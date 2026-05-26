@@ -12,6 +12,7 @@ import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
+import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -28,6 +29,8 @@ export type FishSpecies = {
   catch_difficulty: number
   catch_score: number
   sell_value: number
+  length_min_in?: number | null
+  length_max_in?: number | null
 }
 
 import { ZONE_RARITY_RATES, ZONE_MIN_LEVEL } from './zoneData'
@@ -268,7 +271,31 @@ export async function reelIn(
   _streakBonus = 0, // deprecated: streak XP is now computed server-side (kept for call-site arity)
   jackpotMultiplier = 1,
 ): Promise<
-  | { caught: true; fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; xpGained: number; newXP: number; dailyProgress: [number, number, number]; unlockedSkinId?: string; perfectStreak?: number; streakBonusXP?: number }
+  | {
+      caught: true
+      fish: FishSpecies
+      baitSaved: boolean
+      isNewSpecies: boolean
+      xpGained: number
+      newXP: number
+      dailyProgress: [number, number, number]
+      unlockedSkinId?: string
+      perfectStreak?: number
+      streakBonusXP?: number
+      // ── Per-catch size variance (lib/fishSize) ──
+      /** Rolled length in inches. Always present on caught:true. */
+      sizeIn: number
+      /** Species range — present for non-ancients (ancients have one canonical size). */
+      sizeMin?: number
+      sizeMax?: number
+      /** Tier classification. Omitted for ancients (no variance, no chrome needed). */
+      sizeTier?: FishSizeTier
+      /** True if this catch set a new personal best for the species. Always
+       *  false for ancients (caught once, no PB chase). */
+      isPB: boolean
+      /** Previous PB before this catch, in inches. null on first-catch. */
+      previousBest: number | null
+    }
   | { caught: false }
   | { error: string }
 > {
@@ -335,7 +362,25 @@ export async function reelIn(
     if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
     if (aStreak >= 10) await unlockBadge('unbroken')
     await admin.from('profiles').update(updates).eq('id', user.id)
-    return { caught: true, fish: fish as FishSpecies, baitSaved: false, isNewSpecies: isNewTrophy, xpGained, newXP, dailyProgress: [0, 0, 0], perfectStreak: aStreak, streakBonusXP: 0 }
+    // Ancients have one canonical size each (length_min_in === length_max_in
+    // per the migration). No PB chase since each ancient is a one-time catch
+    // stored in trophy_catches. Display the size for flavor; skip tier chrome
+    // + range bar (no comparison to make).
+    const ancientSize = Number(fish.length_min_in ?? 0)
+    return {
+      caught: true,
+      fish: fish as FishSpecies,
+      baitSaved: false,
+      isNewSpecies: isNewTrophy,
+      xpGained,
+      newXP,
+      dailyProgress: [0, 0, 0],
+      perfectStreak: aStreak,
+      streakBonusXP: 0,
+      sizeIn: ancientSize,
+      isPB: false,
+      previousBest: null,
+    }
   }
 
   // Perfect: 50% chance to return the bait used for this cast; Phantom Hook: additional 25% on any catch
@@ -461,6 +506,39 @@ export async function reelIn(
   // Record challenge score (fire and forget)
   recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})
 
+  // ── Size variance + personal-best tracking (non-ancient catches) ──
+  // Roll a length within the species's [length_min_in, length_max_in] range
+  // and classify into a tier (tiny/small/avg/large/trophy). Then upsert the
+  // PB row for this (user, species), only writing if the new length beats
+  // the previous best. Skipped entirely for ancients (handled above) since
+  // they're one-time catches with canonical sizes.
+  const sizeMinIn = fish.length_min_in == null ? null : Number(fish.length_min_in)
+  const sizeMaxIn = fish.length_max_in == null ? null : Number(fish.length_max_in)
+  let sizeIn = 0
+  let sizeTier: FishSizeTier | undefined
+  let isPB = false
+  let previousBest: number | null = null
+  if (sizeMinIn != null && sizeMaxIn != null) {
+    const roll = rollFishSize(sizeMinIn, sizeMaxIn)
+    sizeIn = roll.lengthIn
+    sizeTier = roll.tier
+
+    const { data: pbRow } = await admin
+      .from('fish_personal_bests')
+      .select('best_length_in')
+      .eq('user_id', user.id)
+      .eq('fish_id', fishId)
+      .maybeSingle()
+    previousBest = pbRow ? Number(pbRow.best_length_in) : null
+    isPB = previousBest == null || sizeIn > previousBest
+    if (isPB) {
+      await admin.from('fish_personal_bests').upsert(
+        { user_id: user.id, fish_id: fishId, best_length_in: sizeIn, caught_at: new Date().toISOString() },
+        { onConflict: 'user_id,fish_id' },
+      )
+    }
+  }
+
   // Update daily challenge progress
   const dailyDate = getTodayUTC()
   const dailyChallenges = await getEffectiveDailyChallenges(dailyDate, admin)
@@ -492,7 +570,24 @@ export async function reelIn(
     { onConflict: 'user_id,date' },
   )
 
-  return { caught: true, fish: fish as FishSpecies, baitSaved, isNewSpecies, xpGained, newXP, dailyProgress: newP, unlockedSkinId: reelInUnlockedSkin, perfectStreak: newPerfectStreak, streakBonusXP: serverStreakBonus }
+  return {
+    caught: true,
+    fish: fish as FishSpecies,
+    baitSaved,
+    isNewSpecies,
+    xpGained,
+    newXP,
+    dailyProgress: newP,
+    unlockedSkinId: reelInUnlockedSkin,
+    perfectStreak: newPerfectStreak,
+    streakBonusXP: serverStreakBonus,
+    sizeIn,
+    sizeMin: sizeMinIn ?? undefined,
+    sizeMax: sizeMaxIn ?? undefined,
+    sizeTier,
+    isPB,
+    previousBest,
+  }
 }
 
 // Crate loot tables — doubloons and bait pool depend on crate tier, not zone.

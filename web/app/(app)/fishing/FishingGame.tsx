@@ -40,6 +40,7 @@ import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
+import { formatFishLength, tierShowsPill, TIER_LABEL, type FishSizeTier } from '@/lib/fishSize'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
@@ -1001,7 +1002,7 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6 }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1014,10 +1015,47 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   jackpotMultiplier?: number
   ancientCount?: number
   ancientTotal?: number
+  // ── Per-catch size variance (lib/fishSize) ──
+  sizeIn: number
+  sizeMin?: number
+  sizeMax?: number
+  sizeTier?: FishSizeTier
+  isPB: boolean
+  previousBest: number | null
 }) {
   const isAncient = fish.habitat === 'ancient_deep'
   const rarity = fish.bite_rarity ?? 1
   const baseR = RARITY[rarity] ?? RARITY[1]
+
+  // ── Size readout count-up ─────────────────────────────────────────────────
+  // Slot-machine roll: the size number ticks from 0 up to the rolled length
+  // over ~700ms with an ease-out curve, then locks. Single rAF loop; no state
+  // outside this component touched. Animated value drives the rendered string
+  // but the underlying sizeIn stays canonical for math.
+  const hasSize = sizeIn > 0
+  const showRange = hasSize && !isAncient && sizeMin != null && sizeMax != null && sizeMax > sizeMin
+  const [displaySize, setDisplaySize] = useState(0)
+  useEffect(() => {
+    if (!hasSize) return
+    let raf = 0
+    let start = 0
+    const dur = 700
+    const target = sizeIn
+    const tick = (t: number) => {
+      if (!start) start = t
+      const elapsed = t - start
+      const p = Math.min(1, elapsed / dur)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setDisplaySize(target * eased)
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [sizeIn, hasSize])
+  const sizePercentile = showRange ? Math.max(0, Math.min(1, (sizeIn - sizeMin!) / (sizeMax! - sizeMin!))) : 0.5
+  const showTrophyPill = !isAncient && sizeTier != null && tierShowsPill(sizeTier)
+  const showPBPill = !isAncient && isPB
+
   // Ancient deep gets its own palette + label, overriding the gold legendary look
   const r = isAncient
     ? { label: 'Ancient', color: '#e11d48', hookedText: baseR.hookedText }
@@ -1087,14 +1125,76 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         </motion.div>
       )}
 
-      {/* Compact banner row — perfect / double / jackpot / gem all collapse
-          into a single flex-wrap row of slim pills so they never push the
-          cast button or bottom nav off the screen. Each pill keeps its own
-          accent color + the same gradient + top-accent chrome as before,
-          just at ~32px tall instead of ~80px. Ignition burst rings still
-          fire on the perfect pill at the 3-streak ignition moment. */}
-      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned) && (
+      {/* Compact banner row — perfect / double / jackpot / gem / trophy /
+          large / PB all collapse into a single flex-wrap row of slim pills
+          so they never push the cast button or bottom nav off the screen.
+          Each pill keeps its own accent color + the same gradient + top-
+          accent chrome as before, just at ~32px tall instead of ~80px.
+          Size-tier pills (Trophy / Large) and the PB pill render first so
+          they catch the eye on the dopamine moments. */}
+      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || showTrophyPill || showPBPill) && (
         <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
+          {/* Trophy / Large pill — top size tiers. Trophy = gold sparkle,
+              Large = cool blue, same gradient + top-accent chrome shape. */}
+          {showTrophyPill && (() => {
+            const trophy = sizeTier === 'trophy'
+            const accent = trophy ? '#fbbf24' : '#60a5fa'
+            const accentRgb = trophy ? '251,191,36' : '96,165,250'
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 360, damping: 18 }}
+                className="font-karla font-700 uppercase"
+                style={{
+                  background: `linear-gradient(180deg, rgba(${accentRgb},0.24) 0%, rgba(${accentRgb},0.06) 100%), #110a04`,
+                  border: `1px solid rgba(${accentRgb},0.55)`,
+                  borderTop: `1px solid rgba(${accentRgb},0.85)`,
+                  borderRadius: 999,
+                  boxShadow: `0 0 ${trophy ? 16 : 12}px rgba(${accentRgb},${trophy ? 0.38 : 0.28})`,
+                  padding: '0.36rem 0.72rem',
+                  fontSize: '0.62rem',
+                  letterSpacing: '0.14em',
+                  color: accent,
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span>{trophy ? '🏆' : '📏'}</span>
+                <span>{trophy ? 'Trophy' : 'Large'}</span>
+              </motion.div>
+            )
+          })()}
+
+          {/* Personal Best pill — independent of size tier. Beating your own
+              previous record on a species, even with a small fish, lands as
+              a teal/green moment so it reads distinct from Trophy gold. */}
+          {showPBPill && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 18, delay: 0.06 }}
+              className="font-karla font-700 uppercase"
+              style={{
+                background: 'linear-gradient(180deg, rgba(45,212,191,0.24) 0%, rgba(45,212,191,0.06) 100%), #04141a',
+                border: '1px solid rgba(45,212,191,0.55)',
+                borderTop: '1px solid rgba(45,212,191,0.85)',
+                borderRadius: 999,
+                boxShadow: '0 0 14px rgba(45,212,191,0.32)',
+                padding: '0.36rem 0.72rem',
+                fontSize: '0.62rem',
+                letterSpacing: '0.14em',
+                color: '#5eead4',
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>⭐</span>
+              <span>New PB</span>
+              {previousBest != null && (
+                <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
+              )}
+            </motion.div>
+          )}
+
           {isPerfect && (() => {
             const isOnFire = perfectStreak >= 3
             const isIgnition = perfectStreak === 3
@@ -1379,30 +1479,123 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.35rem', color: r.color, lineHeight: 1.1, marginBottom: 2 }}>
             {fish.name}
           </p>
-          <p className="font-karla font-300 italic text-center" style={{ fontSize: '0.68rem', color: '#6a6764', marginBottom: '0.7rem' }}>
+          <p className="font-karla font-300 italic text-center" style={{ fontSize: '0.68rem', color: '#6a6764', marginBottom: hasSize ? '0.55rem' : '0.7rem' }}>
             {fish.scientific_name}
           </p>
 
-          {/* Hero price — non-ancient. Big gold number, the thing your eye
-              lands on first after the fish itself. */}
+          {/* ── Size readout — the new hero of the card ──
+              Big counter that ticks up from 0 over ~700ms; range bar below
+              shows where this catch landed in the species's range. Trophy
+              tier picks up a sparkle filter for extra fanfare. Ancients
+              get just the canonical number — no range bar (single defined
+              catch, nothing to compare to). */}
+          {hasSize && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.18 }}
+              style={{ textAlign: 'center', marginBottom: '0.7rem' }}
+            >
+              <span
+                className="font-cinzel font-700"
+                style={{
+                  fontSize: '2.15rem', lineHeight: 1,
+                  color: sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#93c5fd' : '#f0ede8',
+                  textShadow: sizeTier === 'trophy'
+                    ? '0 0 22px rgba(251,191,36,0.7), 0 0 44px rgba(251,191,36,0.35)'
+                    : sizeTier === 'large'
+                    ? '0 0 18px rgba(96,165,250,0.55)'
+                    : '0 0 12px rgba(255,255,255,0.18)',
+                  fontFeatureSettings: '"tnum"',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                {formatFishLength(displaySize)}
+              </span>
+
+              {/* Range bar — only when there's a real range. Slim track with
+                  a glowing needle at the catch's percentile. Labels at the
+                  ends so the player learns the species's natural scale. */}
+              {showRange && (
+                <div style={{ marginTop: 8, padding: '0 0.3rem' }}>
+                  <div style={{ position: 'relative', height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.07)', overflow: 'visible' }}>
+                    {/* Fill from min up to the needle so the catch's spot in
+                        the range reads at a glance. */}
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0, bottom: 0,
+                      width: `${sizePercentile * 100}%`,
+                      background: sizeTier === 'trophy'
+                        ? 'linear-gradient(90deg, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.7) 100%)'
+                        : sizeTier === 'large'
+                        ? 'linear-gradient(90deg, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.7) 100%)'
+                        : 'linear-gradient(90deg, rgba(176,141,79,0.12) 0%, rgba(176,141,79,0.55) 100%)',
+                      borderRadius: 3,
+                    }} />
+                    {/* Needle */}
+                    <motion.div
+                      initial={{ left: 0, opacity: 0 }}
+                      animate={{ left: `${sizePercentile * 100}%`, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 220, damping: 18, delay: 0.45 }}
+                      style={{
+                        position: 'absolute', top: '50%',
+                        width: 3, height: 14,
+                        marginLeft: -1.5, marginTop: -7,
+                        borderRadius: 2,
+                        background: sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#60a5fa' : '#f0ede8',
+                        boxShadow: sizeTier === 'trophy'
+                          ? '0 0 10px rgba(251,191,36,0.85)'
+                          : sizeTier === 'large'
+                          ? '0 0 8px rgba(96,165,250,0.7)'
+                          : '0 0 6px rgba(255,255,255,0.35)',
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between" style={{ marginTop: 4, fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                    <span>{formatFishLength(sizeMin!)}</span>
+                    <span style={{ color: sizeTier && tierShowsPill(sizeTier) ? (sizeTier === 'trophy' ? '#fbbf24' : '#60a5fa') : '#7a7060' }}>
+                      {sizeTier ? TIER_LABEL[sizeTier] : ''}
+                    </span>
+                    <span>{formatFishLength(sizeMax!)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Previous PB line — shown when this catch DIDN'T beat the
+                  record, so the player sees what they're chasing. Skipped on
+                  PB (the green pill already celebrates it) and on first-
+                  catch (nothing to compare against yet). */}
+              {!isAncient && !isPB && previousBest != null && (
+                <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5856', marginTop: 6, letterSpacing: '0.06em' }}>
+                  Your best: <span style={{ color: '#9a8870' }}>{formatFishLength(previousBest)}</span>
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {/* Sell value + XP chip — demoted from hero status to a secondary
+              metrics row. Size is the new headline; the sell number is the
+              follow-up info you check on your way to the next cast. */}
           {!isAncient && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, delay: 0.22 }}
+              transition={{ duration: 0.28, delay: 0.32 }}
               style={{
-                display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
                 marginBottom: '0.7rem',
               }}
             >
-              <span className="font-cinzel font-700"
-                style={{
-                  fontSize: '2.05rem', color: '#f0c040', lineHeight: 1,
-                  textShadow: '0 0 18px rgba(240,192,64,0.45)',
-                }}>
-                {fish.sell_value.toLocaleString()}
+              <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 10px rgba(240,192,64,0.32)' }}>
+                {fish.sell_value.toLocaleString()}<span style={{ fontSize: '0.78rem', marginLeft: 3 }}>⟡</span>
               </span>
-              <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1 }}>⟡</span>
+              {xpGained > 0 && !isPerfect && (
+                <>
+                  <span style={{ color: '#3a3835', fontSize: '0.7rem' }}>·</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#86efac', letterSpacing: '0.04em' }}>
+                    +{xpGained} XP
+                  </span>
+                </>
+              )}
             </motion.div>
           )}
 
@@ -2066,7 +2259,25 @@ export default function FishingGame({
   const [buyingWorms, setBuyingWorms] = useState(false)
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
-  const [catchResult, setCatchResult] = useState<{ fish: FishSpecies; baitSaved: boolean; isNewSpecies: boolean; isPerfect: boolean; xpGained: number; doubleCatch?: boolean; gemEarned?: boolean; perfectStreak: number; streakBonusXP: number; jackpotMultiplier?: number } | null>(null)
+  const [catchResult, setCatchResult] = useState<{
+    fish: FishSpecies
+    baitSaved: boolean
+    isNewSpecies: boolean
+    isPerfect: boolean
+    xpGained: number
+    doubleCatch?: boolean
+    gemEarned?: boolean
+    perfectStreak: number
+    streakBonusXP: number
+    jackpotMultiplier?: number
+    // Per-catch size (lib/fishSize). Ancients have sizeIn but no min/max/tier.
+    sizeIn: number
+    sizeMin?: number
+    sizeMax?: number
+    sizeTier?: import('@/lib/fishSize').FishSizeTier
+    isPB: boolean
+    previousBest: number | null
+  } | null>(null)
   const [crateResult, setCrateResult] = useState<
     | { type: 'doubloons'; amount: number }
     | { type: 'bait';      baitType: string; baitName: string; quantity: number }
@@ -3030,7 +3241,24 @@ export default function FishingGame({
         // it when the YOLO jackpot actually triggered. Double catches go
         // through the separate "Double Catch — ×2" banner; we don't want
         // Millionaire's / Twin-Strike showing the "Jackpot!" banner too.
-        setCatchResult({ fish, baitSaved, isNewSpecies, isPerfect: wasPerfect, xpGained, doubleCatch, gemEarned: false, perfectStreak: res.perfectStreak ?? perfectStreak, streakBonusXP: res.streakBonusXP ?? 0, jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined })
+        setCatchResult({
+          fish,
+          baitSaved,
+          isNewSpecies,
+          isPerfect: wasPerfect,
+          xpGained,
+          doubleCatch,
+          gemEarned: false,
+          perfectStreak: res.perfectStreak ?? perfectStreak,
+          streakBonusXP: res.streakBonusXP ?? 0,
+          jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined,
+          sizeIn: res.sizeIn,
+          sizeMin: res.sizeMin,
+          sizeMax: res.sizeMax,
+          sizeTier: res.sizeTier,
+          isPB: res.isPB,
+          previousBest: res.previousBest,
+        })
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
             setTrophyCatches(prev => new Set([...prev, fish.id]))
@@ -4363,7 +4591,26 @@ export default function FishingGame({
                       )}
                     </motion.div>
                   ) : catchResult ? (
-                    <ResultCard fish={catchResult.fish} baitSaved={catchResult.baitSaved} isNewSpecies={catchResult.isNewSpecies} isPerfect={catchResult.isPerfect} xpGained={catchResult.xpGained} doubleCatch={catchResult.doubleCatch} gemEarned={catchResult.gemEarned} perfectStreak={catchResult.perfectStreak} streakBonusXP={catchResult.streakBonusXP} jackpotMultiplier={catchResult.jackpotMultiplier} ancientCount={trophyCatches.size} ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6} />
+                    <ResultCard
+                      fish={catchResult.fish}
+                      baitSaved={catchResult.baitSaved}
+                      isNewSpecies={catchResult.isNewSpecies}
+                      isPerfect={catchResult.isPerfect}
+                      xpGained={catchResult.xpGained}
+                      doubleCatch={catchResult.doubleCatch}
+                      gemEarned={catchResult.gemEarned}
+                      perfectStreak={catchResult.perfectStreak}
+                      streakBonusXP={catchResult.streakBonusXP}
+                      jackpotMultiplier={catchResult.jackpotMultiplier}
+                      ancientCount={trophyCatches.size}
+                      ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6}
+                      sizeIn={catchResult.sizeIn}
+                      sizeMin={catchResult.sizeMin}
+                      sizeMax={catchResult.sizeMax}
+                      sizeTier={catchResult.sizeTier}
+                      isPB={catchResult.isPB}
+                      previousBest={catchResult.previousBest}
+                    />
                   ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"
