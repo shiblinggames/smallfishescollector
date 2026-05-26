@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { makeChartGuess } from './chartActions'
 import type { ChartContest, ChartProgress, ChartGuess, ChartFinisher } from './chartActions'
 import { getShip } from '@/lib/ships'
@@ -22,6 +22,9 @@ interface Props {
   progress: ChartProgress
   initialGuesses: ChartGuess[]
   initialMovesAvailable: number
+  /** YYYY-MM-DD UTC of the day a new move next lands. Used for the
+   *  "next move in HH:MM" countdown when the player is at 0. */
+  nextGrantDate: string
   pathLength: number
   startTile: [number, number]
   finishers: ChartFinisher[]
@@ -31,7 +34,7 @@ interface Props {
 
 export default function ChartBoard({
   contest, progress, initialGuesses, initialMovesAvailable,
-  pathLength, startTile, finishers, shipTier, completionPosition,
+  nextGrantDate, pathLength, startTile, finishers, shipTier, completionPosition,
 }: Props) {
   const [guesses, setGuesses] = useState<ChartGuess[]>(initialGuesses)
   const [pathIndex, setPathIndex] = useState(progress.path_index ?? 0)
@@ -42,6 +45,22 @@ export default function ChartBoard({
   const [bonusToast, setBonusToast] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const ship = getShip(shipTier)
+
+  // Live "next move in HH:MM" countdown to UTC midnight of nextGrantDate.
+  // Single 60s tick is enough — minute precision matches the displayed format
+  // and avoids a per-second re-render for a passive label.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const nextGrantAt = new Date(`${nextGrantDate}T00:00:00.000Z`).getTime()
+  const msToNext = Math.max(0, nextGrantAt - now)
+  const hrsToNext = Math.floor(msToNext / 3_600_000)
+  const minToNext = Math.floor((msToNext % 3_600_000) / 60_000)
+  const nextLabel = msToNext <= 0
+    ? 'Refresh to claim today’s move'
+    : `Next move in ${hrsToNext}h ${minToNext}m`
 
   const { grid_cols: cols, grid_rows: rows } = contest
 
@@ -116,7 +135,7 @@ export default function ChartBoard({
         {contest.name}
       </p>
       <p className="font-karla" style={{ fontSize: '0.84rem', color: '#9a9080', marginBottom: '1.25rem' }}>
-        Chart a path from sea to shore. Move up, left, or right. Every guess costs one move.
+        Chart a path from sea to shore. Move up, left, or right. One move arrives each day you log in. Skip a day and that day’s move is gone.
       </p>
 
       {/* Stats bar */}
@@ -130,7 +149,7 @@ export default function ChartBoard({
             {movesAvailable} {movesAvailable === 1 ? 'move' : 'moves'} available
           </p>
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a7060', marginTop: 1 }}>
-            Gain fishing or navigator levels to earn more
+            {completed ? 'Path charted' : nextLabel}
           </p>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -293,7 +312,7 @@ export default function ChartBoard({
 
       {movesAvailable === 0 && !completed && (
         <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8070', textAlign: 'center', marginTop: '0.75rem' }}>
-          No moves — gain a fishing or navigator level to continue
+          Out of moves — {nextLabel.toLowerCase()}.
         </p>
       )}
 

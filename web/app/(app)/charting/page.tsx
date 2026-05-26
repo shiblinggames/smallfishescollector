@@ -48,6 +48,7 @@ export default async function ChartingPage() {
                 progress={state.progress}
                 initialGuesses={state.guesses}
                 initialMovesAvailable={state.movesAvailable}
+                nextGrantDate={state.nextGrantDate}
                 pathLength={state.pathLength}
                 startTile={state.startTile}
                 finishers={state.finishers}

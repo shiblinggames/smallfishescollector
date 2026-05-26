@@ -2,8 +2,51 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getLevelFromXP } from '@/lib/fishingLevel'
-import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
+
+// ── Daily-move grant model ──────────────────────────────────────────────────
+//
+// One move per UTC calendar day, no stacking. Every time the player touches
+// the contest (page load or guess submission), we run `maybeGrantDailyMove`:
+// if `last_move_grant_date < today`, bump `moves_granted` by 1 and stamp
+// today. Skip a day, you forfeit that day's move. Replaced the old level-XP
+// formula on 2026-05-26.
+//
+// For legacy progress from the old level formula: the first grant under the
+// new system also rebases `moves_granted = moves_used` so the player's
+// effective balance starts at 0 + today's free move, without losing the
+// path/milestone progress they already accumulated.
+
+function utcDate(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** Returns the (possibly bumped) moves_granted + last_move_grant_date.
+ *  Writes to chart_progress when a grant lands so the row stays canonical. */
+async function maybeGrantDailyMove(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  contestId: number,
+  current: { moves_granted: number; moves_used: number; last_move_grant_date: string | null },
+): Promise<{ moves_granted: number; last_move_grant_date: string }> {
+  const today = utcDate()
+  if (current.last_move_grant_date === today) {
+    return { moves_granted: current.moves_granted, last_move_grant_date: today }
+  }
+
+  // Legacy progress catch-up: if a player had moves_used > moves_granted (old
+  // level-based system) we rebase so they don't carry a phantom debit. Plays
+  // safe even if both are 0 for fresh players (math is identical).
+  const rebased = Math.max(current.moves_granted, current.moves_used)
+  const newGranted = rebased + 1
+
+  await admin
+    .from('chart_progress')
+    .update({ moves_granted: newGranted, last_move_grant_date: today })
+    .eq('user_id', userId)
+    .eq('contest_id', contestId)
+
+  return { moves_granted: newGranted, last_move_grant_date: today }
+}
 
 export interface ChartContest {
   id: number
@@ -36,6 +79,10 @@ export type ChartState = {
   progress: ChartProgress
   guesses: ChartGuess[]
   movesAvailable: number
+  /** UTC date of the next grant (always tomorrow when there's a move pending,
+   *  or today's date if the daily move hasn't been claimed yet). Useful for
+   *  the "next move in HH:MM" countdown on the client. */
+  nextGrantDate: string
   pathLength: number
   startTile: [number, number]
   finishers: ChartFinisher[]
@@ -61,10 +108,9 @@ export async function getChartState(): Promise<ChartState | { error: string }> {
 
   const path = contest.path as [number, number][]
 
-  const [{ data: profile }, { data: existingProgress }, { data: guessRows }] = await Promise.all([
-    admin.from('profiles').select('fishing_xp, expedition_xp').eq('id', user.id).single(),
+  const [{ data: existingProgress }, { data: guessRows }] = await Promise.all([
     admin.from('chart_progress')
-      .select('path_index, moves_used, completed_at, ship_color')
+      .select('path_index, moves_used, moves_granted, last_move_grant_date, completed_at, ship_color')
       .eq('user_id', user.id).eq('contest_id', contest.id).maybeSingle(),
     admin.from('chart_guesses')
       .select('row, col, correct')
@@ -74,17 +120,32 @@ export async function getChartState(): Promise<ChartState | { error: string }> {
 
   let progress = existingProgress
   if (!progress) {
+    const today = utcDate()
     const { data: np } = await admin
       .from('chart_progress')
-      .insert({ user_id: user.id, contest_id: contest.id })
-      .select('path_index, moves_used, completed_at, ship_color')
+      .insert({
+        user_id: user.id,
+        contest_id: contest.id,
+        // First-touch grant: a brand-new player gets today's move on signup.
+        moves_granted: 1,
+        last_move_grant_date: today,
+      })
+      .select('path_index, moves_used, moves_granted, last_move_grant_date, completed_at, ship_color')
       .single()
     progress = np
+  } else if (!progress.completed_at) {
+    // Returning player — bump moves_granted if today's hasn't been claimed yet.
+    const grant = await maybeGrantDailyMove(admin, user.id, contest.id, {
+      moves_granted: progress.moves_granted ?? 0,
+      moves_used: progress.moves_used ?? 0,
+      last_move_grant_date: progress.last_move_grant_date ?? null,
+    })
+    progress = { ...progress, ...grant }
   }
 
-  const fishingLevel = getLevelFromXP(profile?.fishing_xp ?? 0)
-  const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
-  const movesAvailable = Math.max(0, Math.floor(fishingLevel / 2) + expeditionLevel - (progress?.moves_used ?? 0))
+  const movesGranted = progress?.moves_granted ?? 0
+  const movesUsed = progress?.moves_used ?? 0
+  const movesAvailable = Math.max(0, movesGranted - movesUsed)
 
   const { data: finisherRows } = await admin
     .from('chart_progress')
@@ -118,11 +179,22 @@ export async function getChartState(): Promise<ChartState | { error: string }> {
     completionPosition = (count ?? 0) <= 3 ? (count ?? 0) : null
   }
 
+  // The chip shows a "next move at UTC midnight" countdown. Today's already
+  // granted ⇒ point to tomorrow; otherwise (offline ≥1 day) point to today
+  // (the next page touch will grant immediately).
+  const today = utcDate()
+  const nextGrantDate = progress?.last_move_grant_date === today
+    ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    : today
+
   return {
     contest: { id: contest.id, name: contest.name, grid_cols: contest.grid_cols, grid_rows: contest.grid_rows },
-    progress: progress ?? { path_index: 0, moves_used: 0, completed_at: null, ship_color: null },
+    progress: progress
+      ? { path_index: progress.path_index, moves_used: progress.moves_used, completed_at: progress.completed_at, ship_color: progress.ship_color }
+      : { path_index: 0, moves_used: 0, completed_at: null, ship_color: null },
     guesses: (guessRows ?? []) as ChartGuess[],
     movesAvailable,
+    nextGrantDate,
     pathLength: path.length,
     startTile: path[0],
     finishers,
@@ -149,26 +221,39 @@ export async function makeChartGuess(
   const path = contest.path as [number, number][]
 
   const { data: profile } = await admin
-    .from('profiles').select('fishing_xp, expedition_xp, doubloons').eq('id', user.id).single()
-
-  const fishingLevel = getLevelFromXP(profile?.fishing_xp ?? 0)
-  const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
-  const totalLevels = Math.floor(fishingLevel / 2) + expeditionLevel
+    .from('profiles').select('doubloons').eq('id', user.id).single()
 
   let { data: progress } = await admin
     .from('chart_progress').select('*')
     .eq('user_id', user.id).eq('contest_id', contestId).maybeSingle()
 
   if (!progress) {
+    const today = utcDate()
     const { data: np } = await admin
       .from('chart_progress')
-      .insert({ user_id: user.id, contest_id: contestId })
+      .insert({
+        user_id: user.id,
+        contest_id: contestId,
+        moves_granted: 1,
+        last_move_grant_date: today,
+      })
       .select('*').single()
     progress = np
   }
   if (!progress) return { error: 'Progress error' }
-  if (totalLevels - progress.moves_used <= 0) return { error: 'No moves available' }
   if (progress.completed_at) return { error: 'Already completed' }
+
+  // Defense in depth: catch up the daily grant in case the client hasn't
+  // hit getChartState today (e.g. stale tab). Same write the page loader does.
+  const grant = await maybeGrantDailyMove(admin, user.id, contestId, {
+    moves_granted: progress.moves_granted ?? 0,
+    moves_used: progress.moves_used ?? 0,
+    last_move_grant_date: progress.last_move_grant_date ?? null,
+  })
+  progress = { ...progress, ...grant }
+
+  const movesAvailable = (progress.moves_granted ?? 0) - (progress.moves_used ?? 0)
+  if (movesAvailable <= 0) return { error: 'No moves available' }
 
   const currentPathIndex: number = progress.path_index ?? 0
   if (currentPathIndex >= path.length - 1) return { error: 'Already at end' }
@@ -191,7 +276,7 @@ export async function makeChartGuess(
   const [nextRow, nextCol] = path[currentPathIndex + 1]
   const correct = row === nextRow && col === nextCol
 
-  const newMovesUsed = progress.moves_used + 1
+  const newMovesUsed = (progress.moves_used ?? 0) + 1
   const newPathIndex = correct ? currentPathIndex + 1 : currentPathIndex
   const completed = correct && newPathIndex === path.length - 1
 
@@ -230,5 +315,6 @@ export async function makeChartGuess(
   }
 
   const newDoubloonTotal = (profile?.doubloons ?? 0) + bonusDoubloons
-  return { correct, movesLeft: Math.max(0, totalLevels - newMovesUsed), completed, newPathIndex, completionPosition, bonusDoubloons, newDoubloonTotal }
+  const movesLeft = Math.max(0, (progress.moves_granted ?? 0) - newMovesUsed)
+  return { correct, movesLeft, completed, newPathIndex, completionPosition, bonusDoubloons, newDoubloonTotal }
 }
