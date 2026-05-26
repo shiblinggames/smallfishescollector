@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
@@ -12,19 +11,22 @@ import { getHat } from '@/lib/hats'
 import { getRod } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
 import { catchXP } from '@/lib/fishingLevel'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import type { ZoneStat } from './ZoneLanding'
 
 export default async function FishingPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
 
+  // Profile comes from the request-scoped cached loader (lib/userData.ts) so
+  // any other server component in this render that needs profile shares this
+  // single fetch instead of issuing its own.
   const [
     activeSession,
     dailyChallenge,
-    { data: profile },
+    profile,
     { data: baitInventory },
     { data: fishInventory },
     { count: uniqueSpeciesCaught },
@@ -35,10 +37,7 @@ export default async function FishingPage() {
   ] = await Promise.all([
     getActiveChallengeSession(),
     getDailyChallenge(),
-    admin.from('profiles')
-      .select('packs_available, doubloons, hook_tier, rod_tier, reel_tier, line_tier, gems, fishing_xp, fish_hold_tier, highest_perfect_streak, current_perfect_streak, catch_pending, has_seen_fishing_tour, has_seen_fishing_catch_tour, username, zone_shallows_rewarded, zone_open_waters_rewarded, zone_deep_rewarded, zone_abyss_rewarded, has_tide_turner, tide_turner_used, tide_turner_date, equipped_special, has_phantom_hook, has_auto_caster, prestige_levels, trophy_catches, character_color, equipped_badges, unlocked_badges, unlocked_character_colors, equipped_boat, unlocked_boats, equipped_hat, unlocked_hats, is_premium, premium_expires_at, finn_encounters, finn_wins, finn_seen_beats, finn_revealed, finn_last_outcome, last_used_bait')
-      .eq('id', user.id)
-      .single(),
+    getCurrentProfile(),
     admin.from('bait_inventory')
       .select('bait_type, quantity')
       .eq('user_id', user.id),
