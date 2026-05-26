@@ -235,7 +235,12 @@ function RaidMap({
         // Put the title plate on whichever side has the most room: a
         // node on the left half gets its label to the right, and vice
         // versa. The plate's dark background hides the route behind it.
-        const labelRight = cx(i) < 50
+        // EXCEPTION: when this node has a side-branch child (challenge
+        // raid attached), the branch already occupies the "opposite"
+        // side — so flip the label to the parent's OWN side so the two
+        // don't overlap.
+        const hasSideBranchChild = views.some(other => other.node.sideBranch?.parentId === node.id)
+        const labelRight = hasSideBranchChild ? cx(i) >= 50 : cx(i) < 50
         return (
           <div
             key={node.id}
