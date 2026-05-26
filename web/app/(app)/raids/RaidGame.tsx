@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimRaidLoot, reportRaidSink, recordRaidHit } from './actions'
 import { awardRaidKill } from './raidXPActions'
+import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
@@ -1021,6 +1022,20 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setLootBase(base)
         setLootAmount(total)
         setWinIsBoss(true)
+        // Challenge-mode boss trophies — unlock the badge HERE (right as the
+        // boss sinks), not at loot-claim time. Sequencing matters: the
+        // BadgeWatcher fires on the awardRaidKill `doubloons-changed` event
+        // below, so the DB unlock has to land before that dispatch or the
+        // celebration won't pop until something else triggers a re-check.
+        // Map is intentionally small and inline so the relationship between
+        // a challenge raidId and its badge is impossible to lose.
+        const challengeBadgeId =
+          config.raidId === 'corsairs_reckoning_challenge' ? 'corsairs_bane'
+          : config.raidId === 'captain_krust_challenge'    ? 'ghost_ship'
+          : null
+        if (challengeBadgeId) {
+          try { await unlockBadge(challengeBadgeId) } catch { /* badge unlock is best-effort */ }
+        }
         // Award the boss kill XP + the full-clear bonus (25% of the run's kill
         // XP) in one persisted call, but animate the bar in two steps: the kill
         // XP now, then the bonus a beat later, synced to the loot stage's "Full

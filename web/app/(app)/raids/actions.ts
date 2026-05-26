@@ -7,7 +7,6 @@ import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { getActiveEffects } from '@/lib/raidItems'
-import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -214,15 +213,11 @@ export async function claimRaidLoot(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { newShipSkins: [], newDoubloonTotal: 0, newRaidItems: [] }
-  // Challenge-mode boss trophies. Any clear of a challenge raid awards
-  // the corresponding badge — no time/damage gating, the challenge fight
-  // itself is the bar. corsairs_bane = Pete challenge; ghost_ship (now
-  // labelled "Krust's Crutch") = Krust challenge. Normal-mode clears
-  // never grant either, so the badges read as "you beat the hard
-  // version". elapsedMs + damageTaken are still passed through for
-  // cumulative stats tracking elsewhere.
-  if (raidId === 'corsairs_reckoning_challenge') await unlockBadge('corsairs_bane')
-  if (raidId === 'captain_krust_challenge')      await unlockBadge('ghost_ship')
+  // Challenge-mode boss-clear badge unlocks live in RaidGame's
+  // handleEnemyDefeated (the moment the boss sinks) so the celebration
+  // pops as part of the kill beat, not after the loot crate is claimed.
+  // elapsedMs + damageTaken are still passed through for cumulative
+  // stats tracking elsewhere.
 
   const admin = createAdminClient()
   const { data: profile } = await admin
