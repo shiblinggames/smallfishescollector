@@ -1467,39 +1467,52 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
             {/* PB ribbon — overlays the fish on a personal-best catch, then
                 fades out so the rest of the card can be read. Plain-English
-                copy ("Your biggest yet!") for non-jargon clarity; pulses the
-                first half-second so the eye catches it as it arrives. */}
-            <AnimatePresence>
-              {isPBMoment && pbOverlayVisible && (
-                <motion.div
-                  key="pb-overlay"
-                  initial={{ opacity: 0, y: 8, scale: 0.85 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 18, delay: 0.6 }}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    position: 'absolute', top: '38%', left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    padding: '0.4rem 0.85rem', borderRadius: 999,
-                    fontSize: '0.66rem', letterSpacing: '0.16em',
-                    color: '#5eead4',
-                    background: 'linear-gradient(180deg, rgba(15,30,28,0.96) 0%, rgba(8,18,18,0.96) 100%)',
-                    border: '1px solid rgba(94,234,212,0.7)',
-                    boxShadow: '0 0 18px rgba(94,234,212,0.5), 0 6px 22px rgba(0,0,0,0.55)',
-                    whiteSpace: 'nowrap', pointerEvents: 'none',
-                    zIndex: 5,
-                  }}
-                >
-                  <span aria-hidden style={{ fontSize: '0.84rem' }}>🏆</span>
-                  <span>Your biggest yet!</span>
-                  {previousBest != null && (
-                    <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
+                copy ("Your biggest yet!") for non-jargon clarity.
+                The outer wrapper handles centering (translate -50%/-50%)
+                statically because framer-motion's y/scale animations write
+                the whole transform property and would clobber a static
+                translate, shifting the ribbon off-center. AnimatePresence
+                lives inside the centering shell. */}
+            {isPBMoment && (
+              <div style={{
+                position: 'absolute', top: '38%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none', zIndex: 5,
+              }}>
+                <AnimatePresence>
+                  {pbOverlayVisible && (
+                    <motion.div
+                      key="pb-ribbon"
+                      initial={{ opacity: 0, y: 8, scale: 0.85 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 18, delay: 0.6 }}
+                      className="font-karla font-700 uppercase"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        padding: '0.4rem 0.85rem', borderRadius: 999,
+                        fontSize: '0.66rem', letterSpacing: '0.16em',
+                        color: '#5eead4',
+                        // Translucent so the fish still reads through the ribbon
+                        // instead of being hidden behind a solid card.
+                        background: 'linear-gradient(180deg, rgba(15,30,28,0.5) 0%, rgba(8,18,18,0.5) 100%)',
+                        backdropFilter: 'blur(6px)',
+                        WebkitBackdropFilter: 'blur(6px)',
+                        border: '1px solid rgba(94,234,212,0.55)',
+                        boxShadow: '0 0 18px rgba(94,234,212,0.45), 0 6px 22px rgba(0,0,0,0.45)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span aria-hidden style={{ fontSize: '0.84rem' }}>🏆</span>
+                      <span>Your biggest yet!</span>
+                      {previousBest != null && (
+                        <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
+                      )}
+                    </motion.div>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </AnimatePresence>
+              </div>
+            )}
           </motion.div>
 
           {/* Name. Scientific name dropped 2026-05-26 — players don't read
