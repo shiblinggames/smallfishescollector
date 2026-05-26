@@ -1007,7 +1007,7 @@ export default function ShipHero({
                   </div>
                 ) : (
                   <div style={{ padding: '0.85rem 1rem' }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#6a6460' }}>No items yet. Items drop from raid bosses.</p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#6a6460' }}>No items yet.</p>
                   </div>
                 )}
               </div>
