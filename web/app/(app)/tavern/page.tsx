@@ -85,7 +85,6 @@ async function DailySection() {
         info={[]}
         icon={<FishIcon />}
         completed={fotdDone}
-        streak={profile?.fotd_streak ?? 0}
         variant="compact"
         art="/fishoftheday.png"
         accent="#60a5fa"
