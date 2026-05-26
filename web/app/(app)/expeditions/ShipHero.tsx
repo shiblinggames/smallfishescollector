@@ -364,17 +364,41 @@ export default function ShipHero({
     startTransition(async () => { await equipShipSkin(skinId) })
   }
 
-  // Raid item equip/unequip
+  // Raid item equip/unequip + swap. When the slots are full and the
+  // player taps a new unequipped item, the row expands inline with a
+  // "Replace which?" picker (see swapTargetItemId below) — they pick
+  // which equipped item to displace, then handleSwapRaidItem fires.
+  // No more two-tap unequip-then-equip dance.
+  const [swapTargetItemId, setSwapTargetItemId] = useState<string | null>(null)
+
   function handleEquipRaidItem(itemId: string) {
     if (equippedItems.includes(itemId)) return
-    if (equippedItems.length >= raidItemSlots) return
+    if (equippedItems.length >= raidItemSlots) {
+      // Full — show the replace picker for THIS row instead of silently
+      // refusing. Tapping the same item again (or X) closes the picker.
+      setSwapTargetItemId(prev => prev === itemId ? null : itemId)
+      return
+    }
+    setSwapTargetItemId(null)
     const next = [...equippedItems, itemId]
     setEquippedItems(next)
     startTransition(async () => { await saveEquippedRaidItems(next) })
   }
 
   function handleUnequipRaidItem(itemId: string) {
+    setSwapTargetItemId(null)
     const next = equippedItems.filter(i => i !== itemId)
+    setEquippedItems(next)
+    startTransition(async () => { await saveEquippedRaidItems(next) })
+  }
+
+  /** Swap helper: drop `displacedId` from the equipped list and put
+   *  `swapTargetItemId` in its position. Preserves slot order so the
+   *  loadout reads stable across swaps (no awkward shuffling). */
+  function handleSwapRaidItem(displacedId: string) {
+    if (!swapTargetItemId) return
+    const next = equippedItems.map(id => id === displacedId ? swapTargetItemId : id)
+    setSwapTargetItemId(null)
     setEquippedItems(next)
     startTransition(async () => { await saveEquippedRaidItems(next) })
   }
@@ -924,15 +948,26 @@ export default function ShipHero({
                 )
               })()}
 
-              {/* ── Raid Items ── */}
+              {/* ── Raid Items ──
+                  Hybrid loadout pattern: a non-interactive slot row at
+                  the top shows "what am I taking into the raid?" at a
+                  glance; the list below is the sole action surface.
+                  Tap an unequipped item → equips into the next free
+                  slot. Tap an equipped item → unequips. When the slots
+                  are FULL and the player taps a new unequipped item,
+                  the row expands inline with a "Replace which?" picker
+                  (handleSwapRaidItem) so swap is one explicit beat —
+                  no more two-tap unequip-then-equip dance.
+              */}
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Raid Items</p>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
                 Equip up to {raidItemSlots}. Bigger ships hold more. Effects only apply in raids, not voyages.
               </p>
               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
-                {/* Equip slots */}
-                <div style={{ padding: '1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Equipped · {equippedItems.length}/{raidItemSlots}</p>
+                {/* Slot row — pure visual loadout glance, no tap. The
+                    list below is where actions happen. */}
+                <div style={{ padding: '0.9rem 1rem 1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Loadout · {equippedItems.length}/{raidItemSlots}</p>
                   <div style={{ display: 'flex', gap: '0.7rem' }}>
                     {Array.from({ length: raidItemSlots }, (_, i) => i).map(i => {
                       const itemId  = equippedItems[i]
@@ -942,9 +977,9 @@ export default function ShipHero({
                         <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
                           {itemDef ? (
                             <>
-                              <button
-                                onClick={() => handleUnequipRaidItem(itemId!)}
-                                style={{ position: 'relative', width: 64, height: 64, borderRadius: 12, background: `${color}11`, border: `1.5px solid ${color}55`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', padding: 0, overflow: 'hidden' }}
+                              <div
+                                aria-label={`Equipped: ${itemDef.name}`}
+                                style={{ position: 'relative', width: 60, height: 60, borderRadius: 12, background: `${color}11`, border: `1.5px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
                               >
                                 {itemDef.image ? (
                                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -952,18 +987,15 @@ export default function ShipHero({
                                 ) : (
                                   <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{itemDef.emoji}</span>
                                 )}
-                                <div style={{ position: 'absolute', top: 3, right: 3, width: 14, height: 14, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                                </div>
-                              </button>
-                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.62rem', color: color ?? '#b8b3ac', maxWidth: 64, lineHeight: 1.2 }}>{itemDef.name}</p>
+                              </div>
+                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.62rem', color: color ?? '#b8b3ac', maxWidth: 60, lineHeight: 1.2 }}>{itemDef.name}</p>
                             </>
                           ) : (
                             <>
-                              <div style={{ width: 64, height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ width: 60, height: 60, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
                               </div>
-                              <p className="font-karla font-600 text-center" style={{ fontSize: '0.62rem', color: '#5a5550', maxWidth: 64, lineHeight: 1.2 }}>Empty</p>
+                              <p className="font-karla font-600 text-center" style={{ fontSize: '0.62rem', color: '#5a5550', maxWidth: 60, lineHeight: 1.2 }}>Empty</p>
                             </>
                           )}
                         </div>
@@ -972,7 +1004,10 @@ export default function ShipHero({
                   </div>
                 </div>
 
-                {/* Owned items */}
+                {/* Owned items — single action surface. Equipped rows
+                    carry rarity-colored borders and a tap-to-unequip
+                    target; unequipped rows tap to equip (or expand the
+                    swap picker if loadout is full). */}
                 {ownedRaidItems.length > 0 ? (
                   <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {ownedRaidItems.map(itemId => {
@@ -981,27 +1016,90 @@ export default function ShipHero({
                       const color    = RARITY_ITEM_COLOR[def.rarity]
                       const equipped = equippedItems.includes(itemId)
                       const full     = equippedItems.length >= raidItemSlots && !equipped
+                      const showSwap = swapTargetItemId === itemId
                       return (
-                        <button
-                          key={itemId}
-                          onClick={equipped ? () => handleUnequipRaidItem(itemId) : full ? undefined : () => handleEquipRaidItem(itemId)}
-                          disabled={full}
-                          style={{ background: equipped ? `${color}14` : 'rgba(255,255,255,0.04)', border: `1.5px solid ${equipped ? color + '60' : 'rgba(255,255,255,0.12)'}`, borderRadius: 10, padding: '0.7rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: full ? 'default' : 'pointer', opacity: full ? 0.45 : 1, width: '100%', textAlign: 'left' }}
-                        >
-                          {def.image ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={def.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
-                          ) : (
-                            <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
+                        <div key={itemId} style={{ display: 'flex', flexDirection: 'column' }}>
+                          <button
+                            onClick={equipped ? () => handleUnequipRaidItem(itemId) : () => handleEquipRaidItem(itemId)}
+                            style={{
+                              background: equipped ? `${color}14` : showSwap ? 'rgba(96,165,250,0.10)' : 'rgba(255,255,255,0.04)',
+                              border: `1.5px solid ${equipped ? color + '60' : showSwap ? 'rgba(96,165,250,0.55)' : 'rgba(255,255,255,0.12)'}`,
+                              borderRadius: showSwap ? '10px 10px 0 0' : 10,
+                              padding: '0.7rem 0.85rem',
+                              display: 'flex', alignItems: 'center', gap: '0.8rem',
+                              cursor: 'pointer', width: '100%', textAlign: 'left',
+                              transition: 'background 0.15s, border-color 0.15s',
+                            }}
+                          >
+                            {def.image ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={def.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+                            ) : (
+                              <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: equipped ? color : '#f0ede8', marginBottom: 3 }}>{def.name}</p>
+                              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
+                            </div>
+                            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: equipped ? color : full ? '#60a5fa' : '#7a7674', flexShrink: 0 }}>
+                              {equipped ? 'Equipped' : showSwap ? 'Cancel' : full ? 'Swap' : 'Equip'}
+                            </span>
+                          </button>
+                          {/* Inline "Replace which?" picker — only when this
+                              row is the swap target. Three (or fewer) small
+                              thumbs of the currently equipped items; tap
+                              one to displace it in favor of this row's
+                              item. Attaches under the row with a shared
+                              accent border so the relationship reads
+                              clearly. */}
+                          {showSwap && (
+                            <div
+                              role="group"
+                              aria-label="Replace which equipped item?"
+                              style={{
+                                padding: '0.7rem 0.85rem 0.85rem',
+                                background: 'rgba(96,165,250,0.06)',
+                                border: '1.5px solid rgba(96,165,250,0.55)',
+                                borderTop: 'none',
+                                borderRadius: '0 0 10px 10px',
+                                display: 'flex', flexDirection: 'column', gap: '0.55rem',
+                              }}
+                            >
+                              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#7aa7e8' }}>Replace which?</p>
+                              <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap' }}>
+                                {equippedItems.map(eqId => {
+                                  const eqDef = getRaidItem(eqId)
+                                  if (!eqDef) return null
+                                  const eqColor = RARITY_ITEM_COLOR[eqDef.rarity]
+                                  return (
+                                    <button
+                                      key={eqId}
+                                      onClick={() => handleSwapRaidItem(eqId)}
+                                      title={`Replace ${eqDef.name} with ${def.name}`}
+                                      style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                                        padding: '0.45rem 0.55rem 0.5rem',
+                                        background: `${eqColor}10`,
+                                        border: `1.5px solid ${eqColor}66`,
+                                        borderRadius: 10,
+                                        cursor: 'pointer',
+                                        minWidth: 70,
+                                      }}
+                                    >
+                                      {eqDef.image ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img src={eqDef.image} alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                                      ) : (
+                                        <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>{eqDef.emoji}</span>
+                                      )}
+                                      <span className="font-karla font-600 truncate text-center" style={{ fontSize: '0.6rem', color: eqColor, maxWidth: 60, lineHeight: 1.15 }}>{eqDef.name}</span>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
                           )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: equipped ? color : '#f0ede8', marginBottom: 3 }}>{def.name}</p>
-                            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
-                          </div>
-                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: equipped ? color : '#7a7674', flexShrink: 0 }}>
-                            {equipped ? 'Equipped' : full ? 'Full' : 'Equip'}
-                          </span>
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
