@@ -29,13 +29,19 @@ export const CHALLENGE_MODS = {
   goldMult: 1.5,
   xpMult:   1.5,
 
-  // Loot crate — uniques (ship skins, named items) get DOUBLE drop weight
-  // (the chase reward for grinding challenge). Gems also bumped so the
-  // currency payout matches the harder fight. Doubloon entries are left
-  // unscaled in the loot table because doubloon volume is already lifted
-  // by the per-kill gold multiplier above; double-dipping here would
-  // make doubloons too dominant in the crate roll.
-  uniqueDropWeightMult: 2.0,
+  // Loot crate — uniques (ship skins, named items) should drop at ~2× the
+  // rate they do in the normal raid (the chase reward for grinding
+  // challenge). The multiplier here is on the loot ROW WEIGHT, not the
+  // final rate: because the total weight in the denominator also grows,
+  // a 2.0× weight bump only yields ~1.7× actual drop rate. 2.5× gets us
+  // to ~2.06× actual rate against both Pete and Krust's loot tables
+  // (the math: 12.5 / 125 = 10.0% vs original 5 / 103 = 4.85%).
+  //
+  // Gems also bumped so the currency payout matches the harder fight.
+  // Doubloon entries are left unscaled — per-kill gold already covers
+  // that lane; double-dipping here would make doubloons dominate the
+  // crate roll and crowd out uniques.
+  uniqueDropWeightMult: 2.5,
   gemDropWeightMult:    1.5,
 } as const
 
