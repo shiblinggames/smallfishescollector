@@ -491,15 +491,18 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // Node id stays 'last_cache' so anyone who's already chosen a kit
+    // keeps their cleared state in raid_node_progress.cleared[]. Only
+    // the player-facing label / copy changes.
     id: 'last_cache',
     type: 'shop',
-    label: 'The Last Cache',
+    label: 'Driftwood Cache',
     flavor: 'A driftwood outfit clinging to a rock just inside the danger line. Two pieces of kit on the counter, take one, leave the other for good.',
     requiresNode: 'smugglers_chart',
     choice: { items: ['gunners_sight', 'reinforced_hull'] },
     detail: {
       description:
-        "Past the beacon chain the chart shows one last drop point, a driftwood shack hammered to a rock just inside the danger line. The keeper has worked this water longer than most and runs the same trick every fence past the strait pulls: two pieces of kit on the counter, take one, leave the other for good. After this the freight runs deeper than any honest captain has charts for.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout alongside the rest of your kit.",
+        "Past the beacon chain the chart shows another drop point, a driftwood shack hammered to a rock just inside the danger line. The keeper has worked this water longer than most and runs the same trick every fence past the strait pulls: two pieces of kit on the counter, take one, leave the other for good. The freight runs deeper than any honest captain has charts for, and there will be more outfits like this one along the way.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout alongside the rest of your kit.",
       dropsNote: 'Pick one. Permanent, equippable, and you cannot come back for the other.',
     },
   },

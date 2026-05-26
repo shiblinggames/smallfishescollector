@@ -75,7 +75,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'crit_damage_mult',    value: 1.15 },
       { type: 'noncrit_damage_mult', value: 0.85 },
     ],
-    source: 'The Last Cache',
+    source: 'Driftwood Cache',
   },
   {
     id: 'reinforced_hull',
@@ -85,7 +85,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     emoji: '🛠️',
     rarity: 'epic',
     effects: [{ type: 'max_hp_mult', value: 1.15 }],
-    source: 'The Last Cache',
+    source: 'Driftwood Cache',
   },
 ]
 
