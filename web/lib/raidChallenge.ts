@@ -125,6 +125,13 @@ export function buildChallengeRaid(base: BossRaidConfig): BossRaidConfig {
     enemies:          scaledEnemies,
     killRewards:      scaledKillRewards,
     loot:             scaleLoot(base.loot),
+    // Challenge variants skip the pre-fight dialogue — the player has
+    // already played the normal raid (challenge unlocks gate on that),
+    // they've seen the story beat. The challenge IS the fight, not the
+    // narrative; making them re-tap through "So another pup thinks..."
+    // every retry would drag. RaidGame's bossDialoguePending gate falls
+    // through cleanly when this is undefined.
+    preFightDialogue: undefined,
   }
 }
 
