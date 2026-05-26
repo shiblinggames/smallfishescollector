@@ -1165,7 +1165,10 @@ export default function ShipHero({
               style={{
                 position: 'fixed', inset: 0, zIndex: 111,
                 display: 'flex',
-                paddingTop: '1rem',
+                // Clear the fixed Nav header (44px mobile, 60px desktop) + iOS
+                // safe-area-top so the modal's top isn't hidden under it when
+                // scrolled.
+                paddingTop: 'calc(env(safe-area-inset-top, 0px) + 76px)',
                 paddingLeft: '1rem',
                 paddingRight: '1rem',
                 // Clear the 60px MobileTabBar + iOS safe-area + a little breathing
