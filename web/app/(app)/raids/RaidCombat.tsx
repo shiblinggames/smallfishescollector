@@ -213,6 +213,11 @@ export default function RaidCombat({
   const nameplate = playerLabel ?? shipName
   // Stats-breakdown popup, opened by tapping the player nameplate
   const [showStats, setShowStats]     = useState(false)
+  // Tappable enemy nameplate → an analog of the Captain's Ledger for the
+  // current enemy: HP / damage range / volley / crit / speed, the themed
+  // ability if any (Carapace etc.), and the enemy's full behavior pattern as
+  // a visible cycle so players can study what punches come when.
+  const [showEnemyStats, setShowEnemyStats] = useState(false)
   // Flee confirmation (real raids only). fleeResult holds the outcome of a
   // failed escape so the modal can show "caught!" before the player dismisses.
   const [fleeOpen, setFleeOpen]       = useState(false)
@@ -1047,15 +1052,23 @@ export default function RaidCombat({
         )}
 
         {/* Enemy HP nameplate — top-left, with circular portrait badge */}
-        <div style={{
-          position: 'absolute', top: 10, left: 10, zIndex: 4,
-          padding: '0.45rem 0.6rem 0.5rem 0.45rem',
-          background: 'rgba(6,12,20,0.9)',
-          border: `1px solid ${isBoss ? '#fbbf24' : '#2a3548'}`,
-          borderRadius: 12,
-          display: 'flex', alignItems: 'center', gap: 8,
-          minWidth: 160,
-        }}>
+        <button
+          type="button"
+          onClick={() => setShowEnemyStats(true)}
+          aria-label={`${enemy.name} — view stats`}
+          style={{
+            position: 'absolute', top: 10, left: 10, zIndex: 4,
+            padding: '0.45rem 0.6rem 0.5rem 0.45rem',
+            background: 'rgba(6,12,20,0.9)',
+            border: `1px solid ${isBoss ? '#fbbf24' : '#2a3548'}`,
+            borderRadius: 12,
+            display: 'flex', alignItems: 'center', gap: 8,
+            minWidth: 160,
+            textAlign: 'left',
+            cursor: 'pointer',
+            font: 'inherit', color: 'inherit',
+          }}
+        >
           {enemy.portrait && (
             <div style={{
               flexShrink: 0, width: 54, height: 54, borderRadius: '50%',
@@ -1091,7 +1104,7 @@ export default function RaidCombat({
             <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
-        </div>
+        </button>
 
         {/* Enemy boat — sits in the water (below the horizon), farther away than the player */}
         <motion.div
@@ -1436,6 +1449,21 @@ export default function RaidCombat({
         )}
       </AnimatePresence>
 
+      {/* Enemy stats — opened by tapping the enemy nameplate. Mirrors the
+          player's Ledger: portrait + name header, stat grid (HP / damage /
+          volley / crit), the themed ability if any, and the full pattern
+          cycle visualised as chips so players can study punch timing. */}
+      <AnimatePresence>
+        {showEnemyStats && (
+          <EnemyStatsPopup
+            enemy={enemy}
+            currentHp={enemyHp}
+            isBoss={isBoss}
+            onClose={() => setShowEnemyStats(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Keyframes (namespaced rc- so they don't collide with the existing raid's globals) */}
       <style>{`
         @keyframes rc-cannon-shot {
@@ -1616,6 +1644,200 @@ function PlayerStatsPopup({
             background: 'rgba(96,165,250,0.14)',
             border: '1px solid rgba(96,165,250,0.45)',
             color: '#90c0ff', borderRadius: 12,
+            fontSize: '0.85rem', letterSpacing: '0.04em', cursor: 'pointer',
+          }}
+        >
+          Close
+        </button>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ── Enemy stats popup ───────────────────────────────────────────────────────
+// Mirrors PlayerStatsPopup for the current enemy. Shows what a player would
+// want to know to read the fight: HP / damage range / volley / crit chance /
+// speed, the themed ability if any, and the full behavior pattern as chips so
+// the cycle is legible. Tapping the backdrop or Close dismisses.
+function EnemyStatsPopup({
+  enemy, currentHp, isBoss, onClose,
+}: {
+  enemy: BroadsideEnemy
+  currentHp: number
+  isBoss: boolean
+  onClose: () => void
+}) {
+  const minVolley = enemy.minDmg * 2
+  const maxVolley = enemy.maxDmg * 2
+  const minCrit = Math.floor(enemy.minDmg * 1.5)
+  const maxCrit = Math.floor(enemy.maxDmg * 1.5)
+  const critPct = Math.round((enemy.critChance ?? 0) * 100)
+  const dr = enemy.damageReduction ?? 0
+  const drPct = Math.round(dr * 100)
+  const abilityName = enemy.abilityName
+
+  const rows: { label: string; value: string; hint: string; color: string }[] = [
+    { label: 'HP',          value: `${currentHp} / ${enemy.hpBase}`,   hint: 'remaining / total hull',         color: '#86efac' },
+    { label: 'Damage',      value: `${enemy.minDmg}–${enemy.maxDmg}`,  hint: 'per normal shot',                color: '#f87171' },
+    { label: 'Volley',      value: `${minVolley}–${maxVolley}`,        hint: '3-charge heavy shot',            color: '#fb923c' },
+    { label: 'Speed',       value: String(enemy.shipSpeed),            hint: 'turn order',                     color: '#60a5fa' },
+    { label: 'Crit Chance', value: `${critPct}%`,                      hint: `${minCrit}–${maxCrit} on crit`,  color: '#fbbf24' },
+  ]
+
+  const ACTION_META: Record<string, { label: string; color: string }> = {
+    reload: { label: 'Reload', color: '#9aa4b2' },
+    fire:   { label: 'Fire',   color: '#f87171' },
+    volley: { label: 'Volley', color: '#fb923c' },
+    dodge:  { label: 'Dodge',  color: '#7dd3fc' },
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 95,
+        background: 'rgba(0,0,0,0.82)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.25rem',
+      }}
+    >
+      <motion.div
+        onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 4 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          width: '100%', maxWidth: 380,
+          background: 'linear-gradient(180deg, #1a0c0c 0%, #0c0606 100%)',
+          border: `1px solid ${isBoss ? 'rgba(251,191,36,0.34)' : 'rgba(239,68,68,0.22)'}`,
+          borderRadius: 20,
+          padding: '1.1rem 1rem 1rem',
+          boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          maxHeight: 'calc(100dvh - 4rem)',
+          overflowY: 'auto',
+        }}
+      >
+        {/* Header — portrait + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          {enemy.portrait && (
+            <div style={{
+              flexShrink: 0, width: 60, height: 60, borderRadius: '50%',
+              border: `2px solid ${isBoss ? '#fbbf24' : ENEMY_COLOR}`,
+              boxShadow: `0 0 10px ${isBoss ? 'rgba(251,191,36,0.45)' : 'rgba(239,68,68,0.4)'}`,
+              overflow: 'hidden',
+              background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08) 0%, rgba(20,40,60,0.85) 70%)',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={enemy.portrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', color: isBoss ? '#fbbf24' : '#c4a96a', letterSpacing: '0.14em', marginBottom: 3 }}>
+              {isBoss ? 'Boss' : 'Enemy'}
+            </p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {enemy.name}
+            </p>
+          </div>
+        </div>
+
+        {/* Stat cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+          {rows.map(r => (
+            <div key={r.label} style={{
+              display: 'flex', flexDirection: 'column', gap: 4,
+              padding: '0.65rem 0.7rem',
+              background: 'rgba(255,255,255,0.025)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderLeft: `3px solid ${r.color}`,
+              borderRadius: 12,
+            }}>
+              <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: r.color, letterSpacing: '0.04em' }}>{r.label}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.05 }}>{r.value}</p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.35 }}>{r.hint}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Themed ability — Carapace / etc., if the enemy has one */}
+        {dr > 0 && abilityName && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#7dd3fc', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Ability
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(56,189,248,0.06)',
+              border: '1px solid rgba(56,189,248,0.22)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(56,189,248,0.1)',
+                border: '1px solid rgba(56,189,248,0.3)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.1rem' }} aria-hidden>🛡️</span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#7dd3fc', lineHeight: 1.15, marginBottom: 2 }}>
+                  {abilityName} −{drPct}%
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  Soaks {drPct}% off every hit you land.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action pattern — full cycle as chips so the rhythm is legible */}
+        <div style={{ marginBottom: 14 }}>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#9a9690', letterSpacing: '0.16em', marginBottom: 6 }}>
+            Pattern · {enemy.pattern.length}-turn cycle
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {enemy.pattern.map((act, i) => {
+              const meta = ACTION_META[act] ?? { label: act, color: '#9a9690' }
+              return (
+                <span key={i} className="font-karla font-700 uppercase" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  fontSize: '0.56rem', letterSpacing: '0.08em',
+                  color: meta.color,
+                  background: `${meta.color}1c`,
+                  border: `1px solid ${meta.color}45`,
+                  borderRadius: 5,
+                  padding: '0.2rem 0.4rem',
+                }}>
+                  <span style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: 0 }}>{i + 1}</span>
+                  {meta.label}
+                </span>
+              )
+            })}
+          </div>
+          <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.45)', lineHeight: 1.4, marginTop: 7 }}>
+            Repeats from turn 1 once the cycle ends. Read the rhythm to time your dodges and volleys.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="font-karla font-700"
+          style={{
+            width: '100%', padding: '0.85rem',
+            background: 'rgba(239,68,68,0.12)',
+            border: '1px solid rgba(239,68,68,0.4)',
+            color: '#fca5a5', borderRadius: 12,
             fontSize: '0.85rem', letterSpacing: '0.04em', cursor: 'pointer',
           }}
         >
