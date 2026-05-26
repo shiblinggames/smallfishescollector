@@ -399,7 +399,8 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Krust's cabin gave up the freight network map: every drop along the coast strung on a single chain of signal beacons. Light the whole chain and it shows where it all ships to.",
     bridge: "The beacons catch as one, and every lane on the map bends to a single point far past the danger line. That is where the freight ends up, and where you are bound.",
     requiresNode: 'finndicate_notice',
-    // image: '/smugglers_chart.png',  // TODO: wire the custom node art once provided
+    // No per-node image — every puzzle node defaults to /puzzle.png via
+    // TYPE_IMAGE in RaidsSection. Override here only for a one-off art.
     puzzle: {
       // 4×4 Lights Out. Light every beacon at once; each tap flips the beacon and
       // its neighbours, so there is no greedy solve. 4×4 is fully solvable with a

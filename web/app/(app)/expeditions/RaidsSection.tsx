@@ -25,7 +25,8 @@ const TYPE_ACCENT: Record<string, string> = {
 // Default art per node type, used when a node has no own `image`. Lets
 // every shop (and any future shops) share one icon without per-node data.
 const TYPE_IMAGE: Record<string, string | undefined> = {
-  shop: '/raidshop.jpeg',
+  shop:   '/raidshop.jpeg',
+  puzzle: '/puzzle.png',
 }
 
 // Winding sea-chart zig-zag (% of width, cycled top→bottom). Map is
