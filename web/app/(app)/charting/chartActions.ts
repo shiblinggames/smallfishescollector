@@ -290,6 +290,25 @@ export async function makeChartGuess(
     if (newTileRow > 10 && !(currentMilestones & 2)) { newMilestones |= 2; bonusDoubloons += 5000 }
   }
 
+  // Top-3 finisher reward (added 2026-05-26): 1st 10k, 2nd 7.5k, 3rd 5k.
+  // Counted PRE-write so this player's position is (priorFinishers + 1).
+  // Tied-second-pair race: count is the prior count for both writers, but
+  // since chart completion is rare across the contest's lifetime the race
+  // is essentially impossible — skip a row lock for simplicity.
+  let completionPosition: number | null = null
+  if (completed) {
+    const { count } = await admin
+      .from('chart_progress')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contestId)
+      .not('completed_at', 'is', null)
+    const pos = (count ?? 0) + 1
+    completionPosition = pos <= 3 ? pos : null
+    if (pos === 1) bonusDoubloons += 10000
+    else if (pos === 2) bonusDoubloons += 7500
+    else if (pos === 3) bonusDoubloons += 5000
+  }
+
   const updateTasks = [
     admin.from('chart_guesses').insert({ user_id: user.id, contest_id: contestId, row, col, correct }),
     admin.from('chart_progress').update({
@@ -303,16 +322,6 @@ export async function makeChartGuess(
       : []),
   ]
   await Promise.all(updateTasks)
-
-  let completionPosition: number | null = null
-  if (completed) {
-    const { count } = await admin
-      .from('chart_progress')
-      .select('id', { count: 'exact', head: true })
-      .eq('contest_id', contestId)
-      .not('completed_at', 'is', null)
-    completionPosition = (count ?? 0) <= 3 ? (count ?? 0) : null
-  }
 
   const newDoubloonTotal = (profile?.doubloons ?? 0) + bonusDoubloons
   const movesLeft = Math.max(0, (progress.moves_granted ?? 0) - newMovesUsed)

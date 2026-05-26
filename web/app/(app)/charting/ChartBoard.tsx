@@ -11,6 +11,9 @@ const EXTEND = 1
 const LINE_COLOR = 'rgba(56,210,130,0.9)'
 const LINE_W = 2
 const MILESTONE_ROWS: Record<number, number> = { 5: 2000, 10: 5000 }
+// Top-3 finisher rewards (paid in chartActions.makeChartGuess on completion).
+// Keep in sync with the server table there.
+const FINISHER_REWARDS: Record<number, number> = { 1: 10000, 2: 7500, 3: 5000 }
 
 function ordinal(n: number) { return ['1st', '2nd', '3rd'][n - 1] ?? `${n}th` }
 function formatDate(iso: string) {
@@ -179,7 +182,7 @@ export default function ChartBoard({
               {ordinal(finisherPosition)} to chart the course
             </p>
             <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a6a50' }}>
-              Cosmetic reward pending beta close
+              +{FINISHER_REWARDS[finisherPosition].toLocaleString()} ⟡ awarded
             </p>
           </div>
         </div>
@@ -383,8 +386,11 @@ export default function ChartBoard({
             <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0c040', marginBottom: '0.4rem' }}>
               {ordinal(finisherPosition)} to Chart the Course!
             </p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', marginBottom: '0.4rem', textShadow: '0 0 18px rgba(240,192,64,0.4)' }}>
+              +{FINISHER_REWARDS[finisherPosition].toLocaleString()} <span style={{ color: '#c8a840' }}>⟡</span>
+            </p>
             <p className="font-karla" style={{ fontSize: '0.8rem', color: '#9a8a70', marginBottom: '1.75rem', lineHeight: 1.5 }}>
-              A special cosmetic item awaits you once the beta closes.
+              Paid straight to your purse. Fair winds, captain.
             </p>
             <button
               onClick={() => setShowReward(false)}
