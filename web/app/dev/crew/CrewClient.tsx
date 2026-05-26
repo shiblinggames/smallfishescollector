@@ -7,7 +7,7 @@ import {
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult,
 } from './actions'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
-import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
+import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META, CREW_EFFECTS } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import TickingNumber from '@/components/TickingNumber'
 
@@ -188,15 +188,32 @@ function CrewPanel({
         }} />
         {/* inner frame line */}
         <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
-        {/* rarity nameplate */}
-        <div className="font-karla font-700" style={{
-          position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
-          fontSize: '0.46rem', letterSpacing: '0.1em', textTransform: 'uppercase',
-          color, background: 'rgba(7,5,3,0.82)', border: `1px solid ${color}aa`,
-          padding: '0.1rem 0.4rem', borderRadius: 3, whiteSpace: 'nowrap',
-        }}>
-          {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}
-        </div>
+        {/* Trait teaser nameplate — replaces the old rarity label (which was
+            redundant with the "COMMON CREW" subtitle next to the name) so the
+            portrait surfaces the more interesting thing players should care
+            about. Headline = first trait; "+N" = how many more are stacked on
+            top, hinting "tap the card to see the rest." Buff/flaw color makes
+            the read instant. Hidden entirely when the crew has no traits. */}
+        {effects.length > 0 && (() => {
+          const head = CREW_EFFECTS[effects[0]]
+          if (!head) return null
+          const extra = effects.length - 1
+          const buff = head.kind === 'buff'
+          const tint = buff ? 'rgba(80,200,130,0.95)' : 'rgba(220,90,90,0.95)'
+          const text = buff ? '#cdf5dc' : '#f7c5c5'
+          return (
+            <div className="font-karla font-700" style={{
+              position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
+              maxWidth: 'calc(100% - 10px)',
+              fontSize: '0.5rem', letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: text, background: 'rgba(7,5,3,0.88)', border: `1px solid ${tint}`,
+              padding: '0.12rem 0.42rem', borderRadius: 3, whiteSpace: 'nowrap',
+              overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {head.name}{extra > 0 ? <span style={{ color: tint, marginLeft: 4 }}>+{extra}</span> : null}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Manifest detail */}
@@ -210,8 +227,7 @@ function CrewPanel({
           </p>
         </div>
 
-        {/* Engraved stats. Action moved to the footer row (below) — squeezing
-            it in here overflowed the card edge at narrow widths. */}
+        {/* Engraved stats — three stat blocks left-aligned. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
           {(['power', 'dodge', 'fortune'] as const).map(k => (
             <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -223,20 +239,16 @@ function CrewPanel({
           ))}
         </div>
 
-        {/* Footer: "View N traits" link on the left, Recruit/Roster Full/Aboard
-            action on the right. Wrap if the card is genuinely too narrow so
-            the button never spills off the edge. */}
-        <div style={{ marginTop: 'auto', paddingTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
-          <span className="font-karla font-700" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: '0.8rem', color: frameAccent,
-            textDecoration: 'underline', textDecorationColor: `${frameAccent}77`, textUnderlineOffset: 3,
-          }}>
-            {effects.length > 0 ? `View ${effects.length} trait${effects.length === 1 ? '' : 's'}` : 'View details'}
-            <span aria-hidden style={{ fontSize: '0.95rem' }}>›</span>
-          </span>
-          {children && <div style={{ display: 'flex', alignItems: 'center' }}>{children}</div>}
-        </div>
+        {/* Footer: action button on its own row. The old "View N traits"
+            link was redundant once the portrait nameplate started teasing
+            the headline trait — players now click the whole card naturally,
+            and the action gets full breathing room so it can't spill off
+            the edge regardless of label length ("Roster Full" / "Aboard"). */}
+        {children && (
+          <div style={{ marginTop: 'auto', paddingTop: '0.4rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>{children}</div>
+          </div>
+        )}
       </div>
     </motion.div>
   )
