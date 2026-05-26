@@ -53,6 +53,7 @@ const DEFAULT_TRACK = '/fishingsoundtrack.ogg'
 // Per-zone soundtracks. A zone not listed here falls back to DEFAULT_TRACK.
 const ZONE_TRACKS: Record<string, string> = {
   open_waters: '/fishingsoundtrackopen.ogg',
+  deep:        '/fishingsoundtrackdeep.ogg',
 }
 
 /** Resolve the soundtrack URL for a fishing zone (null / unknown = default). */
