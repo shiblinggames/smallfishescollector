@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
-import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, RAID_SCORE_TARGET } from '@/lib/expeditions'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
@@ -18,7 +18,7 @@ import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/l
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
-import { getXPProgress, getNavigatorTitle, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
+import { getXPProgress, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -505,8 +505,6 @@ export default function ShipHero({
             >
               <span style={{ fontSize: '0.95rem', color: '#7da0d8', whiteSpace: 'nowrap' }}>
                 <span className="font-cinzel font-700">Lv {xpProgress.level}</span>
-                <span style={{ color: '#4a5e7a' }}> · </span>
-                <span style={{ fontStyle: 'italic', color: '#6a8ab8' }}>{getNavigatorTitle(xpProgress.level)}</span>
               </span>
               <div style={{ width: 84, flexShrink: 0, height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
@@ -573,7 +571,8 @@ export default function ShipHero({
           )}
         </div>
 
-        {/* Scores — big, tap a tile for the breakdown */}
+        {/* Scores — big, tap a tile for the breakdown. Same 0-100 scale + same
+            nautical title ladder on both sides so they're directly comparable. */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <button
             onClick={() => setBreakdownScore('voyage')}
@@ -583,8 +582,10 @@ export default function ShipHero({
             <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#7da0d8', marginBottom: 4 }}>Voyage Score</p>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
               <span className="font-cinzel font-700" style={{ fontSize: '2.25rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</span>
-              <span style={{ fontSize: '0.62rem', color: '#5a5856' }}>ⓘ</span>
+              <span className="font-karla" style={{ fontSize: '0.72rem', color: '#5a6878' }}>/100</span>
+              <span style={{ fontSize: '0.62rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
             </div>
+            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9ab4dc', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(voyageScore)}</p>
           </button>
           <button
             onClick={() => setBreakdownScore('raid')}
@@ -593,9 +594,11 @@ export default function ShipHero({
           >
             <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#d88a6a', marginBottom: 4 }}>Raid Score</p>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-              <span className="font-cinzel font-700" style={{ fontSize: '2.25rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.total}</span>
-              <span style={{ fontSize: '0.62rem', color: '#5a5856' }}>ⓘ</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '2.25rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.score}</span>
+              <span className="font-karla" style={{ fontSize: '0.72rem', color: '#785a4e' }}>/100</span>
+              <span style={{ fontSize: '0.62rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
             </div>
+            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#dca494', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(raidRating.score)}</p>
           </button>
         </div>
 
@@ -1454,9 +1457,9 @@ function StatDelta({ label, cur, next }: { label: string; cur: number; next: num
 
 // ── Nav level info panel ────────────────────────────────────────────────────
 // Inner content of the modal opened from the Lv pill in the ship hero. Shows
-// the navigator title, XP progress to next level, the captain bonuses at the
-// current level, and a preview of the bonuses one level up so the player sees
-// what they're working toward.
+// XP progress to next level, the captain bonuses at the current level, and a
+// preview of the bonuses one level up so the player sees what they're working
+// toward. Nautical titles live on Voyage/Raid Scores now, not nav level.
 function NavLevelInfoPanel({
   level, xpInLevel, xpForLevel, progress, onClose,
 }: {
@@ -1466,7 +1469,6 @@ function NavLevelInfoPanel({
   progress: number
   onClose: () => void
 }) {
-  const navTitle = getNavigatorTitle(level)
   const atMax = level >= MAX_LEVEL
   const xpToNext = atMax ? 0 : Math.max(0, xpForLevel - xpInLevel)
   const currentBonus = navLevelBonuses(level)
@@ -1493,13 +1495,10 @@ function NavLevelInfoPanel({
         </button>
       </div>
 
-      {/* Level + title */}
+      {/* Level — just the number now; titles belong to Voyage/Raid Score. */}
       <div style={{ textAlign: 'center', marginBottom: '1.1rem' }}>
         <p className="font-cinzel font-700" style={{ fontSize: '2.4rem', color: '#7da0d8', lineHeight: 1, textShadow: '0 0 22px rgba(125,160,216,0.35)' }}>
           Lv {level}
-        </p>
-        <p className="font-karla font-500 italic" style={{ fontSize: '0.82rem', color: '#6a8ab8', marginTop: 5 }}>
-          {navTitle}
         </p>
       </div>
 
@@ -1635,6 +1634,20 @@ function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
   return (
     <>
       <BreakdownHeader title="Voyage Score" color="#7090c0" onClose={onClose} />
+
+      {/* Rank banner — shared nautical ladder, same shape as the Raid Score
+          banner so both readouts feel like one system. */}
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem',
+        padding: '0.75rem 0.9rem', marginBottom: '0.85rem',
+        background: 'rgba(112,144,192,0.1)', border: '1px solid rgba(112,144,192,0.3)', borderRadius: 12,
+      }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#9ab4dc', fontStyle: 'italic' }}>{getRankTitle(total)}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', fontFeatureSettings: '"tnum"' }}>
+          {total}<span style={{ color: '#7090c0', fontSize: '0.75rem' }}>/100</span>
+        </p>
+      </div>
+
       <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#9a9488', lineHeight: 1.5, marginBottom: '0.85rem' }}>
         Predicts your crew&apos;s odds of clearing hard daily-voyage events.
       </p>
@@ -1668,12 +1681,9 @@ function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
         ))}
       </div>
 
-      <div style={{ padding: '0.7rem 0.85rem', background: 'rgba(112,144,192,0.08)', border: '1px solid rgba(112,144,192,0.22)', borderRadius: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#9aaecc' }}>Average × 100</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>{total}<span style={{ color: '#7090c0', fontSize: '0.7rem' }}> / 100</span></p>
-        </div>
-      </div>
+      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', lineHeight: 1.45, textAlign: 'center' }}>
+        Score is the average success rate across the three event types, scaled to 100.
+      </p>
     </>
   )
 }
@@ -1687,7 +1697,7 @@ function RaidScoreBreakdown({
   crewPower: number; crewDodge: number; crewFortune: number
   navLevel: number; navBonusPower: number; navBonusDodge: number; navBonusFortune: number; navBonusHp: number
   shipName: string; shipDurability: number; shipMin: number
-  rating: { offense: number; defense: number; total: number }
+  rating: { offense: number; defense: number; total: number; score: number }
   onClose: () => void
 }) {
   const stats = [
@@ -1700,6 +1710,18 @@ function RaidScoreBreakdown({
   return (
     <>
       <BreakdownHeader title="Raid Score" color="#c8704a" onClose={onClose} />
+
+      {/* Rank banner — same 0-100 nautical ladder as Voyage Score. */}
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem',
+        padding: '0.75rem 0.9rem', marginBottom: '0.85rem',
+        background: 'rgba(200,112,74,0.11)', border: '1px solid rgba(200,112,74,0.36)', borderRadius: 12,
+      }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#dca494', fontStyle: 'italic' }}>{getRankTitle(rating.score)}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', fontFeatureSettings: '"tnum"' }}>
+          {rating.score}<span style={{ color: '#c8704a', fontSize: '0.75rem' }}>/100</span>
+        </p>
+      </div>
 
       <p className="font-karla" style={{ fontSize: '0.88rem', color: '#c4bfb6', lineHeight: 1.55, marginBottom: '1rem' }}>
         How tough your crew is in a raid. The higher it climbs, the
@@ -1733,16 +1755,12 @@ function RaidScoreBreakdown({
         </p>
       </div>
 
-      {/* Total */}
-      <div style={{ padding: '0.9rem 0.95rem', background: 'rgba(200,112,74,0.11)', border: '1px solid rgba(200,112,74,0.36)', borderRadius: 12, marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.8rem', color: '#e8a37a' }}>Raid Score</p>
-            <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b88a6e', marginTop: 3 }}>Offense + half your Defense</p>
-          </div>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#f0ede8' }}>{rating.total}</p>
-        </div>
-      </div>
+      {/* Raw total — shown as a small footnote so hardcore players still see
+          the underlying Offense + ½ Defense number, while the headline 0-100
+          score lives in the banner up top. */}
+      <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a6a60', lineHeight: 1.45, textAlign: 'center', marginBottom: '1rem' }}>
+        Raw total <span style={{ color: '#cbb4ad', fontWeight: 600 }}>{rating.total}</span> = Offense + ½ Defense, scaled to {RAID_SCORE_TARGET} for the /100 score.
+      </p>
 
       {/* How to raise it */}
       <div style={{ padding: '0.85rem 0.95rem', background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, marginBottom: '1rem' }}>

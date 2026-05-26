@@ -161,7 +161,39 @@ export interface CombatRating {
   offense: number
   defense: number
   total: number
+  /** 0–100 readiness on the shared nautical ladder (see RANK_TITLES). */
+  score: number
 }
+
+// ── Shared rank ladder ───────────────────────────────────────────────────────
+// One vocabulary for both scores: Voyage Score (0–100) and Raid Score (0–100,
+// derived from CombatRating.total via RAID_SCORE_TARGET). Reuses the seven
+// nautical titles that used to live on nav level — there's only one set of
+// titles in the game so players don't juggle two ladders.
+
+export const RANK_TITLES: { min: number; title: string }[] = [
+  { min: 90, title: 'Legendary Seafarer' },
+  { min: 75, title: 'Admiral'            },
+  { min: 60, title: 'Commodore'          },
+  { min: 45, title: 'Sea Captain'        },
+  { min: 30, title: 'Navigator'          },
+  { min: 15, title: 'First Mate'         },
+  { min: 0,  title: 'Deckhand'           },
+]
+
+export function getRankTitle(score: number): string {
+  return RANK_TITLES.find(t => score >= t.min)?.title ?? 'Deckhand'
+}
+
+// Raw raid totals (offense + defense/2) top out around 220 for a no-compromises
+// endgame loadout (tier-6 ship + Nav 100 + 5 maxed Legendaries with Bulwark +
+// Keen Cutlass). Used to normalise the raw total onto the shared 0–100 ladder
+// so Voyage Score and Raid Score read on the same scale. Revisit only when new
+// CONTENT raises the ceiling: a new ship tier, a new crew rarity above
+// Legendary, the Nav cap above 100, or new high-pct crew effects. Boss
+// difficulty does NOT change this — the score is your setup's strength, not
+// the difficulty of the fight in front of you.
+export const RAID_SCORE_TARGET = 220
 
 // Net raid combat modifiers from crew effects (Stage 2b). Aggregated by
 // resolveDeployedCrew; passed into the damage profile + rating + live combat.
@@ -209,10 +241,12 @@ export function computeCombatRating(
   const takenMult  = Math.max(0.1, 1 - (raidMods?.damageTakenPct ?? 0) / 100)
   const defense    = Math.round(shipDurability * (1 + dodgeBoost) * takenMult) + Math.round(totalFortune * 0.25)
 
+  const total = offense + Math.round(defense * 0.5)
   return {
     offense,
     defense,
-    total: offense + Math.round(defense * 0.5),
+    total,
+    score: Math.min(100, Math.round((total / RAID_SCORE_TARGET) * 100)),
   }
 }
 

@@ -35,7 +35,6 @@ interface Props {
   isPremium: boolean
   level: number
   expeditionLevel: number
-  navigatorTitle: string
   career: CareerStats
   shipTier: number
   shipName: string
@@ -115,7 +114,6 @@ export default function ProfileClient({
   isPremium,
   level,
   expeditionLevel,
-  navigatorTitle,
   career,
   shipTier,
   shipName,
@@ -960,7 +958,7 @@ export default function ProfileClient({
               )}
               {expeditionLevel > 0 && (
                 <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#60a5fa', marginTop: 5 }}>
-                  {navigatorTitle} · Lv {expeditionLevel}
+                  Nav Lv {expeditionLevel}
                 </p>
               )}
               {shipSkinDef && (

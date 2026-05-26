@@ -4,7 +4,7 @@ import ProfileClient from './ProfileClient'
 import { getCrewRoster } from '@/app/dev/crew/actions'
 import { getShip } from '@/lib/ships'
 import { getLevelFromXP } from '@/lib/fishingLevel'
-import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
+import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { isPremiumActive } from '@/lib/premium'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
@@ -65,7 +65,6 @@ export default async function ProfilePage() {
     ...((profile?.unlocked_character_colors as string[] | null) ?? []),
   ]
   const expeditionLevel = getExpeditionLevel(profile?.expedition_xp ?? 0)
-  const navigatorTitle = getNavigatorTitle(expeditionLevel)
   const isPremium = isPremiumActive(profile)
 
   return (
@@ -80,7 +79,6 @@ export default async function ProfilePage() {
           isPremium={isPremium}
           level={level}
           expeditionLevel={expeditionLevel}
-          navigatorTitle={navigatorTitle}
           career={career}
           shipTier={profile?.ship_tier ?? 0}
           shipName={ship.name}

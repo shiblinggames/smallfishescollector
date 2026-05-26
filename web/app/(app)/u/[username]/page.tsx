@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import ProfileClient from './ProfileClient'
 import { notFound } from 'next/navigation'
-import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
+// (nav-level helpers no longer needed here — ProfileClient derives the level itself)
 import { isPremiumActive } from '@/lib/premium'
 import { crewDisplayName } from '@/lib/crewGen'
 import type { ShowcaseCrew } from '@/components/CrewShowcase'

@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition, useRef } from 'react'
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
 import { addCrewMember, removeCrewMember } from '@/app/(app)/social/actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
-import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
+import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import { getHook, hookGlowClass } from '@/lib/hooks'
 import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -105,7 +105,6 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
 
   const fishingLevel = getLevelFromXP(stats.fishingXP)
   const expLevel = getExpeditionLevel(stats.expeditionXP)
-  const expTitle = getNavigatorTitle(expLevel)
 
   const rod  = getRod(gear.rodTier)
   const reel = getReel(gear.reelTier)
@@ -452,7 +451,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
               </p>
               {expLevel > 0 && (
                 <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#60a5fa', marginTop: 5 }}>
-                  {expTitle} · Lv {expLevel}
+                  Nav Lv {expLevel}
                 </p>
               )}
               {shipSkin && (

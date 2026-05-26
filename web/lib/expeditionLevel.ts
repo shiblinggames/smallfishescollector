@@ -38,21 +38,10 @@ export function getXPProgress(xp: number): {
   return { level, progress: xpInLevel / xpForLevel, xpInLevel, xpForLevel }
 }
 
-// ── Navigator titles ─────────────────────────────────────────────────────────
-
-const TITLES: { minLevel: number; title: string }[] = [
-  { minLevel: 100, title: 'Legendary Seafarer' },
-  { minLevel: 75,  title: 'Admiral'            },
-  { minLevel: 50,  title: 'Commodore'          },
-  { minLevel: 30,  title: 'Sea Captain'        },
-  { minLevel: 15,  title: 'Navigator'          },
-  { minLevel: 5,   title: 'First Mate'         },
-  { minLevel: 1,   title: 'Deckhand'           },
-]
-
-export function getNavigatorTitle(level: number): string {
-  return TITLES.find(t => level >= t.minLevel)?.title ?? 'Deckhand'
-}
+// Note: the seven nautical titles (Deckhand → Legendary Seafarer) used to
+// live here tied to nav level. They were moved to lib/expeditions.ts as
+// RANK_TITLES / getRankTitle so Voyage Score and Raid Score share ONE ladder
+// and players don't juggle two title systems. Nav level is now just a number.
 
 // ── Nav-level → combat bonuses ──────────────────────────────────────────────
 // Veteran-captain stat boost applied on top of ship + crew totals. Per level:
