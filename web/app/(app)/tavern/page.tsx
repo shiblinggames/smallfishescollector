@@ -40,9 +40,10 @@ const cachedChartState = cache(() => getChartState())
 // ── Sections ────────────────────────────────────────────────────────────────
 
 async function DailySection() {
-  const [profile, fotdAttempt] = await Promise.all([
+  const [profile, fotdAttempt, chartState] = await Promise.all([
     getCurrentProfile(),
     cachedFotdAttempt(),
+    cachedChartState(),
   ])
   const today = new Date().toISOString().split('T')[0]
   const isPremium = isPremiumActive(profile)
@@ -52,6 +53,15 @@ async function DailySection() {
     (!isPremium || profile?.last_pack_claim === today)
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 6)
   const tideRunCommitted = profile?.tide_run_committed_date === today
+
+  // Chart the Course folded into Daily on 2026-05-26 — used to live in its
+  // own "Contest" section. The daily-grant model (1 move per day, no stacking)
+  // makes it a daily login ritual like the others, not a sprint race.
+  const hasChart = chartState && !('error' in chartState)
+  const chartCompleted = hasChart && !!chartState.progress.completed_at
+  const chartMovesLeft = hasChart ? chartState.movesAvailable : 0
+  const chartTilesCharted = hasChart ? chartState.progress.path_index : 0
+  const chartPathLength = hasChart ? chartState.pathLength : 0
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -92,38 +102,25 @@ async function DailySection() {
         artMaxHeight={68}
         accent="#5da7d4"
       />
-    </div>
-  )
-}
-
-async function ContestSection() {
-  const chartState = await cachedChartState()
-  const hasContest = chartState && !('error' in chartState)
-  if (!hasContest) return null // no active contest → render nothing
-  const chartCompleted = !!chartState.progress.completed_at
-  const chartTilesCharted = chartState.progress.path_index
-  const chartPathLength = chartState.pathLength
-  const chartMovesLeft = chartState.movesAvailable
-  return (
-    <div>
-      <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Contest</p>
-      <GameCard
-        href="/charting"
-        eyebrow="Contest"
-        title="Chart the Course"
-        statusText={
-          chartCompleted ? 'Voyage complete ✓' :
-          chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength} tiles · ${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} left` :
-          chartMovesLeft > 0 ? `${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} available` :
-          'Chart a path from sea to shore'
-        }
-        info={[]}
-        icon={<ChartIcon />}
-        completed={chartCompleted}
-        variant="featured"
-        art="/chartthecourse.png"
-        accent="#f0c040"
-      />
+      {hasChart && (
+        <GameCard
+          href="/charting"
+          eyebrow="Daily"
+          title="Chart the Course"
+          statusText={
+            chartCompleted ? 'Path charted ✓' :
+            chartMovesLeft > 0 && chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength - 1} tiles · move ready` :
+            chartMovesLeft > 0 ? 'Today’s move ready' :
+            'Come back tomorrow'
+          }
+          info={[]}
+          icon={<ChartIcon />}
+          completed={chartCompleted}
+          variant="compact"
+          art="/chartthecourse.png"
+          accent="#f0c040"
+        />
+      )}
     </div>
   )
 }
@@ -195,19 +192,15 @@ export default async function TavernPage() {
             <RecruitCard />
           </div>
 
-          {/* Daily — label paints with shell; the 3 cards stream in */}
+          {/* Daily — label paints with shell; the cards stream in. Includes
+              Chart the Course (folded in 2026-05-26 once it became a daily
+              login ritual rather than a contest sprint). */}
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
             <Suspense fallback={<DailyCardsSkeleton />}>
               <DailySection />
             </Suspense>
           </div>
-
-          {/* Contest — entire section (incl. label) streams; renders null when
-              there's no active contest, so no empty label flicker. */}
-          <Suspense fallback={null}>
-            <ContestSection />
-          </Suspense>
 
           {/* Games — same pattern as Daily */}
           <div>
@@ -243,7 +236,7 @@ export default async function TavernPage() {
 function DailyCardsSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3">
-      {[0, 1, 2].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
+      {[0, 1, 2, 3].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
     </div>
   )
 }
