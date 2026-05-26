@@ -43,14 +43,21 @@ export interface RunBuff {
 
 // name and image come from ships.ts — combat-specific stats defined here only.
 // Used by raids and daily voyages (for displayed crew score, captain bonuses).
+//
+// HP curve steepens at the high end (tuned 2026-05-26): each mid-to-late
+// upgrade should buy a felt-bigger survivability bump than its predecessor,
+// so the 22k→80k→200k cost climb feels rewarded. Step gains: +7, +8, +10,
+// +15, +25, +40. Galleon (+42% HP vs Brigantine) and Man-o-War (+47% HP vs
+// Galleon) are the headline endgame jumps. Early game (Rowboat → Schooner)
+// is unchanged.
 const EXPEDITION_COMBAT_STATS: Record<number, Omit<ShipStats, 'name' | 'image'>> = {
-  0: { durability: 20, speed: 2,  crewSlots: 1, minDamage: 1  },
-  1: { durability: 27, speed: 3,  crewSlots: 1, minDamage: 2  },
-  2: { durability: 35, speed: 4,  crewSlots: 2, minDamage: 3  },
-  3: { durability: 45, speed: 5,  crewSlots: 2, minDamage: 4  },
-  4: { durability: 55, speed: 6,  crewSlots: 3, minDamage: 6  },
-  5: { durability: 70, speed: 8,  crewSlots: 4, minDamage: 8  },
-  6: { durability: 90, speed: 11, crewSlots: 5, minDamage: 11 },
+  0: { durability:  20, speed: 2,  crewSlots: 1, minDamage: 1  },
+  1: { durability:  27, speed: 3,  crewSlots: 1, minDamage: 2  },
+  2: { durability:  35, speed: 4,  crewSlots: 2, minDamage: 3  },
+  3: { durability:  45, speed: 5,  crewSlots: 2, minDamage: 4  },
+  4: { durability:  60, speed: 6,  crewSlots: 3, minDamage: 6  },
+  5: { durability:  85, speed: 8,  crewSlots: 4, minDamage: 8  },
+  6: { durability: 125, speed: 11, crewSlots: 5, minDamage: 11 },
 }
 
 export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntries(
