@@ -4009,8 +4009,11 @@ export default function FishingGame({
               size, so a tall ResultCard (long fun-fact, ancient banner, pills
               stack) would expand this div and push the action button row + the
               4 bottom tiles down behind the MobileTabBar. With these two, the
-              card scrolls inside its slot and the siblings stay locked. */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              card scrolls inside its slot and the siblings stay locked.
+              .scrollbar-hide hides the gutter scrollbar desktop browsers
+              render when overflow triggers — mobile already uses overlay
+              scrollbars, so this just brings desktop in line. */}
+          <div className="scrollbar-hide" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <AnimatePresence mode="wait">
 
               {/* ── IDLE / CASTING ── */}
