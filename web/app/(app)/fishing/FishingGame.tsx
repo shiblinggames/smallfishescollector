@@ -1054,7 +1054,19 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   }, [sizeIn, hasSize])
   const sizePercentile = showRange ? Math.max(0, Math.min(1, (sizeIn - sizeMin!) / (sizeMax! - sizeMin!))) : 0.5
   const showTrophyPill = !isAncient && sizeTier != null && tierShowsPill(sizeTier)
-  const showPBPill = !isAncient && isPB
+  const isPBMoment = !isAncient && isPB
+
+  // PB overlay is transient — sits over the fish image like a victory ribbon
+  // for ~2.6s, then fades out so the rest of the card can be inspected. Stays
+  // mounted long enough for the count-up to land and the player to register
+  // the moment without freezing the celebration on screen forever.
+  const [pbOverlayVisible, setPbOverlayVisible] = useState(isPBMoment)
+  useEffect(() => {
+    if (!isPBMoment) return
+    setPbOverlayVisible(true)
+    const t = setTimeout(() => setPbOverlayVisible(false), 2600)
+    return () => clearTimeout(t)
+  }, [isPBMoment])
 
   // Ancient deep gets its own palette + label, overriding the gold legendary look
   const r = isAncient
@@ -1429,12 +1441,16 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             trophy badge) get the visual weight; fun fact sits below as
             flavor, not as the focus. */}
         <div style={{ position: 'relative', zIndex: 2, padding: '1rem 1rem 1.1rem' }}>
-          {/* Big fish image — entrance bounce so it FEELS like a reveal. */}
+          {/* Big fish image — entrance bounce so it FEELS like a reveal.
+              Wrapped in a position:relative so the transient PB ribbon can
+              overlay directly on top of the fish (auto-dismisses ~2.6s
+              after the catch). */}
           <motion.div
             initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
             transition={{ type: 'spring', stiffness: 220, damping: 14, delay: 0.08 }}
             style={{
+              position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: '0.55rem',
             }}
@@ -1446,6 +1462,42 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 filter: `drop-shadow(0 8px 20px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 28px ${r.color}40)` : ''}`,
               }}
             />
+
+            {/* PB ribbon — overlays the fish on a personal-best catch, then
+                fades out so the rest of the card can be read. Plain-English
+                copy ("Your biggest yet!") for non-jargon clarity; pulses the
+                first half-second so the eye catches it as it arrives. */}
+            <AnimatePresence>
+              {isPBMoment && pbOverlayVisible && (
+                <motion.div
+                  key="pb-overlay"
+                  initial={{ opacity: 0, y: 8, scale: 0.85 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 18, delay: 0.6 }}
+                  className="font-karla font-700 uppercase"
+                  style={{
+                    position: 'absolute', top: '38%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    padding: '0.4rem 0.85rem', borderRadius: 999,
+                    fontSize: '0.66rem', letterSpacing: '0.16em',
+                    color: '#5eead4',
+                    background: 'linear-gradient(180deg, rgba(15,30,28,0.96) 0%, rgba(8,18,18,0.96) 100%)',
+                    border: '1px solid rgba(94,234,212,0.7)',
+                    boxShadow: '0 0 18px rgba(94,234,212,0.5), 0 6px 22px rgba(0,0,0,0.55)',
+                    whiteSpace: 'nowrap', pointerEvents: 'none',
+                    zIndex: 5,
+                  }}
+                >
+                  <span aria-hidden style={{ fontSize: '0.84rem' }}>🏆</span>
+                  <span>Your biggest yet!</span>
+                  {previousBest != null && (
+                    <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Name. Scientific name dropped 2026-05-26 — players don't read
@@ -1471,10 +1523,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 className="font-cinzel font-700"
                 style={{
                   fontSize: '2.15rem', lineHeight: 1,
-                  color: showPBPill ? '#5eead4' : sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#93c5fd' : '#f0ede8',
-                  textShadow: showPBPill
-                    ? '0 0 22px rgba(94,234,212,0.65), 0 0 44px rgba(94,234,212,0.3)'
-                    : sizeTier === 'trophy'
+                  color: sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#93c5fd' : '#f0ede8',
+                  textShadow: sizeTier === 'trophy'
                     ? '0 0 22px rgba(251,191,36,0.7), 0 0 44px rgba(251,191,36,0.35)'
                     : sizeTier === 'large'
                     ? '0 0 18px rgba(96,165,250,0.55)'
@@ -1485,35 +1535,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               >
                 {formatFishLength(displaySize)}
               </span>
-
-              {/* PB celebration — sits IN the size hero, not as a pill in the
-                  notification row. Plain-English ("Your biggest yet!") so
-                  newcomers don't have to know what "PB" means. Springs in
-                  after the count-up settles so the number lands first, then
-                  the celebration arrives. */}
-              {showPBPill && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 360, damping: 18, delay: 0.55 }}
-                  className="font-karla font-700 uppercase"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    marginTop: 6, padding: '0.22rem 0.6rem', borderRadius: 999,
-                    fontSize: '0.6rem', letterSpacing: '0.14em',
-                    color: '#5eead4',
-                    background: 'linear-gradient(180deg, rgba(45,212,191,0.22) 0%, rgba(45,212,191,0.05) 100%), #04141a',
-                    border: '1px solid rgba(45,212,191,0.5)',
-                    boxShadow: '0 0 14px rgba(45,212,191,0.28)',
-                  }}
-                >
-                  <span aria-hidden style={{ fontSize: '0.72rem' }}>🏆</span>
-                  <span>Your biggest yet!</span>
-                  {previousBest != null && (
-                    <span style={{ color: '#99f6e4', letterSpacing: 0 }}>+{(sizeIn - previousBest).toFixed(1)} in</span>
-                  )}
-                </motion.div>
-              )}
 
               {/* Range bar — only when there's a real range. Slim track with
                   a glowing needle at the catch's percentile. Labels at the
