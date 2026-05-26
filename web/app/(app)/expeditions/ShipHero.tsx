@@ -1165,7 +1165,13 @@ export default function ShipHero({
               style={{
                 position: 'fixed', inset: 0, zIndex: 111,
                 display: 'flex',
-                padding: '1rem',
+                paddingTop: '1rem',
+                paddingLeft: '1rem',
+                paddingRight: '1rem',
+                // Clear the 60px MobileTabBar + iOS safe-area + a little breathing
+                // room, so a tall breakdown modal isn't clipped by the bottom nav
+                // when scrolled to its end.
+                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 overscrollBehavior: 'contain',
