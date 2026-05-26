@@ -40,7 +40,7 @@ import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
-import { formatFishLength, tierShowsPill, TIER_LABEL, type FishSizeTier } from '@/lib/fishSize'
+import { formatFishLength, tierShowsPill, type FishSizeTier } from '@/lib/fishSize'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
@@ -1039,7 +1039,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     if (!hasSize) return
     let raf = 0
     let start = 0
-    const dur = 700
+    const dur = 550
     const target = sizeIn
     const tick = (t: number) => {
       if (!start) start = t
@@ -1187,8 +1187,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             const accent = isOnFire ? '#fb923c' : '#fbbf24'
             const accentRgb = isOnFire ? '251,146,60' : '251,191,36'
             const glow = `0 0 ${10 + (s - 1) * 3}px rgba(${accentRgb},${0.30 + (s - 1) * 0.04})`
-            const basePerfectBonus = Math.round((xpGained - streakBonusXP) * 0.2 / 1.2)
-            const totalXp = basePerfectBonus + streakBonusXP
             return (
               <div style={{ position: 'relative', display: 'inline-flex' }}>
                 {/* Ignition burst rings — fire on first time hitting streak 3 */}
@@ -1226,9 +1224,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 >
                   <span>{isOnFire ? '🔥' : '⭐'}</span>
                   <span>{isOnFire ? 'On Fire' : 'Perfect'}</span>
-                  {totalXp > 0 && (
-                    <span style={{ color: '#86efac', letterSpacing: 0 }}>+{totalXp} XP</span>
-                  )}
                   {perfectStreak >= 2 && (
                     <span style={{ color: accent, letterSpacing: 0, textShadow: `0 0 8px rgba(${accentRgb},0.6)` }}>×{perfectStreak}</span>
                   )}
@@ -1413,29 +1408,35 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           />
         )}
 
-        {/* Header band — just the rarity tag + "New Species" if applicable.
-            Zone label dropped (player already knows what zone they're in). */}
-        <div className="px-4 py-2 flex items-center justify-center gap-2"
-          style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
-          <span className="font-karla font-700 uppercase tracking-[0.18em]"
-            style={{
-              fontSize: '0.58rem', color: r.color,
-              background: `${r.color}1c`, border: `1px solid ${r.color}45`,
-              padding: '0.18rem 0.6rem', borderRadius: '2rem',
-            }}>
-            {r.label}{rarity >= 4 ? ' ✦' : ''}
-          </span>
-          {isNewSpecies && (
-            <motion.span
-              initial={{ scale: 0 }} animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }}
-              className="font-karla font-700 uppercase tracking-[0.18em]"
-              style={{ fontSize: '0.58rem', color: '#fde68a',
-                background: 'rgba(253,230,138,0.15)', border: '1px solid rgba(253,230,138,0.4)',
-                padding: '0.18rem 0.6rem', borderRadius: '2rem' }}
-            >New ✦</motion.span>
-          )}
-        </div>
+        {/* Header band — rarity tag + "New Species" if applicable. Hidden
+            entirely on common catches that aren't new species: that's the
+            most-frequent path, and the band was a whole row of chrome just
+            to say "yeah, normal one." Epic+ rarity gets the band (chrome
+            reinforces the moment); a common first-catch gets the band so
+            the New badge has a home. Zone label dropped long ago. */}
+        {(rarity >= 2 || isNewSpecies) && (
+          <div className="px-4 py-2 flex items-center justify-center gap-2"
+            style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
+            <span className="font-karla font-700 uppercase tracking-[0.18em]"
+              style={{
+                fontSize: '0.58rem', color: r.color,
+                background: `${r.color}1c`, border: `1px solid ${r.color}45`,
+                padding: '0.18rem 0.6rem', borderRadius: '2rem',
+              }}>
+              {r.label}{rarity >= 4 ? ' ✦' : ''}
+            </span>
+            {isNewSpecies && (
+              <motion.span
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.2 }}
+                className="font-karla font-700 uppercase tracking-[0.18em]"
+                style={{ fontSize: '0.58rem', color: '#fde68a',
+                  background: 'rgba(253,230,138,0.15)', border: '1px solid rgba(253,230,138,0.4)',
+                  padding: '0.18rem 0.6rem', borderRadius: '2rem' }}
+              >New ✦</motion.span>
+            )}
+          </div>
+        )}
 
         {/* Body — fish is the hero, but the card has to fit on screen
             without scrolling. Tight top/bottom padding + a shrunken image
@@ -1450,7 +1451,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <motion.div
             initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 220, damping: 14, delay: 0.08 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.04 }}
             style={{
               position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1486,7 +1487,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                       initial={{ opacity: 0, y: 8, scale: 0.85 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                      transition={{ type: 'spring', stiffness: 320, damping: 18, delay: 0.6 }}
+                      transition={{ type: 'spring', stiffness: 340, damping: 18, delay: 0.45 }}
                       className="font-karla font-700 uppercase"
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 7,
@@ -1531,7 +1532,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.18 }}
+              transition={{ duration: 0.24, delay: 0.1 }}
               style={{ textAlign: 'center', marginBottom: '0.5rem' }}
             >
               <span
@@ -1588,26 +1589,17 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                       }}
                     />
                   </div>
+                  {/* End-of-range labels only. Tier label is redundant with
+                      the colored pill above + the needle's own tier color. */}
                   <div className="flex justify-between" style={{ marginTop: 4, fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
                     <span>{formatFishLength(sizeMin!)}</span>
-                    <span style={{ color: sizeTier && tierShowsPill(sizeTier) ? (sizeTier === 'trophy' ? '#fbbf24' : '#60a5fa') : '#7a7060' }}>
-                      {sizeTier ? TIER_LABEL[sizeTier] : ''}
-                    </span>
                     <span>{formatFishLength(sizeMax!)}</span>
                   </div>
                 </div>
               )}
-
-              {/* Previous-record line — shown when this catch DIDN'T beat
-                  the record, so the player sees what they're chasing.
-                  Plain "Largest you've caught" copy so it reads to anyone.
-                  Skipped on PB (the in-card celebration above covers it)
-                  and on first-catch (nothing to compare against yet). */}
-              {!isAncient && !isPB && previousBest != null && (
-                <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5856', marginTop: 6, letterSpacing: '0.06em' }}>
-                  Largest you&apos;ve caught: <span style={{ color: '#9a8870' }}>{formatFishLength(previousBest)}</span>
-                </p>
-              )}
+              {/* "Largest you've caught" caption removed — the collection
+                  drawer now owns per-species PB display. Result card stays
+                  focused on THIS catch. */}
             </motion.div>
           )}
 
@@ -1618,7 +1610,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, delay: 0.32 }}
+              transition={{ duration: 0.22, delay: 0.18 }}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
                 marginBottom: '0.45rem',
@@ -1627,7 +1619,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 10px rgba(240,192,64,0.32)' }}>
                 {fish.sell_value.toLocaleString()}<span style={{ fontSize: '0.78rem', marginLeft: 3 }}>⟡</span>
               </span>
-              {xpGained > 0 && !isPerfect && (
+              {xpGained > 0 && (
                 <>
                   <span style={{ color: '#3a3835', fontSize: '0.7rem' }}>·</span>
                   <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#86efac', letterSpacing: '0.04em' }}>
