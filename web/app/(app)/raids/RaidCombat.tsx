@@ -1255,19 +1255,23 @@ export default function RaidCombat({
           }}
         >
           <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
-            {/* Elite aura — a soft pulsing violet radial behind the ship sprite
-                so an elite enemy reads as "this one is different" the moment
-                it slides on screen. Pure decoration; combat math doesn't see
-                it. Skipped on the boss (the boss has its own gold treatment
-                and a Phase 3 multi-phase visual). */}
+            {/* Elite aura — a soft pulsing violet radial behind the ship
+                sprite so an elite enemy reads as "this one is different"
+                from the moment it slides on screen. Combined with the
+                nameplate chrome (violet border + ELITE badge + affix
+                name) this is the only OTHER tell on the battle area; the
+                earlier floating pill duplicated the nameplate text and
+                cluttered the middle of the screen. Skipped on the boss
+                (the boss has its own gold treatment and a Phase 3
+                multi-phase visual). */}
             {isElite && !isBoss && (
               <motion.div
                 aria-hidden
-                animate={{ opacity: [0.55, 0.85, 0.55], scale: [0.98, 1.04, 0.98] }}
+                animate={{ opacity: [0.7, 1, 0.7], scale: [0.96, 1.06, 0.96] }}
                 transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
-                  position: 'absolute', inset: '-22%',
-                  background: 'radial-gradient(circle at 50% 55%, rgba(167,139,250,0.55) 0%, rgba(167,139,250,0.18) 45%, transparent 70%)',
+                  position: 'absolute', inset: '-30%',
+                  background: 'radial-gradient(circle at 50% 55%, rgba(167,139,250,0.7) 0%, rgba(167,139,250,0.28) 40%, transparent 72%)',
                   pointerEvents: 'none', zIndex: 0,
                 }}
               />
@@ -1280,38 +1284,13 @@ export default function RaidCombat({
               style={{
                 width: '100%', display: 'block', position: 'relative', zIndex: 1,
                 transform: 'scaleX(-1)',  // face the player
-                // Elites also pick up a violet drop-shadow halo so the ship
-                // sprite itself sells the "elite" read, not just the
-                // background aura. Layered on top of the existing shadow.
-                filter: `drop-shadow(0 3px 6px rgba(0,0,0,0.35))${isElite && !isBoss ? ' drop-shadow(0 0 14px rgba(167,139,250,0.85))' : ''} ${isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)'}`,
+                // Elites pick up a violet drop-shadow halo on the sprite
+                // itself so the silhouette reads as "lit up" even outside
+                // the aura. Layered on top of the existing dark shadow.
+                filter: `drop-shadow(0 3px 6px rgba(0,0,0,0.35))${isElite && !isBoss ? ' drop-shadow(0 0 16px rgba(167,139,250,0.95))' : ''} ${isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)'}`,
                 pointerEvents: 'none',
               }}
             />
-            {/* Floating ELITE + affix tag above the ship — reinforces the
-                nameplate read so a player looking at the battle area (not
-                the stat sidebar) still sees what they're up against. */}
-            {isElite && !isBoss && affix && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.4 }}
-                style={{
-                  position: 'absolute', top: -22, left: '50%', transform: 'translateX(-50%)',
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '0.18rem 0.5rem',
-                  background: 'rgba(20,12,32,0.85)',
-                  border: '1px solid rgba(167,139,250,0.65)',
-                  borderRadius: 999,
-                  boxShadow: '0 0 10px rgba(167,139,250,0.4)',
-                  whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 2,
-                }}
-              >
-                <span aria-hidden style={{ fontSize: '0.6rem', color: '#a78bfa' }}>✦</span>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', color: '#c4b5fd', letterSpacing: '0.14em' }}>
-                  Elite · {affix.name}
-                </span>
-              </motion.div>
-            )}
             {/* Explosion burst on impact — overlays the enemy hull */}
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
