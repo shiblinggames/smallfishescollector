@@ -68,7 +68,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'gunners_sight',
     name: "Gunner's Sight",
     description: '+15% crit damage, but normal shots hit for 15% less. A trade for the steady-handed.',
-    image: null,
+    image: '/gunnerssight.png',
     emoji: '🎯',
     rarity: 'epic',
     effects: [
@@ -81,7 +81,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'reinforced_hull',
     name: 'Reinforced Hull',
     description: '+15% max HP at the start of every raid. Heavier strakes, slower to sink.',
-    image: null,
+    image: '/reinforcedhull.png',
     emoji: '🛠️',
     rarity: 'epic',
     effects: [{ type: 'max_hp_mult', value: 1.15 }],
