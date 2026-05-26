@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
@@ -9,26 +8,24 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel, getNavigatorTitle } from '@/lib/expeditionLevel'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { isPremiumActive } from '@/lib/premium'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
 
 export default async function ProfilePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
 
+  // Profile via the request-scoped cached loader (lib/userData.ts).
   const [
-    { data: profile },
+    profile,
     crewRoster,
     { data: rarestFishRows },
     { data: allFishSpecies },
     { data: careerAgg },
   ] = await Promise.all([
-    supabase.from('profiles')
-      .select('packs_available, doubloons, gems, username, username_changed, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, ship_tier, ship_name, rod_tier, reel_tier, hook_tier, equipped_ship_skin, equipped_special, character_color, unlocked_character_colors, unlocked_badges, equipped_badges, trophy_catches, equipped_boat, equipped_hat, avatar_bg_color, avatar_border_color, unlocked_avatar_specials, profile_bg, fishing_casts, total_perfects, highest_raid_damage')
-      .eq('id', user.id)
-      .single(),
+    getCurrentProfile(),
     getCrewRoster(),
     admin.from('fish_collection')
       .select('fish_species(id, name, bite_rarity, habitat)')

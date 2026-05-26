@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
@@ -12,79 +12,167 @@ import RecruitCard from './RecruitCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
 import { CHARACTER_COLORS } from '@/lib/characters'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { SkeletonBox } from '@/components/Skeleton'
 
-export default async function TavernPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+// Same streaming pattern as /expeditions: shell + Nav paint as soon as profile
+// arrives, then each card-group section streams in via its own Suspense
+// boundary. Shared deps go through cache() so each section fetches what it
+// needs without duplicate Supabase calls.
 
+const cachedFotdAttempt = cache(async () => {
+  const user = await getCurrentUser()
+  if (!user) return null
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
+  const { data } = await admin
+    .from('daily_fish_attempts')
+    .select('solved, guesses')
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .single()
+  return data
+})
 
-  const [{ data: profile }, { data: fotdAttempt }, dailyWagered, slotsDailyWagered, chartState] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, fotd_streak, last_daily_claim, last_pack_claim, is_premium, premium_expires_at, ship_tier, hook_tier, fishing_date, fishing_casts, has_seen_welcome, has_seen_setup, character_color, unlocked_character_colors, username, gems, tide_run_committed_date').eq('id', user.id).single(),
-    admin.from('daily_fish_attempts').select('solved, guesses').eq('user_id', user.id).eq('date', today).single(),
-    getDailyWagered(),
-    getSlotsDailyWagered(),
-    getChartState(),
+const cachedDailyWagered = cache(() => getDailyWagered())
+const cachedSlotsDailyWagered = cache(() => getSlotsDailyWagered())
+const cachedChartState = cache(() => getChartState())
+
+// ── Sections ────────────────────────────────────────────────────────────────
+
+async function DailySection() {
+  const [profile, fotdAttempt] = await Promise.all([
+    getCurrentProfile(),
+    cachedFotdAttempt(),
   ])
-
+  const today = new Date().toISOString().split('T')[0]
   const isPremium = isPremiumActive(profile)
-
   const baseAmount = isPremium ? 100 : 50
   const allClaimed =
     profile?.last_daily_claim === today &&
     (!isPremium || profile?.last_pack_claim === today)
-
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 6)
+  const tideRunCommitted = profile?.tide_run_committed_date === today
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <GameCard
+        href="/tavern/daily-bonus"
+        eyebrow="Daily"
+        title="Daily Bonus"
+        statusText={allClaimed ? 'Come back tomorrow' : `${baseAmount} ⟡ available`}
+        info={[]}
+        icon={<CoinIcon />}
+        completed={allClaimed}
+        variant="compact"
+        art="/dailybonus.png"
+        accent="#f0c040"
+      />
+      <GameCard
+        href="/tavern/fish-of-the-day"
+        eyebrow="Daily"
+        title="Fish of the Day"
+        statusText={fotdDone ? 'Come back tomorrow' : 'Guess the mystery fish'}
+        info={[]}
+        icon={<FishIcon />}
+        completed={fotdDone}
+        streak={profile?.fotd_streak ?? 0}
+        variant="compact"
+        art="/fishoftheday.png"
+        accent="#60a5fa"
+      />
+      <GameCard
+        href="/tavern/tide-run"
+        eyebrow="Daily"
+        title="Tide Run"
+        statusText={tideRunCommitted ? 'Today’s run committed — play freely' : 'Outrun pursuit, commit one run a day'}
+        info={[]}
+        icon={<BoatIcon />}
+        variant="compact"
+        art="/boatrun.png"
+        artMaxHeight={68}
+        accent="#5da7d4"
+      />
+    </div>
+  )
+}
+
+async function ContestSection() {
+  const chartState = await cachedChartState()
+  const hasContest = chartState && !('error' in chartState)
+  if (!hasContest) return null // no active contest → render nothing
+  const chartCompleted = !!chartState.progress.completed_at
+  const chartTilesCharted = chartState.progress.path_index
+  const chartPathLength = chartState.pathLength
+  const chartMovesLeft = chartState.movesAvailable
+  return (
+    <div>
+      <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Contest</p>
+      <GameCard
+        href="/charting"
+        eyebrow="Contest"
+        title="Chart the Course"
+        statusText={
+          chartCompleted ? 'Voyage complete ✓' :
+          chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength} tiles · ${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} left` :
+          chartMovesLeft > 0 ? `${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} available` :
+          'Chart a path from sea to shore'
+        }
+        info={[]}
+        icon={<ChartIcon />}
+        completed={chartCompleted}
+        variant="featured"
+        art="/chartthecourse.png"
+        accent="#f0c040"
+      />
+    </div>
+  )
+}
+
+async function GamesSection() {
+  const [dailyWagered, slotsDailyWagered] = await Promise.all([
+    cachedDailyWagered(),
+    cachedSlotsDailyWagered(),
+  ])
   const crownCapReached = dailyWagered >= DAILY_CAP
   const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
-  const tideRunCommitted = profile?.tide_run_committed_date === today
-  const hasContest = chartState && !('error' in chartState)
-  const chartCompleted = hasContest && !!chartState.progress.completed_at
-  const chartTilesCharted = hasContest ? chartState.progress.path_index : 0
-  const chartPathLength = hasContest ? chartState.pathLength : 0
-  const chartMovesLeft = hasContest ? chartState.movesAvailable : 0
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <GameCard
+        href="/tavern/crown-and-anchor"
+        eyebrow="Game"
+        title="Crown & Anchor"
+        statusText={crownCapReached ? 'Daily limit reached' : 'Roll dice, match your symbol'}
+        info={[]}
+        icon={<AnchorIcon />}
+        completed={crownCapReached}
+        variant="compact"
+        art="/crownandanchor.png"
+        accent="#fb923c"
+      />
+      <GameCard
+        href="/tavern/slots"
+        eyebrow="Game"
+        title="Fish Slots"
+        statusText={slotsCapReached ? 'Daily limit reached' : 'Match three fish to win'}
+        info={[]}
+        icon={<SlotsIcon />}
+        completed={slotsCapReached}
+        variant="compact"
+        art="/fishslots.png"
+        accent="#a78bfa"
+      />
+    </div>
+  )
+}
 
-
-  const bartenderLines = [
-    // Fish of the Day
-    "Heard the fish today is a tricky one. Three sailors guessed wrong on the first clue.",
-    "Someone cracked the fish of the day on the very first guess this morning. Haven't seen that in weeks.",
-    "Don't even look at today's fish without your first clue. Trust me on that one.",
-    "The fish of the day's been stumping everyone. Clue by clue, they're getting closer.",
-    // Fishing
-    "Slow morning on the water. Fish aren't biting much today.",
-    "Dropped a line myself before my shift. Came up empty. The deep ones are hiding.",
-    "Those enchanted hooks — never believed in 'em myself. Then I saw what came up on one.",
-    "Best hook wins. Simple as that. The rusty one'll catch something, sure — just not the good stuff.",
-    "Hit the gold zone on either edge and you might just keep your bait. Timing's everything.",
-    "Perfect catch means a shot at your bait back. Good sailors barely burn through a worm.",
-    "Blobfish. Ugliest thing in the sea. Fetches nearly a thousand doubloons at market though. Go figure.",
-    "The abyss doesn't keep you waiting as long as it used to. Still just as likely to eat you alive.",
-    "Don't sell your abyss catch at the dock price. Wait for the market to swing — it's worth it.",
-    "Vampire squid, firefly squid — sounds like a nightmare. Pays like one too, in the good way.",
-    "Rowboat fills up fast if you're fishing the abyss. You'll be running to market every five minutes.",
-    "Man-o-War holds three hundred and fifty fish. Sailors have been known to disappear for days on one of those.",
-    "Running low on hold space? Head to market before your next cast. Learned that the hard way.",
-    // Crown & Anchor
-    "Careful with the dice today. Saw a sailor lose four rounds straight on the anchor. Bad luck going around.",
-    "Crown and Anchor's been running hot this week. Or maybe it's just the dice. Who knows.",
-    "Five thousand doubloons is the limit at the tables. House rules. Don't bother arguing — I made the rules.",
-    // General tavern
-    "What'll it be? Oh — you're just browsing. Fair enough.",
-    "Stay for a round. The Tentacle-Tonic's fresh today.",
-    "Another one asking about the abyss. I'll say what I always say — go prepared, or don't go at all.",
-    "Fortified XX just came in from the southern ports. Good batch this time.",
-    "Quieter than usual today. Most of the regulars are out on the water.",
-    // Ships
-    "Saw a Galleon come into port this morning. Now that's a ship.",
-    "Bigger ship, better haul. That's how it works. Always has been.",
-  ]
-  const bartenderLine = bartenderLines[Math.floor(Math.random() * bartenderLines.length)]
+export default async function TavernPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const profile = await getCurrentProfile()
 
   const freeColorIds = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
-  const unlockedColors = [...freeColorIds, ...(profile?.unlocked_character_colors ?? [])]
+  const unlockedColors = [...freeColorIds, ...((profile?.unlocked_character_colors as string[] | null) ?? [])]
 
   return (
     <>
@@ -104,121 +192,47 @@ export default async function TavernPage() {
       <main className="min-h-screen">
         <div className="px-4 max-w-lg mx-auto pt-6 pb-16 flex flex-col gap-6" style={{ position: 'relative', zIndex: 1 }}>
 
-        {/* Recruit Crew — top feature card */}
-        <div>
-          <RecruitCard />
-        </div>
-
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
-          <div className="grid grid-cols-2 gap-3">
-          <GameCard
-            href="/tavern/daily-bonus"
-            eyebrow="Daily"
-            title="Daily Bonus"
-            statusText={allClaimed ? 'Come back tomorrow' : `${baseAmount} ⟡ available`}
-            info={[]}
-            icon={<CoinIcon />}
-            completed={allClaimed}
-            variant="compact"
-            art="/dailybonus.png"
-            accent="#f0c040"
-          />
-          <GameCard
-            href="/tavern/fish-of-the-day"
-            eyebrow="Daily"
-            title="Fish of the Day"
-            statusText={fotdDone ? 'Come back tomorrow' : 'Guess the mystery fish'}
-            info={[]}
-            icon={<FishIcon />}
-            completed={fotdDone}
-            streak={profile?.fotd_streak ?? 0}
-            variant="compact"
-            art="/fishoftheday.png"
-            accent="#60a5fa"
-          />
-          <GameCard
-            href="/tavern/tide-run"
-            eyebrow="Daily"
-            title="Tide Run"
-            statusText={tideRunCommitted ? 'Today’s run committed — play freely' : 'Outrun pursuit, commit one run a day'}
-            info={[]}
-            icon={<BoatIcon />}
-            variant="compact"
-            art="/boatrun.png"
-            artMaxHeight={68}
-            accent="#5da7d4"
-          />
-          </div>
-        </div>
-
-        {hasContest && (
+          {/* Recruit Crew — self-contained, no page-level data dep */}
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Contest</p>
-            <GameCard
-              href="/charting"
-              eyebrow="Contest"
-              title="Chart the Course"
-              statusText={
-                chartCompleted ? 'Voyage complete ✓' :
-                chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength} tiles · ${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} left` :
-                chartMovesLeft > 0 ? `${chartMovesLeft} move${chartMovesLeft === 1 ? '' : 's'} available` :
-                'Chart a path from sea to shore'
-              }
-              info={[]}
-              icon={<ChartIcon />}
-              completed={chartCompleted}
-              variant="featured"
-              art="/chartthecourse.png"
-              accent="#f0c040"
-            />
+            <RecruitCard />
           </div>
-        )}
 
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Games</p>
-          <div className="grid grid-cols-2 gap-3">
-          <GameCard
-            href="/tavern/crown-and-anchor"
-            eyebrow="Game"
-            title="Crown & Anchor"
-            statusText={crownCapReached ? 'Daily limit reached' : 'Roll dice, match your symbol'}
-            info={[]}
-            icon={<AnchorIcon />}
-            completed={crownCapReached}
-            variant="compact"
-            art="/crownandanchor.png"
-            accent="#fb923c"
-          />
-          <GameCard
-            href="/tavern/slots"
-            eyebrow="Game"
-            title="Fish Slots"
-            statusText={slotsCapReached ? 'Daily limit reached' : 'Match three fish to win'}
-            info={[]}
-            icon={<SlotsIcon />}
-            completed={slotsCapReached}
-            variant="compact"
-            art="/fishslots.png"
-            accent="#a78bfa"
-          />
+          {/* Daily — label paints with shell; the 3 cards stream in */}
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
+            <Suspense fallback={<DailyCardsSkeleton />}>
+              <DailySection />
+            </Suspense>
           </div>
-        </div>
 
-        <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
-            Enjoying the game?{' '}
-            <Link href="/marketplace" className="text-[#f0c040] hover:text-[#f5d060] transition-colors">
-              Support our indie studio with a membership →
-            </Link>
-          </p>
-          <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.72rem' }}>
-            Questions or feedback?{' '}
-            <Link href="/contact" className="text-[#6a6764] hover:text-[#9a9488] transition-colors" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>
-              Contact us
-            </Link>
-          </p>
-        </div>
+          {/* Contest — entire section (incl. label) streams; renders null when
+              there's no active contest, so no empty label flicker. */}
+          <Suspense fallback={null}>
+            <ContestSection />
+          </Suspense>
+
+          {/* Games — same pattern as Daily */}
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Games</p>
+            <Suspense fallback={<GamesCardsSkeleton />}>
+              <GamesSection />
+            </Suspense>
+          </div>
+
+          <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
+              Enjoying the game?{' '}
+              <Link href="/marketplace" className="text-[#f0c040] hover:text-[#f5d060] transition-colors">
+                Support our indie studio with a membership →
+              </Link>
+            </p>
+            <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.72rem' }}>
+              Questions or feedback?{' '}
+              <Link href="/contact" className="text-[#6a6764] hover:text-[#9a9488] transition-colors" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                Contact us
+              </Link>
+            </p>
+          </div>
 
         </div>
       </main>
@@ -226,6 +240,25 @@ export default async function TavernPage() {
   )
 }
 
+// ── Skeletons matching each section's card grid shape ──────────────────────
+
+function DailyCardsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {[0, 1, 2].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
+    </div>
+  )
+}
+
+function GamesCardsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {[0, 1].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
+    </div>
+  )
+}
+
+// ── Icons (unchanged from previous version) ────────────────────────────────
 
 function CoinIcon() {
   return (
@@ -252,16 +285,6 @@ function AnchorIcon() {
       <circle cx="12" cy="5" r="2"/>
       <path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
       <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
-    </svg>
-  )
-}
-
-function HookIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v9"/>
-      <path d="M12 12c0 4-3 5.5-4.5 3.5s-.5-4.5 2-4.5"/>
-      <circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/>
     </svg>
   )
 }

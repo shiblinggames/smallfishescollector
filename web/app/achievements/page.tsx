@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
@@ -11,20 +10,19 @@ import LogTabs from './LogTabs'
 import { FINN_ENCOUNTER_BEATS, FINN_REVEAL_BEAT } from '@/lib/finn'
 import { getRaidMapView } from '@/app/expeditions/raidMapActions'
 import { isCombatNode } from '@/lib/raidMap'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 
 export default async function AchievementsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, collectionRes, speciesRes, voyageCountRes, raidMap] = await Promise.all([
-    admin.from('profiles')
-      .select('packs_available, doubloons, gems, unlocked_badges, fishing_xp, expedition_xp, prestige_levels, trophy_catches, highest_perfect_streak, tide_run_best_distance, fotd_longest_streak, finn_seen_beats, finn_revealed')
-      .eq('id', user.id).single(),
+  // Profile via the request-scoped cached loader (lib/userData.ts).
+  const [profile, collectionRes, speciesRes, voyageCountRes, raidMap] = await Promise.all([
+    getCurrentProfile(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('id, habitat'),
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),

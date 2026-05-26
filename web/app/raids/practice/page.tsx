@@ -1,17 +1,16 @@
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import PracticeRaidGame from './PracticeRaidGame'
 import { getRaidPlayerStats } from '../actions'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 
 export default async function PracticeRaidPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, stats] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp, has_seen_raid_tutorial, has_completed_practice_raid, raid_repair_owed').eq('id', user.id).single(),
+  // Profile via the request-scoped cached loader (lib/userData.ts).
+  const [profile, stats] = await Promise.all([
+    getCurrentProfile(),
     getRaidPlayerStats(user.id),
   ])
 

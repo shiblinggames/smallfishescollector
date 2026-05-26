@@ -1,17 +1,17 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import RaidGame from '../RaidGame'
 import { getRaidPlayerStats } from '../actions'
 import { CAPTAIN_KRUST } from '@/lib/bossRaids'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 
 export default async function KrustRaidPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, stats] = await Promise.all([
-    supabase.from('profiles').select('packs_available, doubloons, gems, expedition_xp, raid_repair_owed').eq('id', user.id).single(),
+  // Profile via the request-scoped cached loader (lib/userData.ts).
+  const [profile, stats] = await Promise.all([
+    getCurrentProfile(),
     getRaidPlayerStats(user.id),
   ])
 
