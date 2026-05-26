@@ -102,25 +102,31 @@ async function DailySection() {
         artMaxHeight={68}
         accent="#5da7d4"
       />
-      {hasChart && (
-        <GameCard
-          href="/charting"
-          eyebrow="Daily"
-          title="Chart the Course"
-          statusText={
-            chartCompleted ? 'Path charted ✓' :
-            chartMovesLeft > 0 && chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength - 1} tiles · move ready` :
-            chartMovesLeft > 0 ? 'Today’s move ready' :
-            'Come back tomorrow'
-          }
-          info={[]}
-          icon={<ChartIcon />}
-          completed={chartCompleted}
-          variant="compact"
-          art="/chartthecourse.png"
-          accent="#f0c040"
-        />
-      )}
+      {hasChart && (() => {
+        // Daily-done = today's move has been spent (or the whole chart is
+        // already charted). Both states dim the card with a green check,
+        // matching the Daily Bonus / Fish of the Day / Tide Run pattern.
+        const dailyDone = chartCompleted || chartMovesLeft === 0
+        return (
+          <GameCard
+            href="/charting"
+            eyebrow="Daily"
+            title="Chart the Course"
+            statusText={
+              chartCompleted ? 'Path charted ✓' :
+              chartMovesLeft === 0 ? 'Come back tomorrow' :
+              chartTilesCharted > 0 ? `${chartTilesCharted} / ${chartPathLength - 1} tiles · move ready` :
+              'Today’s move ready'
+            }
+            info={[]}
+            icon={<ChartIcon />}
+            completed={dailyDone}
+            variant="compact"
+            art="/chartthecourse.png"
+            accent="#f0c040"
+          />
+        )
+      })()}
     </div>
   )
 }
