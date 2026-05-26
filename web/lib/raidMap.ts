@@ -11,6 +11,7 @@
 // stays farmable.
 
 import { CORSAIRS_RECKONING, CAPTAIN_KRUST, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -265,6 +266,31 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // Challenge variant — unlocks once normal Pete is cleared. Same gauntlet,
+    // scaled-up stats (+30% mob HP, +15% mob dmg, +50% boss HP, +20% boss
+    // dmg) and scaled payouts (+50% gold/XP per kill, +50% gem weight in
+    // the crate, DOUBLE the unique drop rate). Completions track under the
+    // suffixed raid_id so the Boss Records leaderboard is its own bucket.
+    // The "syndicate" story chain still gates on the normal pete clear,
+    // not this one — challenge stays optional / parallel to the main line.
+    id: 'pete_challenge',
+    type: 'raid',
+    label: "Challenge: The Corsair's Reckoning",
+    flavor: 'Pete sails out again, meaner this time, with the kind of crew that does not lose twice.',
+    requiresNode: 'pete',
+    route: '/raids/challenge',
+    raidId: CORSAIRS_RECKONING_CHALLENGE.raidId,
+    image: CORSAIRS_RECKONING.enemies.pete.portrait,
+    detail: {
+      description:
+        "The same six ship battles, the same old corsair at the end, but every hull he has put back on the water is a step harder than the one before it. The Raiders hit cleaner, the Marksman aims truer, and Pete himself fights like a man who has finally noticed you are still here. Crack his crate this time and the contraband runs richer for it.",
+      enemies: ['Reef Raider ×2', "Crow's Nest Marksman ×2", 'Saltwater Corsair ×2', 'Barnacle Pete'],
+      drops: lootDrops(CORSAIRS_RECKONING_CHALLENGE.loot),
+      clearReward: clearPayout(CORSAIRS_RECKONING_CHALLENGE),
+      dropsNote: 'Every kill pays more, the clear bonus is steeper, and his unique contraband rolls at double the normal rate.',
+    },
+  },
+  {
     id: 'syndicate',
     type: 'story',
     label: 'A Bigger Fish',
@@ -367,6 +393,28 @@ export const RAID_MAP: RaidNode[] = [
       drops: lootDrops(CAPTAIN_KRUST.loot),
       clearReward: clearPayout(CAPTAIN_KRUST),
       dropsNote: 'One crate per Krust clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
+    },
+  },
+  {
+    // Challenge variant of Krust. Same scaling rules as Pete's challenge
+    // node — see pete_challenge for the design notes. Gates on the normal
+    // krust clear only; the finndicate_notice story chain keeps gating on
+    // normal krust so the main plot is unaffected.
+    id: 'krust_challenge',
+    type: 'raid',
+    label: "Challenge: Krust's Consignment",
+    flavor: "Krust patched the iron hull, drilled the crew, and put the consignment back on the cold water. He does not lose cargo twice.",
+    requiresNode: 'krust',
+    route: '/raids/krust/challenge',
+    raidId: CAPTAIN_KRUST_CHALLENGE.raidId,
+    image: CAPTAIN_KRUST.enemies.krust.portrait,
+    detail: {
+      description:
+        "Krust's full consignment again, harder for the loss. The Carapace runs thicker, the volleys land cleaner, and every hand on his deck has had a long, cold look at the captain who sank them once already. Crack the crate this run and the contraband rolls deeper than any of his first manifests ever paid.",
+      enemies: ['Bilge Runner ×2', 'Brine Deckhand ×2', 'Hull Breaker ×2', 'Krust Overseer ×2', 'Captain Krust'],
+      drops: lootDrops(CAPTAIN_KRUST_CHALLENGE.loot),
+      clearReward: clearPayout(CAPTAIN_KRUST_CHALLENGE),
+      dropsNote: 'Every kill pays more, the clear bonus is steeper, and his unique contraband rolls at double the normal rate.',
     },
   },
   {
