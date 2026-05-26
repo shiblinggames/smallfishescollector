@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/(app)/raids/actions'
@@ -18,7 +18,7 @@ import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/l
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
-import { getXPProgress, getNavigatorTitle, navLevelBonuses } from '@/lib/expeditionLevel'
+import { getXPProgress, getNavigatorTitle, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -246,6 +246,10 @@ export default function ShipHero({
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [upgradeBusy, setUpgradeBusy] = useState(false)
   const [upgradeError, setUpgradeError] = useState<string | null>(null)
+  // Tappable Nav-level info modal — shows captain bonuses, XP to next level,
+  // and what changes at the next tier. Opens from the small Lv pill in the
+  // ship hero header.
+  const [navInfoOpen, setNavInfoOpen] = useState(false)
 
   // Loadout inner state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
@@ -484,8 +488,22 @@ export default function ShipHero({
             <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1.1 }}>
               {shipName ?? shipStats.name}
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }}>
-              <span className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#7da0d8', whiteSpace: 'nowrap' }}>
+            <button
+              type="button"
+              onClick={() => setNavInfoOpen(true)}
+              aria-label="Show navigation level info"
+              className="font-karla font-600"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                marginTop: 5, padding: '0.18rem 0.55rem', borderRadius: 7,
+                background: 'transparent', border: '1px solid transparent',
+                color: 'inherit', cursor: 'pointer',
+                transition: 'background 0.15s, border-color 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.25)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
+            >
+              <span style={{ fontSize: '0.95rem', color: '#7da0d8', whiteSpace: 'nowrap' }}>
                 <span className="font-cinzel font-700">Lv {xpProgress.level}</span>
                 <span style={{ color: '#4a5e7a' }}> · </span>
                 <span style={{ fontStyle: 'italic', color: '#6a8ab8' }}>{getNavigatorTitle(xpProgress.level)}</span>
@@ -493,7 +511,7 @@ export default function ShipHero({
               <div style={{ width: 84, flexShrink: 0, height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Ship + crew-on-deck overlay */}
@@ -1204,6 +1222,34 @@ export default function ShipHero({
         </motion.div>
       </PopupShell>
 
+      {/* Navigation-level info modal — opens from the Lv pill in the hero
+          header. Shows the current captain bonuses (HP, Power, Navigation,
+          Fortune), XP progress to the next level, and what the bonuses become
+          one level up so the player sees the carrot. */}
+      <PopupShell open={navInfoOpen} onClose={() => setNavInfoOpen(false)}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 4 }}
+          transition={{ duration: 0.18 }}
+          style={{
+            margin: 'auto', width: '100%', maxWidth: 380,
+            background: 'rgba(8,14,24,0.98)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 18,
+            padding: '1.1rem 1rem 1.25rem',
+          }}
+        >
+          <NavLevelInfoPanel
+            level={xpProgress.level}
+            xpInLevel={xpProgress.xpInLevel}
+            xpForLevel={xpProgress.xpForLevel}
+            progress={xpProgress.progress}
+            onClose={() => setNavInfoOpen(false)}
+          />
+        </motion.div>
+      </PopupShell>
+
       {/* Ship upgrade modal — preview the next available tier with stats vs
           the current ship, plus a one-tap buy. The full shipyard is still
           reachable via the secondary link, for browsing skins / re-checking
@@ -1403,6 +1449,127 @@ function StatDelta({ label, cur, next }: { label: string; cur: number; next: num
         {diff === 0 ? '—' : `${sign}${diff}`}
       </span>
     </>
+  )
+}
+
+// ── Nav level info panel ────────────────────────────────────────────────────
+// Inner content of the modal opened from the Lv pill in the ship hero. Shows
+// the navigator title, XP progress to next level, the captain bonuses at the
+// current level, and a preview of the bonuses one level up so the player sees
+// what they're working toward.
+function NavLevelInfoPanel({
+  level, xpInLevel, xpForLevel, progress, onClose,
+}: {
+  level: number
+  xpInLevel: number
+  xpForLevel: number
+  progress: number
+  onClose: () => void
+}) {
+  const navTitle = getNavigatorTitle(level)
+  const atMax = level >= MAX_LEVEL
+  const xpToNext = atMax ? 0 : Math.max(0, xpForLevel - xpInLevel)
+  const currentBonus = navLevelBonuses(level)
+  const nextBonus = atMax ? null : navLevelBonuses(level + 1)
+
+  return (
+    <>
+      <div className="flex items-center justify-between" style={{ marginBottom: '0.85rem' }}>
+        <p className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>
+          Navigation
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            width: 30, height: 30, borderRadius: 8, padding: 0,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+            color: '#cbd2da', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      {/* Level + title */}
+      <div style={{ textAlign: 'center', marginBottom: '1.1rem' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '2.4rem', color: '#7da0d8', lineHeight: 1, textShadow: '0 0 22px rgba(125,160,216,0.35)' }}>
+          Lv {level}
+        </p>
+        <p className="font-karla font-500 italic" style={{ fontSize: '0.82rem', color: '#6a8ab8', marginTop: 5 }}>
+          {navTitle}
+        </p>
+      </div>
+
+      {/* XP progress */}
+      <div style={{ marginBottom: '1.1rem' }}>
+        <div className="flex justify-between font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.12em', color: '#7a8696', marginBottom: 6 }}>
+          <span>Experience</span>
+          <span>{atMax ? 'MAX' : `${xpInLevel.toLocaleString()} / ${xpForLevel.toLocaleString()}`}</span>
+        </div>
+        <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${Math.min(1, progress) * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 4 }} />
+        </div>
+        <p className="font-karla font-500" style={{ fontSize: '0.7rem', color: atMax ? '#7da0d8' : '#7a8696', marginTop: 7, textAlign: 'center' }}>
+          {atMax
+            ? 'Top of the ladder. There is no higher rank.'
+            : <>{xpToNext.toLocaleString()} XP to <span style={{ color: '#cbd2da' }}>Lv {level + 1}</span></>}
+        </p>
+      </div>
+
+      {/* Current captain bonuses */}
+      <div style={{ marginBottom: nextBonus ? '0.85rem' : '0.5rem' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875', marginBottom: 6 }}>
+          Captain bonuses at Lv {level}
+        </p>
+        <NavBonusGrid bonus={currentBonus} />
+      </div>
+
+      {/* Next-level preview */}
+      {nextBonus && (
+        <div style={{ marginBottom: '0.6rem' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875', marginBottom: 6 }}>
+            At Lv {level + 1}
+          </p>
+          <NavBonusGrid bonus={nextBonus} compareTo={currentBonus} />
+        </div>
+      )}
+
+      <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6a6764', lineHeight: 1.55, marginTop: '0.85rem' }}>
+        Navigation XP comes from raids, voyages, and other expedition rewards. Every level adds +1 HP to your ship in raids, and every 5 levels adds +1 Power, +1 Navigation, and +1 Fortune on top of your crew totals.
+      </p>
+    </>
+  )
+}
+
+function NavBonusGrid({ bonus, compareTo }: { bonus: ReturnType<typeof navLevelBonuses>; compareTo?: ReturnType<typeof navLevelBonuses> }) {
+  const rows: { label: string; val: number; prev: number | undefined; color: string }[] = [
+    { label: 'Ship HP',    val: bonus.hp,         prev: compareTo?.hp,         color: '#86efac' },
+    { label: 'Power',      val: bonus.power,      prev: compareTo?.power,      color: '#f87171' },
+    { label: 'Navigation', val: bonus.navigation, prev: compareTo?.navigation, color: '#60a5fa' },
+    { label: 'Fortune',    val: bonus.fortune,    prev: compareTo?.fortune,    color: '#f0c040' },
+  ]
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 10, rowGap: 6,
+      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 10, padding: '0.6rem 0.75rem', fontSize: '0.74rem',
+    }}>
+      {rows.map(({ label, val, prev, color }) => {
+        const delta = prev !== undefined ? val - prev : null
+        return (
+          <Fragment key={label}>
+            <span className="font-karla font-600" style={{ color: '#9a9690' }}>{label}</span>
+            <span className="font-cinzel font-700" style={{ color, textAlign: 'right' }}>+{val}</span>
+            <span className="font-karla font-600" style={{ color: delta && delta > 0 ? '#4ade80' : '#6a6764', textAlign: 'right', minWidth: 28 }}>
+              {delta === null ? '' : delta > 0 ? `+${delta}` : '—'}
+            </span>
+          </Fragment>
+        )
+      })}
+    </div>
   )
 }
 
