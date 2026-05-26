@@ -62,8 +62,16 @@ const TYPE_SIZE: Record<string, number> = {
   raid:      66,
 }
 
+// Side-branch tokens (e.g. challenge-mode raids) are smaller than their
+// parent so the parent raid stays the visual focus of its row.
+const SIDE_BRANCH_SIZE = 40
+const SIDE_BRANCH_ACCENT = '#a78bfa' // matches the elite/affix violet
+
 function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; size?: number }) {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  // Inlined here so RaidsSection has no extra import; not part of the
+  // type-keyed branch because sideBranch is the discriminator on the call
+  // site, not the node.type. See ChallengeGlyph below.
   // skirmish: crossed cutlasses (a single duel)
   if (type === 'skirmish') return <svg {...common}><path d="M3 17l6-6M14.5 6.5L21 13M6 21l-3-3M9 3l12 12-3 3L6 6z" /></svg>
   // raid: skull (the boss campaign)
@@ -83,6 +91,19 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'puzzle') return <svg {...common}><path d="M12 2c1.6 3 5 4.6 5 9a5 5 0 0 1-10 0c0-2 .8-3.2 2-4.2.2 1.2 1 1.9 1.9 2.1C11.8 6.6 11 4.1 12 2z" /></svg>
   // milestone (default): treasure star
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
+}
+
+/** Crossed cutlasses for challenge-mode side-branch nodes. Distinct from the
+ *  skirmish single-blade glyph (which also uses cutlasses but stylised
+ *  differently) and from the raid skull (the parent token). Drawn at a
+ *  small size since side-branch tokens themselves are smaller. */
+function ChallengeGlyph({ color, size = 22 }: { color: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4l11 11M9 4l11 11" />
+      <path d="M3 17l4 4M17 3l4 4M5 19l2-2M19 5l-2 2" />
+    </svg>
+  )
 }
 
 function LockGlyph({ size = 16 }: { size?: number }) {
@@ -106,10 +127,39 @@ function RaidMap({
   onSelect: (v: RaidNodeView) => void
   repairOwed: number
 }) {
-  const n = views.length
-  const height = PAD_TOP + TOKEN / 2 + (n - 1) * ROW + TOKEN / 2 + PAD_BOTTOM
-  const cx = (i: number) => COLS[i % COLS.length]
-  const cy = (i: number) => PAD_TOP + TOKEN / 2 + i * ROW
+  // Side-branch layout: nodes flagged sideBranch don't consume a zigzag row
+  // — they share their parent's row and sit on the opposite horizontal side.
+  // Pre-compute (rowIdx, colPct) per view in one pass so cx/cy lookups stay
+  // O(1) in the render. nextRow counts only chain (non-side) nodes.
+  const positions = (() => {
+    const out: { row: number; col: number; isSide: boolean }[] = []
+    const rowOf: Record<string, number> = {}
+    let nextRow = 0
+    for (const v of views) {
+      if (v.node.sideBranch) {
+        const parentRow = rowOf[v.node.sideBranch.parentId] ?? 0
+        const parentCol = COLS[parentRow % COLS.length]
+        // Side-branch sits opposite the parent: parent on the right (col > 50)
+        // → branch on the far left, and vice versa. Keeps both readable.
+        const sideCol = parentCol < 50 ? 88 : 12
+        out.push({ row: parentRow, col: sideCol, isSide: true })
+      } else {
+        out.push({ row: nextRow, col: COLS[nextRow % COLS.length], isSide: false })
+        rowOf[v.node.id] = nextRow
+        nextRow++
+      }
+    }
+    return { entries: out, totalRows: nextRow }
+  })()
+
+  const height = PAD_TOP + TOKEN / 2 + (positions.totalRows - 1) * ROW + TOKEN / 2 + PAD_BOTTOM
+  const cx = (i: number) => positions.entries[i].col
+  const cy = (i: number) => PAD_TOP + TOKEN / 2 + positions.entries[i].row * ROW
+
+  // Indices that participate in the main chain line (non-side).
+  const chainIdx = positions.entries
+    .map((p, i) => p.isSide ? -1 : i)
+    .filter(i => i >= 0)
 
   // The "current" node = first non-cleared, non-locked node. Gets a gentle pulse.
   const currentIdx = views.findIndex(v => v.status === 'available')
@@ -124,13 +174,17 @@ function RaidMap({
         preserveAspectRatio="none"
         style={{ position: 'absolute', inset: 0, width: '100%', height, pointerEvents: 'none' }}
       >
-        {views.slice(0, -1).map((v, i) => {
-          const x1 = cx(i), y1 = cy(i), x2 = cx(i + 1), y2 = cy(i + 1)
+        {/* Main chain line — connects consecutive non-side nodes in row
+            order, skipping side branches so the route stays straight. */}
+        {chainIdx.slice(0, -1).map((idxA, j) => {
+          const idxB = chainIdx[j + 1]
+          const v = views[idxA]
+          const x1 = cx(idxA), y1 = cy(idxA), x2 = cx(idxB), y2 = cy(idxB)
           const ym = (y1 + y2) / 2
           const lit = v.status === 'cleared'
           return (
             <path
-              key={v.node.id}
+              key={`chain-${v.node.id}`}
               d={`M ${x1} ${y1} C ${x1} ${ym}, ${x2} ${ym}, ${x2} ${y2}`}
               fill="none"
               stroke={lit ? 'rgba(196,169,106,0.85)' : 'rgba(255,255,255,0.12)'}
@@ -141,13 +195,43 @@ function RaidMap({
             />
           )
         })}
+        {/* Side-branch connectors — short horizontal-ish lines from each
+            side-branch token back to its parent on the same row. Drawn
+            below the main chain so the chain stays the dominant read. */}
+        {positions.entries.map((p, i) => {
+          if (!p.isSide) return null
+          const parentId = views[i].node.sideBranch!.parentId
+          const parentIdx = views.findIndex(v => v.node.id === parentId)
+          if (parentIdx < 0) return null
+          const x1 = cx(parentIdx), y1 = cy(parentIdx)
+          const x2 = cx(i), y2 = cy(i)
+          // Slight vertical bow so the line reads as a branch, not a straight
+          // tick. Uses violet to match the challenge theme.
+          const bow = 8
+          const branchClear = views[i].status === 'cleared'
+          return (
+            <path
+              key={`branch-${views[i].node.id}`}
+              d={`M ${x1} ${y1} Q ${(x1 + x2) / 2} ${y1 - bow}, ${x2} ${y2}`}
+              fill="none"
+              stroke={branchClear ? 'rgba(167,139,250,0.85)' : 'rgba(167,139,250,0.4)'}
+              strokeWidth={2}
+              strokeDasharray={branchClear ? undefined : '3 4'}
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          )
+        })}
       </svg>
 
       {views.map((v, i) => {
         const { node, status } = v
-        const accent = TYPE_ACCENT[node.type] ?? '#c4a96a'
+        const isSide = !!node.sideBranch
+        // Side-branch tokens get the violet challenge palette + a smaller
+        // diameter so the parent raid stays the visual focus of its row.
+        const accent = isSide ? SIDE_BRANCH_ACCENT : (TYPE_ACCENT[node.type] ?? '#c4a96a')
         const img = node.image ?? TYPE_IMAGE[node.type]
-        const size = TYPE_SIZE[node.type] ?? 52
+        const size = isSide ? SIDE_BRANCH_SIZE : (TYPE_SIZE[node.type] ?? 52)
         const glyph = Math.round(size * 0.42)
         const badge = Math.max(15, Math.round(size * 0.34))
         const locked = status === 'locked'
@@ -206,15 +290,18 @@ function RaidMap({
                 touchAction: 'manipulation',
               }}
             >
-              {img ? (
-                <span style={{
-                  position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
-                  filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
-                }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </span>
-              ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
+              {isSide
+                ? (locked ? <LockGlyph size={glyph} /> : <ChallengeGlyph color={accent} size={glyph} />)
+                : img ? (
+                    <span style={{
+                      position: 'absolute', inset: 3, borderRadius: '50%', overflow: 'hidden',
+                      filter: locked ? 'grayscale(1) brightness(0.5)' : undefined,
+                    }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </span>
+                  )
+                : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
 
               {locked && img && (
                 <span

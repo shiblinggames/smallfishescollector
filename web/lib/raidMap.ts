@@ -115,6 +115,13 @@ export interface RaidNode {
   choice?: { items: string[] }
   /** puzzle: the beacon-chain (Lights Out). Solving clears the node. */
   puzzle?: RaidPuzzle
+  /** Marks this node as a side branch hanging off another node, NOT part of
+   *  the main story chain. Used by challenge-mode raids: the challenge node
+   *  sits beside its parent on the map (shared row, opposite column),
+   *  draws a short connector to the parent instead of taking its own
+   *  zigzag slot, and renders smaller + with the challenge glyph. The main
+   *  chain skips it entirely when drawing the route line. */
+  sideBranch?: { parentId: string }
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
 }
@@ -280,7 +287,10 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'pete',
     route: '/raids/challenge',
     raidId: CORSAIRS_RECKONING_CHALLENGE.raidId,
-    image: CORSAIRS_RECKONING.enemies.pete.portrait,
+    sideBranch: { parentId: 'pete' },
+    // No `image` — side-branch challenge nodes render with the dedicated
+    // crossed-cutlasses challenge glyph (see NodeGlyph in RaidsSection)
+    // so they don't get mistaken for the parent raid at a glance.
     detail: {
       description:
         "The same six ship battles, the same old corsair at the end, but every hull he has put back on the water is a step harder than the one before it. The Raiders hit cleaner, the Marksman aims truer, and Pete himself fights like a man who has finally noticed you are still here. Crack his crate this time and the contraband runs richer for it.",
@@ -407,7 +417,9 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'krust',
     route: '/raids/krust/challenge',
     raidId: CAPTAIN_KRUST_CHALLENGE.raidId,
-    image: CAPTAIN_KRUST.enemies.krust.portrait,
+    sideBranch: { parentId: 'krust' },
+    // Side-branch challenge glyph instead of the boss portrait — see
+    // pete_challenge for the design notes.
     detail: {
       description:
         "Krust's full consignment again, harder for the loss. The Carapace runs thicker, the volleys land cleaner, and every hand on his deck has had a long, cold look at the captain who sank them once already. Crack the crate this run and the contraband rolls deeper than any of his first manifests ever paid.",
