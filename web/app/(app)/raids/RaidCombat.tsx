@@ -272,6 +272,9 @@ export default function RaidCombat({
   const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
+  // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
+  // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
+  const [phaseFlash, setPhaseFlash]   = useState(false)
   const [critFreeze, setCritFreeze]   = useState(false)   // briefly freezes the aim bar at the lock moment
   const [enemyShakeKey, setEnemyShakeKey] = useState(0)
   const [enemyShakeKind, setEnemyShakeKind] = useState<'hit' | 'crit'>('hit')
@@ -291,6 +294,12 @@ export default function RaidCombat({
   const rafRef       = useRef(0)
 
   const enemyPatternIdxRef = useRef(0)
+  // Boss phase tracking — challenge-mode Pete (and any future multi-phase
+  // boss) flips to phase 2 when crossing enemy.phase2.hpThreshold. While
+  // phase===2 we read enemy.phase2.pattern instead of enemy.pattern and
+  // multiply enemy outgoing damage by enemy.phase2.damageMult. Phase 1
+  // single-phase enemies never touch this — the ref stays at 1 forever.
+  const enemyPhaseRef      = useRef<1 | 2>(1)
   const turnRef            = useRef(1)
   const [turn, setTurn]    = useState(1)
   const critFreezeRef      = useRef(false)
@@ -418,6 +427,7 @@ export default function RaidCombat({
     }, 600)
     setPHitsplat(null); setEHitsplat(null)
     enemyPatternIdxRef.current = 0
+    enemyPhaseRef.current = 1
     turnRef.current = 1; setTurn(1)
     return () => clearTimeout(promptTimer)
   }, [enemy.id, enemy.name, enemy.hpBase, isBoss])
@@ -478,7 +488,12 @@ export default function RaidCombat({
   // ─── Enemy AI: pick next action from pattern ───────────────────────────────
 
   const pickEnemyAction = useCallback((): EnemyAction => {
-    const pattern = enemy.pattern
+    // Phase 2 swaps the boss's whole behavior cycle for the alternate
+    // pattern in phase2.pattern (more aggressive for Pete). Falls back to
+    // the base pattern for phase-1 enemies and any boss without phase2.
+    const pattern = enemyPhaseRef.current === 2 && enemy.phase2
+      ? enemy.phase2.pattern
+      : enemy.pattern
     let action = pattern[enemyPatternIdxRef.current % pattern.length]
     // Sanity guard: if scripted action is impossible (e.g. fire with 0 charges), substitute reload
     if ((action === 'fire'   && enemyCharges < 1) ||
@@ -488,7 +503,7 @@ export default function RaidCombat({
       enemyPatternIdxRef.current++
     }
     return action
-  }, [enemy.pattern, enemyCharges])
+  }, [enemy.pattern, enemy.phase2, enemyCharges])
 
   // ─── Player action handlers ────────────────────────────────────────────────
 
@@ -639,6 +654,10 @@ export default function RaidCombat({
       splatColor: string
       big?: boolean
       logLines: string[]         // log lines to reveal when this step starts
+      // True when this step is the one that pushed the boss across its
+      // phase-2 HP threshold. Triggers a red full-screen flash so the
+      // transition reads as a beat, not a silent shift in pattern.
+      phaseTransition?: boolean
     }
 
     // Hull plating: equipped damage-reduction items cut INCOMING enemy
@@ -662,6 +681,10 @@ export default function RaidCombat({
       let splatText = ''
       let splatColor = '#ef4444'
       let enemyCrit = false
+      // True for the single step that ticks the boss across its phase-2
+      // HP threshold. Hoisted out of the player-attack branch so the
+      // post-loop steps.push() can read it on the same step.
+      let didPhaseTransition = false
       const stepLines: string[] = []
 
       // Resilient affix: 33% chance to regen at the top of each enemy
@@ -760,6 +783,13 @@ export default function RaidCombat({
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)
+          // Phase 2 boss damage bump (challenge-mode Pete) — multiplies the
+          // raw rolled damage before crit + dodge math so a phase-2 volley
+          // hits the player's hull math at the new, scarier rate. No-op for
+          // phase-1 enemies (mult stays 1).
+          if (enemyPhaseRef.current === 2 && enemy.phase2) {
+            dmg = Math.max(1, Math.floor(dmg * enemy.phase2.damageMult))
+          }
           // Enemy crit — flat chance per enemy, applied after the volley
           // multiplier. Players crit through aim-bar skill; enemies don't
           // have that, so the same outcome happens via RNG.
@@ -797,6 +827,24 @@ export default function RaidCombat({
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
           if (dmg > 0) onPlayerHit?.(dmg)
+          // Boss phase 2 transition — challenge-mode Pete flips behavior
+          // when this hit drops him under the threshold while still alive.
+          // Bump the ref, reset the pattern index so the new pattern reads
+          // from the start, push the dialogue line into this step's log,
+          // and mark the step so playStep can fire the red flash. Skipped
+          // for phase-1 enemies (no phase2 config) and never re-fires
+          // (guarded by enemyPhaseRef.current === 1).
+          if (
+            enemy.phase2
+            && enemyPhaseRef.current === 1
+            && eHp > 0
+            && eHp <= enemy.hpBase * enemy.phase2.hpThreshold
+          ) {
+            enemyPhaseRef.current = 2
+            enemyPatternIdxRef.current = 0
+            stepLines.push(`${enemy.name}: "${enemy.phase2.dialogueLine}"`)
+            didPhaseTransition = true
+          }
           // Reflective affix: 50% chance to bounce a slice of the damage
           // back to the player on landing. Fires only when actual damage
           // landed (partial-dodge included; missed shots aren't reflected).
@@ -887,6 +935,7 @@ export default function RaidCombat({
         who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor,
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
+        phaseTransition: didPhaseTransition,
       })
 
       // Frenzied affix: when this enemy fires or volleys, it has a chance
@@ -903,6 +952,12 @@ export default function RaidCombat({
       ) {
         const base2 = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
         let dmg2 = base2 // frenzy follow-up is always a single shot (not volley)
+        // Phase 2 boss damage bump also covers the Frenzied bonus shot,
+        // mirroring the primary fire branch above. Otherwise the headline
+        // attack scales but the affix follow-up under-hits in phase 2.
+        if (enemyPhaseRef.current === 2 && enemy.phase2) {
+          dmg2 = Math.max(1, Math.floor(dmg2 * enemy.phase2.damageMult))
+        }
         const baseCrit2 = enemy.critChance ?? 0
         const effCrit2  = affix?.critMult ? Math.min(1, baseCrit2 * affix.critMult) : baseCrit2
         let frenziedCrit = false
@@ -995,6 +1050,15 @@ export default function RaidCombat({
       const step = steps[i]
       const isAttack  = step.action === 'fire' || step.action === 'volley'
       const isDodged  = isAttack && step.splatText === 'Dodged'
+
+      // Phase 2 transition — fire the red wash the moment this step starts
+      // animating, so the dialogue line, the projectile/splat, and the
+      // flash all land as one "the gloves are off" beat. Cleaned up after
+      // ~520ms (matches the rc-phase-flash keyframes below).
+      if (step.phaseTransition) {
+        setPhaseFlash(true)
+        setTimeout(() => setPhaseFlash(false), 520)
+      }
 
       // Stream this step's log lines into the visible log as the step plays.
       // Multi-line steps (e.g. "Enemy fails dodge" + "You fire for X") cascade
@@ -1662,6 +1726,19 @@ export default function RaidCombat({
         }} />
       )}
 
+      {/* Phase-2 transition flash — same shape as crit flash but red and
+          slightly longer-held, so the moment Pete (challenge-mode) flips
+          to phase 2 reads as a real shift, not a quiet pattern swap.
+          Sits one z-index above crit so a crit landing on the threshold
+          hit still gets to play underneath. */}
+      {phaseFlash && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 91,
+          background: 'radial-gradient(ellipse at center, rgba(239,68,68,0.42) 0%, rgba(239,68,68,0.12) 60%, transparent 100%)',
+          animation: 'rc-phase-flash 0.5s ease forwards',
+        }} />
+      )}
+
       {/* Player stats breakdown — opened by tapping the player nameplate */}
       <AnimatePresence>
         {showStats && (
@@ -1717,6 +1794,11 @@ export default function RaidCombat({
         }
         @keyframes rc-crit-flash {
           0%   { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes rc-phase-flash {
+          0%   { opacity: 0; }
+          25%  { opacity: 1; }
           100% { opacity: 0; }
         }
       `}</style>

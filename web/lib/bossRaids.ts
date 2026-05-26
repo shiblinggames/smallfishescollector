@@ -30,6 +30,21 @@ export interface BroadsideEnemy {
    *  Krust's crew = crustacean "Carapace" defense. */
   damageReduction?: number
   abilityName?: string
+  /** Optional two-phase boss config. When set, the enemy transitions to
+   *  phase 2 the moment its HP drops below `hpThreshold` (fraction of
+   *  maxHP). In phase 2, action choice reads from `pattern` instead of
+   *  the base pattern, every enemy damage roll multiplies by
+   *  `damageMult`, and `dialogueLine` is pushed into the action log
+   *  paired with a brief red screen flash. Bosses without phase2 set
+   *  fight as a single phase. Currently only the challenge-mode Pete
+   *  carries this; the boss config goes here so future challenge bosses
+   *  (Krust etc.) can adopt the same shape. */
+  phase2?: {
+    hpThreshold: number       // 0.5 = 50% of maxHP
+    damageMult: number        // 1.25 = +25% damage on enemy fire/volley rolls
+    pattern: EnemyAction[]    // alternate behavior cycle used from phase 2 onward
+    dialogueLine: string      // shown in the action log on transition, as a quoted boss line
+  }
 }
 
 export interface RaidLootItem {

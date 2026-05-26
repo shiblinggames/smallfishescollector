@@ -128,8 +128,45 @@ export function buildChallengeRaid(base: BossRaidConfig): BossRaidConfig {
   }
 }
 
+/** Attach a phase2 config to a single boss inside an already-built challenge
+ *  variant. Hand-tuned per boss because phase 2 patterns + dialogue are
+ *  character-specific. Called once at module load and folded into the
+ *  exported challenge config below. */
+function withBossPhase2(
+  config: BossRaidConfig,
+  bossKey: string,
+  phase2: NonNullable<BroadsideEnemy['phase2']>,
+): BossRaidConfig {
+  return {
+    ...config,
+    enemies: {
+      ...config.enemies,
+      [bossKey]: { ...config.enemies[bossKey], phase2 },
+    },
+  }
+}
+
+// Pete's phase 2 — triggers at 50% HP. Phase 2 pattern drops the dodge-
+// camping rhythm of phase 1 and runs straight aggression: more fires, an
+// earlier volley setup, fewer dodges. Combined with the +25% damage mult,
+// phase 2 hits ~1.7-2x harder per turn than phase 1.
+const PETE_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
+  hpThreshold: 0.5,
+  damageMult:  1.25,
+  // 10-turn loop with 2 volleys + 2 fires + 1 dodge. Compare to phase 1's
+  // 13-turn rhythm-trap that mostly threatens via dodge-camping. Charges:
+  // 0→1→0→1→0→1→2→3→0→1→0. Note T6 volley fires only if charges are >=3,
+  // which the prior three reloads cover. Falls through to reload if not.
+  pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'volley'],
+  dialogueLine: "Right then. No more dancing.",
+}
+
 // Pre-built challenge variants — page files + raid map import these
 // directly so the heavy lifting (the factory) only runs once at module
-// load, not per-request.
-export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig = buildChallengeRaid(CORSAIRS_RECKONING)
-export const CAPTAIN_KRUST_CHALLENGE:    BossRaidConfig = buildChallengeRaid(CAPTAIN_KRUST)
+// load, not per-request. Pete's challenge boss carries a two-phase
+// rhythm; Krust's challenge stays single-phase until we tune one for
+// him later.
+export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig =
+  withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING), 'pete', PETE_PHASE2)
+export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig =
+  buildChallengeRaid(CAPTAIN_KRUST)
