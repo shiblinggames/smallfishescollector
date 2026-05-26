@@ -210,7 +210,8 @@ function CrewPanel({
           </p>
         </div>
 
-        {/* Engraved stats + inline round action */}
+        {/* Engraved stats. Action moved to the footer row (below) — squeezing
+            it in here overflowed the card edge at narrow widths. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.15rem 0' }}>
           {(['power', 'dodge', 'fortune'] as const).map(k => (
             <div key={k} title={STAT_LABEL[k]} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -220,11 +221,12 @@ function CrewPanel({
               </span>
             </div>
           ))}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>{children}</div>
         </div>
 
-        {/* Footer: one tappable link into the detail modal (whole card is also clickable) */}
-        <div style={{ marginTop: 'auto', paddingTop: '0.4rem' }}>
+        {/* Footer: "View N traits" link on the left, Recruit/Roster Full/Aboard
+            action on the right. Wrap if the card is genuinely too narrow so
+            the button never spills off the edge. */}
+        <div style={{ marginTop: 'auto', paddingTop: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
           <span className="font-karla font-700" style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
             fontSize: '0.8rem', color: frameAccent,
@@ -233,6 +235,7 @@ function CrewPanel({
             {effects.length > 0 ? `View ${effects.length} trait${effects.length === 1 ? '' : 's'}` : 'View details'}
             <span aria-hidden style={{ fontSize: '0.95rem' }}>›</span>
           </span>
+          {children && <div style={{ display: 'flex', alignItems: 'center' }}>{children}</div>}
         </div>
       </div>
     </motion.div>
