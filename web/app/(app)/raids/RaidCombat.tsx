@@ -780,6 +780,23 @@ export default function RaidCombat({
             dmg = Math.max(1, Math.round(dmg * affix.damageTakenMult))
             stepLines.push(`Ironclad! ${enemy.name}'s plating soaks the blow (${before} → ${dmg}).`)
           }
+          // Phase 2 chance-gated mitigation — challenge-mode Krust hunkers
+          // behind his plate at 50% HP. Same shape as Ironclad: chance roll
+          // succeeds → multiply dmg by `damageTakenMult` and surface a log
+          // line. `damageTakenVolleyBypass` skips the roll on volley shots
+          // so the player always has a clean path through plate (the
+          // dialogue line is the in-fiction hint).
+          if (
+            enemyPhaseRef.current === 2
+            && enemy.phase2?.damageTakenMult
+            && dmg > 0
+            && !(enemy.phase2.damageTakenVolleyBypass && action === 'volley')
+            && Math.random() < (enemy.phase2.damageTakenChance ?? 1)
+          ) {
+            const before = dmg
+            dmg = Math.max(1, Math.round(dmg * enemy.phase2.damageTakenMult))
+            stepLines.push(`Carapace! ${enemy.name}'s plate soaks the blow (${before} → ${dmg}).`)
+          }
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
           dmg = base * (action === 'volley' ? 2 : 1)

@@ -44,6 +44,16 @@ export interface BroadsideEnemy {
     damageMult: number        // 1.25 = +25% damage on enemy fire/volley rolls
     pattern: EnemyAction[]    // alternate behavior cycle used from phase 2 onward
     dialogueLine: string      // shown in the action log on transition, as a quoted boss line
+    // Optional chance-gated incoming-damage mitigation while in phase 2.
+    // Mirrors the Ironclad affix shape so the combat code can fold both
+    // into the same check style: when the chance roll succeeds, dmg is
+    // multiplied by `damageTakenMult` (e.g. 0.7 for -30%) and a log line
+    // surfaces. `damageTakenVolleyBypass` skips the roll entirely on
+    // volley shots so the player always has a clean answer to a
+    // hunkered boss. Stacks on top of any flat `damageReduction`.
+    damageTakenChance?: number
+    damageTakenMult?: number
+    damageTakenVolleyBypass?: boolean
   }
 }
 

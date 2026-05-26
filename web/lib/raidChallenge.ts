@@ -161,12 +161,33 @@ const PETE_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
   dialogueLine: "Right then. No more dancing.",
 }
 
+// Krust's phase 2 — triggers at 50% HP. Where Pete goes aggressive, Krust
+// goes the other way: he hunkers behind his carapace. The pattern drops
+// the dodge-camping of phase 1 (he stops dancing) and becomes a patient
+// reload-fire-reload-fire-volley trade, no dodges. Outgoing damage stays
+// flat (1.0 mult) — the new threat is purely defensive.
+//
+// On top of his existing 15% flat Carapace soak, phase 2 adds a 50% /
+// -30% chance-gated mitigation that fires only on non-volley shots. The
+// dialogue line is also the player's hint at the answer: heavy volleys
+// punch through, every other shot might get soaked.
+const KRUST_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
+  hpThreshold: 0.5,
+  damageMult:  1.0,
+  // 8-turn loop: 4 reloads + 2 fires + 1 volley + 1 reload at cap. Charges:
+  // 0→1→2→1→2→3→2→3→0. No dodges (the carapace IS the defense in phase 2).
+  pattern: ['reload', 'reload', 'fire', 'reload', 'reload', 'fire', 'reload', 'volley'],
+  dialogueLine: "Plate holds. Now hammer it.",
+  damageTakenChance:        0.5,
+  damageTakenMult:          0.7,
+  damageTakenVolleyBypass:  true,
+}
+
 // Pre-built challenge variants — page files + raid map import these
 // directly so the heavy lifting (the factory) only runs once at module
-// load, not per-request. Pete's challenge boss carries a two-phase
-// rhythm; Krust's challenge stays single-phase until we tune one for
-// him later.
+// load, not per-request. Pete and Krust both carry two-phase challenge
+// fights, tuned to their character (Pete = aggression, Krust = plate).
 export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig =
   withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING), 'pete', PETE_PHASE2)
 export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(CAPTAIN_KRUST)
+  withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST), 'krust', KRUST_PHASE2)
