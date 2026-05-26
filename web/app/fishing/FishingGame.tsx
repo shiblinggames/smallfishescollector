@@ -4003,8 +4003,14 @@ export default function FishingGame({
 
           {/* Phase content — grows to fill available space. Relative so
               the separate hooked-banner AnimatePresence below can absolutely
-              overlay the same area without affecting the main phase flow. */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              overlay the same area without affecting the main phase flow.
+              minHeight:0 + overflowY:auto is required: flex:1 items default to
+              min-height:auto and can't shrink below their content's intrinsic
+              size, so a tall ResultCard (long fun-fact, ancient banner, pills
+              stack) would expand this div and push the action button row + the
+              4 bottom tiles down behind the MobileTabBar. With these two, the
+              card scrolls inside its slot and the siblings stay locked. */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <AnimatePresence mode="wait">
 
               {/* ── IDLE / CASTING ── */}
