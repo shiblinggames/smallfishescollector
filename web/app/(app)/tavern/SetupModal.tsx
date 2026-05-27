@@ -100,10 +100,10 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               Small Fishes
             </p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f0ede8', lineHeight: 1.2, marginBottom: '0.5rem' }}>
-              What should we call you?
+              Pick your captain name
             </p>
-            <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a6764', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Pick a username for your public profile. You can only set this once, so choose well.
+            <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#9aa0a6', marginBottom: '1.5rem', lineHeight: 1.55 }}>
+              This is how other captains will see you — on the leaderboards, in raids, and around the tavern.
             </p>
 
             <form onSubmit={handleUsernameNext}>
@@ -113,7 +113,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                 onChange={e => { setUsernameInput(e.target.value); setUsernameError('') }}
                 placeholder="your_name"
                 className="sg-input font-karla font-600 tracking-[0.06em] w-full"
-                style={{ fontSize: '1rem', marginBottom: usernameError ? 6 : '1.25rem' }}
+                style={{ fontSize: '1rem', marginBottom: usernameError ? 6 : '1rem' }}
                 maxLength={20}
                 autoFocus
                 spellCheck={false}
@@ -123,38 +123,51 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               {usernameError && (
                 <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#f87171', marginBottom: '1rem' }}>{usernameError}</p>
               )}
-              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginBottom: '1.25rem' }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginBottom: '0.4rem' }}>
                 3–20 characters · letters, numbers, underscores
               </p>
-              <div style={{ display: 'flex', gap: 8 }}>
+              {/* Permanence caveat kept small + low-key. Leading with it
+                  (the old copy) discouraged players from picking one
+                  in case they "got it wrong" — better to put visibility
+                  benefits up top and let this sit as a footnote. */}
+              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginBottom: '1.25rem' }}>
+                Permanent — set once, kept forever.
+              </p>
+              {/* Continue is now the full-width primary CTA. Skip drops
+                  to a small text link below so it reads as "I'll come
+                  back to this," not as an equal-weight alternative —
+                  highly suggests picking a name without forcing it. */}
+              <button
+                type="submit"
+                disabled={usernamePending || !usernameInput.trim()}
+                className="font-karla font-700 w-full"
+                style={{
+                  padding: '0.8rem',
+                  background: usernameInput.trim() ? 'rgba(96,165,250,0.18)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${usernameInput.trim() ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: 10, cursor: usernameInput.trim() ? 'pointer' : 'default',
+                  fontSize: '0.78rem', color: usernameInput.trim() ? '#60a5fa' : '#4a4845',
+                  opacity: usernamePending ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {usernamePending ? '…' : 'Continue →'}
+              </button>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.7rem' }}>
                 <button
                   type="button"
                   onClick={() => setStep('color')}
                   className="font-karla font-600"
                   style={{
-                    flex: 1, padding: '0.7rem',
-                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 10, cursor: 'pointer',
-                    fontSize: '0.75rem', color: '#6a6764',
+                    background: 'none', border: 'none', padding: '0.3rem 0.6rem',
+                    cursor: 'pointer',
+                    fontSize: '0.66rem', color: '#5a5550',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 3,
+                    textDecorationColor: 'rgba(255,255,255,0.18)',
                   }}
                 >
-                  Skip
-                </button>
-                <button
-                  type="submit"
-                  disabled={usernamePending || !usernameInput.trim()}
-                  className="font-karla font-700"
-                  style={{
-                    flex: 2, padding: '0.7rem',
-                    background: usernameInput.trim() ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${usernameInput.trim() ? 'rgba(96,165,250,0.45)' : 'rgba(255,255,255,0.08)'}`,
-                    borderRadius: 10, cursor: usernameInput.trim() ? 'pointer' : 'default',
-                    fontSize: '0.75rem', color: usernameInput.trim() ? '#60a5fa' : '#4a4845',
-                    opacity: usernamePending ? 0.5 : 1,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {usernamePending ? '…' : 'Continue →'}
+                  Skip for now
                 </button>
               </div>
             </form>
