@@ -108,6 +108,22 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
 }
 
+// Map raw RaidNodeType keys to player-facing labels. The raw enum values
+// (e.g. 'class_pick') get surfaced in the detail sheet's eyebrow chip;
+// without this they'd render as the literal "class_pick" with underscore.
+function nodeTypeLabel(type: string): string {
+  switch (type) {
+    case 'skirmish':   return 'Skirmish'
+    case 'raid':       return 'Raid'
+    case 'milestone':  return 'Milestone'
+    case 'shop':       return 'Shop'
+    case 'story':      return 'Story'
+    case 'puzzle':     return 'Puzzle'
+    case 'class_pick': return 'Class'
+    default:           return type
+  }
+}
+
 function LockGlyph({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -669,7 +685,7 @@ function NodeDetailSheet({
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0ede8', lineHeight: 1.15 }}>{node.label}</p>
               <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
                 <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: accent, background: `${accent}1f`, border: `1px solid ${accent}40`, borderRadius: 5, padding: '0.18rem 0.42rem' }}>
-                  {node.type}
+                  {nodeTypeLabel(node.type)}
                 </span>
                 <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{
                   fontSize: '0.5rem', borderRadius: 5, padding: '0.18rem 0.42rem',
@@ -844,7 +860,7 @@ function NodeDetailSheet({
           return (
             <div style={{ marginTop: '1.1rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
-                {chosen ? 'You Chose' : 'Choose Your Class'}
+                {chosen ? 'You Chose' : 'Pick a Class'}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {SHIP_CLASS_LIST.map(cls => {
@@ -898,7 +914,7 @@ function NodeDetailSheet({
                             cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
                           }}
                         >
-                          {pending ? '…' : locked ? 'Locked' : `Become ${cls.name}`}
+                          {pending ? '…' : locked ? 'Locked' : `Pick ${cls.name}`}
                         </button>
                       )}
                     </div>
@@ -906,7 +922,7 @@ function NodeDetailSheet({
                 })}
               </div>
               <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: '0.6rem', lineHeight: 1.5 }}>
-                Permanent. Class effects apply to every raid you sail from here on, stacking with raid items.
+                Permanent. Class effects apply to every raid from here on and stack with raid items.
               </p>
             </div>
           )

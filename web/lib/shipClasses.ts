@@ -46,8 +46,8 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     tagline: 'Glass cannon. You hit hard. You also break.',
     description: 'Sacrifice hull integrity for raw firepower. Cannons run hotter, plating is thinner.',
     bullets: [
-      { label: '+15% raid damage', positive: true  },
-      { label: '−10% raid HP',     positive: false },
+      { label: '+15% damage', positive: true  },
+      { label: '−10% HP',     positive: false },
     ],
     color: '#f0743a',
     emoji: '💥',
@@ -59,8 +59,8 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     tagline: 'Plate and patience. You outlast everything.',
     description: 'Reinforced everywhere. Your hull soaks more, your guns sit a little lighter.',
     bullets: [
-      { label: '+15% raid HP',     positive: true  },
-      { label: '−10% raid damage', positive: false },
+      { label: '+15% HP',     positive: true  },
+      { label: '−10% damage', positive: false },
     ],
     color: '#7dd3fc',
     emoji: '🛡️',
@@ -72,8 +72,8 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     tagline: 'Cargo first. Fights second.',
     description: 'You sail for the prize, not the glory. Heavier holds full of plunder cost you tempo.',
     bullets: [
-      { label: '+25% raid doubloons', positive: true  },
-      { label: '−10 raid speed',      positive: false },
+      { label: '+25% doubloons', positive: true  },
+      { label: '−10 speed',      positive: false },
     ],
     color: '#f0c040',
     emoji: '⟡',
@@ -85,8 +85,8 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     tagline: 'Steady hand. No weak spot.',
     description: 'No specialty, no flaw. A small lift across the board for the captain who wants options open.',
     bullets: [
-      { label: '+5% raid damage', positive: true },
-      { label: '+5% raid HP',     positive: true },
+      { label: '+5% damage', positive: true },
+      { label: '+5% HP',     positive: true },
     ],
     color: '#9aa6b8',
     emoji: '⚓',
