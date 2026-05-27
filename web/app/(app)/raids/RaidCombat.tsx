@@ -179,6 +179,12 @@ export interface RaidCombatProps {
    *  player-stats breakdown popup (tap the player nameplate). */
   totalFortune?: number
   equippedRaidItems: string[]
+  /** Aggregated ship-class damage multiplier (Master Gunner, Ironside,
+   *  First Mate all touch this — Master Gunner +15%, Ironside -10%,
+   *  First Mate +5%, all multiplying together across chapters).
+   *  Multiplied onto every shot the player lands; same chain as raid
+   *  items. Default 1 = no class picks yet. */
+  classDamageMult?: number
   /** Player's equipped repair kit id (e.g. 'basic_repair_kit'). Drives the
    *  Special action: once per battle, takes a turn, heals using the kit's
    *  range + Fortune scaling. Omitted/unknown id => Special stays disabled. */
@@ -226,6 +232,7 @@ export default function RaidCombat({
   shipMinDamage, shipSpeed, totalPower, totalNavigation,
   totalFortune = 0,
   equippedRaidItems,
+  classDamageMult = 1,
   equippedRepairKit,
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
@@ -759,7 +766,11 @@ export default function RaidCombat({
           const aimItemMult = isCritShot
             ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
             : getActiveEffects(equippedRaidItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
-          const mult = (action === 'volley' ? 2 : 1) * bossMult * aimItemMult
+          // classDamageMult: aggregated ship-class effect (Master Gunner
+          // +15%, Ironside -10%, First Mate +5%, stacks across chapters).
+          // Stacks multiplicatively with raid items + volley + crit, same
+          // chain as the rest of the damage mults.
+          const mult = (action === 'volley' ? 2 : 1) * bossMult * aimItemMult * classDamageMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so

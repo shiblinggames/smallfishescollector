@@ -41,6 +41,8 @@ export default async function RaidPage() {
             shipSkins={stats.shipSkins}
             equippedItems={stats.equippedRaidItems}
             ownedRaidItems={stats.ownedRaidItems}
+            classDamageMult={stats.classDamageMult}
+            classDoubloonMult={stats.classDoubloonMult}
             equippedRepairKit={stats.equippedRepairKit}
             initialExpeditionXP={profile?.expedition_xp ?? 0}
             raidMods={stats.raidMods}

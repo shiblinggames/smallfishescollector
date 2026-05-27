@@ -112,25 +112,26 @@ async function loadRaidRecords(
   return result
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords> }> {
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string> }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0, raidRecords: {} }
+  if (!user) return { views: [], doubloons: 0, raidRecords: {}, shipClasses: {} }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes')
     .eq('id', user.id)
     .single()
 
   const doubloons = profile?.doubloons ?? 0
   const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
+  const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
   const [cleared, raidRecords] = await Promise.all([
     buildClearedSet(admin, user.id, profile ?? {}),
     loadRaidRecords(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords }
+  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords, shipClasses }
 }
 
 export async function claimMilestoneNode(
@@ -299,6 +300,57 @@ export async function claimQuartermasterChoice(
     .from('profiles')
     .update({
       raid_items: newItems,
+      raid_node_progress: { ...prog, cleared: newCleared },
+    })
+    .eq('id', user.id)
+
+  return { ok: true }
+}
+
+// Chapter-end class pick. Writes profiles.ship_classes[chapterId] =
+// classId and marks the node cleared. One pick per chapter, locked in
+// permanently — the action refuses if the chapter already has a class
+// picked (so the four-card UI being optimistic doesn't let a player
+// double-write). The node's classPick.chapterId comes from RAID_MAP.
+export async function pickShipClass(
+  nodeId: string,
+  classId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'class_pick' || !node.classPick) return { error: 'Invalid node' }
+  // Server-side validation of the class id against the registry. Lazy
+  // import so this server action doesn't pull SHIP_CLASSES into the
+  // raid map's edge bundle when unrelated callers compile it.
+  const { SHIP_CLASSES } = await import('@/lib/shipClasses')
+  if (!(classId in SHIP_CLASSES)) return { error: 'Invalid class' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('has_completed_practice_raid, raid_node_progress, ship_classes')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { error: 'Already chosen' }
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+
+  const picks = (profile.ship_classes as Record<string, string> | null) ?? {}
+  if (picks[node.classPick.chapterId]) return { error: 'Class already picked for this chapter' }
+
+  const newPicks = { ...picks, [node.classPick.chapterId]: classId }
+  const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+
+  await admin
+    .from('profiles')
+    .update({
+      ship_classes: newPicks,
       raid_node_progress: { ...prog, cleared: newCleared },
     })
     .eq('id', user.id)

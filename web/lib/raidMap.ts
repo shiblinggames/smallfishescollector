@@ -21,7 +21,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick'
 
 /** Routes into a combat screen + derives its clear from battle data. */
 export function isCombatNode(t: RaidNodeType): boolean {
@@ -119,6 +119,10 @@ export interface RaidNode {
    *  raid-item ids (lib/raidItems). Choosing one adds it to the
    *  player's raid_items permanently and clears the node. */
   choice?: { items: string[] }
+  /** class_pick node: one-time chapter-end ship-class pick. The
+   *  chapterId is the RAID_CHAPTERS.id this pick contributes to (so
+   *  the picker writes into profiles.ship_classes[chapterId]). */
+  classPick?: { chapterId: string }
   /** puzzle: the beacon-chain (Lights Out). Solving clears the node. */
   puzzle?: RaidPuzzle
   /** Marks this node as a side branch hanging off another node, NOT part of
@@ -239,9 +243,11 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     romanNumeral: 'I',
     title:      'The Loose Thread',
     subtitle:   'A coastline of pirates, and a thread that runs to somewhere bigger.',
-    // Pete's arc + Krust's arc, including both challenge variants. Krust
-    // challenge is the last beat of Chapter I.
-    lastNodeId: 'krust_challenge',
+    // Pete's arc + Krust's arc, both challenge variants, AND the
+    // class-pick that closes the chapter. Captain's Choice is the
+    // final beat — a permanent ship-identity decision for clearing
+    // the chapter.
+    lastNodeId: 'chapter_1_class',
   },
   {
     id:         'sunken_hand',
@@ -496,6 +502,24 @@ export const RAID_MAP: RaidNode[] = [
       drops: lootDrops(CAPTAIN_KRUST_CHALLENGE.loot),
       clearReward: clearPayout(CAPTAIN_KRUST_CHALLENGE),
       dropsNote: 'Every kill pays more, the clear bonus is steeper, and his unique contraband rolls at double the normal rate.',
+    },
+  },
+  {
+    // Chapter-end ship-class pick. Unlocks the moment the player beats
+    // the main Krust raid (challenge optional). Picks a permanent ship
+    // identity from the 4-class roster in lib/shipClasses.ts; locked in
+    // once chosen. New class nodes for future chapters follow the same
+    // pattern (one per chapter, gated on the chapter's final boss).
+    id: 'chapter_1_class',
+    type: 'class_pick',
+    label: "Captain's Choice",
+    flavor: "Two captains on the seabed and your name on every wanted board between here and the danger lines. Time to decide what kind of captain your name belongs to.",
+    requiresNode: 'krust',
+    classPick: { chapterId: 'thread' },
+    detail: {
+      description:
+        "You sank Pete. You sank Krust. The coast knows your sails now and the next stretch of water is not going to be kind. Stand on the deck of your ship and pick a class. Once chosen it stays with you for every raid you sail from here on.\n\nEach class is a real tradeoff, not a free buff. Stack the same archetype across chapters to commit harder; spread your picks to stay balanced.",
+      ctaLabel: 'Pick a class',
     },
   },
   {

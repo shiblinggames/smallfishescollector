@@ -7,6 +7,7 @@ import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { getActiveEffects } from '@/lib/raidItems'
+import { aggregateShipClasses } from '@/lib/shipClasses'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -42,6 +43,12 @@ export interface RaidPlayerStats {
    *  already-owned items from the boss loot roll so duplicates re-roll
    *  into something new. */
   ownedRaidItems: string[]
+  /** Aggregated ship-class effects from every chapter the player has
+   *  picked one for. damageMult and doubloonMult are passed through to
+   *  RaidGame to apply at hit time; hpMult + speedFlat are already
+   *  baked into playerHPMax + shipSpeed below. */
+  classDamageMult: number
+  classDoubloonMult: number
   equippedRepairKit: string
   hasSeenRaidTutorial: boolean
   raidMods: RaidMods
@@ -52,7 +59,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes')
     .eq('id', userId)
     .single()
 
@@ -97,10 +104,17 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     .filter(e => e.type === 'max_hp_mult')
     .reduce((a, e) => a * e.value, 1)
 
+  // Ship classes: chapter-end identity picks (Master Gunner, Ironside,
+  // Helmsman, First Mate). Each pick stacks multiplicatively with raid
+  // items + with other class picks. HP and speed bake into the base
+  // stats below; damageMult + doubloonMult pass through to RaidGame.
+  const shipClassPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
+  const classEffects = aggregateShipClasses(shipClassPicks)
+
   return {
-    playerHPMax:      Math.round((ship.durability + navBonus.hp) * hpMaxMult),
+    playerHPMax:      Math.round((ship.durability + navBonus.hp) * hpMaxMult * classEffects.hpMult),
     shipMinDamage:    ship.minDamage,
-    shipSpeed:        ship.speed,
+    shipSpeed:        Math.max(0, ship.speed + classEffects.speedFlat),
     totalPower:       totalPower   + navBonus.power,
     totalDodge:       totalDodge   + navBonus.navigation,
     totalFortune:     totalFortune + navBonus.fortune,
@@ -117,6 +131,8 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    equippedItems,
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
+    classDamageMult:      classEffects.damageMult,
+    classDoubloonMult:    classEffects.doubloonMult,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
     raidMods:             resolved.raid,
@@ -227,11 +243,17 @@ export async function claimRaidLoot(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items')
+    .select('doubloons, gems, ship_skins, equipped_ship_skin, raid_items, ship_classes')
     .eq('id', user.id)
     .single()
 
-  let doubloons       = (profile?.doubloons ?? 0) + baseDoubloons
+  // Helmsman + future doubloon-mult class picks scale the crate
+  // doubloons too, in addition to the per-kill gold (which scales via
+  // awardRaidKill). Same multiplier read from the same place.
+  const classPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
+  const classDoubloonMult = aggregateShipClasses(classPicks).doubloonMult
+  const scaledBaseDoubloons = Math.round(baseDoubloons * classDoubloonMult)
+  let doubloons       = (profile?.doubloons ?? 0) + scaledBaseDoubloons
   let gems            = profile?.gems ?? 0
   const ownedSkins    = (profile?.ship_skins as string[] | null) ?? []
   let equippedSkin    = (profile?.equipped_ship_skin as string | null) ?? null

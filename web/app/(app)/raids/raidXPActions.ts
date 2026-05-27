@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { aggregateShipClasses } from '@/lib/shipClasses'
 
 export async function awardRaidKill(
   xp: number,
@@ -14,12 +15,20 @@ export async function awardRaidKill(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, doubloons')
+    .select('expedition_xp, doubloons, ship_classes')
     .eq('id', user.id)
     .single()
 
+  // Ship-class doubloon multiplier (Helmsman + future picks). Applied
+  // server-side so the client can't inflate it. XP isn't class-modified
+  // (gunner doesn't earn more XP per fight, they just hit harder);
+  // only the gold scales.
+  const classPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
+  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
+  const scaledDoubloons = Math.round(doubloons * doubloonMult)
+
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
-  const newDoubloonTotal = (profile?.doubloons ?? 0) + doubloons
+  const newDoubloonTotal = (profile?.doubloons ?? 0) + scaledDoubloons
 
   await admin.from('profiles').update({
     expedition_xp: newExpeditionXP,

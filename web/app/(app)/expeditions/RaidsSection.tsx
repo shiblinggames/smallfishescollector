@@ -9,7 +9,8 @@ import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
-import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode, pickShipClass } from './raidMapActions'
+import { SHIP_CLASS_LIST, getShipClass } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 
 // Single parchment-gold accent for every main-chain node. Earlier this
@@ -95,6 +96,14 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
   // puzzle: a signal beacon flame (light the chain)
   if (type === 'puzzle') return <svg {...common}><path d="M12 2c1.6 3 5 4.6 5 9a5 5 0 0 1-10 0c0-2 .8-3.2 2-4.2.2 1.2 1 1.9 1.9 2.1C11.8 6.6 11 4.1 12 2z" /></svg>
+  // class_pick: ship wheel (Captain's Choice)
+  if (type === 'class_pick') return (
+    <svg {...common}>
+      <circle cx="12" cy="12" r="7" />
+      <circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
+      <path d="M12 2v4 M12 18v4 M2 12h4 M18 12h4 M5 5l2.8 2.8 M16.2 16.2L19 19 M19 5l-2.8 2.8 M7.8 16.2L5 19" />
+    </svg>
+  )
   // milestone (default): treasure star
   return <svg {...common}><path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16.9 5.7 20.4 8 13.4 2 8.9h7.6z" /></svg>
 }
@@ -423,12 +432,14 @@ function NodeDetailSheet({
   view,
   doubloons,
   ownedRaidItems,
+  shipClasses,
   raidRecords,
   onClose,
 }: {
   view: RaidNodeView
   doubloons: number
   ownedRaidItems: string[]
+  shipClasses: Record<string, string>
   raidRecords: RaidRecords | null
   onClose: () => void
 }) {
@@ -479,6 +490,16 @@ function NodeDetailSheet({
     setErr(null)
     startTransition(async () => {
       const res = await claimQuartermasterChoice(node.id, itemId)
+      if ('error' in res) { setErr(res.error); return }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  function chooseClass(classId: string) {
+    setErr(null)
+    startTransition(async () => {
+      const res = await pickShipClass(node.id, classId)
       if ('error' in res) { setErr(res.error); return }
       router.refresh()
       onClose()
@@ -812,6 +833,85 @@ function NodeDetailSheet({
           </div>
         )}
 
+        {/* Chapter-end class picker. Renders a 4-card grid of ship
+            classes from SHIP_CLASS_LIST. If a class is already picked
+            for this chapter, that card highlights and the others dim
+            (lock is permanent). Otherwise every card is a tap target;
+            the chosen class goes to the server via pickShipClass. */}
+        {node.classPick && (() => {
+          const chosenId = shipClasses[node.classPick.chapterId]
+          const chosen = chosenId ? getShipClass(chosenId) : undefined
+          return (
+            <div style={{ marginTop: '1.1rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                {chosen ? 'You Chose' : 'Choose Your Class'}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {SHIP_CLASS_LIST.map(cls => {
+                  const isChosen = chosen?.id === cls.id
+                  const dimmed = !!chosen && !isChosen
+                  return (
+                    <div key={cls.id} style={{
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                      background: isChosen ? `${cls.color}1f` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isChosen ? `${cls.color}80` : `${cls.color}26`}`,
+                      borderRadius: 10, padding: '0.7rem 0.75rem',
+                      opacity: dimmed ? 0.4 : 1,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cls.color}1a`, border: `1px solid ${cls.color}40`, fontSize: '1.05rem' }}>
+                          {cls.emoji}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
+                          <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.35, marginTop: 2, fontStyle: 'italic' }}>{cls.tagline}</p>
+                        </div>
+                        {isChosen && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: cls.color, background: `${cls.color}1c`, border: `1px solid ${cls.color}40`, borderRadius: 5, padding: '0.2rem 0.45rem', flexShrink: 0 }}>Chosen ✓</span>
+                        )}
+                      </div>
+                      {/* Bullets — green for positive, red for negative */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {cls.bullets.map((b, i) => (
+                          <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
+                            fontSize: '0.55rem',
+                            color: b.positive ? '#7adf9a' : '#f08a8a',
+                            background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                            border: `1px solid ${b.positive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
+                            borderRadius: 4, padding: '0.18rem 0.4rem',
+                          }}>
+                            {b.label}
+                          </span>
+                        ))}
+                      </div>
+                      {!chosen && (
+                        <button
+                          onClick={() => chooseClass(cls.id)}
+                          disabled={pending || locked}
+                          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                          style={{
+                            marginTop: 2, padding: '0.55rem', borderRadius: 9,
+                            fontSize: '0.78rem',
+                            background: locked ? 'rgba(255,255,255,0.06)' : `${cls.color}26`,
+                            border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${cls.color}66`}`,
+                            color: locked ? '#5a5856' : cls.color,
+                            cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {pending ? '…' : locked ? 'Locked' : `Become ${cls.name}`}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: '0.6rem', lineHeight: 1.5 }}>
+                Permanent. Class effects apply to every raid you sail from here on, stacking with raid items.
+              </p>
+            </div>
+          )
+        })()}
+
         {/* Boss records — fastest non-admin clear + the player's own best.
             Lives above Drops so the player sees the target time + their own
             best right before they decide whether to run it again. Only
@@ -1133,7 +1233,7 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[] }) {
+export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string> }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   const clearedCount = views.filter(v => v.status === 'cleared').length
@@ -1299,6 +1399,7 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
             view={selected}
             doubloons={doubloons}
             ownedRaidItems={ownedRaidItems}
+            shipClasses={shipClasses}
             raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
             onClose={() => setSelected(null)}
           />

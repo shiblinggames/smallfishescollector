@@ -50,6 +50,8 @@ export default async function PeteChallengeRaidPage() {
             shipSkins={stats.shipSkins}
             equippedItems={stats.equippedRaidItems}
             ownedRaidItems={stats.ownedRaidItems}
+            classDamageMult={stats.classDamageMult}
+            classDoubloonMult={stats.classDoubloonMult}
             equippedRepairKit={stats.equippedRepairKit}
             initialExpeditionXP={profile?.expedition_xp ?? 0}
             raidMods={stats.raidMods}

@@ -342,6 +342,8 @@ interface RaidCrewMember {
 
 export default function RaidGame({ config, equippedShipSkin, shipSkins, equippedItems,
   ownedRaidItems,
+  classDamageMult,
+  classDoubloonMult,
   equippedRepairKit,
   shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
@@ -365,6 +367,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   shipSkins: string[]
   equippedItems: string[]
   ownedRaidItems: string[]
+  /** Aggregated ship-class multiplier for player outgoing damage in
+   *  raids (1.15 = +15% from one Master Gunner pick, stacks
+   *  multiplicatively across chapters). */
+  classDamageMult: number
+  /** Aggregated ship-class multiplier for raid clear doubloons
+   *  (1.25 = +25% from Helmsman). */
+  classDoubloonMult: number
   equippedRepairKit: string
   initialExpeditionXP: number
   playerCharacterColor: string | null
@@ -1279,6 +1288,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 totalNavigation={totalDodge}
                 totalFortune={totalFortune}
                 equippedRaidItems={equippedItems}
+                classDamageMult={classDamageMult}
                 equippedRepairKit={equippedRepairKit}
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}
