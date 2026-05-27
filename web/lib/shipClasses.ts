@@ -50,7 +50,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
       { label: '−10% HP',     positive: false },
     ],
     color: '#f0743a',
-    emoji: '💥',
+    emoji: '✦',
     effects: { damageMult: 1.15, hpMult: 0.90 },
   },
   ironside: {
@@ -63,7 +63,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
       { label: '−10% damage', positive: false },
     ],
     color: '#7dd3fc',
-    emoji: '🛡️',
+    emoji: '▣',
     effects: { damageMult: 0.90, hpMult: 1.15 },
   },
   helmsman: {
@@ -89,7 +89,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
       { label: '+5% HP',     positive: true },
     ],
     color: '#9aa6b8',
-    emoji: '🏴‍☠️',
+    emoji: '⊕',
     effects: { damageMult: 1.05, hpMult: 1.05 },
   },
 }

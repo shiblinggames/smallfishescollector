@@ -859,69 +859,81 @@ function NodeDetailSheet({
           const chosen = chosenId ? getShipClass(chosenId) : undefined
           return (
             <div style={{ marginTop: '1.1rem' }}>
-              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.68rem', color: '#7a7875', marginBottom: '0.65rem' }}>
                 {chosen ? 'You Chose' : 'Pick a Class'}
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {SHIP_CLASS_LIST.map(cls => {
                   const isChosen = chosen?.id === cls.id
                   const dimmed = !!chosen && !isChosen
                   return (
                     <div key={cls.id} style={{
-                      display: 'flex', flexDirection: 'column', gap: 6,
+                      display: 'flex', alignItems: 'center', gap: '0.85rem',
                       background: isChosen ? `${cls.color}1f` : 'rgba(255,255,255,0.03)',
                       border: `1px solid ${isChosen ? `${cls.color}80` : `${cls.color}26`}`,
-                      borderRadius: 10, padding: '0.7rem 0.75rem',
+                      borderRadius: 12, padding: '0.85rem 0.95rem',
                       opacity: dimmed ? 0.4 : 1,
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cls.color}1a`, border: `1px solid ${cls.color}40`, fontSize: '1.05rem' }}>
-                          {cls.emoji}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
-                          <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.35, marginTop: 2, fontStyle: 'italic' }}>{cls.tagline}</p>
-                        </div>
-                        {isChosen && (
-                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: cls.color, background: `${cls.color}1c`, border: `1px solid ${cls.color}40`, borderRadius: 5, padding: '0.2rem 0.45rem', flexShrink: 0 }}>Chosen ✓</span>
-                        )}
+                      {/* Class icon — plain unicode glyph (same style as
+                          Helmsman's lozenge) inside a tinted circle. */}
+                      <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cls.color}1a`, border: `1px solid ${cls.color}40`, fontSize: '1.5rem', color: cls.color, lineHeight: 1 }}>
+                        {cls.emoji}
                       </div>
-                      {/* Bullets — green for positive, red for negative */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                        {cls.bullets.map((b, i) => (
-                          <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
-                            fontSize: '0.55rem',
-                            color: b.positive ? '#7adf9a' : '#f08a8a',
-                            background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-                            border: `1px solid ${b.positive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
-                            borderRadius: 4, padding: '0.18rem 0.4rem',
-                          }}>
-                            {b.label}
-                          </span>
-                        ))}
+                      {/* Name + tagline + bullets stack. Bigger fonts so
+                          the picker is easier to read at a glance. */}
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
+                        <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.35, fontStyle: 'italic' }}>{cls.tagline}</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
+                          {cls.bullets.map((b, i) => (
+                            <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
+                              fontSize: '0.66rem',
+                              color: b.positive ? '#7adf9a' : '#f08a8a',
+                              background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                              border: `1px solid ${b.positive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
+                              borderRadius: 5, padding: '0.22rem 0.5rem',
+                            }}>
+                              {b.label}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      {!chosen && (
+                      {/* Right-side action: circle "Choose" button while
+                          picking, or a checkmark badge on the chosen card.
+                          Replaces the old full-width CTA below the card. */}
+                      {isChosen ? (
+                        <div style={{
+                          width: 52, height: 52, flexShrink: 0, borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: `${cls.color}1c`, border: `2px solid ${cls.color}`,
+                        }}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={cls.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                        </div>
+                      ) : !chosen ? (
                         <button
                           onClick={() => chooseClass(cls.id)}
                           disabled={pending || locked}
-                          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                          aria-label={`Pick ${cls.name}`}
+                          className="font-cinzel font-700 uppercase tracking-[0.04em]"
                           style={{
-                            marginTop: 2, padding: '0.55rem', borderRadius: 9,
-                            fontSize: '0.78rem',
-                            background: locked ? 'rgba(255,255,255,0.06)' : `${cls.color}26`,
-                            border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${cls.color}66`}`,
+                            width: 52, height: 52, flexShrink: 0, borderRadius: '50%',
+                            background: locked ? 'rgba(255,255,255,0.04)' : `${cls.color}26`,
+                            border: `2px solid ${locked ? 'rgba(255,255,255,0.1)' : `${cls.color}99`}`,
                             color: locked ? '#5a5856' : cls.color,
+                            fontSize: '0.6rem',
                             cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 0, touchAction: 'manipulation',
                           }}
                         >
-                          {pending ? '…' : locked ? 'Locked' : `Pick ${cls.name}`}
+                          {pending ? '…' : locked ? '🔒' : 'Choose'}
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   )
                 })}
               </div>
-              <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: '0.6rem', lineHeight: 1.5 }}>
+              <p className="font-karla" style={{ fontSize: '0.7rem', color: '#6a6764', marginTop: '0.7rem', lineHeight: 1.5 }}>
                 Permanent. Class effects apply to every raid from here on and stack with raid items.
               </p>
             </div>
