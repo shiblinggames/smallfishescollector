@@ -216,9 +216,14 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     // Tier-2 roster. Stiffer than Pete's reef: a Finndicate shipping
     // crew that runs cargo on a schedule and does not like being late.
     // 8-fight gauntlet (2 of each) escalating into Krust himself.
-    // Stats run roughly 2x the Corsair's Reckoning tier so the long
-    // run still bites at higher Navigation. All values are tuned
-    // starting points — adjust freely.
+    //
+    // RAID-WIDE RULE: NO ONE IN THIS RAID EVER VOLLEYS. They plate up
+    // behind the Carapace, take a methodical reload-and-trade rhythm,
+    // and just keep firing. The player's volley is the answer (it
+    // punches through Carapace — see the volley bypass in RaidCombat),
+    // so the whole raid is "stack 3 charges, blow open the plate."
+    // Per-enemy patterns vary the cadence + dodge density so each
+    // tier still has its own read.
     scout: {
       id: 'scout', name: 'Bilge Runner', hpBase: 40, minDmg: 4, maxDmg: 8,
       shipSpeed: 5, actionMs: 4200,
@@ -234,11 +239,11 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     reg: {
       id: 'reg', name: 'Brine Deckhand', hpBase: 52, minDmg: 5, maxDmg: 11,
       shipSpeed: 5, actionMs: 4600,
-      // 7-turn loop, two punish turns on the autopilot rhythm:
-      //   T4 dodge  → wastes the player's second charged shot
-      //   T7 volley → free 2x hit while the player reloads
-      // Charges: 0→1→0→1→1→2→3→0
-      pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley'],
+      // 6-turn loop. Adds one mid-cycle dodge to the basic trade so the
+      // player can't pure-autopilot anymore.
+      //   T4 dodge → wastes the player's second charged shot
+      // Charges: 0→1→0→1→1→2→1
+      pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'fire'],
       critChance: 0.06,
       image: '/enemytier2reg.png',
       portrait: '/krust_soldier.jpeg',
@@ -247,12 +252,11 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     brute: {
       id: 'brute', name: 'Hull Breaker', hpBase: 70, minDmg: 9, maxDmg: 14,
       shipSpeed: 4, actionMs: 5200,
-      // Tanky and slow. Telegraphs a big opening volley with three
-      // reloads, then steady heavy fire. Low speed loses most speed
-      // rolls, so its volley usually lands AFTER the player's reply —
-      // survivable if read, brutal if ignored.
-      // Charges: 0→1→2→3→0→1→0→1→0
-      pattern: ['reload', 'reload', 'reload', 'volley', 'reload', 'fire', 'reload', 'fire'],
+      // Tanky and slow. Defensive wall — leads with a dodge to absorb
+      // the opening shot, then steady fire with another dodge mid-loop.
+      // Low speed loses most speed rolls; survives via plate + dodges.
+      // Charges: 0→1→1→2→1→1→2→1
+      pattern: ['reload', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'fire'],
       critChance: 0.05,
       image: '/enemytier2brute.png',
       portrait: '/krust_brute.jpeg',
@@ -262,11 +266,12 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       id: 'elite', name: 'Krust Overseer', hpBase: 64, minDmg: 6, maxDmg: 13,
       shipSpeed: 9, actionMs: 3400,
       // Fastest ship in the run (speed 9) — wins most speed rolls, so
-      // its dodges and volleys resolve before the player's reply.
-      // 9-turn loop with four punish turns (T2 fire trade, T4 dodge,
-      // T7 volley, T9 fire). The real test before the boss.
-      // Charges: 0→1→0→1→1→2→3→0→1→0
-      pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
+      // its fires and dodges resolve before the player's reply. 8-turn
+      // aggressive trader: three fires per loop, two dodges. The "real
+      // test before the boss" pressure now comes from raw cadence, not
+      // a big volley callback.
+      // Charges: 0→1→0→1→0→0→1→0→0
+      pattern: ['reload', 'fire', 'reload', 'fire', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.10,
       image: '/enemytier2elite.png',
       portrait: '/krust_overseer.jpeg',
@@ -275,13 +280,14 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     krust: {
       id: 'krust', name: 'Captain Krust', hpBase: 110, minDmg: 12, maxDmg: 22,
       shipSpeed: 7, actionMs: 4200,
-      // 14-turn boss loop. Same brutal philosophy as Pete, dialed up:
-      // three reload-dodge pairs early (T2/T4/T6) shred the autopilot
-      // fire turns, a volley T7, a free fire T9, a fourth dodge T11,
-      // and a closing volley T14. 12-22 x2 volley x1.5 crit tops out
-      // near 66-damage single shots — read the pattern or sink.
-      // Charges: 0→1→1→2→2→3→3→0→1→0→1→1→2→3→0
-      pattern: ['reload', 'dodge', 'reload', 'dodge', 'reload', 'dodge', 'volley', 'reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley'],
+      // 8-turn boss loop. Krust's signature: always saves up two
+      // reloads, then either fires or dodges. Methodical, plate-and-
+      // trade. Never volleys (the whole crew doesn't — see raid-wide
+      // rule above), so his offense is one big-base shot every fourth
+      // turn (12-22 × 1.5 crit tops near 33-damage singles).
+      //   T1-T2 reload, T3 fire, T4 dodge, T5-T6 reload, T7 fire, T8 dodge
+      // Charges: 0→1→2→1→1→2→3→2→2
+      pattern: ['reload', 'reload', 'fire', 'dodge', 'reload', 'reload', 'fire', 'dodge'],
       critChance: 0.09,
       image: '/enemytier2boss.png',
       portrait: '/Captainkrust.jpeg',

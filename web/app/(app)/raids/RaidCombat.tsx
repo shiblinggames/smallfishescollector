@@ -419,7 +419,7 @@ export default function RaidCombat({
       : `A ${enemy.name} draws alongside!`
     // Themed-ability tell: one-time note so the player knows why hits land soft.
     const introLines = (enemy.damageReduction ?? 0) > 0
-      ? [intro, `Its ${(enemy.abilityName ?? 'armour').toLowerCase()} turns aside the worst of your shot.`]
+      ? [intro, `Its ${(enemy.abilityName ?? 'armour').toLowerCase()} soaks fire and graze. Volleys break through.`]
       : [intro]
     setResolveLog(introLines)
     const promptTimer = setTimeout(() => {
@@ -764,8 +764,12 @@ export default function RaidCombat({
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
           // the hitsplat + log show the real number that gets through.
+          // VOLLEY BYPASS: a 3-charge volley is the concentrated burst that
+          // punches the plate open — the whole Krust raid is designed around
+          // this answer (no enemy in that raid ever volleys themselves; the
+          // player's volley is the response). Fire/graze still gets soaked.
           const dr = enemy.damageReduction ?? 0
-          if (dr > 0 && dmg > 0) dmg = Math.max(1, Math.round(dmg * (1 - dr)))
+          if (dr > 0 && dmg > 0 && action !== 'volley') dmg = Math.max(1, Math.round(dmg * (1 - dr)))
           // Ironclad affix: 50% chance to soak 30% off the hit on top of
           // any themed defense. Stacks multiplicatively, never floors
           // below 1. Push a log line when it triggers so the player
@@ -2311,7 +2315,7 @@ function EnemyStatsPopup({
                   {abilityName} −{drPct}%
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
-                  Soaks {drPct}% off every hit you land.
+                  Soaks {drPct}% off your fire and graze hits. Volleys punch through it for full damage.
                 </p>
               </div>
             </div>

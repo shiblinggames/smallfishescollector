@@ -171,19 +171,22 @@ const PETE_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
 }
 
 // Krust's phase 2 — same revival shape as Pete, opposite character. Where
-// Pete rises angrier and faster, Krust rises defiant and turtled. The
-// pattern drops every dodge in phase 1 (the carapace IS the defense in
-// phase 2), outgoing damage stays flat (1.0 mult), and on top of his
-// existing 15% flat Carapace soak, phase 2 adds a 50% / -30% chance-
-// gated mitigation that fires only on non-volley shots. The dialogue
-// line doubles as the player's hint at the answer: heavy volleys punch
-// through, every other shot might get soaked.
+// Pete rises angrier and faster, Krust rises defiant and turtled. Keeps
+// the raid-wide "no volleys" rule (Krust's whole crew plates up and
+// trades, never charges a volley). Phase 2 holds the signature 2-reload
+// buildup from phase 1 but tightens the cadence: drops one dodge per
+// loop so he fires more often under pressure. Outgoing damage stays
+// flat (1.0 mult). On top of his existing 15% flat Carapace soak,
+// phase 2 adds a 50% / -30% chance-gated mitigation that fires only on
+// non-volley shots. The dialogue line doubles as the player's hint:
+// volleys punch through plate, every other shot might get soaked.
 const KRUST_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
   revivePct:  0.5,
   damageMult: 1.0,
-  // 8-turn loop: 4 reloads + 2 fires + 1 volley + 1 reload at cap. Charges:
-  // 0→1→2→1→2→3→2→3→0. No dodges (the carapace IS the defense in phase 2).
-  pattern: ['reload', 'reload', 'fire', 'reload', 'reload', 'fire', 'reload', 'volley'],
+  // 7-turn loop: 4 reloads + 2 fires + 1 dodge. Same 2-reload buildup
+  // as phase 1 but one fewer dodge per cycle. No volley (whole-raid
+  // rule). Charges: 0→1→2→1→2→3→2→2
+  pattern: ['reload', 'reload', 'fire', 'reload', 'reload', 'fire', 'dodge'],
   dialogueLine: "Down? Plate's still warm. Try again.",
   damageTakenChance:        0.5,
   damageTakenMult:          0.7,
