@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, type TopTideRunHolder } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
@@ -346,11 +347,20 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(initialBestDistance)
   const [deadCount, setDeadCount] = useState(0)   // wreck-screen count-up
-  // Per-run beacon doubloon reward. Awarded automatically on every
-  // wreck (no daily cap, no commit prompt — that scheme confused
-  // players into thinking un-committed runs didn't count toward the
-  // leaderboard). `null` until the server confirms the payout.
+  // Per-run beacon doubloon reward. Set optimistically the moment
+  // the wreck modal appears (beacons * 2 client-side) so the modal
+  // doesn't resize when the server reply lands a few hundred ms later.
   const [beaconReward, setBeaconReward] = useState<{ doubloons: number } | null>(null)
+  // Floating "+N coin" animation that visualizes the doubloons
+  // traveling up toward the Nav balance. Fires on a short delay
+  // after the wreck modal appears, synchronized with the Nav
+  // counter tick (doubloons-changed dispatch — see pendingNavTotalRef).
+  const [flyingPayout, setFlyingPayout] = useState<{ key: number; amount: number } | null>(null)
+  // Server-confirmed total held until the float fires, so the Nav
+  // tick lands at the exact moment the phantom +N starts its
+  // journey (instead of the dispatch firing whenever the server
+  // happens to reply).
+  const pendingNavTotalRef = useRef<number | null>(null)
   const [showTour, setShowTour] = useState(false)
 
   // First-time tour: show modal on mount if the player hasn't seen it.
@@ -393,40 +403,59 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     }
   }, [uiState])
 
-  // Auto-award beacon doubloons on every wreck. Fires once per
-  // wreck transition (guarded by beaconReward null + uiState ===
-  // 'dead'). No daily cap, no opt-in — beacons smashed = doubloons
-  // earned, every run. Best-effort: if the server errors, the player
-  // just doesn't see the line; the leaderboard still records the
-  // distance via submitTideRunBest.
+  // Auto-award beacon doubloons on every wreck. Two beats:
+  //   1. Set the reward state OPTIMISTICALLY the moment the wreck
+  //      screen appears (beacons × 2, the same math the server runs).
+  //      This means the modal renders at its final size on the first
+  //      frame — no late pop-in that would resize the modal when the
+  //      server reply lands a few hundred ms later.
+  //   2. In the background, fire the server action to actually credit
+  //      the doubloons. If it succeeds, dispatch doubloons-changed so
+  //      the Nav balance ticks up in sync with the floating reward
+  //      animation. If it errors, the player has already seen the
+  //      number — the audit row + the credit didn't land, but they'll
+  //      get more on the next run.
   const beaconsThisRun = gRef.current.beaconsSmashed
   useEffect(() => {
     if (uiState !== 'dead') return
     if (beaconReward !== null) return
-    if (beaconsThisRun <= 0) {
-      setBeaconReward({ doubloons: 0 })
-      return
-    }
+    const optimistic = beaconsThisRun * 2
+    setBeaconReward({ doubloons: optimistic })
+    if (beaconsThisRun <= 0) return
     let cancelled = false
     void (async () => {
       try {
         const result = await awardTideRunBeacons(beaconsThisRun)
         if (cancelled) return
         if ('ok' in result) {
-          setBeaconReward({ doubloons: result.doubloons })
-          if (typeof window !== 'undefined') {
-            try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
-          }
-        } else {
-          // Hide the payout line on error rather than show a stale 0.
-          setBeaconReward({ doubloons: 0 })
+          // Stash the new total — the dispatch fires later when the
+          // float animation triggers (so Nav tick + float are in sync).
+          pendingNavTotalRef.current = result.newDoubloonTotal
         }
       } catch {
-        if (!cancelled) setBeaconReward({ doubloons: 0 })
+        /* best-effort */
       }
     })()
     return () => { cancelled = true }
   }, [uiState, beaconsThisRun, beaconReward])
+
+  // Fire the floating "+N coin" animation ~350ms after the wreck
+  // modal appears (so the player reads the static block first), and
+  // dispatch doubloons-changed at the same beat so the Nav counter
+  // starts ticking exactly when the phantom begins its rise. Reset
+  // on new run.
+  useEffect(() => {
+    if (uiState !== 'dead') { setFlyingPayout(null); return }
+    if (!beaconReward || beaconReward.doubloons <= 0) return
+    const t = setTimeout(() => {
+      setFlyingPayout({ key: Date.now(), amount: beaconReward.doubloons })
+      if (pendingNavTotalRef.current != null && typeof window !== 'undefined') {
+        try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: pendingNavTotalRef.current })) } catch {}
+        pendingNavTotalRef.current = null
+      }
+    }, 350)
+    return () => clearTimeout(t)
+  }, [uiState, beaconReward])
 
   // ── Load sprite ────────────────────────────────────────────────────────────
   // The high score is server-authoritative — passed in as initialBestDistance.
@@ -1792,7 +1821,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
               {topHolder && topHolder.distance > 0 && (
                 <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>
-                    Hiscore
+                    Global Hiscore
                   </p>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>
                     {topHolder.distance.toLocaleString()}m <span className="font-karla font-400" style={{ color: 'rgba(255,255,255,0.55)' }}>by {topHolder.username}</span>
@@ -1804,6 +1833,44 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                 Tap to try again
               </p>
             </div>
+
+            {/* Floating "+N coin" payload — phantom number that rises
+                from the modal toward the top of the screen (where the
+                Nav doubloons counter lives). Fires ~350ms after the
+                wreck modal appears in sync with the Nav counter tick.
+                Purely decorative; the actual credit happens server-
+                side and is already reflected in pendingNavTotalRef. */}
+            <AnimatePresence>
+              {flyingPayout && (
+                <motion.div
+                  key={flyingPayout.key}
+                  initial={{ opacity: 0, y: 0, scale: 0.7 }}
+                  animate={{
+                    opacity: [0, 1, 1, 0],
+                    y: [0, -80, -180, -260],
+                    scale: [0.7, 1.25, 1.1, 0.95],
+                  }}
+                  transition={{ duration: 1.45, times: [0, 0.18, 0.65, 1], ease: 'easeOut' }}
+                  onAnimationComplete={() => setFlyingPayout(null)}
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    color: '#ffd56b',
+                    fontWeight: 700,
+                    fontSize: '1.7rem',
+                    letterSpacing: '0.02em',
+                    textShadow: '0 0 18px rgba(255,213,107,0.9), 0 0 38px rgba(255,213,107,0.5)',
+                    pointerEvents: 'none',
+                    zIndex: 30,
+                    fontFamily: 'var(--font-cinzel), serif',
+                  }}
+                >
+                  +{flyingPayout.amount} ⟡
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
