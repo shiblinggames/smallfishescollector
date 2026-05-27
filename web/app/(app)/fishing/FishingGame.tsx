@@ -4314,26 +4314,25 @@ export default function FishingGame({
                 <motion.div key="catching"
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', paddingBottom: '0.25rem' }}>
 
-                  <div style={{ minHeight: '1.6rem' }}>
+                  {/* Live zone label. Minimal — just colored text, no pill
+                      backing. The dial's colored arcs are the primary "what
+                      zone am I in" signal; this is a small supporting cue
+                      that doesn't need to dominate the vertical layout.
+                      Reserved height kept tight so the dial has room to
+                      render without clipping at the bottom. */}
+                  <div style={{ minHeight: '1.05rem' }}>
                     {(phase === 'reeling' || currentZone) && (
-                      <div style={{
-                        display: 'inline-block',
-                        background: 'rgba(4,10,18,0.52)',
-                        border: `1px solid ${currentZone?.color ?? 'rgba(255,255,255,0.08)'}35`,
-                        borderRadius: 20,
-                        padding: '0.3rem 0.85rem',
-                      }}>
-                        <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
-                          style={{
-                            fontSize: '0.88rem',
-                            color: retryFlash ? '#fb923c' : (currentZone?.color ?? '#e8e4de'),
-                            textShadow: retryFlash ? '0 0 16px rgba(251,146,60,0.7)' : currentZone ? `0 0 16px ${currentZone.color}70` : 'none',
-                          }}>
-                          {retryFlash ? 'Second Wind!' : (phase === 'reeling' && bossStageCleared) ? `Stage ${bossStage - 1}/3 — Hold On!` : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
-                        </p>
-                      </div>
+                      <p className="font-cinzel font-700 uppercase tracking-[0.14em]"
+                        style={{
+                          fontSize: '0.7rem',
+                          color: retryFlash ? '#fb923c' : (currentZone?.color ?? '#e8e4de'),
+                          textShadow: retryFlash ? '0 0 12px rgba(251,146,60,0.7)' : currentZone ? `0 0 10px ${currentZone.color}60` : 'none',
+                          margin: 0,
+                        }}>
+                        {retryFlash ? 'Second Wind!' : (phase === 'reeling' && bossStageCleared) ? `Stage ${bossStage - 1}/3` : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
+                      </p>
                     )}
                     {/* Boss stage progress dots */}
                     {selectedZone === 'ancient_deep' && phase === 'catching' && bossStage > 0 && (
