@@ -20,6 +20,27 @@ type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
 const BASE_VOYAGE_MS = 6 * 60 * 60 * 1000
 
+// Recommended voyage scores per route. Anchored to the 0-100 normalized
+// VoyageScore (see computeVoyageScore in lib/expeditions). Recommendations
+// were retuned 2026-05-27 against the normalized scale: deep-water routes
+// previously asked for too much score relative to how early they unlock
+// (Howling Deep opens at nav 15 but used to want 50/100, which a typical
+// nav-15 crew can't reach). The Bertuna Triangle is the top tier and still
+// only asks for ~35; the recommendation is a "you're ready" signal, not a
+// hard gate. Per-route min level lives in ROUTE_MIN_LEVELS below.
+const REC_SCORES: Record<VoyageRoute, number> = {
+  coastal:  12,
+  open:     20,
+  deep:     25,
+  triangle: 35,
+}
+const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = {
+  coastal:  1,
+  open:     5,
+  deep:     15,
+  triangle: 25,
+}
+
 function computeVoyageDurationMs(expeditionLevel: number, totalNav: number): number {
   const levelReductionMs = 90 * Math.pow(expeditionLevel / 100, 2) * 60 * 1000
   const navReductionMs = Math.min(90 * 60 * 1000, 90 * Math.pow(totalNav / 75, 2) * 60 * 1000)
@@ -387,8 +408,6 @@ export default function DailyVoyagePanel({
                 {/* Clickable route nodes */}
                 {(() => {
                   const expeditionLevel = getLevelFromXP(expeditionXP)
-                  const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15, triangle: 25 }
-                  const REC_SCORES: Record<VoyageRoute, number> = { coastal: 20, open: 35, deep: 50, triangle: 65 }
                   return (Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(routeKey => {
                     const rco = ROUTE_CONFIGS[routeKey]
                     const node = ROUTE_NODES[routeKey]
@@ -458,8 +477,7 @@ export default function DailyVoyagePanel({
                 {/* Overlay panel — fades up from the bottom when a route is selected */}
                 {selectedRoute && (() => {
                   const expeditionLevel = getLevelFromXP(expeditionXP)
-                  const ROUTE_MIN_LEVELS_OVL: Record<VoyageRoute, number> = { coastal: 1, open: 5, deep: 15, triangle: 25 }
-                  const minLevel = ROUTE_MIN_LEVELS_OVL[selectedRoute]
+                  const minLevel = ROUTE_MIN_LEVELS[selectedRoute]
                   const rco = ROUTE_CONFIGS[selectedRoute]
                   const levelLockedRoute = expeditionLevel < minLevel
                   const shipLockedRoute  = shipTier < rco.minShipTier
@@ -500,8 +518,7 @@ export default function DailyVoyagePanel({
 
                       {/* Stats row */}
                       {stats && (() => {
-                        const REC: Record<string, number> = { coastal: 20, open: 35, deep: 50, triangle: 65 }
-                        const rec = REC[selectedRoute] ?? 0
+                        const rec = REC_SCORES[selectedRoute] ?? 0
                         const crewScore = computeVoyageScore(stats.power, stats.dodge, stats.fortune)
                         const met = crewScore >= rec
                         const close = !met && crewScore >= rec * 0.75
