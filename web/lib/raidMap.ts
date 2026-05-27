@@ -65,6 +65,12 @@ export interface RaidNodeDrop {
   swatch?: string
   /** CSS filter applied to the swatch (the skin's actual effect). */
   swatchFilter?: string
+  /** If this drop is a raid item, its id (so the detail modal can pull
+   *  the full RaidItemDef — effects, description, source). */
+  raidItemId?: string
+  /** If this drop is a ship skin, its id (so the detail modal can
+   *  pull the full ShipSkin — name, filter, lore). */
+  shipSkinId?: string
 }
 
 /** Extra content shown when the player taps a node open. */
@@ -156,11 +162,15 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
         drop.sublabel = 'Ship skin. A cosmetic new look for your ship.'
         drop.image = SHIP_SKIN_PREVIEW_IMG
         drop.imageFilter = skin.filter
+        drop.shipSkinId = l.shipSkinId
       }
     }
     // Raid item → surface its plain-English effect.
     const item = getRaidItem(l.id)
-    if (item) drop.sublabel = `Raid item. ${item.description}`
+    if (item) {
+      drop.sublabel = `Raid item. ${item.description}`
+      drop.raidItemId = item.id
+    }
     return drop
   })
   return combineGemDrops(drops)

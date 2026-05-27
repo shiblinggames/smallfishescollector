@@ -4,10 +4,11 @@ import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { isCombatNode, chapterForNode, RAID_CHAPTERS, type RaidChapter, type RaidNodeView } from '@/lib/raidMap'
+import { isCombatNode, chapterForNode, RAID_CHAPTERS, type RaidChapter, type RaidNodeDrop, type RaidNodeView } from '@/lib/raidMap'
 import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
+import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode } from './raidMapActions'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 
@@ -435,6 +436,10 @@ function NodeDetailSheet({
   const [pending, startTransition] = useTransition()
   const [err, setErr] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false) // puzzle solved → show the destination
+  // Tap a unique-drop chip to inspect it (image, full description,
+  // effect breakdown for raid items, drop chance). Cleared by tapping
+  // outside the popup or its close button.
+  const [selectedDrop, setSelectedDrop] = useState<RaidNodeDrop | null>(null)
   const { node, status, claimable, lockReason } = view
   // Single accent now: matches the unified map palette.
   const accent = MAIN_ACCENT
@@ -889,11 +894,19 @@ function NodeDetailSheet({
                         {uniques.map(d => {
                           const rc = d.rarity ? RARITY_COLOR[d.rarity] : '#9ca3af'
                           return (
-                            <span key={d.label} style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-                              background: `${rc}16`, border: `1px solid ${rc}40`,
-                              borderRadius: 9, padding: '0.4rem 0.55rem 0.4rem 0.45rem',
-                            }}>
+                            <button
+                              type="button"
+                              key={d.label}
+                              onClick={() => setSelectedDrop(d)}
+                              aria-label={`${d.label} — details`}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                                background: `${rc}16`, border: `1px solid ${rc}40`,
+                                borderRadius: 9, padding: '0.4rem 0.55rem 0.4rem 0.45rem',
+                                cursor: 'pointer', font: 'inherit', color: 'inherit',
+                                touchAction: 'manipulation',
+                              }}
+                            >
                               <span style={{ width: 26, height: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.05rem', overflow: 'hidden' }}>
                                 {d.swatch
                                   ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 4, background: d.swatch, filter: d.swatchFilter }} />
@@ -908,7 +921,7 @@ function NodeDetailSheet({
                                   {d.chance}
                                 </span>
                               )}
-                            </span>
+                            </button>
                           )
                         })}
                       </div>
@@ -974,7 +987,143 @@ function NodeDetailSheet({
     </motion.div>
   )
 
-  return typeof document !== 'undefined' ? createPortal(sheet, document.body) : null
+  // Drop detail popup — layers ABOVE the sheet (sheet is z-1000) so
+  // tapping a unique-drop chip inside the sheet opens this card without
+  // closing the sheet itself. Both portal to <body> so they escape any
+  // ancestor stacking context.
+  const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} onClose={() => setSelectedDrop(null)} /> : null
+
+  return typeof document !== 'undefined'
+    ? createPortal(<>{sheet}{dropModal}</>, document.body)
+    : null
+}
+
+/* ─────────────────────── Drop detail modal ──────────────────── */
+// Tap a unique-drop chip on a node sheet → this card opens. Pulls full
+// info from getRaidItem / getShipSkin so it shows effects + flavor in
+// addition to whatever the drop chip already had. Sits ABOVE the node
+// detail sheet (z-2000 vs sheet's z-1000); tapping the backdrop or the
+// X closes it without closing the underlying sheet.
+function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () => void }) {
+  const rarityColor = drop.rarity ? RARITY_COLOR[drop.rarity] : '#9ca3af'
+  const raidItem    = drop.raidItemId ? getRaidItem(drop.raidItemId)   : undefined
+  const shipSkin    = drop.shipSkinId ? getShipSkin(drop.shipSkinId)   : undefined
+  // What kind of drop is this — drives the "type" label + body copy.
+  const dropKind = raidItem ? 'Raid Item' : shipSkin ? 'Ship Skin' : 'Drop'
+  // Description: prefer the raid item's full description; fall back to
+  // the drop's sublabel (already preformatted by lootDrops).
+  const description = raidItem?.description
+    ?? (drop.sublabel ?? '').replace(/^Raid item\.\s*|^Ship skin\.\s*/, '')
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.25rem',
+      }}
+    >
+      <motion.div
+        onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: 4 }}
+        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          width: '100%', maxWidth: 340,
+          background: 'linear-gradient(180deg, #0e1726 0%, #07101c 100%)',
+          border: `1px solid ${rarityColor}55`,
+          borderTop: `3px solid ${rarityColor}`,
+          borderRadius: 16,
+          padding: '1.1rem 1.05rem 1.1rem',
+          boxShadow: `0 16px 48px rgba(0,0,0,0.55), 0 0 24px ${rarityColor}22`,
+          position: 'relative',
+        }}
+      >
+        {/* Close (X) */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: 'absolute', top: 8, right: 8,
+            width: 28, height: 28, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+            color: '#9aa0a6', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 0, font: 'inherit',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+
+        {/* Header: big icon + name + type + rarity */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, paddingRight: 24 }}>
+          <div style={{
+            width: 64, height: 64, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: `${rarityColor}14`, border: `1px solid ${rarityColor}45`,
+            borderRadius: 12, overflow: 'hidden',
+          }}>
+            {drop.swatch
+              ? <span style={{ display: 'block', width: '100%', height: '100%', background: drop.swatch, filter: drop.swatchFilter }} />
+              : drop.image
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={drop.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: 4 }} />
+                : <span style={{ fontSize: '2rem' }}>{drop.emoji}</span>}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: rarityColor, marginBottom: 4 }}>
+              {dropKind}
+            </p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f5f2ec', lineHeight: 1.15 }}>
+              {drop.label}
+            </p>
+            {drop.rarity && (
+              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: rarityColor, marginTop: 3 }}>
+                {drop.rarity}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Description */}
+        {description && (
+          <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.55, marginBottom: 14 }}>
+            {description}
+          </p>
+        )}
+
+        {/* Source line for raid items (tells you where it drops) */}
+        {raidItem?.source && (
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a8090', marginBottom: 14 }}>
+            Source: <span style={{ color: '#9aa6b8' }}>{raidItem.source}</span>
+          </p>
+        )}
+
+        {/* Drop chance pill */}
+        {drop.chance && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="font-karla font-700 uppercase tracking-[0.1em]"
+              style={{
+                fontSize: '0.65rem', color: rarityColor,
+                background: `${rarityColor}1c`, border: `1px solid ${rarityColor}50`,
+                borderRadius: 999, padding: '0.32rem 0.85rem',
+              }}>
+              {drop.chance} drop chance
+            </span>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  )
 }
 
 /* ─────────────────────── Collapsible section ─────────────────── */
