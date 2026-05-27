@@ -47,7 +47,13 @@ const COLS = [36, 64, 32, 68]
 const ROW = 84           // vertical pitch between node centres
 const TOKEN = 72         // layout/max token diameter (drives spacing + viewBox)
 const PAD_TOP = 18
-const PAD_BOTTOM = 14
+// Bigger than PAD_TOP because the current-node label sits BELOW its
+// token (~30-40px tall for one or two lines). On every row except the
+// last, that label nests into the inter-row gap (ROW = 84); on the
+// LAST row of a chapter it would otherwise overshoot the parchment
+// backdrop and poke past the chapter card border. Reserve enough
+// bottom padding here that a wrapped label still fits inside the card.
+const PAD_BOTTOM = 52
 
 // Uniform node size for every main-chain token — the chain reads as a
 // steady rhythm of beats. The boss raid still gets a subtle bump so the
