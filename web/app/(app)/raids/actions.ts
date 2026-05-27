@@ -49,6 +49,10 @@ export interface RaidPlayerStats {
    *  baked into playerHPMax + shipSpeed below. */
   classDamageMult: number
   classDoubloonMult: number
+  /** Raw chapter -> classId picks. Threaded to the in-fight stats popup
+   *  so the player can see WHICH classes are modifying their ship,
+   *  not just the aggregated multiplier. */
+  shipClasses: Record<string, string>
   equippedRepairKit: string
   hasSeenRaidTutorial: boolean
   raidMods: RaidMods
@@ -133,6 +137,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
     classDamageMult:      classEffects.damageMult,
     classDoubloonMult:    classEffects.doubloonMult,
+    shipClasses:          shipClassPicks,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
     raidMods:             resolved.raid,

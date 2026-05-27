@@ -7,6 +7,7 @@ import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
+import { getShipClass } from '@/lib/shipClasses'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
@@ -167,6 +168,10 @@ interface Props {
   equippedRepairKit: string
   raidRepairOwed: number
   doubloons: number
+  /** chapterId -> classId picks from chapter-end Captain's Choice nodes.
+   *  Used to render the "Classes" section in the loadout drawer so the
+   *  player can see which classes are buffing their next raid. */
+  shipClasses: Record<string, string>
 }
 
 function DrawerHandle() {
@@ -195,6 +200,7 @@ export default function ShipHero({
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems,
   equippedRepairKit,
   raidRepairOwed, doubloons,
+  shipClasses,
 }: Props) {
   const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
@@ -943,6 +949,56 @@ export default function ShipHero({
                           {kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()} Fortune scales the max ({range.max - kit.baseMax > 0 ? `+${range.max - kit.baseMax}` : 'no'} bonus from your {ratedFortune} Fortune).
                         </p>
                       </div>
+                    </div>
+                  </>
+                )
+              })()}
+
+              {/* ── Classes ──
+                  Read-only summary of chapter-end class picks. Picks
+                  happen in the Captain's Choice node (raid map);
+                  surfacing them here lets the player see what's
+                  buffing their next raid right next to the rest of
+                  their loadout. Each pick shows the same glyph +
+                  name + bullets used in the picker for consistency.
+              */}
+              {(() => {
+                const picks = Object.values(shipClasses)
+                  .map(id => getShipClass(id))
+                  .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
+                if (picks.length === 0) return null
+                return (
+                  <>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Classes</p>
+                    <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
+                      Permanent picks from Captain&apos;s Choice nodes. Effects apply in raids and stack with raid items.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1.5rem' }}>
+                      {picks.map(cls => (
+                        <div key={cls.id} style={{
+                          display: 'flex', alignItems: 'center', gap: '0.85rem',
+                          background: `${cls.color}14`, border: `1px solid ${cls.color}40`,
+                          borderRadius: 12, padding: '0.75rem 0.9rem',
+                        }}>
+                          <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cls.color}1a`, border: `1px solid ${cls.color}40`, fontSize: '1.4rem', color: cls.color, lineHeight: 1 }}>
+                            {cls.emoji}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 4 }}>
+                              {cls.bullets.map((b, i) => (
+                                <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
+                                  fontSize: '0.6rem',
+                                  color: b.positive ? '#7adf9a' : '#f08a8a',
+                                  background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                                  border: `1px solid ${b.positive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
+                                  borderRadius: 5, padding: '0.2rem 0.45rem',
+                                }}>{b.label}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </>
                 )

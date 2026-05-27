@@ -45,6 +45,7 @@ export default async function KrustChallengeRaidPage() {
             ownedRaidItems={stats.ownedRaidItems}
             classDamageMult={stats.classDamageMult}
             classDoubloonMult={stats.classDoubloonMult}
+            shipClasses={stats.shipClasses}
             equippedRepairKit={stats.equippedRepairKit}
             initialExpeditionXP={profile?.expedition_xp ?? 0}
             raidMods={stats.raidMods}

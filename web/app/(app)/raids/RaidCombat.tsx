@@ -27,6 +27,7 @@ import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { type AffixDef } from '@/lib/raidAffixes'
+import { getShipClass } from '@/lib/shipClasses'
 import CharacterAvatar from '@/components/CharacterAvatar'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
@@ -185,6 +186,10 @@ export interface RaidCombatProps {
    *  Multiplied onto every shot the player lands; same chain as raid
    *  items. Default 1 = no class picks yet. */
   classDamageMult?: number
+  /** Raw chapter -> classId picks. Shown on the Captain's Ledger
+   *  popup so the player can see which classes are buffing them
+   *  during the fight. */
+  shipClasses?: Record<string, string>
   /** Player's equipped repair kit id (e.g. 'basic_repair_kit'). Drives the
    *  Special action: once per battle, takes a turn, heals using the kit's
    *  range + Fortune scaling. Omitted/unknown id => Special stays disabled. */
@@ -233,6 +238,7 @@ export default function RaidCombat({
   totalFortune = 0,
   equippedRaidItems,
   classDamageMult = 1,
+  shipClasses = {},
   equippedRepairKit,
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
@@ -1916,6 +1922,7 @@ export default function RaidCombat({
             totalFortune={totalFortune}
             isBoss={isBoss}
             equippedRaidItems={equippedRaidItems}
+            shipClasses={shipClasses}
             damagePct={mods.damagePct}
             onClose={() => setShowStats(false)}
           />
@@ -1985,7 +1992,7 @@ export default function RaidCombat({
 function PlayerStatsPopup({
   shipName, shipImageUrl, shipFilter, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
-  isBoss, equippedRaidItems, damagePct = 0,
+  isBoss, equippedRaidItems, shipClasses = {}, damagePct = 0,
   onClose,
 }: {
   shipName: string
@@ -2000,6 +2007,9 @@ function PlayerStatsPopup({
   totalFortune: number
   isBoss: boolean
   equippedRaidItems: string[]
+  /** chapter -> classId picks. Surfaces under the stat grid so the
+   *  player can see which classes are buffing them mid-fight. */
+  shipClasses?: Record<string, string>
   damagePct?: number
   onClose: () => void
 }) {
@@ -2089,6 +2099,58 @@ function PlayerStatsPopup({
             </div>
           ))}
         </div>
+
+        {/* Classes — chapter-end picks. Read-only summary so the
+            player can confirm mid-fight which classes are scaling
+            their numbers. Glyph + name + bullet pills, same shape
+            as the loadout-drawer Class section. */}
+        {(() => {
+          const picks = Object.values(shipClasses)
+            .map(id => getShipClass(id))
+            .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
+          if (picks.length === 0) return null
+          return (
+            <div style={{ marginBottom: 14 }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#7dd3fc', letterSpacing: '0.16em', marginBottom: 6 }}>
+                Classes
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {picks.map(cls => (
+                  <div key={cls.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '0.6rem 0.7rem',
+                    background: `${cls.color}10`,
+                    border: `1px solid ${cls.color}33`,
+                    borderRadius: 12,
+                  }}>
+                    <div style={{
+                      width: 32, height: 32, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `${cls.color}18`, border: `1px solid ${cls.color}45`,
+                      borderRadius: 9, fontSize: '1.15rem', color: cls.color, lineHeight: 1,
+                    }}>
+                      {cls.emoji}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
+                        {cls.bullets.map((b, i) => (
+                          <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
+                            fontSize: '0.56rem',
+                            color: b.positive ? '#7adf9a' : '#f08a8a',
+                            background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                            border: `1px solid ${b.positive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
+                            borderRadius: 4, padding: '0.15rem 0.38rem',
+                          }}>{b.label}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Special — scales with however many raid items are equipped */}
         {specialItems.length > 0 && (

@@ -344,6 +344,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   ownedRaidItems,
   classDamageMult,
   classDoubloonMult,
+  shipClasses,
   equippedRepairKit,
   shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
@@ -374,6 +375,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   /** Aggregated ship-class multiplier for raid clear doubloons
    *  (1.25 = +25% from Helmsman). */
   classDoubloonMult: number
+  /** Raw chapter -> classId picks. Threaded to RaidCombat so the
+   *  in-fight Captain's Ledger popup can show which classes are
+   *  buffing the player. */
+  shipClasses: Record<string, string>
   equippedRepairKit: string
   initialExpeditionXP: number
   playerCharacterColor: string | null
@@ -1289,6 +1294,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 totalFortune={totalFortune}
                 equippedRaidItems={equippedItems}
                 classDamageMult={classDamageMult}
+                shipClasses={shipClasses}
                 equippedRepairKit={equippedRepairKit}
                 killReward={reward ? { gold: reward.gold, xp: reward.xp } : undefined}
                 onEnemyDefeated={handleEnemyDefeated}
