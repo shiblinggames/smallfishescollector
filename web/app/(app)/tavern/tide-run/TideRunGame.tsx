@@ -6,7 +6,7 @@ import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, type TopTideR
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { prefetchTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
+import { prefetchTideRunAudio, teardownTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -292,8 +292,14 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   const shipImgRef = useRef<HTMLImageElement | null>(null)
 
   // Kick off the beacon SFX prefetch on mount so the buffers are ready by
-  // the time the player encounters their first beacon.
-  useEffect(() => { prefetchTideRunAudio() }, [])
+  // the time the player encounters their first beacon. On UNMOUNT (player
+  // leaves /tide-run), fully tear down the silent session-keeper audio
+  // element so iOS doesn't keep showing the lock-screen Now Playing
+  // widget after the player has navigated away.
+  useEffect(() => {
+    prefetchTideRunAudio()
+    return () => { teardownTideRunAudio() }
+  }, [])
 
   // Speaker toggle state — mirrors the persisted preference in the audio
   // singleton. UI in render below.

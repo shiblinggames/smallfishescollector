@@ -218,6 +218,23 @@ export function setTideRunMuted(next: boolean): void {
   try { window.localStorage.setItem('tideRunAudioMuted', String(next)) } catch {}
 }
 
+/** Full teardown of the silent session-keeper audio element. Called
+ *  when TideRunGame unmounts (player leaves the page). Without this,
+ *  the keeper element stays in the DOM with its src set even after
+ *  pause, which keeps iOS's Now Playing / lock-screen media widget
+ *  visible across the rest of the app. Rebuilds cleanly on the next
+ *  /tide-run mount via ensureSessionKeeper. */
+export function teardownTideRunAudio(): void {
+  if (!sessionKeeper) return
+  try { sessionKeeper.pause() } catch {}
+  try { sessionKeeper.removeAttribute('src') } catch {}
+  try { sessionKeeper.load() } catch {}
+  try { sessionKeeper.remove() } catch {}
+  sessionKeeper = null
+  sessionKeeperStarted = false
+  sessionKeeperRouted = false
+}
+
 /** Beacon detected the airborne ship — beam fires up and catches the
  *  player. Plays at the moment detection starts (before the death). */
 export function playBeaconCatchSfx(): void { play(catchBuffer) }

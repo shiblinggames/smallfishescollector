@@ -311,6 +311,32 @@ function rampMaster(fromValue: number, target: number, ms: number, pauseAtEnd = 
       clearHandoff()
       try { elA?.pause() } catch {}
       try { elB?.pause() } catch {}
+      // FULL teardown — not just pause. Paused <audio> elements with
+      // their src still set keep iOS's Now Playing widget visible on
+      // the lock screen / Control Center forever (until app close),
+      // because iOS treats them as "media item still loaded, just
+      // paused." Stripping the src + dropping the elements from the
+      // DOM forces iOS to end the media session for these elements
+      // and the widget goes away. ensureElements() rebuilds them
+      // fresh on the player's next /fishing visit; the gesture
+      // primer (primeBothElements via elementsPrimed=false) runs
+      // again on first interaction, same as a cold start.
+      try {
+        if (elA) {
+          elA.removeAttribute('src')
+          try { elA.load() } catch {}
+          try { elA.remove() } catch {}
+        }
+        if (elB) {
+          elB.removeAttribute('src')
+          try { elB.load() } catch {}
+          try { elB.remove() } catch {}
+        }
+      } catch {}
+      elA = null
+      elB = null
+      current = null
+      elementsPrimed = false
       pendingPauseTimeout = null
     }, ms + 80)
   }
