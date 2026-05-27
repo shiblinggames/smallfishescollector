@@ -1754,40 +1754,46 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         )}
 
         {uiState === 'dead' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 pointer-events-none">
+            {/* Wider modal (was 320 → now 420) with more padding so the
+                blocks have room to breathe. Bigger fonts across every
+                line so the recap is genuinely readable, not cramped. */}
             <div style={{
-              padding: '18px 26px',
-              borderRadius: 16,
-              background: 'rgba(6, 18, 34, 0.86)',
+              width: '100%',
+              maxWidth: 420,
+              padding: '24px 28px 22px',
+              borderRadius: 18,
+              background: 'rgba(6, 18, 34, 0.88)',
               border: '1px solid rgba(189,160,90,0.5)',
               backdropFilter: 'blur(6px)',
-              maxWidth: 320,
             }}>
               {(() => {
                 const isNewBest = score > 0 && score === highScore
-                const shortBy = highScore - score
                 return (
                   <>
-                    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.65rem', color: '#bda05a', marginBottom: 6 }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.78rem', color: '#bda05a', marginBottom: 8 }}>
                       Wrecked
                     </p>
                     <p className="font-cinzel font-700" style={{
-                      fontSize: '2.4rem', lineHeight: 1,
+                      fontSize: '3.2rem', lineHeight: 1,
                       color: isNewBest ? '#ffd56b' : '#ffffff',
-                      textShadow: isNewBest ? '0 0 18px rgba(255,213,107,0.55)' : 'none',
+                      textShadow: isNewBest ? '0 0 22px rgba(255,213,107,0.6)' : 'none',
                     }}>
-                      {deadCount}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
+                      {deadCount}<span style={{ fontSize: '1.3rem', marginLeft: 6, opacity: 0.75 }}>m</span>
                     </p>
                     {isNewBest ? (
-                      <p className="tr-newbest font-cinzel font-700 mt-2" style={{
-                        fontSize: '0.95rem', color: '#ffd56b', letterSpacing: '0.12em',
+                      <p className="tr-newbest font-cinzel font-700 mt-3" style={{
+                        fontSize: '1.1rem', color: '#ffd56b', letterSpacing: '0.12em',
                         textShadow: '0 0 14px rgba(255,213,107,0.6)',
                       }}>
                         ★ NEW BEST ★
                       </p>
                     ) : (
-                      <p className="font-karla font-300 mt-2" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
-                        Best {highScore}m{shortBy > 0 ? ` · ${shortBy}m short` : ''}
+                      // Personal Best line. Drops the "N meters short"
+                      // tail — that math is dispiriting after a wreck,
+                      // the PB number alone is enough context.
+                      <p className="font-karla font-700 mt-3" style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.78)' }}>
+                        Personal Best: <span style={{ color: '#ffffff' }}>{highScore}m</span>
                       </p>
                     )}
                   </>
@@ -1796,40 +1802,50 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
 
               {/* ── Beacon doubloon payout ──
                   Auto-awarded on every wreck (2 doubloons per beacon
-                  smashed, no daily cap). Replaces the old "commit
-                  one run per day" prompt that confused players into
-                  thinking un-committed runs didn't count for the
-                  leaderboard (they always did). */}
+                  smashed). Set optimistically when the wreck screen
+                  appears so the modal lands at final size on frame 1. */}
               {beaconReward && beaconReward.doubloons > 0 && (
-                <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(189,160,90,0.18)', border: '1px solid rgba(189,160,90,0.55)' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#bda05a', marginBottom: 4 }}>
+                <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 12, background: 'rgba(189,160,90,0.18)', border: '1px solid rgba(189,160,90,0.55)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.7rem', color: '#bda05a', marginBottom: 6 }}>
                     Beacons Smashed
                   </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffd56b' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#ffd56b', lineHeight: 1.1 }}>
                     +{beaconReward.doubloons} ⟡
                   </p>
-                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.45 }}>
+                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.45 }}>
                     {beaconsThisRun} × 2 doubloons
                   </p>
                 </div>
               )}
 
-              {/* ── Global #1 to chase ──
-                  Always-on target on the wreck screen so the player
-                  sees what the run to beat looks like. Hidden when
-                  the leaderboard hasn't been seeded yet (cold start). */}
+              {/* ── Global Hiscore ──
+                  Hero treatment: bigger distance number with a crown
+                  glyph, name underneath in a secondary line. The
+                  previous tight one-line "1500m by yoon" read as
+                  metadata; this version reads as the target you're
+                  chasing. */}
               {topHolder && topHolder.distance > 0 && (
-                <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>
+                <div style={{
+                  marginTop: 14,
+                  padding: '14px 16px',
+                  borderRadius: 12,
+                  background: 'linear-gradient(180deg, rgba(255,213,107,0.07) 0%, rgba(189,160,90,0.05) 100%)',
+                  border: '1px solid rgba(255,213,107,0.32)',
+                }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.65rem', color: 'rgba(255,213,107,0.78)', marginBottom: 6 }}>
                     Global Hiscore
                   </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>
-                    {topHolder.distance.toLocaleString()}m <span className="font-karla font-400" style={{ color: 'rgba(255,255,255,0.55)' }}>by {topHolder.username}</span>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#ffd56b', lineHeight: 1.1, textShadow: '0 0 14px rgba(255,213,107,0.32)' }}>
+                    <span style={{ marginRight: 8 }}>👑</span>
+                    {topHolder.distance.toLocaleString()}m
+                  </p>
+                  <p className="font-karla font-700 mt-1" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.72)' }}>
+                    held by <span style={{ color: '#f0ede8', fontWeight: 700 }}>{topHolder.username}</span>
                   </p>
                 </div>
               )}
 
-              <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.7rem', color: '#bda05a' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.18em] mt-5" style={{ fontSize: '0.82rem', color: '#bda05a' }}>
                 Tap to try again
               </p>
             </div>

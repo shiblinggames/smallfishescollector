@@ -52,7 +52,6 @@ async function DailySection() {
     profile?.last_daily_claim === today &&
     (!isPremium || profile?.last_pack_claim === today)
   const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 6)
-  const tideRunCommitted = profile?.tide_run_committed_date === today
 
   // Chart the Course folded into Daily on 2026-05-26 — used to live in its
   // own "Contest" section. The daily-grant model (1 move per day, no stacking)
@@ -91,9 +90,9 @@ async function DailySection() {
       />
       <GameCard
         href="/tavern/tide-run"
-        eyebrow="Daily"
+        eyebrow="Arcade"
         title="Tide Run"
-        statusText={tideRunCommitted ? 'Today’s run committed — play freely' : 'Outrun pursuit, commit one run a day'}
+        statusText="Outrun pursuit. Smash beacons for doubloons"
         info={[]}
         icon={<BoatIcon />}
         variant="compact"
