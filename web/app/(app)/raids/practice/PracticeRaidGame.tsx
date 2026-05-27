@@ -301,48 +301,29 @@ interface TourStep {
   arrowAlign: 'left' | 'center' | 'right'
 }
 
+// Three steps. The essential combat read: your moves, the aim minigame,
+// the enemy pattern + dodge. Skirmish-vs-raid framing, stats popup, and
+// the "faster ship goes first" detail are all discoverable through play
+// (the action log narrates each beat). Players who want depth can tap
+// their nameplate for stats anytime.
 const PRACTICE_TOUR: TourStep[] = [
   {
-    title: 'Welcome aboard, Captain!',
-    body: "Fights are turn-based. You and the enemy each pick a move — the faster ship goes first.",
-    cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
-    arrowDir: 'none', arrowAlign: 'center',
-  },
-  {
-    title: 'Your four moves',
-    body: 'RELOAD loads a cannonball. FIRE spends one. VOLLEY spends three for double damage. DODGE avoids the next hit.',
+    title: 'Pick a move',
+    body: 'Reload loads a cannonball. Fire spends one. Volley spends three for double damage. Dodge avoids the next hit.',
     cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
     title: 'Lock the aim',
-    body: 'When you fire, a marker sweeps a bar. Tap to stop it in the green to hit — nail the gold center for a critical.',
+    body: 'When you fire, tap to stop the marker in the green. Gold center is a critical.',
     cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
-    title: 'Read the enemy',
-    body: "Enemies follow a pattern. Watch their cannonballs — at 3, a big volley is coming. Learn the pattern to beat them.",
+    title: 'Read the pattern',
+    body: 'Enemies follow a pattern. At 3 cannonballs they volley. Dodge that turn.',
     cardStyle: { top: '32%', left: '1rem', right: '1rem' },
     arrowDir: 'up', arrowAlign: 'left',
-  },
-  {
-    title: 'Speed & dodging',
-    body: "See a big volley coming? Dodge that turn — even a failed dodge cuts the hit in half. Then it needs a turn to recharge.",
-    cardStyle: { bottom: '32%', left: '1rem', right: '1rem' },
-    arrowDir: 'down', arrowAlign: 'right',
-  },
-  {
-    title: 'Your stats',
-    body: "Tap your nameplate any time to see your ship's stats. Better crew and a higher Nav rank make them stronger.",
-    cardStyle: { top: '32%', left: '1rem', right: '1rem' },
-    arrowDir: 'down', arrowAlign: 'right',
-  },
-  {
-    title: 'Skirmish vs Raid',
-    body: "This Skirmish is one practice battle. A real Raid is a string of fights ending in a boss. Sink the enemy for doubloons and XP — good hunting!",
-    cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
-    arrowDir: 'none', arrowAlign: 'center',
   },
 ]
 

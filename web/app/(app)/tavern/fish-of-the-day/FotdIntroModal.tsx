@@ -4,13 +4,12 @@ import { useTransition } from 'react'
 import StepTourModal from '@/components/StepTourModal'
 import { markFotdIntroSeen } from './fotdIntroAction'
 
+// Two steps. Six was way too many for a daily guessing puzzle —
+// the gem counter, guess counter, and hint button all surface
+// themselves the moment the player opens the page.
 const STEPS = [
-  { color: '#4ade80', title: 'Guess the fish',   placement: 'top'    as const, body: 'A secret fish hides every day. Guess which one before you run out of tries.' },
-  { color: '#f0c040', title: 'Start with a clue',placement: 'top'    as const, body: 'You begin with one clue. Stuck? Buy more clues with gems.' },
-  { color: '#60a5fa', title: 'Four guesses',     placement: 'bottom' as const, body: 'You get four guesses. Start typing a fish name and pick it from the list.' },
-  { color: '#a78bfa', title: 'Win the gems',     placement: 'bottom' as const, body: 'Every puzzle has gems on the line. Solve it to keep them — run out of guesses and they’re gone.' },
-  { color: '#34d399', title: 'Hints cost gems',  placement: 'bottom' as const, body: 'Buy a hint when you’re stuck — one per round, then you have to take a guess.' },
-  { color: '#fb923c', title: 'New fish daily',   placement: 'center' as const, body: 'A fresh fish every day at midnight. Come back tomorrow for another shot.' },
+  { color: '#4ade80', title: 'Guess the fish',  placement: 'top'    as const, body: 'Guess the secret fish in 4 tries. Solve it to win the gems on the line.' },
+  { color: '#f0c040', title: 'Stuck? Buy hints', placement: 'bottom' as const, body: 'Hints cost gems, one per round. New fish every day at midnight.' },
 ]
 
 export default function FotdIntroModal() {

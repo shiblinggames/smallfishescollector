@@ -199,7 +199,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               Pick your character
             </p>
             <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#6a6764', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Choose your fisher's color. More can be earned as you play.
+              Unlock more colors as you play.
             </p>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: hintSkinId ? 0 : '1.25rem' }}>
@@ -313,7 +313,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               Pick your avatar colors
             </p>
             <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#6a6764', marginBottom: '1.1rem', lineHeight: 1.5 }}>
-              Customize the background and border around your character. These show up everywhere your avatar appears.
+              Background and border around your character. Shows up everywhere you do.
             </p>
 
             {/* Live preview */}

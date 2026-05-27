@@ -16,28 +16,19 @@ interface TourStep {
   arrowAlign: 'left' | 'center' | 'right'
 }
 
+// Two steps: the loop split (voyages vs raids), then the loadout. The
+// old welcome-overview was redundant with the page itself, and the crew
+// callout merged into raids since both depend on it.
 const STEPS: TourStep[] = [
   {
-    title: 'Welcome to Expeditions',
-    body: "Send your crew out to earn while you play. Two ways in: Voyages for steady daily rewards, or Raids for ship battles.",
-    cardStyle: { top: '50%', left: '1rem', right: '1rem', transform: 'translateY(-50%)' },
-    arrowDir: 'none', arrowAlign: 'center',
-  },
-  {
-    title: 'Voyages',
-    body: "Pick a route and set sail. Your crew comes back later carrying doubloons, gems, and rare drops. A fresh route each day.",
+    title: 'Voyages and Raids',
+    body: "Voyages earn for you in the background. Raids are ship battles for special loot.",
     cardStyle: { top: '26%', left: '1rem', right: '1rem' },
     arrowDir: 'down', arrowAlign: 'center',
   },
   {
-    title: 'Raids',
-    body: "Ship-vs-ship battles. Try a Skirmish to learn how fights work, then take on Barnacle Pete for loot you can't get anywhere else.",
-    cardStyle: { top: '38%', left: '1rem', right: '1rem' },
-    arrowDir: 'down', arrowAlign: 'center',
-  },
-  {
-    title: 'Your crew',
-    body: "Tap View Loadout to pick your captain and crew. Stronger crew and a bigger ship mean bigger rewards on every trip.",
+    title: 'Set your loadout',
+    body: "Tap View Loadout to pick your crew and ship. Stronger crew means bigger rewards.",
     cardStyle: { top: '54%', left: '1rem', right: '1rem' },
     arrowDir: 'up', arrowAlign: 'center',
   },

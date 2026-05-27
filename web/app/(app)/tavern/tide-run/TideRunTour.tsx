@@ -8,41 +8,19 @@ interface TourStep {
   body: React.ReactNode
 }
 
+// Three steps. Cargo Run story flavor and the rock/shoal/current
+// classification both folded into the actual rules players need:
+// control (hold), hazards (with the non-obvious beacon trick), and
+// once-a-day cashin. Rock shapes show themselves in play; the beacon
+// rule is genuinely non-obvious and earns its own step.
 const STEPS: TourStep[] = [
-  {
-    eyebrow: 'The Story',
-    title: 'The Cargo Run',
-    body: (
-      <>
-        You&apos;ve stolen a boat full of gold and there&apos;s trouble on your
-        tail. Stay ahead as long as you can — the further you get, the bigger
-        the payout.
-      </>
-    ),
-  },
   {
     eyebrow: 'Controls',
     title: 'Hold to Jump',
     body: (
       <>
-        <span style={{ color: '#bda05a', fontWeight: 700 }}>Tap and hold
-        anywhere</span> to jump. Quick tap = small hop. Long hold = big leap.
-      </>
-    ),
-  },
-  {
-    eyebrow: 'Hazards',
-    title: 'Read the Water',
-    body: (
-      <>
-        <span style={{ color: '#e0e8ef', fontWeight: 700 }}>Rocks</span> — jump
-        over them.
-        <br />
-        <span style={{ color: '#a0c8e0', fontWeight: 700 }}>Shoals</span>
-        {' '}(dark water) — jump or you wreck.
-        <br />
-        <span style={{ color: '#dfeaef', fontWeight: 700 }}>Currents</span>
-        {' '}(white foam) — ride through to slow down, or jump to keep speed.
+        <span style={{ color: '#bda05a', fontWeight: 700 }}>Tap and hold</span>
+        {' '}anywhere to jump. Quick tap hops, long hold leaps.
       </>
     ),
   },
@@ -51,29 +29,24 @@ const STEPS: TourStep[] = [
     title: 'Smash the Beacons',
     body: (
       <>
-        Some rocks have a blinking amber light — those are
-        <span style={{ color: '#ffb84d', fontWeight: 700 }}> beacons</span>.
-        <br />
-        <br />
-        <span style={{ color: '#9ae6b4', fontWeight: 700 }}>Smash through them
-        on the water</span> to take them out.{' '}
-        <span style={{ color: '#fda4a4', fontWeight: 700 }}>Jump over one</span>
-        {' '}and the alarm wrecks you.
+        Rocks with a blinking
+        <span style={{ color: '#ffb84d', fontWeight: 700 }}> amber light </span>
+        are beacons.{' '}
+        <span style={{ color: '#9ae6b4', fontWeight: 700 }}>Smash them on the water</span>
+        {' '}to take them out.{' '}
+        <span style={{ color: '#fda4a4', fontWeight: 700 }}>Jump one</span> and the
+        alarm wrecks you.
       </>
     ),
   },
   {
     eyebrow: 'Rewards',
-    title: 'Pick Your Run',
+    title: 'Cash In Once a Day',
     body: (
       <>
-        Play as much as you want — every run counts toward your best score.
-        <br />
-        <br />
-        Once a day you can <span style={{ color: '#bda05a', fontWeight: 700 }}>cash
-        in</span> one run for <span style={{ color: '#bda05a' }}>⟡</span> based
-        on how far you got.
-        <span style={{ color: '#bda05a', fontWeight: 700 }}> Resets at midnight.</span>
+        Play as much as you want. Once a day, pick your best run and{' '}
+        <span style={{ color: '#bda05a', fontWeight: 700 }}>cash it in</span> for{' '}
+        <span style={{ color: '#bda05a' }}>⟡</span>. Resets at midnight.
       </>
     ),
   },

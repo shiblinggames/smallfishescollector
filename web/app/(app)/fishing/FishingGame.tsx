@@ -365,31 +365,21 @@ function pickWaitMessage(zone: ZoneKey, streak: number, ctx?: TipContext): strin
 
 // ─── Catch mechanics tour ────────────────────────────────────────────────────
 
+// Two steps cover what the player needs RIGHT NOW. On Fire, snag, and
+// dial speed all show themselves through play (you'll see the streak
+// counter, you'll lose a fish to the red, you'll feel the dial speed
+// change as you level up). Gear upgrades have their own affordances in
+// the gear menu.
 const CATCH_TOUR_STEPS = [
   {
     color: '#4ade80',
-    title: 'Catch zone',
-    body: 'Stop the dial in the green to land the fish. A better Hook makes the green bigger.',
+    title: 'Stop in the green',
+    body: 'Tap to stop the dial. Green catches the fish. Red loses it.',
   },
   {
     color: '#f59e0b',
-    title: 'Perfect zone',
-    body: 'The gold strip is the Perfect zone. Land there for bonus XP and a shot at a free recast.',
-  },
-  {
-    color: '#fb923c',
-    title: 'On fire 🔥',
-    body: 'Hit two Perfects in a row and you catch fire — extra XP on every Perfect. One miss puts it out.',
-  },
-  {
-    color: '#f87171',
-    title: 'Snag zone',
-    body: 'Land in the red and you lose the fish and your bait. A better Line shrinks the red.',
-  },
-  {
-    color: '#94a3b8',
-    title: 'Dial speed',
-    body: 'Tougher fish spin the dial faster, and the Abyss gets tricky. A better Reel slows it down.',
+    title: 'Gold is Perfect',
+    body: 'The thin gold strip is a Perfect. Bonus XP, and stack them to catch fire.',
   },
 ]
 
@@ -404,40 +394,23 @@ type TourStep = {
   arrowAlign: 'left' | 'center' | 'right'
 }
 
+// Two onboarding callouts cover the non-obvious bits: zones unlock as
+// you level (the gate isn't visible up front), and the bottom row is
+// the action bar. Collection / gear / bait / market each have clear
+// icons and labels — players can poke around without a guided tour.
 const TOUR_STEPS: TourStep[] = [
   {
-    title: 'Zones',
-    body: 'Go deeper for rarer fish. Earn XP to unlock the next zone.',
+    title: 'Zones unlock with XP',
+    body: 'Go deeper for rarer fish. The next zone opens when you level up.',
     cardStyle: { top: 96, left: 16, right: 16 },
     arrowDir: 'up', arrowAlign: 'center',
   },
   {
-    title: 'Collection',
-    body: "Every fish you catch is saved here. Tap one for details.",
-    cardStyle: { top: 56, right: 16 },
-    maxWidth: 210,
-    arrowDir: 'up', arrowAlign: 'right',
-  },
-  {
-    title: 'Gear',
-    body: 'Your rod, reel, hook and line. A green dot means you can afford an upgrade.',
-    cardStyle: { bottom: 112, left: 16 },
-    maxWidth: 220,
-    arrowDir: 'down', arrowAlign: 'left',
-  },
-  {
-    title: 'Bait',
-    body: 'Different baits change how bites work. 10 free worms every day.',
+    title: 'Gear, bait, sell',
+    body: 'Your tools live down here. Tap around to see what each does.',
     cardStyle: { bottom: 112, left: 16, right: 16 },
-    maxWidth: 220,
+    maxWidth: 240,
     arrowDir: 'down', arrowAlign: 'center',
-  },
-  {
-    title: 'Sell your fish',
-    body: 'Quick-sell for fast cash, or take them to the market for a lot more.',
-    cardStyle: { bottom: 112, right: 16 },
-    maxWidth: 220,
-    arrowDir: 'down', arrowAlign: 'right',
   },
 ]
 

@@ -9,24 +9,15 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+// One welcome step. Players figure out crew + voyages + dailies as they
+// play; we don't need to pitch every system upfront. The install-as-app
+// step is appended below ONLY when the platform supports it.
 const BASE_STEPS: TourStep[] = [
   {
     color: '#60a5fa',
     title: 'Welcome aboard!',
     placement: 'center',
-    body: "Head to the fishing dock and cast your line. Catch fish, sell them for doubloons. That's the heart of the game.",
-  },
-  {
-    color: '#c8a870',
-    title: 'Build a crew',
-    placement: 'top',
-    body: "Recruit fish cards, then send your crew on voyages. They sail off and bring back doubloons and gear while you keep playing.",
-  },
-  {
-    color: '#f0c040',
-    title: 'Come back daily',
-    placement: 'center',
-    body: "Free doubloons and bait every day, plus new fish to hunt each week. Now go fish!",
+    body: "Cast a line, sell your catch, build a crew. Tap around to explore.",
   },
 ]
 
@@ -66,12 +57,12 @@ export default function WelcomeModal() {
       ? ' Tap the Share icon, then Add to Home Screen.'
       : env.ios
         ? ' Tap Share in Safari, then Add to Home Screen.'
-        : ' Find it in the menu under “Install the App”.'
+        : ' Find it in the menu under "Install the App".'
     steps.push({
       color: '#5ab4c8',
-      title: 'Play it like a real app',
+      title: 'Add to home screen',
       placement: 'center',
-      body: `Add it to your home screen — full-screen, faster, and it feels like a real game.${iosLine}`,
+      body: `Plays full-screen, faster, feels like a real game.${iosLine}`,
       cta: deferred
         ? {
             label: 'Install App',
