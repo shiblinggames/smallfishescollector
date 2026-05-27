@@ -868,19 +868,24 @@ function NodeDetailSheet({
               const uniques = drops.filter(d => d.emoji !== GEM_GLYPH && !d.label.includes('⟡'))
               return (
                 <>
+                  {/* Headline payout pills — all in the same muted
+                      neutral so they read as "context" (here's the gold
+                      and XP you'll earn), not as "look at me." The
+                      colorful chase chips below (rarity-tinted unique
+                      drops) are what should grab attention. */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: uniques.length ? 11 : 0 }}>
                     {detail.clearReward && (
-                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#8ab0e0', background: 'rgba(112,144,192,0.12)', border: '1px solid rgba(112,144,192,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#b8b3ac', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
                         {detail.clearReward.xp.toLocaleString()} Nav XP
                       </span>
                     )}
                     {detail.clearReward && (
-                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#f0c040', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#b8b3ac', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
                         {detail.clearReward.doubloons.toLocaleString()} ⟡
                       </span>
                     )}
                     {gemAmount && (
-                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: GEM_COLOR, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.32)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
+                      <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#b8b3ac', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '0.3rem 0.6rem' }}>
                         {gemAmount} <span className="font-cinzel">◆</span>
                       </span>
                     )}
