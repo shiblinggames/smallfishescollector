@@ -518,7 +518,7 @@ export const RAID_MAP: RaidNode[] = [
     classPick: { chapterId: 'thread' },
     detail: {
       description:
-        "You sank Pete. You sank Krust. The coast knows your sails now and the next stretch of water is not going to be kind. Stand on the deck of your ship and pick a class. Once chosen it stays with you for every raid you sail from here on.\n\nEach class is a real tradeoff, not a free buff. Stack the same archetype across chapters to commit harder; spread your picks to stay balanced.",
+        "You sank Pete. You sank Krust. The coast knows your sails now and the next stretch of water is not going to be kind. Stand on the deck of your ship and pick a class. Once chosen it stays with you for every raid you sail from here on.",
       ctaLabel: 'Pick a class',
     },
   },
