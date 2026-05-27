@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
-import { commitTideRun, submitTideRunBest, recordTideRunRun } from './actions'
+import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, type TopTideRunHolder } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
@@ -275,12 +275,15 @@ function seaSurfaceY(worldX: number, ch: number, distanceScrolled: number): numb
 
 // ── Game ─────────────────────────────────────────────────────────────────────
 interface TideRunGameProps {
-  initialCommittedToday?: boolean
   initialBestDistance?: number
   hasSeenTour?: boolean
+  /** Current #1 leaderboard holder. Shown on the wreck screen as the
+   *  global target to chase. Null on a cold leaderboard (no one has
+   *  scored anything yet). */
+  topHolder?: TopTideRunHolder | null
 }
 
-export default function TideRunGame({ initialCommittedToday = false, initialBestDistance = 0, hasSeenTour = false }: TideRunGameProps) {
+export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = false, topHolder = null }: TideRunGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
@@ -343,11 +346,11 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(initialBestDistance)
   const [deadCount, setDeadCount] = useState(0)   // wreck-screen count-up
-  const [committedToday, setCommittedToday] = useState(initialCommittedToday)
-  const [committing, setCommitting] = useState(false)
-  const [commitReward, setCommitReward] = useState<{ doubloons: number } | null>(null)
-  const [commitError, setCommitError] = useState<string | null>(null)
-  const [confirmingCommit, setConfirmingCommit] = useState(false)
+  // Per-run beacon doubloon reward. Awarded automatically on every
+  // wreck (no daily cap, no commit prompt — that scheme confused
+  // players into thinking un-committed runs didn't count toward the
+  // leaderboard). `null` until the server confirms the payout.
+  const [beaconReward, setBeaconReward] = useState<{ doubloons: number } | null>(null)
   const [showTour, setShowTour] = useState(false)
 
   // First-time tour: show modal on mount if the player hasn't seen it.
@@ -382,45 +385,48 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
     return () => cancelAnimationFrame(raf)
   }, [uiState, score])
 
-  // Reset commit reward feedback when a new run starts
+  // Reset reward feedback when a new run starts so the wreck screen
+  // doesn't show last run's payout on this run's first frame.
   useEffect(() => {
     if (uiState === 'playing') {
-      setCommitReward(null)
-      setCommitError(null)
-      setConfirmingCommit(false)
+      setBeaconReward(null)
     }
   }, [uiState])
 
-  const handleCommit = useCallback(async () => {
-    if (committing || committedToday) return
-    if (score < 1) return
-    setCommitting(true)
-    setCommitError(null)
-    const distance = score
-    try {
-      const result = await commitTideRun(distance)
-      if ('ok' in result) {
-        setCommittedToday(true)
-        setCommitReward({ doubloons: result.doubloons })
-        // Defer the nav refresh event so any listener-side re-fetches don't
-        // race with our local state flush. Pass the new total as detail —
-        // Nav reads e.detail; dispatching with no detail used to set its
-        // doubloon display to null and crash the page on render.
-        if (typeof window !== 'undefined') {
-          setTimeout(() => {
-            try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
-          }, 0)
-        }
-      } else {
-        setCommitError(result.error)
-        if (result.error.includes('Already')) setCommittedToday(true)
-      }
-    } catch (err) {
-      setCommitError('Connection hiccup — please try again.')
-    } finally {
-      setCommitting(false)
+  // Auto-award beacon doubloons on every wreck. Fires once per
+  // wreck transition (guarded by beaconReward null + uiState ===
+  // 'dead'). No daily cap, no opt-in — beacons smashed = doubloons
+  // earned, every run. Best-effort: if the server errors, the player
+  // just doesn't see the line; the leaderboard still records the
+  // distance via submitTideRunBest.
+  const beaconsThisRun = gRef.current.beaconsSmashed
+  useEffect(() => {
+    if (uiState !== 'dead') return
+    if (beaconReward !== null) return
+    if (beaconsThisRun <= 0) {
+      setBeaconReward({ doubloons: 0 })
+      return
     }
-  }, [committing, committedToday, score])
+    let cancelled = false
+    void (async () => {
+      try {
+        const result = await awardTideRunBeacons(beaconsThisRun)
+        if (cancelled) return
+        if ('ok' in result) {
+          setBeaconReward({ doubloons: result.doubloons })
+          if (typeof window !== 'undefined') {
+            try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
+          }
+        } else {
+          // Hide the payout line on error rather than show a stale 0.
+          setBeaconReward({ doubloons: 0 })
+        }
+      } catch {
+        if (!cancelled) setBeaconReward({ doubloons: 0 })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [uiState, beaconsThisRun, beaconReward])
 
   // ── Load sprite ────────────────────────────────────────────────────────────
   // The high score is server-authoritative — passed in as initialBestDistance.
@@ -1759,115 +1765,39 @@ export default function TideRunGame({ initialCommittedToday = false, initialBest
                 )
               })()}
 
-              {/* ── Commit run for daily reward ── */}
-              {commitReward ? (
+              {/* ── Beacon doubloon payout ──
+                  Auto-awarded on every wreck (2 doubloons per beacon
+                  smashed, no daily cap). Replaces the old "commit
+                  one run per day" prompt that confused players into
+                  thinking un-committed runs didn't count for the
+                  leaderboard (they always did). */}
+              {beaconReward && beaconReward.doubloons > 0 && (
                 <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(189,160,90,0.18)', border: '1px solid rgba(189,160,90,0.55)' }}>
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#bda05a', marginBottom: 4 }}>
-                    Run Committed
+                    Beacons Smashed
                   </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#ffd56b' }}>
-                    +{commitReward.doubloons} ⟡
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffd56b' }}>
+                    +{beaconReward.doubloons} ⟡
                   </p>
-                  <p className="font-karla font-300 mt-2" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.45 }}>
-                    No more <span style={{ color: '#bda05a' }}>⟡</span> today — resets at midnight UTC.
-                  </p>
-                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(180, 220, 240, 0.75)', lineHeight: 1.45 }}>
-                    Keep playing — new best scores still count for the leaderboard.
+                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.45 }}>
+                    {beaconsThisRun} × 2 doubloons
                   </p>
                 </div>
-              ) : committedToday ? (
-                <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.55)' }}>
-                    Already Committed Today
-                  </p>
-                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.45 }}>
-                    No more <span style={{ color: '#bda05a' }}>⟡</span> today — resets at midnight UTC.
-                  </p>
-                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.65rem', color: 'rgba(180, 220, 240, 0.72)', lineHeight: 1.45 }}>
-                    New best scores still count for the leaderboard.
-                  </p>
-                </div>
-              ) : score >= 1 ? (
-                confirmingCommit ? (
-                  <div style={{
-                    pointerEvents: 'auto',
-                    marginTop: 14,
-                    padding: '12px 14px 13px',
-                    borderRadius: 12,
-                    background: 'rgba(189,160,90,0.12)',
-                    border: '1px solid rgba(189,160,90,0.5)',
-                  }}>
-                    <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.45, marginBottom: 10 }}>
-                      Commit this run for <span style={{ color: '#ffd56b' }}>{score} ⟡</span>?
-                      <br />
-                      <span className="font-300" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.65)' }}>
-                        You only get one commit per day.
-                      </span>
-                    </p>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                      <button
-                        onPointerDown={(e) => { e.stopPropagation() }}
-                        onClick={(e) => { e.stopPropagation(); setConfirmingCommit(false) }}
-                        className="font-karla font-700"
-                        style={{
-                          pointerEvents: 'auto', flex: 1, padding: '9px 0', borderRadius: 10,
-                          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
-                          color: 'rgba(255,255,255,0.7)', fontSize: '0.74rem', cursor: 'pointer',
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onPointerDown={(e) => { e.stopPropagation() }}
-                        onClick={(e) => { e.stopPropagation(); handleCommit() }}
-                        disabled={committing}
-                        className="font-cinzel font-700"
-                        style={{
-                          pointerEvents: 'auto', flex: 1, padding: '9px 0', borderRadius: 10,
-                          background: 'linear-gradient(180deg, rgba(189,160,90,0.95), rgba(150,120,55,0.95))',
-                          border: '1px solid rgba(220,190,120,0.85)', color: '#1a0f02',
-                          fontSize: '0.78rem', letterSpacing: '0.04em',
-                          cursor: committing ? 'wait' : 'pointer', opacity: committing ? 0.7 : 1,
-                        }}
-                      >
-                        {committing ? 'Saving…' : 'Commit'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onPointerDown={(e) => { e.stopPropagation() }}
-                    onClick={(e) => { e.stopPropagation(); setConfirmingCommit(true) }}
-                    style={{
-                      pointerEvents: 'auto',
-                      marginTop: 14,
-                      padding: '11px 22px 12px',
-                      borderRadius: 12,
-                      background: 'linear-gradient(180deg, rgba(189,160,90,0.95), rgba(150,120,55,0.95))',
-                      border: '1px solid rgba(220,190,120,0.85)',
-                      color: '#1a0f02',
-                      boxShadow: '0 4px 12px rgba(189,160,90,0.4)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 2,
-                    }}
-                  >
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', letterSpacing: '0.06em' }}>
-                      Save Run
-                    </span>
-                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', opacity: 0.82 }}>
-                      {score} ⟡
-                    </span>
-                  </button>
-                )
-              ) : null}
+              )}
 
-              {commitError && !commitReward && (
-                <p className="font-karla font-700 mt-2" style={{ fontSize: '0.66rem', color: '#f08a8a' }}>
-                  {commitError}
-                </p>
+              {/* ── Global #1 to chase ──
+                  Always-on target on the wreck screen so the player
+                  sees what the run to beat looks like. Hidden when
+                  the leaderboard hasn't been seeded yet (cold start). */}
+              {topHolder && topHolder.distance > 0 && (
+                <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>
+                    Hiscore
+                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0ede8' }}>
+                    {topHolder.distance.toLocaleString()}m <span className="font-karla font-400" style={{ color: 'rgba(255,255,255,0.55)' }}>by {topHolder.username}</span>
+                  </p>
+                </div>
               )}
 
               <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.7rem', color: '#bda05a' }}>

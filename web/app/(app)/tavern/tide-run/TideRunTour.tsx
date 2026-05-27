@@ -41,12 +41,12 @@ const STEPS: TourStep[] = [
   },
   {
     eyebrow: 'Rewards',
-    title: 'Cash In Once a Day',
+    title: 'Smash for Doubloons',
     body: (
       <>
-        Play as much as you want. Once a day, pick your best run and{' '}
-        <span style={{ color: '#bda05a', fontWeight: 700 }}>cash it in</span> for{' '}
-        <span style={{ color: '#bda05a' }}>⟡</span>. Resets at midnight.
+        Every beacon you smash pays{' '}
+        <span style={{ color: '#bda05a', fontWeight: 700 }}>2 <span style={{ color: '#bda05a' }}>⟡</span></span>,
+        every run. Distance still chases the leaderboard.
       </>
     ),
   },

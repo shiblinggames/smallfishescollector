@@ -72,29 +72,30 @@ export async function recordTideRunRun(distance: number, beacons: number): Promi
   }
 }
 
-/** Today's date in UTC as YYYY-MM-DD — keyed against profiles.tide_run_committed_date. */
-function todayUTCDate(): string {
-  return new Date().toISOString().slice(0, 10)
-}
+/** Doubloon payout per beacon smashed. Tiny passive income so every
+ *  run feels rewarded; the leaderboard chase is what drives long
+ *  runs. Replaces the old "commit one run per day" scheme that left
+ *  players confused about whether un-committed runs still counted
+ *  toward leaderboard PBs (they always did). */
+const DOUBLOONS_PER_BEACON = 2
 
-export type CommitTideRunResult =
+export type AwardTideRunResult =
   | { ok: true; doubloons: number; newDoubloonTotal: number }
   | { error: string }
 
-/**
- * Commit a Tide Run's distance for doubloons (one commit per UTC day).
- *   doubloons earned = floor(distance)
- * Players can keep playing after committing; the option just won't be
- * offered again until the next UTC midnight.
- */
-export async function commitTideRun(distance: number): Promise<CommitTideRunResult> {
+/** Award doubloons for beacons smashed in a single run. Called on
+ *  every wreck (or successful completion if we ever add one), no
+ *  daily cap. Beacons are sanity-clamped against absurd values; the
+ *  client is trusted enough that the leaderboard is just distance,
+ *  but a hard ceiling keeps a manipulated payload from minting
+ *  arbitrary doubloons. */
+export async function awardTideRunBeacons(beacons: number): Promise<AwardTideRunResult> {
   try {
-    if (typeof distance !== 'number' || !isFinite(distance) || distance < 0) {
-      return { error: 'Invalid distance' }
+    if (typeof beacons !== 'number' || !isFinite(beacons) || beacons < 0) {
+      return { error: 'Invalid beacon count' }
     }
-    const meters = Math.floor(distance)
-    if (meters < 1) return { error: 'Run too short to commit' }
-    if (meters > 100000) return { error: 'Invalid distance' }
+    const smashed = Math.max(0, Math.min(10000, Math.floor(beacons)))
+    if (smashed === 0) return { error: 'No beacons smashed' }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -103,37 +104,58 @@ export async function commitTideRun(distance: number): Promise<CommitTideRunResu
     const admin = createAdminClient()
     const { data: profile } = await admin
       .from('profiles')
-      .select('doubloons, tide_run_committed_date')
+      .select('doubloons')
       .eq('id', user.id)
       .single()
     if (!profile) return { error: 'Profile not found' }
 
-    const today = todayUTCDate()
-    if (profile.tide_run_committed_date === today) {
-      return { error: 'Already committed a run today' }
-    }
-
-    const doubloonsEarned = meters
+    const doubloonsEarned = smashed * DOUBLOONS_PER_BEACON
     const newDoubloons = (profile.doubloons ?? 0) + doubloonsEarned
 
     const { error: updateErr } = await admin
       .from('profiles')
-      .update({
-        doubloons: newDoubloons,
-        tide_run_committed_date: today,
-      })
+      .update({ doubloons: newDoubloons })
       .eq('id', user.id)
     if (updateErr) return { error: 'Update failed' }
 
-    // Best-effort audit row; don't fail the commit if it errors out
+    // Best-effort audit row.
     await admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: doubloonsEarned,
-      reason: `Tide Run commit (${meters}m)`,
+      reason: `Tide Run beacons smashed (${smashed})`,
     }).then(() => {}, () => {})
 
     return { ok: true, doubloons: doubloonsEarned, newDoubloonTotal: newDoubloons }
   } catch {
     return { error: 'Server error — please try again' }
+  }
+}
+
+/** Top-of-leaderboard reader. Shown on the wreck screen so the
+ *  player always sees the target to beat right next to their own
+ *  result. Returns null if no one has any distance yet (clean cold
+ *  start). */
+export type TopTideRunHolder = { username: string; distance: number }
+
+export async function getTopTideRunHolder(): Promise<TopTideRunHolder | null> {
+  try {
+    const admin = createAdminClient()
+    // leaderboard_tide_run view already excludes admins and resolves
+    // tiebreaks by first-to-reach, so the #1 row is the canonical
+    // public hiscore holder.
+    const { data } = await admin
+      .from('leaderboard_tide_run')
+      .select('username, score')
+      .order('score', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+    if (!data) return null
+    return {
+      username: (data as { username: string }).username,
+      distance: (data as { score: number }).score,
+    }
+  } catch {
+    return null
   }
 }
