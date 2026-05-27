@@ -184,13 +184,22 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
   },
   sequence: ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair'],
   bossId: 'pete',
+  // Weights total 100 for clean percentage reads. Normal raid drops
+  // both Corsair Cannons (the weak +10% Epic and the Prime +20%
+  // Legendary), with the Legendary at the chase rate. Challenge
+  // variant doubles every special-drop rate (overridden in
+  // raidChallenge.ts), not auto-scaled, so the percentages land
+  // exactly where designed instead of inflating denominator drift.
   loot: [
-    { id: 'doubloons_300',  label: '+300 ⟡',        image: '/smallpile.png',       emoji: '🪙', rarity: 'common',    weight: 50 },
-    { id: 'doubloons_600',  label: '+600 ⟡',        image: '/dailybonus.png',      emoji: '💰', rarity: 'uncommon',  weight: 25 },
-    { id: 'gems_25',        label: '25 Gems',        image: null,                   emoji: GEM_GLYPH, rarity: 'rare',      weight: 15 },
-    { id: 'pack',           label: '100 Gems',       image: null,                   emoji: GEM_GLYPH, rarity: 'epic',      weight: 5  },
-    { id: 'corsair_black',  label: 'Corsair Black',  image: null,                   emoji: '🚢', rarity: 'epic',      weight: 5,  shipSkinId: 'corsair_black' },
-    { id: 'corsair_cannon', label: 'Corsair Cannon', image: '/corsaircannon.png',   emoji: '💣', rarity: 'legendary', weight: 3  },
+    // 70% currency
+    { id: 'doubloons_300',        label: '+300 ⟡',                 image: '/smallpile.png',         emoji: '🪙',       rarity: 'common',    weight: 30 },
+    { id: 'doubloons_600',        label: '+600 ⟡',                 image: '/dailybonus.png',        emoji: '💰',       rarity: 'uncommon',  weight: 20 },
+    { id: 'gems_25',              label: '25 Gems',                 image: null,                     emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
+    { id: 'pack',                 label: '100 Gems',                image: null,                     emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
+    // 30% special drops
+    { id: 'corsair_black',        label: 'Corsair Black',           image: null,                     emoji: '🚢',       rarity: 'epic',      weight: 5,  shipSkinId: 'corsair_black' },
+    { id: 'corsair_cannon',       label: 'Corsair Cannon',          image: '/corsaircannon.png',     emoji: '💣',       rarity: 'epic',      weight: 20 },
+    { id: 'corsair_prime_cannon', label: "Corsair's Prime Cannon",  image: '/corsairprimecannon.png',emoji: '💣',       rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
     brute:   { gold: 20,  xp: 20  },
@@ -296,13 +305,21 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   },
   sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'brute', 'elite', 'elite'],
   bossId: 'krust',
+  // Mirror Pete's two-tier structure. Krust's Carapace is the
+  // standard plate (Epic, -10%); Captain's Carapace is Krust's own
+  // full-grade armour (Legendary, -15%). Same 30% special-drop /
+  // 70% currency split as Pete; challenge variant overrides this
+  // table with doubled special rates in raidChallenge.ts.
   loot: [
-    { id: 'doubloons_600',   label: '+600 ⟡',         image: '/smallpile.png',     emoji: '🪙', rarity: 'common',    weight: 50 },
-    { id: 'doubloons_1200',  label: '+1,200 ⟡',       image: '/dailybonus.png',    emoji: '💰', rarity: 'uncommon',  weight: 25 },
-    { id: 'gems_50',         label: '50 Gems',         image: null,                 emoji: GEM_GLYPH, rarity: 'rare',      weight: 15 },
-    { id: 'pack_2',          label: '200 Gems',        image: null,                 emoji: GEM_GLYPH, rarity: 'epic',      weight: 5  },
-    { id: 'verdigris_hull',  label: 'Verdigris Hull',  image: null,                 emoji: '🚢', rarity: 'epic',      weight: 5,  shipSkinId: 'verdigris_hull' },
-    { id: 'krusts_carapace', label: "Krust's Carapace", image: '/captainshull.png', emoji: '🛡️', rarity: 'legendary', weight: 3  },
+    // 70% currency
+    { id: 'doubloons_600',     label: '+600 ⟡',                image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 30 },
+    { id: 'doubloons_1200',    label: '+1,200 ⟡',              image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 20 },
+    { id: 'gems_50',           label: '50 Gems',                image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
+    { id: 'pack_2',            label: '200 Gems',               image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
+    // 30% special drops
+    { id: 'verdigris_hull',    label: 'Verdigris Hull',         image: null,                      emoji: '🚢',       rarity: 'epic',      weight: 5,  shipSkinId: 'verdigris_hull' },
+    { id: 'krusts_carapace',   label: "Krust's Carapace",       image: '/captainshull.png',       emoji: '🛡️',      rarity: 'epic',      weight: 20 },
+    { id: 'captains_carapace', label: "Captain's Carapace",     image: '/captainscarapace.png',   emoji: '🛡️',      rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
     scout: { gold: 40,  xp: 40  },

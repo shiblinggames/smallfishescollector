@@ -100,10 +100,13 @@ function scaleLoot(loot: RaidLootItem[]): RaidLootItem[] {
 }
 
 /** Build the challenge variant of a raid. Stat-scaled enemies, scaled
- *  per-kill payouts, weighted loot table, suffixed raid_id, title
- *  prefixed with "Challenge —" so the dialogue + clear modal still read
- *  in the same voice as the base raid. */
-export function buildChallengeRaid(base: BossRaidConfig): BossRaidConfig {
+ *  per-kill payouts, suffixed raid_id, title prefixed with "Challenge:".
+ *  Loot is normally weight-scaled via scaleLoot, but specific raids can
+ *  override the whole loot table by passing `lootOverride` — used for
+ *  the chase-tier system (Corsair Cannon + Prime, Krust's Carapace +
+ *  Captain's), where we want exact doubled rates rather than the
+ *  factory's weight-multiplier (which inflates denominator drift). */
+export function buildChallengeRaid(base: BossRaidConfig, lootOverride?: BossRaidConfig['loot']): BossRaidConfig {
   const scaledEnemies: Record<string, BroadsideEnemy> = {}
   for (const [key, e] of Object.entries(base.enemies)) {
     scaledEnemies[key] = scaleEnemy(e, key === base.bossId)
@@ -124,7 +127,7 @@ export function buildChallengeRaid(base: BossRaidConfig): BossRaidConfig {
     bossDefeatedText: base.bossDefeatedText, // same line; the title prefix is enough
     enemies:          scaledEnemies,
     killRewards:      scaledKillRewards,
-    loot:             scaleLoot(base.loot),
+    loot:             lootOverride ?? scaleLoot(base.loot),
     // Challenge variants skip the pre-fight dialogue — the player has
     // already played the normal raid (challenge unlocks gate on that),
     // they've seen the story beat. The challenge IS the fight, not the
@@ -193,11 +196,48 @@ const KRUST_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
   damageTakenVolleyBypass:  true,
 }
 
+// Challenge-mode loot tables. Doubled special-drop rates from normal:
+// ship skin 5%→10%, normal item 20%→40%, legendary 5%→10%. Currency
+// shrinks proportionally so the totals stay at 100. Defined as
+// overrides (rather than relying on the factory's scaleLoot weight
+// multiplier) so the percentages land exactly where designed instead
+// of inflating denominator drift.
+//
+// Pull from the source bossRaids tables to inherit images / labels;
+// the only thing that changes is the weight column.
+const PETE_CHALLENGE_LOOT: typeof CORSAIRS_RECKONING['loot'] = (() => {
+  const byId = Object.fromEntries(CORSAIRS_RECKONING.loot.map(l => [l.id, l]))
+  const w = (id: string, weight: number) => ({ ...byId[id], weight })
+  return [
+    w('doubloons_300',         15),  // 15%
+    w('doubloons_600',         10),  // 10%
+    w('gems_25',               10),  // 10%
+    w('pack',                   5),  //  5%
+    w('corsair_black',         10),  // 10% ship skin (2× normal)
+    w('corsair_cannon',        40),  // 40% normal item (2× normal)
+    w('corsair_prime_cannon',  10),  // 10% legendary (2× normal)
+  ]
+})()
+
+const KRUST_CHALLENGE_LOOT: typeof CAPTAIN_KRUST['loot'] = (() => {
+  const byId = Object.fromEntries(CAPTAIN_KRUST.loot.map(l => [l.id, l]))
+  const w = (id: string, weight: number) => ({ ...byId[id], weight })
+  return [
+    w('doubloons_600',         15),
+    w('doubloons_1200',        10),
+    w('gems_50',               10),
+    w('pack_2',                 5),
+    w('verdigris_hull',        10),
+    w('krusts_carapace',       40),
+    w('captains_carapace',     10),
+  ]
+})()
+
 // Pre-built challenge variants — page files + raid map import these
 // directly so the heavy lifting (the factory) only runs once at module
 // load, not per-request. Pete and Krust both carry two-phase challenge
 // fights, tuned to their character (Pete = aggression, Krust = plate).
 export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig =
-  withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING), 'pete', PETE_PHASE2)
+  withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING, PETE_CHALLENGE_LOOT), 'pete', PETE_PHASE2)
 export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig =
-  withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST), 'krust', KRUST_PHASE2)
+  withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST, KRUST_CHALLENGE_LOOT), 'krust', KRUST_PHASE2)

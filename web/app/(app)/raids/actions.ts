@@ -38,6 +38,10 @@ export interface RaidPlayerStats {
   equippedShipSkin: string | null
   shipSkins: string[]
   equippedRaidItems: string[]
+  /** All raid items the player owns (equipped or not). Used to exclude
+   *  already-owned items from the boss loot roll so duplicates re-roll
+   *  into something new. */
+  ownedRaidItems: string[]
   equippedRepairKit: string
   hasSeenRaidTutorial: boolean
   raidMods: RaidMods
@@ -48,7 +52,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp')
     .eq('id', userId)
     .single()
 
@@ -112,6 +116,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     equippedShipSkin:     (profile?.equipped_ship_skin as string | null) ?? null,
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    equippedItems,
+    ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
     raidMods:             resolved.raid,

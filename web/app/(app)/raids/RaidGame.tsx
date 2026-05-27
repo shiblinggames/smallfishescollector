@@ -24,14 +24,32 @@ import TapToContinueGate from '@/components/TapToContinueGate'
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical' | null
 
-function rollLootIndex(loot: RaidLootItem[]): number {
-  const total = loot.reduce((s, i) => s + i.weight, 0)
-  let r = Math.random() * total
+/** Weighted random roll over the loot table, with duplicate
+ *  protection: any slot whose id is in `excludedIds` is removed from
+ *  the weight pool before rolling. Used to skip ship skins + raid
+ *  items the player already owns so they always get something new
+ *  (or fall through to a currency slot if every unique is owned). */
+function rollLootIndex(loot: RaidLootItem[], excludedIds: Set<string> = new Set()): number {
+  // Build the eligible pool, preserving original indices.
+  const pool: { idx: number; weight: number }[] = []
   for (let i = 0; i < loot.length; i++) {
-    r -= loot[i].weight
-    if (r <= 0) return i
+    if (excludedIds.has(loot[i].id)) continue
+    pool.push({ idx: i, weight: loot[i].weight })
   }
-  return loot.length - 1
+  // Edge case: every slot excluded (shouldn't happen in practice since
+  // currency slots are never excluded). Fall back to a plain roll.
+  if (pool.length === 0) {
+    for (let i = 0; i < loot.length; i++) {
+      pool.push({ idx: i, weight: loot[i].weight })
+    }
+  }
+  const total = pool.reduce((s, p) => s + p.weight, 0)
+  let r = Math.random() * total
+  for (const p of pool) {
+    r -= p.weight
+    if (r <= 0) return p.idx
+  }
+  return pool[pool.length - 1].idx
 }
 
 function isBossRound(round: number, seqLen: number): boolean {
@@ -323,6 +341,7 @@ interface RaidCrewMember {
 }
 
 export default function RaidGame({ config, equippedShipSkin, shipSkins, equippedItems,
+  ownedRaidItems,
   equippedRepairKit,
   shipImageUrl, shipName, username, playerHPMax, shipMinDamage, shipSpeed,
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
@@ -345,6 +364,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   equippedShipSkin: string | null
   shipSkins: string[]
   equippedItems: string[]
+  ownedRaidItems: string[]
   equippedRepairKit: string
   initialExpeditionXP: number
   playerCharacterColor: string | null
@@ -356,6 +376,15 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
   const shipFilter        = shipSkinDef?.filter ?? 'none'
+  // Pre-built set of every unique the player already owns. rollLootIndex
+  // skips these so a boss clear always rolls something new — owned ship
+  // skins and owned raid items both drop out of the eligible pool. The
+  // pool always includes the currency slots, so there's always something
+  // to roll into even if the player has every unique.
+  const ownedUniqueIds    = new Set<string>([
+    ...shipSkins,
+    ...ownedRaidItems,
+  ])
   const dodgeBonus        = totalDodge * 5
   const fortuneMult       = 1 + totalFortune / 75   // 2× at max crew luck (~75)
   const playerActionMs    = Math.max(700, 2000 - shipSpeed * 100)
@@ -807,7 +836,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // Slot machine spin — triggers when loot crate is opened
   useEffect(() => {
     if (!lootOpened) return
-    const final = rollLootIndex(config.loot)
+    const final = rollLootIndex(config.loot, ownedUniqueIds)
     setSlotFinal(final)
     setSlotLanded(false)
 
@@ -1015,7 +1044,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         setWinGold(gold); setWinXP(xp)
         // Roll loot + dollar amount up front so the stage can pre-position
         // the slot before the player taps Loot Chest.
-        const final = rollLootIndex(config.loot)
+        const final = rollLootIndex(config.loot, ownedUniqueIds)
         const base  = Math.floor(Math.random() * 301 + 300)
         const total = Math.floor(base * fortuneMult)
         setSlotFinal(final)

@@ -24,14 +24,27 @@ export interface RaidItemDef {
 }
 
 export const RAID_ITEMS: RaidItemDef[] = [
+  // Two tiers of the same chase item. The normal raid drops the
+  // weaker version (more common), the challenge raid drops both at
+  // higher rates with the legendary Prime variant as the chase.
   {
     id: 'corsair_cannon',
     name: 'Corsair Cannon',
-    description: '+25% damage to raid bosses.',
+    description: '+10% damage to raid bosses.',
     image: '/corsaircannon.png',
     emoji: '💣',
-    rarity: 'rare',
-    effects: [{ type: 'boss_damage_mult', value: 1.25 }],
+    rarity: 'epic',
+    effects: [{ type: 'boss_damage_mult', value: 1.10 }],
+    source: "Barnacle Pete's Raid",
+  },
+  {
+    id: 'corsair_prime_cannon',
+    name: "Corsair's Prime Cannon",
+    description: '+20% damage to raid bosses. The captain-grade version of the Corsair Cannon.',
+    image: '/corsairprimecannon.png',
+    emoji: '💣',
+    rarity: 'legendary',
+    effects: [{ type: 'boss_damage_mult', value: 1.20 }],
     source: "Barnacle Pete's Raid",
   },
   {
@@ -54,13 +67,27 @@ export const RAID_ITEMS: RaidItemDef[] = [
     effects: [{ type: 'speed_roll_nav_pct', value: 0.25 }],
     source: "Quartermaster's Cache",
   },
+  // Same two-tier treatment as the Corsair Cannon. Krust's Carapace
+  // is the standard plate; Captain's Carapace is the full-grade
+  // version of his own armour, dropped only at the higher rate from
+  // his Consignment (with Prime rates in challenge mode).
   {
     id: 'krusts_carapace',
     name: "Krust's Carapace",
-    description: 'Cuts all incoming enemy fire by 15%. The same plated hide Krust hid behind for years.',
+    description: 'Cuts incoming enemy fire by 10%.',
     image: '/captainshull.png',
     emoji: '🛡️',
     rarity: 'epic',
+    effects: [{ type: 'incoming_damage_mult', value: 0.90 }],
+    source: "Krust's Consignment",
+  },
+  {
+    id: 'captains_carapace',
+    name: "Captain's Carapace",
+    description: "Cuts incoming enemy fire by 15%. The plated hide Krust himself hid behind for years.",
+    image: '/captainscarapace.png',
+    emoji: '🛡️',
+    rarity: 'legendary',
     effects: [{ type: 'incoming_damage_mult', value: 0.85 }],
     source: "Krust's Consignment",
   },
