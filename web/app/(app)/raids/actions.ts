@@ -105,7 +105,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     .reduce((a, e) => a * e.value, 1)
 
   // Ship classes: chapter-end identity picks (Master Gunner, Ironside,
-  // Helmsman, First Mate). Each pick stacks multiplicatively with raid
+  // Helmsman, Buccaneer). Each pick stacks multiplicatively with raid
   // items + with other class picks. HP and speed bake into the base
   // stats below; damageMult + doubloonMult pass through to RaidGame.
   const shipClassPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}

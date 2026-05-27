@@ -10,7 +10,7 @@
 // twice doubles down on the identity (and the tradeoff); spreading
 // picks across classes softens or cancels the tradeoffs.
 
-export type ShipClassId = 'master_gunner' | 'ironside' | 'helmsman' | 'first_mate'
+export type ShipClassId = 'master_gunner' | 'ironside' | 'helmsman' | 'buccaneer'
 
 export interface ShipClassEffects {
   /** Multiplier on player outgoing raid damage. 1.15 = +15%, 0.90 = -10%. Default 1. */
@@ -79,17 +79,17 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     emoji: '⟡',
     effects: { doubloonMult: 1.25, speedFlat: -10 },
   },
-  first_mate: {
-    id: 'first_mate',
-    name: 'First Mate',
-    tagline: 'Steady hand. No weak spot.',
-    description: 'No specialty, no flaw. A small lift across the board for the captain who wants options open.',
+  buccaneer: {
+    id: 'buccaneer',
+    name: 'Buccaneer',
+    tagline: 'No specialty. No weak spot.',
+    description: 'A small lift across the board for the captain who wants their options open. The default pirate, just a little better at everything.',
     bullets: [
       { label: '+5% damage', positive: true },
       { label: '+5% HP',     positive: true },
     ],
     color: '#9aa6b8',
-    emoji: '⚓',
+    emoji: '🏴‍☠️',
     effects: { damageMult: 1.05, hpMult: 1.05 },
   },
 }
@@ -98,7 +98,7 @@ export const SHIP_CLASS_LIST: ShipClassDef[] = [
   SHIP_CLASSES.master_gunner,
   SHIP_CLASSES.ironside,
   SHIP_CLASSES.helmsman,
-  SHIP_CLASSES.first_mate,
+  SHIP_CLASSES.buccaneer,
 ]
 
 export function getShipClass(id: string | null | undefined): ShipClassDef | undefined {

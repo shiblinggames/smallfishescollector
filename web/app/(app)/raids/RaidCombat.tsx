@@ -180,8 +180,8 @@ export interface RaidCombatProps {
   totalFortune?: number
   equippedRaidItems: string[]
   /** Aggregated ship-class damage multiplier (Master Gunner, Ironside,
-   *  First Mate all touch this — Master Gunner +15%, Ironside -10%,
-   *  First Mate +5%, all multiplying together across chapters).
+   *  Buccaneer all touch this — Master Gunner +15%, Ironside -10%,
+   *  Buccaneer +5%, all multiplying together across chapters).
    *  Multiplied onto every shot the player lands; same chain as raid
    *  items. Default 1 = no class picks yet. */
   classDamageMult?: number
@@ -767,7 +767,7 @@ export default function RaidCombat({
             ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
             : getActiveEffects(equippedRaidItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
           // classDamageMult: aggregated ship-class effect (Master Gunner
-          // +15%, Ironside -10%, First Mate +5%, stacks across chapters).
+          // +15%, Ironside -10%, Buccaneer +5%, stacks across chapters).
           // Stacks multiplicatively with raid items + volley + crit, same
           // chain as the rest of the damage mults.
           const mult = (action === 'volley' ? 2 : 1) * bossMult * aimItemMult * classDamageMult
