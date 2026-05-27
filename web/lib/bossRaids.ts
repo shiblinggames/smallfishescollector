@@ -198,8 +198,8 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     { id: 'pack',                 label: '100 Gems',                image: null,                     emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
     // 30% special drops
     { id: 'corsair_black',        label: 'Corsair Black',           image: null,                     emoji: '🚢',       rarity: 'epic',      weight: 5,  shipSkinId: 'corsair_black' },
-    { id: 'corsair_cannon',       label: 'Corsair Cannon',          image: '/corsaircannon.png',     emoji: '💣',       rarity: 'epic',      weight: 20 },
-    { id: 'corsair_prime_cannon', label: "Corsair's Prime Cannon",  image: '/corsairprimecannon.png',emoji: '💣',       rarity: 'legendary', weight: 5  },
+    { id: 'corsair_cannon',       label: 'Corsair Cannon',          image: '/corsaircannon-v2.png',     emoji: '💣',       rarity: 'epic',      weight: 20 },
+    { id: 'corsair_prime_cannon', label: "Corsair's Prime Cannon",  image: '/corsairsprimecannon.png',emoji: '💣',       rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
     brute:   { gold: 20,  xp: 20  },
