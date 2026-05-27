@@ -89,6 +89,16 @@ async function DailySection() {
         accent="#60a5fa"
       />
       <GameCard
+        href="/leaderboard"
+        eyebrow="Compete"
+        title="Leaderboards"
+        statusText="Climb the boards. See where you rank"
+        info={[]}
+        icon={<TrophyIcon />}
+        variant="compact"
+        accent="#f0c040"
+      />
+      <GameCard
         href="/tavern/tide-run"
         eyebrow="Arcade"
         title="Tide Run"
@@ -314,6 +324,21 @@ function BoatIcon() {
       <path d="M4 14l1-5h14l1 5"/>
       <path d="M12 9V4"/>
       <path d="M12 4l4 3h-8z" fill="currentColor"/>
+    </svg>
+  )
+}
+
+// Classic two-handled trophy on a base — for the Leaderboards card.
+// Drawn with currentColor + rounded strokes to match the rest of the
+// tavern grid icons.
+function TrophyIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 4h8v6a4 4 0 0 1-8 0V4z"/>
+      <path d="M8 6H5v2a3 3 0 0 0 3 3"/>
+      <path d="M16 6h3v2a3 3 0 0 1-3 3"/>
+      <path d="M10 14v3M14 14v3"/>
+      <path d="M8 19h8"/>
     </svg>
   )
 }
