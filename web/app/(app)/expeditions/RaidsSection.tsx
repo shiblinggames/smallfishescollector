@@ -1264,11 +1264,13 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
 export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string> }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
-  // Per-chapter manual expand overrides. A "fully cleared" chapter
-  // collapses by default; the player can tap its header to peek the
-  // node map again. Ephemeral (resets on page navigation) — chapters
-  // are not something you revisit often enough to bother persisting.
-  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
+  // Per-chapter manual toggle overrides. Membership means the player
+  // has flipped the default open/closed state for that chapter — works
+  // in both directions: open a fully-cleared chapter back up, OR close
+  // a main-cleared chapter that still has open challenges. Ephemeral
+  // (resets on page navigation) — chapters are not something you
+  // revisit often enough to bother persisting.
+  const [chaptersToggled, setChaptersToggled] = useState<Set<string>>(new Set())
   const clearedCount = views.filter(v => v.status === 'cleared').length
 
   return (
@@ -1404,16 +1406,23 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               // "yet to unlock", which is a different signal.
               const challengesRemaining = sideViews.filter(v => v.status === 'available').length
               // Fully cleared = main + every side branch the player has
-              // access to. Only fully-cleared chapters collapse by
-              // default — if there's still a challenge raid sitting
-              // there, the chapter stays expanded so the player sees it.
+              // access to. Drives the DEFAULT collapsed state: fully
+              // cleared → collapsed; main cleared but a challenge raid
+              // is still hanging → expanded (so the player sees the
+              // node sitting there). Either default can be flipped by
+              // the player via the chevron.
               const fullyCleared = chapterCleared && challengesRemaining === 0
               const chapterStarted = bucket.views.some(v => v.status !== 'locked')
-              const manuallyExpanded = expandedChapters.has(c.id)
-              const collapsed = fullyCleared && !manuallyExpanded
+              // Collapsible the moment the main path is done. Player
+              // can close a chapter even if challenges remain — the
+              // header still advertises them, so they're never lost.
+              const collapsible = chapterCleared
+              const defaultCollapsed = fullyCleared
+              const toggled = chaptersToggled.has(c.id)
+              const collapsed = collapsible && (defaultCollapsed !== toggled) // XOR
               const toggle = () => {
-                if (!fullyCleared) return // only meaningful when fully cleared
-                setExpandedChapters(prev => {
+                if (!collapsible) return
+                setChaptersToggled(prev => {
                   const next = new Set(prev)
                   if (next.has(c.id)) next.delete(c.id); else next.add(c.id)
                   return next
@@ -1421,21 +1430,21 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               }
               return (
                 <div key={c.id} style={{ marginBottom: '1.1rem' }}>
-                  {/* Header. When the chapter is fully cleared (and so
-                      collapsible), the whole header is a tap-target
-                      that toggles the node map. Otherwise it's just
+                  {/* Header. Tap-target the moment the main path is
+                      cleared — player can collapse even with optional
+                      challenges still open. Otherwise it's just
                       static title chrome. */}
                   <button
                     type="button"
                     onClick={toggle}
-                    disabled={!fullyCleared}
+                    disabled={!collapsible}
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       background: 'transparent', border: 0, padding: 0,
                       marginBottom: collapsed ? '0' : '0.65rem',
                       paddingBottom: '0.55rem',
                       borderBottom: '1px solid rgba(196,169,106,0.18)',
-                      cursor: fullyCleared ? 'pointer' : 'default',
+                      cursor: collapsible ? 'pointer' : 'default',
                     }}
                     aria-expanded={!collapsed}
                   >
@@ -1456,8 +1465,9 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
                           · {challengesRemaining} challenge{challengesRemaining === 1 ? '' : 's'} available
                         </span>
                       )}
-                      {/* Chevron only when the chapter is collapsible. */}
-                      {fullyCleared && (
+                      {/* Chevron whenever the chapter is collapsible
+                          (main path cleared) — works in both directions. */}
+                      {collapsible && (
                         <span style={{ marginLeft: 'auto', color: 'rgba(196,169,106,0.65)', fontSize: '0.8rem', lineHeight: 1, transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.18s' }} aria-hidden>
                           ▾
                         </span>
