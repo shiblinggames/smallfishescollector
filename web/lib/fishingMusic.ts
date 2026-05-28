@@ -34,6 +34,17 @@ let masterGain: GainNode | null = null   // music volume (the <audio> elements)
 let sfxGain: GainNode | null = null      // SFX volume (chime/cast/dial) — independent
 let gainA: GainNode | null = null
 let gainB: GainNode | null = null
+// MediaElementSources kept on hand so we can disconnect them at teardown.
+// Each source is permanently bound to the audio element passed to
+// createMediaElementSource; once that element is destroyed we MUST drop
+// the source too — otherwise on remount the Web Audio graph is still
+// wired to the OLD (destroyed) elements while the NEW elements emit
+// their audio directly to the system bus, bypassing all of our gains.
+// That bypass is what produced the "delay/reverb on shallows" bug:
+// during the loop pre-roll both new elements played the same track in
+// parallel because the gainA→gainB swap had no effect on them.
+let srcA: MediaElementAudioSourceNode | null = null
+let srcB: MediaElementAudioSourceNode | null = null
 let webAudioReady = false
 let trackDuration = 0
 let lastGainValue = 1
@@ -151,12 +162,16 @@ function setupWebAudio(): boolean {
   if (webAudioReady) return true
   if (!elA || !elB || typeof window === 'undefined') return false
   try {
+    // Reuse the existing AudioContext across remounts when possible —
+    // iOS in particular dislikes churning AudioContexts. Only the
+    // per-element source / gain stack gets rebuilt to bind to the
+    // freshly-created elA / elB.
     const Ctx: typeof AudioContext | undefined =
       window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!Ctx) return false
-    const ctx = new Ctx()
-    const srcA = ctx.createMediaElementSource(elA)
-    const srcB = ctx.createMediaElementSource(elB)
+    const ctx = audioCtx ?? new Ctx()
+    const newSrcA = ctx.createMediaElementSource(elA)
+    const newSrcB = ctx.createMediaElementSource(elB)
     const ga = ctx.createGain()
     const gb = ctx.createGain()
     const master = ctx.createGain()
@@ -166,11 +181,13 @@ function setupWebAudio(): boolean {
     master.gain.value = MUSIC_VOLUME
     sfx.gain.value = sfxMuted ? 0 : 1
     lastGainValue = MUSIC_VOLUME
-    srcA.connect(ga).connect(master)
-    srcB.connect(gb).connect(master)
+    newSrcA.connect(ga).connect(master)
+    newSrcB.connect(gb).connect(master)
     master.connect(ctx.destination)
     sfx.connect(ctx.destination)
     audioCtx = ctx
+    srcA = newSrcA
+    srcB = newSrcB
     gainA = ga
     gainB = gb
     masterGain = master
@@ -179,10 +196,29 @@ function setupWebAudio(): boolean {
     return true
   } catch {
     audioCtx = null
+    srcA = srcB = null
     gainA = gainB = masterGain = sfxGain = null
     webAudioReady = false
     return false
   }
+}
+
+// Disconnect every node we created for the current element pair, so the
+// next setupWebAudio() can build a fresh graph bound to the NEW elements.
+// Called from the page-leave teardown right when we null out elA/elB.
+// Keeps audioCtx alive (iOS hates churn) — we just drop everything that's
+// tied to the destroyed audio elements.
+function teardownWebAudioGraph() {
+  try { srcA?.disconnect() } catch {}
+  try { srcB?.disconnect() } catch {}
+  try { gainA?.disconnect() } catch {}
+  try { gainB?.disconnect() } catch {}
+  try { masterGain?.disconnect() } catch {}
+  try { sfxGain?.disconnect() } catch {}
+  srcA = srcB = null
+  gainA = gainB = null
+  masterGain = sfxGain = null
+  webAudioReady = false
 }
 
 function clearHandoff() {
@@ -337,6 +373,16 @@ function rampMaster(fromValue: number, target: number, ms: number, pauseAtEnd = 
       elB = null
       current = null
       elementsPrimed = false
+      // CRITICAL: drop the Web Audio graph too. The srcA / srcB
+      // MediaElementSources are permanently bound to the elements we
+      // just destroyed — leaving them in the graph means
+      // setupWebAudio() will short-circuit on the next remount and
+      // the NEW elements will bypass our gain stack entirely,
+      // emitting audio direct to system. During the loop pre-roll
+      // both new elements then play the same track in parallel
+      // (~200ms offset) which sounds like delay/reverb. Dropping the
+      // graph here forces a clean rebuild on next unlock.
+      teardownWebAudioGraph()
       pendingPauseTimeout = null
     }, ms + 80)
   }
