@@ -20,7 +20,6 @@
 // Per-enemy AI follows BroadsideEnemy.pattern cycle.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
@@ -1844,60 +1843,64 @@ export default function RaidCombat({
       {/* Bottom panel — persistent log + action UI. NO position/transform
           here: it's an ancestor of heavy framer-motion content, and a
           compositing ancestor breaks iOS PWA fixed Nav/MobileTabBar.
-          See memory: feedback_pagetransition_ios_pwa. */}
+          See memory: feedback_pagetransition_ios_pwa.
+
+          During the 'aiming' sub-phase the LogBox is swapped for the
+          aim bar (same 130px slot) and the ActionMenu is swapped for
+          a single Lock Shot button (same 72px slot). Both replacements
+          match dimensions exactly so the battle stage above doesn't
+          reflow — this was the constraint that originally pushed the
+          aim minigame to a body portal; matching heights lets it sit
+          inline where the player's eye already is. */}
       <div style={{
         background: '#060c14',
         borderTop: '2px solid #2a3548',
         padding: '0.7rem 0.85rem 0.95rem',
         display: 'flex', flexDirection: 'column', gap: 8,
       }}>
-        {/* Action log — shows this turn's events (cleared at start of each resolve) */}
-        <LogBox lines={resolveLog} turn={turn} />
+        {subPhase === 'aiming' ? (
+          <AimBarInline indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef} />
+        ) : (
+          <LogBox lines={resolveLog} turn={turn} />
+        )}
 
-        {/* ActionMenu is ALWAYS mounted so nothing shifts. The aim
-            minigame is a body-portaled fixed overlay (rendered after
-            this div) — it never becomes a layout/compositing ancestor
-            here, which is what broke the fixed nav. */}
-        <ActionMenu
-          canFire={canFire}
-          canVolley={canVolley}
-          canDodge={canDodge}
-          onSelect={selectAction}
-          disabled={subPhase !== 'await_input'}
-          highlightedAction={subPhase === 'await_input' ? null : playerAction}
-          specialItems={(() => {
-            // Special chooser items. Today this is just the repair kit;
-            // future special abilities (potions, boat skills, etc.) drop
-            // in here without engine churn. Per-entry `disabled` keeps
-            // an item visible with its reason, so the player understands
-            // why the slot didn't fire instead of seeing it just grey out.
-            if (!repairKit) return []
-            const atFull = playerHp >= playerHpMax
-            const range = repairKitRange(repairKit, totalFortune)
-            return [{
-              id: 'repair',
-              label: repairKit.name,
-              sub: kitUsed
-                ? 'Already used this battle.'
-                : atFull
-                  ? 'Hull already at full HP.'
-                  : `Heals ${range.min}-${range.max} HP. Costs your turn.`,
-              color: '#4ade80',
-              emoji: repairKit.emoji,
-              image: repairKit.image,
-              disabled: kitUsed || atFull,
-              onClick: () => selectAction('repair'),
-            }]
-          })()}
-        />
+        {subPhase === 'aiming' ? (
+          <InlineLockButton onLock={lockShot} />
+        ) : (
+          <ActionMenu
+            canFire={canFire}
+            canVolley={canVolley}
+            canDodge={canDodge}
+            onSelect={selectAction}
+            disabled={subPhase !== 'await_input'}
+            highlightedAction={subPhase === 'await_input' ? null : playerAction}
+            specialItems={(() => {
+              // Special chooser items. Today this is just the repair kit;
+              // future special abilities (potions, boat skills, etc.) drop
+              // in here without engine churn. Per-entry `disabled` keeps
+              // an item visible with its reason, so the player understands
+              // why the slot didn't fire instead of seeing it just grey out.
+              if (!repairKit) return []
+              const atFull = playerHp >= playerHpMax
+              const range = repairKitRange(repairKit, totalFortune)
+              return [{
+                id: 'repair',
+                label: repairKit.name,
+                sub: kitUsed
+                  ? 'Already used this battle.'
+                  : atFull
+                    ? 'Hull already at full HP.'
+                    : `Heals ${range.min}-${range.max} HP. Costs your turn.`,
+                color: '#4ade80',
+                emoji: repairKit.emoji,
+                image: repairKit.image,
+                disabled: kitUsed || atFull,
+                onClick: () => selectAction('repair'),
+              }]
+            })()}
+          />
+        )}
       </div>
-
-      {subPhase === 'aiming' && (
-        <AimPanel
-          indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
-          onLock={lockShot}
-        />
-      )}
 
       {/* Full-screen crit flash — fixed, matches the existing raid */}
       {critFlash && (
@@ -2940,58 +2943,83 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // (the regression — see memory feedback_pagetransition_ios_pwa). The
 // layout never shifts (ActionMenu stays mounted) and the Lock button
 // lands at the bottom where the thumb already is.
-function AimPanel({ indicatorRef, zoneRef, flashRef, onLock }: {
+// In-place aim bar — sits in the LogBox's slot during aiming, sized
+// to match LogBox's locked 130px height so the bottom panel doesn't
+// shift. The actual aim bar is 44px; the surrounding chrome (Turn-
+// style header + centering + helper hint) fills the rest of the slot.
+// Pairs with InlineLockButton below.
+function AimBarInline({ indicatorRef, zoneRef, flashRef }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
-  onLock: () => void
 }) {
-  if (typeof document === 'undefined') return null
-  return createPortal(
+  return (
     <div style={{
-      position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 55,
-      display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+      background: '#04080e',
+      border: '1px solid #1f2e42',
+      borderRadius: 12,
+      padding: '0.65rem 0.85rem',
+      minHeight: 130, maxHeight: 130,
+      overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
     }}>
-      <div style={{
-        pointerEvents: 'auto',
-        width: '100%', maxWidth: 580,
-        background: '#060c14',
-        borderTop: '2px solid #2a3548',
-        // Bottom pad clears the fixed MobileTabBar (~64px) + safe area.
-        padding: '0.85rem 0.85rem calc(env(safe-area-inset-bottom, 0px) + 72px)',
-        display: 'flex', flexDirection: 'column', gap: 12,
-      }}>
-        <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
-          {/* Bar-wide flash overlay — fires on lock to punch the result */}
-          <div ref={flashRef} style={{
-            position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
-            pointerEvents: 'none', zIndex: 3,
-          }} />
-          {/* Moving target zone */}
-          <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
-            <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
-            <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
-            <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
-          </div>
-          {/* Indicator */}
-          <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
-        </div>
-
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={onLock}
-          className="font-cinzel font-700"
-          style={{
-            width: '100%',
-            padding: '0.95rem', borderRadius: 14, background: '#4ade80', color: '#0a1422',
-            border: 'none', fontSize: '1rem', cursor: 'pointer',
-          }}
-        >
-          Lock Shot
-        </motion.button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexShrink: 0 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#fbbf24' }}>
+          Lock Your Shot
+        </p>
+        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#5a7a9a' }}>
+          Gold = Crit
+        </p>
       </div>
-    </div>,
-    document.body,
+
+      {/* The bar itself — same DOM as the old AimPanel so the
+          existing indicator/zone/flash animation hooks keep working
+          without any ref reshuffling. */}
+      <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
+        <div ref={flashRef} style={{
+          position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
+          pointerEvents: 'none', zIndex: 3,
+        }} />
+        <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
+          <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
+          <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
+          <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
+        </div>
+        <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
+      </div>
+
+      {/* Small footer hint — keeps the slot visually balanced so the
+          aim bar isn't floating at the bottom of an empty box. */}
+      <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a7a9a', textAlign: 'center', flexShrink: 0 }}>
+        Tap LOCK when the marker hits the gold center.
+      </p>
+    </div>
+  )
+}
+
+// Single full-width Lock button that occupies the ActionMenu's slot
+// during aiming. Same vertical footprint (58px circle + 5px gap + 9px
+// label = ~72px in ActionMenu) so swapping in/out doesn't shift the
+// battle stage above.
+function InlineLockButton({ onLock }: { onLock: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 72 }}>
+      <motion.button
+        whileTap={{ scale: 0.96 }}
+        onClick={onLock}
+        className="font-cinzel font-700 uppercase tracking-[0.14em]"
+        style={{
+          width: '100%', height: 58,
+          borderRadius: 14,
+          background: '#4ade80', color: '#0a1422',
+          border: 'none', fontSize: '0.95rem', cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(74,222,128,0.35), inset 0 -3px 0 rgba(0,0,0,0.15)',
+          touchAction: 'manipulation',
+        }}
+      >
+        Lock Shot
+      </motion.button>
+    </div>
   )
 }
 
