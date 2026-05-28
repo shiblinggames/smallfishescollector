@@ -99,6 +99,7 @@ async function RaidsMapSection() {
       repairOwed={profile?.raid_repair_owed ?? 0}
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
       shipClasses={raidMap.shipClasses}
+      seenChapterUnlocks={raidMap.seenChapterUnlocks}
     />
   )
 }

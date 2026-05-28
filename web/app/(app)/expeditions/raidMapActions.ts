@@ -112,26 +112,56 @@ async function loadRaidRecords(
   return result
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string> }> {
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0, raidRecords: {}, shipClasses: {} }
+  if (!user) return { views: [], doubloons: 0, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [] }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks')
     .eq('id', user.id)
     .single()
 
   const doubloons = profile?.doubloons ?? 0
   const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
   const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
+  const seenChapterUnlocks = (profile?.seen_chapter_unlocks as string[] | null) ?? []
   const [cleared, raidRecords] = await Promise.all([
     buildClearedSet(admin, user.id, profile ?? {}),
     loadRaidRecords(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords, shipClasses }
+  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords, shipClasses, seenChapterUnlocks }
+}
+
+/** First-time celebration dismiss — appends the chapter id to
+ *  profiles.seen_chapter_unlocks (idempotent). The celebration overlay
+ *  in RaidsSection fires once when a chapter unlocks; calling this
+ *  prevents it from firing again on future visits / other devices. */
+export async function markChapterUnlockSeen(
+  chapterId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('seen_chapter_unlocks')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const seen = (profile.seen_chapter_unlocks as string[] | null) ?? []
+  if (seen.includes(chapterId)) return { ok: true } // idempotent
+
+  await admin
+    .from('profiles')
+    .update({ seen_chapter_unlocks: [...seen, chapterId] })
+    .eq('id', user.id)
+  return { ok: true }
 }
 
 export async function claimMilestoneNode(

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -9,7 +9,7 @@ import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
-import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode, pickShipClass } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen } from './raidMapActions'
 import { SHIP_CLASS_LIST, getShipClass } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 
@@ -1343,9 +1343,246 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
   )
 }
 
+/* ─────────────────────── Chapter-unlock overlay ───────────────── */
+
+// First-time celebration when a chapter unlocks. Fires once per
+// chapter per player (persisted via profiles.seen_chapter_unlocks;
+// dismissed by markChapterUnlockSeen). Designed to FEEL like a real
+// milestone — full-screen takeover, parchment scroll, gold particles,
+// stamping roman numeral — not a quiet toast in the corner.
+function ChapterUnlockOverlay({
+  chapter, previousChapter, onDismiss,
+}: {
+  chapter: RaidChapter
+  previousChapter: RaidChapter | null
+  onDismiss: () => void
+}) {
+  // Random-but-deterministic sparkle positions so they're stable across
+  // re-renders. 14 sparkles drift up across the backdrop, each with its
+  // own delay + duration + horizontal jitter — reads as ambient gold
+  // dust, not a regimented confetti burst.
+  const sparkles = (() => {
+    const arr: { left: number; size: number; delay: number; duration: number; sway: number }[] = []
+    for (let i = 0; i < 14; i++) {
+      arr.push({
+        left:     (i * 73) % 100,                   // spread across the width
+        size:     3 + ((i * 17) % 5),               // 3–7px
+        delay:    (i * 0.23) % 2.6,                 // staggered starts
+        duration: 4 + ((i * 11) % 4),               // 4–7s
+        sway:     (i % 2 === 0 ? 1 : -1) * (8 + (i * 3) % 10),
+      })
+    }
+    return arr
+  })()
+
+  return createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      style={{
+        position: 'fixed', inset: 0,
+        zIndex: 3000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem',
+        // Deep-ocean radial so the sparkles glow against it. The very
+        // center is darker so the parchment card pops cleanly.
+        background: 'radial-gradient(ellipse at center, rgba(4,12,24,0.92) 0%, rgba(2,4,10,0.97) 70%, rgba(0,0,0,0.99) 100%)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+      }}
+      onClick={onDismiss}
+    >
+      {/* Sparkle particles — float up + sway. pointer-events:none so
+          they don't intercept the tap-anywhere dismiss. */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {sparkles.map((s, i) => (
+          <motion.div
+            key={i}
+            initial={{ y: '110%', opacity: 0, x: 0 }}
+            animate={{ y: '-15%', opacity: [0, 0.85, 0.85, 0], x: [0, s.sway, 0, -s.sway, 0] }}
+            transition={{
+              y:       { duration: s.duration, delay: s.delay, repeat: Infinity, ease: 'linear' },
+              opacity: { duration: s.duration, delay: s.delay, repeat: Infinity, times: [0, 0.15, 0.8, 1], ease: 'easeInOut' },
+              x:       { duration: s.duration, delay: s.delay, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            style={{
+              position: 'absolute',
+              left: `${s.left}%`,
+              bottom: 0,
+              width: s.size, height: s.size,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255,225,150,0.95) 0%, rgba(240,192,64,0.6) 50%, transparent 100%)',
+              boxShadow: '0 0 12px rgba(255,210,120,0.55)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Card — stops tap propagation so taps inside don't trigger
+          the backdrop dismiss accidentally. */}
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.18, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          width: '100%', maxWidth: 440,
+          padding: '1.6rem 1.4rem 1.5rem',
+          borderRadius: 18,
+          background: [
+            'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255,225,150,0.18) 0%, transparent 70%)',
+            'linear-gradient(180deg, rgba(36,24,10,0.96) 0%, rgba(20,14,8,0.98) 100%)',
+          ].join(', '),
+          border: '1.5px solid rgba(240,192,64,0.55)',
+          borderTop: '2.5px solid rgba(255,215,120,0.85)',
+          boxShadow: '0 0 60px rgba(240,192,64,0.22), 0 0 140px rgba(240,192,64,0.08), inset 0 0 40px rgba(40,28,12,0.5)',
+          textAlign: 'center',
+        }}
+      >
+        {/* "Chapter N complete" — anchors the celebration to what the
+            player just DID, not just what they're getting. */}
+        {previousChapter && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, duration: 0.4 }}
+            className="font-karla font-700 uppercase tracking-[0.22em]"
+            style={{ fontSize: '0.56rem', color: '#4ade80', marginBottom: '0.65rem' }}
+          >
+            ✓ Chapter {previousChapter.romanNumeral} Complete
+          </motion.p>
+        )}
+
+        {/* Anchor divider — small pirate-flavored chrome that pins the
+            card as a moment, not just a banner. */}
+        <motion.div
+          initial={{ opacity: 0, scaleX: 0 }}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ delay: 0.6, duration: 0.45, ease: 'easeOut' }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            margin: '0 auto 1rem', maxWidth: 220,
+            transformOrigin: 'center',
+          }}
+        >
+          <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent 0%, rgba(240,192,64,0.6) 100%)' }} />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 8px rgba(240,192,64,0.55))' }}>
+            <circle cx="12" cy="5" r="2"/>
+            <path d="M12 7v10M8 17c0 0 1 2 4 2s4-2 4-2M7 11h10"/>
+            <path d="M7 17c-2-1-3-3-3-5h3M17 17c2-1 3-3 3-5h-3"/>
+          </svg>
+          <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(240,192,64,0.6) 0%, transparent 100%)' }} />
+        </motion.div>
+
+        {/* "NEW CHAPTER UNLOCKED" tag */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.85, duration: 0.4 }}
+          className="font-karla font-700 uppercase tracking-[0.32em]"
+          style={{ fontSize: '0.56rem', color: 'rgba(240,192,64,0.75)', marginBottom: '0.5rem' }}
+        >
+          New Chapter Unlocked
+        </motion.p>
+
+        {/* Roman numeral — stamps in with overshoot for a real "ka-thunk"
+            arrival. Cinzel weight + drop-shadow give it the feel of an
+            embossed plate. */}
+        <motion.p
+          initial={{ opacity: 0, scale: 1.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1.05, duration: 0.55, type: 'spring', stiffness: 220, damping: 14 }}
+          className="font-cinzel font-700"
+          style={{
+            fontSize: '4.2rem', lineHeight: 1,
+            color: '#ffd56b', letterSpacing: '0.04em',
+            margin: '0 0 0.3rem',
+            textShadow: '0 0 24px rgba(240,192,64,0.7), 0 4px 18px rgba(0,0,0,0.6)',
+          }}
+        >
+          {chapter.romanNumeral}
+        </motion.p>
+
+        {/* Chapter title */}
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.45, duration: 0.45 }}
+          className="font-cinzel font-700"
+          style={{
+            fontSize: '1.45rem', lineHeight: 1.15,
+            color: '#f5f2ec', letterSpacing: '0.02em',
+            marginBottom: '0.65rem',
+            textShadow: '0 2px 12px rgba(0,0,0,0.7)',
+          }}
+        >
+          {chapter.title}
+        </motion.p>
+
+        {/* Subtitle — flavor blurb. */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.75, duration: 0.5 }}
+          className="font-karla"
+          style={{
+            fontSize: '0.82rem', lineHeight: 1.5,
+            color: 'rgba(245,242,236,0.78)',
+            fontStyle: 'italic',
+            marginBottom: '1.5rem',
+            padding: '0 0.5rem',
+          }}
+        >
+          {chapter.subtitle}
+        </motion.p>
+
+        {/* CTA */}
+        <motion.button
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2.05, duration: 0.4 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={onDismiss}
+          className="font-cinzel font-700 uppercase tracking-[0.18em]"
+          style={{
+            width: '100%', padding: '12px 0',
+            borderRadius: 12,
+            background: 'linear-gradient(180deg, rgba(240,192,64,0.32) 0%, rgba(240,192,64,0.12) 100%)',
+            border: '1px solid rgba(240,192,64,0.65)',
+            borderTop: '1.5px solid rgba(255,215,120,0.9)',
+            color: '#ffd56b',
+            fontSize: '0.78rem',
+            cursor: 'pointer',
+            boxShadow: '0 0 24px rgba(240,192,64,0.22)',
+          }}
+        >
+          Set Sail →
+        </motion.button>
+
+        {/* Subtle hint: tap backdrop also dismisses, but only after the
+            CTA has appeared so the player doesn't dismiss-by-accident
+            while the card is still animating in. */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2.4, duration: 0.4 }}
+          className="font-karla"
+          style={{ fontSize: '0.6rem', color: 'rgba(240,192,64,0.4)', marginTop: '0.7rem' }}
+        >
+          Tap anywhere to dismiss
+        </motion.p>
+      </motion.div>
+    </motion.div>,
+    document.body,
+  )
+}
+
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string> }) {
+export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses, seenChapterUnlocks }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[] }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -1355,7 +1592,54 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
   // (resets on page navigation) — chapters are not something you
   // revisit often enough to bother persisting.
   const [chaptersToggled, setChaptersToggled] = useState<Set<string>>(new Set())
+  // First-time chapter-unlock celebration. Set on mount if the player
+  // has just cleared chapter N-1 but never dismissed the chapter N
+  // overlay. Cleared by tapping the CTA, which fires the server
+  // action to persist seen-state across devices.
+  const [celebratingChapter, setCelebratingChapter] = useState<RaidChapter | null>(null)
   const clearedCount = views.filter(v => v.status === 'cleared').length
+
+  // Detect "just unlocked, never seen" celebrations. The bucket math
+  // here mirrors the chapter-rendering pass below — done once on mount
+  // (and whenever views/seen change, e.g. after dismiss) so the
+  // overlay can fire without waiting on player interaction.
+  useEffect(() => {
+    const groups = new Map<string, RaidNodeView[]>()
+    for (const v of views) {
+      const cid = chapterForNode(v.node.id).id
+      const arr = groups.get(cid) ?? []
+      arr.push(v)
+      groups.set(cid, arr)
+    }
+    const seen = new Set(seenChapterUnlocks)
+    // Chapter 0 has no "unlocked" moment (it's the player's starting
+    // point) — start from index 1 and celebrate the first chapter
+    // where the previous chapter's MAIN path is cleared AND the
+    // player hasn't dismissed the overlay yet.
+    for (let i = 1; i < RAID_CHAPTERS.length; i++) {
+      const prev = RAID_CHAPTERS[i - 1]
+      const curr = RAID_CHAPTERS[i]
+      if (seen.has(curr.id)) continue
+      const prevBucket = groups.get(prev.id) ?? []
+      const prevMain = prevBucket.filter(v => !v.node.sideBranch)
+      const prevMainCleared = prevMain.length > 0 && prevMain.every(v => v.status === 'cleared')
+      if (prevMainCleared) {
+        setCelebratingChapter(curr)
+        break
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [views, seenChapterUnlocks])
+
+  function dismissCelebration() {
+    if (!celebratingChapter) return
+    const id = celebratingChapter.id
+    setCelebratingChapter(null)
+    // Fire-and-forget — even if the request fails, the in-memory
+    // dismiss closes the overlay for this session. Next visit will
+    // re-trigger it; the player rarely notices a single retry.
+    markChapterUnlockSeen(id).catch(() => {})
+  }
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
@@ -1474,10 +1758,29 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               bucket.views.push(v)
               groups.set(c.id, bucket)
             }
+            // Pre-compute main-cleared status for every chapter so the
+            // gate below (chapter N requires chapter N-1's main path)
+            // can look it up without rebuilding the bucket math.
+            const mainClearedById = new Map<string, boolean>()
+            for (const c of RAID_CHAPTERS) {
+              const b = groups.get(c.id)
+              if (!b) { mainClearedById.set(c.id, false); continue }
+              const main = b.views.filter(v => !v.node.sideBranch)
+              mainClearedById.set(c.id, main.length > 0 && main.every(v => v.status === 'cleared'))
+            }
             // Iterate in the canonical RAID_CHAPTERS order, not the Map
             // insertion order — guards against a partial dataset showing
             // chapter II before chapter I.
-            return RAID_CHAPTERS.map(c => {
+            return RAID_CHAPTERS.map((c, chapterIdx) => {
+              // Hard gate: chapter N (N > 0) is completely hidden until
+              // chapter N-1's MAIN path is cleared. No header, no map,
+              // no fogged-out tease — the player shouldn't see the
+              // chapter exists yet. Side branches in the previous
+              // chapter don't gate progression (they're optional).
+              if (chapterIdx > 0) {
+                const prev = RAID_CHAPTERS[chapterIdx - 1]
+                if (!mainClearedById.get(prev.id)) return null
+              }
               const bucket = groups.get(c.id)
               if (!bucket || bucket.views.length === 0) return null
               const mainViews = bucket.views.filter(v => !v.node.sideBranch)
@@ -1595,6 +1898,24 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
             shipClasses={shipClasses}
             raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
             onClose={() => setSelected(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Chapter-unlock celebration. Fires once per chapter per
+          player; the dismiss handler persists seen-state to the DB
+          so the overlay doesn't fire again on future visits / other
+          devices. */}
+      <AnimatePresence>
+        {celebratingChapter && (
+          <ChapterUnlockOverlay
+            key={celebratingChapter.id}
+            chapter={celebratingChapter}
+            previousChapter={(() => {
+              const idx = RAID_CHAPTERS.findIndex(c => c.id === celebratingChapter.id)
+              return idx > 0 ? RAID_CHAPTERS[idx - 1] : null
+            })()}
+            onDismiss={dismissCelebration}
           />
         )}
       </AnimatePresence>
