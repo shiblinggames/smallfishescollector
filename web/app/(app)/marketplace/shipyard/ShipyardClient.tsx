@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { SHIPS } from '@/lib/ships'
 import { buyShip, renameShip } from '@/app/shipyard/actions'
-import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons, shipName: initialShipName }: { shipTier: number; doubloons: number; shipName: string | null }) {
   const [shipTier, setShipTier] = useState(initialTier)
@@ -100,12 +100,19 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
           />
         </div>
 
-        {/* Active ship stats row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, marginTop: 10 }}>
-          <HeroStat label="Crew"  value={activeStats?.crewSlots ?? 1} color={activeShip.color} />
-          <HeroStat label="Hull"  value={activeStats?.durability ?? 0} color="#60a5fa" />
-          <HeroStat label="Speed" value={activeStats?.speed ?? 0}      color="#f0c040" />
-          <HeroStat label="Min Dmg" value={activeStats?.minDamage ?? 0} color="#fb923c" />
+        {/* Active ship stats row. Raid Items is a tier-scaled cap on
+            how many equipped raid items the ship can carry into a
+            fight (see raidItemSlotsForTier) — meaningful upgrade
+            pull for T2/T4/T5 buyers, so it gets the same surface as
+            the existing combat stats instead of being buried in the
+            loadout drawer. 5 columns is tight on small mobile but
+            readable at 5×~64px. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginTop: 10 }}>
+          <HeroStat label="Crew"       value={activeStats?.crewSlots ?? 1}        color={activeShip.color} />
+          <HeroStat label="Hull"       value={activeStats?.durability ?? 0}       color="#60a5fa" />
+          <HeroStat label="Speed"      value={activeStats?.speed ?? 0}            color="#f0c040" />
+          <HeroStat label="Min Dmg"    value={activeStats?.minDamage ?? 0}        color="#fb923c" />
+          <HeroStat label="Raid Items" value={raidItemSlotsForTier(shipTier)}     color="#a78bfa" />
         </div>
       </div>
 
@@ -202,16 +209,20 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                 </p>
               </div>
 
-              {/* Compact stats row */}
+              {/* Compact stats row. The "Items" chip shows the
+                  raid-item loadout capacity for that hull tier — so
+                  a player eyeing T5 can see they'd get a 4th item
+                  slot before they buy. */}
               <div style={{
                 display: 'flex', flexWrap: 'wrap', gap: 6,
                 marginBottom: isNext ? 12 : 0,
                 fontSize: '0.7rem',
               }}>
-                <StatChip label="Crew"  value={stats?.crewSlots  ?? 1} accent={c}       owned={owned} />
-                <StatChip label="Hull"  value={stats?.durability ?? 0} accent="#60a5fa" owned={owned} />
-                <StatChip label="Speed" value={stats?.speed      ?? 0} accent="#f0c040" owned={owned} />
-                <StatChip label="Dmg"   value={stats?.minDamage  ?? 0} accent="#fb923c" owned={owned} />
+                <StatChip label="Crew"  value={stats?.crewSlots  ?? 1}        accent={c}       owned={owned} />
+                <StatChip label="Hull"  value={stats?.durability ?? 0}        accent="#60a5fa" owned={owned} />
+                <StatChip label="Speed" value={stats?.speed      ?? 0}        accent="#f0c040" owned={owned} />
+                <StatChip label="Dmg"   value={stats?.minDamage  ?? 0}        accent="#fb923c" owned={owned} />
+                <StatChip label="Items" value={raidItemSlotsForTier(ship.tier)} accent="#a78bfa" owned={owned} />
               </div>
 
               {/* Buy button — only on the next purchasable tier */}
