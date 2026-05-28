@@ -638,9 +638,23 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         // sit too close to where this shoal will land. The boat exits a
         // current still recovering speed (over ~1s); a wide shoal right
         // after that would be unclearable.
+        //
+        // IMPORTANT: only sweep currents that haven't entered the
+        // viewport yet. The spawner runs ahead of the boat (lookahead
+        // ≈ one canvas-width — see the spawnHazard while-loop below).
+        // A current placed for an earlier hazard can be on-screen by
+        // the time a later iteration of that loop picks "shoal" — if
+        // we delete it then, the foam patch the player is steering
+        // around vanishes mid-frame. Visible currents stay; the
+        // currentBeforeShoal narrow-shoal fallback (just below) keeps
+        // the encounter fair.
         const shoalStartX = g.nextSpawnAt
         const minCurrentGap = g.cw * 0.32
-        g.currents = g.currents.filter(c => (c.x + c.width + minCurrentGap) < shoalStartX)
+        const viewportRight = g.scrollX + g.cw
+        g.currents = g.currents.filter(c => {
+          if (c.x < viewportRight) return true                     // already visible — never yank
+          return (c.x + c.width + minCurrentGap) < shoalStartX     // off-screen — safe to drop
+        })
 
         // A current that survived the overlap-sweep can still sit close
         // enough that the boat reaches the shoal before its speed has
