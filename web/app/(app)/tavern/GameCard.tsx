@@ -48,7 +48,11 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
           minHeight: 200,
         }}
       >
-        {/* Top: art */}
+        {/* Top: art. No drop-shadow filter here — at compact sizes the
+            shadow reads as a rectangular halo around the image box
+            rather than tracing the silhouette (the PNGs' anti-aliased
+            edges leak into the alpha pass). The card's own accent
+            border + top-edge highlight already frame the art. */}
         {art && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 96, marginBottom: 8 }}>
             <img
@@ -58,8 +62,7 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
                 width: '100%',
                 height: artMaxHeight,
                 objectFit: 'contain',
-                opacity: done ? 0.4 : 0.92,
-                filter: `drop-shadow(0 4px 14px ${accent}55)`,
+                opacity: done ? 0.4 : 0.95,
               }}
             />
           </div>
