@@ -10,6 +10,7 @@ import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen } from './raidMapActions'
+import { repairShip } from '@/app/(app)/raids/actions'
 import { SHIP_CLASS_LIST, getShipClass } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 
@@ -147,11 +148,17 @@ function RaidMap({
   views,
   doubloons,
   onSelect,
+  onRepairBlocked,
   repairOwed,
 }: {
   views: RaidNodeView[]
   doubloons: number
   onSelect: (v: RaidNodeView) => void
+  /** Called when the player taps a combat node that's blocked because
+   *  the ship is sunk. RaidsSection opens a focused repair prompt
+   *  with an inline Pay & Repair button so they don't have to scroll
+   *  back to the ShipHero banner to fix it. */
+  onRepairBlocked?: () => void
   repairOwed: number
 }) {
   // Side-branch layout: nodes flagged sideBranch don't consume a zigzag row
@@ -376,12 +383,23 @@ function RaidMap({
             }}
           >
             <motion.button
-              onClick={() => { if (interactive) onSelect(v) }}
-              whileTap={interactive ? { scale: 0.9 } : undefined}
+              onClick={() => {
+                if (interactive) {
+                  onSelect(v)
+                  return
+                }
+                // Specifically: combat node + ship sunk. Open the repair
+                // prompt instead of swallowing the tap silently — players
+                // were tapping their current node, nothing happening, and
+                // missing the ShipHero banner above. Locked nodes still
+                // no-op (they're not actionable in any way).
+                if (raidBlocked && onRepairBlocked) onRepairBlocked()
+              }}
+              whileTap={(interactive || raidBlocked) ? { scale: 0.9 } : undefined}
               transition={{ type: 'spring', stiffness: 520, damping: 20 }}
               aria-label={node.label}
-              aria-disabled={!interactive || undefined}
-              disabled={!interactive}
+              aria-disabled={!interactive && !raidBlocked || undefined}
+              disabled={!interactive && !raidBlocked}
               className={isCurrent && interactive ? 'raid-node-current' : undefined}
               style={{
                 width: size,
@@ -392,7 +410,7 @@ function RaidMap({
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                cursor: interactive ? 'pointer' : 'default',
+                cursor: interactive || raidBlocked ? 'pointer' : 'default',
                 background: locked
                   ? 'radial-gradient(circle at 35% 30%, #14110d, #0a0907)'
                   : cleared
@@ -1580,6 +1598,150 @@ function ChapterUnlockOverlay({
   )
 }
 
+/* ─────────────────────── Repair-blocked prompt ────────────────── */
+
+// Focused modal that fires when the player taps a combat node while
+// their ship is sunk. Two failure modes were happening before this
+// shipped: the tap was silently ignored, or the player did spot the
+// repair banner in ShipHero but had to scroll back up to act on it.
+// Now they tap the node, the prompt explains, and Pay & Repair lives
+// right there. Closes + refreshes on success so the node unblocks
+// inline.
+function RepairBlockedModal({
+  repairOwed, doubloons, onClose,
+}: {
+  repairOwed: number
+  doubloons: number
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [err, setErr] = useState<string | null>(null)
+  const canAfford = doubloons >= repairOwed
+
+  function doRepair() {
+    setErr(null)
+    startTransition(async () => {
+      const res = await repairShip()
+      if ('error' in res) { setErr(res.error); return }
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+      onClose()
+      router.refresh()
+    })
+  }
+
+  return createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem',
+        background: 'rgba(2,4,10,0.78)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
+      }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 360,
+          padding: '1.3rem 1.2rem 1.15rem',
+          borderRadius: 16,
+          background: 'linear-gradient(180deg, rgba(28,14,8,0.97) 0%, rgba(18,10,8,0.98) 100%)',
+          border: '1px solid rgba(239,68,68,0.45)',
+          borderTop: '2px solid rgba(239,68,68,0.75)',
+          boxShadow: '0 0 48px rgba(239,68,68,0.18), 0 0 120px rgba(239,68,68,0.06)',
+          textAlign: 'center',
+        }}
+      >
+        <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.56rem', color: '#ef4444', marginBottom: '0.4rem' }}>
+          Ship Sunk
+        </p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#f5f2ec', lineHeight: 1.2, marginBottom: '0.55rem' }}>
+          Repair your hull
+        </p>
+        <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(245,242,236,0.7)', lineHeight: 1.5, marginBottom: '1.1rem', fontStyle: 'italic' }}>
+          Your ship can&apos;t sail back into a fight until the hull is patched up at port.
+        </p>
+
+        <div style={{
+          background: 'rgba(0,0,0,0.35)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          padding: '0.7rem 0.9rem',
+          marginBottom: '1rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#a8a5a0' }}>Repair cost</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: canAfford ? '#fbbf24' : '#ef4444' }}>
+            {repairOwed.toLocaleString()} ⟡
+          </p>
+        </div>
+
+        {err && (
+          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#f08a8a', marginBottom: '0.7rem' }}>
+            {err}
+          </p>
+        )}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={onClose}
+            className="font-karla font-700 uppercase tracking-[0.12em]"
+            style={{
+              flex: 1, padding: '0.7rem 0',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: '#a8a5a0',
+              fontSize: '0.72rem',
+              cursor: 'pointer',
+            }}
+          >
+            Not yet
+          </button>
+          <button
+            onClick={doRepair}
+            disabled={!canAfford || pending}
+            className="font-karla font-700 uppercase tracking-[0.12em]"
+            style={{
+              flex: 1.4, padding: '0.7rem 0',
+              borderRadius: 10,
+              background: canAfford
+                ? 'linear-gradient(180deg, rgba(74,222,128,0.32) 0%, rgba(74,222,128,0.12) 100%)'
+                : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${canAfford ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.12)'}`,
+              borderTop: canAfford ? '1.5px solid rgba(120,232,160,0.8)' : '1px solid rgba(255,255,255,0.12)',
+              color: canAfford ? '#86efac' : '#7a7775',
+              fontSize: '0.72rem',
+              cursor: canAfford && !pending ? 'pointer' : 'default',
+              opacity: pending ? 0.65 : 1,
+              boxShadow: canAfford ? '0 0 18px rgba(74,222,128,0.2)' : 'none',
+            }}
+          >
+            {pending
+              ? 'Repairing…'
+              : canAfford
+                ? <>Pay & Repair · {repairOwed.toLocaleString()} ⟡</>
+                : <>Need {(repairOwed - doubloons).toLocaleString()} more ⟡</>
+            }
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body,
+  )
+}
+
 /* ─────────────────────── Collapsible section ─────────────────── */
 
 export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses, seenChapterUnlocks }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[] }) {
@@ -1592,6 +1754,11 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
   // (resets on page navigation) — chapters are not something you
   // revisit often enough to bother persisting.
   const [chaptersToggled, setChaptersToggled] = useState<Set<string>>(new Set())
+  // Fires when the player taps a combat node while the ship is sunk.
+  // Opens a focused repair prompt (RepairBlockedModal) — they can pay
+  // and patch the hull right there instead of scrolling back to the
+  // ShipHero banner up the page.
+  const [repairPromptOpen, setRepairPromptOpen] = useState(false)
   // First-time chapter-unlock celebration. Set on mount if the player
   // has just cleared chapter N-1 but never dismissed the chapter N
   // overlay. Cleared by tapping the CTA, which fires the server
@@ -1877,7 +2044,7 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
                         transition={{ duration: 0.22, ease: 'easeOut' }}
                         style={{ overflow: 'hidden' }}
                       >
-                        <RaidMap views={bucket.views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
+                        <RaidMap views={bucket.views} doubloons={doubloons} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} repairOwed={repairOwed} />
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1916,6 +2083,19 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               return idx > 0 ? RAID_CHAPTERS[idx - 1] : null
             })()}
             onDismiss={dismissCelebration}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Repair-blocked prompt. Tapping any combat node while the
+          ship is sunk opens this — direct Pay & Repair action lives
+          here so players don't have to scroll back to ShipHero. */}
+      <AnimatePresence>
+        {repairPromptOpen && (
+          <RepairBlockedModal
+            repairOwed={repairOwed}
+            doubloons={doubloons}
+            onClose={() => setRepairPromptOpen(false)}
           />
         )}
       </AnimatePresence>
