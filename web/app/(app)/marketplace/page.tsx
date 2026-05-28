@@ -43,7 +43,6 @@ export default async function MarketplacePage() {
                 </>}
                 title="Fish Market"
                 description="Trade your catch at live market prices. Up to 2.5× base value."
-                tags={['Hourly pricing', 'Up to 2.5× value', 'Full Moon bonus']}
                 extra={
                   <svg aria-hidden viewBox="0 0 300 60" preserveAspectRatio="none"
                     style={{ position: 'absolute', bottom: 0, right: 0, width: '55%', height: '100%', opacity: 0.06 }}>
@@ -67,7 +66,6 @@ export default async function MarketplacePage() {
                   eyebrow="Tackle"
                   title="Tackle Shop"
                   description="Rods, reels, hooks, and bait. Each piece changes how you fish."
-                  tags={['Catch zone', 'Reel speed', 'Rod skills']}
                   variant="compact"
                 />
               </Link>
@@ -80,7 +78,6 @@ export default async function MarketplacePage() {
                   eyebrow="Ship"
                   title="Shipyard"
                   description="Bigger vessel means a bigger haul, more crew, and more expedition power."
-                  tags={['Fish hold', 'Crew slots', 'Combat']}
                   variant="compact"
                 />
               </Link>
@@ -100,9 +97,6 @@ export default async function MarketplacePage() {
                   eyebrow={isPremium ? 'Active' : 'Support'}
                   title={isPremium ? "You're a Member" : 'Membership'}
                   description={isPremium ? "Daily perks active. Thanks for your support." : "Daily pack, bonus doubloons, no market fees."}
-                  tags={isPremium
-                    ? ['Pack/day', '100 ⟡/day', 'No fees']
-                    : ['Pack/day', '100 ⟡/day', 'No fees']}
                   badge={isPremium ? 'Member' : undefined}
                   variant="compact"
                 />
@@ -116,7 +110,6 @@ export default async function MarketplacePage() {
                   eyebrow="Board game"
                   title="Seas the Booty"
                   description="Strategy card game for 2–6 players. Includes 20 digital packs."
-                  tags={['2–6 players', '$29.99', '20 packs']}
                   variant="compact"
                 />
               </a>
@@ -151,20 +144,8 @@ function Label({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Tag({ label, color }: { label: string; color: string }) {
-  return (
-    <span className="font-karla font-600" style={{
-      fontSize: '0.58rem', color: color + 'cc',
-      background: color + '14', border: `1px solid ${color}28`,
-      padding: '0.15rem 0.5rem', borderRadius: '2rem', whiteSpace: 'nowrap',
-    }}>
-      {label}
-    </span>
-  )
-}
-
 function DestCard({
-  accent, art, artStyle, artWidth, eyebrow, title, description, tags, badge, extra, variant = 'default',
+  accent, art, artStyle, artWidth, eyebrow, title, description, badge, extra, variant = 'default',
 }: {
   accent: string
   art: string | null
@@ -173,7 +154,6 @@ function DestCard({
   eyebrow: React.ReactNode
   title: string
   description: string
-  tags: string[]
   badge?: string
   extra?: React.ReactNode
   variant?: 'default' | 'compact'
@@ -188,6 +168,9 @@ function DestCard({
         borderRadius: 18,
         padding: '0.95rem 0.95rem 1.05rem',
         display: 'flex', flexDirection: 'column',
+        // minHeight pins every compact card to the same footprint
+        // regardless of description length; the row's grid cells
+        // then equalize to the tallest one for a clean grid.
         minHeight: 220,
         cursor: 'pointer',
         transition: 'transform 0.15s, border-color 0.15s',
@@ -223,11 +206,6 @@ function DestCard({
         <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#a8a5a0', lineHeight: 1.45, flex: 1 }}>
           {description}
         </p>
-        {tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-            {tags.slice(0, 3).map((t, i) => <Tag key={i} label={t} color={accent} />)}
-          </div>
-        )}
       </div>
     )
   }
@@ -264,15 +242,9 @@ function DestCard({
           {title}
         </p>
 
-        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#b0ada8', lineHeight: 1.55, marginBottom: tags.length > 0 ? '0.7rem' : 0 }}>
+        <p className="font-karla font-400" style={{ fontSize: '0.76rem', color: '#b0ada8', lineHeight: 1.55 }}>
           {description}
         </p>
-
-        {tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {tags.map((t, i) => <Tag key={i} label={t} color={accent} />)}
-          </div>
-        )}
       </div>
 
       {/* Right: image container */}
