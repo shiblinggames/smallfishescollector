@@ -8,6 +8,7 @@ import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
 import GameCard from './GameCard'
 import RecruitCard from './RecruitCard'
+import TavernTideRunCard from './TavernTideRunCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
@@ -127,21 +128,10 @@ async function ArcadeSection() {
   const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
   return (
     <div className="grid grid-cols-2 gap-3">
-      {/* Tide Run lives here now (was under Daily) — it's not a daily
-          ritual, it's playable anytime for hiscore / beacon doubloons.
-          Sits alongside the other anytime-play / hiscore games. */}
-      <GameCard
-        href="/tavern/tide-run"
-        eyebrow="Arcade"
-        title="Tide Run"
-        statusText="Outrun pursuit. Smash beacons for doubloons"
-        info={[]}
-        icon={<BoatIcon />}
-        variant="compact"
-        art="/boatrun.png"
-        artMaxHeight={68}
-        accent="#5da7d4"
-      />
+      {/* Tide Run gets hero treatment at the top of the page (see
+          TavernTideRunCard) since it's one of the most-played games.
+          It's intentionally NOT also a compact card here — duplicating
+          would clutter the grid and dilute the hero pull. */}
       <GameCard
         href="/tavern/crown-and-anchor"
         eyebrow="Arcade"
@@ -200,10 +190,19 @@ export default async function TavernPage() {
             <RecruitCard />
           </div>
 
-          {/* Leaderboards hero — same full-width banner shape as
-              Recruit. Streams in with its own Suspense because it
-              awaits the top tide-run holder; the skeleton matches
-              the banner footprint so the shell layout doesn't jump. */}
+          {/* Tide Run hero — popular game, surfaced at the top so
+              it's the highest-visibility entry in the page. Pulls
+              the player's PB directly from profile (already loaded
+              above), so no extra fetch. */}
+          <div>
+            <TavernTideRunCard personalBest={(profile?.tide_run_best_distance as number | null) ?? 0} />
+          </div>
+
+          {/* Leaderboards hero — same full-width banner shape as the
+              two heroes above. Streams in with its own Suspense
+              because it awaits the top tide-run holder; the skeleton
+              matches the banner footprint so the shell layout doesn't
+              jump. */}
           <Suspense fallback={<SkeletonBox height={146} radius={20} />}>
             <TavernLeaderboardsCard />
           </Suspense>
@@ -261,10 +260,11 @@ function DailyCardsSkeleton() {
 }
 
 function ArcadeCardsSkeleton() {
-  // 3 anytime-play cards now (Tide Run + Crown & Anchor + Fish Slots).
+  // 2 cards (Crown & Anchor + Fish Slots). Tide Run lives in its own
+  // hero card at the top of the page, not in this grid.
   return (
     <div className="grid grid-cols-2 gap-3">
-      {[0, 1, 2].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
+      {[0, 1].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
     </div>
   )
 }
@@ -319,17 +319,6 @@ function SlotsIcon() {
       <path d="M8 6V4M12 6V4M16 6V4"/>
       <path d="M6 12h3M10.5 12h3M15 12h3"/>
       <path d="M7.5 15v0M12 15v0M16.5 15v0"/>
-    </svg>
-  )
-}
-
-function BoatIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 17c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/>
-      <path d="M4 14l1-5h14l1 5"/>
-      <path d="M12 9V4"/>
-      <path d="M12 4l4 3h-8z" fill="currentColor"/>
     </svg>
   )
 }
