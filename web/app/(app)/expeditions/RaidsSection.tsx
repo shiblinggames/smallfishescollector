@@ -134,6 +134,15 @@ function LockGlyph({ size = 16 }: { size?: number }) {
 
 /* ─────────────────────────── The map ─────────────────────────── */
 
+// ─── Progressive reveal ─────────────────────────────────────────────────
+// How many locked main-chain nodes past the current "available" one stay
+// visible at a glance. Anything further is fogged out (no token, just the
+// route line still passes through the position). The chapter's LAST
+// main-chain node is always shown as a faded beacon — destination known,
+// path uncharted. This trades the Slay-the-Spire planning view for an
+// exploration feel that suits a linear chapter map better.
+const REVEAL_AHEAD = 2
+
 function RaidMap({
   views,
   doubloons,
@@ -190,6 +199,47 @@ function RaidMap({
   // CHAIN. Side-branch challenge raids are optional detours — pulsing one
   // of them as "current" would mislead a player about the main story path.
   const currentIdx = views.findIndex(v => v.status === 'available' && !v.node.sideBranch)
+
+  // Progressive-reveal classification per view. Three states:
+  //   revealed — drawn as today (cleared / available / lit-locked)
+  //   beacon   — chapter's final main-chain node, shown as a faded
+  //              destination silhouette even when still locked
+  //   fogged   — locked + beyond the reveal window; the token is not
+  //              rendered at all (route line still flows through its
+  //              position so the path "goes somewhere uncharted")
+  //
+  // currentChainPos is the position of the current available node
+  // within the main chain. Side branches inherit their parent's
+  // chain position so a side branch hanging off a fogged parent is
+  // fogged too — but cleared / available branches always reveal so
+  // the player never loses sight of what they've done or can do.
+  type Visibility = 'revealed' | 'fogged' | 'beacon'
+  const chainPosOfView = new Map<number, number>()
+  positions.entries.forEach((p, i) => {
+    if (!p.isSide) {
+      chainPosOfView.set(i, chainIdx.indexOf(i))
+    } else {
+      const parentId = views[i].node.sideBranch!.parentId
+      const parentI = views.findIndex(v => v.node.id === parentId)
+      chainPosOfView.set(i, parentI >= 0 ? chainIdx.indexOf(parentI) : 0)
+    }
+  })
+  const currentChainPos = currentIdx >= 0 ? chainIdx.indexOf(currentIdx) : -1
+  const lastChainPos = chainIdx.length - 1
+  const visibilityFor = (i: number): Visibility => {
+    const v = views[i]
+    if (v.status === 'cleared' || v.status === 'available') return 'revealed'
+    // Locked from here on. If the player has no current node (every
+    // available one is cleared or the chapter hasn't seeded yet),
+    // fall back to revealing everything — no map to "fog forward".
+    if (currentChainPos < 0) return 'revealed'
+    const pos = chainPosOfView.get(i) ?? 0
+    if (pos <= currentChainPos + REVEAL_AHEAD) return 'revealed'
+    // Beacon only applies to the chapter's last MAIN-chain node, not
+    // a side branch that happens to sit on the same row.
+    if (!positions.entries[i].isSide && pos === lastChainPos) return 'beacon'
+    return 'fogged'
+  }
 
   return (
     <div
@@ -250,9 +300,12 @@ function RaidMap({
         })}
         {/* Side-branch connectors — short horizontal-ish lines from each
             side-branch token back to its parent on the same row. Drawn
-            below the main chain so the chain stays the dominant read. */}
+            below the main chain so the chain stays the dominant read.
+            A connector to a fogged-out branch would dangle into nothing,
+            so we skip the line in that case too. */}
         {positions.entries.map((p, i) => {
           if (!p.isSide) return null
+          if (visibilityFor(i) === 'fogged') return null
           const parentId = views[i].node.sideBranch!.parentId
           const parentIdx = views.findIndex(v => v.node.id === parentId)
           if (parentIdx < 0) return null
@@ -280,8 +333,18 @@ function RaidMap({
       </svg>
 
       {views.map((v, i) => {
+        const vis = visibilityFor(i)
+        // Fogged: don't render the token at all. The route line still
+        // passes through this position, so the chapter reads as
+        // "the path goes that way — into uncharted water".
+        if (vis === 'fogged') return null
         const { node, status } = v
         const isSide = !!node.sideBranch
+        // Beacon: chapter-end destination silhouette. Stays non-
+        // interactive (it's locked) and is rendered with a heavier
+        // dim so it reads as a distant landmark, not a "next up"
+        // node. A small "Chapter end" caption pins it as the goal.
+        const isBeacon = vis === 'beacon'
         // Single parchment-gold accent for every main-chain node — type is
         // communicated by the glyph + portrait, not by color. Side branches
         // still use the crimson challenge accent.
@@ -345,7 +408,10 @@ function RaidMap({
                 // owns the route. Locked / repair-blocked stay at the old
                 // 0.6; cleared sits a notch above that (0.62) so it still
                 // reads as history-you-can-tap, not pure dead state.
-                opacity: locked || raidBlocked ? 0.6 : cleared ? 0.62 : 1,
+                // Beacon (chapter-end destination) pulls further back to
+                // ~0.32 so it reads as "distant" against the lit current
+                // node — but still legible as a landmark.
+                opacity: isBeacon ? 0.32 : locked || raidBlocked ? 0.6 : cleared ? 0.62 : 1,
                 // The pulse animation drives box-shadow; let it own the prop.
                 ...(isCurrent && interactive ? { boxShadow: undefined } : {}),
                 touchAction: 'manipulation',
@@ -432,6 +498,24 @@ function RaidMap({
                   <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
                     {node.label}
                   </span>
+                </p>
+              </div>
+            )}
+
+            {/* Beacon caption: "Chapter end" pinned under the destination
+                silhouette so the player reads it as the goal rather than
+                wondering why one locked node is showing while others nearby
+                aren't. Tiny + muted; reads as a horizon marker. */}
+            {isBeacon && (
+              <div
+                style={{
+                  position: 'absolute', top: '100%', left: '50%',
+                  transform: 'translateX(-50%)', marginTop: 8,
+                  width: 'max-content', textAlign: 'center', pointerEvents: 'none',
+                }}
+              >
+                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: 'rgba(196,169,106,0.7)', textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+                  Chapter end
                 </p>
               </div>
             )}
