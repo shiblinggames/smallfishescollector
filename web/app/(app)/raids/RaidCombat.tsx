@@ -511,10 +511,24 @@ export default function RaidCombat({
       ? enemy.phase2.pattern
       : enemy.pattern
     let action = pattern[enemyPatternIdxRef.current % pattern.length]
-    // Sanity guard: if scripted action is impossible (e.g. fire with 0 charges), substitute reload
+    // Sanity guards. Two failure modes:
+    //
+    //  1) Impossible action — fire with no charges / volley below MAX:
+    //     substitute reload, DON'T advance the pattern, so the original
+    //     action is re-attempted next turn (now with a charge in hand).
+    //
+    //  2) Reload at MAX charges — would no-op and burn the turn. Affects
+    //     no-volley enemies (Krust + his crew) whose patterns carry more
+    //     reloads than fires per cycle: charges accumulate cycle over
+    //     cycle until a reload overshoots MAX. Substitute fire (they
+    //     have ammo by definition) and DO advance — the wasted reload
+    //     becomes the extra shot the cadence was already building toward.
     if ((action === 'fire'   && enemyCharges < 1) ||
         (action === 'volley' && enemyCharges < MAX_CHARGES)) {
       action = 'reload'
+    } else if (action === 'reload' && enemyCharges >= MAX_CHARGES) {
+      action = 'fire'
+      enemyPatternIdxRef.current++
     } else {
       enemyPatternIdxRef.current++
     }

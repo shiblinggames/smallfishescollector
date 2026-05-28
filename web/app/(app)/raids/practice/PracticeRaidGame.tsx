@@ -613,8 +613,15 @@ export default function PracticeRaidGame({
 
       if (enemyActionElapsedRef.current >= e.actionMs) {
         enemyActionElapsedRef.current = 0
-        const action = e.pattern[enemyPatternIdxRef.current % e.pattern.length]
+        let action = e.pattern[enemyPatternIdxRef.current % e.pattern.length]
         enemyPatternIdxRef.current++
+        // If the pattern says reload but charges are already at MAX,
+        // it'd no-op and burn the action tick. Substitute fire so the
+        // wasted reload becomes the extra shot the cadence was building
+        // toward. Mirrors the same guard in RaidCombat.pickEnemyAction.
+        if (action === 'reload' && enemyChargesRef.current >= MAX_CHARGES) {
+          action = 'fire'
+        }
 
         if (action === 'reload') {
           if (enemyChargesRef.current < MAX_CHARGES) {
