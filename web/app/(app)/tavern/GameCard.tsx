@@ -45,7 +45,11 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
           opacity: done ? 0.55 : 1,
           userSelect: 'none',
           transition: 'opacity 0.15s',
-          minHeight: 200,
+          // No minHeight — cards hug their content. (Used to be 200px
+          // so the statusText line had room; now that subtext is gone,
+          // a fixed floor left dead space at the bottom.) Grid cells
+          // auto-equalize row height side-by-side, so cards still line
+          // up cleanly even when titles wrap differently.
         }}
       >
         {/* Top: art. No drop-shadow filter here — at compact sizes the
