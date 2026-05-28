@@ -8,6 +8,7 @@ import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
 import GameCard from './GameCard'
 import RecruitCard from './RecruitCard'
+import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
 import { CHARACTER_COLORS } from '@/lib/characters'
@@ -88,28 +89,6 @@ async function DailySection() {
         art="/fishoftheday.png"
         accent="#60a5fa"
       />
-      <GameCard
-        href="/leaderboard"
-        eyebrow="Compete"
-        title="Leaderboards"
-        statusText="Climb the boards. See where you rank"
-        info={[]}
-        icon={<TrophyIcon />}
-        variant="compact"
-        accent="#f0c040"
-      />
-      <GameCard
-        href="/tavern/tide-run"
-        eyebrow="Arcade"
-        title="Tide Run"
-        statusText="Outrun pursuit. Smash beacons for doubloons"
-        info={[]}
-        icon={<BoatIcon />}
-        variant="compact"
-        art="/boatrun.png"
-        artMaxHeight={68}
-        accent="#5da7d4"
-      />
       {hasChart && (() => {
         // Daily-done = today's move has been spent (or the whole chart is
         // already charted). Both states dim the card with a green check,
@@ -139,7 +118,7 @@ async function DailySection() {
   )
 }
 
-async function GamesSection() {
+async function ArcadeSection() {
   const [dailyWagered, slotsDailyWagered] = await Promise.all([
     cachedDailyWagered(),
     cachedSlotsDailyWagered(),
@@ -148,9 +127,24 @@ async function GamesSection() {
   const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
   return (
     <div className="grid grid-cols-2 gap-3">
+      {/* Tide Run lives here now (was under Daily) — it's not a daily
+          ritual, it's playable anytime for hiscore / beacon doubloons.
+          Sits alongside the other anytime-play / hiscore games. */}
+      <GameCard
+        href="/tavern/tide-run"
+        eyebrow="Arcade"
+        title="Tide Run"
+        statusText="Outrun pursuit. Smash beacons for doubloons"
+        info={[]}
+        icon={<BoatIcon />}
+        variant="compact"
+        art="/boatrun.png"
+        artMaxHeight={68}
+        accent="#5da7d4"
+      />
       <GameCard
         href="/tavern/crown-and-anchor"
-        eyebrow="Game"
+        eyebrow="Arcade"
         title="Crown & Anchor"
         statusText={crownCapReached ? 'Daily limit reached' : 'Roll dice, match your symbol'}
         info={[]}
@@ -162,7 +156,7 @@ async function GamesSection() {
       />
       <GameCard
         href="/tavern/slots"
-        eyebrow="Game"
+        eyebrow="Arcade"
         title="Fish Slots"
         statusText={slotsCapReached ? 'Daily limit reached' : 'Match three fish to win'}
         info={[]}
@@ -206,9 +200,17 @@ export default async function TavernPage() {
             <RecruitCard />
           </div>
 
-          {/* Daily — label paints with shell; the cards stream in. Includes
-              Chart the Course (folded in 2026-05-26 once it became a daily
-              login ritual rather than a contest sprint). */}
+          {/* Leaderboards hero — same full-width banner shape as
+              Recruit. Streams in with its own Suspense because it
+              awaits the top tide-run holder; the skeleton matches
+              the banner footprint so the shell layout doesn't jump. */}
+          <Suspense fallback={<SkeletonBox height={146} radius={20} />}>
+            <TavernLeaderboardsCard />
+          </Suspense>
+
+          {/* Daily — true daily rituals only now (login claims). Tide
+              Run moved to Arcade since it's playable anytime, and the
+              Leaderboards card moved to the hero banner above. */}
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
             <Suspense fallback={<DailyCardsSkeleton />}>
@@ -216,11 +218,11 @@ export default async function TavernPage() {
             </Suspense>
           </div>
 
-          {/* Games — same pattern as Daily */}
+          {/* Arcade — anytime-play, hiscore-driven games. */}
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Games</p>
-            <Suspense fallback={<GamesCardsSkeleton />}>
-              <GamesSection />
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
+            <Suspense fallback={<ArcadeCardsSkeleton />}>
+              <ArcadeSection />
             </Suspense>
           </div>
 
@@ -248,17 +250,21 @@ export default async function TavernPage() {
 // ── Skeletons matching each section's card grid shape ──────────────────────
 
 function DailyCardsSkeleton() {
+  // 2 cards minimum (Daily Bonus, FotD); Chart the Course shows as a
+  // third card when an active chart exists. Reserve 2 cells so the
+  // shell doesn't jump on warm renders.
   return (
     <div className="grid grid-cols-2 gap-3">
-      {[0, 1, 2, 3].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
+      {[0, 1].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
     </div>
   )
 }
 
-function GamesCardsSkeleton() {
+function ArcadeCardsSkeleton() {
+  // 3 anytime-play cards now (Tide Run + Crown & Anchor + Fish Slots).
   return (
     <div className="grid grid-cols-2 gap-3">
-      {[0, 1].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
+      {[0, 1, 2].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
     </div>
   )
 }
@@ -328,17 +334,3 @@ function BoatIcon() {
   )
 }
 
-// Classic two-handled trophy on a base — for the Leaderboards card.
-// Drawn with currentColor + rounded strokes to match the rest of the
-// tavern grid icons.
-function TrophyIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 4h8v6a4 4 0 0 1-8 0V4z"/>
-      <path d="M8 6H5v2a3 3 0 0 0 3 3"/>
-      <path d="M16 6h3v2a3 3 0 0 1-3 3"/>
-      <path d="M10 14v3M14 14v3"/>
-      <path d="M8 19h8"/>
-    </svg>
-  )
-}
