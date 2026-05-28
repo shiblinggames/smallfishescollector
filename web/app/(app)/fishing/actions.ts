@@ -539,16 +539,28 @@ export async function reelIn(
     }
   }
 
-  // Update daily challenge progress
+  // Update daily challenge progress.
+  //
+  // The challenges shown to the player depend on their fishing level
+  // (so they don't get e.g. an Abyss challenge when Abyss is still
+  // locked). To keep the set stable within a day even when they level
+  // up across a zone boundary, we snapshot the level into
+  // daily_challenge_progress.fishing_level_snapshot on first touch and
+  // reuse it for the rest of the day.
   const dailyDate = getTodayUTC()
-  const dailyChallenges = await getEffectiveDailyChallenges(dailyDate, admin)
   const isPerfect = result === 'perfect'
   const { data: dailyRow } = await admin
     .from('daily_challenge_progress')
-    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3')
+    .select('p1, p2, p3, claimed_1, claimed_2, claimed_3, fishing_level_snapshot')
     .eq('user_id', user.id)
     .eq('date', dailyDate)
     .maybeSingle()
+
+  // oldFishingLevel was computed above (line ~473) from the pre-catch
+  // XP — that's the right level to lock in for today, even if THIS
+  // catch is the one that pushes them across a zone boundary.
+  const snapLevel = dailyRow?.fishing_level_snapshot ?? oldFishingLevel
+  const dailyChallenges = await getEffectiveDailyChallenges(dailyDate, admin, snapLevel)
 
   const newP = [
     Math.min(
@@ -566,7 +578,14 @@ export async function reelIn(
   ] as [number, number, number]
 
   await admin.from('daily_challenge_progress').upsert(
-    { user_id: user.id, date: dailyDate, p1: newP[0], p2: newP[1], p3: newP[2] },
+    {
+      user_id: user.id,
+      date: dailyDate,
+      p1: newP[0], p2: newP[1], p3: newP[2],
+      // Persist the snapshot on first touch (no-op on subsequent
+      // upserts since the value won't change).
+      fishing_level_snapshot: snapLevel,
+    },
     { onConflict: 'user_id,date' },
   )
 

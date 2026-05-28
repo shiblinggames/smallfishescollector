@@ -2375,7 +2375,13 @@ export default function FishingGame({
   const [, startTransition]         = useTransition()
 
   // ── Daily challenges ────────────────────────────────────────────────────
-  const dailyChallenges = initialDailyChallenge ? initialDailyChallenge.challenges : getDailyChallenges(new Date().toISOString().slice(0, 10))
+  // Pass the current fishing level to the fallback so the client doesn't
+  // briefly flash a zone challenge the player can't actually do before
+  // the server-loaded set replaces it. Server-side path always passes
+  // the snapshotted level — see fishing/actions.ts + dailyChallengeActions.
+  const dailyChallenges = initialDailyChallenge
+    ? initialDailyChallenge.challenges
+    : getDailyChallenges(new Date().toISOString().slice(0, 10), getLevelFromXP(initialFishingXP))
   const [dailyProgress, setDailyProgress] = useState<[number, number, number]>(initialDailyChallenge?.progress ?? [0, 0, 0])
   const [dailyClaimed, setDailyClaimed] = useState<[boolean, boolean, boolean]>(initialDailyChallenge?.claimed ?? [false, false, false])
   // Push local progress + claimed up to the parent on every change so the

@@ -70,20 +70,75 @@ function dateHash(date: string, salt: number): number {
   return h >>> 0
 }
 
-export function getDailyChallenges(date: string): [DailyChallenge, DailyChallenge, DailyChallenge] {
+// Min fishing level to unlock each zone. Duplicated from
+// app/(app)/fishing/zoneData.ts because lib/ can't import from app/.
+// Keep these two constants in sync.
+const ZONE_MIN_LEVEL: Record<string, number> = {
+  shallows:     1,
+  open_waters: 15,
+  deep:        30,
+  abyss:       50,
+  ancient_deep: 75,
+}
+
+function isEligibleAtLevel(challenge: DailyChallenge, fishingLevel: number): boolean {
+  if (!challenge.zone) return true
+  const min = ZONE_MIN_LEVEL[challenge.zone] ?? 1
+  return fishingLevel >= min
+}
+
+// Deterministic picker that respects the player's unlocked zones.
+//
+// Try the date's natural index first. If that challenge references a
+// zone the player hasn't unlocked, probe forward (deterministically)
+// until we find one they CAN do. Because unlocked zones only grow
+// monotonically as the player levels, the same player always lands on
+// the same probe sequence on a given date — leveling up won't shift
+// a challenge they're already mid-way through (unless they cross a
+// zone boundary, which is what the level snapshot in
+// daily_challenge_progress guards against).
+function pickEligible(
+  date: string,
+  salt: number,
+  pool: DailyChallenge[],
+  fishingLevel: number,
+): DailyChallenge {
+  let h = dateHash(date, salt)
+  for (let attempt = 0; attempt < pool.length; attempt++) {
+    const idx = h % pool.length
+    if (isEligibleAtLevel(pool[idx], fishingLevel)) return pool[idx]
+    // Probe forward deterministically (LCG-style bump) so the order
+    // is reproducible from the same starting hash.
+    h = (h * 2654435761 + 1) >>> 0
+  }
+  // Shouldn't happen — every tier has non-zone challenges that are
+  // always eligible — but fall back to the raw modulo just in case.
+  return pool[dateHash(date, salt) % pool.length]
+}
+
+export function getDailyChallenges(
+  date: string,
+  // Default to "all zones unlocked" so existing client-only fallback
+  // paths keep working. Server paths always pass the real level.
+  fishingLevel: number = 999,
+): [DailyChallenge, DailyChallenge, DailyChallenge] {
   return [
-    TIER1[dateHash(date, 1) % TIER1.length],
-    TIER2[dateHash(date, 2) % TIER2.length],
-    TIER3[dateHash(date, 3) % TIER3.length],
+    pickEligible(date, 1, TIER1, fishingLevel),
+    pickEligible(date, 2, TIER2, fishingLevel),
+    pickEligible(date, 3, TIER3, fishingLevel),
   ]
 }
 
-// Server-side only: checks challenge_overrides first, falls back to deterministic.
-// Pass an admin Supabase client; the client-side game always uses getDailyChallenges.
+// Server-side only: checks challenge_overrides first, falls back to
+// the level-aware picker. Admin overrides bypass the level filter on
+// purpose (so we can pin event challenges regardless of unlock state).
+// Pass an admin Supabase client; the client-side game always uses
+// getDailyChallenges directly.
 export async function getEffectiveDailyChallenges(
   date: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any,
+  fishingLevel: number,
 ): Promise<[DailyChallenge, DailyChallenge, DailyChallenge]> {
   const { data } = await admin
     .from('challenge_overrides')
@@ -91,7 +146,7 @@ export async function getEffectiveDailyChallenges(
     .eq('date', date)
     .maybeSingle()
   if (data) return [data.tier1, data.tier2, data.tier3]
-  return getDailyChallenges(date)
+  return getDailyChallenges(date, fishingLevel)
 }
 
 export function getTodayUTC(): string {
