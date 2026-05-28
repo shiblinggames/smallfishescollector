@@ -4,14 +4,16 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
 import LeaderboardsRotatingHook, { type LeaderboardHighlight } from './LeaderboardsRotatingHook'
 
-// Full-width hero card surfacing the Leaderboards in the Tavern.
-// Same banner shape as Recruit / TavernTideRunCard.
+// Thin Leaderboards bar that sits at the very top of the Tavern.
+// Single-line ticker rotating through the top entry across all 4
+// boards — like a bar's bulletin board cycling through the latest
+// gossip. No icon, no art — just the line, because we want this to
+// be UNobtrusive at the top of the page, not another hero banner
+// competing for attention with the cards below.
 //
-// The hook line ROTATES across boards every few seconds — "USERNAME
-// leads BOARD with SCORE" — like the bar's bulletin board cycling
-// through the latest gossip. Surfaces breadth + drives the tap with
-// social proof (a specific name + a specific number). Falls back to
-// a static line if every board is cold.
+// IMPORTANT: fixed height + clipped overflow so the bar does NOT
+// flex with the rotating content. Longer ticker entries get
+// truncated with ellipsis rather than pushing the page layout.
 
 type TopRow = { username: string; score: number } | null
 
@@ -59,54 +61,36 @@ export default async function TavernLeaderboardsCard() {
     <Link
       href="/leaderboard"
       style={{
-        display: 'flex', alignItems: 'stretch', gap: '1rem',
+        display: 'flex', alignItems: 'center',
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(135deg, rgba(8,14,22,0.98) 0%, rgba(28,22,8,0.95) 100%)',
-        border: '1px solid rgba(240,192,64,0.5)',
-        borderTop: '2px solid rgba(240,192,64,0.8)',
-        borderRadius: 20,
-        padding: '1.4rem 1.5rem 1.3rem',
+        border: '1px solid rgba(240,192,64,0.4)',
+        borderTop: '1px solid rgba(240,192,64,0.7)',
+        borderRadius: 14,
+        // Fixed bar height — content is clipped, never flexes.
+        height: 44,
+        padding: '0 0.9rem',
         cursor: 'pointer',
         userSelect: 'none',
         textDecoration: 'none',
         color: 'inherit',
-        boxShadow: '0 0 40px rgba(240,192,64,0.14), inset 0 0 60px rgba(240,192,64,0.04)',
+        boxShadow: '0 0 24px rgba(240,192,64,0.1)',
       }}
     >
-      {/* Left: text */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p className="font-karla font-700 uppercase tracking-[0.18em]"
-          style={{ fontSize: '0.56rem', color: 'rgba(240,192,64,0.75)', marginBottom: '0.45rem', letterSpacing: '0.2em' }}>
-          Compete
-        </p>
-        <p className="font-cinzel font-700"
-          style={{ fontSize: '1.25rem', color: '#f0ede8', lineHeight: 1.15, marginBottom: '0.45rem', letterSpacing: '0.02em' }}>
-          Leaderboards
-        </p>
-        {/* The hook itself is a client component so the rotation
-            interval can run on the client without forcing the whole
-            page to re-render. Reserve a min-height so the banner
-            doesn't grow / shrink as longer hook lines cycle in. */}
-        <div style={{ minHeight: '1.6rem' }}>
-          <LeaderboardsRotatingHook highlights={highlights} />
-        </div>
+      {/* Single-line ticker, hard-clipped so longer entries
+          ellipsis instead of pushing the bar taller. */}
+      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        <LeaderboardsRotatingHook highlights={highlights} />
       </div>
-
-      {/* Right: trophy glyph (no dedicated art yet — use a large
-          stroked trophy SVG that matches the hiscore visual). */}
-      <div style={{
-        flexShrink: 0, width: 110,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <svg width="78" height="78" viewBox="0 0 24 24" fill="none" stroke="#ffd56b" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
-          style={{ filter: 'drop-shadow(0 4px 18px rgba(240,192,64,0.55))', opacity: 0.95 }}>
-          <path d="M8 4h8v6a4 4 0 0 1-8 0V4z" />
-          <path d="M8 6H5v2a3 3 0 0 0 3 3" />
-          <path d="M16 6h3v2a3 3 0 0 1-3 3" />
-          <path d="M10 14v3M14 14v3" />
-          <path d="M8 19h8" />
-        </svg>
-      </div>
+      {/* Chevron — tiny "tap to go" cue at the right edge. */}
+      <svg
+        width="12" height="12" viewBox="0 0 24 24" fill="none"
+        stroke="rgba(240,192,64,0.7)" strokeWidth="2.5"
+        strokeLinecap="round" strokeLinejoin="round"
+        style={{ flexShrink: 0, marginLeft: 8 }}
+      >
+        <path d="M9 6l6 6-6 6" />
+      </svg>
     </Link>
   )
 }

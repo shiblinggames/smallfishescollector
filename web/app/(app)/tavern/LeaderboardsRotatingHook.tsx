@@ -50,9 +50,22 @@ export default function LeaderboardsRotatingHook({ highlights }: { highlights: L
     return () => clearInterval(t)
   }, [paused, highlights.length])
 
+  // Shared text styles — used by the empty-state line AND the rotating
+  // entries. Margin reset + nowrap + ellipsis matter inside the fixed
+  // 44px thin-bar parent so the line never flexes the layout.
+  const textStyle: React.CSSProperties = {
+    fontSize: '0.74rem',
+    lineHeight: 1.4,
+    color: 'rgba(240,192,64,0.92)',
+    margin: 0,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  }
+
   if (highlights.length === 0) {
     return (
-      <p className="font-karla font-400" style={{ fontSize: '0.74rem', lineHeight: 1.5, color: 'rgba(240,192,64,0.92)' }}>
+      <p className="font-karla font-400" style={textStyle}>
         Climb the boards across every game
       </p>
     )
@@ -69,7 +82,7 @@ export default function LeaderboardsRotatingHook({ highlights }: { highlights: L
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -6 }}
         transition={{ duration: 0.32, ease: 'easeOut' }}
-        style={{ fontSize: '0.74rem', lineHeight: 1.5, color: 'rgba(240,192,64,0.92)' }}
+        style={textStyle}
       >
         <span style={{ color: 'rgba(240,192,64,0.6)' }}>👑 </span>
         <span style={{ fontWeight: 700, color: '#f0ede8' }}>{current.username}</span>

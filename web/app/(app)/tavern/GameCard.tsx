@@ -6,9 +6,11 @@ interface Props {
   href: string
   eyebrow: string
   title: string
-  statusText: string
-  info: string[]
-  icon: React.ReactNode
+  /** Optional subtext under the title. Drop it for a more compact card —
+   *  the eyebrow + title + ✓ Done badge usually carry enough meaning. */
+  statusText?: string
+  info?: string[]
+  icon?: React.ReactNode
   completed?: boolean
   streak?: number
   variant?: 'default' | 'featured' | 'compact'
@@ -72,12 +74,14 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
             <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: '#4ade80', whiteSpace: 'nowrap' }}>✓ Done</span>
           )}
         </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: '0.3rem' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: statusText ? '0.3rem' : 0 }}>
           {title}
         </p>
-        <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#a8a5a0', lineHeight: 1.45 }}>
-          {statusText}
-        </p>
+        {statusText && (
+          <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#a8a5a0', lineHeight: 1.45 }}>
+            {statusText}
+          </p>
+        )}
         {!done && streak != null && streak > 0 && (
           <p className="font-karla font-700 mt-1.5" style={{ fontSize: '0.58rem', color: accent }}>
             {streak}d streak
@@ -118,13 +122,15 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
           )}
         </div>
 
-        <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.2, marginBottom: '0.35rem' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.2, marginBottom: statusText ? '0.35rem' : 0 }}>
           {title}
         </p>
 
-        <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#b0ada8', lineHeight: 1.5 }}>
-          {statusText}
-        </p>
+        {statusText && (
+          <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#b0ada8', lineHeight: 1.5 }}>
+            {statusText}
+          </p>
+        )}
 
         {!done && streak != null && streak > 0 && (
           <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.65rem', color: accent }}>
