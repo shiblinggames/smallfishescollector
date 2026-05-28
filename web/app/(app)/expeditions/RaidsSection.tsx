@@ -1264,6 +1264,11 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
 export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string> }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
+  // Per-chapter manual expand overrides. A "fully cleared" chapter
+  // collapses by default; the player can tap its header to peek the
+  // node map again. Ephemeral (resets on page navigation) — chapters
+  // are not something you revisit often enough to bother persisting.
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const clearedCount = views.filter(v => v.status === 'cleared').length
 
   return (
@@ -1390,11 +1395,50 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               const bucket = groups.get(c.id)
               if (!bucket || bucket.views.length === 0) return null
               const mainViews = bucket.views.filter(v => !v.node.sideBranch)
+              const sideViews = bucket.views.filter(v =>  v.node.sideBranch)
+              // Main-path beaten? (Chapter "cleared" by story standard.)
               const chapterCleared = mainViews.length > 0 && mainViews.every(v => v.status === 'cleared')
+              // Side branches the player can still go do (challenge raids
+              // they've unlocked but haven't run). We count `available`
+              // specifically — locked ones aren't "yet to do", they're
+              // "yet to unlock", which is a different signal.
+              const challengesRemaining = sideViews.filter(v => v.status === 'available').length
+              // Fully cleared = main + every side branch the player has
+              // access to. Only fully-cleared chapters collapse by
+              // default — if there's still a challenge raid sitting
+              // there, the chapter stays expanded so the player sees it.
+              const fullyCleared = chapterCleared && challengesRemaining === 0
               const chapterStarted = bucket.views.some(v => v.status !== 'locked')
+              const manuallyExpanded = expandedChapters.has(c.id)
+              const collapsed = fullyCleared && !manuallyExpanded
+              const toggle = () => {
+                if (!fullyCleared) return // only meaningful when fully cleared
+                setExpandedChapters(prev => {
+                  const next = new Set(prev)
+                  if (next.has(c.id)) next.delete(c.id); else next.add(c.id)
+                  return next
+                })
+              }
               return (
                 <div key={c.id} style={{ marginBottom: '1.1rem' }}>
-                  <div style={{ marginBottom: '0.65rem', paddingBottom: '0.55rem', borderBottom: '1px solid rgba(196,169,106,0.18)' }}>
+                  {/* Header. When the chapter is fully cleared (and so
+                      collapsible), the whole header is a tap-target
+                      that toggles the node map. Otherwise it's just
+                      static title chrome. */}
+                  <button
+                    type="button"
+                    onClick={toggle}
+                    disabled={!fullyCleared}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      background: 'transparent', border: 0, padding: 0,
+                      marginBottom: collapsed ? '0' : '0.65rem',
+                      paddingBottom: '0.55rem',
+                      borderBottom: '1px solid rgba(196,169,106,0.18)',
+                      cursor: fullyCleared ? 'pointer' : 'default',
+                    }}
+                    aria-expanded={!collapsed}
+                  >
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
                       <span className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: chapterStarted ? MAIN_ACCENT : '#6a6764' }}>
                         Chapter {c.romanNumeral}
@@ -1404,6 +1448,20 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
                           ✓ Cleared
                         </span>
                       )}
+                      {/* Surface remaining challenges so the player
+                          knows the chapter isn't truly "done done"
+                          even though the main path is beaten. */}
+                      {chapterCleared && challengesRemaining > 0 && (
+                        <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.55rem', color: '#fbbf24' }}>
+                          · {challengesRemaining} challenge{challengesRemaining === 1 ? '' : 's'} available
+                        </span>
+                      )}
+                      {/* Chevron only when the chapter is collapsible. */}
+                      {fullyCleared && (
+                        <span style={{ marginLeft: 'auto', color: 'rgba(196,169,106,0.65)', fontSize: '0.8rem', lineHeight: 1, transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.18s' }} aria-hidden>
+                          ▾
+                        </span>
+                      )}
                     </div>
                     <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: chapterStarted ? '#f5f2ec' : 'rgba(245,242,236,0.55)', lineHeight: 1.2, marginTop: 2 }}>
                       {c.title}
@@ -1411,8 +1469,21 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
                     <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginTop: 3, lineHeight: 1.4, fontStyle: 'italic' }}>
                       {c.subtitle}
                     </p>
-                  </div>
-                  <RaidMap views={bucket.views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {!collapsed && (
+                      <motion.div
+                        key="map"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <RaidMap views={bucket.views} doubloons={doubloons} onSelect={setSelected} repairOwed={repairOwed} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )
             })
