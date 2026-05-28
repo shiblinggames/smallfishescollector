@@ -171,22 +171,38 @@ export function prefetchTideRunAudio(): void {
   fetchDeath()
 }
 
-/** Called by the global GameAudioPrimer on every user gesture. iOS needs
- *  the AudioContext to be both created AND resumed inside a gesture
- *  call stack — so we create it here (lazily) if it doesn't exist yet.
- *  Idempotent: after the first gesture, subsequent calls just ensure
- *  the ctx is running. Tide-run's ctx work is tiny — only the fishing
- *  audio's heavy init (audio elements + 1.6 MB OGG fetch) is gated
- *  separately on a "wanted" path. */
+/** LIGHT path — called by the global FishingAudioPrimer on EVERY
+ *  gesture app-wide. Only resumes an EXISTING context if it's
+ *  suspended. Does NOT create the silent session keeper. Without
+ *  this gate, tapping anywhere outside /tide-run would (re)create
+ *  the silent.ogg session keeper, which keeps iOS's Now Playing
+ *  widget visible on the lock screen across the whole app even
+ *  after teardownTideRunAudio ran on the player leaving the page.
+ *
+ *  Mirrors the resumeFishingAudioIfReady / unlockFishingAudio
+ *  split in lib/fishingMusic. */
+export function resumeTideRunAudioIfReady(): void {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {})
+  }
+}
+
+/** HEAVY path — called by TideRunGame mount (inside the gesture
+ *  that starts the game). Creates the AudioContext, lights the
+ *  silent session keeper, routes it through the graph so iOS PWA
+ *  allows audible Web Audio output, and kicks the SFX decode pass.
+ *  Idempotent: re-entering /tide-run rebuilds whatever teardown
+ *  cleared without doubling up.
+ *
+ *  iOS needs the AudioContext to be both CREATED and RESUMED inside
+ *  a user-gesture call stack — caller is responsible for invoking
+ *  this from a gesture handler (a tap inside /tide-run is the
+ *  natural fit since the game waits for a tap to start anyway). */
 export function unlockTideRunAudio(): void {
   if (!ensureContext()) return
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})
   }
-  // Start the silent loop inside the gesture so iOS allows it. Route it
-  // through the AudioContext via MediaElementSource so the keeper lives
-  // on the SAME Web Audio graph as the SFX — that's the pattern fishing
-  // uses to get audible output on iOS PWA.
   ensureSessionKeeper()
   routeSessionKeeper()
   startSessionKeeper()

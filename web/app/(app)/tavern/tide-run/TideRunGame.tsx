@@ -6,7 +6,7 @@ import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, type TopTideR
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
-import { prefetchTideRunAudio, teardownTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
+import { prefetchTideRunAudio, unlockTideRunAudio, teardownTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -556,6 +556,13 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   const onPress = useCallback(() => {
     const g = gRef.current
     if (g.state === 'ready') {
+      // Heavy audio init runs HERE (inside the user gesture) so iOS
+      // allows the AudioContext + the silent session keeper to start.
+      // The global primer only does a light context-resume now;
+      // anchoring the keeper to "player just tapped to start tide
+      // run" means iOS's Now Playing widget is only armed while the
+      // player is actually inside this game.
+      unlockTideRunAudio()
       reset()
       g.state = 'playing'
       setUiState('playing')

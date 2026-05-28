@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { resumeFishingAudioIfReady } from '@/lib/fishingMusic'
-import { unlockTideRunAudio } from '@/lib/tideRunAudio'
+import { resumeTideRunAudioIfReady } from '@/lib/tideRunAudio'
 
 /** Mounts at the app shell. On every user gesture (pointerdown / touchstart)
  *  anywhere in the app, resumes any audio contexts that have already been
@@ -22,8 +22,14 @@ import { unlockTideRunAudio } from '@/lib/tideRunAudio'
 export default function FishingAudioPrimer() {
   useEffect(() => {
     const onGesture = () => {
+      // Both calls are LIGHT — only resume the per-module
+      // AudioContext if it already exists. Neither creates audio
+      // elements / contexts / fetches on its own. The heavy unlock
+      // happens inside each game's own mount effect, so the iOS
+      // Now Playing widget doesn't get re-armed by a tap outside
+      // the game.
       resumeFishingAudioIfReady()
-      unlockTideRunAudio()
+      resumeTideRunAudioIfReady()
     }
     window.addEventListener('pointerdown', onGesture, { capture: true, passive: true })
     window.addEventListener('touchstart', onGesture, { capture: true, passive: true })
