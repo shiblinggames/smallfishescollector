@@ -1,21 +1,59 @@
 import Link from 'next/link'
-import { getTopTideRunHolder } from './tide-run/actions'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'
+import LeaderboardsRotatingHook, { type LeaderboardHighlight } from './LeaderboardsRotatingHook'
 
 // Full-width hero card surfacing the Leaderboards in the Tavern.
-// Modeled after RecruitCard (image right, text left) so the two
-// hero cards at the top of the page share a visual rhythm.
+// Same banner shape as Recruit / TavernTideRunCard.
 //
-// The hook line — "Top: USERNAME leads with N" — is the social
-// proof that drives the tap. A bare "see leaderboards" link gets
-// scrolled past; a name + score makes it personal. Today's source
-// is the Tide Run board (cheapest single query); future revisions
-// could rotate across boards or show the player's own rank.
+// The hook line ROTATES across boards every few seconds — "USERNAME
+// leads BOARD with SCORE" — like the bar's bulletin board cycling
+// through the latest gossip. Surfaces breadth + drives the tap with
+// social proof (a specific name + a specific number). Falls back to
+// a static line if every board is cold.
+
+type TopRow = { username: string; score: number } | null
+
+async function fetchTop(view: string): Promise<TopRow> {
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from(view)
+      .select('username, score')
+      .order('score', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+    if (!data) return null
+    const row = data as { username: string | null; score: number | null }
+    if (!row.username || !row.score || row.score <= 0) return null
+    return { username: row.username, score: row.score }
+  } catch {
+    return null
+  }
+}
+
+async function loadHighlights(): Promise<LeaderboardHighlight[]> {
+  // Four boards in parallel. Order in the returned array drives the
+  // rotation order; Tide Run leads because it's the most-engaged
+  // board today.
+  const [tideRun, fishing, expedition, fishSlots] = await Promise.all([
+    fetchTop('leaderboard_tide_run'),
+    fetchTop('leaderboard_fishing'),
+    fetchTop('leaderboard_expedition'),
+    fetchTop('leaderboard_fish_slots'),
+  ])
+  const out: LeaderboardHighlight[] = []
+  if (tideRun)    out.push({ board: 'Tide Run',  username: tideRun.username,    scoreLabel: `${tideRun.score.toLocaleString()}m` })
+  if (fishing)    out.push({ board: 'Fishing',   username: fishing.username,    scoreLabel: `Lv ${getLevelFromXP(fishing.score)}` })
+  if (expedition) out.push({ board: 'Navigator', username: expedition.username, scoreLabel: `Lv ${getExpeditionLevel(expedition.score)}` })
+  if (fishSlots)  out.push({ board: 'Fish Slots', username: fishSlots.username, scoreLabel: `${fishSlots.score.toLocaleString()} ⟡` })
+  return out
+}
 
 export default async function TavernLeaderboardsCard() {
-  const top = await getTopTideRunHolder()
-  const hookLine = top && top.distance > 0
-    ? `${top.username} leads Tide Run with ${top.distance.toLocaleString()}m`
-    : 'Climb the boards across every game'
+  const highlights = await loadHighlights()
 
   return (
     <Link
@@ -45,19 +83,13 @@ export default async function TavernLeaderboardsCard() {
           style={{ fontSize: '1.25rem', color: '#f0ede8', lineHeight: 1.15, marginBottom: '0.45rem', letterSpacing: '0.02em' }}>
           Leaderboards
         </p>
-        <p className="font-karla font-400"
-          style={{ fontSize: '0.74rem', lineHeight: 1.5, color: 'rgba(240,192,64,0.92)' }}>
-          {top && top.distance > 0 ? (
-            <>
-              <span style={{ color: 'rgba(240,192,64,0.6)' }}>👑 </span>
-              <span style={{ fontWeight: 700, color: '#f0ede8' }}>{top.username}</span>
-              {' '}leads Tide Run with{' '}
-              <span style={{ fontWeight: 700, color: '#ffd56b' }}>{top.distance.toLocaleString()}m</span>
-            </>
-          ) : (
-            hookLine
-          )}
-        </p>
+        {/* The hook itself is a client component so the rotation
+            interval can run on the client without forcing the whole
+            page to re-render. Reserve a min-height so the banner
+            doesn't grow / shrink as longer hook lines cycle in. */}
+        <div style={{ minHeight: '1.6rem' }}>
+          <LeaderboardsRotatingHook highlights={highlights} />
+        </div>
       </div>
 
       {/* Right: trophy glyph (no dedicated art yet — use a large
