@@ -2998,27 +2998,44 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef }: {
 }
 
 // Single full-width Lock button that occupies the ActionMenu's slot
-// during aiming. Same vertical footprint (58px circle + 5px gap + 9px
-// label = ~72px in ActionMenu) so swapping in/out doesn't shift the
-// battle stage above.
+// during aiming. Mirrors ActionMenu's CircleBtn column structure EXACTLY
+// — flex column with the same 58px button slot, same 5px gap, same
+// 0.56rem caption span below — so the browser computes the same
+// natural height across devices. A hardcoded `height: 72` was close on
+// most devices but off by a few pixels wherever default line-height
+// differs from 1.2; flex: 1 on the battle stage then ate or surrendered
+// the delta and the UI visibly shifted as the row swapped in. The
+// caption text is transparent — it's only there to reserve the same
+// vertical space CircleBtn's "Dodge"/"Fire" labels would have.
 function InlineLockButton({ onLock }: { onLock: () => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 72 }}>
-      <motion.button
-        whileTap={{ scale: 0.96 }}
-        onClick={onLock}
-        className="font-cinzel font-700 uppercase tracking-[0.14em]"
-        style={{
-          width: '100%', height: 58,
-          borderRadius: 14,
-          background: '#4ade80', color: '#0a1422',
-          border: 'none', fontSize: '0.95rem', cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(74,222,128,0.35), inset 0 -3px 0 rgba(0,0,0,0.15)',
-          touchAction: 'manipulation',
-        }}
-      >
-        Lock Shot
-      </motion.button>
+    <div style={{ position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={onLock}
+            className="font-cinzel font-700 uppercase tracking-[0.14em]"
+            style={{
+              width: '100%', height: 58,
+              borderRadius: 14,
+              background: '#4ade80', color: '#0a1422',
+              border: 'none', fontSize: '0.95rem', cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(74,222,128,0.35), inset 0 -3px 0 rgba(0,0,0,0.15)',
+              touchAction: 'manipulation',
+            }}
+          >
+            Lock Shot
+          </motion.button>
+          {/* Invisible caption — matches CircleBtn's label slot so the
+              column's natural height equals an ActionMenu column's. */}
+          <span aria-hidden className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+            fontSize: '0.56rem', color: 'transparent', userSelect: 'none',
+          }}>
+            Lock
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
