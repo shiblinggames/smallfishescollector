@@ -76,23 +76,46 @@ export default function RaidLootStage(props: Props) {
   }, [boss.name, killGold, killXP])
 
   // ─── Slot machine tick ─────────────────────────────────────────────────────
+  // Build a fixed sequence of displayed indices BEFORE we start ticking,
+  // so the deceleration naturally walks INTO slotFinal instead of
+  // hard-snapping to it on the last tick.
+  //
+  // The intervals below decelerate: 60ms (fast) → 110 → 200 → 320 (slow).
+  // The last 5 ticks land in the slow region — meaning those are the
+  // entries the player can actually read. We plan them so they read as
+  // a wheel slowing through neighbors and stopping on the reward:
+  //   tick T-4: slotFinal - 4
+  //   tick T-3: slotFinal - 3
+  //   tick T-2: slotFinal - 2
+  //   tick T-1: slotFinal - 1
+  //   tick T  : slotFinal           ← settle
+  // Earlier ticks (fast region) just spin through random indices for
+  // flavor — too fast to read, so randomness doesn't matter there.
   useEffect(() => {
     if (phase !== 'spinning') return
     let cancelled = false
+    const total = 22
+    const mod = (n: number) => ((n % loot.length) + loot.length) % loot.length
+
+    const sequence: number[] = []
+    for (let s = 0; s < total - 5; s++) {
+      sequence.push(Math.floor(Math.random() * loot.length))
+    }
+    // Last 5 entries lead INTO slotFinal — predecessors of the final
+    // index (mod len), ending exactly on slotFinal.
+    for (let off = 4; off >= 0; off--) sequence.push(mod(slotFinal - off))
+
     let i = 0
-    const total = 22 + (slotFinal % loot.length)  // ~3.5s of ticks
     const tick = () => {
       if (cancelled) return
       i++
-      // Decelerating intervals — fast then slow, lands on slotFinal
-      const remaining = total - i
-      const interval = remaining > 12 ? 60 : remaining > 6 ? 110 : remaining > 2 ? 200 : 320
-      setSlotDisplay(prev => (prev + 1) % loot.length)
+      setSlotDisplay(sequence[i - 1])
       if (i >= total) {
-        setSlotDisplay(slotFinal)
         setPhase('landed')
         return
       }
+      const remaining = total - i
+      const interval = remaining > 12 ? 60 : remaining > 6 ? 110 : remaining > 2 ? 200 : 320
       setTimeout(tick, interval)
     }
     setTimeout(tick, 60)
