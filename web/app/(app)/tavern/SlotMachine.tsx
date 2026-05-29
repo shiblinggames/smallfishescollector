@@ -9,6 +9,13 @@ import type { SlotSymbolId } from './constants'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const ALL_IDS: SlotSymbolId[] = SLOT_SYMBOLS_LIST.map((s) => s.id)
 
+// Light wrapper around the Vibration API. Real haptic on Android +
+// Android PWAs; silent no-op on iOS (Apple has never shipped this,
+// so iOS players just don't feel anything here — no harm).
+function haptic(pattern: number | number[]) {
+  if (typeof navigator !== 'undefined') navigator.vibrate?.(pattern)
+}
+
 const WIN_LABEL: Record<SlotSymbolId, string> = {
   common:    '2× Match',
   rare:      'Rare Catch!',
@@ -70,15 +77,21 @@ function SlotSymbolDisplay({ id, size }: { id: SlotSymbolId; size?: number }) {
 }
 
 // Each reel stops independently — no delay prop needed
-function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd, matchColor, matchWild }: {
+function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMissOdd, matchColor, matchWild, onLand }: {
   symbol: SlotSymbolId
   rolling: boolean
   won: boolean
   winColor?: string
+  /** Stagger the win-pop animation per reel so the row reads left-to-right
+   *  instead of all three landing simultaneously. Casino feel: line traces. */
+  winDelayMs?: number
   nearMiss?: boolean    // part of a near-miss (orange)
   nearMissOdd?: boolean // the reel that broke the near-miss
   matchColor?: string   // partial/wild win — matching pair, tinted in fish color
   matchWild?: boolean   // hook acting as wild (teal)
+  /** Fires once when the rolling state flips false — used to thump a tiny
+   *  haptic on each reel landing. Android only; iOS no-ops. */
+  onLand?: () => void
 }) {
   const [display, setDisplay] = useState<SlotSymbolId>(symbol)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -96,12 +109,14 @@ function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd, matchColo
       timeoutRef.current = setTimeout(() => {
         if (intervalRef.current) clearInterval(intervalRef.current)
         setDisplay(symbol)
+        onLand?.()
       }, 60)
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rolling, symbol])
 
   const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === display)!
@@ -125,7 +140,7 @@ function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd, matchColo
     : nearMiss ? '0 0 18px #f9731660'
     : (rolling ? 'none' : `0 0 20px ${color}38`)
   const anim = won
-    ? 'reel-pop 0.55s cubic-bezier(0.36,0.07,0.19,0.97) forwards'
+    ? `reel-pop 0.55s cubic-bezier(0.36,0.07,0.19,0.97) ${winDelayMs}ms forwards`
     : nearMissOdd ? 'near-miss-wobble 0.55s ease-out'
     : (nearMiss || matchColor || matchWild) ? 'match-glow 1.6s ease-in-out infinite'
     : 'none'
@@ -148,16 +163,23 @@ function Reel({ symbol, rolling, won, winColor, nearMiss, nearMissOdd, matchColo
   )
 }
 
-// Stop reels left-to-right with a gap between each
+// Stop reels left-to-right with a gap between each. `thirdReelHoldMs`
+// lets the caller stretch the wait before the third reel snaps — used
+// when reels[0] and reels[1] are about to land matching, so the third
+// reel keeps spinning and the player gets the classic casino "is it
+// going to land?" tension. Both outcomes (win OR near-miss) trigger
+// the same hold because the suspense is identical until the symbol
+// resolves.
 function stopReels(
   setter: (v: boolean[]) => void,
   baseDelay: number,
   gap = 300,
+  thirdReelHoldMs = 0,
 ): number {
   setTimeout(() => setter([false, true,  true]),  baseDelay)
   setTimeout(() => setter([false, false, true]),  baseDelay + gap)
-  setTimeout(() => setter([false, false, false]), baseDelay + gap * 2)
-  return baseDelay + gap * 2  // ms when last reel stops
+  setTimeout(() => setter([false, false, false]), baseDelay + gap * 2 + thirdReelHoldMs)
+  return baseDelay + gap * 2 + thirdReelHoldMs
 }
 
 const BET_PRESETS = [10, 25, 50, 100, 250, 500]
@@ -209,9 +231,18 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     setWinSym(sym)
     setFlashColor(color)
     setFlashKey((k) => k + 1)
+    // Win haptic — escalates with payout tier. Catfish gets the
+    // longest, most punchy pattern; common is just a confirming pulse.
     if (sym === 'catfish') {
       setJackpotShake(true)
       setTimeout(() => setJackpotShake(false), 700)
+      haptic([60, 40, 60, 40, 140])
+    } else if (sym === 'legendary') {
+      haptic([50, 40, 90])
+    } else if (sym === 'rare') {
+      haptic([40, 30, 60])
+    } else {
+      haptic(80)
     }
   }
 
@@ -239,9 +270,13 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
 
     setReels(result.reels)
 
-    // Stop main reels left → right, 300ms apart, starting at 1200ms
-    const lastMainStop = stopReels(setMainRolling, 1200, 300)
-    // lastMainStop = 1800ms, last reel snaps at ~1860ms
+    // Casino-style third-reel tension: whenever the first two reels are
+    // about to land matching, hold the third for an extra ~750ms so the
+    // player gets that "is it gonna land?" beat. Same hold for wins AND
+    // for near-misses — the suspense is identical until the symbol
+    // actually resolves on the third reel.
+    const tense = result.reels[0] === result.reels[1]
+    const lastMainStop = stopReels(setMainRolling, 1200, 300, tense ? 750 : 0)
 
     if (result.bonus) {
       // Flash teal when all anchors have landed
@@ -425,10 +460,18 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 rolling={mainRolling[i]}
                 won={wonMainReels || (isRefund && sym === 'anchor')}
                 winColor={wonMainReels ? winColor : isRefund ? '#34d399' : undefined}
+                // Stagger the win pops 130ms apart so the row reads left
+                // to right — eye traces "match … match … match!" instead
+                // of three simultaneous bounces.
+                winDelayMs={i * 130}
                 nearMiss={!!(isNearMiss && nearMissSymbol && sym === nearMissSymbol)}
                 nearMissOdd={!!(isNearMiss && nearMissSymbol && sym !== nearMissSymbol)}
                 matchColor={isPartialWin && partialMatchedSym && sym === partialMatchedSym ? partialMatchColor : undefined}
                 matchWild={!!(isPartialWin && lastResult?.outcome === 'wild_win' && sym === 'anchor')}
+                // Tiny click on every reel landing. Android players get a
+                // real taptic pulse; iOS no-ops. Crisper than waiting for
+                // the win/lose resolve to fire one big buzz.
+                onLand={() => haptic(15)}
               />
             ))}
           </div>
@@ -454,6 +497,8 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                     rolling={bonusRolling[i]}
                     won={wonBonusReels}
                     winColor={wonBonusReels ? winColor : undefined}
+                    winDelayMs={i * 130}
+                    onLand={() => haptic(15)}
                   />
                 ))}
               </div>

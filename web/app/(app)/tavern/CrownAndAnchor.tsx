@@ -64,6 +64,12 @@ const SYMBOL_COLOR: Record<Symbol, string> = {
   club:    '#4ade80',
 }
 
+// Real haptic on Android / Android PWAs; silent no-op on iOS (Apple
+// has never shipped the Vibration API). Cheap, safe to call anywhere.
+function haptic(pattern: number | number[]) {
+  if (typeof navigator !== 'undefined') navigator.vibrate?.(pattern)
+}
+
 function Die({ symbol, rolling }: { symbol: Symbol; rolling: boolean }) {
   const [display, setDisplay] = useState<Symbol>(symbol)
   const [justLanded, setJustLanded] = useState(false)
@@ -129,6 +135,12 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
   const rolling = diceRolling.some(Boolean)
   const [lastResult, setLastResult] = useState<RollResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Live count of dice that have landed on the player's pick. Updates
+  // as each die settles — drives the bet card's escalating glow so the
+  // player FEELS each match arrive instead of seeing a single bulk
+  // result at the end. Reset every roll, cleared when a fresh pick
+  // happens.
+  const [liveMatches, setLiveMatches] = useState(0)
 
   const dailyRemaining = DAILY_CAP - dailyWagered
   const canRoll = selected !== null && wager >= MIN_BET && wager <= Math.min(MAX_BET, doubloons, dailyRemaining) && !rolling && dailyRemaining > 0
@@ -137,6 +149,7 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
     if (!selected || !canRoll) return
     setError(null)
     setLastResult(null)
+    setLiveMatches(0)
     setDiceRolling([true, true, true])
 
     const result = await rollDice(selected, wager)
@@ -160,6 +173,15 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
     order.forEach((dieIdx, i) => {
       setTimeout(() => {
         setDiceRolling(prev => { const next = [...prev]; next[dieIdx] = false; return next })
+        // Per-die landing feedback. Match → harder thump + live-count
+        // bump so the bet card escalates as matches arrive. Miss →
+        // tiny tap that still reads as a settled die.
+        if (result.result[dieIdx] === selected) {
+          haptic([20, 25, 40])
+          setLiveMatches(prev => prev + 1)
+        } else {
+          haptic(15)
+        }
       }, stopTimes[i])
     })
     const lastStop = stopTimes[2]
@@ -168,6 +190,11 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
       setDailyWagered(result.dailyWagered)
       setLastResult(result)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+      // Bigger payoff thump on full-result reveal — escalates with
+      // match count so 3-of-a-kind feels distinct from 1.
+      if (result.matches === 3) haptic([90, 50, 90, 50, 160])
+      else if (result.matches === 2) haptic([60, 40, 100])
+      else if (result.matches === 1) haptic(70)
     }, lastStop + 220)
   }
 
@@ -198,26 +225,47 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
         </p>
       </div>
 
-      {/* Symbol picker */}
+      {/* Symbol picker — the selected card's glow escalates as dice
+          land matching it (liveMatches), so by the time the third die
+          settles the player can FEEL whether they're in 0× / 1× / 2× /
+          3× territory before the result text says so. The big visible
+          payoff is when the third matching die lands and the card
+          flares into the 3-match treatment. */}
       <div className="flex flex-col items-center gap-3 w-full">
         <p className="sg-eyebrow" style={{ color: '#9a9488' }}>Pick a Symbol</p>
         <div className="grid grid-cols-3 gap-3 w-full">
-          {SYMBOLS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSelected(s)}
-              className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-150"
-              style={{
-                background: selected === s ? `rgba(4,10,20,0.88)` : 'rgba(4,10,20,0.72)',
-                border: `1px solid ${selected === s ? SYMBOL_COLOR[s] : 'rgba(255,255,255,0.12)'}`,
-                color: selected === s ? SYMBOL_COLOR[s] : '#9a9488',
-                boxShadow: selected === s ? `0 0 14px ${SYMBOL_COLOR[s]}40` : 'none',
-              }}
-            >
-              <SymbolIcon name={s} size={24} />
-              <span className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.12em]">{SYMBOL_LABEL[s]}</span>
-            </button>
-          ))}
+          {SYMBOLS.map((s) => {
+            const isSelected = selected === s
+            const c = SYMBOL_COLOR[s]
+            // Glow + border tier per live match count. Multiple rings
+            // at higher tiers (3 = outer halo) so the visual reads
+            // like the bet is "lighting up" instead of just brightening.
+            const tier = isSelected ? liveMatches : 0
+            const glow =
+              tier === 3 ? `0 0 0 2px ${c}, 0 0 36px ${c}cc, 0 0 70px ${c}80`
+              : tier === 2 ? `0 0 28px ${c}aa, 0 0 56px ${c}55`
+              : tier === 1 ? `0 0 22px ${c}80`
+              : isSelected ? `0 0 14px ${c}40`
+              : 'none'
+            return (
+              <button
+                key={s}
+                onClick={() => { setSelected(s); setLiveMatches(0) }}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-150"
+                style={{
+                  background: isSelected ? `rgba(4,10,20,0.88)` : 'rgba(4,10,20,0.72)',
+                  border: `1px solid ${isSelected ? c : 'rgba(255,255,255,0.12)'}`,
+                  color: isSelected ? c : '#9a9488',
+                  boxShadow: glow,
+                  transform: tier === 3 ? 'scale(1.05)' : tier >= 1 ? 'scale(1.02)' : 'scale(1)',
+                  transition: 'all 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                }}
+              >
+                <SymbolIcon name={s} size={24} />
+                <span className="font-karla font-600 text-[0.6rem] uppercase tracking-[0.12em]">{SYMBOL_LABEL[s]}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
