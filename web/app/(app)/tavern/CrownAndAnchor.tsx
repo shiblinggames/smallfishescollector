@@ -284,7 +284,9 @@ export default function CrownAndAnchor({ doubloons: initialDoubloons, dailyWager
           <div className="text-center" style={{ background: 'rgba(4,10,20,0.82)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '0.65rem 1.25rem' }}>
             {lastResult.matches > 0 ? (
               <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.1rem' }}>
-                {lastResult.matches === 3 ? '🎰 ' : ''}{lastResult.matches}× match — +{lastResult.payout} ⟡
+                {/* Show net (actual profit) not payout (gross return)
+                    so the +N reads as money WON, not money returned. */}
+                {lastResult.matches === 3 ? '🎰 ' : ''}{lastResult.matches}× match — +{lastResult.net} ⟡
               </p>
             ) : (
               <p className="font-karla font-400 text-[#a0a09a] text-sm">No match — {lastResult.net} ⟡</p>

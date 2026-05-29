@@ -61,7 +61,15 @@ export async function rollDice(symbol: Symbol, wager: number): Promise<RollResul
 
   const result: Symbol[] = [randomSymbol(), randomSymbol(), randomSymbol()]
   const matches = result.filter((s) => s === symbol).length
-  const payout = matches > 0 ? wager * matches : 0
+  // Standard Crown & Anchor: every matching die returns your wager
+  // PLUS 1× the wager as winnings. So 1 match → 2× return (+1× net),
+  // 2 → 3× return (+2× net), 3 → 4× return (+3× net). Matches the
+  // displayed rules ("win 1× · 2× · 3×") and lands the game at ~92%
+  // RTP — same neighborhood as Fish Slots. Was previously
+  // `wager * matches` which made 1 match break even, gave the game a
+  // ~50% theoretical house edge, and contradicted the rules line at
+  // the bottom of the screen.
+  const payout = matches > 0 ? wager * (matches + 1) : 0
   const net = payout - wager
   const newDoubloons = profile.doubloons + net
 
