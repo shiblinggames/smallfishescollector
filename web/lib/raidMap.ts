@@ -255,10 +255,12 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     romanNumeral: 'II',
     title:      'The Sunken Hand',
     subtitle:   'The shadow you have been pulling at finally has a name.',
-    // Current chapter II content is the post-Krust setup arc. New raids
-    // for chapter II append before this boundary; chapter III starts
-    // after a new RAID_CHAPTERS entry is added.
-    lastNodeId: 'last_cache',
+    // Post-Krust setup arc: finndicate_notice → smugglers_chart →
+    // last_cache → cartographer_reveal (names Captain Reckon). The
+    // chapter's boss raid (Reckon's encounter) is the next build and
+    // will become the new lastNodeId when it lands. Chapter III only
+    // starts after a new RAID_CHAPTERS entry is added.
+    lastNodeId: 'cartographer_reveal',
   },
 ]
 
@@ -595,6 +597,38 @@ export const RAID_MAP: RaidNode[] = [
       description:
         "Past the beacon chain the chart shows another drop point, a driftwood shack hammered to a rock just inside the danger line. The keeper has worked this water longer than most and runs the same trick every fence past the strait pulls: two pieces of kit on the counter, take one, leave the other for good. The freight runs deeper than any honest captain has charts for, and there will be more outfits like this one along the way.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout alongside the rest of your kit.",
       dropsNote: 'Pick one. Permanent, equippable, and you cannot come back for the other.',
+    },
+  },
+  {
+    // Chapter II's named-foe reveal — the next Lieutenant on the
+    // Finndicate ladder. Same shape as krust_reveal (one new noun,
+    // one Logbook fragment, no fight): the driftwood keeper drops
+    // the name "Captain Reckon" — the org's private cartographer
+    // whose hand-drawn lines run every freight lane past the danger
+    // line. Gates the future Raid 3 (Reckon's encounter); when that
+    // raid lands, point its requiresNode here and bump chapter II's
+    // lastNodeId to it. Fragment V continues the numbered sequence
+    // (I intro, II syndicate, III krust_reveal, IV finndicate_notice).
+    id: 'cartographer_reveal',
+    type: 'story',
+    label: "The Charts That Don't Exist",
+    flavor: 'Past the danger line the public charts go blank. Someone is keeping their own.',
+    bridge: "Captain Reckon. He maps the water past where the charts end, and the Finndicate's freight sails by his hand and no other. Sink him and the route to wherever it all ends comes up with the wreck.",
+    requiresNode: 'last_cache',
+    image: '/raidlog.png',
+    detail: {
+      description:
+        "The driftwood keeper loosens up over a third hot cup and lets a thing slip he should not have. Past the danger line the public charts go blank not by oversight but by design. The Finndicate keeps its own cartographer, an old hand who sounds the deeps no honest captain has ever read, and he hands his lines to no one outside the org. Every freight run past the strait sails by his ink and no other.\n\nCaptain Reckon. He has not set boot on land in years. He is the only fish who knows where every drop point past the danger line lives, and the only one who can be made to give them up. Sink him and his charts come up with the wreck. Leave him afloat and the route to wherever the freight all ends just keeps living on his deck, in his head, on his ledger.",
+      drops: [
+        {
+          emoji: '📜',
+          label: "Captain's Logbook, Fragment V",
+          sublabel: "\"Reckon don't tell you the heading. He hands you the chart and lets you read your own grave on it.\" Said by the driftwood keeper, who would not name the place but pointed.",
+          rarity: 'rare',
+        },
+      ],
+      dropsNote: "A second face on the Finndicate's payroll, and a chart that goes where the public ones quit.",
+      ctaLabel: 'Find his Course →',
     },
   },
 ]
