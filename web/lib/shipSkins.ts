@@ -20,8 +20,13 @@ export const SHIP_SKINS: ShipSkinDef[] = [
     id: 'verdigris_hull',
     name: 'Verdigris Hull',
     description: 'A hull rotted a deep, ominous green by years buried in Krust\'s cold cargo holds.',
-    filter: 'brightness(0.46) saturate(1.4) hue-rotate(95deg) contrast(1.18) drop-shadow(0 0 5px rgba(10,55,32,0.55))',
-    color: '#1d4a30',
+    // Same darken-and-desaturate treatment as Corsair Black (a clean
+    // black silhouette reads well across every ship tier); the skin's
+    // identity comes from the verdigris-green glow alone. Previously
+    // used hue-rotate(95deg) on top of saturation 1.4 which produced
+    // a garish neon-green tint that fought every ship's base palette.
+    filter: 'brightness(0.5) saturate(0.2) contrast(1.1) drop-shadow(0 0 5px rgba(60,165,110,0.35))',
+    color: '#43a884',
     source: "Krust's Consignment",
   },
 ]
