@@ -39,7 +39,39 @@ export default async function DevStatsPage() {
       by: b.completions !== b.players ? `${b.completions} total clears` : null,
     }))
 
+  // Fleet Records — headline flex numbers + record holders, computed
+  // in the admin_stats() flex branch. Stays first in the section list
+  // so the admin lands on the brag wall before the operational stats.
+  const flex = s.flex ?? {}
+  const biggestFish = flex.biggestFish ?? {}
+  const biggestTavern = flex.biggestTavernPayout ?? {}
+  const fleetRecords: Stat[] = [
+    { label: 'Fish caught fleet-wide', value: flex.fishCaught ?? 0 },
+    { label: 'Distance sailed',        value: `${fmt(flex.distanceSailed ?? 0)} m` },
+    {
+      label: 'Biggest fish landed',
+      value: biggestFish.length ? `${biggestFish.length}″ ${biggestFish.species ?? ''}`.trim() : '—',
+      by:    biggestFish.username ?? null,
+    },
+    {
+      label: 'Longest perfect streak',
+      value: flex.longestPerfectStreak ?? 0,
+      by:    byIf(flex.longestPerfectStreak ?? 0, flex.longestPerfectStreakBy),
+    },
+    {
+      label: 'Biggest tavern payout',
+      value: biggestTavern.amount ? `${fmt(biggestTavern.amount)} ⟡` : '—',
+      by:    biggestTavern.username
+        ? `${biggestTavern.username} · ${biggestTavern.game ?? ''}`.trim()
+        : null,
+    },
+  ]
+
   const sections: { title: string; accent: string; stats: Stat[] }[] = [
+    {
+      title: 'Fleet Records', accent: '#fbbf24',
+      stats: fleetRecords,
+    },
     {
       title: 'Players', accent: '#60a5fa',
       stats: [
@@ -107,6 +139,10 @@ export default async function DevStatsPage() {
       ],
     },
     {
+      // Earned numbers EXCLUDE 'Admin grant' transactions so the totals
+      // reflect what players actually earned through gameplay, not what
+      // got handed to them via admin tools. Held balances are unfiltered
+      // because they're current state regardless of source.
       title: 'Economy', accent: '#f0c040',
       stats: [
         { label: 'Doubloons earned', value: `${fmt(s.economy?.doubloonsEarned ?? 0)} ⟡` },
