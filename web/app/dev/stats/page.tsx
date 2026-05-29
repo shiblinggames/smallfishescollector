@@ -39,31 +39,29 @@ export default async function DevStatsPage() {
       by: b.completions !== b.players ? `${b.completions} total clears` : null,
     }))
 
-  // Fleet Records — headline flex numbers + record holders, computed
-  // in the admin_stats() flex branch. Stays first in the section list
-  // so the admin lands on the brag wall before the operational stats.
+  // Fleet Records — fleet-wide aggregates pulled up as the headline
+  // brag wall + the one record (Biggest fish) that isn't already on
+  // the public leaderboard. Anything the leaderboard already shows
+  // (perfect streak, tavern payouts, etc.) stays out — this is a
+  // brag wall, not a duplicate. Stays first in the section list so
+  // the admin lands on the headline numbers before per-feature
+  // operational stats. Feature sections below keep their own copies
+  // of these aggregates as well — the brag wall is a curated
+  // headline, the sections are the detailed breakdowns.
   const flex = s.flex ?? {}
   const biggestFish = flex.biggestFish ?? {}
-  const biggestTavern = flex.biggestTavernPayout ?? {}
   const fleetRecords: Stat[] = [
     { label: 'Fish caught fleet-wide', value: flex.fishCaught ?? 0 },
+    { label: 'Lines cast',             value: s.fishing?.casts ?? 0 },
     { label: 'Distance sailed',        value: `${fmt(flex.distanceSailed ?? 0)} m` },
+    { label: 'Voyages completed',      value: s.voyages?.completed ?? 0 },
+    { label: 'Raids cleared',          value: s.raids?.cleared ?? 0 },
+    { label: 'Crew recruited',         value: s.recruits?.lifetime ?? 0 },
+    { label: 'Tide Run beacons',       value: s.tideRun?.beacons ?? 0 },
     {
       label: 'Biggest fish landed',
       value: biggestFish.length ? `${biggestFish.length}″ ${biggestFish.species ?? ''}`.trim() : '—',
       by:    biggestFish.username ?? null,
-    },
-    {
-      label: 'Longest perfect streak',
-      value: flex.longestPerfectStreak ?? 0,
-      by:    byIf(flex.longestPerfectStreak ?? 0, flex.longestPerfectStreakBy),
-    },
-    {
-      label: 'Biggest tavern payout',
-      value: biggestTavern.amount ? `${fmt(biggestTavern.amount)} ⟡` : '—',
-      by:    biggestTavern.username
-        ? `${biggestTavern.username} · ${biggestTavern.game ?? ''}`.trim()
-        : null,
     },
   ]
 
