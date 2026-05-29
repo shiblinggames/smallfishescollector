@@ -532,17 +532,19 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   // pool to the foundational eight effects in lib/tides.ts. Future
   // longer raids bump this cap to unlock the stronger tier-2+ effects.
   tides: { slots: [3, 6], maxTier: 1 },
-  // TODO: ship skin for the Cartographer + the Astrolabe pair (epic
-  // Cartographer's Astrolabe + legendary Captain's Astrolabe — both
-  // grant the player a Riposte mirror of the boss's signature, normal
-  // tier lower, legendary higher per the design). Astrolabes get added
-  // to raidItems.ts in the next pass and slotted in here. Currency-only
-  // placeholder rolls correctly through claimRaidLoot until then.
+  // Same 70/30 currency/special split as Pete + Krust. The Astrolabe
+  // pair are the chase items — mirror the Carapace pair from Krust
+  // (Epic at the standard rate, Legendary at the chase rate). Ship
+  // skin slot is still TODO; will land when Cartographer art ships.
   loot: [
-    { id: 'doubloons_600',     label: '+600 ⟡',                image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 30 },
-    { id: 'doubloons_1200',    label: '+1,200 ⟡',              image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 25 },
-    { id: 'gems_50',           label: '50 Gems',                image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 25 },
-    { id: 'pack_2',            label: '200 Gems',               image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 20 },
+    // 70% currency
+    { id: 'doubloons_600',          label: '+600 ⟡',                  image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 30 },
+    { id: 'doubloons_1200',         label: '+1,200 ⟡',                image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 20 },
+    { id: 'gems_50',                label: '50 Gems',                  image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
+    { id: 'pack_2',                 label: '200 Gems',                 image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
+    // 30% special drops (ship skin TBA)
+    { id: 'cartographers_astrolabe', label: "Cartographer's Astrolabe", image: null,                     emoji: '🧭',       rarity: 'epic',      weight: 25 },
+    { id: 'captains_astrolabe',      label: "Captain's Astrolabe",      image: null,                     emoji: '🧭',       rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
     scout:        { gold: 50,  xp: 50  },

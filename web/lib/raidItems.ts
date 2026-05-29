@@ -6,6 +6,8 @@ export type RaidEffectType =
   | 'crit_damage_mult'      // value = multiplier on crit shots only (e.g. 1.15 = +15%)
   | 'noncrit_damage_mult'   // value = multiplier on hit + graze shots (e.g. 0.85 = -15%)
   | 'max_hp_mult'           // value = multiplier on player's max HP at raid start (e.g. 1.15 = +15%)
+  | 'parry_chance'          // value = 0-1 chance, on a SUCCESSFUL dodge, to reflect a slice of the dodged shot
+  | 'parry_reflect_pct'     // value = 0-1 fraction of the dodged shot's damage roll reflected back when parry triggers
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -117,6 +119,39 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'epic',
     effects: [{ type: 'max_hp_mult', value: 1.15 }],
     source: 'Driftwood Cache',
+  },
+  // The Cartographer's signature drop — same two-tier shape as the
+  // Corsair Cannon + Krust's Carapace pairs. Cartographer's Astrolabe
+  // is the standard, dropped from his normal raid. Captain's Astrolabe
+  // is the captain-grade version at higher numbers, dropped only at
+  // the chase rate (and bumped by the challenge variant). Both grant
+  // a player-side mirror of the boss's Riposte: on a successful dodge,
+  // a chance to reflect a slice of the would-be hit back at him.
+  {
+    id: 'cartographers_astrolabe',
+    name: "Cartographer's Astrolabe",
+    description: 'On a successful dodge, 30% chance to deflect half the incoming shot back at the attacker.',
+    image: null,
+    emoji: '🧭',
+    rarity: 'epic',
+    effects: [
+      { type: 'parry_chance',      value: 0.30 },
+      { type: 'parry_reflect_pct', value: 0.50 },
+    ],
+    source: "The Cartographer's Survey",
+  },
+  {
+    id: 'captains_astrolabe',
+    name: "Captain's Astrolabe",
+    description: "On a successful dodge, 50% chance to deflect 75% of the incoming shot back at the attacker. The brass instrument the Cartographer kept on his own hip.",
+    image: null,
+    emoji: '🧭',
+    rarity: 'legendary',
+    effects: [
+      { type: 'parry_chance',      value: 0.50 },
+      { type: 'parry_reflect_pct', value: 0.75 },
+    ],
+    source: "The Cartographer's Survey",
   },
 ]
 

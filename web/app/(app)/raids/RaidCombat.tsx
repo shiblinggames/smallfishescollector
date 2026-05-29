@@ -999,6 +999,43 @@ export default function RaidCombat({
             stepLines.push(isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
+
+            // ── Parry layer on top of the dodge result ───────────────────
+            // Two mirror mechanics, only one fires per dodge depending on
+            // which side dodged:
+            //
+            //   ENEMY parry (The Cartographer's Riposte) — when the enemy
+            //   dodges a player attack and carries parryChance/parryDamagePct,
+            //   roll for a fresh counter-shot. Uses a fresh damage roll
+            //   (his own minDmg..maxDmg) × parryDamagePct, applied through
+            //   the same incoming-mitigation chain as a regular enemy fire
+            //   so raid items + tides still mitigate it.
+            //
+            //   PLAYER parry (Astrolabe items) — when the player dodges
+            //   an enemy attack and equipped raid items grant parry_chance
+            //   + parry_reflect_pct, roll to reflect a slice of the SHOT'S
+            //   own damage (the `dmg` already computed for this fire/volley
+            //   step) back into the enemy. Different sourcing (counter-roll
+            //   vs deflection) is intentional — boss is striking back, the
+            //   player is turning his blade away.
+            if (isAttackerPlayer && enemy.parryChance && enemy.parryDamagePct && Math.random() < enemy.parryChance) {
+              const parryBase = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
+              let parryDmg = Math.max(1, Math.floor(parryBase * enemy.parryDamagePct))
+              const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
+              if (takenMult !== 1) parryDmg = Math.max(1, Math.floor(parryDmg * takenMult))
+              pHp = Math.max(0, pHp - parryDmg)
+              stepLines.push(`${enemy.parryName ?? 'Riposte'}! ${enemy.name} counters your strike for ${parryDmg}.`)
+            } else if (!isAttackerPlayer) {
+              const parryEffects = getActiveEffects(equippedRaidItems)
+              const parryChance      = parryEffects.filter(e => e.type === 'parry_chance').reduce((a, e) => Math.max(a, e.value), 0)
+              const parryReflectPct  = parryEffects.filter(e => e.type === 'parry_reflect_pct').reduce((a, e) => Math.max(a, e.value), 0)
+              if (parryChance > 0 && parryReflectPct > 0 && dmg > 0 && Math.random() < parryChance) {
+                const reflectDmg = Math.max(1, Math.floor(dmg * parryReflectPct))
+                eHp = Math.max(0, eHp - reflectDmg)
+                stepLines.push(`Riposte! You turn the shot back, slicing ${reflectDmg} into ${enemy.name}.`)
+              }
+            }
+
             steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines })
             continue
           } else {
@@ -2621,6 +2658,43 @@ function EnemyStatsPopup({
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
                   Fog drifts across your aim bar, hiding the gold center. Lock through the mist by rhythm and timing.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Riposte — The Cartographer's unique trait (layered on top of
+            the crew-wide Mist Veil). Warm amber accent so it reads as
+            "offensive defense" rather than the cool fog blue. Same card
+            shape so abilities stack cleanly when an enemy carries both. */}
+        {enemy.parryChance && enemy.parryDamagePct && enemy.parryName && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#f0c040', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Counter-Ability
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(240,192,64,0.06)',
+              border: '1px solid rgba(240,192,64,0.22)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(240,192,64,0.1)',
+                border: '1px solid rgba(240,192,64,0.3)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.1rem' }} aria-hidden>⚔️</span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0c040', lineHeight: 1.15, marginBottom: 2 }}>
+                  {enemy.parryName}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  Counters a dodged strike for {Math.round(enemy.parryDamagePct * 100)}% of his damage roll, {Math.round(enemy.parryChance * 100)}% of the time. Firing into his dodge is never safe.
                 </p>
               </div>
             </div>

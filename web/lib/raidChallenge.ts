@@ -11,7 +11,7 @@
 // raid_id so completions track in their own bucket on the leaderboard.
 // PHASE 2: elite enemy variants + the affix system. PHASE 3: boss phases.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
 
 /** Multipliers applied by buildChallengeRaid. Tweak here, not per-raid. */
 export const CHALLENGE_MODS = {
@@ -233,11 +233,37 @@ const KRUST_CHALLENGE_LOOT: typeof CAPTAIN_KRUST['loot'] = (() => {
   ]
 })()
 
+// The Cartographer's challenge loot. Doubles the special-drop rates
+// (Cartographer's Astrolabe 25 → 50, Captain's Astrolabe 5 → 10) so
+// the legendary Astrolabe becomes the realistic chase reward on
+// challenge runs. Currency shrinks proportionally to keep the total
+// at 100. The 10% "ship skin reserved" slot from the normal loot
+// table is folded into the epic Astrolabe weight here until the
+// Cartographer ship skin lands; then redistribute (e.g. skin 10 /
+// epic 40 / legendary 10).
+const CARTOGRAPHER_CHALLENGE_LOOT: typeof THE_CARTOGRAPHER['loot'] = (() => {
+  const byId = Object.fromEntries(THE_CARTOGRAPHER.loot.map(l => [l.id, l]))
+  const w = (id: string, weight: number) => ({ ...byId[id], weight })
+  return [
+    w('doubloons_600',           15),
+    w('doubloons_1200',          10),
+    w('gems_50',                 10),
+    w('pack_2',                   5),
+    w('cartographers_astrolabe', 50),
+    w('captains_astrolabe',      10),
+  ]
+})()
+
 // Pre-built challenge variants — page files + raid map import these
 // directly so the heavy lifting (the factory) only runs once at module
 // load, not per-request. Pete and Krust both carry two-phase challenge
 // fights, tuned to their character (Pete = aggression, Krust = plate).
+// The Cartographer skips phase 2 for now — Riposte is already a unique
+// second threat layer on top of the crew-wide Mist Veil, and adding a
+// phase 2 would stack three signature mechanics into one fight.
 export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig =
   withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING, PETE_CHALLENGE_LOOT), 'pete', PETE_PHASE2)
 export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig =
   withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST, KRUST_CHALLENGE_LOOT), 'krust', KRUST_PHASE2)
+export const THE_CARTOGRAPHER_CHALLENGE: BossRaidConfig =
+  buildChallengeRaid(THE_CARTOGRAPHER, CARTOGRAPHER_CHALLENGE_LOOT)
