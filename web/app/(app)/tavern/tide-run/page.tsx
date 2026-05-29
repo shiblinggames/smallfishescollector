@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import TideRunGame from './TideRunGame'
-import { getTopTideRunHolder } from './actions'
+import { getTopTideRunHolder, getPlayerTideRunRank } from './actions'
 
 export default async function TideRunPage() {
   const supabase = await createClient()
@@ -10,7 +10,7 @@ export default async function TideRunPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-  const [{ data: profile }, topHolder] = await Promise.all([
+  const [{ data: profile }, topHolder, initialRank] = await Promise.all([
     admin
       .from('profiles')
       .select('tide_run_best_distance, has_seen_tide_run_tour')
@@ -20,6 +20,9 @@ export default async function TideRunPage() {
     // player always sees the target to beat. Fetched on mount; new
     // PBs by other players land on next page load.
     getTopTideRunHolder(),
+    // Player's own rank + gap to the rank above. Re-fetched on the
+    // client after every wreck so PB-driven rank shifts land live.
+    getPlayerTideRunRank(),
   ])
 
   const initialBestDistance = (profile?.tide_run_best_distance as number | null) ?? 0
@@ -32,6 +35,7 @@ export default async function TideRunPage() {
           initialBestDistance={initialBestDistance}
           hasSeenTour={hasSeenTour}
           topHolder={topHolder}
+          initialRank={initialRank}
         />
       </main>
     </>

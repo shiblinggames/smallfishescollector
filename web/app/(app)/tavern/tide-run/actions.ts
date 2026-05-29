@@ -159,3 +159,68 @@ export async function getTopTideRunHolder(): Promise<TopTideRunHolder | null> {
     return null
   }
 }
+
+/** Player's current spot on the Tide Run leaderboard + the gap to the
+ *  position above. Drives the wreck-screen "you're #5 · 300m from #4"
+ *  motivator — gap-to-next-rank is a much stronger pull than abstract
+ *  rank alone. Returns the rank as null when the player has no
+ *  distance on the board yet (cold-start state — show the global
+ *  hiscore as the carrot instead). Fetched on page load and again
+ *  after every wreck so PB-driven rank shifts land live. */
+export type PlayerTideRunRank = {
+  rank: number | null
+  totalPlayers: number
+  yourDistance: number
+  /** Position of the player immediately above on the board. null when
+   *  the player is rank 1 (or not ranked at all). */
+  nextRankDistance: number | null
+  nextRankUsername: string | null
+}
+
+export async function getPlayerTideRunRank(): Promise<PlayerTideRunRank | null> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const admin = createAdminClient()
+    // Pull the full leaderboard once and walk it in JS. The Tide Run
+    // board is tiny (low hundreds at most for a long while), so a
+    // single round-trip is cheaper than a count + lookup-above pair.
+    // Admins are already filtered out by the view.
+    const { data: rows } = await admin
+      .from('leaderboard_tide_run')
+      .select('user_id, username, score')
+      .order('score', { ascending: false })
+      .order('created_at', { ascending: true })
+
+    const list = (rows ?? []) as { user_id: string; username: string; score: number }[]
+    const totalPlayers = list.length
+
+    const meIdx = list.findIndex(r => r.user_id === user.id)
+    if (meIdx === -1) {
+      // Player has no distance on the board yet — caller surfaces the
+      // global hiscore as the carrot in this case.
+      return { rank: null, totalPlayers, yourDistance: 0, nextRankDistance: null, nextRankUsername: null }
+    }
+
+    const me = list[meIdx]
+    if (meIdx === 0) {
+      // Rank 1 — no one above to chase.
+      return {
+        rank: 1, totalPlayers,
+        yourDistance: me.score,
+        nextRankDistance: null, nextRankUsername: null,
+      }
+    }
+    const above = list[meIdx - 1]
+    return {
+      rank: meIdx + 1, totalPlayers,
+      yourDistance: me.score,
+      nextRankDistance: above.score,
+      nextRankUsername: above.username,
+    }
+  } catch {
+    return null
+  }
+}

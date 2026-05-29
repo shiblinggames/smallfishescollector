@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, type TopTideRunHolder } from './actions'
+import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTideRunRank, type TopTideRunHolder, type PlayerTideRunRank } from './actions'
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
@@ -282,9 +282,13 @@ interface TideRunGameProps {
    *  global target to chase. Null on a cold leaderboard (no one has
    *  scored anything yet). */
   topHolder?: TopTideRunHolder | null
+  /** Player's own rank + gap to the rank above on page load. The wreck
+   *  screen re-fetches this after each death so PB-driven rank shifts
+   *  land live. */
+  initialRank?: PlayerTideRunRank | null
 }
 
-export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = false, topHolder = null }: TideRunGameProps) {
+export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = false, topHolder = null, initialRank = null }: TideRunGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
@@ -352,6 +356,11 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   const [uiState, setUiState] = useState<GameState>('ready')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(initialBestDistance)
+  // Player's current rank + gap to the next position. Initialised from
+  // the server-rendered prop and refreshed after every wreck so a new
+  // PB that lifts the player past someone is reflected on the very
+  // next wreck modal, not a page refresh later.
+  const [rank, setRank] = useState<PlayerTideRunRank | null>(initialRank)
   const [deadCount, setDeadCount] = useState(0)   // wreck-screen count-up
   // Per-run beacon doubloon reward. Set optimistically the moment
   // the wreck modal appears (beacons * 2 client-side) so the modal
@@ -821,7 +830,12 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         recordTideRunRun(finalMeters, g.beaconsSmashed).catch(() => {})
         if (finalMeters > highScore) {
           setHighScore(finalMeters)
-          submitTideRunBest(finalMeters).catch(() => {})
+          // Chain the rank refresh off the PB submission so the wreck
+          // modal lands on the updated position, not the stale one.
+          submitTideRunBest(finalMeters)
+            .then(() => getPlayerTideRunRank())
+            .then(r => { if (r) setRank(r) })
+            .catch(() => {})
         }
       }
       return
@@ -1104,7 +1118,12 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
       recordTideRunRun(finalMeters, g.beaconsSmashed).catch(() => {})
       if (finalMeters > highScore) {
         setHighScore(finalMeters)
-        submitTideRunBest(finalMeters).catch(() => {})
+        // Chain the rank refresh off the PB submission so the wreck
+        // modal lands on the updated position, not the stale one.
+        submitTideRunBest(finalMeters)
+          .then(() => getPlayerTideRunRank())
+          .then(r => { if (r) setRank(r) })
+          .catch(() => {})
       }
     } else {
       const now = performance.now()
@@ -1827,52 +1846,97 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                 )
               })()}
 
-              {/* ── Beacon doubloon payout ──
-                  Auto-awarded on every wreck (2 doubloons per beacon
-                  smashed). Set optimistically when the wreck screen
-                  appears so the modal lands at final size on frame 1. */}
-              {beaconReward && beaconReward.doubloons > 0 && (
-                <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 12, background: 'rgba(189,160,90,0.18)', border: '1px solid rgba(189,160,90,0.55)' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.7rem', color: '#bda05a', marginBottom: 6 }}>
-                    Beacons Smashed
-                  </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#ffd56b', lineHeight: 1.1 }}>
-                    +{beaconReward.doubloons} ⟡
-                  </p>
-                  <p className="font-karla font-300 mt-1" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.45 }}>
-                    {beaconsThisRun} × 2 doubloons
-                  </p>
-                </div>
-              )}
-
-              {/* ── Global Hiscore ──
-                  Hero treatment: bigger distance number with a crown
-                  glyph, name underneath in a secondary line. The
-                  previous tight one-line "1500m by yoon" read as
-                  metadata; this version reads as the target you're
-                  chasing. */}
+              {/* ── Leaderboard story (Global Hiscore + your rank + gap) ──
+                  This panel is the wreck modal's MAIN motivator now. It
+                  unifies "where the bar sits" with "where you stand and
+                  what catching the next person costs you" — the
+                  gap-to-next-rank number is the strongest pull. The
+                  rank/gap line is hidden in cold-start states (no rank
+                  yet, or no one above you) so the panel never shows
+                  empty rows. */}
               {topHolder && topHolder.distance > 0 && (
                 <div style={{
-                  marginTop: 14,
+                  marginTop: 16,
                   padding: '14px 16px',
                   borderRadius: 12,
-                  background: 'linear-gradient(180deg, rgba(255,213,107,0.07) 0%, rgba(189,160,90,0.05) 100%)',
-                  border: '1px solid rgba(255,213,107,0.32)',
+                  background: 'linear-gradient(180deg, rgba(255,213,107,0.09) 0%, rgba(189,160,90,0.05) 100%)',
+                  border: '1px solid rgba(255,213,107,0.4)',
+                  boxShadow: '0 0 28px rgba(255,213,107,0.08)',
                 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.65rem', color: 'rgba(255,213,107,0.78)', marginBottom: 6 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.65rem', color: 'rgba(255,213,107,0.85)', marginBottom: 6 }}>
                     Global Hiscore
                   </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#ffd56b', lineHeight: 1.1, textShadow: '0 0 14px rgba(255,213,107,0.32)' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#ffd56b', lineHeight: 1.1, textShadow: '0 0 18px rgba(255,213,107,0.45)' }}>
                     <span style={{ marginRight: 8 }}>👑</span>
                     {topHolder.distance.toLocaleString()}m
                   </p>
                   <p className="font-karla font-700 mt-1" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.72)' }}>
                     held by <span style={{ color: '#f0ede8', fontWeight: 700 }}>{topHolder.username}</span>
                   </p>
+
+                  {/* Your rank + gap-to-next. Split states:
+                       1. Rank null → "Get on the board" hint (cold start
+                          — no run > 0 yet, the global hiscore above is
+                          the only carrot).
+                       2. Rank 1 → "👑 You hold this run" (no one above).
+                       3. Rank N + nextRank present → "300m to catch
+                          mikel (#N-1)" — THE motivator. */}
+                  {rank && (
+                    <div style={{
+                      marginTop: 12,
+                      paddingTop: 12,
+                      borderTop: '1px solid rgba(255,213,107,0.18)',
+                    }}>
+                      {rank.rank === null ? (
+                        <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.45 }}>
+                          One run past the start gets you on the board.
+                        </p>
+                      ) : rank.rank === 1 ? (
+                        <>
+                          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: '#4ade80', marginBottom: 4 }}>
+                            You&apos;re #1
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.45 }}>
+                            Nobody&apos;s caught you yet. Push it further.
+                          </p>
+                        </>
+                      ) : rank.nextRankDistance != null && rank.nextRankUsername ? (
+                        <>
+                          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: 'rgba(255,213,107,0.78)', marginBottom: 4 }}>
+                            You&apos;re #{rank.rank} of {rank.totalPlayers}
+                          </p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f5f2ec', lineHeight: 1.35 }}>
+                            <span style={{ color: '#ffd56b' }}>{(rank.nextRankDistance - rank.yourDistance).toLocaleString()}m</span>
+                            {' '}to catch{' '}
+                            <span style={{ color: '#f5f2ec', fontWeight: 700 }}>{rank.nextRankUsername}</span>
+                            <span style={{ color: 'rgba(240,237,232,0.55)' }}> · #{rank.rank - 1}</span>
+                          </p>
+                        </>
+                      ) : (
+                        <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: 'rgba(255,213,107,0.78)' }}>
+                          You&apos;re #{rank.rank} of {rank.totalPlayers}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
-              <p className="font-karla font-700 uppercase tracking-[0.18em] mt-5" style={{ fontSize: '0.82rem', color: '#bda05a' }}>
+              {/* ── Beacon doubloon payout ──
+                  Demoted to a single quiet line beneath the leaderboard
+                  panel. Doubloons-per-beacon is a passive trickle, not
+                  the reason a player kept running — the rank chase is.
+                  Set optimistically the moment the wreck screen
+                  appears so the modal doesn't resize when the server
+                  reply lands a few hundred ms later. */}
+              {beaconReward && beaconReward.doubloons > 0 && (
+                <p className="font-karla mt-3" style={{ fontSize: '0.72rem', color: 'rgba(255,213,107,0.78)', textAlign: 'center' }}>
+                  <span style={{ fontWeight: 700, color: '#ffd56b' }}>+{beaconReward.doubloons} ⟡</span>
+                  <span style={{ color: 'rgba(240,237,232,0.55)' }}> · {beaconsThisRun} beacons smashed</span>
+                </p>
+              )}
+
+              <p className="font-karla font-700 uppercase tracking-[0.18em] mt-4" style={{ fontSize: '0.82rem', color: '#bda05a' }}>
                 Tap to try again
               </p>
             </div>
