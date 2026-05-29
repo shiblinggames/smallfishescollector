@@ -295,12 +295,14 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     },
     elite: {
       id: 'elite', name: 'Krust Overseer', hpBase: 64, minDmg: 6, maxDmg: 13,
-      shipSpeed: 9, actionMs: 3400,
-      // Fastest ship in the run (speed 9) — wins most speed rolls, so
-      // its fires and dodges resolve before the player's reply. 8-turn
-      // aggressive trader: three fires per loop, two dodges. The "real
-      // test before the boss" pressure now comes from raw cadence, not
-      // a big volley callback.
+      shipSpeed: 6, actionMs: 3400,
+      // 8-turn aggressive trader: three fires per loop, two dodges.
+      // Pressure comes from the rotation — high fire rate + the
+      // Carapace soak — not from raw speed-roll dominance. Was speed
+      // 9 (fastest in the run) but that combined with d20 + the prior
+      // 0.25 Compass coefficient meant the Overseer outpaced almost
+      // every player; dropped to 6 (parity with Pete) so the test feels
+      // like cadence-management, not first-strike denial.
       // Charges: 0→1→0→1→0→0→1→0→0
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.10,
