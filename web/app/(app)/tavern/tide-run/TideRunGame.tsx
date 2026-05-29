@@ -1903,7 +1903,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                       ) : rank.nextRankDistance != null && rank.nextRankUsername ? (
                         <>
                           <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: 'rgba(255,213,107,0.78)', marginBottom: 4 }}>
-                            You&apos;re #{rank.rank} of {rank.totalPlayers}
+                            You&apos;re #{rank.rank}
                           </p>
                           <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f5f2ec', lineHeight: 1.35 }}>
                             <span style={{ color: '#ffd56b' }}>{(rank.nextRankDistance - rank.yourDistance).toLocaleString()}m</span>
