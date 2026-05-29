@@ -30,6 +30,17 @@ export interface BroadsideEnemy {
    *  Krust's crew = crustacean "Carapace" defense. */
   damageReduction?: number
   abilityName?: string
+  /** Reckon's raid — "Mist Veil." A drifting fog band overlaid on the
+   *  player's aim bar during lock-in, partially obscuring the gold
+   *  Critical center. `aimFogDensity` is the band's opacity (0 = none,
+   *  ~0.4 = thin/scout-tier, ~0.7 = deep/Reckon-tier). `aimFogName`
+   *  labels it on the enemy nameplate (mirrors `abilityName`). The fog
+   *  is always-on while this enemy is the active target — symmetrical
+   *  with Krust's Carapace cadence (every player aim is affected).
+   *  Render lives in RaidCombat's AimBarInline; both fields undefined
+   *  on every non-Reckon-raid enemy means zero rendering cost. */
+  aimFogDensity?: number
+  aimFogName?: string
   /** Optional two-phase boss config. The phase 2 trigger is a "false
    *  defeat" — the boss appears to sink, then rises back at `revivePct`
    *  of their max HP with the alternate pattern, damage mult, and (if

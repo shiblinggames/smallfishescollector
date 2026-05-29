@@ -429,10 +429,16 @@ export default function RaidCombat({
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
       : `A ${enemy.name} draws alongside!`
-    // Themed-ability tell: one-time note so the player knows why hits land soft.
-    const introLines = (enemy.damageReduction ?? 0) > 0
-      ? [intro, `Its ${(enemy.abilityName ?? 'armour').toLowerCase()} soaks fire and graze. Volleys break through.`]
-      : [intro]
+    // Themed-ability tell: one-time note so the player knows why hits land
+    // soft / why the bar fogs over. Each ability gets its own line so an
+    // enemy carrying both reads cleanly in the log.
+    const introLines = [intro]
+    if ((enemy.damageReduction ?? 0) > 0) {
+      introLines.push(`Its ${(enemy.abilityName ?? 'armour').toLowerCase()} soaks fire and graze. Volleys break through.`)
+    }
+    if ((enemy.aimFogDensity ?? 0) > 0) {
+      introLines.push(`A ${(enemy.aimFogName ?? 'mist').toLowerCase()} drifts over your aim bar. Lock by rhythm, not by sight.`)
+    }
     setResolveLog(introLines)
     const promptTimer = setTimeout(() => {
       // Only append if the player hasn't acted yet — once a turn resolves,
@@ -1454,13 +1460,24 @@ export default function RaidCombat({
               </p>
               {/* Has-ability tell — small inline indicator instead of a full
                   row pill. The full ability details live in the enemy stats
-                  popup (tap the nameplate to open it). */}
+                  popup (tap the nameplate to open it). Each themed ability
+                  shows its own glyph: shield for Carapace-style mitigation,
+                  fog cloud for Mist Veil. Both can coexist if a future
+                  enemy carries multiple traits. */}
               {(enemy.damageReduction ?? 0) > 0 && (
                 <span
                   aria-label={`Has ability: ${enemy.abilityName ?? 'special defense'}`}
                   style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 0 4px rgba(125,211,252,0.55))' }}
                 >
                   🛡️
+                </span>
+              )}
+              {(enemy.aimFogDensity ?? 0) > 0 && (
+                <span
+                  aria-label={`Has ability: ${enemy.aimFogName ?? 'Mist Veil'}`}
+                  style={{ fontSize: '0.72rem', lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 0 4px rgba(180,200,220,0.55))' }}
+                >
+                  🌫️
                 </span>
               )}
               {isBoss && enemyPhase !== 2 && (
@@ -1859,7 +1876,7 @@ export default function RaidCombat({
         display: 'flex', flexDirection: 'column', gap: 8,
       }}>
         {subPhase === 'aiming' ? (
-          <AimBarInline indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef} />
+          <AimBarInline indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef} aimFogDensity={enemy.aimFogDensity} />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
         )}
@@ -2412,6 +2429,44 @@ function EnemyStatsPopup({
           </div>
         )}
 
+        {/* Mist Veil — Reckon's raid ability. Same layout as the
+            Carapace card so the player learns one pattern for "this
+            enemy has a themed thing." Accent shifts to the cool fog
+            blue rather than Carapace's sky cyan so the two are
+            visually distinguishable when a future enemy carries both. */}
+        {(enemy.aimFogDensity ?? 0) > 0 && enemy.aimFogName && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#b0c4d8', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Ability
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(176,196,216,0.06)',
+              border: '1px solid rgba(176,196,216,0.22)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(176,196,216,0.1)',
+                border: '1px solid rgba(176,196,216,0.3)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.1rem' }} aria-hidden>🌫️</span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#b0c4d8', lineHeight: 1.15, marginBottom: 2 }}>
+                  {enemy.aimFogName}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  Fog drifts across your aim bar, hiding the gold center. Lock through the mist by rhythm and timing.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Behavior — a single fuzzy tell, not a turn-by-turn pattern reveal.
             Players still have to read the rhythm in combat; this just tips
             them off to what to watch for. */}
@@ -2948,11 +3003,18 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
+  /** Reckon's "Mist Veil" — 0–1 opacity of a drifting fog band overlaid
+   *  on the aim bar. Undefined / 0 = no fog (every existing raid). ~0.4
+   *  thin (his crew tier), ~0.7 deep (Reckon himself). Themed: he runs
+   *  these waters because the fog hides his charts. */
+  aimFogDensity?: number
 }) {
+  const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
+  const hasFog = fogOpacity > 0
   return (
     <div style={{
       background: '#04080e',
@@ -2963,6 +3025,21 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef }: {
       overflow: 'hidden',
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
     }}>
+      {/* Inline keyframes for the drifting fog band. Local to the
+          component because the rest of RaidCombat sets animations
+          via inline strings already; no global stylesheet for it.
+          The band sits at -45% → 145% so the feathered edges sweep
+          fully off-screen each cycle, never visibly snapping. */}
+      {hasFog && (
+        <style>{`
+          @keyframes mist-veil-drift {
+            0%   { transform: translateX(-45%); }
+            50%  { transform: translateX(145%); }
+            100% { transform: translateX(-45%); }
+          }
+        `}</style>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexShrink: 0 }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#fbbf24' }}>
           Lock Your Shot
@@ -2978,7 +3055,11 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef }: {
       <div style={{ position: 'relative', height: 44, background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, overflow: 'hidden' }}>
         <div ref={flashRef} style={{
           position: 'absolute', inset: 0, opacity: 0, background: 'transparent',
-          pointerEvents: 'none', zIndex: 3,
+          // zIndex 5 sits above the Mist Veil fog (zIndex 4) so the
+          // punch-on-lock flash always reads cleanly, even when the
+          // fog is at its densest. Was 3; bumped 2026-05-29 when fog
+          // landed.
+          pointerEvents: 'none', zIndex: 5,
         }} />
         <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
           <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
@@ -2986,12 +3067,38 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef }: {
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
+        {/* Mist Veil overlay — Reckon's raid ability. A semi-opaque
+            fog band drifts back-and-forth across the bar, briefly
+            covering the gold critical center. Sits above the zone
+            and indicator (zIndex 4) but BELOW the lock-flash (zIndex
+            3 → bumped to 5 below so the punch-on-lock isn't muted
+            by the fog). pointerEvents:none keeps taps falling through
+            to the parent panel. */}
+        {hasFog && (
+          <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none', overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', top: -2, bottom: -2,
+              width: '38%',
+              background: `linear-gradient(90deg,
+                rgba(220,232,242,0) 0%,
+                rgba(220,232,242,${0.18 * fogOpacity}) 15%,
+                rgba(220,232,242,${0.92 * fogOpacity}) 50%,
+                rgba(220,232,242,${0.18 * fogOpacity}) 85%,
+                rgba(220,232,242,0) 100%
+              )`,
+              filter: 'blur(1.5px)',
+              animation: 'mist-veil-drift 1.6s ease-in-out infinite',
+            }} />
+          </div>
+        )}
       </div>
 
-      {/* Small footer hint — keeps the slot visually balanced so the
-          aim bar isn't floating at the bottom of an empty box. */}
-      <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a7a9a', textAlign: 'center', flexShrink: 0 }}>
-        Tap LOCK when the marker hits the gold center.
+      {/* Footer hint — when the fog's up, swap to a fog-specific cue
+          so the player understands why the bar is blurring out. */}
+      <p className="font-karla" style={{ fontSize: '0.6rem', color: hasFog ? '#7a9ab5' : '#5a7a9a', textAlign: 'center', flexShrink: 0 }}>
+        {hasFog
+          ? 'Lock through the mist. The gold center won\'t stay visible.'
+          : 'Tap LOCK when the marker hits the gold center.'}
       </p>
     </div>
   )
