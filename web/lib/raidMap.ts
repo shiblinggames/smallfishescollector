@@ -21,7 +21,30 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event'
+
+// Branching event nodes (lib/raidMap RaidNode.event). One-time, the
+// player picks ONE option which fires its outcome and clears the node;
+// the other options are gone for good. Distinct from `choice` (which
+// picks from raid items only) because each option here can grant a
+// different KIND of reward, including "nothing." Used for in-world
+// decision beats — captured scouts, faction parlays, etc.
+export type RaidEventOutcome =
+  | { type: 'doubloons'; amount: number }   // gain doubloons + ledger row
+  | { type: 'navXp';     amount: number }   // gain Navigation XP
+  | { type: 'none' }                        // no material reward; story choice only
+
+export interface RaidEventChoice {
+  /** Stable id stored in raid_node_progress.choices so we can show
+   *  which option the player picked on revisit. Don't reuse across
+   *  nodes (collisions would mis-render past picks). */
+  id: string
+  /** CTA button text. Short verb-led phrase. */
+  label: string
+  /** One-sentence card body. Explains what happens AND the trade. */
+  description: string
+  outcome: RaidEventOutcome
+}
 
 /** Routes into a combat screen + derives its clear from battle data. */
 export function isCombatNode(t: RaidNodeType): boolean {
@@ -119,6 +142,10 @@ export interface RaidNode {
    *  raid-item ids (lib/raidItems). Choosing one adds it to the
    *  player's raid_items permanently and clears the node. */
   choice?: { items: string[] }
+  /** Event nodes: branching decision beats with N outcomes (loot /
+   *  release / take logs etc). The chosen choice id is persisted in
+   *  raid_node_progress.choices so the sheet can mark it on revisit. */
+  event?: { choices: RaidEventChoice[] }
   /** class_pick node: one-time chapter-end ship-class pick. The
    *  chapterId is the RAID_CHAPTERS.id this pick contributes to (so
    *  the picker writes into profiles.ship_classes[chapterId]). */
@@ -600,35 +627,51 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Chapter II's named-foe reveal — the next Lieutenant on the
-    // Finndicate ladder. Same shape as krust_reveal (one new noun,
-    // one Logbook fragment, no fight): the driftwood keeper drops
-    // the name "Captain Reckon" — the org's private cartographer
-    // whose hand-drawn lines run every freight lane past the danger
-    // line. Gates the future Raid 3 (Reckon's encounter); when that
-    // raid lands, point its requiresNode here and bump chapter II's
-    // lastNodeId to it. Fragment V continues the numbered sequence
-    // (I intro, II syndicate, III krust_reveal, IV finndicate_notice).
+    // Chapter II's scout-encounter event beat. One-time, branching
+    // choice with three outcomes (loot doubloons / cut them loose /
+    // take their navigator's logs for Nav XP). The scouts refuse to
+    // name their captain; the player only SUSPECTS Finndicate from
+    // the cargo + the cut of the ship — keeps the one-noun-per-story-
+    // node cadence (no new name revealed here; that lands later in
+    // Raid 3's pre-fight). Gated at Nav 25 to match the "past the
+    // danger line" framing. Node id stays `cartographer_reveal` so
+    // anyone who'd already cleared the prior story version keeps
+    // their persisted state; only the player-facing copy + type +
+    // mechanics change.
     id: 'cartographer_reveal',
-    type: 'story',
+    type: 'event',
     label: "The Charts That Don't Exist",
-    flavor: 'Past the danger line the public charts go blank. Someone is keeping their own.',
-    bridge: "Captain Reckon. He maps the water past where the charts end, and the Finndicate's freight sails by his hand and no other. Sink him and the route to wherever it all ends comes up with the wreck.",
+    flavor: 'Two scout cutters running the water ahead of you, no flag, neither anything like a freight ship. You catch them clean.',
+    bridge: "The scouts sail off, one way or another, and word of your name passes through the cold water faster than any chart of yours could chase it.",
     requiresNode: 'last_cache',
+    requiresNavLevel: 25,
     image: '/raidlog.png',
-    detail: {
-      description:
-        "The driftwood keeper loosens up over a third hot cup and lets a thing slip he should not have. Past the danger line the public charts go blank not by oversight but by design. The Finndicate keeps its own cartographer, an old hand who sounds the deeps no honest captain has ever read, and he hands his lines to no one outside the org. Every freight run past the strait sails by his ink and no other.\n\nCaptain Reckon. He has not set boot on land in years. He is the only fish who knows where every drop point past the danger line lives, and the only one who can be made to give them up. Sink him and his charts come up with the wreck. Leave him afloat and the route to wherever the freight all ends just keeps living on his deck, in his head, on his ledger.",
-      drops: [
+    event: {
+      choices: [
         {
-          emoji: '📜',
-          label: "Captain's Logbook, Fragment V",
-          sublabel: "\"Reckon don't tell you the heading. He hands you the chart and lets you read your own grave on it.\" Said by the driftwood keeper, who would not name the place but pointed.",
-          rarity: 'rare',
+          id: 'loot',
+          label: 'Sack the hold',
+          description: "Take the coin in their strongbox and send the empty hulls home. Word goes round the dockside that you are running poor on principle and rich on plunder.",
+          outcome: { type: 'doubloons', amount: 1200 },
+        },
+        {
+          id: 'release',
+          label: 'Cut them loose',
+          description: "Send them back untouched and without a message. A captain who keeps the high water remembers his own, and sometimes that earns him a sail in his lee when he needs one.",
+          outcome: { type: 'none' },
+        },
+        {
+          id: 'logs',
+          label: "Take the navigator's logs",
+          description: "Leave the coin, take the charts. The marks on them sharpen every heading you sail from here on, even the ones you cannot read yet.",
+          outcome: { type: 'navXp', amount: 750 },
         },
       ],
-      dropsNote: "A second face on the Finndicate's payroll, and a chart that goes where the public ones quit.",
-      ctaLabel: 'Find his Course →',
+    },
+    detail: {
+      description:
+        "Two cutters running tight together, no flag flying and neither one a freight ship. They were sounding the water ahead of you, no question, the same water the smuggler's chart pointed past. You catch them clean.\n\nThe scouts will not tell you who they sail for. They will not even lie about it. They go quiet and watch the deck like men who have run cargo long enough to know what telling earns them. You do not need them to tell you. The cargo in the hold and the cut of the ships makes it plain enough. The Finndicate has scouts on this water, and the scouts have a heading you would dearly love to read.\n\nThe choice is yours, captain. Pick once, and only once.",
+      dropsNote: 'One-time event. Pick your option and you sail on. The water past this point answers to a captain you have not met yet.',
     },
   },
 ]

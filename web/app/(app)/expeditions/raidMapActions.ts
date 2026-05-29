@@ -112,10 +112,10 @@ async function loadRaidRecords(
   return result
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[] }> {
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string> }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [] }
+  if (!user) return { views: [], doubloons: 0, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], raidNodeChoices: {} }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -128,11 +128,16 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
   const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
   const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
   const seenChapterUnlocks = (profile?.seen_chapter_unlocks as string[] | null) ?? []
+  // Per-event-node "chosen option" map (raid_node_progress.choices) —
+  // lets the sheet mark which card the player picked when revisiting
+  // a cleared event node. Empty for any node the player hasn't run yet.
+  const raidNodeProgress = (profile?.raid_node_progress as { choices?: Record<string, string> } | null) ?? {}
+  const raidNodeChoices = raidNodeProgress.choices ?? {}
   const [cleared, raidRecords] = await Promise.all([
     buildClearedSet(admin, user.id, profile ?? {}),
     loadRaidRecords(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords, shipClasses, seenChapterUnlocks }
+  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords, shipClasses, seenChapterUnlocks, raidNodeChoices }
 }
 
 /** First-time celebration dismiss — appends the chapter id to
@@ -335,6 +340,75 @@ export async function claimQuartermasterChoice(
     .eq('id', user.id)
 
   return { ok: true }
+}
+
+// Event nodes: one-time decision beats with branching outcomes (see
+// RaidEventChoice in lib/raidMap). Validates the choice id against
+// the node, applies its outcome (doubloons / Nav XP / nothing),
+// inserts a ledger row if currency was moved, persists the chosen
+// option in raid_node_progress.choices so the sheet can mark it on
+// revisit, and adds the node to cleared[]. Idempotent guard: refuses
+// if the node is already cleared (the other options stay gone for good).
+export async function pickRaidEventChoice(
+  nodeId: string,
+  choiceId: string,
+): Promise<{ ok: true; newDoubloons?: number; newExpeditionXp?: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'event' || !node.event) return { error: 'Invalid node' }
+  const choice = node.event.choices.find(c => c.id === choiceId)
+  if (!choice) return { error: 'Invalid choice' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { error: 'Already chosen' }
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  if (node.requiresNavLevel) {
+    const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+    if (navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  }
+
+  const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+  const newChoices = { ...(prog.choices ?? {}), [nodeId]: choiceId }
+
+  const updates: Record<string, unknown> = {
+    raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
+  }
+  let newDoubloons: number | undefined
+  let newExpeditionXp: number | undefined
+
+  if (choice.outcome.type === 'doubloons') {
+    newDoubloons = (profile.doubloons ?? 0) + choice.outcome.amount
+    updates.doubloons = newDoubloons
+  } else if (choice.outcome.type === 'navXp') {
+    newExpeditionXp = (profile.expedition_xp ?? 0) + choice.outcome.amount
+    updates.expedition_xp = newExpeditionXp
+  }
+
+  await admin.from('profiles').update(updates).eq('id', user.id)
+
+  // Ledger row for doubloon-bearing outcomes. Kept best-effort — a
+  // failed insert shouldn't block the choice itself from settling.
+  if (choice.outcome.type === 'doubloons') {
+    await admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: choice.outcome.amount,
+      reason: `Raid event: ${node.label} (${choice.label})`,
+    }).then(() => {}, () => {})
+  }
+
+  return { ok: true, newDoubloons, newExpeditionXp }
 }
 
 // Chapter-end class pick. Writes profiles.ship_classes[chapterId] =

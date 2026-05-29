@@ -9,7 +9,7 @@ import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
-import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { SHIP_CLASS_LIST, getShipClass } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
@@ -97,6 +97,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'story') return <svg {...common}><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5 1.5-1.5 4-2 8-1.5V5c-4-.5-6.5 0-8 1.5zM12 6.5V19" /></svg>
   // puzzle: a signal beacon flame (light the chain)
   if (type === 'puzzle') return <svg {...common}><path d="M12 2c1.6 3 5 4.6 5 9a5 5 0 0 1-10 0c0-2 .8-3.2 2-4.2.2 1.2 1 1.9 1.9 2.1C11.8 6.6 11 4.1 12 2z" /></svg>
+  // event: forked path (a decision beat)
+  if (type === 'event') return <svg {...common}><path d="M12 3v6M12 9l-5 6M12 9l5 6M5 17l2 4M19 17l-2 4M5 17h4M15 17h4" /></svg>
   // class_pick: ship wheel (Captain's Choice)
   if (type === 'class_pick') return (
     <svg {...common}>
@@ -121,6 +123,7 @@ function nodeTypeLabel(type: string): string {
     case 'story':      return 'Story'
     case 'puzzle':     return 'Puzzle'
     case 'class_pick': return 'Class'
+    case 'event':      return 'Event'
     default:           return type
   }
 }
@@ -552,6 +555,7 @@ function NodeDetailSheet({
   ownedRaidItems,
   shipClasses,
   raidRecords,
+  pickedEventChoiceId,
   onClose,
 }: {
   view: RaidNodeView
@@ -559,6 +563,10 @@ function NodeDetailSheet({
   ownedRaidItems: string[]
   shipClasses: Record<string, string>
   raidRecords: RaidRecords | null
+  /** If this is an event node the player has already cleared, which
+   *  of its choices did they pick? Drives the "Chosen ✓" badge + the
+   *  dimmed-other-options visual state on revisit. */
+  pickedEventChoiceId?: string
   onClose: () => void
 }) {
   const router = useRouter()
@@ -599,6 +607,22 @@ function NodeDetailSheet({
     startTransition(async () => {
       const res = await markStoryNodeRead(node.id)
       if ('error' in res) { setErr(res.error); return }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  function chooseEvent(choiceId: string) {
+    setErr(null)
+    startTransition(async () => {
+      const res = await pickRaidEventChoice(node.id, choiceId)
+      if ('error' in res) { setErr(res.error); return }
+      // If the outcome moved doubloons (loot path), the action returned
+      // the new total — bump the Nav counter so the +N flies in lieu of
+      // a full reload moment. Nav XP outcomes are reflected next refresh.
+      if (res.newDoubloons != null) {
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      }
       router.refresh()
       onClose()
     })
@@ -724,6 +748,14 @@ function NodeDetailSheet({
     // cleared/locked just show a status banner here.
     if (cleared) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Beacons Lit ✓</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    }
+  } else if (node.type === 'event') {
+    // available → choice cards in the body render their own CTAs, so
+    // no bottom button here. cleared/locked just show a status banner.
+    if (cleared) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Choice Made ✓</div>
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     }
@@ -950,6 +982,83 @@ function NodeDetailSheet({
             )}
           </div>
         )}
+
+        {/* Event nodes: branching one-time decision. Renders one card
+            per choice with its outcome chip ("+1,200 ⟡" / "+750 Nav
+            XP" / "No spoils"); after the player picks, that card
+            lights up with a "Chosen ✓" badge and the others go dim +
+            "Gone." Same persistence pattern as the shop-choice block
+            above — picks are permanent. */}
+        {node.event && (() => {
+          const choiceAccent = '#c084fc' // violet — matches the event glyph color
+          const outcomeChip = (outcome: typeof node.event.choices[number]['outcome']) => {
+            if (outcome.type === 'doubloons') return `+${outcome.amount.toLocaleString()} ⟡`
+            if (outcome.type === 'navXp')     return `+${outcome.amount.toLocaleString()} Nav XP`
+            return 'No spoils'
+          }
+          return (
+            <div style={{ marginTop: '1.1rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                {pickedEventChoiceId ? 'You Chose' : 'Choose One'}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {node.event.choices.map(c => {
+                  const isChosen = pickedEventChoiceId === c.id
+                  const dimmed = cleared && !isChosen
+                  return (
+                    <div key={c.id} style={{
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                      background: isChosen ? `${choiceAccent}1f` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isChosen ? `${choiceAccent}80` : `${choiceAccent}26`}`,
+                      borderRadius: 10, padding: '0.7rem 0.75rem',
+                      opacity: dimmed ? 0.45 : 1,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <span className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.86rem', color: '#f0ede8' }}>
+                          {c.label}
+                        </span>
+                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.58rem', color: choiceAccent, background: `${choiceAccent}14`, border: `1px solid ${choiceAccent}40`, borderRadius: 5, padding: '0.18rem 0.45rem', flexShrink: 0 }}>
+                          {outcomeChip(c.outcome)}
+                        </span>
+                        {isChosen && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: choiceAccent, flexShrink: 0 }}>Chosen ✓</span>
+                        )}
+                        {cleared && !isChosen && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', flexShrink: 0 }}>Gone</span>
+                        )}
+                      </div>
+                      <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.45 }}>
+                        {c.description}
+                      </span>
+                      {!cleared && (
+                        <button
+                          onClick={() => chooseEvent(c.id)}
+                          disabled={pending || locked}
+                          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                          style={{
+                            marginTop: 2, padding: '0.6rem', borderRadius: 9,
+                            fontSize: '0.82rem',
+                            background: locked ? 'rgba(255,255,255,0.06)' : `${choiceAccent}26`,
+                            border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${choiceAccent}66`}`,
+                            color: locked ? '#5a5856' : choiceAccent,
+                            cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {pending ? '…' : locked ? 'Locked' : c.label}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              {detail.dropsNote && (
+                <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6a6764', marginTop: '0.55rem', lineHeight: 1.5 }}>
+                  {detail.dropsNote}
+                </p>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Chapter-end class picker. Renders a 4-card grid of ship
             classes from SHIP_CLASS_LIST. If a class is already picked
@@ -1744,7 +1853,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses, seenChapterUnlocks }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[] }) {
+export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string> }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -2064,6 +2173,7 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
             ownedRaidItems={ownedRaidItems}
             shipClasses={shipClasses}
             raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
+            pickedEventChoiceId={raidNodeChoices[selected.node.id]}
             onClose={() => setSelected(null)}
           />
         )}
