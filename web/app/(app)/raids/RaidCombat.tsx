@@ -19,11 +19,12 @@
 //
 // Per-enemy AI follows BroadsideEnemy.pattern cycle.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
+import { describeEffect, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass } from '@/lib/shipClasses'
@@ -223,6 +224,11 @@ export interface RaidCombatProps {
    *  the player tried to open). */
   fleeSignal?: number
   fleeNav?: (() => void) | null
+  /** Active tide effects for this run (see lib/tides). Read-only from
+   *  the combat layer; RaidGame manages lifecycle (filters out
+   *  per-fight scope on advance). RaidCombat applies the effects as
+   *  multipliers / bonuses into the existing roll formulas. */
+  tideEffects?: TideEffect[]
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -243,9 +249,75 @@ export default function RaidCombat({
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
+  tideEffects = [],
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
+
+  // ── Tide effects — compile run-active boons/debuffs into a flat
+  //    multiplier/bonus context. Filtered by scope so a "next fight"
+  //    HP delta from a previous fight doesn't refire here. Used below
+  //    in the damage math, crit roll, charge init, etc. */
+  const tide = useMemo(() => {
+    let dmgMult       = 1
+    let fireDmgMult   = 1
+    let volleyDmgMult = 1
+    let bossDmgMult   = 1
+    let bossVolMult   = 1
+    let critBonus     = 0
+    let critZoneMult  = 1
+    let inDmgMult     = 1
+    let inCritReduce  = 0
+    let dodgeBonus    = 0
+    let speedDelta    = 0
+    let chargesStart  = 0
+    let hpStartDelta  = 0
+    let reloadProc    = { chance: 0, bonus: 0 }
+    let everyFightHeal = 0
+    let guaranteedDodgeBank = 0
+    // Per-enemy one-shots applied at mount only.
+    let enemyHpScaleMult = 1
+    let enemyChargesDelta = 0
+    for (const e of tideEffects) {
+      switch (e.kind) {
+        case 'damageMult':            dmgMult *= e.mult; break
+        case 'fireDmgMult':           fireDmgMult *= e.mult; break
+        case 'volleyDmgMult':         volleyDmgMult *= e.mult; break
+        case 'bossDamageMult':        bossDmgMult *= e.mult; break
+        case 'bossVolleyDmgMult':     bossVolMult *= e.mult; break
+        case 'critChanceBonus':       critBonus += e.chance; break
+        case 'critZoneScale':         critZoneMult *= e.mult; break
+        case 'incomingDmgMult':       inDmgMult *= e.mult; break
+        case 'incomingCritReduction': inCritReduce += e.chance; break
+        case 'dodgeBonus':            dodgeBonus += e.chance; break
+        case 'speedDelta':            speedDelta += e.n; break
+        case 'startCharges':          chargesStart += e.n; break
+        case 'startHpDelta':
+          // Apply nextFight scope at every mount; boss scope only on boss.
+          if (e.scope === 'nextFight') hpStartDelta += e.n
+          else if (e.scope === 'boss' && isBoss) hpStartDelta += e.n
+          break
+        case 'startOfFightHeal':      everyFightHeal += e.n; break
+        case 'reloadProc':
+          // Procs stack additively on chance + bonus (simple model;
+          // future tier 4 tides could replace with a more nuanced curve).
+          reloadProc = { chance: reloadProc.chance + e.chance, bonus: reloadProc.bonus + e.bonusCharges }
+          break
+        case 'guaranteedDodge':       guaranteedDodgeBank += e.n; break
+        case 'enemyHpScale':          enemyHpScaleMult *= e.mult; break
+        case 'enemyStartChargesDelta':enemyChargesDelta += e.n; break
+        case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
+      }
+    }
+    return {
+      dmgMult, fireDmgMult, volleyDmgMult, bossDmgMult, bossVolMult,
+      critBonus, critZoneMult, inDmgMult, inCritReduce,
+      dodgeBonus, speedDelta,
+      chargesStart, hpStartDelta, everyFightHeal,
+      reloadProc, guaranteedDodgeBank,
+      enemyHpScaleMult, enemyChargesDelta,
+    }
+  }, [tideEffects, isBoss])
   // Anchor save can fire at most once per RaidCombat mount (the parent
   // tracks the per-run charge across encounter remounts via onAnchorSave).
   const anchorUsedRef = useRef(false)
@@ -268,10 +340,20 @@ export default function RaidCombat({
   // failed escape so the modal can show "caught!" before the player dismisses.
   const [fleeOpen, setFleeOpen]       = useState(false)
   const [fleeResult, setFleeResult]   = useState<{ dmg: number; defeated: boolean } | null>(null)
-  const [playerHp, setPlayerHp]       = useState(initialPlayerHp)
-  const [enemyHp, setEnemyHp]         = useState(enemy.hpBase)
-  const [playerCharges, setPlayerCharges] = useState(0)
-  const [enemyCharges, setEnemyCharges]   = useState(0)
+  // Initial state — tide effects fold into the seed values. Player HP
+  // applies hpStartDelta + everyFightHeal at fight start (heal can
+  // push above max? no — clamped to max). Enemy HP scales. Player +
+  // enemy starting charges include the tide deltas (clamped 0–MAX).
+  const [playerHp, setPlayerHp]       = useState(() =>
+    Math.max(0, Math.min(playerHpMax, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal))
+  )
+  const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
+  const [playerCharges, setPlayerCharges] = useState(() =>
+    Math.max(0, Math.min(MAX_CHARGES, tide.chargesStart))
+  )
+  const [enemyCharges, setEnemyCharges]   = useState(() =>
+    Math.max(0, Math.min(MAX_CHARGES, tide.enemyChargesDelta))
+  )
   const [subPhase, setSubPhase]       = useState<SubPhase>('await_input')
   const [playerAction, setPlayerAction] = useState<EnemyAction | null>(null)
   const [enemyAction, setEnemyAction]   = useState<EnemyAction | null>(null)
@@ -579,9 +661,22 @@ export default function RaidCombat({
 
   function lockShot() {
     if (subPhase !== 'aiming' || critFreeze) return
-    let res = getShotResult(firePosRef.current, zonePosRef.current)
-    // Keen Cutlass etc.: a clean hit has a flat chance to upgrade to a crit.
-    if (res === 'hit' && mods.critPct > 0 && Math.random() < mods.critPct / 100) res = 'critical'
+    // Tide critZoneScale widens the gold critical band. We feed a
+    // tide-scaled CRIT_W into a local copy of getShotResult so the
+    // function constant doesn't have to change shape. tide.critZoneMult
+    // defaults to 1 (no scale) when no tide affects this run.
+    const tideCritW = CRIT_W * tide.critZoneMult
+    const pos = firePosRef.current
+    const zoneCenter = zonePosRef.current
+    let res: ShotResult
+    if (pos >= zoneCenter - tideCritW && pos <= zoneCenter + tideCritW) res = 'critical'
+    else if (pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W) res = 'hit'
+    else if (pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W) res = 'graze'
+    else res = 'miss'
+    // Keen Cutlass + tide critChanceBonus: a clean hit has a flat chance
+    // to upgrade to a crit. Tide bonus stacks ADDITIVELY with crew crit.
+    const critUpgradeChance = (mods.critPct / 100) + tide.critBonus
+    if (res === 'hit' && critUpgradeChance > 0 && Math.random() < critUpgradeChance) res = 'critical'
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
 
@@ -644,7 +739,11 @@ export default function RaidCombat({
     const compassNavPct = getActiveEffects(equippedRaidItems)
       .filter(e => e.type === 'speed_roll_nav_pct')
       .reduce((a, e) => a + e.value, 0)
-    const pSpeedRoll = rollSpeed(shipSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
+    // Tide speedDelta folds straight into the player's effective ship
+    // speed for the turn-order roll. Floored at 1 so a tide drop can't
+    // make the player un-act-able.
+    const tideAdjustedSpeed = Math.max(1, shipSpeed + tide.speedDelta)
+    const pSpeedRoll = rollSpeed(tideAdjustedSpeed, totalNavigation) + Math.floor(totalNavigation * compassNavPct)
     // Fleet affix on the enemy: flat bonus to its speed roll. Not a
     // guarantee like before — just much better odds of going first.
     const eSpeedRoll = rollSpeed(enemy.shipSpeed, 0) + (affix?.speedBonus ?? 0)
@@ -739,7 +838,21 @@ export default function RaidCombat({
       }
 
       if (action === 'reload') {
-        if (who === 'player') { pCharges = Math.min(MAX_CHARGES, pCharges + 1); stepLines.push(`You load a cannonball. (${pCharges}/${MAX_CHARGES})`) }
+        if (who === 'player') {
+          // Tide reload proc: roll for the bonus extra charges on top
+          // of the base +1. Procs feel best when surfaced — push a
+          // dedicated log line on success so the player sees the
+          // tide doing work, not just a bigger number.
+          const baseGain = 1
+          const procGain = tide.reloadProc.chance > 0 && Math.random() < tide.reloadProc.chance
+            ? tide.reloadProc.bonus : 0
+          pCharges = Math.min(MAX_CHARGES, pCharges + baseGain + procGain)
+          if (procGain > 0) {
+            stepLines.push(`Powder Keg proc! +${procGain} extra cannonball${procGain === 1 ? '' : 's'}. (${pCharges}/${MAX_CHARGES})`)
+          } else {
+            stepLines.push(`You load a cannonball. (${pCharges}/${MAX_CHARGES})`)
+          }
+        }
         else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`) }
       } else if (action === 'repair') {
         // Player-only consumable: heal the hull, lose the offensive
@@ -795,7 +908,15 @@ export default function RaidCombat({
           // +15%, Ironside -10%, Buccaneer +5%, stacks across chapters).
           // Stacks multiplicatively with raid items + volley + crit, same
           // chain as the rest of the damage mults.
-          const mult = (action === 'volley' ? 2 : 1) * bossMult * aimItemMult * classDamageMult
+          // Tide layer: dmgMult (broad), plus action-specific fire/volley
+          // mults, plus boss-only mults stacked on top when isBoss.
+          const isVolley = action === 'volley'
+          const tideActionMult = isVolley ? tide.volleyDmgMult : tide.fireDmgMult
+          const tideBossMult = isBoss
+            ? tide.bossDmgMult * (isVolley ? tide.bossVolMult : 1)
+            : 1
+          const mult = (isVolley ? 2 : 1) * bossMult * aimItemMult * classDamageMult
+                       * tide.dmgMult * tideActionMult * tideBossMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
@@ -929,7 +1050,9 @@ export default function RaidCombat({
         } else {
           // Hull plating (raid items) + crew survivability effects (Bulwark
           // cuts, Soft Shell adds) both scale incoming damage here.
-          const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100)
+          // Tide layer: tide.inDmgMult folds in incomingDmgMult tide
+          // effects (Drop sea anchor: ×0.85 next fight, etc.).
+          const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
           if (takenMult !== 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * takenMult))
           pHp = Math.max(0, pHp - dmg)
           // Vampiric affix: 50% chance to heal a fraction of dealt
@@ -1958,6 +2081,7 @@ export default function RaidCombat({
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
             damagePct={mods.damagePct}
+            tideEffects={tideEffects}
             onClose={() => setShowStats(false)}
           />
         )}
@@ -2027,6 +2151,7 @@ function PlayerStatsPopup({
   shipName, shipImageUrl, shipFilter, playerHp, playerHpMax,
   shipMinDamage, shipSpeed, totalPower, totalNavigation, totalFortune,
   isBoss, equippedRaidItems, shipClasses = {}, damagePct = 0,
+  tideEffects = [],
   onClose,
 }: {
   shipName: string
@@ -2045,6 +2170,10 @@ function PlayerStatsPopup({
    *  player can see which classes are buffing them mid-fight. */
   shipClasses?: Record<string, string>
   damagePct?: number
+  /** Mid-raid Tide effects currently in play. Listed in the Ledger
+   *  as friendly one-liners (see lib/tides.describeEffect) so the
+   *  player can see what their picks are doing. Hidden when empty. */
+  tideEffects?: TideEffect[]
   onClose: () => void
 }) {
   // Single source of truth — mirrors rollShotDamage, incl. crew damage effects.
@@ -2133,6 +2262,31 @@ function PlayerStatsPopup({
             </div>
           ))}
         </div>
+
+        {/* Active Tides — mid-raid event picks the player has banked
+            this run. Each row shows the friendly description per
+            effect from lib/tides.describeEffect, grouped under one
+            "Active Tides" header. Hidden when no tides have fired. */}
+        {tideEffects.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#bae6fd', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Active Tides
+            </p>
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 4,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(125,211,252,0.06)',
+              border: '1px solid rgba(125,211,252,0.22)',
+              borderRadius: 12,
+            }}>
+              {tideEffects.map((e, i) => (
+                <p key={i} className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(231,238,246,0.78)', lineHeight: 1.4 }}>
+                  <span style={{ color: '#bae6fd' }}>•</span> {describeEffect(e)}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Classes — chapter-end picks. Read-only summary so the
             player can confirm mid-fight which classes are scaling

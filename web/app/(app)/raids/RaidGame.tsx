@@ -18,6 +18,8 @@ import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollEliteSlots, type
 import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
+import TideModal from './TideModal'
+import { drawTides, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import TapToContinueGate from '@/components/TapToContinueGate'
 
@@ -466,6 +468,21 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // advance when the dialogue is dismissed (Engage tap).
   const [bossDialoguePending, setBossDialoguePending] = useState(false)
   const pendingBossAdvanceRef = useRef<(() => void) | null>(null)
+  // ── Tides (mid-raid roguelike events) ────────────────────────────────
+  // Drawn once at raid start from the eligible pool (tier <= maxTier).
+  // Each slot fires a TideModal after the kill of a specific encounter
+  // (config.tides.slots), gating the next-round advance the same way
+  // boss dialogue does. activeTideEffects accumulates as picks land;
+  // RaidCombat reads it via prop. Tokens (guaranteedDodge etc.) are
+  // tracked inside activeTideEffects and consumed-on-use by the engine.
+  const [drawnTides, setDrawnTides] = useState<TideEvent[]>([])
+  const [activeTideEffects, setActiveTideEffects] = useState<TideEffect[]>([])
+  const [pendingTide, setPendingTide] = useState<TideEvent | null>(null)
+  const pendingTideAdvanceRef = useRef<(() => void) | null>(null)
+  // Track which tide slots have fired so a retry doesn't re-fire ones
+  // the player already saw this run (defensive — we also clear it on
+  // reset). Indices are kept relative to config.tides.slots.
+  const tidesFiredRef = useRef<Set<number>>(new Set())
   const [shotResult, setShotResult]     = useState<ShotResult>(null)
   const [dodgePrimed, setDodgePrimed]   = useState(false)
   const [dodgeCooldown, setDodgeCooldown] = useState(false)
@@ -619,7 +636,19 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setRoundDisplay(1); setEnemySinking(false)
     setShowCannonShot(false); setClearReady(false)
     setLootAmount(0); setLootBase(0); setLootOpened(false); setLootClaimed(false)
-  }, [playerHPMax, resetEnemyForRound])
+    // Tides: roll the run's drawn set on raid start. Effects + tokens
+    // start empty (each retry rolls fresh). Pete + Krust have no
+    // tides config so drawTides returns []; the modal never fires.
+    if (config.tides) {
+      setDrawnTides(drawTides(config.tides.slots.length, config.tides.maxTier))
+    } else {
+      setDrawnTides([])
+    }
+    setActiveTideEffects([])
+    setPendingTide(null)
+    pendingTideAdvanceRef.current = null
+    tidesFiredRef.current = new Set()
+  }, [playerHPMax, resetEnemyForRound, config.tides])
 
   // Turn-based: no "OPEN FIRE" gate, so jump straight into combat on mount.
   // BUT — we must defer past the first paint, otherwise framer-motion content
@@ -1060,7 +1089,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         // the slot before the player taps Loot Chest.
         const final = rollLootIndex(config.loot, ownedUniqueIds)
         const base  = Math.floor(Math.random() * 301 + 300)
-        const total = Math.floor(base * fortuneMult)
+        // Tide doubloonsAtRaidEnd: sum all run-active deltas onto the
+        // raw base BEFORE fortune scales it. Net result lands in the
+        // slot machine total + the kill gold dispatched below.
+        const tideDoubloons = activeTideEffects
+          .filter((e): e is Extract<TideEffect, { kind: 'doubloonsAtRaidEnd' }> => e.kind === 'doubloonsAtRaidEnd')
+          .reduce((s, e) => s + e.n, 0)
+        const total = Math.max(0, Math.floor(base * fortuneMult) + tideDoubloons)
         setSlotFinal(final)
         setLootBase(base)
         setLootAmount(total)
@@ -1126,9 +1161,48 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     //      overlay AFTER the bar has visibly filled. Defer the next-fight
     //      advance until the user dismisses it.
     //   4. Otherwise just advance to the next enemy.
+    // Expire next-fight-scope tide effects now that the fight ended.
+    // Boss-scope effects stay until the boss fight ends; allRemaining
+    // effects stay until raid end. enemyHpScale + enemyStartChargesDelta
+    // are also one-shot ("next enemy"), so they expire here too.
+    setActiveTideEffects(prev => prev.filter(e => {
+      if (e.kind === 'enemyHpScale')            return false
+      if (e.kind === 'enemyStartChargesDelta')  return false
+      if (e.kind === 'startCharges'     && e.scope === 'nextFight') return false
+      if (e.kind === 'startHpDelta'     && e.scope === 'nextFight') return false
+      if (e.kind === 'incomingDmgMult'  && e.scope === 'nextFight') return false
+      if (e.kind === 'dodgeBonus'       && e.scope === 'nextFight') return false
+      if (e.kind === 'speedDelta'       && e.scope === 'next2Fights') return false
+      // Per-fight damage mults (fireDmgMult, volleyDmgMult) — the spec
+      // marks several as one-fight in their copy ("on the next fight").
+      // Schema-wise they're run-scoped; we filter the explicit-next-fight
+      // ones via a SECONDARY field if added later. For now they persist
+      // run-wide, matching the schema.
+      return true
+    }))
+
     const advanceToNext = () => {
       setEnemySinking(false)
       const nextRound = roundRef.current + 1
+      // Tide check: slots are 1-indexed kill counts ("after the 3rd kill").
+      // roundRef.current is the just-killed 0-indexed round, so kill count
+      // = roundRef.current + 1. If a slot matches AND we haven't already
+      // fired for it this run, queue the tide modal and gate the
+      // advance behind its pick — same pattern as boss dialogue below.
+      if (config.tides && drawnTides.length > 0) {
+        const killCount = roundRef.current + 1
+        const slotIdx = config.tides.slots.indexOf(killCount)
+        if (slotIdx >= 0 && !tidesFiredRef.current.has(slotIdx) && drawnTides[slotIdx]) {
+          tidesFiredRef.current.add(slotIdx)
+          pendingTideAdvanceRef.current = () => {
+            roundRef.current = nextRound
+            resetEnemyForRound(roundRef.current)
+            setRoundDisplay(roundRef.current + 1)
+          }
+          setPendingTide(drawnTides[slotIdx])
+          return
+        }
+      }
       // If the next round is the boss AND the raid config has pre-fight
       // dialogue, gate the round advance on the dialogue modal. Real
       // round/enemy advance runs in the modal's onComplete callback.
@@ -1307,6 +1381,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 fleeSignal={fleeTick}
                 fleeNav={fleeNavRef.current}
                 raidMods={raidMods}
+                tideEffects={activeTideEffects}
               />
             )
           })()}
@@ -1358,6 +1433,47 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 setBossDialoguePending(false)
                 const fn = pendingBossAdvanceRef.current
                 pendingBossAdvanceRef.current = null
+                fn?.()
+              }}
+            />
+          )}
+          {/* Tide modal: between-fight roguelike event. Picking a
+              choice fires instant effects (heal) immediately and
+              appends every non-instant effect to activeTideEffects
+              so RaidCombat can read them on the next mount. */}
+          {pendingTide && (
+            <TideModal
+              tide={pendingTide}
+              onPicked={(choice: TideChoice) => {
+                // Apply instant-now effects (heals) at pick-time. They
+                // don't need to persist in activeTideEffects since they
+                // resolve here; only durable effects need the array.
+                let healDelta = 0
+                let fullHealTriggered = false
+                const persisted: TideEffect[] = []
+                for (const e of choice.effects) {
+                  if (e.kind === 'instantHeal') {
+                    healDelta += e.n
+                  } else if (e.kind === 'fullHeal') {
+                    fullHealTriggered = true
+                  } else {
+                    persisted.push(e)
+                  }
+                }
+                if (fullHealTriggered) {
+                  playerHPRef.current = playerHPMax
+                  setPlayerHP(playerHPMax)
+                } else if (healDelta !== 0) {
+                  const next = Math.min(playerHPMax, Math.max(0, playerHPRef.current + healDelta))
+                  playerHPRef.current = next
+                  setPlayerHP(next)
+                }
+                if (persisted.length > 0) {
+                  setActiveTideEffects(prev => [...prev, ...persisted])
+                }
+                setPendingTide(null)
+                const fn = pendingTideAdvanceRef.current
+                pendingTideAdvanceRef.current = null
                 fn?.()
               }}
             />
