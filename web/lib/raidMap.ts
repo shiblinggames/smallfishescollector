@@ -10,8 +10,8 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -291,11 +291,12 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     title:      'The Sunken Hand',
     subtitle:   'The shadow you have been pulling at finally has a name.',
     // Post-Krust setup arc: finndicate_notice → smugglers_chart →
-    // last_cache → cartographer_reveal (names The Cartographer). The
-    // chapter's boss raid (The Cartographer's Survey) is the next
-    // build and will become the new lastNodeId when it lands.
+    // last_cache → cartographer_reveal → cartographer → cartographer_challenge.
+    // Both raid nodes are wired but gated by comingSoon (art assets
+    // still pending). A chapter_2_class node will land later — when
+    // it does, this lastNodeId bumps to that, mirroring chapter I.
     // Chapter III only starts after a new RAID_CHAPTERS entry is added.
-    lastNodeId: 'cartographer_reveal',
+    lastNodeId: 'cartographer_challenge',
   },
 ]
 
@@ -684,6 +685,61 @@ export const RAID_MAP: RaidNode[] = [
       description:
         "Two cutters running tight together, no flag flying and neither one a freight ship. They were sounding the water ahead of you, no question, the same water the smuggler's chart pointed past. You catch them clean.\n\nThe scouts will not tell you who they sail for. They will not even lie about it. They go quiet and watch the deck like sailors who have run cargo long enough to know what telling earns them. You do not need them to tell you. The cargo in the hold and the cut of the ships makes it plain enough. The Finndicate has scouts on this water, and the scouts have a heading you would dearly love to read.\n\nThe choice is yours, captain. Pick once, and only once.",
       dropsNote: 'One-time event. Pick your option and you sail on. The water past this point answers to a captain you have not met yet.',
+    },
+  },
+  {
+    // Chapter II's boss raid. The Cartographer's full data + engine
+    // (Mist Veil crew, Riposte signature, Tides, Astrolabe drops,
+    // challenge variant) are wired and tested; this node + the route
+    // page below complete the player-reachable surface. Held back by
+    // comingSoon until enemy + boss art ships — placeholder image is
+    // the generic raidlog icon. To go live: drop comingSoon, swap
+    // image to `THE_CARTOGRAPHER.enemies.cartographer.portrait`,
+    // and (separately) drop comingSoon on cartographer_reveal when
+    // that narrative is finished.
+    id: 'cartographer',
+    type: 'raid',
+    label: "The Cartographer's Survey",
+    flavor: "Past the Finndicate scouts the water turns to grey wall. The galleon waiting in the fog draws every chart Krust ever followed. Sink him and the Finndicate loses its eyes.",
+    bridge: "His ship goes down without a flag or a name on the hull. The seas he drew belong to no one now, and the charts in his cabin name half the danger lines you have not sailed yet.",
+    requiresNode: 'cartographer_reveal',
+    requiresNavLevel: 28,
+    comingSoon: true,
+    route: '/raids/cartographer',
+    raidId: THE_CARTOGRAPHER.raidId,
+    image: '/raidlog.png',
+    detail: {
+      description:
+        "The Finndicate's chartmaker rides a slow-built galleon under the fog past the danger line, and every freight lane Krust ever ran was a thing he drew first. His crew sails the Sounding Fog for cover, and every aim through it lands a half-read shorter than it ought to. He himself counters a dodge with a brass-bound parry few captains see coming twice. Cut his hull and the chart line cuts with him.",
+      enemies: ['Drift Scout ×2', 'Sounding Hand ×2', 'Wakebreaker ×2', 'The Surveyor ×2', 'The Cartographer'],
+      drops: lootDrops(THE_CARTOGRAPHER.loot),
+      clearReward: clearPayout(THE_CARTOGRAPHER),
+      dropsNote: 'One crate per Cartographer clear, rolled once and scaled by your Fortune. Every kill along the way pays gold + Nav XP, and the run carries two Tide events between fights — read them and choose.',
+    },
+  },
+  {
+    // Challenge variant of The Cartographer. Same scaling rules as
+    // Pete + Krust challenge nodes. No phase 2 — Riposte is already
+    // a second mechanic layer on top of crew-wide Mist Veil; stacking
+    // a third would over-pack the fight. Held back by comingSoon
+    // alongside its parent until art lands.
+    id: 'cartographer_challenge',
+    type: 'raid',
+    label: "Challenge: The Cartographer's Survey",
+    flavor: "The chartmaker put a fresh hull under the fog and a tighter watch on the line. He does not lose seas twice.",
+    requiresNode: 'cartographer',
+    comingSoon: true,
+    route: '/raids/cartographer/challenge',
+    raidId: THE_CARTOGRAPHER_CHALLENGE.raidId,
+    sideBranch: { parentId: 'cartographer' },
+    image: '/raidlog.png',
+    detail: {
+      description:
+        "The same chart line again, sharper for the loss. The fog runs heavier, the Surveyor reads the water cleaner, and the Cartographer himself counters every dodge like a captain who has already seen this fight once. Crack his cabin this run and his own astrolabe rolls at twice the rate.",
+      enemies: ['Drift Scout ×2', 'Sounding Hand ×2', 'Wakebreaker ×2', 'The Surveyor ×2', 'The Cartographer'],
+      drops: lootDrops(THE_CARTOGRAPHER_CHALLENGE.loot),
+      clearReward: clearPayout(THE_CARTOGRAPHER_CHALLENGE),
+      dropsNote: 'Every kill pays more, the clear bonus is steeper, and the legendary Captain\'s Astrolabe rolls at double the normal rate.',
     },
   },
 ]
