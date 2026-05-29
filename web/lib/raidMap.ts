@@ -146,6 +146,14 @@ export interface RaidNode {
    *  release / take logs etc). The chosen choice id is persisted in
    *  raid_node_progress.choices so the sheet can mark it on revisit. */
   event?: { choices: RaidEventChoice[] }
+  /** Soft-disable a node while its content is still being designed.
+   *  Treated as permanently locked in computeRaidMap (reason: "Coming
+   *  soon"), AND the chapter's main-path-cleared check skips coming-
+   *  soon nodes so a still-cooking node at the chapter's tail doesn't
+   *  pretend to gate progression that doesn't exist yet. Server-side
+   *  every action that mutates the node refuses with "Coming soon" so
+   *  a hand-crafted client request can't sneak through. */
+  comingSoon?: boolean
   /** class_pick node: one-time chapter-end ship-class pick. The
    *  chapterId is the RAID_CHAPTERS.id this pick contributes to (so
    *  the picker writes into profiles.ship_classes[chapterId]). */
@@ -645,6 +653,10 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The scouts sail off, one way or another, and word of your name passes through the cold water faster than any chart of yours could chase it.",
     requiresNode: 'last_cache',
     requiresNavLevel: 25,
+    // Soft-disabled while the narrative + balance of the three choices
+    // (and what the "release" mercy path quietly buys later) is still
+    // being designed. Drop this flag when the node is ready to ship.
+    comingSoon: true,
     image: '/raidlog.png',
     event: {
       choices: [
@@ -698,6 +710,13 @@ export function computeRaidMap(
   return RAID_MAP.map(node => {
     if (cleared.has(node.id)) {
       return { node, status: 'cleared' as const, claimable: false }
+    }
+    // Coming-soon takes precedence over normal lock-reason resolution
+    // — the node is intentionally inaccessible while content lands,
+    // not blocked by player progression. Stays locked even when the
+    // player has met every prereq + Nav requirement.
+    if (node.comingSoon) {
+      return { node, status: 'locked' as const, claimable: false, lockReason: 'Coming soon' }
     }
     const prereqOk = !node.requiresNode || cleared.has(node.requiresNode)
     const navOk = !node.requiresNavLevel || navLevel >= node.requiresNavLevel

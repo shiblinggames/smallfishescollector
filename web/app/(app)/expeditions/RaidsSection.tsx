@@ -1897,7 +1897,10 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
       const curr = RAID_CHAPTERS[i]
       if (seen.has(curr.id)) continue
       const prevBucket = groups.get(prev.id) ?? []
-      const prevMain = prevBucket.filter(v => !v.node.sideBranch)
+      // Filter out coming-soon nodes too — they're stubs the player can't
+      // complete yet, so they shouldn't perpetually block the chapter's
+      // "cleared" signal for content that's already shipped.
+      const prevMain = prevBucket.filter(v => !v.node.sideBranch && !v.node.comingSoon)
       const prevMainCleared = prevMain.length > 0 && prevMain.every(v => v.status === 'cleared')
       if (prevMainCleared) {
         setCelebratingChapter(curr)
@@ -2041,7 +2044,9 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
             for (const c of RAID_CHAPTERS) {
               const b = groups.get(c.id)
               if (!b) { mainClearedById.set(c.id, false); continue }
-              const main = b.views.filter(v => !v.node.sideBranch)
+              // Skip coming-soon stubs — same rationale as the
+              // per-chapter cleared check below.
+              const main = b.views.filter(v => !v.node.sideBranch && !v.node.comingSoon)
               mainClearedById.set(c.id, main.length > 0 && main.every(v => v.status === 'cleared'))
             }
             // Iterate in the canonical RAID_CHAPTERS order, not the Map
@@ -2062,7 +2067,11 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
               const mainViews = bucket.views.filter(v => !v.node.sideBranch)
               const sideViews = bucket.views.filter(v =>  v.node.sideBranch)
               // Main-path beaten? (Chapter "cleared" by story standard.)
-              const chapterCleared = mainViews.length > 0 && mainViews.every(v => v.status === 'cleared')
+              // Coming-soon nodes don't count toward the "did the player
+              // do everything" check — they're not done because they
+              // can't be done yet.
+              const completable = mainViews.filter(v => !v.node.comingSoon)
+              const chapterCleared = completable.length > 0 && completable.every(v => v.status === 'cleared')
               // Side branches the player can still go do (challenge raids
               // they've unlocked but haven't run). We count `available`
               // specifically — locked ones aren't "yet to do", they're

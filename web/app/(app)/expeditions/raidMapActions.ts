@@ -359,6 +359,7 @@ export async function pickRaidEventChoice(
 
   const node = RAID_MAP.find(n => n.id === nodeId)
   if (!node || node.type !== 'event' || !node.event) return { error: 'Invalid node' }
+  if (node.comingSoon) return { error: 'Coming soon' }
   const choice = node.event.choices.find(c => c.id === choiceId)
   if (!choice) return { error: 'Invalid choice' }
 
