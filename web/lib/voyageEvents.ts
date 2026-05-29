@@ -429,7 +429,7 @@ const DISCOVERY_SUCCESS = [
   { title: 'Pearl Beds',         narrative: "{captain} noticed the color of the water change. They anchored and dove. The oyster beds were untouched." },
   { title: 'Stranded Merchant',  narrative: "A merchant pinnace hard aground, crew already gone. {captain} salvaged the hold before the tide took the rest." },
   { title: 'Buried Casket',      narrative: "The shoreline marker was recent enough to still be readable. Whoever buried it hadn't come back for it." },
-  { title: 'Wreck Chart',        narrative: "A dead man's map, traded off a dockside sailor for almost nothing. It turned out to be worth considerably more than that." },
+  { title: 'Wreck Chart',        narrative: "A dead captain's map, traded off a dockside sailor for almost nothing. It turned out to be worth considerably more than that." },
   { title: 'Salt Marsh Cache',   narrative: "Poles marking a submerged cache in the marsh — a smuggler's system {captain} had seen before. The chest came up on the third dive." },
 ]
 
@@ -454,7 +454,7 @@ const ENCOUNTER_WIN = [
   { title: 'Merchant Deal',     narrative: "A stranded merchant ship needed an escort through contested waters. {captain} obliged, and the merchant paid well." },
   { title: 'Customs Cutter',    narrative: "The cutter came alongside to inspect. {captain} kept calm and the papers held. They waved them through and the crew breathed again." },
   { title: 'Desperate Crew',    narrative: "A starving crew tried to take the ship at knifepoint. {captain} disarmed the ringleader and put the rest to work for passage." },
-  { title: 'Hired Swords',      narrative: "Three armed men came aboard with a contract from a rival merchant. {captain} tore it up. They left without a fight." },
+  { title: 'Hired Swords',      narrative: "Three armed sailors came aboard with a contract from a rival merchant. {captain} tore it up. They left without a fight." },
   { title: 'Standoff',          narrative: "Two ships, guns run out, neither wanting the cost of a real fight. {captain} waited them out. They blinked first." },
   { title: 'River Pirates',     narrative: "They'd blocked the channel with a chain. {captain} had seen the trick before. A flanking approach, a cut line, and they were through." },
 ]

@@ -135,7 +135,7 @@ export const FINN_ENCOUNTER_BEATS: FinnBeat[] = [
     lines: [
       "The Ancient Deep. Past your trench, past your abyss, where the water turns to ink and the floor forgets to stop.",
       "Six things worth pulling up live down there. Six. Not five, not seven.",
-      "Funny, the things a man ends up counting.",
+      "Funny, the things a captain ends up counting.",
     ],
   },
   {
@@ -334,7 +334,7 @@ export const FINN_REVEAL_BEAT: FinnBeat = {
     "First trophy up out of the Ancient Deep. In one piece. You actually did it.",
     "Listen to me. Whatever you think you're holding, you're holding less than half of it.",
     "There are five more down there. Five. And I need every one of them landed.",
-    "...need. Strong word, for a man who's meant to be your rival. Let's call it want.",
+    "...need. Strong word, for a captain who's meant to be your rival. Let's call it want.",
     "I have spent more of my life on that black water than I will ever tell you, and not once did it open for me. Not once.",
     "It's opening for you.",
     "So here's the new bet, the only one that ever mattered. You and me. All six.",

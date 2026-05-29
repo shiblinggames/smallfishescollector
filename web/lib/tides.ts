@@ -8,7 +8,7 @@
 // its effects are added to the run's active effects array. Effects are
 // run-scoped (cleared on raid end / retry / leave).
 //
-// Reckon's raid is the first to use Tides; future longer raids declare
+// The Cartographer's raid is the first to use Tides; future longer raids declare
 // higher maxTier to pull in stronger effects. Numbers scale per tier
 // (philosophy A: same effect kinds throughout, just bigger numbers).
 //

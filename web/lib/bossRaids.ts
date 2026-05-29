@@ -30,17 +30,31 @@ export interface BroadsideEnemy {
    *  Krust's crew = crustacean "Carapace" defense. */
   damageReduction?: number
   abilityName?: string
-  /** Reckon's raid — "Mist Veil." A drifting fog band overlaid on the
-   *  player's aim bar during lock-in, partially obscuring the gold
-   *  Critical center. `aimFogDensity` is the band's opacity (0 = none,
-   *  ~0.4 = thin/scout-tier, ~0.7 = deep/Reckon-tier). `aimFogName`
-   *  labels it on the enemy nameplate (mirrors `abilityName`). The fog
-   *  is always-on while this enemy is the active target — symmetrical
-   *  with Krust's Carapace cadence (every player aim is affected).
-   *  Render lives in RaidCombat's AimBarInline; both fields undefined
-   *  on every non-Reckon-raid enemy means zero rendering cost. */
+  /** The Cartographer's raid — "Mist Veil." A drifting fog band
+   *  overlaid on the player's aim bar during lock-in, partially
+   *  obscuring the gold Critical center. `aimFogDensity` is the band's
+   *  opacity (0 = none, ~0.4 = thin/scout-tier, ~0.7 = deep/boss-tier).
+   *  `aimFogName` labels it on the enemy nameplate (mirrors
+   *  `abilityName`). The fog is always-on while this enemy is the
+   *  active target — symmetrical with Krust's Carapace cadence (every
+   *  player aim is affected). Render lives in RaidCombat's
+   *  AimBarInline; both fields undefined on every non-Cartographer-raid
+   *  enemy means zero rendering cost. */
   aimFogDensity?: number
   aimFogName?: string
+  /** The Cartographer's raid — "Riposte." When this enemy executes a
+   *  `dodge` action and the player's same-turn action was offensive
+   *  (`fire` or `volley`), `parryChance` (0-1) rolls. On success, the
+   *  enemy rolls its damage normally (minDmg..maxDmg, no crit), then
+   *  multiplies by `parryDamagePct` (0-1) and deals that to the
+   *  player. `parryName` labels it on the enemy nameplate (mirrors
+   *  `abilityName` / `aimFogName`). Unlike a normal enemy fire, the
+   *  parry counter does not consume a charge — it's a free reflection
+   *  off the dodge. All three fields undefined on every non-Cartographer
+   *  enemy means zero rendering + zero engine cost. */
+  parryChance?: number
+  parryDamagePct?: number
+  parryName?: string
   /** Optional two-phase boss config. The phase 2 trigger is a "false
    *  defeat" — the boss appears to sink, then rises back at `revivePct`
    *  of their max HP with the alternate pattern, damage mult, and (if
@@ -105,7 +119,7 @@ export interface BossRaidConfig {
   /** Optional mid-raid Tide events (see lib/tides.ts). `slots` lists
    *  the encounter indices AFTER which a tide fires (e.g. [3, 6] fires
    *  one tide after the 3rd kill and another after the 6th).
-   *  `maxTier` caps the eligible pool — Reckon's raid will likely be
+   *  `maxTier` caps the eligible pool — The Cartographer's raid is
    *  the first with `maxTier: 1`; later, longer raids bump this to
    *  unlock stronger effects from the same pool. Undefined = no tides
    *  for this raid (Pete + Krust stay untouched). */
@@ -356,9 +370,197 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard grey line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull are the same." },
     { speaker: 'boss', text: "C.K. So you're the little hook that's been snagging my freight. I wondered who kept making my couriers late." },
     { speaker: 'player', text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
-    { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why men like Pete are fodder and men like me are not." },
+    { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why captains like Pete are fodder and captains like me are not." },
     { speaker: 'boss', text: "But you've cost the Finndicate a season's haul, captain, and someone above me will want that back out of you. I'll just take it out first." },
     { speaker: 'boss', text: "Strike your colours or strike your guns. Either way this consignment sails on without you." },
+  ],
+}
+
+export const THE_CARTOGRAPHER: BossRaidConfig = {
+  raidId: 'cartographer',
+  raidTitle: "The Cartographer's Survey",
+  bossDefeatedText: 'The Cartographer Defeated',
+  enemies: {
+    // Tier-3 roster. The Cartographer's chart line sails the Sounding
+    // Fog for cover — the deep grey band on the Finndicate's own maps.
+    // 8-fight gauntlet (2 of each) escalating into the boss himself.
+    //
+    // RAID-WIDE RULE: every enemy in this raid carries MIST VEIL — a
+    // drifting fog band drawn over the player's aim bar during lock-in,
+    // partially hiding the Critical center. Density climbs through the
+    // tiers (0.35 scout → 0.70 boss) so the gauntlet visibly thickens.
+    // Krust's crew identity was no-volleys + Carapace plating; this
+    // crew is the inverse — no plating, but they volley readily, and
+    // the fog makes every player aim a real read instead of a flick.
+    // The Cartographer himself layers a unique Riposte on top — a
+    // chance to counter-hit off any of his dodges.
+    // Tides also debut in this raid (slots [3, 6]), adding the
+    // between-fight boon/debuff choice that future longer raids will
+    // lean into harder.
+    scout: {
+      id: 'scout', name: 'Drift Scout', hpBase: 48, minDmg: 5, maxDmg: 10,
+      shipSpeed: 7, actionMs: 4000,
+      // Light cutter ranging ahead of the chart line. Pure trade — no
+      // tricks, no dodges — so the player's first taste of Mist Veil
+      // lands without other variables in the way. Faster than Krust's
+      // scout (5 → 7) so even a clean read still risks losing the
+      // speed roll on the first turn. Fog density 0.40 here is the
+      // floor for this raid — every fight reads the fog.
+      // Charges: 0→1→0→1→0
+      pattern: ['reload', 'fire', 'reload', 'fire'],
+      critChance: 0.05,
+      image: '/enemytier3scout.png',
+      portrait: ENEMY_IMG_BASE + 'driftscout.png',
+      aimFogDensity: 0.40, aimFogName: 'Mist Veil',
+    },
+    reg: {
+      id: 'reg', name: 'Sounding Hand', hpBase: 66, minDmg: 7, maxDmg: 13,
+      shipSpeed: 5, actionMs: 4600,
+      // 6-turn loop. Workhorse of the chart line, and the player's
+      // FIRST introduction to the guaranteed-hit mechanic — fires a
+      // single shot on T4, then volleys on T5 while the player is
+      // dodge-gated from the T4 defense (one-dodge-at-a-time rule in
+      // RaidCombat). The fire-volley shape is distinct from the
+      // Surveyor/Cartographer fire-fire shape later — same lesson, two
+      // teaches, so the player learns variations of "you cannot
+      // perfectly defend everything" without monotony.
+      //   T1-T3 triple-reload telegraph (the punch is loaded)
+      //   T4 fire   → dodge-able opening shot
+      //   T5 VOLLEY → GUARANTEED 2× hit if T4 was dodged
+      //   T6 dodge  → eats the player's reply
+      // Charges: 0→1→2→3→2→0→0
+      pattern: ['reload', 'reload', 'reload', 'fire', 'volley', 'dodge'],
+      critChance: 0.07,
+      image: '/enemytier3reg.png',
+      portrait: ENEMY_IMG_BASE + 'soundinghand.png',
+      aimFogDensity: 0.45, aimFogName: 'Mist Veil',
+    },
+    brute: {
+      id: 'brute', name: 'Wakebreaker', hpBase: 96, minDmg: 10, maxDmg: 17,
+      shipSpeed: 3, actionMs: 5400,
+      // 7-turn loop. Slowest hull in the raid (drags an iron chain
+      // through its own wake so trailing ships can't read the line).
+      // Front-loaded: opens with a charged volley off two reloads
+      // before settling into a defensive trade.
+      //   T3 VOLLEY → 2× hit straight off the opener
+      //   T4 dodge  → wastes player's first reply
+      //   T6 fire   → second hit
+      //   T7 dodge  → wastes player's second reply
+      // Speed 3 means it almost always shoots after the player; the
+      // pressure is the cadence + Mist Veil at the lock, not first-strike.
+      // Charges: 0→1→2→0→0→1→0→0
+      pattern: ['reload', 'reload', 'volley', 'dodge', 'reload', 'fire', 'dodge'],
+      critChance: 0.06,
+      image: '/enemytier3brute.png',
+      portrait: ENEMY_IMG_BASE + 'wakebreaker.png',
+      aimFogDensity: 0.45, aimFogName: 'Mist Veil',
+    },
+    elite: {
+      id: 'elite', name: 'The Surveyor', hpBase: 84, minDmg: 8, maxDmg: 16,
+      shipSpeed: 8, actionMs: 3400,
+      // 8-turn aggressive trader. The fastest ship the player has met
+      // in any raid (post-d30): wins first strike a clear majority of
+      // turns and carries a charged volley mid-loop. The fog jumps to
+      // 0.55 here too — half a tier above the rest of the crew — so
+      // the "real test before the boss" is a triple-threat of speed,
+      // cadence, and a meaningfully harder aim read. He is also the
+      // FIRST enemy in the game to fire on consecutive turns: the
+      // T3-T4 double-tap forces a guaranteed hit. Player can dodge T3
+      // OR T4 but not both (RaidCombat's one-dodge-at-a-time rule —
+      // `canDodge = lastPlayerAction !== 'dodge'`), so one shot in the
+      // double-tap ALWAYS lands. Trade or take it; you can't fully avoid it.
+      //   T3 fire   → opens with a charged shot off 2 reloads
+      //   T4 fire   → IMMEDIATE second shot, guaranteed hit (dodge gated)
+      //   T7 VOLLEY → 2× hit off a fresh 2-reload tell
+      //   T8 dodge  → eats player's reply
+      // Charges: 0→1→2→1→0→1→2→0→0
+      pattern: ['reload', 'reload', 'fire', 'fire', 'reload', 'reload', 'volley', 'dodge'],
+      critChance: 0.11,
+      image: '/enemytier3elite.png',
+      portrait: ENEMY_IMG_BASE + 'thesurveyor.png',
+      aimFogDensity: 0.55, aimFogName: 'Mist Veil',
+    },
+    cartographer: {
+      id: 'cartographer', name: 'The Cartographer', hpBase: 150, minDmg: 14, maxDmg: 26,
+      shipSpeed: 6, actionMs: 4400,
+      // 8-turn boss loop. Signature shape: triple-reload telegraph →
+      // DOUBLE-TAP fires → reload → volley → dodge. Methodical speed
+      // (6) leaves Mist Veil (0.70 — the deep band) as his soft edge,
+      // and the back-to-back T4-T5 fires as his hard one. Player sees
+      // three reloads stack and knows the punch is coming, but the
+      // one-dodge-at-a-time rule guarantees one of T4/T5 lands no
+      // matter how they play it. Add the T7 volley off a 2-reload
+      // tell and the loop puts 3 guaranteed-bite turns into every 8.
+      //
+      // Layered on top: RIPOSTE. When the T8 dodge lands against a
+      // player attack (fire or volley), 30% chance to counter for
+      // 25% of his damage roll. Means even his defensive turn carries
+      // threat — the player can't safely fire into his dodge.
+      //   T1-T3 reload triple-stack telegraph
+      //   T4 fire   → first of the double-tap (dodge-able)
+      //   T5 fire   → second, GUARANTEED hit if T4 was dodged
+      //   T7 VOLLEY → 2× hit off a follow-up 2-reload tell
+      //   T8 dodge  → eats reply + 30% Riposte counter
+      // Charges: 0→1→2→3→2→1→2→0→0
+      pattern: ['reload', 'reload', 'reload', 'fire', 'fire', 'reload', 'volley', 'dodge'],
+      critChance: 0.10,
+      image: '/enemytier3boss.png',
+      portrait: ENEMY_IMG_BASE + 'thecartographer.png',
+      aimFogDensity: 0.70, aimFogName: 'Mist Veil',
+      parryChance: 0.30, parryDamagePct: 0.25, parryName: 'Riposte',
+    },
+  },
+  // Interleaved sequence — no back-to-back duplicates, every type met
+  // by fight 5, low-tier scouts seeded between heavier fights as
+  // breathers. Reads as a chartmaker's planned interception rather
+  // than the standard 2-of-each block escalation:
+  //   1 scout  → recon vanguard
+  //   2 reg    → line scout makes contact
+  //   3 scout  → second vanguard (recon phase closes here — tide 1)
+  //   4 brute  → heavy hull crashes the line
+  //   5 elite  → Surveyor darts in to verify the kill
+  //   6 reg    → workhorse closes the net behind him (tide 2)
+  //   7 brute  → second heavy as the net tightens
+  //   8 elite  → final test, the Cartographer's right hand
+  //   9 boss   → The Cartographer
+  sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
+  bossId: 'cartographer',
+  // Tides fire after the 3rd and 6th kills — one at the close of the
+  // recon phase (the 2 scouts + 1 reg "feeler" group), one mid-way
+  // through the closing net (after the Surveyor's first appearance
+  // and the second workhorse goes down). maxTier 1 keeps the eligible
+  // pool to the foundational eight effects in lib/tides.ts. Future
+  // longer raids bump this cap to unlock the stronger tier-2+ effects.
+  tides: { slots: [3, 6], maxTier: 1 },
+  // TODO: ship skin for the Cartographer + the Astrolabe pair (epic
+  // Cartographer's Astrolabe + legendary Captain's Astrolabe — both
+  // grant the player a Riposte mirror of the boss's signature, normal
+  // tier lower, legendary higher per the design). Astrolabes get added
+  // to raidItems.ts in the next pass and slotted in here. Currency-only
+  // placeholder rolls correctly through claimRaidLoot until then.
+  loot: [
+    { id: 'doubloons_600',     label: '+600 ⟡',                image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 30 },
+    { id: 'doubloons_1200',    label: '+1,200 ⟡',              image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 25 },
+    { id: 'gems_50',           label: '50 Gems',                image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 25 },
+    { id: 'pack_2',            label: '200 Gems',               image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 20 },
+  ],
+  killRewards: {
+    scout:        { gold: 50,  xp: 50  },
+    reg:          { gold: 70,  xp: 75  },
+    brute:        { gold: 95,  xp: 105 },
+    elite:        { gold: 120, xp: 130 },
+    cartographer: { gold: 450, xp: 450 },
+  },
+  // TODO: tune voice + length pass with the user. Six lines mirroring
+  // Krust's structure: narrator scene-set → boss intro → player name him
+  // → boss thesis line → boss "I've already mapped you" beat → engage.
+  preFightDialogue: [
+    { speaker: 'narrator', text: "The fog thickens until sea and sky blur into one grey wall. Out of that wall a slow-built galleon glides up, decks stacked with rolled charts and brass-bound sextants. No flags fly. No name is painted on the hull." },
+    { speaker: 'boss', text: "I heard a young captain was reading my routes. I came up the line to see what kind of eyes were behind it." },
+    { speaker: 'player', text: "You're the Cartographer. The Finndicate's chartmaker. Krust said his couriers followed your lines." },
+    { speaker: 'boss', text: "Names belong to ships. I draw seas. Krust ran cargo, and you put him at the bottom of one of my channels. Now you're on a page of mine too." },
+    { speaker: 'boss', text: "Every water you've crossed since Driftwood is marked in the cabin behind me. I knew the shape of your wake before you knew the shape of your hold." },
+    { speaker: 'boss', text: "Lock your gunports if you've any sense. Or don't, and let this fog have you the way it had the others." },
   ],
 }
 

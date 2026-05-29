@@ -2589,8 +2589,8 @@ function EnemyStatsPopup({
           </div>
         )}
 
-        {/* Mist Veil — Reckon's raid ability. Same layout as the
-            Carapace card so the player learns one pattern for "this
+        {/* Mist Veil — The Cartographer's raid ability. Same layout as
+            the Carapace card so the player learns one pattern for "this
             enemy has a themed thing." Accent shifts to the cool fog
             blue rather than Carapace's sky cyan so the two are
             visually distinguishable when a future enemy carries both. */}
@@ -3167,10 +3167,10 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
-  /** Reckon's "Mist Veil" — 0–1 opacity of a drifting fog band overlaid
-   *  on the aim bar. Undefined / 0 = no fog (every existing raid). ~0.4
-   *  thin (his crew tier), ~0.7 deep (Reckon himself). Themed: he runs
-   *  these waters because the fog hides his charts. */
+  /** The Cartographer's "Mist Veil" — 0–1 opacity of a drifting fog
+   *  band overlaid on the aim bar. Undefined / 0 = no fog (every other
+   *  raid). ~0.4 thin (his crew tier), ~0.7 deep (the boss himself).
+   *  Themed: he runs these waters because the fog hides his charts. */
   aimFogDensity?: number
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
@@ -3227,7 +3227,7 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity }: {
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
-        {/* Mist Veil overlay — Reckon's raid ability. A semi-opaque
+        {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
             fog band drifts back-and-forth across the bar, briefly
             covering the gold critical center. Sits above the zone
             and indicator (zIndex 4) but BELOW the lock-flash (zIndex

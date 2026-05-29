@@ -291,10 +291,10 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     title:      'The Sunken Hand',
     subtitle:   'The shadow you have been pulling at finally has a name.',
     // Post-Krust setup arc: finndicate_notice → smugglers_chart →
-    // last_cache → cartographer_reveal (names Captain Reckon). The
-    // chapter's boss raid (Reckon's encounter) is the next build and
-    // will become the new lastNodeId when it lands. Chapter III only
-    // starts after a new RAID_CHAPTERS entry is added.
+    // last_cache → cartographer_reveal (names The Cartographer). The
+    // chapter's boss raid (The Cartographer's Survey) is the next
+    // build and will become the new lastNodeId when it lands.
+    // Chapter III only starts after a new RAID_CHAPTERS entry is added.
     lastNodeId: 'cartographer_reveal',
   },
 ]
@@ -328,7 +328,7 @@ export const RAID_MAP: RaidNode[] = [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment I",
-          sublabel: "\"Pete don't spend his haul. He delivers it.\" Said once, by a man who knew better than to say it twice.",
+          sublabel: "\"Pete don't spend his haul. He delivers it.\" Said once, by a sailor who knew better than to say it twice.",
           rarity: 'common',
         },
       ],
@@ -405,7 +405,7 @@ export const RAID_MAP: RaidNode[] = [
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
-        "The same six ship battles, the same old corsair at the end, but every hull he has put back on the water is a step harder than the one before it. The Raiders hit cleaner, the Marksman aims truer, and Pete himself fights like a man who has finally noticed you are still here. Crack his crate this time and the contraband runs richer for it.",
+        "The same six ship battles, the same old corsair at the end, but every hull he has put back on the water is a step harder than the one before it. The Raiders hit cleaner, the Marksman aims truer, and Pete himself fights like a captain who has finally noticed you are still here. Crack his crate this time and the contraband runs richer for it.",
       enemies: ['Reef Raider ×2', "Crow's Nest Marksman ×2", 'Saltwater Corsair ×2', 'Barnacle Pete'],
       drops: lootDrops(CORSAIRS_RECKONING_CHALLENGE.loot),
       clearReward: clearPayout(CORSAIRS_RECKONING_CHALLENGE),
@@ -422,12 +422,12 @@ export const RAID_MAP: RaidNode[] = [
     image: '/raidlog.png',
     detail: {
       description:
-        "Pete's strongbox was not empty, only full of the wrong man's paperwork. Cut sheets, courier routes, years of neat little sums, and one word stamped on every page: the Finndicate. So much for the kingpin. Pete was a cash cow like all the rest, milked dry and bled the same as everyone he ever robbed. And the coin never sits still. Page after page, every haul buys the same thing over again, and not one line will say what.\n\nUnder the ledgers waits a sealed letter. No name on it, just two letters bitten into the wax: C.K. The manifest is heavy and the route mostly burned away, but the heading held. It runs out past the Bilge Strait, into the cold beyond. Whoever C.K. is, the Finndicate trusts them with cargo by the holdful, and now you know which way it sails.",
+        "Pete's strongbox was not empty, only full of the wrong captain's paperwork. Cut sheets, courier routes, years of neat little sums, and one word stamped on every page: the Finndicate. So much for the kingpin. Pete was a cash cow like all the rest, milked dry and bled the same as everyone he ever robbed. And the coin never sits still. Page after page, every haul buys the same thing over again, and not one line will say what.\n\nUnder the ledgers waits a sealed letter. No name on it, just two letters bitten into the wax: C.K. The manifest is heavy and the route mostly burned away, but the heading held. It runs out past the Bilge Strait, into the cold beyond. Whoever C.K. is, the Finndicate trusts them with cargo by the holdful, and now you know which way it sails.",
       drops: [
         {
           emoji: '📜',
           label: "Captain's Logbook, Fragment II",
-          sublabel: "\"The Finndicate does not lose men. It loses ledgers.\" Scratched into the underside of the strongbox lid.",
+          sublabel: "\"The Finndicate does not lose captains. It loses ledgers.\" Scratched into the underside of the strongbox lid.",
           rarity: 'uncommon',
         },
         {
@@ -682,7 +682,7 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        "Two cutters running tight together, no flag flying and neither one a freight ship. They were sounding the water ahead of you, no question, the same water the smuggler's chart pointed past. You catch them clean.\n\nThe scouts will not tell you who they sail for. They will not even lie about it. They go quiet and watch the deck like men who have run cargo long enough to know what telling earns them. You do not need them to tell you. The cargo in the hold and the cut of the ships makes it plain enough. The Finndicate has scouts on this water, and the scouts have a heading you would dearly love to read.\n\nThe choice is yours, captain. Pick once, and only once.",
+        "Two cutters running tight together, no flag flying and neither one a freight ship. They were sounding the water ahead of you, no question, the same water the smuggler's chart pointed past. You catch them clean.\n\nThe scouts will not tell you who they sail for. They will not even lie about it. They go quiet and watch the deck like sailors who have run cargo long enough to know what telling earns them. You do not need them to tell you. The cargo in the hold and the cut of the ships makes it plain enough. The Finndicate has scouts on this water, and the scouts have a heading you would dearly love to read.\n\nThe choice is yours, captain. Pick once, and only once.",
       dropsNote: 'One-time event. Pick your option and you sail on. The water past this point answers to a captain you have not met yet.',
     },
   },

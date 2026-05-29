@@ -170,7 +170,7 @@ const PETE_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
   // 0→1→0→1→0→1→2→3→0→1→0. Note T6 volley fires only if charges are >=3,
   // which the prior three reloads cover. Falls through to reload if not.
   pattern: ['reload', 'fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'volley'],
-  dialogueLine: "On your feet, old man. We're not done yet.",
+  dialogueLine: "On your feet, old captain. We're not done yet.",
 }
 
 // Krust's phase 2 — same revival shape as Pete, opposite character. Where
