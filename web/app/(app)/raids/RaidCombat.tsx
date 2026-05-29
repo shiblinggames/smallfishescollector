@@ -1432,69 +1432,135 @@ export default function RaidCombat({
         position: 'relative',
         flex: 1,
         minHeight: 400,
-        background: 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
+        // Sky/sea gradient swaps based on the current enemy's atmosphere.
+        // Cartographer-raid enemies (any with aimFogDensity > 0) get the
+        // cool grey Sounding Fog palette; every other raid keeps the
+        // warm dusk that's been the default. Tied to aimFogDensity
+        // rather than a config-level field so the atmosphere extends
+        // any future raid that adopts the Mist Veil mechanic for free
+        // — split into an explicit `atmosphere` config flag the moment
+        // a raid needs one without the other.
+        background: (enemy.aimFogDensity ?? 0) > 0
+          ? 'linear-gradient(180deg, #4a5566 0%, #58687a 30%, #6a7888 40%, #18222e 100%)'
+          : 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
             Sun + drifting clouds + a soft water-surface shimmer. All pure
             CSS via keyframes in globals.css. Sits below the horizon line,
             ships, and HP boxes (z-index left implicit — they're rendered
-            after these and have explicit z-index where it matters). */}
+            after these and have explicit z-index where it matters).
+            Two variants: default dusk (sun + clouds + sun reflection)
+            and Cartographer fog (dim mist-disc where the sun should be,
+            three drifting fog bands across the stage, no reflection). */}
 
-        {/* Sun — diffuse atmospheric glow, not a 3D-looking sphere. The
-            radial gradient softens the center alpha so it blends into the
-            sky instead of reading as a hard disk; the .raid-sun pulse adds
-            the breathing halo via colored drop-shadows. */}
-        <div
-          className="raid-sun"
-          aria-hidden
-          style={{
-            position: 'absolute', top: '6%', right: '13%',
-            width: 56, height: 56, borderRadius: '50%',
-            background: 'radial-gradient(circle at 50% 50%, rgba(255,250,225,0.70) 0%, rgba(255,230,170,0.40) 28%, rgba(255,210,140,0.15) 55%, transparent 90%)',
-            filter: 'blur(1.5px)',
-            pointerEvents: 'none',
-          }}
-        />
+        {(enemy.aimFogDensity ?? 0) > 0 ? (
+          <>
+            {/* Sun behind the Sounding Fog — barely a disc, just a cool
+                pale glow where the sun should be. No pulse — the fog
+                eats any breathing the warm sun does in dusk mode. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: '8%', right: '15%',
+                width: 64, height: 64, borderRadius: '50%',
+                background: 'radial-gradient(circle at 50% 50%, rgba(220,228,238,0.45) 0%, rgba(200,210,225,0.22) 35%, rgba(180,195,215,0.08) 60%, transparent 90%)',
+                filter: 'blur(4px)',
+                pointerEvents: 'none',
+              }}
+            />
 
-        {/* Drifting clouds — three layers at different sizes + speeds.
-            Each cloud is a flat radial-gradient with soft edges; the
-            wrapping div handles the slow translate. */}
-        <div aria-hidden style={{ position: 'absolute', top: '6%',  left: 0, right: 0, height: 36, pointerEvents: 'none' }}>
-          <div className="raid-cloud-slow" style={{ width: 120, height: 28, borderRadius: 14, background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(1px)' }} />
-        </div>
-        <div aria-hidden style={{ position: 'absolute', top: '15%', left: 0, right: 0, height: 28, pointerEvents: 'none' }}>
-          <div className="raid-cloud-mid"  style={{ width: 88, height: 22, borderRadius: 11, background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(0.8px)' }} />
-        </div>
-        <div aria-hidden style={{ position: 'absolute', top: '22%', left: 0, right: 0, height: 22, pointerEvents: 'none' }}>
-          <div className="raid-cloud-fast" style={{ width: 64, height: 18, borderRadius: 9,  background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(0.8px)' }} />
-        </div>
+            {/* Three fog bands at staggered heights. Each is wider than
+                the stage (180% width) so the keyframe sway never
+                exposes a hard edge. Soft horizontal gradient + blur
+                fakes thick mist drifting through the air. */}
+            <div aria-hidden style={{ position: 'absolute', top: '12%', left: '-40%', width: '180%', height: 64, pointerEvents: 'none' }}>
+              <div className="raid-fog-slow" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(210,220,232,0.20) 25%, rgba(225,232,240,0.28) 50%, rgba(210,220,232,0.20) 75%, transparent 100%)', filter: 'blur(8px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '22%', left: '-40%', width: '180%', height: 56, pointerEvents: 'none' }}>
+              <div className="raid-fog-mid" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(200,212,226,0.22) 30%, rgba(220,228,238,0.30) 50%, rgba(200,212,226,0.22) 70%, transparent 100%)', filter: 'blur(7px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '30%', left: '-40%', width: '180%', height: 48, pointerEvents: 'none' }}>
+              <div className="raid-fog-fast" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(190,205,222,0.18) 30%, rgba(212,222,234,0.26) 50%, rgba(190,205,222,0.18) 70%, transparent 100%)', filter: 'blur(6px)' }} />
+            </div>
 
-        {/* Horizon line + water tint — sits higher so the ships have more water under them */}
-        <div style={{
-          position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
-          background: 'rgba(255,255,255,0.12)', boxShadow: '0 0 24px rgba(140,180,210,0.18)',
-        }} />
-        <div style={{
-          position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
-          background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
-        }} />
+            {/* Horizon line + water tint — same vertical position as
+                dusk, palette shifted cool. No bright line, just a
+                whisper where sky meets fog meets sea. */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
+              background: 'rgba(200,212,226,0.10)', boxShadow: '0 0 24px rgba(180,200,220,0.12)',
+            }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
+              background: 'linear-gradient(180deg, rgba(30,42,56,0.45) 0%, rgba(8,12,20,0.88) 100%)',
+            }} />
 
-        {/* Static sun reflection — the sun is upper-right, so its glint
-            on the water sits directly below it, fading down into the
-            depths. No movement — water surface motion gets weird at this
-            visual scale, so the reflection is a still soft glow. */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: '38%', right: '8%',
-            width: 110, height: '32%',
-            background: 'radial-gradient(ellipse at 50% 0%, rgba(255,235,180,0.22) 0%, rgba(255,225,160,0.10) 40%, transparent 75%)',
-            mixBlendMode: 'screen',
-            pointerEvents: 'none',
-            filter: 'blur(3px)',
-          }}
-        />
+            {/* Low fog band sitting on the water itself — drifts slowest,
+                gives the seabase the sense of mist rolling along the
+                surface. Replaces dusk's sun reflection. */}
+            <div aria-hidden style={{ position: 'absolute', top: '42%', left: '-40%', width: '180%', height: 36, pointerEvents: 'none' }}>
+              <div className="raid-fog-slow" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(195,208,222,0.16) 30%, rgba(215,225,236,0.22) 50%, rgba(195,208,222,0.16) 70%, transparent 100%)', filter: 'blur(5px)' }} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Sun — diffuse atmospheric glow, not a 3D-looking sphere. The
+                radial gradient softens the center alpha so it blends into the
+                sky instead of reading as a hard disk; the .raid-sun pulse adds
+                the breathing halo via colored drop-shadows. */}
+            <div
+              className="raid-sun"
+              aria-hidden
+              style={{
+                position: 'absolute', top: '6%', right: '13%',
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'radial-gradient(circle at 50% 50%, rgba(255,250,225,0.70) 0%, rgba(255,230,170,0.40) 28%, rgba(255,210,140,0.15) 55%, transparent 90%)',
+                filter: 'blur(1.5px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Drifting clouds — three layers at different sizes + speeds.
+                Each cloud is a flat radial-gradient with soft edges; the
+                wrapping div handles the slow translate. */}
+            <div aria-hidden style={{ position: 'absolute', top: '6%',  left: 0, right: 0, height: 36, pointerEvents: 'none' }}>
+              <div className="raid-cloud-slow" style={{ width: 120, height: 28, borderRadius: 14, background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(1px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '15%', left: 0, right: 0, height: 28, pointerEvents: 'none' }}>
+              <div className="raid-cloud-mid"  style={{ width: 88, height: 22, borderRadius: 11, background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(0.8px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '22%', left: 0, right: 0, height: 22, pointerEvents: 'none' }}>
+              <div className="raid-cloud-fast" style={{ width: 64, height: 18, borderRadius: 9,  background: 'radial-gradient(ellipse at 50% 60%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0) 75%)', filter: 'blur(0.8px)' }} />
+            </div>
+
+            {/* Horizon line + water tint — sits higher so the ships have more water under them */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
+              background: 'rgba(255,255,255,0.12)', boxShadow: '0 0 24px rgba(140,180,210,0.18)',
+            }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
+              background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)',
+            }} />
+
+            {/* Static sun reflection — the sun is upper-right, so its glint
+                on the water sits directly below it, fading down into the
+                depths. No movement — water surface motion gets weird at this
+                visual scale, so the reflection is a still soft glow. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: '38%', right: '8%',
+                width: 110, height: '32%',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,235,180,0.22) 0%, rgba(255,225,160,0.10) 40%, transparent 75%)',
+                mixBlendMode: 'screen',
+                pointerEvents: 'none',
+                filter: 'blur(3px)',
+              }}
+            />
+          </>
+        )}
 
         {/* Leave button — small ← icon in the top-right of the battle stage.
             Replaces the dedicated Leave row above the XP bar so the game

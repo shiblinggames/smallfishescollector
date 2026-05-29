@@ -986,6 +986,25 @@ html, body {
 .raid-cloud-fast { animation: raid-cloud-drift-fast 32s linear infinite; }
 .raid-sun        { animation: raid-sun-pulse 5.5s ease-in-out infinite; }
 
+/* Fog bands for the Cartographer raid backdrop. Drift sideways slowly
+   with alternating direction so the seams never read as a hard reset.
+   Three layers at staggered speeds create depth without parallax. */
+@keyframes raid-fog-drift-slow {
+  from { transform: translateX(-22%); }
+  to   { transform: translateX(22%); }
+}
+@keyframes raid-fog-drift-mid {
+  from { transform: translateX(18%); }
+  to   { transform: translateX(-18%); }
+}
+@keyframes raid-fog-drift-fast {
+  from { transform: translateX(-12%); }
+  to   { transform: translateX(28%); }
+}
+.raid-fog-slow { animation: raid-fog-drift-slow 42s ease-in-out infinite alternate; }
+.raid-fog-mid  { animation: raid-fog-drift-mid  31s ease-in-out infinite alternate; }
+.raid-fog-fast { animation: raid-fog-drift-fast 24s ease-in-out infinite alternate; }
+
 /* ── Expeditions page zoom ── */
 .expeditions-content        { zoom: 1.35; }
 @media (min-width: 640px)   { .expeditions-content { zoom: 1.4; } }
