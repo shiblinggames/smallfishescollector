@@ -1348,6 +1348,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               <RaidCombat
                 key={`combat-r${roundDisplay}`}
                 enemy={enemyForCombat}
+                atmosphere={config.atmosphere}
                 affix={eliteAffix}
                 isElite={!!eliteAffix}
                 isBoss={isBoss}

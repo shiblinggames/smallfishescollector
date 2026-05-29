@@ -112,6 +112,15 @@ export interface BossRaidConfig {
   bossId: string
   loot: RaidLootItem[]
   killRewards: Record<string, { gold: number; xp: number }>
+  /** Battle-stage atmosphere. Each raid gets its own backdrop palette so
+   *  fights read as different places, not the same dusk seascape repeated.
+   *  Undefined falls back to 'dusk' (the original look) so any pre-existing
+   *  raid stays visually unchanged unless it opts in.
+   *    - dusk     : default warm seascape (cool blue sky, warm sun, drifting clouds)
+   *    - sunset   : Pete's coastal reef at golden hour (saturated orange + purple)
+   *    - overcast : Krust's open ocean past the Bilge Strait (cold steel-grey, thick clouds, no sun)
+   *    - fog      : The Cartographer's Sounding Fog (washed-out grey, dim sun, drifting mist bands) */
+  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog'
   /** Optional dialogue sequence shown right before the boss fight starts.
    *  Tap to advance each line; the last line's button is "Engage" which
    *  closes the modal and mounts the combat. */
@@ -147,6 +156,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
   raidId: 'corsairs_reckoning',
   raidTitle: "The Corsair's Reckoning",
   bossDefeatedText: 'Barnacle Pete Defeated',
+  atmosphere: 'sunset',
   enemies: {
     // Patterns punish a reload-fire-reload-fire autopilot (player fires on
     // even turns, reloads on odd). Difficulty rises with enemy tier; the
@@ -257,6 +267,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   raidId: 'captain_krust',
   raidTitle: "Krust's Consignment",
   bossDefeatedText: 'Captain Krust Defeated',
+  atmosphere: 'overcast',
   enemies: {
     // Tier-2 roster. Stiffer than Pete's reef: a Finndicate shipping
     // crew that runs cargo on a schedule and does not like being late.
@@ -380,6 +391,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   raidId: 'cartographer',
   raidTitle: "The Cartographer's Survey",
   bossDefeatedText: 'The Cartographer Defeated',
+  atmosphere: 'fog',
   enemies: {
     // Tier-3 roster. The Cartographer's chart line sails the Sounding
     // Fog for cover — the deep grey band on the Finndicate's own maps.

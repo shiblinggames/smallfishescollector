@@ -235,6 +235,12 @@ export interface RaidCombatProps {
    *  per-fight scope on advance). RaidCombat applies the effects as
    *  multipliers / bonuses into the existing roll formulas. */
   tideEffects?: TideEffect[]
+  /** Battle-stage atmosphere palette. Comes from the parent raid config
+   *  (BossRaidConfig.atmosphere) so every fight in the same raid shares
+   *  the same look. Default ('dusk' / undefined) keeps the original
+   *  warm seascape — used by the practice skirmish and any legacy
+   *  caller that doesn't set the field. */
+  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog'
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -256,6 +262,7 @@ export default function RaidCombat({
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
+  atmosphere = 'dusk',
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
@@ -1432,29 +1439,29 @@ export default function RaidCombat({
         position: 'relative',
         flex: 1,
         minHeight: 400,
-        // Sky/sea gradient swaps based on the current enemy's atmosphere.
-        // Cartographer-raid enemies (any with aimFogDensity > 0) get the
-        // cool grey Sounding Fog palette; every other raid keeps the
-        // warm dusk that's been the default. Tied to aimFogDensity
-        // rather than a config-level field so the atmosphere extends
-        // any future raid that adopts the Mist Veil mechanic for free
-        // — split into an explicit `atmosphere` config flag the moment
-        // a raid needs one without the other.
-        background: (enemy.aimFogDensity ?? 0) > 0
-          ? 'linear-gradient(180deg, #4a5566 0%, #58687a 30%, #6a7888 40%, #18222e 100%)'
-          : 'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
+        // Sky/sea gradient + inner backdrop elements switch on the raid's
+        // atmosphere config (BossRaidConfig.atmosphere). Each raid gets
+        // its own visual identity — Pete's coastal sunset, Krust's cold
+        // overcast open ocean, the Cartographer's Sounding Fog — instead
+        // of the same dusk seascape every fight. Default ('dusk') keeps
+        // the original warm look for any caller that doesn't opt in
+        // (e.g. the practice skirmish).
+        background:
+          atmosphere === 'fog'      ? 'linear-gradient(180deg, #4a5566 0%, #58687a 30%, #6a7888 40%, #18222e 100%)' :
+          atmosphere === 'sunset'   ? 'linear-gradient(180deg, #2a1838 0%, #6e2840 16%, #c84a28 34%, #d96a38 44%, #1a0a12 100%)' :
+          atmosphere === 'overcast' ? 'linear-gradient(180deg, #38485a 0%, #485868 30%, #546675 40%, #0a121a 100%)' :
+                                      'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
         {/* ── Atmospheric backdrop ─────────────────────────────────────────
-            Sun + drifting clouds + a soft water-surface shimmer. All pure
-            CSS via keyframes in globals.css. Sits below the horizon line,
-            ships, and HP boxes (z-index left implicit — they're rendered
-            after these and have explicit z-index where it matters).
-            Two variants: default dusk (sun + clouds + sun reflection)
-            and Cartographer fog (dim mist-disc where the sun should be,
-            three drifting fog bands across the stage, no reflection). */}
+            Sun/sky/clouds/water all swap based on `atmosphere`. Each
+            variant is a self-contained fragment so the parts (sun
+            colour, cloud presence, sun reflection, fog bands) can
+            differ per raid without ifs cluttering the shared layout.
+            Order of branches: fog first, then sunset/overcast, then
+            dusk as default fall-through. */}
 
-        {(enemy.aimFogDensity ?? 0) > 0 ? (
+        {atmosphere === 'fog' ? (
           <>
             {/* Sun behind the Sounding Fog — barely a disc, just a cool
                 pale glow where the sun should be. No pulse — the fog
@@ -1502,6 +1509,113 @@ export default function RaidCombat({
             <div aria-hidden style={{ position: 'absolute', top: '42%', left: '-40%', width: '180%', height: 36, pointerEvents: 'none' }}>
               <div className="raid-fog-slow" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(195,208,222,0.16) 30%, rgba(215,225,236,0.22) 50%, rgba(195,208,222,0.16) 70%, transparent 100%)', filter: 'blur(5px)' }} />
             </div>
+          </>
+        ) : atmosphere === 'sunset' ? (
+          <>
+            {/* Pete's coastal sunset — bigger, lower, more saturated sun
+                sits near the horizon line catching warm pink/orange. The
+                breathing halo is the same .raid-sun pulse but with a
+                shifted hue baked into the radial-gradient core. */}
+            <div
+              className="raid-sun"
+              aria-hidden
+              style={{
+                position: 'absolute', top: '20%', right: '14%',
+                width: 78, height: 78, borderRadius: '50%',
+                background: 'radial-gradient(circle at 50% 50%, rgba(255,210,150,0.90) 0%, rgba(255,160,90,0.55) 30%, rgba(255,120,70,0.20) 58%, transparent 92%)',
+                filter: 'blur(2px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Drifting clouds — warm-tinted undersides catching the
+                sunset. Slightly slower than dusk so the sky feels
+                more still as the day closes. */}
+            <div aria-hidden style={{ position: 'absolute', top: '7%',  left: 0, right: 0, height: 36, pointerEvents: 'none' }}>
+              <div className="raid-cloud-slow" style={{ width: 130, height: 30, borderRadius: 15, background: 'radial-gradient(ellipse at 50% 65%, rgba(255,200,150,0.30) 0%, rgba(255,170,110,0.14) 50%, rgba(255,140,90,0) 75%)', filter: 'blur(1px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '15%', left: 0, right: 0, height: 28, pointerEvents: 'none' }}>
+              <div className="raid-cloud-mid"  style={{ width: 96, height: 24, borderRadius: 12, background: 'radial-gradient(ellipse at 50% 65%, rgba(255,190,140,0.26) 0%, rgba(255,160,100,0.12) 50%, rgba(255,130,80,0) 75%)', filter: 'blur(0.8px)' }} />
+            </div>
+
+            {/* Horizon line — warm cream over the sunset reflection. */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
+              background: 'rgba(255,220,180,0.18)', boxShadow: '0 0 28px rgba(255,180,120,0.24)',
+            }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
+              background: 'linear-gradient(180deg, rgba(60,30,40,0.45) 0%, rgba(8,8,16,0.90) 100%)',
+            }} />
+
+            {/* Sun reflection — bigger, more saturated than dusk because
+                the sun sits much lower. Stretches further down into the
+                water since the angle is shallower at sunset. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: '38%', right: '8%',
+                width: 140, height: '40%',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,180,110,0.38) 0%, rgba(255,150,90,0.18) 40%, transparent 78%)',
+                mixBlendMode: 'screen',
+                pointerEvents: 'none',
+                filter: 'blur(3px)',
+              }}
+            />
+          </>
+        ) : atmosphere === 'overcast' ? (
+          <>
+            {/* Krust's cold open ocean past the Bilge Strait — no sun
+                disc at all, just a heavy cloud cover swallowing the
+                upper sky. The "sun behind clouds" is implied by a
+                faintly brighter band where the sun would be. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: '4%', right: '12%',
+                width: 90, height: 60,
+                background: 'radial-gradient(ellipse at 50% 50%, rgba(190,200,215,0.18) 0%, rgba(170,182,200,0.08) 45%, transparent 80%)',
+                filter: 'blur(10px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Heavy overcast cap — a wide soft band across the top
+                of the sky that reads as a continuous cloud cover. Sits
+                under the drifting cloud patches below for layered depth. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '24%',
+                background: 'linear-gradient(180deg, rgba(60,72,86,0.55) 0%, rgba(70,82,98,0.30) 60%, transparent 100%)',
+                filter: 'blur(2px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Three slow drifting cloud patches — darker than dusk,
+                lower in the sky so the overcast feels like it's pressing
+                down on the water. */}
+            <div aria-hidden style={{ position: 'absolute', top: '8%',  left: 0, right: 0, height: 36, pointerEvents: 'none' }}>
+              <div className="raid-cloud-slow" style={{ width: 150, height: 32, borderRadius: 16, background: 'radial-gradient(ellipse at 50% 55%, rgba(180,192,208,0.32) 0%, rgba(150,162,180,0.16) 50%, transparent 78%)', filter: 'blur(1.5px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '18%', left: 0, right: 0, height: 32, pointerEvents: 'none' }}>
+              <div className="raid-cloud-mid"  style={{ width: 116, height: 28, borderRadius: 14, background: 'radial-gradient(ellipse at 50% 55%, rgba(160,172,188,0.30) 0%, rgba(130,144,162,0.14) 50%, transparent 78%)', filter: 'blur(1.2px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '28%', left: 0, right: 0, height: 26, pointerEvents: 'none' }}>
+              <div className="raid-cloud-fast" style={{ width: 84, height: 22, borderRadius: 11, background: 'radial-gradient(ellipse at 50% 55%, rgba(150,162,180,0.26) 0%, rgba(120,134,152,0.12) 50%, transparent 78%)', filter: 'blur(1px)' }} />
+            </div>
+
+            {/* Horizon line — cold steel, very faint. No reflection
+                because no sun is visible through the cloud cap. */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
+              background: 'rgba(180,195,212,0.12)', boxShadow: '0 0 24px rgba(140,160,180,0.10)',
+            }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
+              background: 'linear-gradient(180deg, rgba(22,32,44,0.50) 0%, rgba(6,10,18,0.90) 100%)',
+            }} />
           </>
         ) : (
           <>
