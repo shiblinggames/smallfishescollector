@@ -102,6 +102,17 @@ export interface BossRaidConfig {
    *  Tap to advance each line; the last line's button is "Engage" which
    *  closes the modal and mounts the combat. */
   preFightDialogue?: BossDialogueLine[]
+  /** Optional mid-raid Tide events (see lib/tides.ts). `slots` lists
+   *  the encounter indices AFTER which a tide fires (e.g. [3, 6] fires
+   *  one tide after the 3rd kill and another after the 6th).
+   *  `maxTier` caps the eligible pool — Reckon's raid will likely be
+   *  the first with `maxTier: 1`; later, longer raids bump this to
+   *  unlock stronger effects from the same pool. Undefined = no tides
+   *  for this raid (Pete + Krust stay untouched). */
+  tides?: {
+    slots: number[]
+    maxTier: 1 | 2 | 3 | 4
+  }
 }
 
 // The one true gem look: the purple ◆ glyph from the Nav currency display.
