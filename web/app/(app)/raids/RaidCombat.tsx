@@ -83,7 +83,13 @@ function rollShotDamage(res: ShotResult, shipMinDamage: number, totalPower: numb
 }
 
 function rollSpeed(shipSpeed: number, navigation: number) {
-  return d20() + shipSpeed + Math.floor(navigation / 10)
+  // Speed roll uses 1d30 (not d20 like dodge) — deliberately more random
+  // than dodge so even a high-Compass build can't fully eliminate
+  // turn-order swing. A +10 advantage that won 94% of the time on d20
+  // now wins ~77% on d30; a +5 advantage drops from 81% to 64%. Tuned
+  // 2026-05-29 alongside the Compass nerf (0.25 → 0.20) to flatten
+  // late-game determinism without invalidating speed-built captains.
+  return (Math.floor(Math.random() * 30) + 1) + shipSpeed + Math.floor(navigation / 10)
 }
 function rollDodge(shipSpeed: number, navigation: number) {
   return d20() + shipSpeed + navigation

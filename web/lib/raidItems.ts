@@ -60,11 +60,15 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'navigators_compass',
     name: "Navigator's Compass",
-    description: 'Adds a quarter of your Navigation to your turn-order roll, so you strike first far more often.',
+    // Reads as "a fifth" now after the 0.25 → 0.20 nerf (2026-05-29).
+    // Combined with the d20 → d30 speed roll, the build still earns
+    // first strike a clear majority of the time but late-game
+    // determinism is meaningfully flatter than before.
+    description: 'Adds a fifth of your Navigation to your turn-order roll, so you strike first more often.',
     image: '/navigatorscompass.png',
     emoji: '🧭',
     rarity: 'epic',
-    effects: [{ type: 'speed_roll_nav_pct', value: 0.25 }],
+    effects: [{ type: 'speed_roll_nav_pct', value: 0.20 }],
     source: "Quartermaster's Cache",
   },
   // Same two-tier treatment as the Corsair Cannon. Krust's Carapace
