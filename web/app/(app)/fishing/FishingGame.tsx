@@ -984,7 +984,7 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, onViewLogbook }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1004,10 +1004,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   sizeTier?: FishSizeTier
   isPB: boolean
   previousBest: number | null
-  /** Opens the Logbook drawer, expands the just-caught fish's zone, and
-   *  surfaces the detail modal for the caught species. Wires the catch
-   *  moment directly to the collection so players actually look at it. */
-  onViewLogbook?: () => void
 }) {
   const isAncient = fish.habitat === 'ancient_deep'
   const rarity = fish.bite_rarity ?? 1
@@ -1642,48 +1638,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <p className="font-karla font-400 text-center" style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.4 }}>
             {fish.fun_fact}
           </p>
-
-          {/* Logbook CTA — only on the moments that earn the extra
-              height: a new species (gold pulse + "+1 Logbook" copy) or
-              a PB (teal accent + "New PB" copy). Common repeat catches
-              skip the CTA entirely — the player still has the header
-              Logbook button up top, and the result card stays compact
-              for short-screen devices (iPhone SE class) where the
-              author's earlier "fits without scrolling" optimisations
-              live. Show on isNewSpecies OR isPB so the moments that
-              would actually want a logbook review pull the player in. */}
-          {onViewLogbook && (isNewSpecies || isPBMoment) && (() => {
-            const newSpecies = isNewSpecies
-            const accent     = newSpecies ? '#fde68a' : '#5eead4'
-            const accentRgb  = newSpecies ? '253,230,138' : '94,234,212'
-            const label      = newSpecies ? '+1 Logbook · View →' : 'New PB · View in Logbook →'
-            return (
-              <motion.button
-                type="button"
-                onClick={onViewLogbook}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.22, delay: 0.4 }}
-                className="font-karla font-700 uppercase"
-                style={{
-                  marginTop: '0.7rem', width: '100%',
-                  padding: '0.45rem 0.7rem',
-                  borderRadius: 10,
-                  background: `linear-gradient(180deg, rgba(${accentRgb},0.18) 0%, rgba(${accentRgb},0.04) 100%)`,
-                  border: `1px solid rgba(${accentRgb},0.55)`,
-                  color: accent,
-                  fontSize: '0.62rem',
-                  letterSpacing: '0.14em',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  cursor: 'pointer', touchAction: 'manipulation',
-                  boxShadow: `0 0 18px rgba(${accentRgb},0.22)`,
-                  animation: 'raid-node-current 2.4s ease-in-out infinite',
-                }}
-              >
-                <span>{label}</span>
-              </motion.button>
-            )
-          })()}
         </div>
       </motion.div>
     </div>
@@ -2592,6 +2546,15 @@ export default function FishingGame({
   const [waitMessage, setWaitMessage] = useState('')
   const [retryFlash, setRetryFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
+
+  // Fresh-catch hook — pulses the header Logbook button (top right) for
+  // the latest noteworthy catch (new species or PB). Set in the catch
+  // handler, cleared on cast / cast-again / opening the Logbook. The
+  // older uncheckedNewFishIds state still drives a subtle persistent
+  // pulse for ANY unviewed entry; this state stacks a stronger
+  // momentary flash on top so the player notices THIS catch without
+  // being forced into the drawer — totally optional.
+  const [freshCatchHook, setFreshCatchHook] = useState<'new-species' | 'pb' | null>(null)
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number; prestige?: boolean } | null>(null)
   // Level-up celebration carries both the old AND new level so we can
@@ -3221,6 +3184,7 @@ export default function FishingGame({
   async function handleCast() {
     if (phase !== 'idle') return
     if (finnPending) return  // encounter is loading in
+    setFreshCatchHook(null)  // moving on from the last catch — dismiss the Logbook flash
     // 2% chance Finn intercepts the cast (no bait consumed). Suppressed
     // while a challenge is already in flight so the player isn't double-bet.
     if (!finnChallenge && !finnOverlay && Math.random() < FINN_ENCOUNTER_RATE) {
@@ -3511,6 +3475,12 @@ export default function FishingGame({
         if (res.isPB && res.sizeIn > 0) {
           setPersonalBests(prev => ({ ...prev, [fish.id]: res.sizeIn }))
         }
+        // Stage the Logbook header-button flash for noteworthy catches.
+        // New species wins over PB so the gold treatment lands on
+        // first-time catches that also set a PB. Cleared on next cast
+        // or on opening the Logbook.
+        if (isNewSpecies) setFreshCatchHook('new-species')
+        else if (res.isPB) setFreshCatchHook('pb')
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
             setTrophyCatches(prev => new Set([...prev, fish.id]))
@@ -3630,6 +3600,7 @@ export default function FishingGame({
   async function handleCastAgain() {
     if (phase !== 'result') return
     if (finnPending) return
+    setFreshCatchHook(null)  // moving on from the last catch — dismiss the Logbook flash
     // Same Finn intercept as handleCast. Bait isn't consumed during an
     // encounter, so the player can pass freely.
     if (!finnChallenge && !finnOverlay && Math.random() < FINN_ENCOUNTER_RATE) {
@@ -4302,37 +4273,65 @@ export default function FishingGame({
               {/* Logbook button — rebranded from the old tiny "Fish" pill
                   so players actually notice the collection exists. The
                   inline progress bar makes completion legible without
-                  opening the drawer; subtle pulse + brighter border
-                  when there are unchecked new species so the eye lands
-                  on it the moment a new fish is caught. */}
+                  opening the drawer. Two attention states stack:
+                    - uncheckedNewFishIds.size > 0  → subtle persistent pulse
+                      (zone-color border + glow) so the player knows
+                      something's waiting for them
+                    - freshCatchHook != null        → STRONG attention flash
+                      (gold for new species, teal for PB) tied to THIS catch
+                      so the button visibly reacts when a noteworthy fish
+                      lands. Dismissed on cast, cast-again, or tap. */}
               {(() => {
                 const zoneColor = HABITAT_COLOR[selectedZone]
                 const total = allFishSpecies.length
                 const caught = caughtFishIds.size
                 const pct = total > 0 ? caught / total : 0
                 const hasNew = uncheckedNewFishIds.size > 0
+                const flashing = freshCatchHook != null
+                // Flash overrides the subtle pulse — same button, brighter colour + faster pulse
+                const flashAccent = freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
+                const accent = flashing ? flashAccent : zoneColor
                 return (
-                  <button
-                    onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
+                  <motion.button
+                    key={freshCatchHook ?? 'idle'}
+                    onClick={() => {
+                      setCollectionOpen(o => !o)
+                      setGearOpen(false)
+                      setHoldOpen(false)
+                      setFreshCatchHook(null)
+                    }}
+                    animate={flashing ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                    transition={flashing ? { duration: 0.6, ease: 'easeOut' } : { duration: 0 }}
                     style={{
                       display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch',
                       height: 36, padding: '0.22rem 0.6rem 0.28rem', borderRadius: 12,
-                      background: hasNew ? `${zoneColor}1a` : 'rgba(4,10,18,0.72)',
-                      border: `1px solid ${hasNew ? zoneColor + 'aa' : zoneColor + '50'}`,
+                      background: flashing ? `${accent}24` : hasNew ? `${accent}1a` : 'rgba(4,10,18,0.72)',
+                      border: `1px solid ${flashing ? accent : hasNew ? accent + 'aa' : accent + '50'}`,
                       cursor: 'pointer', touchAction: 'manipulation',
                       position: 'relative',
                       minWidth: 88,
-                      boxShadow: hasNew ? `0 0 14px ${zoneColor}55` : 'none',
-                      animation: hasNew ? 'raid-node-current 2.4s ease-in-out infinite' : 'none',
+                      boxShadow: flashing
+                        ? `0 0 22px ${accent}aa, 0 0 44px ${accent}55`
+                        : hasNew
+                          ? `0 0 14px ${accent}55`
+                          : 'none',
+                      // Faster pulse when flashing (1.1s) vs the calmer
+                      // ambient one (2.4s); both reuse the raid-node-current
+                      // keyframe to keep the visual vocabulary consistent.
+                      animation: flashing
+                        ? 'raid-node-current 1.1s ease-in-out infinite'
+                        : hasNew
+                          ? 'raid-node-current 2.4s ease-in-out infinite'
+                          : 'none',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                       <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                        style={{ fontSize: '0.52rem', color: zoneColor, lineHeight: 1 }}>
-                        Logbook
+                        style={{ fontSize: '0.52rem', color: accent, lineHeight: 1 }}>
+                        {flashing ? (freshCatchHook === 'pb' ? 'New PB!' : 'New!') : 'Logbook'}
                       </span>
                       <span className="font-cinzel font-700"
-                        style={{ fontSize: '0.72rem', color: zoneColor, lineHeight: 1 }}>
+                        style={{ fontSize: '0.72rem', color: accent, lineHeight: 1 }}>
                         {caught}
                         <span className="font-karla font-400" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.45)' }}>
                           /{total}
@@ -4341,9 +4340,9 @@ export default function FishingGame({
                     </div>
                     {/* Inline progress fill — visible at-a-glance completion */}
                     <div style={{ marginTop: 4, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct * 100}%`, background: zoneColor, borderRadius: 2, boxShadow: hasNew ? `0 0 6px ${zoneColor}aa` : 'none' }} />
+                      <div style={{ height: '100%', width: `${pct * 100}%`, background: accent, borderRadius: 2, boxShadow: flashing || hasNew ? `0 0 6px ${accent}aa` : 'none' }} />
                     </div>
-                    {hasNew && (
+                    {hasNew && !flashing && (
                       <span style={{
                         position: 'absolute', top: -5, right: -5,
                         minWidth: 16, height: 16, borderRadius: 8,
@@ -4357,7 +4356,7 @@ export default function FishingGame({
                         {uncheckedNewFishIds.size}
                       </span>
                     )}
-                  </button>
+                  </motion.button>
                 )
               })()}
             </div>
@@ -4894,18 +4893,6 @@ export default function FishingGame({
                       sizeTier={catchResult.sizeTier}
                       isPB={catchResult.isPB}
                       previousBest={catchResult.previousBest}
-                      onViewLogbook={() => {
-                        setCollectionOpen(true)
-                        setExpandedZone(catchResult.fish.habitat)
-                        setTappedFishId(catchResult.fish.id)
-                        if (catchResult.isNewSpecies) {
-                          setUncheckedNewFishIds(prev => {
-                            const next = new Set(prev)
-                            next.delete(catchResult.fish.id)
-                            return next
-                          })
-                        }
-                      }}
                     />
                   ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
