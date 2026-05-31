@@ -1326,7 +1326,28 @@ function NodeDetailSheet({
 
         {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#f08a8a', marginTop: '0.9rem' }}>{err}</p>}
 
-        {cta && <div style={{ marginTop: '1.3rem' }}>{cta}</div>}
+        {/* Sticky CTA — pins to the bottom of the sheet's viewport so
+            long descriptions / drop lists / boss-records don't shove
+            the action button off-screen and force the player to scroll
+            to find "Enter Raid →". Negative margins extend the gradient
+            fade across the full sheet width; the calc'd bottom matches
+            the motion.div's bottom padding so the bar lands flush with
+            the safe area instead of floating above it. */}
+        {cta && (
+          <div style={{
+            position: 'sticky',
+            bottom: 'calc(-1.4rem - env(safe-area-inset-bottom, 0px))',
+            marginTop: '1.3rem',
+            marginLeft: '-1.15rem',
+            marginRight: '-1.15rem',
+            padding: '1.1rem 1.15rem calc(1.4rem + env(safe-area-inset-bottom, 0px))',
+            background: 'linear-gradient(180deg, rgba(10,8,7,0) 0%, rgba(10,8,7,0.88) 40%, #0a0807 100%)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}>
+            {cta}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )
