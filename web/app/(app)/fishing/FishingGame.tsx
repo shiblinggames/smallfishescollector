@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
@@ -1647,9 +1647,20 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
 // ─── Drawer helpers ──────────────────────────────────────────────────────────
 
-function DrawerHandle() {
+function DrawerHandle({ dragHandleProps }: { dragHandleProps?: React.HTMLAttributes<HTMLDivElement> }) {
+  // The drag area is enlarged via top/bottom padding so the visible 4px pill
+  // sits inside a comfortable touch target. `touchAction: 'none'` keeps the
+  // browser from claiming the gesture as a scroll before framer-motion's
+  // drag-controls can start the drag.
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '0.55rem 0 0.1rem', flexShrink: 0, cursor: 'grab' }}>
+    <div
+      {...dragHandleProps}
+      style={{
+        display: 'flex', justifyContent: 'center', padding: '0.7rem 0 0.3rem',
+        flexShrink: 0, cursor: 'grab', touchAction: 'none',
+        ...dragHandleProps?.style,
+      }}
+    >
       <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
     </div>
   )
@@ -1678,6 +1689,11 @@ function DrawerClose({ onClick }: { onClick: () => void }) {
   )
 }
 
+// Legacy: drag-from-anywhere on the drawer body. Five of the six fishing
+// drawers still use this — fine for short drawers whose inner content
+// doesn't scroll past a screen height. The collection drawer migrated to
+// useDrawerDrag below because its 2-column trophy grid scrolls and the
+// drag-from-anywhere model fights inner scroll gestures.
 function drawerDragProps(onClose: () => void) {
   return {
     drag: 'y' as const,
@@ -1685,6 +1701,33 @@ function drawerDragProps(onClose: () => void) {
     dragElastic: { top: 0, bottom: 0.35 },
     onDragEnd: (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
       if (info.offset.y > 80 || info.velocity.y > 400) onClose()
+    },
+  }
+}
+
+// Drag-only-from-handle variant. `dragListener: false` stops framer-motion
+// from claiming touches anywhere on the drawer body; the handle's
+// onPointerDown is the sole trigger for dragControls.start(). Use this on
+// any drawer whose body contains a scrollable list — without it, swiping
+// up inside the list (a downward finger gesture) drags the whole drawer
+// down toward close instead of scrolling the list. Caller spreads
+// motionProps onto the outer motion.div and passes handleProps to the
+// DrawerHandle's dragHandleProps so the visual pill is the drag target.
+function useDrawerDrag(onClose: () => void) {
+  const controls = useDragControls()
+  return {
+    motionProps: {
+      drag: 'y' as const,
+      dragControls: controls,
+      dragListener: false,
+      dragConstraints: { top: 0 },
+      dragElastic: { top: 0, bottom: 0.35 },
+      onDragEnd: (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
+        if (info.offset.y > 80 || info.velocity.y > 400) onClose()
+      },
+    },
+    handleProps: {
+      onPointerDown: (e: React.PointerEvent) => controls.start(e),
     },
   }
 }
@@ -2350,6 +2393,41 @@ export default function FishingGame({
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [tappedFishId])
+
+  // Drag-from-handle for the collection drawer. The 2-column trophy
+  // grid is scrollable, and drag-from-anywhere would let an upward
+  // scroll gesture get reinterpreted as a drag-down-to-close. Hook is
+  // called unconditionally here so the dragControls instance is
+  // stable across the drawer's mount/unmount cycle.
+  const collectionDrawerDrag = useDrawerDrag(() => {
+    setCollectionOpen(false)
+    setExpandedZone(null)
+    setTappedFishId(null)
+  })
+
+  // Refs for the collection drawer's scrollable body + each zone block.
+  // When the player taps a zone header, we want the just-expanded zone's
+  // header to land at the top of the drawer body so the grid that just
+  // appeared is what they see. Without this, opening a zone whose
+  // header is offscreen leaves the player scrolled to wherever they
+  // were and the new content lands above/below their viewport.
+  const collectionBodyRef = useRef<HTMLDivElement | null>(null)
+  const zoneBlockRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  useEffect(() => {
+    if (!expandedZone) return
+    const body = collectionBodyRef.current
+    const zoneEl = zoneBlockRefs.current[expandedZone]
+    if (!body || !zoneEl) return
+    // Compute the zone header's offset relative to the body's current
+    // scrollTop, then scrollTo. requestAnimationFrame waits one frame
+    // for the expanded grid's DOM to lay out so we don't overshoot.
+    requestAnimationFrame(() => {
+      const containerTop = body.getBoundingClientRect().top
+      const zoneTop = zoneEl.getBoundingClientRect().top
+      const target = body.scrollTop + (zoneTop - containerTop)
+      body.scrollTo({ top: target, behavior: 'smooth' })
+    })
+  }, [expandedZone])
 
   // Boss fight state (ancient_deep)
   const [bossStage, setBossStage] = useState(0)
@@ -5530,7 +5608,7 @@ export default function FishingGame({
           <motion.div key="collection-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            {...drawerDragProps(() => { setCollectionOpen(false); setExpandedZone(null); setTappedFishId(null) })}
+            {...collectionDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
@@ -5540,7 +5618,7 @@ export default function FishingGame({
               display: 'flex', flexDirection: 'column',
             }}
           >
-            <DrawerHandle />
+            <DrawerHandle dragHandleProps={collectionDrawerDrag.handleProps} />
             {/* Sticky header */}
             <div className="flex items-center justify-between flex-shrink-0"
               style={{ padding: '1.25rem 1.1rem 0.75rem' }}>
@@ -5550,7 +5628,7 @@ export default function FishingGame({
             </div>
 
             {/* Scrollable body */}
-            <div style={{ overflowY: 'auto', padding: '0 1.1rem 2rem', overscrollBehavior: 'contain' }}>
+            <div ref={collectionBodyRef} style={{ overflowY: 'auto', padding: '0 1.1rem 2rem', overscrollBehavior: 'contain' }}>
             {ZONES.filter(z => z !== 'ancient_deep').map(zone => {
               const zoneSpecies = allFishSpecies.filter(f => f.habitat === zone)
               const discoveredCount = zoneSpecies.filter(f => caughtFishIds.has(f.id)).length
@@ -5562,7 +5640,7 @@ export default function FishingGame({
               const isClaiming = claimingZone === zone
 
               return (
-                <div key={zone} style={{ marginBottom: '0.6rem' }}>
+                <div key={zone} ref={el => { zoneBlockRefs.current[zone] = el }} style={{ marginBottom: '0.6rem' }}>
                   <button
                     className="w-full text-left"
                     style={{
@@ -5823,7 +5901,7 @@ export default function FishingGame({
               const isExpanded = expandedZone === zone
               const isLocked = getLevelFromXP(fishingXP) < 75
               return (
-                <div key={zone} style={{ marginBottom: '0.6rem' }}>
+                <div key={zone} ref={el => { zoneBlockRefs.current[zone] = el }} style={{ marginBottom: '0.6rem' }}>
                   <button
                     className="w-full text-left"
                     style={{
