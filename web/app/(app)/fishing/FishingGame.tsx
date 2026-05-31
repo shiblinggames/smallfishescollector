@@ -2338,6 +2338,19 @@ export default function FishingGame({
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
   const [trophyCatches, setTrophyCatches] = useState(() => new Set(initialTrophyCatches))
 
+  // Lock body scroll while the trophy detail modal is open. Without
+  // this, the collection drawer's overflowY:auto underneath catches
+  // scroll gestures that overshoot the PopupShell wrapper, and the
+  // drawer slowly creeps along while the user is trying to scroll the
+  // modal content. Matches the lock pattern used by ShipHero's loadout
+  // + sheet modals — see [ShipHero.tsx:277-280].
+  useEffect(() => {
+    if (tappedFishId == null) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [tappedFishId])
+
   // Boss fight state (ancient_deep)
   const [bossStage, setBossStage] = useState(0)
   const bossStageRef = useRef(0)
@@ -5918,6 +5931,7 @@ export default function FishingGame({
                 padding: '1.1rem 1rem 1.2rem',
                 position: 'relative',
                 boxShadow: `0 18px 48px rgba(0,0,0,0.55), 0 0 24px ${rarityColor}22`,
+                overscrollBehavior: 'contain',
               }}
             >
               <button
