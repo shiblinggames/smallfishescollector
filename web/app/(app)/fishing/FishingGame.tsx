@@ -984,7 +984,7 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, onViewLogbook }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1004,6 +1004,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   sizeTier?: FishSizeTier
   isPB: boolean
   previousBest: number | null
+  /** Opens the Logbook drawer, expands the just-caught fish's zone, and
+   *  surfaces the detail modal for the caught species. Wires the catch
+   *  moment directly to the collection so players actually look at it. */
+  onViewLogbook?: () => void
 }) {
   const isAncient = fish.habitat === 'ancient_deep'
   const rarity = fish.bite_rarity ?? 1
@@ -1638,6 +1642,39 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <p className="font-karla font-400 text-center" style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.4 }}>
             {fish.fun_fact}
           </p>
+
+          {/* Logbook CTA — every catch result links directly to the
+              collection. Becomes the visual focus when the catch was a
+              new species (gold pulse + "+1 Logbook" copy); stays
+              available as a quiet link for repeat catches so a player
+              can review their PB or browse what they've found without
+              hunting down the small Logbook button up top. */}
+          {onViewLogbook && (
+            <motion.button
+              type="button"
+              onClick={onViewLogbook}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: 0.4 }}
+              className="font-karla font-700 uppercase"
+              style={{
+                marginTop: '0.7rem', width: '100%',
+                padding: '0.45rem 0.7rem',
+                borderRadius: 10,
+                background: isNewSpecies ? 'linear-gradient(180deg, rgba(253,230,138,0.18) 0%, rgba(253,230,138,0.04) 100%)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${isNewSpecies ? 'rgba(253,230,138,0.55)' : 'rgba(255,255,255,0.10)'}`,
+                color: isNewSpecies ? '#fde68a' : 'rgba(255,255,255,0.55)',
+                fontSize: '0.62rem',
+                letterSpacing: '0.14em',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                cursor: 'pointer', touchAction: 'manipulation',
+                boxShadow: isNewSpecies ? '0 0 18px rgba(253,230,138,0.22)' : 'none',
+                animation: isNewSpecies ? 'raid-node-current 2.4s ease-in-out infinite' : 'none',
+              }}
+            >
+              <span>{isNewSpecies ? '+1 Logbook · View →' : 'View in Logbook →'}</span>
+            </motion.button>
+          )}
         </div>
       </motion.div>
     </div>
@@ -4253,42 +4290,67 @@ export default function FishingGame({
                 )
               })()}
 
-              <button
-                onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  height: 26, padding: '0 0.6rem', borderRadius: 20,
-                  background: 'rgba(4,10,18,0.72)', border: `1px solid ${HABITAT_COLOR[selectedZone]}50`,
-                  cursor: 'pointer', touchAction: 'manipulation',
-                  position: 'relative',
-                }}
-              >
-                <span className="font-karla font-600 uppercase tracking-[0.1em]"
-                  style={{ fontSize: '0.5rem', color: HABITAT_COLOR[selectedZone] + 'dd', lineHeight: 1 }}>
-                  Fish
-                </span>
-                <span className="font-cinzel font-700"
-                  style={{ fontSize: '0.8rem', color: HABITAT_COLOR[selectedZone], lineHeight: 1 }}>
-                  {caughtFishIds.size}
-                  <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)' }}>
-                    /{allFishSpecies.length}
-                  </span>
-                </span>
-                {uncheckedNewFishIds.size > 0 && (
-                  <span style={{
-                    position: 'absolute', top: -4, right: -4,
-                    minWidth: 14, height: 14, borderRadius: 7,
-                    background: '#f87171',
-                    border: '1.5px solid #08121c',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.48rem', fontWeight: 700, color: '#fff',
-                    paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
-                    fontFamily: 'var(--font-karla)',
-                  }}>
-                    {uncheckedNewFishIds.size}
-                  </span>
-                )}
-              </button>
+              {/* Logbook button — rebranded from the old tiny "Fish" pill
+                  so players actually notice the collection exists. The
+                  inline progress bar makes completion legible without
+                  opening the drawer; subtle pulse + brighter border
+                  when there are unchecked new species so the eye lands
+                  on it the moment a new fish is caught. */}
+              {(() => {
+                const zoneColor = HABITAT_COLOR[selectedZone]
+                const total = allFishSpecies.length
+                const caught = caughtFishIds.size
+                const pct = total > 0 ? caught / total : 0
+                const hasNew = uncheckedNewFishIds.size > 0
+                return (
+                  <button
+                    onClick={() => { setCollectionOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
+                    style={{
+                      display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch',
+                      height: 36, padding: '0.22rem 0.6rem 0.28rem', borderRadius: 12,
+                      background: hasNew ? `${zoneColor}1a` : 'rgba(4,10,18,0.72)',
+                      border: `1px solid ${hasNew ? zoneColor + 'aa' : zoneColor + '50'}`,
+                      cursor: 'pointer', touchAction: 'manipulation',
+                      position: 'relative',
+                      minWidth: 88,
+                      boxShadow: hasNew ? `0 0 14px ${zoneColor}55` : 'none',
+                      animation: hasNew ? 'raid-node-current 2.4s ease-in-out infinite' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                        style={{ fontSize: '0.52rem', color: zoneColor, lineHeight: 1 }}>
+                        Logbook
+                      </span>
+                      <span className="font-cinzel font-700"
+                        style={{ fontSize: '0.72rem', color: zoneColor, lineHeight: 1 }}>
+                        {caught}
+                        <span className="font-karla font-400" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.45)' }}>
+                          /{total}
+                        </span>
+                      </span>
+                    </div>
+                    {/* Inline progress fill — visible at-a-glance completion */}
+                    <div style={{ marginTop: 4, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct * 100}%`, background: zoneColor, borderRadius: 2, boxShadow: hasNew ? `0 0 6px ${zoneColor}aa` : 'none' }} />
+                    </div>
+                    {hasNew && (
+                      <span style={{
+                        position: 'absolute', top: -5, right: -5,
+                        minWidth: 16, height: 16, borderRadius: 8,
+                        background: '#f87171',
+                        border: '1.5px solid #08121c',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.5rem', fontWeight: 700, color: '#fff',
+                        paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
+                        fontFamily: 'var(--font-karla)',
+                      }}>
+                        {uncheckedNewFishIds.size}
+                      </span>
+                    )}
+                  </button>
+                )
+              })()}
             </div>
 
           </div>
@@ -4823,6 +4885,18 @@ export default function FishingGame({
                       sizeTier={catchResult.sizeTier}
                       isPB={catchResult.isPB}
                       previousBest={catchResult.previousBest}
+                      onViewLogbook={() => {
+                        setCollectionOpen(true)
+                        setExpandedZone(catchResult.fish.habitat)
+                        setTappedFishId(catchResult.fish.id)
+                        if (catchResult.isNewSpecies) {
+                          setUncheckedNewFishIds(prev => {
+                            const next = new Set(prev)
+                            next.delete(catchResult.fish.id)
+                            return next
+                          })
+                        }
+                      }}
                     />
                   ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
