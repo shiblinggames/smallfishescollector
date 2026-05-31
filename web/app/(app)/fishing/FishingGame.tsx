@@ -42,6 +42,7 @@ import { getDailyChallenges, type DailyChallengeState, type DailyChallenge } fro
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import AncientBgEffect from '@/components/AncientBgEffect'
+import PopupShell from '@/components/PopupShell'
 import { finishSession, type ActiveSession } from '@/app/(app)/social/challengeActions'
 import { equipRod, purchaseRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
@@ -5702,79 +5703,96 @@ export default function FishingGame({
                   )}
 
                   {isExpanded && (
-                    <div className="flex flex-col gap-1.5 mb-1"
+                    <div
                       style={{
                         background: `${zoneColor}08`,
                         border: `1px solid ${zoneColor}20`,
                         borderTop: 'none',
                         borderRadius: '0 0 12px 12px',
-                        padding: '0.5rem 0.5rem 0.6rem',
+                        padding: '0.55rem 0.55rem 0.65rem',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        gap: '0.45rem',
                       }}>
                       {zoneSpecies.map(f => {
                         const discovered = caughtFishIds.has(f.id)
-                        const isTapped = tappedFishId === f.id
                         const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
+                        const pb = personalBests[f.id]
+                        const isNew = uncheckedNewFishIds.has(f.id)
 
-                        if (!discovered) return (
-                          <div key={f.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                            style={{ background: 'rgba(4,10,18,0.35)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: rarityColor + '28', flexShrink: 0 }} />
-                            <p className="font-karla font-600 flex-1"
-                              style={{ fontSize: '0.82rem', color: '#3a3835', letterSpacing: '0.04em' }}>??? Undiscovered</p>
-                          </div>
-                        )
-
-                        return (
-                          <div key={f.id}>
-                            <button
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left"
+                        // Undiscovered: silhouette card. Render the actual
+                        // fish image at brightness:0 + low opacity so the
+                        // player gets a hint of the shape (more compelling
+                        // than a plain "???") without leaking the species.
+                        if (!discovered) {
+                          return (
+                            <div key={f.id}
                               style={{
-                                background: isTapped ? `${rarityColor}14` : 'rgba(4,10,18,0.6)',
-                                border: `1px solid ${isTapped ? rarityColor + '40' : 'rgba(255,255,255,0.06)'}`,
-                                transition: 'background 0.15s, border-color 0.15s',
-                              }}
-                              onClick={() => {
-                                setTappedFishId(isTapped ? null : f.id)
-                                if (!isTapped) setUncheckedNewFishIds(prev => { const next = new Set(prev); next.delete(f.id); return next })
-                              }}
-                            >
-                              <FishImg name={f.name} style={{ width: 48, height: 38, objectFit: 'contain', flexShrink: 0 }} />
-                              <p className="font-cinzel font-700 flex-1 truncate"
-                                style={{ fontSize: '0.88rem', color: rarityColor }}>{f.name}</p>
-                              {uncheckedNewFishIds.has(f.id) && (
-                                <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#f87171', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', padding: '0.1rem 0.4rem', borderRadius: '2rem', flexShrink: 0, fontFamily: 'var(--font-karla)' }}>NEW</span>
-                              )}
-                              <span style={{ fontSize: '0.7rem', color: '#4ade80', flexShrink: 0 }}>✓</span>
-                            </button>
+                                position: 'relative',
+                                background: 'rgba(4,10,18,0.45)',
+                                border: `1px solid ${rarityColor}1c`,
+                                borderRadius: 10,
+                                padding: '0.55rem 0.5rem 0.5rem',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                minHeight: 96,
+                              }}>
+                              <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FishImg name={f.name} style={{ maxWidth: '88%', maxHeight: 48, objectFit: 'contain', filter: 'brightness(0) opacity(0.18)' }} />
+                              </div>
+                              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.28)', marginTop: 4, letterSpacing: '0.06em' }}>???</p>
+                            </div>
+                          )
+                        }
 
-                            {isTapped && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                style={{ overflow: 'hidden' }}
-                              >
-                                <div className="px-3 pt-2 pb-3 mx-0.5 rounded-b-xl"
-                                  style={{ background: `${rarityColor}0a`, border: `1px solid ${rarityColor}25`, borderTop: 'none' }}>
-                                  <FishImg name={f.name} style={{ width: '100%', height: 110, objectFit: 'contain', marginBottom: '0.5rem' }} />
-                                  {/* Scientific name dropped 2026-05-26 — same
-                                      reason as the result card. */}
-                                  <p className="font-karla font-400 mb-3"
-                                    style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.55 }}>
-                                    &ldquo;{f.fun_fact}&rdquo;
-                                  </p>
-                                  <div className="flex items-center justify-between" style={{ gap: 12 }}>
-                                    <p className="font-cinzel font-700"
-                                      style={{ fontSize: '0.82rem', color: '#f0c040' }}>{f.sell_value.toLocaleString()} ⟡</p>
-                                    {personalBests[f.id] != null && (
-                                      <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#9a8870', letterSpacing: '0.04em' }}>
-                                        Largest you&apos;ve caught: <span className="font-cinzel font-700" style={{ color: '#e6dcc8' }}>{formatFishLength(personalBests[f.id])}</span>
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </motion.div>
+                        // Discovered: full card. Tap opens the modal with
+                        // the fun fact + sell value + PB. NEW badge clears
+                        // on tap (same as before — replaces inline expand).
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => {
+                              setTappedFishId(f.id)
+                              if (isNew) setUncheckedNewFishIds(prev => { const next = new Set(prev); next.delete(f.id); return next })
+                            }}
+                            className="text-left"
+                            style={{
+                              position: 'relative',
+                              background: `linear-gradient(180deg, rgba(4,10,18,0.7) 0%, ${rarityColor}10 100%)`,
+                              border: `1px solid ${rarityColor}55`,
+                              borderRadius: 10,
+                              padding: '0.55rem 0.5rem 0.55rem',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                              minHeight: 96,
+                              cursor: 'pointer',
+                              touchAction: 'manipulation',
+                            }}
+                          >
+                            <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <FishImg name={f.name} style={{ maxWidth: '88%', maxHeight: 50, objectFit: 'contain', filter: `drop-shadow(0 1px 6px ${rarityColor}66)` }} />
+                            </div>
+                            <p className="font-cinzel font-700" style={{
+                              fontSize: '0.72rem', color: rarityColor, lineHeight: 1.15,
+                              textAlign: 'center',
+                              width: '100%',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              marginTop: 2,
+                            }}>{f.name}</p>
+                            {pb != null && (
+                              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(230,220,200,0.7)', letterSpacing: '0.04em' }}>
+                                {formatFishLength(pb)}
+                              </p>
                             )}
-                          </div>
+                            {isNew && (
+                              <span style={{
+                                position: 'absolute', top: 4, right: 4,
+                                fontSize: '0.5rem', fontWeight: 700, color: '#f87171',
+                                background: 'rgba(248,113,113,0.18)', border: '1px solid rgba(248,113,113,0.4)',
+                                padding: '0.08rem 0.34rem', borderRadius: '2rem',
+                                fontFamily: 'var(--font-karla)', letterSpacing: '0.05em',
+                              }}>NEW</span>
+                            )}
+                          </button>
                         )
                       })}
                     </div>
@@ -5871,6 +5889,80 @@ export default function FishingGame({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Collection fish detail modal ──────────────────────────────
+          Tapping a discovered fish card in the collection drawer opens
+          this modal with the big image, fun fact, sell value, and the
+          player's PB length. Replaces the old inline tap-to-expand on
+          the row layout; the grid format made the inline panel push
+          neighbouring cards around. Mounted at the FishingGame root so
+          it floats above the drawer (PopupShell handles z-index +
+          safe-area + tap-outside-to-close). */}
+      <PopupShell open={tappedFishId != null} onClose={() => setTappedFishId(null)}>
+        {tappedFishId != null && (() => {
+          const f = allFishSpecies.find(x => x.id === tappedFishId)
+          if (!f) return null
+          const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
+          const pb = personalBests[f.id]
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 4 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                margin: 'auto', width: '100%', maxWidth: 360,
+                background: `linear-gradient(180deg, rgba(8,14,24,0.98) 0%, ${rarityColor}10 100%)`,
+                border: `1px solid ${rarityColor}55`,
+                borderRadius: 18,
+                padding: '1.1rem 1rem 1.2rem',
+                position: 'relative',
+                boxShadow: `0 18px 48px rgba(0,0,0,0.55), 0 0 24px ${rarityColor}22`,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setTappedFishId(null)}
+                aria-label="Close"
+                style={{
+                  position: 'absolute', top: 8, right: 8,
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                  color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1rem', lineHeight: 1, padding: 0,
+                }}
+              >×</button>
+
+              <div style={{ width: '100%', height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.6rem' }}>
+                <FishImg name={f.name} style={{ maxWidth: '90%', maxHeight: 150, objectFit: 'contain', filter: `drop-shadow(0 4px 18px ${rarityColor}66)` }} />
+              </div>
+
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: rarityColor, textAlign: 'center', lineHeight: 1.2, marginBottom: '0.7rem' }}>
+                {f.name}
+              </p>
+
+              <p className="font-karla font-400" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.55, marginBottom: '0.9rem', textAlign: 'center', fontStyle: 'italic' }}>
+                &ldquo;{f.fun_fact}&rdquo;
+              </p>
+
+              <div className="flex items-center justify-between" style={{
+                gap: 12, paddingTop: '0.7rem',
+                borderTop: `1px solid ${rarityColor}25`,
+              }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0c040' }}>
+                  {f.sell_value.toLocaleString()} ⟡
+                </p>
+                {pb != null && (
+                  <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#9a8870', letterSpacing: '0.04em', textAlign: 'right' }}>
+                    Largest you&apos;ve caught: <span className="font-cinzel font-700" style={{ color: '#e6dcc8' }}>{formatFishLength(pb)}</span>
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          )
+        })()}
+      </PopupShell>
 
       {/* ── Gear drawer ── */}
       <AnimatePresence>
