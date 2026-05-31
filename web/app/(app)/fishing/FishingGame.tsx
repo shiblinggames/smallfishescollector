@@ -1643,38 +1643,47 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             {fish.fun_fact}
           </p>
 
-          {/* Logbook CTA — every catch result links directly to the
-              collection. Becomes the visual focus when the catch was a
-              new species (gold pulse + "+1 Logbook" copy); stays
-              available as a quiet link for repeat catches so a player
-              can review their PB or browse what they've found without
-              hunting down the small Logbook button up top. */}
-          {onViewLogbook && (
-            <motion.button
-              type="button"
-              onClick={onViewLogbook}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, delay: 0.4 }}
-              className="font-karla font-700 uppercase"
-              style={{
-                marginTop: '0.7rem', width: '100%',
-                padding: '0.45rem 0.7rem',
-                borderRadius: 10,
-                background: isNewSpecies ? 'linear-gradient(180deg, rgba(253,230,138,0.18) 0%, rgba(253,230,138,0.04) 100%)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${isNewSpecies ? 'rgba(253,230,138,0.55)' : 'rgba(255,255,255,0.10)'}`,
-                color: isNewSpecies ? '#fde68a' : 'rgba(255,255,255,0.55)',
-                fontSize: '0.62rem',
-                letterSpacing: '0.14em',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                cursor: 'pointer', touchAction: 'manipulation',
-                boxShadow: isNewSpecies ? '0 0 18px rgba(253,230,138,0.22)' : 'none',
-                animation: isNewSpecies ? 'raid-node-current 2.4s ease-in-out infinite' : 'none',
-              }}
-            >
-              <span>{isNewSpecies ? '+1 Logbook · View →' : 'View in Logbook →'}</span>
-            </motion.button>
-          )}
+          {/* Logbook CTA — only on the moments that earn the extra
+              height: a new species (gold pulse + "+1 Logbook" copy) or
+              a PB (teal accent + "New PB" copy). Common repeat catches
+              skip the CTA entirely — the player still has the header
+              Logbook button up top, and the result card stays compact
+              for short-screen devices (iPhone SE class) where the
+              author's earlier "fits without scrolling" optimisations
+              live. Show on isNewSpecies OR isPB so the moments that
+              would actually want a logbook review pull the player in. */}
+          {onViewLogbook && (isNewSpecies || isPBMoment) && (() => {
+            const newSpecies = isNewSpecies
+            const accent     = newSpecies ? '#fde68a' : '#5eead4'
+            const accentRgb  = newSpecies ? '253,230,138' : '94,234,212'
+            const label      = newSpecies ? '+1 Logbook · View →' : 'New PB · View in Logbook →'
+            return (
+              <motion.button
+                type="button"
+                onClick={onViewLogbook}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.22, delay: 0.4 }}
+                className="font-karla font-700 uppercase"
+                style={{
+                  marginTop: '0.7rem', width: '100%',
+                  padding: '0.45rem 0.7rem',
+                  borderRadius: 10,
+                  background: `linear-gradient(180deg, rgba(${accentRgb},0.18) 0%, rgba(${accentRgb},0.04) 100%)`,
+                  border: `1px solid rgba(${accentRgb},0.55)`,
+                  color: accent,
+                  fontSize: '0.62rem',
+                  letterSpacing: '0.14em',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  cursor: 'pointer', touchAction: 'manipulation',
+                  boxShadow: `0 0 18px rgba(${accentRgb},0.22)`,
+                  animation: 'raid-node-current 2.4s ease-in-out infinite',
+                }}
+              >
+                <span>{label}</span>
+              </motion.button>
+            )
+          })()}
         </div>
       </motion.div>
     </div>
