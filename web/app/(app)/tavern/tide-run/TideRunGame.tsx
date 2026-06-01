@@ -441,17 +441,17 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     void (async () => {
       try {
         const result = await awardTideRunBeacons(beaconsThisRun)
-        if (cancelled) return
         if ('ok' in result) {
-          // Stash the new total for the float animation effect, AND
-          // dispatch the Nav update right now. Was previously only the
-          // stash — the float-animation timer (~350ms later) handled
-          // the dispatch — but when the server response landed AFTER
-          // that timer, the ref was still null, the timer's dispatch
-          // skipped, and no later trigger ever fired. Player saw the
-          // DB credit on reload only. Dispatching here makes the Nav
-          // counter update the instant the server confirms; the float
-          // effect below stays as the visible coin animation.
+          // Stash + dispatch happen unconditionally even if `cancelled`
+          // is true. The cleanup that sets cancelled=true fires as soon
+          // as beaconReward changes (which the effect itself triggers
+          // via setBeaconReward above) — so cancelled is true within a
+          // frame of this async call starting, long before the server
+          // responds. The original `if (cancelled) return` here meant
+          // the dispatch was effectively never reached. Both ops below
+          // are safe outside the React tree (ref + window event), so
+          // dropping the guard fixes the "Nav doesn't update" bug
+          // without risking a state-update-on-unmount warning.
           pendingNavTotalRef.current = result.newDoubloonTotal
           if (typeof window !== 'undefined') {
             try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
