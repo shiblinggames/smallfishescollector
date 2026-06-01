@@ -2640,6 +2640,28 @@ export default function FishingGame({
   // momentary flash on top so the player notices THIS catch without
   // being forced into the drawer — totally optional.
   const [freshCatchHook, setFreshCatchHook] = useState<'new-species' | 'pb' | null>(null)
+
+  // Latest noteworthy catch's habitat — used to auto-expand the right
+  // zone when the player taps the flashing Logbook button after a new
+  // species / PB. Without this, opening the drawer drops the player
+  // on the zone header list with no signal which zone holds their
+  // just-caught fish.
+  const [latestCatchHabitat, setLatestCatchHabitat] = useState<string | null>(null)
+
+  // Auto-clear unviewed-badge state when the drawer closes. Without
+  // this, the only way to make the red count badge go away is to tap
+  // every new card individually, which players don't intuit. Opening
+  // the Logbook now counts as "I saw the notification" — badges
+  // persist until close. Uses a ref to detect the open → closed
+  // transition so we only clear once per session.
+  const prevCollectionOpenRef = useRef(false)
+  useEffect(() => {
+    if (prevCollectionOpenRef.current && !collectionOpen) {
+      setUncheckedNewFishIds(new Set())
+      setLatestCatchHabitat(null)
+    }
+    prevCollectionOpenRef.current = collectionOpen
+  }, [collectionOpen])
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number; prestige?: boolean } | null>(null)
   // Level-up celebration carries both the old AND new level so we can
@@ -3563,9 +3585,15 @@ export default function FishingGame({
         // Stage the Logbook header-button flash for noteworthy catches.
         // New species wins over PB so the gold treatment lands on
         // first-time catches that also set a PB. Cleared on next cast
-        // or on opening the Logbook.
-        if (isNewSpecies) setFreshCatchHook('new-species')
-        else if (res.isPB) setFreshCatchHook('pb')
+        // or on opening the Logbook. Habitat is captured so the drawer
+        // can auto-expand the right zone when the player taps the flash.
+        if (isNewSpecies) {
+          setFreshCatchHook('new-species')
+          setLatestCatchHabitat(fish.habitat)
+        } else if (res.isPB) {
+          setFreshCatchHook('pb')
+          setLatestCatchHabitat(fish.habitat)
+        }
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
             setTrophyCatches(prev => new Set([...prev, fish.id]))
@@ -4384,9 +4412,16 @@ export default function FishingGame({
                   <motion.button
                     key={freshCatchHook ?? 'idle'}
                     onClick={() => {
+                      const opening = !collectionOpen
                       setCollectionOpen(o => !o)
                       setGearOpen(false)
                       setHoldOpen(false)
+                      // If opening from a flash, auto-expand the zone
+                      // the latest catch lives in so the player lands
+                      // on the right grid instead of the zone list.
+                      if (opening && latestCatchHabitat) {
+                        setExpandedZone(latestCatchHabitat)
+                      }
                       setFreshCatchHook(null)
                     }}
                     animate={flashing ? {
@@ -5824,6 +5859,10 @@ export default function FishingGame({
               const isComplete = discoveredCount === zoneSpecies.length && zoneSpecies.length > 0
               const isClaimed = claimedZones[zone] ?? false
               const isClaiming = claimingZone === zone
+              // Count unviewed new fish in this zone so the header
+              // shows a NEW pill — tells the player exactly which
+              // zone to open without a guessing game.
+              const newInZone = zoneSpecies.filter(f => uncheckedNewFishIds.has(f.id)).length
 
               return (
                 <div key={zone} ref={el => { zoneBlockRefs.current[zone] = el }} style={{ marginBottom: '0.6rem' }}>
@@ -5853,6 +5892,25 @@ export default function FishingGame({
                                 </svg>
                               ))}
                             </div>
+                          )}
+                          {newInZone > 0 && (
+                            <motion.span
+                              animate={{ scale: [1, 1.08, 1] }}
+                              transition={{ duration: 1.4, ease: 'easeInOut', repeat: Infinity }}
+                              style={{
+                                fontSize: '0.5rem', fontWeight: 700,
+                                fontFamily: 'var(--font-karla)',
+                                color: '#fde68a',
+                                background: 'rgba(253,230,138,0.18)',
+                                border: '1px solid rgba(253,230,138,0.5)',
+                                padding: '0.14rem 0.42rem',
+                                borderRadius: '2rem',
+                                letterSpacing: '0.12em',
+                                boxShadow: '0 0 12px rgba(253,230,138,0.32)',
+                                lineHeight: 1,
+                              }}>
+                              {newInZone} NEW
+                            </motion.span>
                           )}
                         </div>
                         <p className="font-karla font-400"
