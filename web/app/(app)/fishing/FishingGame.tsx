@@ -1152,12 +1152,20 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   const isLegendary = rarity === 5 && !isAncient
   const isEpicPlus  = isShiny || rarity >= 4
 
+  // Inset-only halos so the scrollable parent (overflowY:auto on the
+  // catching area at line ~4797) can't clip the glow to a rectangle.
+  // Same blur radii / alphas as the prior outer-shadow recipe — the
+  // effect now reads as "lit from within" instead of "halo around"
+  // but the saturation + brightness budget is the same, so each
+  // rarity still tiers up visibly. The longest insets on rarity 5
+  // extend well past the card's interior so the gradient continues
+  // to fade through the whole card body.
   const glowShadow: Record<number, string> = {
     1: 'none',
-    2: `0 0 10px ${r.color}40, 0 0 28px ${r.color}18`,
-    3: `0 0 18px ${r.color}55, 0 0 44px ${r.color}25`,
-    4: `0 0 26px ${r.color}65, 0 0 60px ${r.color}32`,
-    5: `0 0 32px ${r.color}80, 0 0 80px ${r.color}40, 0 0 130px ${r.color}20`,
+    2: `inset 0 0 10px ${r.color}40, inset 0 0 28px ${r.color}22`,
+    3: `inset 0 0 18px ${r.color}55, inset 0 0 44px ${r.color}30`,
+    4: `inset 0 0 26px ${r.color}70, inset 0 0 60px ${r.color}3a`,
+    5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
   // Shiny replaces the dark glassy card with a warm gold gradient — the
@@ -1456,20 +1464,23 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           />
         )}
 
-        {/* Glow halo — sits outside overflow:hidden so it isn't clipped.
-            Suppressed on shiny since the gold treatment owns the glow
-            chrome; stacking the rarity halo on top read as a rectangle
-            because its blur extended past the card's corner radius. */}
-        {rarity >= 2 && !isShiny && (
+        {/* Glow halo previously sat as a separate motion.div behind the
+            card (inset:-1, boxShadow: outer rarity glow). Moved onto
+            the card itself as inset shadows below — the scrollable
+            parent (overflowY:auto on the catching area) was clipping
+            the outer halo to a rectangle on every rarity, losing the
+            rounded corners. Insets render inside the card's bounds so
+            the rounding is preserved. Pulse for epic+ became a soft
+            opacity oscillation on a separate radial-gradient overlay
+            so the highlight still breathes. */}
+        {rarity >= 2 && !isShiny && isEpicPlus && (
           <motion.div
-            animate={isEpicPlus ? { opacity: [0.5, 1, 0.5] } : { opacity: 1 }}
-            transition={isEpicPlus
-              ? { duration: isLegendary ? 1.2 : 1.8, repeat: Infinity, ease: 'easeInOut' }
-              : {}}
+            animate={{ opacity: [0.45, 0.85, 0.45] }}
+            transition={{ duration: isLegendary ? 1.2 : 1.8, repeat: Infinity, ease: 'easeInOut' }}
             style={{
-              position: 'absolute', inset: -1, borderRadius: '1rem',
-              boxShadow: glowShadow[rarity],
-              pointerEvents: 'none', zIndex: 0,
+              position: 'absolute', inset: 0, borderRadius: '1rem',
+              background: `radial-gradient(ellipse at 50% 55%, ${r.color}28 0%, transparent 70%)`,
+              pointerEvents: 'none', zIndex: 1,
             }}
           />
         )}
@@ -1486,7 +1497,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
           position: 'relative', zIndex: 1,
-          boxShadow: isShiny ? shinyGlow : undefined,
+          // Shiny → its own gold inset glow; everything else → the
+          // rarity-tiered inset halo (replaces the prior outer halo
+          // motion.div that was getting clipped by the scrollable
+          // parent). Rarity-1 commons get no glow as before.
+          boxShadow: isShiny ? shinyGlow : (rarity >= 2 ? glowShadow[rarity] : undefined),
         }}
       >
         {/* Shiny sweep — faster + more saturated than the legendary one.
