@@ -13,6 +13,7 @@ import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
+import { rollShiny } from '@/lib/shiny'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -295,6 +296,11 @@ export async function reelIn(
       isPB: boolean
       /** Previous PB before this catch, in inches. null on first-catch. */
       previousBest: number | null
+      /** Pokémon-style shiny variant. Server-rolled at 1/SHINY_ODDS but
+       *  only if the catch was a Perfect AND the species isn't habitat-
+       *  blocked (Ancient Deep). Persisted as a row in shiny_catches when
+       *  true. */
+      isShiny: boolean
     }
   | { caught: false }
   | { error: string }
@@ -380,6 +386,8 @@ export async function reelIn(
       sizeIn: ancientSize,
       isPB: false,
       previousBest: null,
+      // Ancients can never roll shiny (habitat-blocked in lib/shiny rollShiny).
+      isShiny: false,
     }
   }
 
@@ -549,6 +557,24 @@ export async function reelIn(
   // reuse it for the rest of the day.
   const dailyDate = getTodayUTC()
   const isPerfect = result === 'perfect'
+
+  // ── Shiny roll ────────────────────────────────────────────────────
+  // Gated on a Perfect — ties the ultra-rare drop to the skill moment
+  // instead of a pure casting grind. 1/SHINY_ODDS on top of that.
+  // Habitat-blocked for ancient_deep (its own ceremonial flow).
+  // Persisted as a row in `shiny_catches` carrying enough metadata for
+  // the future trophy display (size, when caught). Per-instance, never
+  // merged — multiple shinies of the same species accumulate.
+  const isShiny = rollShiny({ isPerfect, habitat: fish.habitat })
+  if (isShiny) {
+    await admin.from('shiny_catches').insert({
+      user_id: user.id,
+      fish_id: fish.id,
+      size_in: sizeIn > 0 ? sizeIn : null,
+      status: 'hold',
+    })
+  }
+
   const { data: dailyRow } = await admin
     .from('daily_challenge_progress')
     .select('p1, p2, p3, claimed_1, claimed_2, claimed_3, fishing_level_snapshot')
@@ -606,6 +632,7 @@ export async function reelIn(
     sizeTier,
     isPB,
     previousBest,
+    isShiny,
   }
 }
 

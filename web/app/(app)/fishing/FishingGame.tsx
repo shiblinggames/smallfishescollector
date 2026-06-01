@@ -50,6 +50,7 @@ import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, t
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { formatFishLength, tierShowsPill, type FishSizeTier } from '@/lib/fishSize'
+import { SHINY_FISH_FILTER, SHINY_THEME } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
@@ -1069,7 +1070,7 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, isShiny = false }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1089,6 +1090,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   sizeTier?: FishSizeTier
   isPB: boolean
   previousBest: number | null
+  /** Pokémon-style ultra-rare gold variant — gated server-side on a
+   *  Perfect catch + 1/SHINY_ODDS roll. When true, the card swaps to
+   *  the gold/amber palette and the fish image gets the SHINY_FISH_FILTER
+   *  so the entire result moment reads as premium. */
+  isShiny?: boolean
 }) {
   const isAncient = fish.habitat === 'ancient_deep'
   const rarity = fish.bite_rarity ?? 1
@@ -1135,12 +1141,16 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     return () => clearTimeout(t)
   }, [isPBMoment])
 
-  // Ancient deep gets its own palette + label, overriding the gold legendary look
-  const r = isAncient
-    ? { label: 'Ancient', color: '#e11d48', hookedText: baseR.hookedText }
-    : baseR
+  // Ancient deep gets its own palette + label, overriding the gold legendary look.
+  // Shiny overrides BOTH (rarity + ancient) with the premium gold theme so the
+  // moment reads as the headline reward of the catch, not a sub-modifier.
+  const r = isShiny
+    ? { label: 'Shiny ✦', color: SHINY_THEME.primary, hookedText: baseR.hookedText }
+    : isAncient
+      ? { label: 'Ancient', color: '#e11d48', hookedText: baseR.hookedText }
+      : baseR
   const isLegendary = rarity === 5 && !isAncient
-  const isEpicPlus  = rarity >= 4
+  const isEpicPlus  = isShiny || rarity >= 4
 
   const glowShadow: Record<number, string> = {
     1: 'none',
@@ -1481,7 +1491,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             to say "yeah, normal one." Epic+ rarity gets the band (chrome
             reinforces the moment); a common first-catch gets the band so
             the New badge has a home. Zone label dropped long ago. */}
-        {(rarity >= 2 || isNewSpecies) && (
+        {(rarity >= 2 || isNewSpecies || isShiny) && (
           <div className="px-4 py-2 flex items-center justify-center gap-2"
             style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
             <span className="font-karla font-700 uppercase tracking-[0.18em]"
@@ -1489,8 +1499,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 fontSize: '0.58rem', color: r.color,
                 background: `${r.color}1c`, border: `1px solid ${r.color}45`,
                 padding: '0.18rem 0.6rem', borderRadius: '2rem',
+                textShadow: isShiny ? `0 0 10px ${SHINY_THEME.glow}` : 'none',
               }}>
-              {r.label}{rarity >= 4 ? ' ✦' : ''}
+              {r.label}{!isShiny && rarity >= 4 ? ' ✦' : ''}
             </span>
             {isNewSpecies && (
               <motion.span
@@ -1529,7 +1540,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               name={fish.name}
               style={{
                 width: '62%', maxWidth: 170, height: 92, objectFit: 'contain',
-                filter: `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
+                // Shiny stacks the gold hue-shift + saturation filter on top
+                // of the rarity drop-shadow chain so the sprite reads as a
+                // legitimately different fish without needing new art per
+                // species. See lib/shiny.ts SHINY_FISH_FILTER for the recipe.
+                filter: isShiny
+                  ? `${SHINY_FISH_FILTER} drop-shadow(0 6px 14px ${r.color}55)`
+                  : `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
               }}
             />
 
@@ -2551,6 +2568,7 @@ export default function FishingGame({
     sizeTier?: import('@/lib/fishSize').FishSizeTier
     isPB: boolean
     previousBest: number | null
+    isShiny?: boolean
   } | null>(null)
   const [crateResult, setCrateResult] = useState<
     | { type: 'doubloons'; amount: number }
@@ -3575,6 +3593,7 @@ export default function FishingGame({
           sizeTier: res.sizeTier,
           isPB: res.isPB,
           previousBest: res.previousBest,
+          isShiny: (res as { isShiny?: boolean }).isShiny ?? false,
         })
         // Bump the live PB lookup so the collection drawer reflects the new
         // record without needing a page refresh. Server is authoritative —
@@ -5044,6 +5063,7 @@ export default function FishingGame({
                       sizeTier={catchResult.sizeTier}
                       isPB={catchResult.isPB}
                       previousBest={catchResult.previousBest}
+                      isShiny={catchResult.isShiny}
                     />
                   ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
