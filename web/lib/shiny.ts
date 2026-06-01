@@ -21,16 +21,23 @@ export const SHINY_ODDS = 1000
 /** Sell value multiplier on shiny variants. */
 export const SHINY_SELL_MULT = 10
 
-/** The gold-shimmer CSS filter applied to a shiny fish image anywhere
- *  it renders (result card, hold list, Logbook grid, modal). Uses
- *  hue-rotate + saturate + brightness to push any sprite toward warm
- *  gold, plus two drop-shadows for the rim-light glow. Combine with
- *  the `shiny-fish-shimmer` keyframe in globals.css for the sweeping
- *  highlight, if added separately. */
+/** Heavy gold filter — makes any fish sprite look like SOLID GOLD,
+ *  not just gold-tinted. Recipe:
+ *    grayscale(1)   strips the sprite's original colors
+ *    sepia(1)       pushes the result to a warm tone
+ *    saturate(7)    cranks that warm tone to a strong, opaque gold
+ *    hue-rotate     dials the hue to true 24k gold (vs orange-brown)
+ *    brightness     bumps highlights so the metal reads as polished
+ *    contrast       deepens the shadows so it doesn't look flat
+ *    two drop-shadows lay a tight rim-light + a wider warm halo
+ *  Pure CSS — works on every existing fish sprite without per-species
+ *  art. Pair with the SHINY_THEME palette + result-card chrome for the
+ *  full "wow" moment. */
 export const SHINY_FISH_FILTER =
-  'hue-rotate(40deg) saturate(1.6) brightness(1.15) ' +
-  'drop-shadow(0 0 10px rgba(255,215,80,0.85)) ' +
-  'drop-shadow(0 0 24px rgba(255,200,60,0.5))'
+  'grayscale(1) sepia(1) saturate(7) hue-rotate(-15deg) ' +
+  'brightness(1.25) contrast(1.05) ' +
+  'drop-shadow(0 0 14px rgba(251,191,36,0.95)) ' +
+  'drop-shadow(0 0 36px rgba(251,191,36,0.55))'
 
 /** Theme palette used for shiny chrome (result card border, banners,
  *  Logbook badge). Gold + warm amber. */

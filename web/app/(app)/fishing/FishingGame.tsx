@@ -1160,7 +1160,23 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `0 0 32px ${r.color}80, 0 0 80px ${r.color}40, 0 0 130px ${r.color}20`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  const cardBg = 'rgba(6,16,26,0.96)'
+  // Shiny replaces the dark glassy card with a warm gold gradient — the
+  // chrome itself reads as "premium metal." Three sparkle particles are
+  // pre-randomised so the field is stable across re-renders.
+  const cardBg = isShiny
+    ? 'linear-gradient(135deg, rgba(70,42,10,0.98) 0%, rgba(150,98,24,0.96) 45%, rgba(80,48,12,0.98) 100%)'
+    : 'rgba(6,16,26,0.96)'
+  const shinyGlow = `0 0 36px ${SHINY_THEME.primary}aa, 0 0 88px ${SHINY_THEME.primary}55, inset 0 0 28px rgba(251,191,36,0.18)`
+  const shinySparkles = useMemo(
+    () => Array.from({ length: 12 }, () => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: 2 + Math.random() * 3,
+      delay: Math.random() * 2,
+      duration: 1.6 + Math.random() * 1.4,
+    })),
+    [],
+  )
 
   return (
     <div style={{ position: 'relative' }}>
@@ -1449,18 +1465,93 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
 
       {/* Card */}
       <motion.div
-        initial={{ opacity: 0, y: isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
+        initial={{ opacity: 0, y: isShiny ? 48 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.7 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -6 : 0 }}
+        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: isShiny ? 130 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 11 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.2 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
         className="rounded-2xl overflow-hidden"
         style={{
-          border: `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
+          border: isShiny
+            ? `2px solid ${SHINY_THEME.primary}`
+            : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
           position: 'relative', zIndex: 1,
+          boxShadow: isShiny ? shinyGlow : undefined,
         }}
       >
+        {/* Shiny sweep — faster + more saturated than the legendary one.
+            Loops continuously so the card never sits still; the gold
+            metal always reads as "alive." */}
+        {isShiny && (
+          <>
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: '220%' }}
+              transition={{ duration: 1.6, delay: 0.4, ease: 'linear', repeat: Infinity, repeatDelay: 1.2 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+                background: 'linear-gradient(115deg, transparent 18%, rgba(255,235,140,0.55) 48%, rgba(255,255,255,0.7) 52%, rgba(255,235,140,0.55) 56%, transparent 82%)',
+                mixBlendMode: 'screen',
+              }}
+            />
+            {/* Sparkle particle field — 12 small gold dots scattered, each
+                fading + scaling on its own loop so the card surface always
+                glints somewhere. Random delays staggered up front (see
+                useMemo above) so re-renders don't shuffle the positions. */}
+            <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', overflow: 'hidden' }}>
+              {shinySparkles.map((s, i) => (
+                <motion.span
+                  key={i}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0] }}
+                  transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, repeatDelay: 0.6, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    left: `${s.x}%`, top: `${s.y}%`,
+                    width: s.size, height: s.size,
+                    borderRadius: '50%',
+                    background: '#fff5cf',
+                    boxShadow: `0 0 ${s.size * 3}px #fbcc4a, 0 0 ${s.size * 6}px rgba(251,204,74,0.6)`,
+                  }}
+                />
+              ))}
+            </div>
+            {/* "SHINY" hero header — big gold all-caps banner stamped
+                across the top. Replaces the small rarity-band pill (the
+                pill still renders below for the Shiny label + new
+                species, but this banner is the wow). */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.6, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 16, delay: 0.4 }}
+              style={{
+                position: 'relative', zIndex: 3,
+                padding: '0.7rem 1rem 0.6rem',
+                textAlign: 'center',
+                background: 'linear-gradient(180deg, rgba(255,225,130,0.25) 0%, rgba(0,0,0,0) 100%)',
+                borderBottom: `1px solid ${SHINY_THEME.primary}77`,
+              }}
+            >
+              <p className="font-cinzel font-700"
+                style={{
+                  fontSize: '1.5rem',
+                  letterSpacing: '0.34em',
+                  color: '#fff7d6',
+                  textShadow: `0 0 14px ${SHINY_THEME.primary}, 0 0 32px rgba(251,191,36,0.7), 0 2px 0 rgba(120,70,10,0.6)`,
+                  lineHeight: 1,
+                  marginLeft: '0.34em', // optical centring vs the letter-spacing
+                }}>
+                ✦ SHINY ✦
+              </p>
+              <p className="font-karla font-700 uppercase tracking-[0.32em]"
+                style={{ fontSize: '0.5rem', color: 'rgba(255,240,180,0.78)', marginTop: 4 }}>
+                One in a thousand
+              </p>
+            </motion.div>
+          </>
+        )}
+
         {/* Legendary shimmer sweep */}
-        {isLegendary && (
+        {isLegendary && !isShiny && (
           <motion.div
             initial={{ x: '-100%' }}
             animate={{ x: '220%' }}
@@ -1491,7 +1582,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             to say "yeah, normal one." Epic+ rarity gets the band (chrome
             reinforces the moment); a common first-catch gets the band so
             the New badge has a home. Zone label dropped long ago. */}
-        {(rarity >= 2 || isNewSpecies || isShiny) && (
+        {/* Standard rarity band — suppressed for shiny since the big
+            "✦ SHINY ✦" hero header above already carries that role.
+            On a shiny that's ALSO a new species we only render the
+            "New ✦" pill (skipping the rarity label entirely). */}
+        {!isShiny && (rarity >= 2 || isNewSpecies) && (
           <div className="px-4 py-2 flex items-center justify-center gap-2"
             style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
             <span className="font-karla font-700 uppercase tracking-[0.18em]"
@@ -1499,9 +1594,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 fontSize: '0.58rem', color: r.color,
                 background: `${r.color}1c`, border: `1px solid ${r.color}45`,
                 padding: '0.18rem 0.6rem', borderRadius: '2rem',
-                textShadow: isShiny ? `0 0 10px ${SHINY_THEME.glow}` : 'none',
               }}>
-              {r.label}{!isShiny && rarity >= 4 ? ' ✦' : ''}
+              {r.label}{rarity >= 4 ? ' ✦' : ''}
             </span>
             {isNewSpecies && (
               <motion.span
