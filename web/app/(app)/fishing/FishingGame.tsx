@@ -1168,11 +1168,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny replaces the dark glassy card with a warm gold gradient — the
-  // chrome itself reads as "premium metal." Three sparkle particles are
-  // pre-randomised so the field is stable across re-renders.
+  // Shiny replaces the dark glassy card with a polished-metal look.
+  // Radial gradient mimics light bouncing off a curved gold surface:
+  // a warm champagne highlight up top, deeper amber through the
+  // middle, dark espresso at the bottom edges for depth. The earlier
+  // recipe was a flat brown-to-yellow linear gradient that read as
+  // carnival foil, not premium metal.
   const cardBg = isShiny
-    ? 'linear-gradient(135deg, rgba(70,42,10,0.98) 0%, rgba(150,98,24,0.96) 45%, rgba(80,48,12,0.98) 100%)'
+    ? 'radial-gradient(ellipse at 50% 18%, rgba(208,162,82,0.97) 0%, rgba(120,76,28,0.97) 55%, rgba(36,22,10,0.99) 100%)'
     : 'rgba(6,16,26,0.96)'
   // Inset-only glow. Any OUTER box-shadow gets clipped to a rectangle
   // by the scrollable parent (overflowY:auto on the catching area) so
@@ -1183,13 +1186,17 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   // gold border already carry the metal feel without needing an
   // external halo.
   const shinyGlow = `inset 0 0 32px rgba(255,225,140,0.4), inset 0 0 64px rgba(251,204,74,0.18)`
+  // Fewer + slightly bigger sparkles with more varied timing — the
+  // earlier 12-particle field read as a dense uniform field rather
+  // than the rare, refined glint of polished metal. 7 with stagger
+  // is enough to keep the surface alive without crowding.
   const shinySparkles = useMemo(
-    () => Array.from({ length: 12 }, () => ({
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: 2 + Math.random() * 3,
-      delay: Math.random() * 2,
-      duration: 1.6 + Math.random() * 1.4,
+    () => Array.from({ length: 7 }, () => ({
+      x: 8 + Math.random() * 84,   // pull off the very edges
+      y: 8 + Math.random() * 84,
+      size: 3 + Math.random() * 4,  // 3–7px, was 2–5px
+      delay: Math.random() * 3.5,   // wider stagger
+      duration: 2.2 + Math.random() * 1.6, // slower fade
     })),
     [],
   )
@@ -1493,7 +1500,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         className="rounded-2xl overflow-hidden"
         style={{
           border: isShiny
-            ? `2px solid ${SHINY_THEME.primary}`
+            // Softer champagne-tone border + light inset stroke to
+            // mimic a polished edge. Was a single bright 2px solid
+            // gold which read as a foil sticker.
+            ? '1.5px solid rgba(218,178,98,0.88)'
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
           position: 'relative', zIndex: 1,
@@ -1504,18 +1514,32 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           boxShadow: isShiny ? shinyGlow : (rarity >= 2 ? glowShadow[rarity] : undefined),
         }}
       >
-        {/* Shiny sweep — faster + more saturated than the legendary one.
-            Loops continuously so the card never sits still; the gold
-            metal always reads as "alive." */}
+        {/* Shiny ambient lighting. Two layers, neither of which slides
+            across as a visible "bar":
+              1. A static radial highlight up top — the surface looks
+                 lit from above, like real metal under a soft light.
+              2. A slow, very wide ambient pass that drifts in and out
+                 over 7s with much softer alpha and a smooth easeInOut
+                 so it reads as a passing reflection, not a polish
+                 stripe. The old 1.6s linear sweep at 0.7 alpha read
+                 as a Photoshop "shine effect" — cheap.
+            mix-blend: screen on both so they brighten what's underneath
+            rather than overlaying a coloured tint. */}
         {isShiny && (
           <>
+            <div aria-hidden style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: '52%',
+              zIndex: 1, pointerEvents: 'none',
+              background: 'radial-gradient(ellipse at 50% 0%, rgba(255,238,180,0.32) 0%, rgba(255,225,150,0.12) 35%, transparent 75%)',
+              mixBlendMode: 'screen',
+            }} />
             <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: '220%' }}
-              transition={{ duration: 1.6, delay: 0.4, ease: 'linear', repeat: Infinity, repeatDelay: 1.2 }}
+              initial={{ x: '-40%', opacity: 0 }}
+              animate={{ x: ['-40%', '50%', '140%'], opacity: [0, 0.6, 0] }}
+              transition={{ duration: 7, ease: 'easeInOut', repeat: Infinity, repeatDelay: 3, times: [0, 0.5, 1] }}
               style={{
                 position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
-                background: 'linear-gradient(115deg, transparent 18%, rgba(255,235,140,0.55) 48%, rgba(255,255,255,0.7) 52%, rgba(255,235,140,0.55) 56%, transparent 82%)',
+                background: 'linear-gradient(110deg, transparent 25%, rgba(255,240,180,0.18) 42%, rgba(255,248,210,0.26) 50%, rgba(255,240,180,0.18) 58%, transparent 75%)',
                 mixBlendMode: 'screen',
               }}
             />
@@ -1541,35 +1565,37 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 />
               ))}
             </div>
-            {/* "SHINY" hero header — big gold all-caps banner stamped
-                across the top. Replaces the small rarity-band pill (the
-                pill still renders below for the Shiny label + new
-                species, but this banner is the wow). */}
+            {/* Hero header — refined treatment. Smaller "SHINY" with a
+                single soft glow + a subtle dark drop for depth (was
+                three stacked shadows that read as overworked). The
+                champagne text colour reads as polished metal rather
+                than highlighter yellow. Faux-gold-leaf gradient strip
+                under the bottom border instead of a flat colour bar. */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.6, y: -8 }}
+              initial={{ opacity: 0, scale: 0.78, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 16, delay: 0.4 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.42 }}
               style={{
                 position: 'relative', zIndex: 3,
-                padding: '0.7rem 1rem 0.6rem',
+                padding: '0.85rem 1rem 0.75rem',
                 textAlign: 'center',
-                background: 'linear-gradient(180deg, rgba(255,225,130,0.25) 0%, rgba(0,0,0,0) 100%)',
-                borderBottom: `1px solid ${SHINY_THEME.primary}77`,
+                background: 'linear-gradient(180deg, rgba(255,225,150,0.18) 0%, rgba(0,0,0,0) 100%)',
+                borderBottom: '1px solid rgba(218,178,98,0.45)',
               }}
             >
               <p className="font-cinzel font-700"
                 style={{
-                  fontSize: '1.5rem',
-                  letterSpacing: '0.34em',
-                  color: '#fff7d6',
-                  textShadow: `0 0 14px ${SHINY_THEME.primary}, 0 0 32px rgba(251,191,36,0.7), 0 2px 0 rgba(120,70,10,0.6)`,
+                  fontSize: '1.2rem',
+                  letterSpacing: '0.36em',
+                  color: '#f6e3a6',
+                  textShadow: '0 0 14px rgba(245,205,110,0.55), 0 1px 0 rgba(60,30,4,0.65)',
                   lineHeight: 1,
-                  marginLeft: '0.34em', // optical centring vs the letter-spacing
+                  marginLeft: '0.36em', // optical centring vs the letter-spacing
                 }}>
                 ✦ SHINY ✦
               </p>
-              <p className="font-karla font-700 uppercase tracking-[0.32em]"
-                style={{ fontSize: '0.5rem', color: 'rgba(255,240,180,0.78)', marginTop: 4 }}>
+              <p className="font-karla font-500"
+                style={{ fontSize: '0.52rem', color: 'rgba(232,205,140,0.65)', marginTop: 6, letterSpacing: '0.34em', textTransform: 'uppercase' }}>
                 One in a thousand
               </p>
             </motion.div>
