@@ -1178,11 +1178,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny uses the SAME dark card background as normal — the gold
-  // fish is meant to stand out against a neutral frame, not a warm
-  // one. Even the subtle top wash was competing with the gold halo
-  // behind the fish and washing out the fun-fact text underneath.
-  const cardBg = 'rgba(6,16,26,0.96)'
+  // Shiny gets a slight warm tint on the card so it's not identical
+  // to a normal catch (which read as "plain") — but kept deeply dark
+  // and grounded so the gold fish + burst still dominate. A top warm
+  // wash layered over the normal dark base, fading to fully neutral
+  // by 55% so the body text stays high-contrast.
+  const cardBg = isShiny
+    ? 'linear-gradient(180deg, rgba(54,32,12,0.62) 0%, transparent 55%), rgba(8,14,22,0.97)'
+    : 'rgba(6,16,26,0.96)'
   // No card-level shiny glow anymore. The fish image + its pulsing
   // halo + sparkle ring own the gold. Adding inset gold on the card
   // chrome ate body-text contrast and competed with the fish for the
@@ -1496,11 +1499,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           />
         )}
 
-      {/* Card */}
+      {/* Card. Shiny punches in faster + bigger overshoot — a real
+          spring snap rather than the slow settle the legendary uses.
+          Combined with the burst + particle explosion below this is
+          the "dopamine shot" moment when the card lands. */}
       <motion.div
-        initial={{ opacity: 0, y: isShiny ? 48 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.7 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -6 : 0 }}
+        initial={{ opacity: 0, y: isShiny ? 32 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.5 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -10 : 0 }}
         animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: isShiny ? 130 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 11 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.2 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
+        transition={{ type: 'spring', stiffness: isShiny ? 220 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 13 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.08 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
         className="rounded-2xl overflow-hidden"
         style={{
           border: isShiny
@@ -1613,6 +1619,66 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               minHeight: isShiny ? 124 : undefined,
             }}
           >
+            {/* DOPAMINE-SHOT one-shot burst — fires once on mount.
+                A bright radial flash explodes from the fish centre,
+                expanding from scale 0 to 4 while fading. Pure
+                celebration; this is the "wow" beat that makes the
+                catch feel like a real reward. */}
+            {isShiny && (
+              <div aria-hidden style={{
+                position: 'absolute', top: '50%', left: '50%',
+                width: 180, height: 180,
+                marginLeft: -90, marginTop: -90,
+                pointerEvents: 'none', zIndex: 1,
+              }}>
+                <motion.div
+                  initial={{ opacity: 0.85, scale: 0 }}
+                  animate={{ opacity: 0, scale: 4 }}
+                  transition={{ duration: 0.85, ease: 'easeOut', delay: 0.18 }}
+                  style={{
+                    width: '100%', height: '100%',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,235,160,0.95) 0%, rgba(255,200,80,0.65) 22%, rgba(251,191,36,0.25) 50%, transparent 70%)',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Particle burst — 10 sparkles explode outward from the
+                fish centre in a radial fan on mount. Each fades + scales
+                slightly while travelling. Wraps each in a static-positioned
+                span so framer-motion's x/y/scale animation doesn't fight
+                a centering transform. Pure one-shot, no repeat. */}
+            {isShiny && (
+              <div aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 3 }}>
+                {Array.from({ length: 10 }).map((_, i) => {
+                  const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.3
+                  const distance = 75 + Math.random() * 35
+                  return (
+                    <motion.span
+                      key={i}
+                      initial={{ opacity: 1, x: 0, y: 0, scale: 0.5 }}
+                      animate={{
+                        opacity: [1, 1, 0],
+                        x: Math.cos(angle) * distance,
+                        y: Math.sin(angle) * distance,
+                        scale: [0.5, 1.1, 0.8],
+                      }}
+                      transition={{ duration: 0.85, ease: 'easeOut', delay: 0.22 + i * 0.012, times: [0, 0.55, 1] }}
+                      style={{
+                        position: 'absolute',
+                        top: -4, left: -4,
+                        width: 8, height: 8,
+                        borderRadius: '50%',
+                        background: '#fff8dc',
+                        boxShadow: '0 0 10px #fbcc4a, 0 0 22px rgba(251,204,74,0.85)',
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            )}
+
             {/* Shiny radial halo behind the fish — pulses gently. Sized
                 to barely overhang the fish so the gold light hugs the
                 shape rather than washing the whole card.
