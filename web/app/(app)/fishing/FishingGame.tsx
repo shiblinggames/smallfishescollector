@@ -1168,14 +1168,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny replaces the dark glassy card with a polished-metal look.
-  // Radial gradient mimics light bouncing off a curved gold surface:
-  // a warm champagne highlight up top, deeper amber through the
-  // middle, dark espresso at the bottom edges for depth. The earlier
-  // recipe was a flat brown-to-yellow linear gradient that read as
-  // carnival foil, not premium metal.
+  // Shiny chrome is intentionally subtle so the FISH is the wow
+  // moment, not the card. Dark base (like normal) with a faint warm
+  // wash + a soft top-vignette of warm light — just enough signal
+  // that "something special happened" without competing with the
+  // gold fish in the centre. The earlier saturated gold gradient
+  // made the whole moment about the card chrome.
   const cardBg = isShiny
-    ? 'radial-gradient(ellipse at 50% 18%, rgba(208,162,82,0.97) 0%, rgba(120,76,28,0.97) 55%, rgba(36,22,10,0.99) 100%)'
+    ? 'radial-gradient(ellipse at 50% 0%, rgba(80,52,18,0.45) 0%, rgba(6,16,26,0.96) 55%)'
     : 'rgba(6,16,26,0.96)'
   // Inset-only glow. Any OUTER box-shadow gets clipped to a rectangle
   // by the scrollable parent (overflowY:auto on the catching area) so
@@ -1186,17 +1186,19 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   // gold border already carry the metal feel without needing an
   // external halo.
   const shinyGlow = `inset 0 0 32px rgba(255,225,140,0.4), inset 0 0 64px rgba(251,204,74,0.18)`
-  // Fewer + slightly bigger sparkles with more varied timing — the
-  // earlier 12-particle field read as a dense uniform field rather
-  // than the rare, refined glint of polished metal. 7 with stagger
-  // is enough to keep the surface alive without crowding.
+  // Sparkles are now concentrated AROUND the fish (not the whole
+  // card) so they reinforce the fish-is-the-wow framing. Positions
+  // are roughly bounded to the central fish image area; sizes
+  // vary so the field has texture without a uniform grid look.
   const shinySparkles = useMemo(
-    () => Array.from({ length: 7 }, () => ({
-      x: 8 + Math.random() * 84,   // pull off the very edges
-      y: 8 + Math.random() * 84,
-      size: 3 + Math.random() * 4,  // 3–7px, was 2–5px
-      delay: Math.random() * 3.5,   // wider stagger
-      duration: 2.2 + Math.random() * 1.6, // slower fade
+    () => Array.from({ length: 8 }, () => ({
+      // Polar around centre, biased to a halo radius so the sparkles
+      // ring the fish without sitting directly on it.
+      angle: Math.random() * Math.PI * 2,
+      radius: 38 + Math.random() * 32,        // % from centre
+      size: 3 + Math.random() * 4,            // 3–7px
+      delay: Math.random() * 2.5,
+      duration: 1.8 + Math.random() * 1.4,
     })),
     [],
   )
@@ -1500,10 +1502,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         className="rounded-2xl overflow-hidden"
         style={{
           border: isShiny
-            // Softer champagne-tone border + light inset stroke to
-            // mimic a polished edge. Was a single bright 2px solid
-            // gold which read as a foil sticker.
-            ? '1.5px solid rgba(218,178,98,0.88)'
+            // Subtle warm border — just enough to frame the moment.
+            // The fish is the wow, not the card edge.
+            ? '1px solid rgba(196,158,80,0.55)'
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
           position: 'relative', zIndex: 1,
@@ -1514,92 +1515,19 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           boxShadow: isShiny ? shinyGlow : (rarity >= 2 ? glowShadow[rarity] : undefined),
         }}
       >
-        {/* Shiny ambient lighting. Two layers, neither of which slides
-            across as a visible "bar":
-              1. A static radial highlight up top — the surface looks
-                 lit from above, like real metal under a soft light.
-              2. A slow, very wide ambient pass that drifts in and out
-                 over 7s with much softer alpha and a smooth easeInOut
-                 so it reads as a passing reflection, not a polish
-                 stripe. The old 1.6s linear sweep at 0.7 alpha read
-                 as a Photoshop "shine effect" — cheap.
-            mix-blend: screen on both so they brighten what's underneath
-            rather than overlaying a coloured tint. */}
+        {/* Shiny chrome is minimal — just a soft top-of-card warm
+            wash so the card has a hint of "something is glowing in
+            here." Everything else (radial light behind the fish,
+            sparkles around the fish, scale + bob animation, stronger
+            filter) is layered on the fish image itself further down
+            the body so the FISH is the wow moment, not the card. */}
         {isShiny && (
-          <>
-            <div aria-hidden style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: '52%',
-              zIndex: 1, pointerEvents: 'none',
-              background: 'radial-gradient(ellipse at 50% 0%, rgba(255,238,180,0.32) 0%, rgba(255,225,150,0.12) 35%, transparent 75%)',
-              mixBlendMode: 'screen',
-            }} />
-            <motion.div
-              initial={{ x: '-40%', opacity: 0 }}
-              animate={{ x: ['-40%', '50%', '140%'], opacity: [0, 0.6, 0] }}
-              transition={{ duration: 7, ease: 'easeInOut', repeat: Infinity, repeatDelay: 3, times: [0, 0.5, 1] }}
-              style={{
-                position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
-                background: 'linear-gradient(110deg, transparent 25%, rgba(255,240,180,0.18) 42%, rgba(255,248,210,0.26) 50%, rgba(255,240,180,0.18) 58%, transparent 75%)',
-                mixBlendMode: 'screen',
-              }}
-            />
-            {/* Sparkle particle field — 12 small gold dots scattered, each
-                fading + scaling on its own loop so the card surface always
-                glints somewhere. Random delays staggered up front (see
-                useMemo above) so re-renders don't shuffle the positions. */}
-            <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', overflow: 'hidden' }}>
-              {shinySparkles.map((s, i) => (
-                <motion.span
-                  key={i}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0] }}
-                  transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, repeatDelay: 0.6, ease: 'easeOut' }}
-                  style={{
-                    position: 'absolute',
-                    left: `${s.x}%`, top: `${s.y}%`,
-                    width: s.size, height: s.size,
-                    borderRadius: '50%',
-                    background: '#fff5cf',
-                    boxShadow: `0 0 ${s.size * 3}px #fbcc4a, 0 0 ${s.size * 6}px rgba(251,204,74,0.6)`,
-                  }}
-                />
-              ))}
-            </div>
-            {/* Hero header — refined treatment. Smaller "SHINY" with a
-                single soft glow + a subtle dark drop for depth (was
-                three stacked shadows that read as overworked). The
-                champagne text colour reads as polished metal rather
-                than highlighter yellow. Faux-gold-leaf gradient strip
-                under the bottom border instead of a flat colour bar. */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.78, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.42 }}
-              style={{
-                position: 'relative', zIndex: 3,
-                padding: '0.85rem 1rem 0.75rem',
-                textAlign: 'center',
-                background: 'linear-gradient(180deg, rgba(255,225,150,0.18) 0%, rgba(0,0,0,0) 100%)',
-                borderBottom: '1px solid rgba(218,178,98,0.45)',
-              }}
-            >
-              <p className="font-cinzel font-700"
-                style={{
-                  fontSize: '1.2rem',
-                  letterSpacing: '0.36em',
-                  color: '#f6e3a6',
-                  textShadow: '0 0 14px rgba(245,205,110,0.55), 0 1px 0 rgba(60,30,4,0.65)',
-                  lineHeight: 1,
-                  marginLeft: '0.36em', // optical centring vs the letter-spacing
-                }}>
-                ✦ SHINY ✦
-              </p>
-              <p className="font-karla font-500"
-                style={{ fontSize: '0.52rem', color: 'rgba(232,205,140,0.65)', marginTop: 6, letterSpacing: '0.34em', textTransform: 'uppercase' }}>
-                One in a thousand
-              </p>
-            </motion.div>
-          </>
+          <div aria-hidden style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: '46%',
+            zIndex: 1, pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at 50% 0%, rgba(255,232,160,0.18) 0%, transparent 70%)',
+            mixBlendMode: 'screen',
+          }} />
         )}
 
         {/* Legendary shimmer sweep */}
@@ -1634,11 +1562,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             to say "yeah, normal one." Epic+ rarity gets the band (chrome
             reinforces the moment); a common first-catch gets the band so
             the New badge has a home. Zone label dropped long ago. */}
-        {/* Standard rarity band — suppressed for shiny since the big
-            "✦ SHINY ✦" hero header above already carries that role.
-            On a shiny that's ALSO a new species we only render the
-            "New ✦" pill (skipping the rarity label entirely). */}
-        {!isShiny && (rarity >= 2 || isNewSpecies) && (
+        {/* Rarity band. The big "SHINY" hero was removed (the fish is
+            the wow now) — but the small "Shiny ✦" label here still
+            tells the player what just happened, sitting alongside any
+            "New ✦" pill. */}
+        {(rarity >= 2 || isNewSpecies || isShiny) && (
           <div className="px-4 py-2 flex items-center justify-center gap-2"
             style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
             <span className="font-karla font-700 uppercase tracking-[0.18em]"
@@ -1680,21 +1608,90 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: '0.25rem',
+              // Shiny needs more vertical room — the fish is bigger AND
+              // gets a halo/sparkle ring around it. Without this the
+              // halo bleeds into siblings.
+              minHeight: isShiny ? 180 : undefined,
+              padding: isShiny ? '1rem 0 0.6rem' : undefined,
             }}
           >
-            <FishImg
-              name={fish.name}
-              style={{
-                width: '62%', maxWidth: 170, height: 92, objectFit: 'contain',
-                // Shiny stacks the gold hue-shift + saturation filter on top
-                // of the rarity drop-shadow chain so the sprite reads as a
-                // legitimately different fish without needing new art per
-                // species. See lib/shiny.ts SHINY_FISH_FILTER for the recipe.
-                filter: isShiny
-                  ? `${SHINY_FISH_FILTER} drop-shadow(0 6px 14px ${r.color}55)`
-                  : `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
-              }}
-            />
+            {/* Shiny radial halo behind the fish — pulses slowly so the
+                light reads as alive. Sits behind everything else in
+                this wrapper. */}
+            {isShiny && (
+              <motion.div
+                aria-hidden
+                animate={{ opacity: [0.55, 0.95, 0.55], scale: [0.92, 1.06, 0.92] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  width: 240, height: 240,
+                  transform: 'translate(-50%, -50%)',
+                  background: 'radial-gradient(circle, rgba(255,210,90,0.7) 0%, rgba(251,191,36,0.32) 30%, transparent 65%)',
+                  filter: 'blur(8px)',
+                  pointerEvents: 'none',
+                  zIndex: 0,
+                }}
+              />
+            )}
+
+            {/* Sparkles ringing the fish (polar coords from the centre).
+                Each fades in/out + scales on its own loop, so the gold
+                surface always glints somewhere around the fish without
+                a uniform-grid look. */}
+            {isShiny && (
+              <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' }}>
+                {shinySparkles.map((s, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: [0, 1, 0], scale: [0, 1.3, 0] }}
+                    transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, repeatDelay: 0.8, ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute',
+                      left: `calc(50% + ${Math.cos(s.angle) * s.radius}%)`,
+                      top:  `calc(50% + ${Math.sin(s.angle) * s.radius}%)`,
+                      width: s.size, height: s.size,
+                      borderRadius: '50%',
+                      background: '#fffbe6',
+                      boxShadow: `0 0 ${s.size * 3}px #fbcc4a, 0 0 ${s.size * 7}px rgba(251,204,74,0.65)`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Fish image. Shiny gets:
+                  - much bigger size (78% / 150px vs 62% / 92px)
+                  - the strong gold filter from lib/shiny.ts
+                  - a slow scale+y "breathing" animation so the gold
+                    object reads as alive, not pasted
+                  - dual gold drop-shadows for an aerial glow
+                The shiny version sits ABOVE the radial halo + sparkles
+                (zIndex 1) so the fish stays the focal point. */}
+            <motion.div
+              animate={isShiny ? { y: [0, -3, 0], scale: [1, 1.025, 1] } : undefined}
+              transition={isShiny ? { duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } : undefined}
+              style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <FishImg
+                name={fish.name}
+                style={{
+                  width: isShiny ? '82%' : '62%',
+                  maxWidth: isShiny ? 220 : 170,
+                  height: isShiny ? 150 : 92,
+                  objectFit: 'contain',
+                  // Shiny stacks the gold filter on top of a dual gold
+                  // drop-shadow so the sprite reads as a solid gold
+                  // object hovering off the card. See lib/shiny.ts
+                  // SHINY_FISH_FILTER for the recipe.
+                  filter: isShiny
+                    ? `${SHINY_FISH_FILTER} drop-shadow(0 8px 18px rgba(120,70,8,0.45))`
+                    : `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
+                }}
+              />
+            </motion.div>
 
             {/* PB ribbon — overlays the fish on a personal-best catch, then
                 fades out so the rest of the card can be read. Plain-English
