@@ -1168,24 +1168,16 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny chrome is intentionally subtle so the FISH is the wow
-  // moment, not the card. Dark base (like normal) with a faint warm
-  // wash + a soft top-vignette of warm light — just enough signal
-  // that "something special happened" without competing with the
-  // gold fish in the centre. The earlier saturated gold gradient
-  // made the whole moment about the card chrome.
-  const cardBg = isShiny
-    ? 'radial-gradient(ellipse at 50% 0%, rgba(80,52,18,0.45) 0%, rgba(6,16,26,0.96) 55%)'
-    : 'rgba(6,16,26,0.96)'
-  // Inset-only glow. Any OUTER box-shadow gets clipped to a rectangle
-  // by the scrollable parent (overflowY:auto on the catching area) so
-  // the card's rounded corners are lost and the halo reads as
-  // sharp-edged. Keep all the gold light inside the card: a strong
-  // inner ring + a softer wider inset for a deep-glow feel. Sparkle
-  // particles + shimmer sweep + gold gradient background + thick
-  // gold border already carry the metal feel without needing an
-  // external halo.
-  const shinyGlow = `inset 0 0 32px rgba(255,225,140,0.4), inset 0 0 64px rgba(251,204,74,0.18)`
+  // Shiny uses the SAME dark card background as normal — the gold
+  // fish is meant to stand out against a neutral frame, not a warm
+  // one. Even the subtle top wash was competing with the gold halo
+  // behind the fish and washing out the fun-fact text underneath.
+  const cardBg = 'rgba(6,16,26,0.96)'
+  // No card-level shiny glow anymore. The fish image + its pulsing
+  // halo + sparkle ring own the gold. Adding inset gold on the card
+  // chrome ate body-text contrast and competed with the fish for the
+  // "this is the shiny thing" framing.
+  const shinyGlow: string | undefined = undefined
   // Sparkles are now concentrated AROUND the fish (not the whole
   // card) so they reinforce the fish-is-the-wow framing. Positions
   // are roughly bounded to the central fish image area; sizes
@@ -1502,9 +1494,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         className="rounded-2xl overflow-hidden"
         style={{
           border: isShiny
-            // Subtle warm border — just enough to frame the moment.
-            // The fish is the wow, not the card edge.
-            ? '1px solid rgba(196,158,80,0.55)'
+            // Very faint warm tint on the border — almost the same as
+            // a normal card edge, just hinting at "something gold is
+            // here" without competing with the fish.
+            ? '1px solid rgba(160,120,60,0.32)'
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
           position: 'relative', zIndex: 1,
@@ -1515,20 +1508,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           boxShadow: isShiny ? shinyGlow : (rarity >= 2 ? glowShadow[rarity] : undefined),
         }}
       >
-        {/* Shiny chrome is minimal — just a soft top-of-card warm
-            wash so the card has a hint of "something is glowing in
-            here." Everything else (radial light behind the fish,
-            sparkles around the fish, scale + bob animation, stronger
-            filter) is layered on the fish image itself further down
-            the body so the FISH is the wow moment, not the card. */}
-        {isShiny && (
-          <div aria-hidden style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '46%',
-            zIndex: 1, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse at 50% 0%, rgba(255,232,160,0.18) 0%, transparent 70%)',
-            mixBlendMode: 'screen',
-          }} />
-        )}
+        {/* No card-level shiny chrome — the warm top wash that used
+            to live here was competing with the gold halo behind the
+            fish and washing out body text. All shiny effects now
+            live ON the fish image only. */}
 
         {/* Legendary shimmer sweep */}
         {isLegendary && !isShiny && (
@@ -1565,17 +1548,24 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         {/* Rarity band. The big "SHINY" hero was removed (the fish is
             the wow now) — but the small "Shiny ✦" label here still
             tells the player what just happened, sitting alongside any
-            "New ✦" pill. */}
+            "New ✦" pill. Shiny uses cream-on-dark instead of gold-on-
+            gold (which had no contrast). */}
         {(rarity >= 2 || isNewSpecies || isShiny) && (
           <div className="px-4 py-2 flex items-center justify-center gap-2"
-            style={{ position: 'relative', zIndex: 2, background: `${r.color}28`, borderBottom: `1px solid ${r.color}45` }}>
+            style={{
+              position: 'relative', zIndex: 2,
+              background: isShiny ? 'rgba(40,28,14,0.55)' : `${r.color}28`,
+              borderBottom: isShiny ? '1px solid rgba(160,120,60,0.35)' : `1px solid ${r.color}45`,
+            }}>
             <span className="font-karla font-700 uppercase tracking-[0.18em]"
               style={{
-                fontSize: '0.58rem', color: r.color,
-                background: `${r.color}1c`, border: `1px solid ${r.color}45`,
+                fontSize: '0.58rem',
+                color: isShiny ? '#fff2cc' : r.color,
+                background: isShiny ? 'rgba(120,80,30,0.4)' : `${r.color}1c`,
+                border: isShiny ? '1px solid rgba(200,160,90,0.55)' : `1px solid ${r.color}45`,
                 padding: '0.18rem 0.6rem', borderRadius: '2rem',
               }}>
-              {r.label}{rarity >= 4 ? ' ✦' : ''}
+              {r.label}{!isShiny && rarity >= 4 ? ' ✦' : ''}
             </span>
             {isNewSpecies && (
               <motion.span
