@@ -341,7 +341,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -565,7 +565,14 @@ export async function reelIn(
   // Persisted as a row in `shiny_catches` carrying enough metadata for
   // the future trophy display (size, when caught). Per-instance, never
   // merged — multiple shinies of the same species accumulate.
-  const isShiny = rollShiny({ isPerfect, habitat: fish.habitat })
+  //
+  // Admin/test override: `profiles.force_shiny_next_perfect` — when
+  // true, the next Perfect catch is forced shiny (still habitat-gated)
+  // and the flag is consumed in the same write. Lets QA exercise the
+  // flow without grinding the 1/1000 roll. No effect on non-perfects.
+  const blockedHabitat = fish.habitat === 'ancient_deep'
+  const forcedShiny = !!profile.force_shiny_next_perfect && isPerfect && !blockedHabitat
+  const isShiny = forcedShiny || rollShiny({ isPerfect, habitat: fish.habitat })
   if (isShiny) {
     await admin.from('shiny_catches').insert({
       user_id: user.id,
@@ -573,6 +580,13 @@ export async function reelIn(
       size_in: sizeIn > 0 ? sizeIn : null,
       status: 'hold',
     })
+  }
+  // Consume the test flag on any Perfect — whether or not it triggered
+  // the override (so a habitat-blocked Perfect doesn't strand the flag
+  // forever). Non-perfects leave it alone so QA can keep waiting for
+  // the right moment.
+  if (profile.force_shiny_next_perfect && isPerfect) {
+    await admin.from('profiles').update({ force_shiny_next_perfect: false }).eq('id', user.id)
   }
 
   const { data: dailyRow } = await admin
