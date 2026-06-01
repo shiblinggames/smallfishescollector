@@ -514,12 +514,23 @@ export async function reelIn(
   // Record challenge score (fire and forget)
   recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})
 
+  // ── Shiny pre-check (only the gate, no DB write yet) ─────────────
+  // Decide shiny FIRST so the size roll can force max-length on
+  // shinies. Shinies are guaranteed Trophy-tier — a small shiny
+  // would feel anticlimactic, and the card hides the size hero
+  // anyway so there's no point rolling random variance.
+  const isPerfect = result === 'perfect'
+  const blockedHabitat = fish.habitat === 'ancient_deep'
+  const forcedShiny = !!profile.force_shiny_next_perfect && isPerfect && !blockedHabitat
+  const isShiny = forcedShiny || rollShiny({ isPerfect, habitat: fish.habitat })
+
   // ── Size variance + personal-best tracking (non-ancient catches) ──
   // Roll a length within the species's [length_min_in, length_max_in] range
   // and classify into a tier (tiny/small/avg/large/trophy). Then upsert the
   // PB row for this (user, species), only writing if the new length beats
   // the previous best. Skipped entirely for ancients (handled above) since
-  // they're one-time catches with canonical sizes.
+  // they're one-time catches with canonical sizes. Shinies skip the random
+  // roll and lock to the species's max length (Trophy tier).
   const sizeMinIn = fish.length_min_in == null ? null : Number(fish.length_min_in)
   const sizeMaxIn = fish.length_max_in == null ? null : Number(fish.length_max_in)
   let sizeIn = 0
@@ -527,9 +538,14 @@ export async function reelIn(
   let isPB = false
   let previousBest: number | null = null
   if (sizeMinIn != null && sizeMaxIn != null) {
-    const roll = rollFishSize(sizeMinIn, sizeMaxIn)
-    sizeIn = roll.lengthIn
-    sizeTier = roll.tier
+    if (isShiny) {
+      sizeIn = sizeMaxIn
+      sizeTier = 'trophy'
+    } else {
+      const roll = rollFishSize(sizeMinIn, sizeMaxIn)
+      sizeIn = roll.lengthIn
+      sizeTier = roll.tier
+    }
 
     const { data: pbRow } = await admin
       .from('fish_personal_bests')
@@ -556,23 +572,11 @@ export async function reelIn(
   // daily_challenge_progress.fishing_level_snapshot on first touch and
   // reuse it for the rest of the day.
   const dailyDate = getTodayUTC()
-  const isPerfect = result === 'perfect'
 
-  // ── Shiny roll ────────────────────────────────────────────────────
-  // Gated on a Perfect — ties the ultra-rare drop to the skill moment
-  // instead of a pure casting grind. 1/SHINY_ODDS on top of that.
-  // Habitat-blocked for ancient_deep (its own ceremonial flow).
-  // Persisted as a row in `shiny_catches` carrying enough metadata for
-  // the future trophy display (size, when caught). Per-instance, never
-  // merged — multiple shinies of the same species accumulate.
-  //
-  // Admin/test override: `profiles.force_shiny_next_perfect` — when
-  // true, the next Perfect catch is forced shiny (still habitat-gated)
-  // and the flag is consumed in the same write. Lets QA exercise the
-  // flow without grinding the 1/1000 roll. No effect on non-perfects.
-  const blockedHabitat = fish.habitat === 'ancient_deep'
-  const forcedShiny = !!profile.force_shiny_next_perfect && isPerfect && !blockedHabitat
-  const isShiny = forcedShiny || rollShiny({ isPerfect, habitat: fish.habitat })
+  // ── Shiny persistence + admin-flag consume ───────────────────────
+  // The roll itself happened above (so the size logic could lock to
+  // species max on shinies — see the size block). Here we persist the
+  // row and consume the force_shiny_next_perfect admin override.
   if (isShiny) {
     await admin.from('shiny_catches').insert({
       user_id: user.id,

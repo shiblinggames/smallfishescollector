@@ -1106,7 +1106,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   // outside this component touched. Animated value drives the rendered string
   // but the underlying sizeIn stays canonical for math.
   const hasSize = sizeIn > 0
-  const showRange = hasSize && !isAncient && sizeMin != null && sizeMax != null && sizeMax > sizeMin
+  // Shiny suppresses ALL size-related UI: hero readout, range bar,
+  // trophy/large pill, PB ribbon. Shinies are always Trophy-tier by
+  // design (server forces max length), so the size info is redundant
+  // and just crowds the moment. The gold fish IS the celebration.
+  const showRange = hasSize && !isAncient && !isShiny && sizeMin != null && sizeMax != null && sizeMax > sizeMin
   const [displaySize, setDisplaySize] = useState(0)
   useEffect(() => {
     if (!hasSize) return
@@ -1126,8 +1130,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     return () => cancelAnimationFrame(raf)
   }, [sizeIn, hasSize])
   const sizePercentile = showRange ? Math.max(0, Math.min(1, (sizeIn - sizeMin!) / (sizeMax! - sizeMin!))) : 0.5
-  const showTrophyPill = !isAncient && sizeTier != null && tierShowsPill(sizeTier)
-  const isPBMoment = !isAncient && isPB
+  const showTrophyPill = !isAncient && !isShiny && sizeTier != null && tierShowsPill(sizeTier)
+  const isPBMoment = !isAncient && !isShiny && isPB
 
   // PB overlay is transient — sits over the fish image like a victory ribbon
   // for ~2.6s, then fades out so the rest of the card can be inspected. Stays
@@ -1598,44 +1602,40 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: '0.25rem',
-              // Shiny needs more vertical room — the fish is bigger AND
-              // gets a halo/sparkle ring around it. Without this the
-              // halo bleeds into siblings.
-              minHeight: isShiny ? 180 : undefined,
-              padding: isShiny ? '1rem 0 0.6rem' : undefined,
+              // Slightly more room on shiny so the smaller halo doesn't
+              // crowd siblings, but not as cavernous as before.
+              minHeight: isShiny ? 124 : undefined,
             }}
           >
-            {/* Shiny radial halo behind the fish — pulses slowly so the
-                light reads as alive. Sits behind everything else in
-                this wrapper. */}
+            {/* Shiny radial halo behind the fish — pulses gently. Sized
+                to barely overhang the fish so the gold light hugs the
+                shape rather than washing the whole card. */}
             {isShiny && (
               <motion.div
                 aria-hidden
-                animate={{ opacity: [0.55, 0.95, 0.55], scale: [0.92, 1.06, 0.92] }}
+                animate={{ opacity: [0.5, 0.85, 0.5], scale: [0.95, 1.04, 0.95] }}
                 transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                 style={{
                   position: 'absolute', top: '50%', left: '50%',
-                  width: 240, height: 240,
+                  width: 170, height: 170,
                   transform: 'translate(-50%, -50%)',
-                  background: 'radial-gradient(circle, rgba(255,210,90,0.7) 0%, rgba(251,191,36,0.32) 30%, transparent 65%)',
-                  filter: 'blur(8px)',
+                  background: 'radial-gradient(circle, rgba(255,210,90,0.62) 0%, rgba(251,191,36,0.24) 32%, transparent 64%)',
+                  filter: 'blur(6px)',
                   pointerEvents: 'none',
                   zIndex: 0,
                 }}
               />
             )}
 
-            {/* Sparkles ringing the fish (polar coords from the centre).
-                Each fades in/out + scales on its own loop, so the gold
-                surface always glints somewhere around the fish without
-                a uniform-grid look. */}
+            {/* Sparkles ringing the fish in polar coords from centre.
+                Tighter radius now that the fish is smaller. */}
             {isShiny && (
               <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' }}>
                 {shinySparkles.map((s, i) => (
                   <motion.span
                     key={i}
                     initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: [0, 1, 0], scale: [0, 1.3, 0] }}
+                    animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0] }}
                     transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, repeatDelay: 0.8, ease: 'easeOut' }}
                     style={{
                       position: 'absolute',
@@ -1652,32 +1652,26 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               </div>
             )}
 
-            {/* Fish image. Shiny gets:
-                  - much bigger size (78% / 150px vs 62% / 92px)
-                  - the strong gold filter from lib/shiny.ts
-                  - a slow scale+y "breathing" animation so the gold
-                    object reads as alive, not pasted
-                  - dual gold drop-shadows for an aerial glow
-                The shiny version sits ABOVE the radial halo + sparkles
-                (zIndex 1) so the fish stays the focal point. */}
+            {/* Fish image. Shiny gets only a modest size bump (68% /
+                108px vs 62% / 92px), the gold filter, and the slow
+                breathing animation. Earlier 82%/150px was oversized
+                and ballooned the whole card. */}
             <motion.div
-              animate={isShiny ? { y: [0, -3, 0], scale: [1, 1.025, 1] } : undefined}
+              animate={isShiny ? { y: [0, -2.5, 0], scale: [1, 1.022, 1] } : undefined}
               transition={isShiny ? { duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } : undefined}
               style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <FishImg
                 name={fish.name}
                 style={{
-                  width: isShiny ? '82%' : '62%',
-                  maxWidth: isShiny ? 220 : 170,
-                  height: isShiny ? 150 : 92,
+                  width: isShiny ? '68%' : '62%',
+                  maxWidth: isShiny ? 190 : 170,
+                  height: isShiny ? 108 : 92,
                   objectFit: 'contain',
-                  // Shiny stacks the gold filter on top of a dual gold
-                  // drop-shadow so the sprite reads as a solid gold
-                  // object hovering off the card. See lib/shiny.ts
-                  // SHINY_FISH_FILTER for the recipe.
+                  // Shiny stacks the gold filter (lib/shiny.ts) on top
+                  // of a warm drop-shadow for the "hovering metal" feel.
                   filter: isShiny
-                    ? `${SHINY_FISH_FILTER} drop-shadow(0 8px 18px rgba(120,70,8,0.45))`
+                    ? `${SHINY_FISH_FILTER} drop-shadow(0 6px 14px rgba(120,70,8,0.45))`
                     : `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
                 }}
               />
@@ -1745,7 +1739,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               tier picks up a sparkle filter for extra fanfare. Ancients
               get just the canonical number — no range bar (single defined
               catch, nothing to compare to). */}
-          {hasSize && (
+          {hasSize && !isShiny && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
