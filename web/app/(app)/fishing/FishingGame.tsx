@@ -1178,21 +1178,20 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny gets a DEEP COSMIC PURPLE card. Complementary to gold —
-  // the gold fish + sparkles + halo pop dramatically against violet
-  // in a way they don't against the standard dark blue. Reads as a
-  // rare collectible (think holographic Pokémon card) without using
-  // any gold on the chrome itself, so the fish stays the focus.
-  // Radial form keeps it darker at the edges with a subtle violet
-  // glow up top for depth.
+  // Shiny goes "gold-framed trophy plaque": warm dark amber interior
+  // (not bright gold — that competed with the fish before) inside a
+  // visible gold border. The body stays dark enough that the bright
+  // gold fish + halo + sparkles read as the brightest things on the
+  // card; the warm gradient + gold frame supply the premium context
+  // signal without crowding the fish.
   const cardBg = isShiny
-    ? 'radial-gradient(ellipse at 50% 25%, rgba(52,24,80,0.97) 0%, rgba(22,10,42,0.98) 60%, rgba(10,6,22,0.99) 100%)'
+    ? 'linear-gradient(180deg, rgba(46,30,12,0.97) 0%, rgba(20,12,5,0.98) 50%, rgba(40,26,10,0.97) 100%)'
     : 'rgba(6,16,26,0.96)'
-  // No card-level shiny glow anymore. The fish image + its pulsing
-  // halo + sparkle ring own the gold. Adding inset gold on the card
-  // chrome ate body-text contrast and competed with the fish for the
-  // "this is the shiny thing" framing.
-  const shinyGlow: string | undefined = undefined
+  // Subtle warm inset glow only around the edges — gives the gold
+  // border a soft "framed" depth like polished metal catching light.
+  // Kept low-alpha so it doesn't reach the centre and wash out the
+  // fish or body text.
+  const shinyGlow: string | undefined = 'inset 0 0 22px rgba(200,140,40,0.18), inset 0 0 1px rgba(255,225,140,0.55)'
   // Sparkles are now concentrated AROUND the fish (not the whole
   // card) so they reinforce the fish-is-the-wow framing. Positions
   // are roughly bounded to the central fish image area; sizes
@@ -1512,10 +1511,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         className="rounded-2xl overflow-hidden"
         style={{
           border: isShiny
-            // Soft violet border to frame the cosmic purple card —
-            // pairs with the gold fish inside the way a holo card's
-            // frame complements its centerpiece art.
-            ? '1px solid rgba(140,100,200,0.45)'
+            // Visible gold border — the "trophy plaque frame" that
+            // signals premium. 1.5px solid gold at strong alpha so
+            // it reads as polished metal at any size. Paired with
+            // the inset shinyGlow for the framed-depth feel.
+            ? '1.5px solid rgba(218,178,98,0.78)'
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
           position: 'relative', zIndex: 1,
@@ -1572,19 +1572,20 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           <div className="px-4 py-2 flex items-center justify-center gap-2"
             style={{
               position: 'relative', zIndex: 2,
-              background: isShiny ? 'rgba(28,14,48,0.55)' : `${r.color}28`,
-              borderBottom: isShiny ? '1px solid rgba(140,100,200,0.35)' : `1px solid ${r.color}45`,
+              // Warm dark amber band for shiny — matches the trophy-
+              // plaque card chrome. Bottom edge gets a soft gold line
+              // to echo the outer gold border.
+              background: isShiny ? 'rgba(34,22,8,0.62)' : `${r.color}28`,
+              borderBottom: isShiny ? '1px solid rgba(200,160,90,0.4)' : `1px solid ${r.color}45`,
             }}>
             <span className="font-karla font-700 uppercase tracking-[0.18em]"
               style={{
                 fontSize: '0.58rem',
-                // Gold text on violet pill — high contrast + signals "this is
-                // the rare gold thing" without using gold on the chrome.
-                color: isShiny ? '#fbcc4a' : r.color,
-                background: isShiny ? 'rgba(48,24,82,0.55)' : `${r.color}1c`,
-                border: isShiny ? '1px solid rgba(160,120,200,0.5)' : `1px solid ${r.color}45`,
+                color: isShiny ? '#fff2cc' : r.color,
+                background: isShiny ? 'rgba(80,52,18,0.5)' : `${r.color}1c`,
+                border: isShiny ? '1px solid rgba(218,178,98,0.65)' : `1px solid ${r.color}45`,
                 padding: '0.18rem 0.6rem', borderRadius: '2rem',
-                textShadow: isShiny ? '0 0 8px rgba(251,204,74,0.6)' : 'none',
+                textShadow: isShiny ? '0 0 8px rgba(251,204,74,0.55)' : 'none',
               }}>
               {r.label}{!isShiny && rarity >= 4 ? ' ✦' : ''}
             </span>
