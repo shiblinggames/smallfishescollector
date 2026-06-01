@@ -1609,45 +1609,72 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           >
             {/* Shiny radial halo behind the fish — pulses gently. Sized
                 to barely overhang the fish so the gold light hugs the
-                shape rather than washing the whole card. */}
+                shape rather than washing the whole card.
+                Two-div setup: outer div handles the static -50%/-50%
+                centering via CSS transform; inner motion.div owns the
+                scale/opacity animation. Splitting them avoids
+                framer-motion overwriting the centering transform when
+                it animates scale — which previously slid the halo to
+                offset (50%,50%) from top-left and rendered as a visible
+                offset rectangle behind the fish (the "square glow"
+                bug). borderRadius: 50% on the inner so any clip
+                artifact is circular too. */}
             {isShiny && (
-              <motion.div
-                aria-hidden
-                animate={{ opacity: [0.5, 0.85, 0.5], scale: [0.95, 1.04, 0.95] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                style={{
-                  position: 'absolute', top: '50%', left: '50%',
-                  width: 170, height: 170,
-                  transform: 'translate(-50%, -50%)',
-                  background: 'radial-gradient(circle, rgba(255,210,90,0.62) 0%, rgba(251,191,36,0.24) 32%, transparent 64%)',
-                  filter: 'blur(6px)',
-                  pointerEvents: 'none',
-                  zIndex: 0,
-                }}
-              />
+              <div aria-hidden style={{
+                position: 'absolute', top: '50%', left: '50%',
+                width: 170, height: 170,
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}>
+                <motion.div
+                  animate={{ opacity: [0.5, 0.85, 0.5], scale: [0.95, 1.04, 0.95] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                  style={{
+                    width: '100%', height: '100%',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,210,90,0.62) 0%, rgba(251,191,36,0.24) 32%, transparent 64%)',
+                    filter: 'blur(6px)',
+                  }}
+                />
+              </div>
             )}
 
             {/* Sparkles ringing the fish in polar coords from centre.
-                Tighter radius now that the fish is smaller. */}
+                Same wrapper-split as the halo above: outer span owns
+                the static polar position + the translate(-50%,-50%)
+                centering, inner motion.span owns the scale/opacity
+                animation. Without the split, framer-motion's scale
+                animation overwrote the centering translate and the
+                sparkle dot slid off-position by half its size on each
+                animation frame. */}
             {isShiny && (
               <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' }}>
                 {shinySparkles.map((s, i) => (
-                  <motion.span
+                  <span
                     key={i}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0] }}
-                    transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, repeatDelay: 0.8, ease: 'easeOut' }}
                     style={{
                       position: 'absolute',
                       left: `calc(50% + ${Math.cos(s.angle) * s.radius}%)`,
                       top:  `calc(50% + ${Math.sin(s.angle) * s.radius}%)`,
                       width: s.size, height: s.size,
-                      borderRadius: '50%',
-                      background: '#fffbe6',
-                      boxShadow: `0 0 ${s.size * 3}px #fbcc4a, 0 0 ${s.size * 7}px rgba(251,204,74,0.65)`,
                       transform: 'translate(-50%, -50%)',
+                      display: 'block',
                     }}
-                  />
+                  >
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0] }}
+                      transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, repeatDelay: 0.8, ease: 'easeOut' }}
+                      style={{
+                        display: 'block',
+                        width: '100%', height: '100%',
+                        borderRadius: '50%',
+                        background: '#fffbe6',
+                        boxShadow: `0 0 ${s.size * 3}px #fbcc4a, 0 0 ${s.size * 7}px rgba(251,204,74,0.65)`,
+                      }}
+                    />
+                  </span>
                 ))}
               </div>
             )}
