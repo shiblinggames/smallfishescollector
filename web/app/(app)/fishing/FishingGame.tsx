@@ -1166,7 +1166,12 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   const cardBg = isShiny
     ? 'linear-gradient(135deg, rgba(70,42,10,0.98) 0%, rgba(150,98,24,0.96) 45%, rgba(80,48,12,0.98) 100%)'
     : 'rgba(6,16,26,0.96)'
-  const shinyGlow = `0 0 36px ${SHINY_THEME.primary}aa, 0 0 88px ${SHINY_THEME.primary}55, inset 0 0 28px rgba(251,191,36,0.18)`
+  // Tight gold rim + soft inner glow only — no wide outer halo. The
+  // wider halo I had before (88px outer ring) read as a flat rectangle
+  // because the blur was much larger than the card's 1rem corner
+  // radius. Sparkle particles + shimmer sweep already supply the
+  // "ambient gold field" so the boxShadow just needs to hug the border.
+  const shinyGlow = `inset 0 0 32px rgba(255,225,140,0.35), 0 0 16px ${SHINY_THEME.primary}aa`
   const shinySparkles = useMemo(
     () => Array.from({ length: 12 }, () => ({
       x: Math.random() * 100,
@@ -1420,8 +1425,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           />
         ))}
 
-        {/* Legendary color bloom */}
-        {isLegendary && (
+        {/* Legendary color bloom — suppressed for shiny (own gold treatment) */}
+        {isLegendary && !isShiny && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 0.22, 0] }}
@@ -1448,8 +1453,11 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           />
         )}
 
-        {/* Glow halo — sits outside overflow:hidden so it isn't clipped */}
-        {rarity >= 2 && (
+        {/* Glow halo — sits outside overflow:hidden so it isn't clipped.
+            Suppressed on shiny since the gold treatment owns the glow
+            chrome; stacking the rarity halo on top read as a rectangle
+            because its blur extended past the card's corner radius. */}
+        {rarity >= 2 && !isShiny && (
           <motion.div
             animate={isEpicPlus ? { opacity: [0.5, 1, 0.5] } : { opacity: 1 }}
             transition={isEpicPlus
