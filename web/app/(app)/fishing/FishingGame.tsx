@@ -971,6 +971,91 @@ function fishImageUrl(name: string) {
   return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
 }
 
+// Sepia-ink "DISCOVERED" stamp that overlays a card the first time
+// the player sees their just-caught species in the Logbook. Replaces
+// the previous tiny red "NEW" badge with something that reads as a
+// captain's logbook moment — circular ink stamp, slight rotation,
+// short spring entrance. Drops out the moment the card is tapped
+// (uncheckedNewFishIds clears that id). Pure SVG so it stays sharp
+// at any DPI without loading an image asset.
+function DiscoveredStamp() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 1.7, rotate: -34 }}
+      animate={{ opacity: 1, scale: 1, rotate: -14 }}
+      transition={{ type: 'spring', stiffness: 240, damping: 18, delay: 0.18 }}
+      style={{
+        position: 'absolute', top: -8, right: -6,
+        width: 56, height: 56,
+        pointerEvents: 'none',
+        filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.45))',
+      }}
+    >
+      <svg viewBox="0 0 56 56" width="56" height="56">
+        <defs>
+          <radialGradient id="discovered-ink" cx="50%" cy="50%" r="55%">
+            <stop offset="0%" stopColor="#c44030" stopOpacity="0.95" />
+            <stop offset="70%" stopColor="#a02818" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#7a1810" stopOpacity="0.78" />
+          </radialGradient>
+        </defs>
+        {/* Outer + inner rings — slight stroke variance fakes the
+            "uneven ink coverage" of a real rubber stamp. */}
+        <circle cx="28" cy="28" r="25" fill="none" stroke="url(#discovered-ink)" strokeWidth="2.4" opacity="0.92" />
+        <circle cx="28" cy="28" r="20" fill="none" stroke="url(#discovered-ink)" strokeWidth="1.3" opacity="0.6" />
+        {/* DISCOVERED arc across the top half. tspan letter-spacing
+            is faked with explicit spacing per character for legibility
+            at this size. */}
+        <text x="28" y="20" textAnchor="middle"
+          fontFamily="Georgia, 'Times New Roman', serif"
+          fontSize="5.8" fontWeight="700"
+          fill="url(#discovered-ink)" opacity="0.95"
+          letterSpacing="0.55">
+          DISCOVERED
+        </text>
+        {/* Anchor sigil in the centre. Hand-drawn paths keep the ink
+            feel; no emoji that would render with native colors. */}
+        <g stroke="url(#discovered-ink)" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.92">
+          <circle cx="28" cy="28.5" r="1.8" />
+          <line x1="28" y1="30.5" x2="28" y2="40" />
+          <line x1="24" y1="34.5" x2="32" y2="34.5" />
+          <path d="M 22 39 Q 24 43 28 43 Q 32 43 34 39" />
+        </g>
+        {/* Tiny ★ underneath the anchor — marks it as a captain's stamp */}
+        <text x="28" y="50" textAnchor="middle"
+          fontFamily="Georgia, 'Times New Roman', serif"
+          fontSize="5" fontWeight="700"
+          fill="url(#discovered-ink)" opacity="0.82">★ ★ ★</text>
+      </svg>
+    </motion.div>
+  )
+}
+
+// Small sepia anchor seal that sits in the top-left of the species
+// detail modal. Pure decoration — gives the modal the visual register
+// of a logbook page rather than a generic detail panel. SVG-only so
+// it tints cleanly to whatever ink colour we want.
+function AnchorSeal() {
+  return (
+    <div style={{
+      position: 'absolute', top: 10, left: 10,
+      width: 32, height: 32,
+      pointerEvents: 'none',
+      opacity: 0.55,
+    }}>
+      <svg viewBox="0 0 32 32" width="32" height="32">
+        <circle cx="16" cy="16" r="14" fill="none" stroke="#c2a47a" strokeWidth="1" opacity="0.9" />
+        <g stroke="#c2a47a" fill="none" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.95">
+          <circle cx="16" cy="11" r="1.4" />
+          <line x1="16" y1="12.4" x2="16" y2="22.5" />
+          <line x1="12.5" y1="15.5" x2="19.5" y2="15.5" />
+          <path d="M 11 21 Q 12.5 24.5 16 24.5 Q 19.5 24.5 21 21" />
+        </g>
+      </svg>
+    </div>
+  )
+}
+
 function FishImg({ name, style }: { name: string; style?: React.CSSProperties }) {
   return (
     <img
@@ -6002,15 +6087,7 @@ export default function FishingGame({
                                 {formatFishLength(pb)}
                               </p>
                             )}
-                            {isNew && (
-                              <span style={{
-                                position: 'absolute', top: 4, right: 4,
-                                fontSize: '0.5rem', fontWeight: 700, color: '#f87171',
-                                background: 'rgba(248,113,113,0.18)', border: '1px solid rgba(248,113,113,0.4)',
-                                padding: '0.08rem 0.34rem', borderRadius: '2rem',
-                                fontFamily: 'var(--font-karla)', letterSpacing: '0.05em',
-                              }}>NEW</span>
-                            )}
+                            {isNew && <DiscoveredStamp />}
                           </motion.button>
                         )
                       })}
@@ -6174,6 +6251,11 @@ export default function FishingGame({
                 overscrollBehavior: 'contain',
               }}
             >
+              {/* Anchor seal — sepia decoration in the top-left so the
+                  modal reads as a logbook page entry rather than a
+                  generic detail card. Pure cosmetic. */}
+              <AnchorSeal />
+
               <button
                 type="button"
                 onClick={() => setTappedFishId(null)}
@@ -6196,9 +6278,41 @@ export default function FishingGame({
                 {f.name}
               </p>
 
-              <p className="font-karla font-400" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.55, marginBottom: '0.9rem', textAlign: 'center', fontStyle: 'italic' }}>
-                &ldquo;{f.fun_fact}&rdquo;
-              </p>
+              {/* Captain's Note — fun_fact restyled as a logbook entry.
+                  Warm sepia tone, italic serif (Georgia falls back gracefully
+                  if no custom font), leading "Captain's note —" prefix in
+                  small caps + sepia. Reads like a handwritten margin note
+                  on a journal page instead of a flavor caption. */}
+              <div style={{
+                marginBottom: '0.9rem',
+                padding: '0.55rem 0.7rem 0.6rem',
+                borderRadius: 8,
+                background: 'rgba(194,164,122,0.06)',
+                border: '1px solid rgba(194,164,122,0.18)',
+                borderLeft: '2px solid rgba(194,164,122,0.55)',
+              }}>
+                <p style={{
+                  fontFamily: 'var(--font-karla)',
+                  fontSize: '0.48rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(194,164,122,0.7)',
+                  marginBottom: 4,
+                }}>
+                  Captain's Note
+                </p>
+                <p style={{
+                  fontFamily: 'Georgia, "Times New Roman", serif',
+                  fontSize: '0.82rem',
+                  fontStyle: 'italic',
+                  fontWeight: 400,
+                  color: 'rgba(228,212,180,0.86)',
+                  lineHeight: 1.55,
+                }}>
+                  &ldquo;{f.fun_fact}&rdquo;
+                </p>
+              </div>
 
               <div className="flex items-center justify-between" style={{
                 gap: 12, paddingTop: '0.7rem',
