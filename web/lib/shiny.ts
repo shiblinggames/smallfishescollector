@@ -70,3 +70,30 @@ export function rollShiny(opts: {
 export function shinySellValue(baseSellValue: number): number {
   return Math.round(baseSellValue * SHINY_SELL_MULT)
 }
+
+// ── Shiny moment copy ────────────────────────────────────────────────
+// Pool of evocative lines shown in place of the fun_fact on a shiny
+// result card. Tone: captain's-log entry, rare-find weight. {fish}
+// placeholder gets replaced with the species name (e.g. "Pickerel")
+// so the copy reads personal. Kept generic enough to read right for
+// any species — shallows minnow up to deep-water predator.
+//
+// Add more here over time; pickShinyMessage just picks at random.
+export const SHINY_MESSAGES: readonly string[] = [
+  "A golden {fish}. The kind of catch sailors carve into the hull.",
+  "{fish} of gold under your hand. Captain, this is one in a thousand.",
+  "Sailors tell tales of gold-scaled ones. Tonight you've held one.",
+  "A gilded {fish} — the sea's own coin. Mount it, or part with it for a king's haul.",
+  "Gold-scaled and impossible. Even the old captains only saw one of these.",
+  "A {fish} drawn up in solid gold. The dockside won't believe you without proof.",
+  "Worth more than a hold of common haul, and rarer than the stories about it.",
+  "The crew has gone quiet. None of them have ever seen a golden one before.",
+  "A golden {fish}. Every captain hopes for this once in a career.",
+  "The deep turned a {fish} to gold tonight, and gave it to you.",
+] as const
+
+/** Picks a random shiny message and substitutes the species name. */
+export function pickShinyMessage(fishName: string): string {
+  const tpl = SHINY_MESSAGES[Math.floor(Math.random() * SHINY_MESSAGES.length)]
+  return tpl.replace(/\{fish\}/g, fishName)
+}

@@ -50,7 +50,7 @@ import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, t
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { formatFishLength, tierShowsPill, type FishSizeTier } from '@/lib/fishSize'
-import { SHINY_FISH_FILTER, SHINY_THEME } from '@/lib/shiny'
+import { SHINY_FISH_FILTER, SHINY_THEME, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
@@ -1132,6 +1132,12 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   const sizePercentile = showRange ? Math.max(0, Math.min(1, (sizeIn - sizeMin!) / (sizeMax! - sizeMin!))) : 0.5
   const showTrophyPill = !isAncient && !isShiny && sizeTier != null && tierShowsPill(sizeTier)
   const isPBMoment = !isAncient && !isShiny && isPB
+  // Shiny copy — picked once per catch (memoised on fish.id) so it
+  // doesn't reshuffle on every re-render. Empty string when not shiny.
+  const shinyMessage = useMemo(
+    () => (isShiny ? pickShinyMessage(fish.name) : ''),
+    [isShiny, fish.name],
+  )
 
   // PB overlay is transient — sits over the fish image like a victory ribbon
   // for ~2.6s, then fades out so the rest of the card can be inspected. Stays
@@ -1890,10 +1896,28 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             </motion.div>
           )}
 
-          {/* Flavor — the fun fact, demoted to caption status. */}
-          <p className="font-karla font-400 text-center" style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.4 }}>
-            {fish.fun_fact}
-          </p>
+          {/* Flavor — fun fact normally, but a captain's-log style
+              shiny message on shiny catches. The shiny copy is bigger,
+              italic serif, warm cream colour, framed with quote marks
+              so it reads as a moment-of-record rather than a fact pill. */}
+          {isShiny ? (
+            <p className="text-center" style={{
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontSize: '0.82rem',
+              fontStyle: 'italic',
+              fontWeight: 500,
+              color: 'rgba(238,210,150,0.92)',
+              lineHeight: 1.5,
+              padding: '0 0.4rem',
+              textShadow: '0 0 12px rgba(245,205,110,0.25)',
+            }}>
+              &ldquo;{shinyMessage}&rdquo;
+            </p>
+          ) : (
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.4 }}>
+              {fish.fun_fact}
+            </p>
+          )}
         </div>
       </motion.div>
     </div>
