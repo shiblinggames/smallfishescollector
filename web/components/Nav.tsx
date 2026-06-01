@@ -408,7 +408,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
           )}
           {displayDoubloons !== undefined && (
             <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
-              {displayDoubloons.toLocaleString()} ⟡
+              <TickingNumber value={displayDoubloons} /> ⟡
             </span>
           )}
           <Link
@@ -453,7 +453,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
           )}
           {displayDoubloons !== undefined && (
             <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.8rem' }}>
-              {displayDoubloons.toLocaleString()} ⟡
+              <TickingNumber value={displayDoubloons} /> ⟡
             </span>
           )}
           {/* Hamburger — animates into an X when open. */}
