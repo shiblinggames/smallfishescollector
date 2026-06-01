@@ -29,15 +29,20 @@ export const SHINY_SELL_MULT = 10
  *    hue-rotate     dials the hue to true 24k gold (vs orange-brown)
  *    brightness     bumps highlights so the metal reads as polished
  *    contrast       deepens the shadows so it doesn't look flat
- *    two drop-shadows lay a tight rim-light + a wider warm halo
+ *    single drop-shadow at 14px lays a tight rim-light. The wider
+ *    36px shadow used to be here, but combined with the high-
+ *    saturation filter amplifying the sprite's edge alpha it cast
+ *    a square-ish halo around the IMG element bounds — players
+ *    saw a visible rectangle. The radial halo div behind the fish
+ *    provides the wider warm light; this filter just gives the
+ *    sprite its own rim glow.
  *  Pure CSS — works on every existing fish sprite without per-species
  *  art. Pair with the SHINY_THEME palette + result-card chrome for the
  *  full "wow" moment. */
 export const SHINY_FISH_FILTER =
   'grayscale(1) sepia(1) saturate(7) hue-rotate(-15deg) ' +
   'brightness(1.25) contrast(1.05) ' +
-  'drop-shadow(0 0 14px rgba(251,191,36,0.95)) ' +
-  'drop-shadow(0 0 36px rgba(251,191,36,0.55))'
+  'drop-shadow(0 0 12px rgba(251,191,36,0.85))'
 
 /** Theme palette used for shiny chrome (result card border, banners,
  *  Logbook badge). Gold + warm amber. */

@@ -1699,7 +1699,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             {isShiny && (
               <div aria-hidden style={{
                 position: 'absolute', top: '50%', left: '50%',
-                width: 170, height: 170,
+                width: 220, height: 220,
                 transform: 'translate(-50%, -50%)',
                 pointerEvents: 'none',
                 zIndex: 0,
@@ -1710,8 +1710,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                   style={{
                     width: '100%', height: '100%',
                     borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(255,210,90,0.62) 0%, rgba(251,191,36,0.24) 32%, transparent 64%)',
-                    filter: 'blur(6px)',
+                    // No filter:blur here — Safari/iOS renders blur on a
+                    // radius-clipped element as a SQUARE box (the visible
+                    // "rectangle glow" the player reported). The radial
+                    // gradient's own alpha falloff (transparent at 70%)
+                    // does the softening; wider gradient + slightly lower
+                    // mid stop compensates for the removed blur.
+                    background: 'radial-gradient(circle, rgba(255,210,90,0.6) 0%, rgba(251,191,36,0.22) 38%, transparent 70%)',
                   }}
                 />
               </div>
