@@ -4288,7 +4288,11 @@ export default function FishingGame({
                 const pct = total > 0 ? caught / total : 0
                 const hasNew = uncheckedNewFishIds.size > 0
                 const flashing = freshCatchHook != null
-                // Flash overrides the subtle pulse — same button, brighter colour + faster pulse
+                // Flash colour is correct accent (gold = new species, teal = PB),
+                // unlike the prior raid-node-current keyframe which was a
+                // hardcoded gold box-shadow pulse that overrode any inline
+                // colour. framer-motion drives the flash now so the right
+                // accent + a meaningfully bigger glow lands every cycle.
                 const flashAccent = freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
                 const accent = flashing ? flashAccent : zoneColor
                 return (
@@ -4300,46 +4304,73 @@ export default function FishingGame({
                       setHoldOpen(false)
                       setFreshCatchHook(null)
                     }}
-                    animate={flashing ? { scale: [1, 1.08, 1] } : { scale: 1 }}
-                    transition={flashing ? { duration: 0.6, ease: 'easeOut' } : { duration: 0 }}
+                    animate={flashing ? {
+                      // Big colour-correct pulse: glow expands from a
+                      // moderate baseline to a strong peak each cycle,
+                      // paired with a tiny scale bounce so the eye
+                      // catches the change even mid-fishing. Loops while
+                      // freshCatchHook is set; cleared on cast/cast-again.
+                      boxShadow: [
+                        `0 0 18px ${flashAccent}88, 0 0 36px ${flashAccent}44`,
+                        `0 0 38px ${flashAccent}ee, 0 0 76px ${flashAccent}88`,
+                        `0 0 18px ${flashAccent}88, 0 0 36px ${flashAccent}44`,
+                      ],
+                      scale: [1, 1.05, 1],
+                    } : { scale: 1, boxShadow: hasNew ? `0 0 14px ${zoneColor}55` : '0 0 0 rgba(0,0,0,0)' }}
+                    transition={flashing
+                      ? { duration: 1.2, ease: 'easeInOut', repeat: Infinity }
+                      : { duration: 0.2 }}
                     style={{
                       display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch',
                       height: 36, padding: '0.22rem 0.6rem 0.28rem', borderRadius: 12,
-                      background: flashing ? `${accent}24` : hasNew ? `${accent}1a` : 'rgba(4,10,18,0.72)',
-                      border: `1px solid ${flashing ? accent : hasNew ? accent + 'aa' : accent + '50'}`,
+                      // Solid dark base + accent overlay so the button reads
+                      // legibly against the busy zone scene behind it. The
+                      // previous flashing background was just `${accent}24`
+                      // (~14% alpha colour over fishing art) which left the
+                      // text washed out and the shape unclear.
+                      background: flashing
+                        ? `linear-gradient(180deg, ${flashAccent}55 0%, rgba(8,14,22,0.96) 100%)`
+                        : hasNew
+                          ? `linear-gradient(180deg, ${zoneColor}28 0%, rgba(8,14,22,0.92) 100%)`
+                          : 'rgba(8,14,22,0.9)',
+                      backdropFilter: 'blur(6px)',
+                      WebkitBackdropFilter: 'blur(6px)',
+                      border: `1px solid ${flashing ? flashAccent : hasNew ? accent + 'aa' : accent + '70'}`,
                       cursor: 'pointer', touchAction: 'manipulation',
                       position: 'relative',
                       minWidth: 88,
-                      boxShadow: flashing
-                        ? `0 0 22px ${accent}aa, 0 0 44px ${accent}55`
-                        : hasNew
-                          ? `0 0 14px ${accent}55`
-                          : 'none',
-                      // Faster pulse when flashing (1.1s) vs the calmer
-                      // ambient one (2.4s); both reuse the raid-node-current
-                      // keyframe to keep the visual vocabulary consistent.
-                      animation: flashing
-                        ? 'raid-node-current 1.1s ease-in-out infinite'
-                        : hasNew
-                          ? 'raid-node-current 2.4s ease-in-out infinite'
-                          : 'none',
+                      // Subtle slow ambient pulse for unviewed older entries
+                      // stays on the CSS keyframe; flash state above is
+                      // animated by framer-motion so the box-shadow values
+                      // don't fight the keyframe.
+                      animation: !flashing && hasNew ? 'raid-node-current 2.4s ease-in-out infinite' : 'none',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                       <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                        style={{ fontSize: '0.52rem', color: accent, lineHeight: 1 }}>
+                        style={{
+                          fontSize: '0.55rem',
+                          color: flashing ? '#fff' : accent,
+                          lineHeight: 1,
+                          textShadow: flashing ? `0 0 8px ${flashAccent}` : 'none',
+                        }}>
                         {flashing ? (freshCatchHook === 'pb' ? 'New PB!' : 'New!') : 'Logbook'}
                       </span>
                       <span className="font-cinzel font-700"
-                        style={{ fontSize: '0.72rem', color: accent, lineHeight: 1 }}>
+                        style={{
+                          fontSize: '0.76rem',
+                          color: flashing ? '#fff' : accent,
+                          lineHeight: 1,
+                          textShadow: flashing ? `0 0 8px ${flashAccent}` : 'none',
+                        }}>
                         {caught}
-                        <span className="font-karla font-400" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.45)' }}>
+                        <span className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.55)' }}>
                           /{total}
                         </span>
                       </span>
                     </div>
                     {/* Inline progress fill — visible at-a-glance completion */}
-                    <div style={{ marginTop: 4, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                    <div style={{ marginTop: 4, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct * 100}%`, background: accent, borderRadius: 2, boxShadow: flashing || hasNew ? `0 0 6px ${accent}aa` : 'none' }} />
                     </div>
                     {hasNew && !flashing && (
