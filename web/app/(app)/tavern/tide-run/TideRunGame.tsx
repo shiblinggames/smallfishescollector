@@ -443,9 +443,19 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         const result = await awardTideRunBeacons(beaconsThisRun)
         if (cancelled) return
         if ('ok' in result) {
-          // Stash the new total — the dispatch fires later when the
-          // float animation triggers (so Nav tick + float are in sync).
+          // Stash the new total for the float animation effect, AND
+          // dispatch the Nav update right now. Was previously only the
+          // stash — the float-animation timer (~350ms later) handled
+          // the dispatch — but when the server response landed AFTER
+          // that timer, the ref was still null, the timer's dispatch
+          // skipped, and no later trigger ever fired. Player saw the
+          // DB credit on reload only. Dispatching here makes the Nav
+          // counter update the instant the server confirms; the float
+          // effect below stays as the visible coin animation.
           pendingNavTotalRef.current = result.newDoubloonTotal
+          if (typeof window !== 'undefined') {
+            try { window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloonTotal })) } catch {}
+          }
         }
       } catch {
         /* best-effort */
