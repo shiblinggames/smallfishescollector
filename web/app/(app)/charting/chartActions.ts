@@ -320,6 +320,22 @@ export async function makeChartGuess(
     ...(bonusDoubloons > 0
       ? [admin.from('profiles').update({ doubloons: (profile?.doubloons ?? 0) + bonusDoubloons }).eq('id', user.id)]
       : []),
+    // ── Wrong-guess freshness ────────────────────────────────────────
+    // On a correct advance, wipe this player's old wrong guesses for
+    // this contest. Wrong guesses are only meaningful from the position
+    // they were made at — once the player moves, those red marks
+    // become stale. Without this, a cell wrongly guessed early in
+    // the path (e.g. [2,2] from position [1,2]) stays red forever,
+    // even when it later becomes the correct next move from a new
+    // position. That's the "no correct path" stuck state players
+    // were reporting on contest 6 (yoon, patchme).
+    ...(correct
+      ? [admin.from('chart_guesses')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('contest_id', contestId)
+          .eq('correct', false)]
+      : []),
   ]
   await Promise.all(updateTasks)
 
