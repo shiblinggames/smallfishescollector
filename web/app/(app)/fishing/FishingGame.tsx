@@ -5775,9 +5775,18 @@ export default function FishingGame({
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <div className="flex items-center gap-2">
+                          {/* Percentage as the headline metric — bigger,
+                              brighter, in Cinzel. Raw count drops to a
+                              muted secondary so completion reads at a
+                              glance. Same row height as before so the
+                              zone header chrome stays compact. */}
+                          <p className="font-cinzel font-700"
+                            style={{ fontSize: '0.88rem', color: isComplete ? zoneColor : '#f0ede8', lineHeight: 1, textShadow: isComplete ? `0 0 8px ${zoneColor}66` : 'none' }}>
+                            {Math.round(pct * 100)}%
+                          </p>
                           <p className="font-karla font-600"
-                            style={{ fontSize: '0.78rem', color: isComplete ? zoneColor : 'rgba(255,255,255,0.5)' }}>
-                            {discoveredCount}<span style={{ color: 'rgba(255,255,255,0.25)' }}>/{zoneSpecies.length}</span>
+                            style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>
+                            {discoveredCount}/{zoneSpecies.length}
                           </p>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={zoneColor + '80'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                             style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}>
@@ -5895,7 +5904,19 @@ export default function FishingGame({
                   )}
 
                   {isExpanded && (
-                    <div
+                    <motion.div
+                      // Stagger entrance — when a zone expands, the cards
+                      // cascade in over ~300ms instead of materialising
+                      // all at once. Parent's `visible` variant carries
+                      // staggerChildren; each card's variant just declares
+                      // hidden/visible states and inherits the delay from
+                      // the parent's stagger schedule.
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        hidden:  {},
+                        visible: { transition: { staggerChildren: 0.028, delayChildren: 0.04 } },
+                      }}
                       style={{
                         background: `${zoneColor}08`,
                         border: `1px solid ${zoneColor}20`,
@@ -5911,6 +5932,10 @@ export default function FishingGame({
                         const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
                         const pb = personalBests[f.id]
                         const isNew = uncheckedNewFishIds.has(f.id)
+                        const cardVariants = {
+                          hidden:  { opacity: 0, y: 10, scale: 0.96 },
+                          visible: { opacity: 1, y: 0,  scale: 1, transition: { duration: 0.26, ease: [0.2, 0.7, 0.3, 1] as [number, number, number, number] } },
+                        }
 
                         // Undiscovered: silhouette card. Render the actual
                         // fish image at brightness:0 + low opacity so the
@@ -5918,7 +5943,8 @@ export default function FishingGame({
                         // than a plain "???") without leaking the species.
                         if (!discovered) {
                           return (
-                            <div key={f.id}
+                            <motion.div key={f.id}
+                              variants={cardVariants}
                               style={{
                                 position: 'relative',
                                 background: 'rgba(4,10,18,0.45)',
@@ -5932,7 +5958,7 @@ export default function FishingGame({
                                 <FishImg name={f.name} style={{ maxWidth: '88%', maxHeight: 48, objectFit: 'contain', filter: 'brightness(0) opacity(0.18)' }} />
                               </div>
                               <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.28)', marginTop: 4, letterSpacing: '0.06em' }}>???</p>
-                            </div>
+                            </motion.div>
                           )
                         }
 
@@ -5940,9 +5966,10 @@ export default function FishingGame({
                         // the fun fact + sell value + PB. NEW badge clears
                         // on tap (same as before — replaces inline expand).
                         return (
-                          <button
+                          <motion.button
                             key={f.id}
                             type="button"
+                            variants={cardVariants}
                             onClick={() => {
                               setTappedFishId(f.id)
                               if (isNew) setUncheckedNewFishIds(prev => { const next = new Set(prev); next.delete(f.id); return next })
@@ -5984,10 +6011,10 @@ export default function FishingGame({
                                 fontFamily: 'var(--font-karla)', letterSpacing: '0.05em',
                               }}>NEW</span>
                             )}
-                          </button>
+                          </motion.button>
                         )
                       })}
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               )
@@ -6025,9 +6052,27 @@ export default function FishingGame({
                           {isLocked ? 'Unlocks at Fishing Level 75' : 'Before time. Beyond depth.'}
                         </p>
                       </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: isLocked ? 'rgba(255,255,255,0.2)' : (caughtCount === bossSpecies.length && bossSpecies.length > 0 ? zoneColor : 'rgba(255,255,255,0.5)') }}>
-                        {isLocked ? '—' : <>{caughtCount}<span style={{ color: 'rgba(255,255,255,0.25)' }}>/{bossSpecies.length}</span></>}
-                      </p>
+                      {/* Same percentage-led metric as the other zones,
+                          gated on !isLocked so the header still reads
+                          as "—" while the zone is locked. */}
+                      {isLocked ? (
+                        <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)' }}>—</p>
+                      ) : (() => {
+                        const isAncientComplete = caughtCount === bossSpecies.length && bossSpecies.length > 0
+                        const ancientPct = bossSpecies.length > 0 ? caughtCount / bossSpecies.length : 0
+                        return (
+                          <div className="flex items-center gap-2">
+                            <p className="font-cinzel font-700"
+                              style={{ fontSize: '0.88rem', color: isAncientComplete ? zoneColor : '#f0ede8', lineHeight: 1, textShadow: isAncientComplete ? `0 0 8px ${zoneColor}66` : 'none' }}>
+                              {Math.round(ancientPct * 100)}%
+                            </p>
+                            <p className="font-karla font-600"
+                              style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>
+                              {caughtCount}/{bossSpecies.length}
+                            </p>
+                          </div>
+                        )
+                      })()}
                     </div>
                     {!isLocked && (
                       <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: `${zoneColor}88`, letterSpacing: '0.06em' }}>
@@ -6036,14 +6081,30 @@ export default function FishingGame({
                     )}
                   </button>
                   {isExpanded && !isLocked && (
-                    <div style={{
-                      background: `${zoneColor}08`, border: `1px solid ${zoneColor}22`,
-                      borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.5rem 0.6rem 0.6rem',
-                    }}>
+                    <motion.div
+                      // Stagger entrance — same shape as the other zones.
+                      // Slightly slower per-row (35ms vs 28ms in the grid)
+                      // because Ancient rows feel more ceremonial; the
+                      // cascade reads as the trophy list "lighting up"
+                      // one entry at a time.
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        hidden:  {},
+                        visible: { transition: { staggerChildren: 0.035, delayChildren: 0.05 } },
+                      }}
+                      style={{
+                        background: `${zoneColor}08`, border: `1px solid ${zoneColor}22`,
+                        borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.5rem 0.6rem 0.6rem',
+                      }}>
                       {bossSpecies.map(f => {
                         const caught = trophyCatches.has(f.id)
+                        const rowVariants = {
+                          hidden:  { opacity: 0, x: -8 },
+                          visible: { opacity: 1, x: 0, transition: { duration: 0.28, ease: [0.2, 0.7, 0.3, 1] as [number, number, number, number] } },
+                        }
                         return (
-                          <div key={f.id} style={{
+                          <motion.div key={f.id} variants={rowVariants} style={{
                             display: 'flex', alignItems: 'center', gap: 10,
                             padding: '0.45rem 0.5rem', borderRadius: 8, marginBottom: 2,
                             background: caught ? `${zoneColor}14` : 'rgba(255,255,255,0.02)',
@@ -6069,10 +6130,10 @@ export default function FishingGame({
                                 </svg>
                               </div>
                             )}
-                          </div>
+                          </motion.div>
                         )
                       })}
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               )
