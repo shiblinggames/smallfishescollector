@@ -1166,12 +1166,15 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   const cardBg = isShiny
     ? 'linear-gradient(135deg, rgba(70,42,10,0.98) 0%, rgba(150,98,24,0.96) 45%, rgba(80,48,12,0.98) 100%)'
     : 'rgba(6,16,26,0.96)'
-  // Tight gold rim + soft inner glow only — no wide outer halo. The
-  // wider halo I had before (88px outer ring) read as a flat rectangle
-  // because the blur was much larger than the card's 1rem corner
-  // radius. Sparkle particles + shimmer sweep already supply the
-  // "ambient gold field" so the boxShadow just needs to hug the border.
-  const shinyGlow = `inset 0 0 32px rgba(255,225,140,0.35), 0 0 16px ${SHINY_THEME.primary}aa`
+  // Inset-only glow. Any OUTER box-shadow gets clipped to a rectangle
+  // by the scrollable parent (overflowY:auto on the catching area) so
+  // the card's rounded corners are lost and the halo reads as
+  // sharp-edged. Keep all the gold light inside the card: a strong
+  // inner ring + a softer wider inset for a deep-glow feel. Sparkle
+  // particles + shimmer sweep + gold gradient background + thick
+  // gold border already carry the metal feel without needing an
+  // external halo.
+  const shinyGlow = `inset 0 0 32px rgba(255,225,140,0.4), inset 0 0 64px rgba(251,204,74,0.18)`
   const shinySparkles = useMemo(
     () => Array.from({ length: 12 }, () => ({
       x: Math.random() * 100,
