@@ -1685,43 +1685,15 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               </div>
             )}
 
-            {/* Shiny radial halo behind the fish — pulses gently. Sized
-                to barely overhang the fish so the gold light hugs the
-                shape rather than washing the whole card.
-                Two-div setup: outer div handles the static -50%/-50%
-                centering via CSS transform; inner motion.div owns the
-                scale/opacity animation. Splitting them avoids
-                framer-motion overwriting the centering transform when
-                it animates scale — which previously slid the halo to
-                offset (50%,50%) from top-left and rendered as a visible
-                offset rectangle behind the fish (the "square glow"
-                bug). borderRadius: 50% on the inner so any clip
-                artifact is circular too. */}
-            {isShiny && (
-              <div aria-hidden style={{
-                position: 'absolute', top: '50%', left: '50%',
-                width: 220, height: 220,
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none',
-                zIndex: 0,
-              }}>
-                <motion.div
-                  animate={{ opacity: [0.5, 0.85, 0.5], scale: [0.95, 1.04, 0.95] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                  style={{
-                    width: '100%', height: '100%',
-                    borderRadius: '50%',
-                    // No filter:blur here — Safari/iOS renders blur on a
-                    // radius-clipped element as a SQUARE box (the visible
-                    // "rectangle glow" the player reported). The radial
-                    // gradient's own alpha falloff (transparent at 70%)
-                    // does the softening; wider gradient + slightly lower
-                    // mid stop compensates for the removed blur.
-                    background: 'radial-gradient(circle, rgba(255,210,90,0.6) 0%, rgba(251,191,36,0.22) 38%, transparent 70%)',
-                  }}
-                />
-              </div>
-            )}
+            {/* Radial halo behind the fish removed — even with
+                border-radius:50% and no filter:blur, the radial
+                gradient div's 220×220 bounds rendered as a visible
+                rectangle against the warm card background (the
+                circular fade blended into the surrounding warmth
+                and the element's square footprint showed through).
+                The fish's own gold rim drop-shadow + the entrance
+                burst + the orbiting sparkles supply all the ambient
+                gold light without needing a static halo div behind. */}
 
             {/* Sparkles ringing the fish in polar coords from centre.
                 Same wrapper-split as the halo above: outer span owns

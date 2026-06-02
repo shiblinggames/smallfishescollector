@@ -42,7 +42,15 @@ export const SHINY_SELL_MULT = 10
 export const SHINY_FISH_FILTER =
   'grayscale(1) sepia(1) saturate(7) hue-rotate(-15deg) ' +
   'brightness(1.25) contrast(1.05) ' +
-  'drop-shadow(0 0 12px rgba(251,191,36,0.85))'
+  // Two stacked drop-shadows at moderate radii. drop-shadow follows
+  // the IMAGE'S alpha channel (not the element's bounding box), so
+  // both glows trace the fish silhouette — not the rectangular IMG
+  // element. Wider shadows (36px+) were what previously created a
+  // visible rectangle around the IMG bounds: combined with saturate(7)
+  // amplifying anti-aliasing edge pixels, the shadow rendered the
+  // sprite's faint near-transparent edge as a square-ish halo.
+  'drop-shadow(0 0 10px rgba(251,191,36,0.95)) ' +
+  'drop-shadow(0 0 22px rgba(251,191,36,0.5))'
 
 /** Theme palette used for shiny chrome (result card border, banners,
  *  Logbook badge). Gold + warm amber. */
