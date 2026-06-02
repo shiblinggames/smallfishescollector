@@ -1152,10 +1152,12 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   }, [isPBMoment])
 
   // Ancient deep gets its own palette + label, overriding the gold legendary look.
-  // Shiny overrides BOTH (rarity + ancient) with the premium gold theme so the
-  // moment reads as the headline reward of the catch, not a sub-modifier.
+  // Shiny ("Golden" in player-facing copy — the internal variable name is kept
+  // as isShiny to avoid touching every reference) overrides BOTH (rarity +
+  // ancient) with the premium gold theme so the moment reads as the headline
+  // reward of the catch, not a sub-modifier.
   const r = isShiny
-    ? { label: 'Shiny ✦', color: SHINY_THEME.primary, hookedText: baseR.hookedText }
+    ? { label: 'Golden ✦', color: SHINY_THEME.primary, hookedText: baseR.hookedText }
     : isAncient
       ? { label: 'Ancient', color: '#e11d48', hookedText: baseR.hookedText }
       : baseR
@@ -1962,7 +1964,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           {/* Name. Shiny gets bigger, more ornate Cinzel + a wide
               gold gradient text with a soft warm shadow — reads as the
               centerpiece of the holographic card. Regular catches keep
-              the standard size. */}
+              the standard size. Shiny also prefixes the species name
+              with "Golden" so the card actually reads as e.g.
+              "Golden Pickerel" instead of just "Pickerel". */}
           <p className="font-cinzel font-700 text-center"
             style={isShiny ? {
               fontSize: '1.55rem',
@@ -1980,7 +1984,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               lineHeight: 1.1,
               marginBottom: hasSize ? '0.35rem' : '0.55rem',
             }}>
-            {fish.name}
+            {isShiny ? `Golden ${fish.name}` : fish.name}
           </p>
 
           {/* Ornate gold divider — only on shiny. Reads as a holographic
