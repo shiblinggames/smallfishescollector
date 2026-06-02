@@ -2993,19 +2993,23 @@ export default function FishingGame({
     alreadyMounted?: boolean
   } | null>(null)
   // Lock-out for golden catches. The card's entrance + burst + ring waves
-  // run for ~1.8s but the player needs an extra beat to actually drink in
-  // the trophy before the decision modal slides up. Tuned to 3.2s — long
-  // enough that the catch feels savored, short enough that it doesn't
-  // overstay. Reset every time a new golden lands so back-to-back catches
-  // each get their full moment.
+  // run for ~1.8s — the reveal lock holds the button slot empty for the
+  // full cinematic, then a "Claim Trophy" button slides into the action
+  // row. The decision modal only opens once the player taps that button,
+  // so they can savor the card as long as they want before committing.
+  // Reset every time a new golden lands so back-to-back catches each
+  // get their full moment.
   const [shinyRevealLocked, setShinyRevealLocked] = useState(false)
+  const [shinyChoiceModalOpen, setShinyChoiceModalOpen] = useState(false)
   useEffect(() => {
     if (!catchResult?.isShiny) {
       setShinyRevealLocked(false)
+      setShinyChoiceModalOpen(false)
       return
     }
     setShinyRevealLocked(true)
-    const t = setTimeout(() => setShinyRevealLocked(false), 3200)
+    setShinyChoiceModalOpen(false)
+    const t = setTimeout(() => setShinyRevealLocked(false), 2400)
     return () => clearTimeout(t)
   }, [catchResult?.isShiny, catchResult?.fish.id])
   const [crateResult, setCrateResult] = useState<
@@ -4191,6 +4195,7 @@ export default function FishingGame({
     setLevelUpNotif(null)
     setHoldOpen(false)
     setGearOpen(false)
+    setShinyChoiceModalOpen(false)
   }
 
   // Forced choice modal handlers — both terminal, the trophy can't be
@@ -5911,12 +5916,17 @@ export default function FishingGame({
               })()}
               {phase === 'result' && !crateResult && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!!catchResult || !!missResult) && (() => {
                 const isShinyResult = !!catchResult?.isShiny
-                // Golden catches: the Cast Again button is entirely
-                // replaced — during the 2s reveal lock a pulsing caption
-                // shows where the button would be, and after the lock the
-                // forced-choice modal owns the dismiss flow (rendered at
-                // the root of FishingGame). Nothing tappable in this slot
-                // for shiny so the player can't escape the decision.
+                // Golden catches: three-stage action slot.
+                //   1. Reveal lock (~2.4s after the catch): show a pulsing
+                //      "Trophy Emerging" caption — nothing tappable.
+                //   2. Lock lifts: a gold "Claim Trophy" button slides in.
+                //      Tapping it opens the decision modal. The player can
+                //      sit on this stage as long as they want, just looking
+                //      at the card.
+                //   3. Modal is open: hide the slot button — the choice
+                //      modal owns the interaction now.
+                // After the choice resolves, the result clears back to
+                // ready state via the existing dismissCatchResultToReady.
                 if (isShinyResult) {
                   return (
                     <motion.div key="shiny-locked"
@@ -5939,6 +5949,31 @@ export default function FishingGame({
                         >
                           ✦ Trophy Emerging
                         </motion.div>
+                      )}
+                      {!shinyRevealLocked && !shinyChoiceModalOpen && (
+                        <motion.button
+                          key="claim-trophy"
+                          type="button"
+                          onPointerDown={(e) => { e.preventDefault(); setShinyChoiceModalOpen(true) }}
+                          className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                          style={{
+                            width: 88, height: 88, borderRadius: '50%',
+                            background: 'radial-gradient(ellipse at 40% 35%, rgba(180,120,30,0.55), rgba(74,32,7,0.22))',
+                            border: '1px solid rgba(228,188,108,0.7)', cursor: 'pointer',
+                            fontSize: '0.6rem', color: '#fbcc4a', touchAction: 'manipulation',
+                            boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 26px rgba(228,188,108,0.45), inset 0 1px 0 rgba(255,255,255,0.18)',
+                            position: 'relative', lineHeight: 1.05,
+                            padding: '0 0.5rem',
+                            textAlign: 'center',
+                          }}
+                          initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
+                          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                          exit={{ opacity: 0, scale: 0.92 }}
+                          whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                          transition={{ type: 'spring', stiffness: 320, damping: 14 }}
+                        >
+                          Claim<br />Trophy
+                        </motion.button>
                       )}
                     </motion.div>
                   )
@@ -8020,7 +8055,7 @@ export default function FishingGame({
           the safe-area + tab-bar bottom padding so the modal isn't
           clipped on mobile. */}
       <PopupShell
-        open={phase === 'result' && !!catchResult?.isShiny && !shinyRevealLocked}
+        open={phase === 'result' && !!catchResult?.isShiny && shinyChoiceModalOpen}
         onClose={() => { /* forced choice — backdrop tap does nothing */ }}
         zIndex={200}
         backdropColor="radial-gradient(ellipse at 50% 65%, rgba(40,18,4,0.45) 0%, rgba(0,0,0,0.82) 80%)"
