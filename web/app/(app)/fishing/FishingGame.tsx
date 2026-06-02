@@ -1517,19 +1517,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         transition={{ type: 'spring', stiffness: isShiny ? 220 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 13 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.08 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
         className={isShiny ? 'overflow-hidden' : 'rounded-2xl overflow-hidden'}
         style={{
-          // Shiny gets cut-corner octagonal silhouette — a "treasure
-          // plaque" / coin-slab feel that reads as different from
-          // every other catch card at a glance. Border is dropped
-          // when shiny because clip-path clips it away; the rim is
-          // carried by the inset shinyGlow + the dark outer ring of
-          // the radial gold gradient (the cardBg already fades to
-          // espresso at the edges, which traces the octagon shape).
+          // Shiny gets strongly rounded corners (2.5rem) for a
+          // polished treasure-chest-trim / coin-slab silhouette
+          // that reads distinct from the standard rounded-2xl
+          // (~1rem) used by every other catch card.
           border: isShiny
-            ? undefined
+            ? '2px solid rgba(228,188,108,0.85)'
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
-          clipPath: isShiny
-            ? 'polygon(22px 0%, calc(100% - 22px) 0%, 100% 22px, 100% calc(100% - 22px), calc(100% - 22px) 100%, 22px 100%, 0% calc(100% - 22px), 0% 22px)'
-            : undefined,
+          borderRadius: isShiny ? '2.5rem' : undefined,
           background: cardBg,
           position: 'relative', zIndex: 1,
           // Shiny → its own gold inset glow; everything else → the
