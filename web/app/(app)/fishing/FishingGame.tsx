@@ -1651,7 +1651,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: '0.25rem',
               // SIR-card sizing — bigger fish needs more vertical room.
-              minHeight: isShiny ? 160 : undefined,
+              // Trimmed from 160 to 128 so the whole card fits within
+              // smaller phone viewports (the bottom of the rounded gold
+              // card was getting cut off below 720px tall devices).
+              minHeight: isShiny ? 128 : undefined,
             }}
           >
             {/* DOPAMINE-SHOT v2 — layered burst sequence on entry. */}
@@ -1838,10 +1841,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                   style={{
                     // Shiny gets a noticeably bigger fish so it dominates
                     // the card like a SIR full-art (the art is meant to
-                    // BE the card, not be framed by the chrome).
-                    width: isShiny ? '86%' : '62%',
-                    maxWidth: isShiny ? 240 : 170,
-                    height: isShiny ? 140 : 92,
+                    // BE the card, not be framed by the chrome). Height
+                    // trimmed from 140 to 112 to keep the full card on
+                    // smaller phones — the fish still reads dominant
+                    // against the chrome's smaller proportions.
+                    width: isShiny ? '78%' : '62%',
+                    maxWidth: isShiny ? 220 : 170,
+                    height: isShiny ? 112 : 92,
                     objectFit: 'contain',
                     // Shiny stacks the gold filter (lib/shiny.ts) on top
                     // of a warm drop-shadow for the "hovering metal" feel.
@@ -2079,11 +2085,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           {isShiny ? (
             <p className="text-center" style={{
               fontFamily: 'Georgia, "Times New Roman", serif',
-              fontSize: '0.82rem',
+              // Trimmed from 0.82rem to 0.74rem + tighter line-height so
+              // 3-line shiny messages don't push the card past the bottom
+              // of smaller phone viewports.
+              fontSize: '0.74rem',
               fontStyle: 'italic',
               fontWeight: 500,
               color: 'rgba(238,210,150,0.92)',
-              lineHeight: 1.5,
+              lineHeight: 1.4,
               padding: '0 0.4rem',
               textShadow: '0 0 12px rgba(245,205,110,0.25)',
             }}>
@@ -4070,10 +4079,14 @@ export default function FishingGame({
     setSellOpen(false)
   }
 
-  // Auto Caster: fire cast again ~1.5s after a result when equipped and conditions allow
+  // Auto Caster: fire cast again ~1.5s after a result when equipped and conditions allow.
+  // Skips when the current catch is a golden — players were missing the trophy
+  // moment by muscle-memory tapping recast. Forcing a manual claim guarantees
+  // they actually see the rare catch they just landed.
   useEffect(() => {
     if (equippedSpecial !== 'auto_caster' || !ownedAutoCaster) return
     if (phase !== 'result') return
+    if (catchResult?.isShiny) return
     if (crateResult && cratePhase !== 'revealed') return
     const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
@@ -4081,7 +4094,26 @@ export default function FishingGame({
     const t = setTimeout(() => { handleCastAgain() }, 1500)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCaster, cratePhase])
+  }, [phase, equippedSpecial, ownedAutoCaster, cratePhase, catchResult?.isShiny])
+
+  // Golden catches require an explicit dismissal — clears the result
+  // without auto-casting, so the player can't muscle-memory their way
+  // past the trophy moment. They have to tap Cast on the next turn to
+  // start fishing again.
+  function handleClaimShinyTrophy() {
+    if (phase !== 'result') return
+    setFreshCatchHook(null)
+    setCatchResult(null)
+    setMissResult(null)
+    setCrateResult(null)
+    setCratePhase('closed')
+    setCrateStrip(null)
+    setHookedFish(null)
+    setPerfectFlash(false)
+    setLevelUpNotif(null)
+    setHoldOpen(false)
+    setGearOpen(false)
+  }
 
   async function handleCastAgain() {
     if (phase !== 'result') return
@@ -5739,32 +5771,55 @@ export default function FishingGame({
                   <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
                 </motion.div>
               )}
-              {phase === 'result' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (
-                <motion.button key="again"
-                  onPointerDown={(e) => { e.preventDefault(); handleCastAgain() }}
-                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
-                  style={{
-                    width: 88, height: 88, borderRadius: '50%',
-                    background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
-                    border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
-                    fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
-                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                    position: 'relative',
-                  }}
-                  initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.92 }}
-                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                >
-                  {castRippleKey > 0 && [0, 220, 440].map((delay, i) => (
-                    <motion.span key={`${castRippleKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(103,212,232,0.55)', background: 'transparent', pointerEvents: 'none' }}
-                      initial={{ scale: 1, opacity: 0.55 }} animate={{ scale: 2.2, opacity: 0 }}
-                      transition={{ duration: 1.1, ease: [0.2, 0, 0.6, 1], delay: delay / 1000 }}
-                    />
-                  ))}
-                  Cast Again
-                </motion.button>
-              )}
+              {phase === 'result' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (() => {
+                const isShinyResult = !!catchResult?.isShiny
+                // Golden catches swap Cast Again for a Claim Trophy button —
+                // muscle-memory tap dismisses the trophy moment back to the
+                // ready state instead of auto-casting through it. Forces the
+                // player to actually look at what they caught before fishing
+                // again. Gold colour-shifted so it reads as "claim", not
+                // "continue."
+                const bg = isShinyResult
+                  ? 'radial-gradient(ellipse at 40% 35%, rgba(180,120,30,0.55), rgba(74,32,7,0.25))'
+                  : 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))'
+                const border = isShinyResult ? '1px solid rgba(228,188,108,0.65)' : '1px solid rgba(34,170,200,0.4)'
+                const color = isShinyResult ? '#fbcc4a' : '#67d4e8'
+                const shadow = isShinyResult
+                  ? '0 6px 0 rgba(0,0,0,0.5), 0 0 26px rgba(228,188,108,0.45), inset 0 1px 0 rgba(255,255,255,0.18)'
+                  : '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
+                return (
+                  <motion.button key="again"
+                    onPointerDown={(e) => {
+                      e.preventDefault()
+                      if (isShinyResult) handleClaimShinyTrophy()
+                      else handleCastAgain()
+                    }}
+                    className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                    style={{
+                      width: 88, height: 88, borderRadius: '50%',
+                      background: bg, border, cursor: 'pointer',
+                      fontSize: isShinyResult ? '0.6rem' : '0.65rem', color, touchAction: 'manipulation',
+                      boxShadow: shadow,
+                      position: 'relative',
+                      lineHeight: 1.05,
+                      padding: '0 0.5rem',
+                      textAlign: 'center',
+                    }}
+                    initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                    transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                  >
+                    {!isShinyResult && castRippleKey > 0 && [0, 220, 440].map((delay, i) => (
+                      <motion.span key={`${castRippleKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(103,212,232,0.55)', background: 'transparent', pointerEvents: 'none' }}
+                        initial={{ scale: 1, opacity: 0.55 }} animate={{ scale: 2.2, opacity: 0 }}
+                        transition={{ duration: 1.1, ease: [0.2, 0, 0.6, 1], delay: delay / 1000 }}
+                      />
+                    ))}
+                    {isShinyResult ? 'Claim Trophy' : 'Cast Again'}
+                  </motion.button>
+                )
+              })()}
             </>
           </div>
 
