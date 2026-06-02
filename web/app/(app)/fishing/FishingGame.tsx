@@ -1547,10 +1547,111 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           boxShadow: isShiny ? shinyGlow : (rarity >= 2 ? glowShadow[rarity] : undefined),
         }}
       >
-        {/* No card-level shiny chrome — the warm top wash that used
-            to live here was competing with the gold halo behind the
-            fish and washing out body text. All shiny effects now
-            live ON the fish image only. */}
+        {/* ── Pokémon SIR-style overlays for shiny ───────────────────
+            Three layered effects sit on the card itself (zIndex 1)
+            below all content but above the iridescent background, to
+            give it the "full-art Secret Rare" feel:
+              - rotating starburst of gold rays radiating from centre
+              - subtle diagonal "foil" line pattern that catches light
+              - four corner flourishes (small gold ornaments)
+            All pointer-events: none so they don't intercept taps. */}
+        {isShiny && (
+          <>
+            {/* Starburst light rays — conic gradient creates 16 thin
+                gold spokes radiating from the card centre. Rotates
+                very slowly (90s loop) so the rays drift like the
+                light source is sweeping. mix-blend: screen brightens
+                the underlying iridescent BG rather than overlaying. */}
+            <motion.div
+              aria-hidden
+              animate={{ rotate: 360 }}
+              transition={{ duration: 90, repeat: Infinity, ease: 'linear' }}
+              style={{
+                position: 'absolute', inset: '-25%',
+                background: `conic-gradient(from 0deg,
+                  transparent 0deg, rgba(255,230,150,0.16) 3deg, transparent 8deg,
+                  transparent 22deg, rgba(255,230,150,0.10) 25deg, transparent 30deg,
+                  transparent 45deg, rgba(255,230,150,0.16) 48deg, transparent 53deg,
+                  transparent 67deg, rgba(255,230,150,0.10) 70deg, transparent 75deg,
+                  transparent 90deg, rgba(255,230,150,0.16) 93deg, transparent 98deg,
+                  transparent 112deg, rgba(255,230,150,0.10) 115deg, transparent 120deg,
+                  transparent 135deg, rgba(255,230,150,0.16) 138deg, transparent 143deg,
+                  transparent 157deg, rgba(255,230,150,0.10) 160deg, transparent 165deg,
+                  transparent 180deg, rgba(255,230,150,0.16) 183deg, transparent 188deg,
+                  transparent 202deg, rgba(255,230,150,0.10) 205deg, transparent 210deg,
+                  transparent 225deg, rgba(255,230,150,0.16) 228deg, transparent 233deg,
+                  transparent 247deg, rgba(255,230,150,0.10) 250deg, transparent 255deg,
+                  transparent 270deg, rgba(255,230,150,0.16) 273deg, transparent 278deg,
+                  transparent 292deg, rgba(255,230,150,0.10) 295deg, transparent 300deg,
+                  transparent 315deg, rgba(255,230,150,0.16) 318deg, transparent 323deg,
+                  transparent 337deg, rgba(255,230,150,0.10) 340deg, transparent 345deg,
+                  transparent 360deg)`,
+                mixBlendMode: 'screen',
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            />
+
+            {/* Foil texture — fine diagonal lines for the "etched holo
+                foil" feel real SIR cards have. Very low opacity so it
+                reads as a texture, not a stripe pattern. mix-blend:
+                overlay so it interacts with the iridescent gradient
+                underneath rather than just sitting on top. */}
+            <div aria-hidden style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: `repeating-linear-gradient(110deg,
+                rgba(255,255,255,0.04) 0px,
+                rgba(255,255,255,0.04) 1px,
+                transparent 1px,
+                transparent 7px)`,
+              mixBlendMode: 'overlay',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }} />
+
+            {/* Corner flourishes — four small gold L-bracket ornaments
+                that frame the card like a premium collectible holder.
+                Each is two thin gold strokes meeting at the corner. */}
+            {(['tl', 'tr', 'bl', 'br'] as const).map(corner => {
+              const isTop  = corner.startsWith('t')
+              const isLeft = corner.endsWith('l')
+              return (
+                <div key={corner} aria-hidden style={{
+                  position: 'absolute',
+                  top:    isTop  ? 8 : 'auto',
+                  bottom: !isTop ? 8 : 'auto',
+                  left:   isLeft ? 8 : 'auto',
+                  right:  !isLeft ? 8 : 'auto',
+                  width: 18, height: 18,
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top:    isTop  ? 0 : 'auto',
+                    bottom: !isTop ? 0 : 'auto',
+                    left:   isLeft ? 0 : 'auto',
+                    right:  !isLeft ? 0 : 'auto',
+                    width: 14, height: 1.5,
+                    background: 'linear-gradient(90deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))',
+                    transform: isLeft ? 'none' : 'scaleX(-1)',
+                  }} />
+                  <div style={{
+                    position: 'absolute',
+                    top:    isTop  ? 0 : 'auto',
+                    bottom: !isTop ? 0 : 'auto',
+                    left:   isLeft ? 0 : 'auto',
+                    right:  !isLeft ? 0 : 'auto',
+                    width: 1.5, height: 14,
+                    background: isTop
+                      ? 'linear-gradient(180deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))'
+                      : 'linear-gradient(180deg, rgba(228,188,108,0.4), rgba(228,188,108,0.95))',
+                  }} />
+                </div>
+              )
+            })}
+          </>
+        )}
 
         {/* Legendary shimmer sweep */}
         {isLegendary && !isShiny && (
@@ -1641,9 +1742,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: '0.25rem',
-              // Slightly more room on shiny so the smaller halo doesn't
-              // crowd siblings, but not as cavernous as before.
-              minHeight: isShiny ? 124 : undefined,
+              // SIR-card sizing — bigger fish needs more vertical room.
+              minHeight: isShiny ? 160 : undefined,
             }}
           >
             {/* DOPAMINE-SHOT v2 — layered burst sequence on entry. */}
@@ -1828,14 +1928,17 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 <FishImg
                   name={fish.name}
                   style={{
-                    width: isShiny ? '68%' : '62%',
-                    maxWidth: isShiny ? 190 : 170,
-                    height: isShiny ? 108 : 92,
+                    // Shiny gets a noticeably bigger fish so it dominates
+                    // the card like a SIR full-art (the art is meant to
+                    // BE the card, not be framed by the chrome).
+                    width: isShiny ? '86%' : '62%',
+                    maxWidth: isShiny ? 240 : 170,
+                    height: isShiny ? 140 : 92,
                     objectFit: 'contain',
                     // Shiny stacks the gold filter (lib/shiny.ts) on top
                     // of a warm drop-shadow for the "hovering metal" feel.
                     filter: isShiny
-                      ? `${SHINY_FISH_FILTER} drop-shadow(0 6px 14px rgba(120,70,8,0.45))`
+                      ? `${SHINY_FISH_FILTER} drop-shadow(0 8px 18px rgba(120,70,8,0.55))`
                       : `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
                   }}
                 />
