@@ -2993,9 +2993,11 @@ export default function FishingGame({
     alreadyMounted?: boolean
   } | null>(null)
   // Lock-out for golden catches. The card's entrance + burst + ring waves
-  // run for ~1.8s — the button stays hidden for 2.0s so the player must
-  // watch the full reveal before they can claim. Reset every time a new
-  // golden lands so back-to-back catches each get their full moment.
+  // run for ~1.8s but the player needs an extra beat to actually drink in
+  // the trophy before the decision modal slides up. Tuned to 3.2s — long
+  // enough that the catch feels savored, short enough that it doesn't
+  // overstay. Reset every time a new golden lands so back-to-back catches
+  // each get their full moment.
   const [shinyRevealLocked, setShinyRevealLocked] = useState(false)
   useEffect(() => {
     if (!catchResult?.isShiny) {
@@ -3003,7 +3005,7 @@ export default function FishingGame({
       return
     }
     setShinyRevealLocked(true)
-    const t = setTimeout(() => setShinyRevealLocked(false), 2000)
+    const t = setTimeout(() => setShinyRevealLocked(false), 3200)
     return () => clearTimeout(t)
   }, [catchResult?.isShiny, catchResult?.fish.id])
   const [crateResult, setCrateResult] = useState<
@@ -7994,36 +7996,29 @@ export default function FishingGame({
       />
 
       {/* ── Golden trophy choice modal ───────────────────────────────────
-          Forced decision after a shiny lands and the 2s reveal animation
-          finishes. Sell for 10× doubloons OR mount the species golden in
-          the Logbook forever. No cancel/dismiss — the player has to pick
-          one. Bottom-anchored sheet so it sits over the action button row
-          without covering the card above. */}
-      <AnimatePresence>
-        {phase === 'result' && catchResult?.isShiny && !shinyRevealLocked && (
-          <motion.div
-            key="shiny-choice"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            aria-modal
-            role="dialog"
-            style={{
-              position: 'fixed', inset: 0,
-              background: 'radial-gradient(ellipse at 50% 65%, rgba(40,18,4,0.40) 0%, rgba(0,0,0,0.78) 80%)',
-              zIndex: 200,
-              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-              padding: '1.5rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1.5rem)',
-              touchAction: 'none',
-            }}
-          >
+          Forced decision after a shiny lands and the reveal lock lifts.
+          Sell for 10× doubloons OR mount the species golden in the
+          Logbook forever. No cancel/dismiss — backdrop tap is a no-op
+          on PopupShell since onClose stays empty. PopupShell handles
+          the safe-area + tab-bar bottom padding so the modal isn't
+          clipped on mobile. */}
+      <PopupShell
+        open={phase === 'result' && !!catchResult?.isShiny && !shinyRevealLocked}
+        onClose={() => { /* forced choice — backdrop tap does nothing */ }}
+        zIndex={200}
+        backdropColor="radial-gradient(ellipse at 50% 65%, rgba(40,18,4,0.45) 0%, rgba(0,0,0,0.82) 80%)"
+      >
+        {catchResult?.isShiny && (
             <motion.div
-              initial={{ y: 80, opacity: 0, scale: 0.96 }}
+              key="shiny-choice"
+              initial={{ y: 60, opacity: 0, scale: 0.96 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 40, opacity: 0 }}
+              exit={{ y: 30, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+              role="dialog"
+              aria-modal
               style={{
+                margin: 'auto auto 0 auto',
                 width: '100%', maxWidth: 380,
                 background: 'radial-gradient(circle at 50% 25%, #2a1a08 0%, #16090a 100%)',
                 border: '2px solid rgba(228,188,108,0.7)',
@@ -8124,27 +8119,32 @@ export default function FishingGame({
                 )
               })()}
             </motion.div>
+        )}
+      </PopupShell>
 
-            {/* Resolve toast — confirms the choice landed */}
-            {shinyResolveToast && (
-              <motion.div
-                key="resolve-toast"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="font-karla font-700"
-                style={{
-                  position: 'absolute', top: '14%', left: '50%', transform: 'translateX(-50%)',
-                  background: 'rgba(8,8,6,0.92)', border: '1px solid rgba(228,188,108,0.55)',
-                  padding: '0.55rem 1.1rem', borderRadius: 999,
-                  color: '#fbcc4a', fontSize: '0.82rem',
-                  textShadow: '0 0 10px rgba(251,204,74,0.55)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {shinyResolveToast}
-              </motion.div>
-            )}
+      {/* Resolve toast — confirms the choice landed. Fixed-positioned so
+          it floats above the modal + tab bar without needing a parent. */}
+      <AnimatePresence>
+        {shinyResolveToast && (
+          <motion.div
+            key="shiny-resolve-toast"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="font-karla font-700"
+            style={{
+              position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 80px)',
+              left: '50%', transform: 'translateX(-50%)',
+              background: 'rgba(8,8,6,0.92)', border: '1px solid rgba(228,188,108,0.55)',
+              padding: '0.55rem 1.1rem', borderRadius: 999,
+              color: '#fbcc4a', fontSize: '0.82rem',
+              textShadow: '0 0 10px rgba(251,204,74,0.55)',
+              whiteSpace: 'nowrap',
+              zIndex: 220,
+              pointerEvents: 'none',
+            }}
+          >
+            {shinyResolveToast}
           </motion.div>
         )}
       </AnimatePresence>
