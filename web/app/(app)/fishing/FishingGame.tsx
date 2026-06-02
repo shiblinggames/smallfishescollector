@@ -5344,8 +5344,9 @@ export default function FishingGame({
                         textAlign: 'center',
                       }}
                     >
-                      {/* Crate image */}
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.9rem' }}>
+                      {/* Crate image — fixed slot so the image position
+                          doesn't shift between phases. */}
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0.9rem', height: 96 }}>
                         <motion.img
                           src={(() => {
                             const tier = hookedFish?.crateTier ?? 'wooden'
@@ -5370,10 +5371,14 @@ export default function FishingGame({
                         />
                       </div>
 
-                      {/* Closed: label + tap button */}
+                      {/* Phase content slot — fixed height so the panel
+                          stops growing/shrinking between closed → rolling
+                          → revealed. Without this the slot strip jumps
+                          up or down as adjacent content (label vs reward)
+                          swaps in. Inner content centers vertically in
+                          the slot. */}
+                      <div style={{ minHeight: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                       {cratePhase === 'closed' && (() => {
-                        // Show the actual crate tier so the player knows
-                        // what they hooked at a glance, not just "a crate".
                         const tier = hookedFish?.crateTier ?? 'wooden'
                         const tierName = tier === 'wooden' ? 'Wooden Crate'
                                        : tier === 'metal'  ? 'Metal Crate'
@@ -5384,27 +5389,9 @@ export default function FishingGame({
                           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.18em', marginBottom: 3 }}>
                             You reeled up a
                           </p>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', marginBottom: '0.7rem', textShadow: '0 0 12px rgba(251,191,36,0.35)' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', textShadow: '0 0 12px rgba(251,191,36,0.35)' }}>
                             {tierName}
                           </p>
-                          <motion.button
-                            onClick={handleOpenCrate}
-                            whileTap={{ scale: 0.96 }}
-                            animate={{ boxShadow: ['0 0 0px rgba(251,191,36,0)', '0 0 18px rgba(251,191,36,0.45)', '0 0 0px rgba(251,191,36,0)'] }}
-                            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                            className="font-karla font-700 uppercase tracking-[0.14em]"
-                            style={{
-                              width: '100%', padding: '0.65rem 0',
-                              borderRadius: 12,
-                              background: 'linear-gradient(135deg, rgba(217,119,6,0.4), rgba(251,191,36,0.18))',
-                              border: '1px solid rgba(251,191,36,0.5)',
-                              color: '#fbbf24',
-                              fontSize: '0.72rem',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Open Crate
-                          </motion.button>
                         </motion.div>
                         )
                       })()}
@@ -5516,39 +5503,13 @@ export default function FishingGame({
                               </div>
                             </div>
                           )}
-                          {(() => {
-                            const isCosmetic = crateResult.type === 'skin' || crateResult.type === 'hat' || crateResult.type === 'boat'
-                            const isDoubloons = crateResult.type === 'doubloons'
-                            const bg = isCosmetic
-                              ? 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(74,222,128,0.18))'
-                              : isDoubloons
-                              ? 'linear-gradient(135deg, rgba(217,119,6,0.45), rgba(251,191,36,0.2))'
-                              : 'linear-gradient(135deg, rgba(20,83,45,0.5), rgba(134,239,172,0.18))'
-                            const border = isCosmetic ? 'rgba(74,222,128,0.45)' : isDoubloons ? 'rgba(251,191,36,0.5)' : 'rgba(134,239,172,0.45)'
-                            const color = isCosmetic ? '#4ade80' : isDoubloons ? '#fbbf24' : '#86efac'
-                            const glow = isCosmetic ? '0 0 18px rgba(74,222,128,0.2)' : isDoubloons ? '0 0 20px rgba(251,191,36,0.22)' : '0 0 18px rgba(134,239,172,0.18)'
-                            return (
-                              <motion.button
-                                onClick={handleClaimCrate}
-                                whileTap={{ scale: 0.97 }}
-                                className="font-karla font-700 uppercase tracking-[0.14em]"
-                                style={{
-                                  width: '100%', padding: '0.65rem 0',
-                                  borderRadius: 12,
-                                  background: bg,
-                                  border: `1px solid ${border}`,
-                                  color,
-                                  fontSize: '0.72rem',
-                                  cursor: 'pointer',
-                                  boxShadow: glow,
-                                }}
-                              >
-                                Claim
-                              </motion.button>
-                            )
-                          })()}
+                          {/* Claim button lives in the bottom action row
+                              now — same screen slot as Cast / Reel — so
+                              the action position is consistent across
+                              every fishing phase. */}
                         </motion.div>
                       )}
+                      </div>
                     </motion.div>
                   ) : catchResult ? (
                     <ResultCard
@@ -5892,7 +5853,63 @@ export default function FishingGame({
                   <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
                 </motion.div>
               )}
-              {phase === 'result' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (() => {
+              {/* Crate flow — Open / waiting / Claim. Lives in the same
+                  slot as Cast / Reel so the action button never shifts
+                  position between phases. */}
+              {phase === 'result' && crateResult && cratePhase === 'closed' && (
+                <motion.button key="open-crate"
+                  onPointerDown={(e) => { e.preventDefault(); handleOpenCrate() }}
+                  className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                  style={{
+                    width: 88, height: 88, borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at 40% 35%, rgba(217,119,6,0.45), rgba(217,119,6,0.15))',
+                    border: '1px solid rgba(251,191,36,0.55)', cursor: 'pointer',
+                    fontSize: '0.62rem', color: '#fbbf24', touchAction: 'manipulation',
+                    boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 24px rgba(251,191,36,0.32), inset 0 1px 0 rgba(255,255,255,0.12)',
+                    position: 'relative', lineHeight: 1.1,
+                  }}
+                  initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                >
+                  Open<br />Crate
+                </motion.button>
+              )}
+              {phase === 'result' && crateResult && cratePhase === 'rolling' && (
+                <motion.div key="crate-rolling"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  style={{ width: 88, height: 88, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#4a4845' }}>…</p>
+                </motion.div>
+              )}
+              {phase === 'result' && crateResult && cratePhase === 'revealed' && (() => {
+                const isCosmetic = crateResult.type === 'skin' || crateResult.type === 'hat' || crateResult.type === 'boat'
+                const isDoubloons = crateResult.type === 'doubloons'
+                const accent = isCosmetic ? '#4ade80' : isDoubloons ? '#fbbf24' : '#86efac'
+                const accentRgb = isCosmetic ? '74,222,128' : isDoubloons ? '251,191,36' : '134,239,172'
+                return (
+                  <motion.button key="claim-crate"
+                    onPointerDown={(e) => { e.preventDefault(); handleClaimCrate() }}
+                    className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
+                    style={{
+                      width: 88, height: 88, borderRadius: '50%',
+                      background: `radial-gradient(ellipse at 40% 35%, rgba(${accentRgb},0.42), rgba(${accentRgb},0.14))`,
+                      border: `1px solid rgba(${accentRgb},0.55)`, cursor: 'pointer',
+                      fontSize: '0.72rem', color: accent, touchAction: 'manipulation',
+                      boxShadow: `0 6px 0 rgba(0,0,0,0.5), 0 0 26px rgba(${accentRgb},0.35), inset 0 1px 0 rgba(255,255,255,0.12)`,
+                      position: 'relative',
+                    }}
+                    initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
+                    transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                  >
+                    Claim
+                  </motion.button>
+                )
+              })()}
+              {phase === 'result' && !crateResult && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!!catchResult || !!missResult) && (() => {
                 const isShinyResult = !!catchResult?.isShiny
                 // Golden catches: the Cast Again button is entirely
                 // replaced — during the 2s reveal lock a pulsing caption
