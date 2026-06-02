@@ -1515,15 +1515,21 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
         initial={{ opacity: 0, y: isShiny ? 32 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.5 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -10 : 0 }}
         animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: isShiny ? 220 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 13 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.08 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
-        className="rounded-2xl overflow-hidden"
+        className={isShiny ? 'overflow-hidden' : 'rounded-2xl overflow-hidden'}
         style={{
+          // Shiny gets cut-corner octagonal silhouette — a "treasure
+          // plaque" / coin-slab feel that reads as different from
+          // every other catch card at a glance. Border is dropped
+          // when shiny because clip-path clips it away; the rim is
+          // carried by the inset shinyGlow + the dark outer ring of
+          // the radial gold gradient (the cardBg already fades to
+          // espresso at the edges, which traces the octagon shape).
           border: isShiny
-            // Thicker gradient-feel gold border — the "trading card
-            // frame" that signals premium. 2px solid gold at strong
-            // alpha so it reads as polished metal at any size. Paired
-            // with the inset shinyGlow for the framed-depth feel.
-            ? '2px solid rgba(228,188,108,0.85)'
+            ? undefined
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
+          clipPath: isShiny
+            ? 'polygon(22px 0%, calc(100% - 22px) 0%, 100% 22px, 100% calc(100% - 22px), calc(100% - 22px) 100%, 22px 100%, 0% calc(100% - 22px), 0% 22px)'
+            : undefined,
           background: cardBg,
           position: 'relative', zIndex: 1,
           // Shiny → its own gold inset glow; everything else → the
@@ -1559,48 +1565,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             }}
           />
         )}
-
-        {/* Corner flourishes — four small gold L-bracket ornaments
-            that frame the card like a premium collectible holder.
-            Each is two thin gold strokes meeting at the corner. */}
-        {isShiny && (['tl', 'tr', 'bl', 'br'] as const).map(corner => {
-          const isTop  = corner.startsWith('t')
-          const isLeft = corner.endsWith('l')
-          return (
-            <div key={corner} aria-hidden style={{
-              position: 'absolute',
-              top:    isTop  ? 8 : 'auto',
-              bottom: !isTop ? 8 : 'auto',
-              left:   isLeft ? 8 : 'auto',
-              right:  !isLeft ? 8 : 'auto',
-              width: 18, height: 18,
-              pointerEvents: 'none',
-              zIndex: 2,
-            }}>
-              <div style={{
-                position: 'absolute',
-                top:    isTop  ? 0 : 'auto',
-                bottom: !isTop ? 0 : 'auto',
-                left:   isLeft ? 0 : 'auto',
-                right:  !isLeft ? 0 : 'auto',
-                width: 14, height: 1.5,
-                background: 'linear-gradient(90deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))',
-                transform: isLeft ? 'none' : 'scaleX(-1)',
-              }} />
-              <div style={{
-                position: 'absolute',
-                top:    isTop  ? 0 : 'auto',
-                bottom: !isTop ? 0 : 'auto',
-                left:   isLeft ? 0 : 'auto',
-                right:  !isLeft ? 0 : 'auto',
-                width: 1.5, height: 14,
-                background: isTop
-                  ? 'linear-gradient(180deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))'
-                  : 'linear-gradient(180deg, rgba(228,188,108,0.4), rgba(228,188,108,0.95))',
-              }} />
-            </div>
-          )
-        })}
 
         {/* Legendary shimmer sweep */}
         {isLegendary && !isShiny && (
