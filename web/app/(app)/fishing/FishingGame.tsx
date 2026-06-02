@@ -1178,14 +1178,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny goes HOLOGRAPHIC TRADING CARD. Multi-stop jewel-tone
-  // gradient (deep purple → magenta → blue → gold → back) animated
-  // via background-position shift on the card itself — reads as
-  // iridescent foil catching light, completely different from the
-  // flat dark backgrounds of normal catches. Background-size 300%
-  // gives the gradient room to "travel" across the card surface.
+  // Shiny goes Pokémon GOLD SIR card. Bright gold metallic edges
+  // with a dark espresso vignette in the centre — the dark pocket
+  // gives the bright gold fish a contrasting backdrop to pop against
+  // while the bright gold edges + texture layers carry the "this is
+  // a gold card" reading. Radial gradient does both at once.
   const cardBg = isShiny
-    ? 'linear-gradient(125deg, rgba(38,14,68,0.97) 0%, rgba(78,26,90,0.97) 18%, rgba(38,40,86,0.97) 36%, rgba(72,34,28,0.97) 58%, rgba(82,58,18,0.97) 75%, rgba(38,14,68,0.97) 100%)'
+    ? 'radial-gradient(ellipse at 50% 50%, rgba(40,24,8,0.97) 0%, rgba(96,62,16,0.97) 45%, rgba(190,140,46,0.97) 92%, rgba(228,180,80,0.97) 100%)'
     : 'rgba(6,16,26,0.96)'
   // Subtle warm inset glow only around the edges — gives the gold
   // border a soft "framed" depth like polished metal catching light.
@@ -1510,21 +1509,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           300% so the gradient has room to travel without exposing the
           repeat seam. */}
       <motion.div
-        initial={isShiny
-          ? { opacity: 0, y: 32, scale: 0.5, rotate: -10, backgroundPosition: '0% 50%' }
-          : { opacity: 0, y: isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: 0 }}
-        animate={isShiny
-          ? { opacity: 1, y: 0, scale: 1, rotate: 0, backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }
-          : { opacity: 1, y: 0, scale: 1, rotate: 0 }}
-        transition={isShiny
-          ? {
-              y: { type: 'spring', stiffness: 220, damping: 13, delay: 0.08 },
-              scale: { type: 'spring', stiffness: 220, damping: 13, delay: 0.08 },
-              rotate: { type: 'spring', stiffness: 220, damping: 13, delay: 0.08 },
-              opacity: { duration: 0.3, delay: 0.08 },
-              backgroundPosition: { duration: 9, repeat: Infinity, ease: 'easeInOut' },
-            }
-          : { type: 'spring', stiffness: isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
+        initial={{ opacity: 0, y: isShiny ? 32 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.5 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -10 : 0 }}
+        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: isShiny ? 220 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 13 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.08 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
         className="rounded-2xl overflow-hidden"
         style={{
           border: isShiny
@@ -1535,10 +1522,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             ? '2px solid rgba(228,188,108,0.85)'
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
-          // Background-size 300% gives the iridescent gradient room to
-          // shift across the card surface — the framer-motion animation
-          // above drifts backgroundPosition 0%↔100% over 9s.
-          backgroundSize: isShiny ? '300% 300%' : undefined,
           position: 'relative', zIndex: 1,
           // Shiny → its own gold inset glow; everything else → the
           // rarity-tiered inset halo (replaces the prior outer halo
@@ -1547,64 +1530,45 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           boxShadow: isShiny ? shinyGlow : (rarity >= 2 ? glowShadow[rarity] : undefined),
         }}
       >
-        {/* ── Pokémon SIR-style overlays for shiny ───────────────────
-            Three layered effects sit on the card itself (zIndex 1)
-            below all content but above the iridescent background, to
-            give it the "full-art Secret Rare" feel:
-              - rotating starburst of gold rays radiating from centre
-              - subtle diagonal "foil" line pattern that catches light
-              - four corner flourishes (small gold ornaments)
+        {/* ── Pokémon GOLD SIR overlays for shiny ────────────────────
+            Two layered textures + four corner brackets sit on the card
+            itself (zIndex 1) below all content but above the gold
+            radial background. The rotating starburst rays were
+            removed (they looked terrible). Instead, the brushed
+            metallic texture + subtle ornamental cross-hatch carry
+            the "gold metal etching" feel.
             All pointer-events: none so they don't intercept taps. */}
         {isShiny && (
           <>
-            {/* Starburst light rays — conic gradient creates 16 thin
-                gold spokes radiating from the card centre. Rotates
-                very slowly (90s loop) so the rays drift like the
-                light source is sweeping. mix-blend: screen brightens
-                the underlying iridescent BG rather than overlaying. */}
-            <motion.div
-              aria-hidden
-              animate={{ rotate: 360 }}
-              transition={{ duration: 90, repeat: Infinity, ease: 'linear' }}
-              style={{
-                position: 'absolute', inset: '-25%',
-                background: `conic-gradient(from 0deg,
-                  transparent 0deg, rgba(255,230,150,0.16) 3deg, transparent 8deg,
-                  transparent 22deg, rgba(255,230,150,0.10) 25deg, transparent 30deg,
-                  transparent 45deg, rgba(255,230,150,0.16) 48deg, transparent 53deg,
-                  transparent 67deg, rgba(255,230,150,0.10) 70deg, transparent 75deg,
-                  transparent 90deg, rgba(255,230,150,0.16) 93deg, transparent 98deg,
-                  transparent 112deg, rgba(255,230,150,0.10) 115deg, transparent 120deg,
-                  transparent 135deg, rgba(255,230,150,0.16) 138deg, transparent 143deg,
-                  transparent 157deg, rgba(255,230,150,0.10) 160deg, transparent 165deg,
-                  transparent 180deg, rgba(255,230,150,0.16) 183deg, transparent 188deg,
-                  transparent 202deg, rgba(255,230,150,0.10) 205deg, transparent 210deg,
-                  transparent 225deg, rgba(255,230,150,0.16) 228deg, transparent 233deg,
-                  transparent 247deg, rgba(255,230,150,0.10) 250deg, transparent 255deg,
-                  transparent 270deg, rgba(255,230,150,0.16) 273deg, transparent 278deg,
-                  transparent 292deg, rgba(255,230,150,0.10) 295deg, transparent 300deg,
-                  transparent 315deg, rgba(255,230,150,0.16) 318deg, transparent 323deg,
-                  transparent 337deg, rgba(255,230,150,0.10) 340deg, transparent 345deg,
-                  transparent 360deg)`,
-                mixBlendMode: 'screen',
-                pointerEvents: 'none',
-                zIndex: 1,
-              }}
-            />
-
-            {/* Foil texture — fine diagonal lines for the "etched holo
-                foil" feel real SIR cards have. Very low opacity so it
-                reads as a texture, not a stripe pattern. mix-blend:
-                overlay so it interacts with the iridescent gradient
-                underneath rather than just sitting on top. */}
+            {/* Brushed-metal texture — fine horizontal lines at 1px
+                on / 3px off. The horizontal direction (0deg) reads as
+                the brushed grain of polished gold sheet, the way
+                real metal trophies have a directional finish.
+                mix-blend: overlay so the lines tint with the underlying
+                gold gradient. Very low alpha — should be barely visible
+                as a texture, not a stripe pattern. */}
             <div aria-hidden style={{
               position: 'absolute', inset: 0,
-              backgroundImage: `repeating-linear-gradient(110deg,
-                rgba(255,255,255,0.04) 0px,
-                rgba(255,255,255,0.04) 1px,
+              backgroundImage: `repeating-linear-gradient(0deg,
+                rgba(0,0,0,0.08) 0px,
+                rgba(0,0,0,0.08) 1px,
                 transparent 1px,
-                transparent 7px)`,
+                transparent 3px)`,
               mixBlendMode: 'overlay',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }} />
+
+            {/* Subtle dark cross-hatch around the edges — adds the
+                "engraved gold" feel that SIR cards have where the
+                background isn't flat but has subtle darker etched
+                patterns. Repeating diagonal grid at very low opacity. */}
+            <div aria-hidden style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: `
+                repeating-linear-gradient(45deg, rgba(60,38,10,0.06) 0px, rgba(60,38,10,0.06) 1px, transparent 1px, transparent 12px),
+                repeating-linear-gradient(-45deg, rgba(60,38,10,0.06) 0px, rgba(60,38,10,0.06) 1px, transparent 1px, transparent 12px)
+              `,
               pointerEvents: 'none',
               zIndex: 1,
             }} />
