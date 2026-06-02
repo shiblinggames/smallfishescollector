@@ -89,6 +89,23 @@ export default async function DevStatsPage() {
       ],
     },
     {
+      // Goldens — 1/1000 shiny Perfect catches. 'Total caught' is every
+      // landed golden; sold + mounted are the terminal choices. Any gap
+      // between total and (sold + mounted) is in-flight catches where
+      // the player hasn't yet picked in the choice modal.
+      title: 'Goldens', accent: '#fbcc4a',
+      stats: [
+        { label: 'Total caught',     value: s.goldens?.total ?? 0 },
+        { label: 'Mounted in Log',   value: s.goldens?.mounted ?? 0 },
+        { label: 'Sold for 10×',     value: s.goldens?.sold ?? 0 },
+        {
+          label: 'Most by one captain',
+          value: s.goldens?.topCaptainCount ?? 0,
+          by:    byIf(s.goldens?.topCaptainCount ?? 0, s.goldens?.topCaptainBy),
+        },
+      ],
+    },
+    {
       title: 'Raids', accent: '#f87171',
       stats: [
         { label: 'Raids cleared', value: s.raids?.cleared ?? 0 },
