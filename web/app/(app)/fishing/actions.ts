@@ -341,7 +341,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -519,10 +519,18 @@ export async function reelIn(
   // shinies. Shinies are guaranteed Trophy-tier — a small shiny
   // would feel anticlimactic, and the card hides the size hero
   // anyway so there's no point rolling random variance.
+  //
+  // Admin overrides (both habitat-gated to skip Ancient Deep):
+  //   force_shiny_next_perfect — one-shot, requires a Perfect, consumed
+  //     on use. For QA testing the catch flow without grinding 1/1000.
+  //   force_shiny_always — persistent, fires on ANY catch (not just
+  //     Perfects), never consumed. For longer-form testing where
+  //     the tester wants every catch to be shiny.
   const isPerfect = result === 'perfect'
   const blockedHabitat = fish.habitat === 'ancient_deep'
-  const forcedShiny = !!profile.force_shiny_next_perfect && isPerfect && !blockedHabitat
-  const isShiny = forcedShiny || rollShiny({ isPerfect, habitat: fish.habitat })
+  const forcedShinyOnce = !!profile.force_shiny_next_perfect && isPerfect && !blockedHabitat
+  const forcedShinyAlways = !!profile.force_shiny_always && !blockedHabitat
+  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat })
 
   // ── Size variance + personal-best tracking (non-ancient catches) ──
   // Roll a length within the species's [length_min_in, length_max_in] range
