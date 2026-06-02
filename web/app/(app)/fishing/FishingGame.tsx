@@ -1180,13 +1180,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny goes Pokémon GOLD SIR card. Bright gold metallic edges
-  // with a dark espresso vignette in the centre — the dark pocket
-  // gives the bright gold fish a contrasting backdrop to pop against
-  // while the bright gold edges + texture layers carry the "this is
-  // a gold card" reading. Radial gradient does both at once.
+  // Shiny matches the Treasure premium avatar background exactly:
+  // bright cream-yellow centre → warm amber → deep espresso edges.
+  // Combined with the slow rotating blurred sunburst overlay below
+  // (also lifted from .avatar-bg-treasure in globals.css), this gives
+  // the same "premium glowing gold" feel as the Treasure avatar bg
+  // that the player called out as the best-looking gold treatment.
   const cardBg = isShiny
-    ? 'radial-gradient(ellipse at 50% 50%, rgba(40,24,8,0.97) 0%, rgba(96,62,16,0.97) 45%, rgba(190,140,46,0.97) 92%, rgba(228,180,80,0.97) 100%)'
+    ? 'radial-gradient(circle at 50% 45%, #fde68a 0%, #b45309 55%, #4a2007 100%)'
     : 'rgba(6,16,26,0.96)'
   // Subtle warm inset glow only around the edges — gives the gold
   // border a soft "framed" depth like polished metal catching light.
@@ -1532,92 +1533,74 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           boxShadow: isShiny ? shinyGlow : (rarity >= 2 ? glowShadow[rarity] : undefined),
         }}
       >
-        {/* ── Pokémon GOLD SIR overlays for shiny ────────────────────
-            Two layered textures + four corner brackets sit on the card
-            itself (zIndex 1) below all content but above the gold
-            radial background. The rotating starburst rays were
-            removed (they looked terrible). Instead, the brushed
-            metallic texture + subtle ornamental cross-hatch carry
-            the "gold metal etching" feel.
-            All pointer-events: none so they don't intercept taps. */}
+        {/* ── Treasure-style gold overlay for shiny ─────────────────
+            Lifted directly from .avatar-bg-treasure in globals.css —
+            the same premium golden bg the player loves on the avatar.
+            A slow-rotating blurred conic-gradient creates a soft
+            sunburst of light that drifts across the gold surface
+            (14s per rotation). Sits on top of the radial gold base
+            (cardBg above) but below the content (zIndex 1).
+            All pointer-events: none so it doesn't intercept taps. */}
         {isShiny && (
-          <>
-            {/* Brushed-metal texture — fine horizontal lines at 1px
-                on / 3px off. The horizontal direction (0deg) reads as
-                the brushed grain of polished gold sheet, the way
-                real metal trophies have a directional finish.
-                mix-blend: overlay so the lines tint with the underlying
-                gold gradient. Very low alpha — should be barely visible
-                as a texture, not a stripe pattern. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: 0,
-              backgroundImage: `repeating-linear-gradient(0deg,
-                rgba(0,0,0,0.08) 0px,
-                rgba(0,0,0,0.08) 1px,
-                transparent 1px,
-                transparent 3px)`,
-              mixBlendMode: 'overlay',
+          <motion.div
+            aria-hidden
+            animate={{ rotate: 360 }}
+            transition={{ duration: 14, repeat: Infinity, ease: 'linear' }}
+            style={{
+              position: 'absolute', inset: '-30%',
+              background: `conic-gradient(from 0deg,
+                rgba(255, 248, 200, 0.55), rgba(255, 248, 200, 0) 22%,
+                rgba(255, 248, 200, 0.45), rgba(255, 248, 200, 0) 50%,
+                rgba(255, 248, 200, 0.55), rgba(255, 248, 200, 0) 78%,
+                rgba(255, 248, 200, 0.55))`,
+              filter: 'blur(4px)',
               pointerEvents: 'none',
               zIndex: 1,
-            }} />
-
-            {/* Subtle dark cross-hatch around the edges — adds the
-                "engraved gold" feel that SIR cards have where the
-                background isn't flat but has subtle darker etched
-                patterns. Repeating diagonal grid at very low opacity. */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: 0,
-              backgroundImage: `
-                repeating-linear-gradient(45deg, rgba(60,38,10,0.06) 0px, rgba(60,38,10,0.06) 1px, transparent 1px, transparent 12px),
-                repeating-linear-gradient(-45deg, rgba(60,38,10,0.06) 0px, rgba(60,38,10,0.06) 1px, transparent 1px, transparent 12px)
-              `,
-              pointerEvents: 'none',
-              zIndex: 1,
-            }} />
-
-            {/* Corner flourishes — four small gold L-bracket ornaments
-                that frame the card like a premium collectible holder.
-                Each is two thin gold strokes meeting at the corner. */}
-            {(['tl', 'tr', 'bl', 'br'] as const).map(corner => {
-              const isTop  = corner.startsWith('t')
-              const isLeft = corner.endsWith('l')
-              return (
-                <div key={corner} aria-hidden style={{
-                  position: 'absolute',
-                  top:    isTop  ? 8 : 'auto',
-                  bottom: !isTop ? 8 : 'auto',
-                  left:   isLeft ? 8 : 'auto',
-                  right:  !isLeft ? 8 : 'auto',
-                  width: 18, height: 18,
-                  pointerEvents: 'none',
-                  zIndex: 2,
-                }}>
-                  <div style={{
-                    position: 'absolute',
-                    top:    isTop  ? 0 : 'auto',
-                    bottom: !isTop ? 0 : 'auto',
-                    left:   isLeft ? 0 : 'auto',
-                    right:  !isLeft ? 0 : 'auto',
-                    width: 14, height: 1.5,
-                    background: 'linear-gradient(90deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))',
-                    transform: isLeft ? 'none' : 'scaleX(-1)',
-                  }} />
-                  <div style={{
-                    position: 'absolute',
-                    top:    isTop  ? 0 : 'auto',
-                    bottom: !isTop ? 0 : 'auto',
-                    left:   isLeft ? 0 : 'auto',
-                    right:  !isLeft ? 0 : 'auto',
-                    width: 1.5, height: 14,
-                    background: isTop
-                      ? 'linear-gradient(180deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))'
-                      : 'linear-gradient(180deg, rgba(228,188,108,0.4), rgba(228,188,108,0.95))',
-                  }} />
-                </div>
-              )
-            })}
-          </>
+            }}
+          />
         )}
+
+        {/* Corner flourishes — four small gold L-bracket ornaments
+            that frame the card like a premium collectible holder.
+            Each is two thin gold strokes meeting at the corner. */}
+        {isShiny && (['tl', 'tr', 'bl', 'br'] as const).map(corner => {
+          const isTop  = corner.startsWith('t')
+          const isLeft = corner.endsWith('l')
+          return (
+            <div key={corner} aria-hidden style={{
+              position: 'absolute',
+              top:    isTop  ? 8 : 'auto',
+              bottom: !isTop ? 8 : 'auto',
+              left:   isLeft ? 8 : 'auto',
+              right:  !isLeft ? 8 : 'auto',
+              width: 18, height: 18,
+              pointerEvents: 'none',
+              zIndex: 2,
+            }}>
+              <div style={{
+                position: 'absolute',
+                top:    isTop  ? 0 : 'auto',
+                bottom: !isTop ? 0 : 'auto',
+                left:   isLeft ? 0 : 'auto',
+                right:  !isLeft ? 0 : 'auto',
+                width: 14, height: 1.5,
+                background: 'linear-gradient(90deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))',
+                transform: isLeft ? 'none' : 'scaleX(-1)',
+              }} />
+              <div style={{
+                position: 'absolute',
+                top:    isTop  ? 0 : 'auto',
+                bottom: !isTop ? 0 : 'auto',
+                left:   isLeft ? 0 : 'auto',
+                right:  !isLeft ? 0 : 'auto',
+                width: 1.5, height: 14,
+                background: isTop
+                  ? 'linear-gradient(180deg, rgba(228,188,108,0.95), rgba(228,188,108,0.4))'
+                  : 'linear-gradient(180deg, rgba(228,188,108,0.4), rgba(228,188,108,0.95))',
+              }} />
+            </div>
+          )
+        })}
 
         {/* Legendary shimmer sweep */}
         {isLegendary && !isShiny && (
