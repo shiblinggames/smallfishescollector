@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
@@ -2657,7 +2657,7 @@ export default function FishingGame({
   initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory,
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
-  allFishSpecies, initialCaughtFishIds,
+  allFishSpecies, initialCaughtFishIds, initialMountedFishIds,
   initialPersonalBests,
   initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour,
@@ -2683,6 +2683,10 @@ export default function FishingGame({
   ownedRods: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
+  /** Species the player has mounted as golden in the Logbook. Used to
+   *  paint those species cards with the gold treatment and to disable
+   *  the Mount option in the forced-choice modal on repeat goldens. */
+  initialMountedFishIds: number[]
   /** fish_id → best length in inches. Seeded from fish_personal_bests on
    *  page load; updated in state when a new PB lands during the session. */
   initialPersonalBests: Record<number, number>
@@ -2745,6 +2749,10 @@ export default function FishingGame({
   const [reelTier, setReelTier] = useState(initialReelTier)
   const [hookTier, setHookTier] = useState(initialHookTier)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
+  // Live set of species the player has mounted as golden. Seeded from
+  // fish_collection.is_golden; updated when the choice modal resolves
+  // a Mount so the Logbook reflects it without a refresh.
+  const [mountedFishIds, setMountedFishIds] = useState(() => new Set(initialMountedFishIds))
   // Live PB lookup for the collection drawer. Seeded server-side; bumped in
   // state when a new PB lands so the drawer reflects it without a page
   // refresh.
@@ -2978,6 +2986,11 @@ export default function FishingGame({
     isPB: boolean
     previousBest: number | null
     isShiny?: boolean
+    /** ID of the inserted shiny_catches row — passed to the forced
+     *  Sell-or-Mount modal so it knows which trophy to resolve. */
+    shinyId?: number
+    /** Already mounted this species before? Disables the Mount option. */
+    alreadyMounted?: boolean
   } | null>(null)
   // Lock-out for golden catches. The card's entrance + burst + ring waves
   // run for ~1.8s — the button stays hidden for 2.0s so the player must
@@ -4017,6 +4030,8 @@ export default function FishingGame({
           isPB: res.isPB,
           previousBest: res.previousBest,
           isShiny: (res as { isShiny?: boolean }).isShiny ?? false,
+          shinyId: (res as { shinyId?: number }).shinyId,
+          alreadyMounted: (res as { alreadyMounted?: boolean }).alreadyMounted ?? false,
         })
         // Bump the live PB lookup so the collection drawer reflects the new
         // record without needing a page refresh. Server is authoritative —
@@ -4156,11 +4171,12 @@ export default function FishingGame({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, equippedSpecial, ownedAutoCaster, cratePhase, catchResult?.isShiny])
 
-  // Golden catches require an explicit dismissal — clears the result
-  // without auto-casting, so the player can't muscle-memory their way
-  // past the trophy moment. They have to tap Cast on the next turn to
-  // start fishing again.
-  function handleClaimShinyTrophy() {
+  // Golden catches force a Sell-or-Mount decision via a modal. Both
+  // resolve through this helper to clear the catch result back to the
+  // ready state — the player then has to manually tap Cast to fish
+  // again (no auto-cast). Used after both choice paths and as a
+  // last-ditch dismiss if the action ever errors.
+  function dismissCatchResultToReady() {
     if (phase !== 'result') return
     setFreshCatchHook(null)
     setCatchResult(null)
@@ -4173,6 +4189,49 @@ export default function FishingGame({
     setLevelUpNotif(null)
     setHoldOpen(false)
     setGearOpen(false)
+  }
+
+  // Forced choice modal handlers — both terminal, the trophy can't be
+  // re-resolved after either lands. Action errors still dismiss the
+  // result so the player isn't stranded, but show a toast so we know.
+  const [shinyChoiceLoading, setShinyChoiceLoading] = useState<null | 'sell' | 'mount'>(null)
+  const [shinyResolveToast, setShinyResolveToast] = useState<string | null>(null)
+
+  async function handleSellGolden() {
+    if (!catchResult?.shinyId || shinyChoiceLoading) return
+    setShinyChoiceLoading('sell')
+    try {
+      const res = await sellGoldenTrophy(catchResult.shinyId)
+      if ('error' in res) {
+        setShinyResolveToast(res.error)
+      } else {
+        setDoubloons(res.doubloons)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+        setShinyResolveToast(`+${res.earned.toLocaleString()} ⟡`)
+      }
+    } finally {
+      setTimeout(() => setShinyResolveToast(null), 2200)
+      setShinyChoiceLoading(null)
+      dismissCatchResultToReady()
+    }
+  }
+
+  async function handleMountGolden() {
+    if (!catchResult?.shinyId || shinyChoiceLoading || catchResult.alreadyMounted) return
+    setShinyChoiceLoading('mount')
+    try {
+      const res = await mountGoldenTrophy(catchResult.shinyId)
+      if ('error' in res) {
+        setShinyResolveToast(res.error)
+      } else {
+        setMountedFishIds(prev => new Set([...prev, res.fishId]))
+        setShinyResolveToast('Mounted in Logbook')
+      }
+    } finally {
+      setTimeout(() => setShinyResolveToast(null), 2200)
+      setShinyChoiceLoading(null)
+      dismissCatchResultToReady()
+    }
   }
 
   async function handleCastAgain() {
@@ -5833,79 +5892,62 @@ export default function FishingGame({
               )}
               {phase === 'result' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!crateResult || cratePhase === 'revealed' || !!catchResult || !!missResult) && (() => {
                 const isShinyResult = !!catchResult?.isShiny
-                // Golden catches swap Cast Again for a Claim Trophy button —
-                // muscle-memory tap dismisses the trophy moment back to the
-                // ready state instead of auto-casting through it. While the
-                // reveal animation is still playing (~2s) the button doesn't
-                // even render — replaced by a pulsing "trophy emerging"
-                // caption so the player has nothing to tap until the full
-                // moment plays out. After the lock lifts, the button
-                // spring-pops in.
-                if (isShinyResult && shinyRevealLocked) {
+                // Golden catches: the Cast Again button is entirely
+                // replaced — during the 2s reveal lock a pulsing caption
+                // shows where the button would be, and after the lock the
+                // forced-choice modal owns the dismiss flow (rendered at
+                // the root of FishingGame). Nothing tappable in this slot
+                // for shiny so the player can't escape the decision.
+                if (isShinyResult) {
                   return (
-                    <motion.div key="locked"
+                    <motion.div key="shiny-locked"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.25 }}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 88, gap: 6 }}
                     >
-                      <motion.div
-                        animate={{ opacity: [0.55, 1, 0.55], scale: [1, 1.08, 1] }}
-                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                        className="font-karla font-700 uppercase"
-                        style={{
-                          fontSize: '0.55rem', letterSpacing: '0.22em',
-                          color: '#fbcc4a',
-                          textShadow: '0 0 10px rgba(251,204,74,0.55)',
-                        }}
-                      >
-                        ✦ Trophy Emerging
-                      </motion.div>
+                      {shinyRevealLocked && (
+                        <motion.div
+                          animate={{ opacity: [0.55, 1, 0.55], scale: [1, 1.08, 1] }}
+                          transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                          className="font-karla font-700 uppercase"
+                          style={{
+                            fontSize: '0.55rem', letterSpacing: '0.22em',
+                            color: '#fbcc4a',
+                            textShadow: '0 0 10px rgba(251,204,74,0.55)',
+                          }}
+                        >
+                          ✦ Trophy Emerging
+                        </motion.div>
+                      )}
                     </motion.div>
                   )
                 }
-                const bg = isShinyResult
-                  ? 'radial-gradient(ellipse at 40% 35%, rgba(180,120,30,0.55), rgba(74,32,7,0.25))'
-                  : 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))'
-                const border = isShinyResult ? '1px solid rgba(228,188,108,0.65)' : '1px solid rgba(34,170,200,0.4)'
-                const color = isShinyResult ? '#fbcc4a' : '#67d4e8'
-                const shadow = isShinyResult
-                  ? '0 6px 0 rgba(0,0,0,0.5), 0 0 26px rgba(228,188,108,0.45), inset 0 1px 0 rgba(255,255,255,0.18)'
-                  : '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
                 return (
                   <motion.button key="again"
-                    onPointerDown={(e) => {
-                      e.preventDefault()
-                      if (isShinyResult) handleClaimShinyTrophy()
-                      else handleCastAgain()
-                    }}
+                    onPointerDown={(e) => { e.preventDefault(); handleCastAgain() }}
                     className="font-karla font-700 uppercase tracking-[0.14em] flex items-center justify-center"
                     style={{
                       width: 88, height: 88, borderRadius: '50%',
-                      background: bg, border, cursor: 'pointer',
-                      fontSize: isShinyResult ? '0.6rem' : '0.65rem', color, touchAction: 'manipulation',
-                      boxShadow: shadow,
+                      background: 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))',
+                      border: '1px solid rgba(34,170,200,0.4)', cursor: 'pointer',
+                      fontSize: '0.65rem', color: '#67d4e8', touchAction: 'manipulation',
+                      boxShadow: '0 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(14,116,144,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
                       position: 'relative',
-                      lineHeight: 1.05,
-                      padding: '0 0.5rem',
-                      textAlign: 'center',
                     }}
-                    initial={isShinyResult ? { opacity: 0, scale: 0.4, rotate: -25 } : { opacity: 0, scale: 0.92 }}
-                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.92 }}
                     whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                    transition={isShinyResult
-                      ? { type: 'spring', stiffness: 320, damping: 14 }
-                      : { type: 'spring', stiffness: 600, damping: 22 }}
+                    transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   >
-                    {!isShinyResult && castRippleKey > 0 && [0, 220, 440].map((delay, i) => (
+                    {castRippleKey > 0 && [0, 220, 440].map((delay, i) => (
                       <motion.span key={`${castRippleKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(103,212,232,0.55)', background: 'transparent', pointerEvents: 'none' }}
                         initial={{ scale: 1, opacity: 0.55 }} animate={{ scale: 2.2, opacity: 0 }}
                         transition={{ duration: 1.1, ease: [0.2, 0, 0.6, 1], delay: delay / 1000 }}
                       />
                     ))}
-                    {isShinyResult ? 'Claim Trophy' : 'Cast Again'}
+                    Cast Again
                   </motion.button>
                 )
               })()}
@@ -6626,6 +6668,11 @@ export default function FishingGame({
                         // Discovered: full card. Tap opens the modal with
                         // the fun fact + sell value + PB. NEW badge clears
                         // on tap (same as before — replaces inline expand).
+                        // Mounted (golden) species swap the card chrome to
+                        // the gold treatment from the catch result card —
+                        // gold radial bg, gold border, golden-filtered fish
+                        // sprite, small ✦ badge.
+                        const isMounted = mountedFishIds.has(f.id)
                         return (
                           <motion.button
                             key={f.id}
@@ -6638,30 +6685,49 @@ export default function FishingGame({
                             className="text-left"
                             style={{
                               position: 'relative',
-                              background: `linear-gradient(180deg, rgba(4,10,18,0.7) 0%, ${rarityColor}10 100%)`,
-                              border: `1px solid ${rarityColor}55`,
+                              background: isMounted
+                                ? 'radial-gradient(circle at 50% 35%, rgba(253,230,138,0.28) 0%, rgba(120,68,16,0.55) 60%, rgba(40,18,4,0.85) 100%)'
+                                : `linear-gradient(180deg, rgba(4,10,18,0.7) 0%, ${rarityColor}10 100%)`,
+                              border: isMounted
+                                ? '1px solid rgba(228,188,108,0.75)'
+                                : `1px solid ${rarityColor}55`,
                               borderRadius: 10,
                               padding: '0.55rem 0.5rem 0.55rem',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                               minHeight: 96,
                               cursor: 'pointer',
                               touchAction: 'manipulation',
+                              boxShadow: isMounted ? 'inset 0 0 18px rgba(200,140,40,0.18), 0 0 14px rgba(228,188,108,0.22)' : undefined,
                             }}
                           >
                             <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <FishImg name={f.name} style={{ maxWidth: '88%', maxHeight: 50, objectFit: 'contain', filter: `drop-shadow(0 1px 6px ${rarityColor}66)` }} />
+                              <FishImg name={f.name} style={{
+                                maxWidth: '88%', maxHeight: 50, objectFit: 'contain',
+                                filter: isMounted ? SHINY_FISH_FILTER : `drop-shadow(0 1px 6px ${rarityColor}66)`,
+                              }} />
                             </div>
                             <p className="font-cinzel font-700" style={{
-                              fontSize: '0.72rem', color: rarityColor, lineHeight: 1.15,
+                              fontSize: '0.72rem',
+                              color: isMounted ? '#fff5d0' : rarityColor,
+                              lineHeight: 1.15,
                               textAlign: 'center',
                               width: '100%',
                               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                               marginTop: 2,
-                            }}>{f.name}</p>
+                              textShadow: isMounted ? '0 0 8px rgba(251,204,74,0.45)' : undefined,
+                            }}>{isMounted ? `Golden ${f.name}` : f.name}</p>
                             {pb != null && (
-                              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(230,220,200,0.7)', letterSpacing: '0.04em' }}>
+                              <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: isMounted ? 'rgba(251,204,74,0.85)' : 'rgba(230,220,200,0.7)', letterSpacing: '0.04em' }}>
                                 {formatFishLength(pb)}
                               </p>
+                            )}
+                            {isMounted && (
+                              <span aria-hidden style={{
+                                position: 'absolute', top: 5, right: 5,
+                                fontSize: '0.62rem', color: '#fbcc4a',
+                                textShadow: '0 0 8px rgba(251,204,74,0.85)',
+                                lineHeight: 1,
+                              }}>✦</span>
                             )}
                             {isNew && <DiscoveredStamp />}
                           </motion.button>
@@ -7926,6 +7992,162 @@ export default function FishingGame({
         onPass={handleFinnPass}
         onDismiss={handleFinnDismiss}
       />
+
+      {/* ── Golden trophy choice modal ───────────────────────────────────
+          Forced decision after a shiny lands and the 2s reveal animation
+          finishes. Sell for 10× doubloons OR mount the species golden in
+          the Logbook forever. No cancel/dismiss — the player has to pick
+          one. Bottom-anchored sheet so it sits over the action button row
+          without covering the card above. */}
+      <AnimatePresence>
+        {phase === 'result' && catchResult?.isShiny && !shinyRevealLocked && (
+          <motion.div
+            key="shiny-choice"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            aria-modal
+            role="dialog"
+            style={{
+              position: 'fixed', inset: 0,
+              background: 'radial-gradient(ellipse at 50% 65%, rgba(40,18,4,0.40) 0%, rgba(0,0,0,0.78) 80%)',
+              zIndex: 200,
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              padding: '1.5rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1.5rem)',
+              touchAction: 'none',
+            }}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0, scale: 0.96 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+              style={{
+                width: '100%', maxWidth: 380,
+                background: 'radial-gradient(circle at 50% 25%, #2a1a08 0%, #16090a 100%)',
+                border: '2px solid rgba(228,188,108,0.7)',
+                borderRadius: 22,
+                padding: '1.1rem 1rem 1.15rem',
+                boxShadow: '0 18px 60px rgba(0,0,0,0.7), 0 0 32px rgba(228,188,108,0.35)',
+              }}
+            >
+              <p className="font-karla font-700 uppercase text-center" style={{
+                fontSize: '0.55rem', letterSpacing: '0.24em', color: '#fbcc4a',
+                textShadow: '0 0 12px rgba(251,204,74,0.55)', marginBottom: 4,
+              }}>
+                ✦ Trophy Decision
+              </p>
+              <p className="font-cinzel font-700 text-center" style={{
+                fontSize: '1.05rem', color: '#fff5d0', marginBottom: 2, lineHeight: 1.15,
+              }}>
+                Golden {catchResult.fish.name}
+              </p>
+              <p className="font-karla font-400 text-center" style={{
+                fontSize: '0.66rem', color: '#9a8870', marginBottom: '0.85rem',
+              }}>
+                Pick its fate. This choice is final.
+              </p>
+
+              {/* Sell tile */}
+              {(() => {
+                const earnings = catchResult.fish.sell_value * SHINY_SELL_MULT
+                const sellLoading = shinyChoiceLoading === 'sell'
+                const mountLoading = shinyChoiceLoading === 'mount'
+                return (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); handleSellGolden() }}
+                    disabled={!!shinyChoiceLoading}
+                    style={{
+                      width: '100%', padding: '0.85rem 1rem', borderRadius: 14,
+                      background: 'rgba(180,120,30,0.18)', border: '1px solid rgba(228,188,108,0.55)',
+                      cursor: shinyChoiceLoading ? 'default' : 'pointer', textAlign: 'left',
+                      marginBottom: '0.65rem',
+                      opacity: mountLoading ? 0.3 : 1,
+                      touchAction: 'manipulation',
+                    }}
+                  >
+                    <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.16em', color: '#fbcc4a', marginBottom: 3 }}>
+                      {sellLoading ? 'Selling…' : 'Sell to Market'}
+                    </p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0c040', lineHeight: 1 }}>
+                      {earnings.toLocaleString()} ⟡
+                    </p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9a8870', marginTop: 4, lineHeight: 1.35 }}>
+                      10× the normal sell price. The trophy is gone.
+                    </p>
+                  </button>
+                )
+              })()}
+
+              {/* Mount tile — disabled if this species is already golden in the Logbook */}
+              {(() => {
+                const sellLoading = shinyChoiceLoading === 'sell'
+                const mountLoading = shinyChoiceLoading === 'mount'
+                const disabled = !!catchResult.alreadyMounted
+                return (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); if (!disabled) handleMountGolden() }}
+                    disabled={!!shinyChoiceLoading || disabled}
+                    style={{
+                      width: '100%', padding: '0.85rem 1rem', borderRadius: 14,
+                      background: disabled ? 'rgba(40,28,16,0.55)' : 'rgba(228,188,108,0.12)',
+                      border: `1px solid ${disabled ? 'rgba(160,140,100,0.25)' : 'rgba(228,188,108,0.55)'}`,
+                      cursor: disabled || shinyChoiceLoading ? 'default' : 'pointer',
+                      textAlign: 'left',
+                      opacity: disabled ? 0.6 : (sellLoading ? 0.3 : 1),
+                      touchAction: 'manipulation',
+                    }}
+                  >
+                    <p className="font-karla font-700 uppercase" style={{
+                      fontSize: '0.6rem', letterSpacing: '0.16em',
+                      color: disabled ? '#9a8870' : '#fbcc4a', marginBottom: 3,
+                    }}>
+                      {disabled ? 'Already in Logbook' : (mountLoading ? 'Mounting…' : 'Mount in Logbook')}
+                    </p>
+                    <p className="font-cinzel font-700" style={{
+                      fontSize: disabled ? '0.85rem' : '0.95rem',
+                      color: disabled ? '#9a8870' : '#fff5d0', lineHeight: 1.2,
+                    }}>
+                      {disabled
+                        ? `Already enshrined a golden ${catchResult.fish.name}.`
+                        : `Permanent golden ${catchResult.fish.name} entry.`}
+                    </p>
+                    <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9a8870', marginTop: 4, lineHeight: 1.35 }}>
+                      {disabled
+                        ? 'Sell is the only option for this one.'
+                        : 'Trophy consumed. No doubloons paid out.'}
+                    </p>
+                  </button>
+                )
+              })()}
+            </motion.div>
+
+            {/* Resolve toast — confirms the choice landed */}
+            {shinyResolveToast && (
+              <motion.div
+                key="resolve-toast"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="font-karla font-700"
+                style={{
+                  position: 'absolute', top: '14%', left: '50%', transform: 'translateX(-50%)',
+                  background: 'rgba(8,8,6,0.92)', border: '1px solid rgba(228,188,108,0.55)',
+                  padding: '0.55rem 1.1rem', borderRadius: 999,
+                  color: '#fbcc4a', fontSize: '0.82rem',
+                  textShadow: '0 0 10px rgba(251,204,74,0.55)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {shinyResolveToast}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   )

@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import MarketClient from './MarketClient'
 import MarketIntroModal from './MarketIntroModal'
 import { isPremiumActive } from '@/lib/premium'
-import { getTrophyHold } from './actions'
 
 export type MarketFishEntry = {
   fish_id: number
@@ -43,7 +42,7 @@ export default async function MarketPage() {
     quantity: number
   }
 
-  const [{ data: profile }, marketRes, inventoryRes, stateRes, collectionRes, trophyHoldRes] = await Promise.all([
+  const [{ data: profile }, marketRes, inventoryRes, stateRes, collectionRes] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems, is_premium, premium_expires_at, has_seen_market_intro').eq('id', user.id).single(),
     admin.from('fish_market')
       .select('fish_id, multiplier, prev_multiplier, history, fish_species(id, name, habitat, bite_rarity, sell_value)'),
@@ -53,7 +52,6 @@ export default async function MarketPage() {
       .gt('quantity', 0),
     admin.from('market_state').select('mood, next_update_at').eq('id', 1).single(),
     admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
-    getTrophyHold(),
   ])
 
   const inventoryMap = new Map<number, number>()
@@ -95,7 +93,6 @@ export default async function MarketPage() {
         marketState={state}
         doubloons={profile?.doubloons ?? 0}
         isPremium={isPremiumActive(profile)}
-        trophyHold={trophyHoldRes.items}
       />
     </>
   )

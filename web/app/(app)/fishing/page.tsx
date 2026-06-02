@@ -55,7 +55,7 @@ export default async function FishingPage() {
       .select('id, name, scientific_name, fun_fact, habitat, bite_rarity, sell_value, catch_difficulty')
       .order('bite_rarity'),
     admin.from('fish_collection')
-      .select('fish_id')
+      .select('fish_id, is_golden')
       .eq('user_id', user.id),
     admin.from('fish_market')
       .select('fish_id, multiplier'),
@@ -94,7 +94,10 @@ export default async function FishingPage() {
   }
 
   const ownedRods = (rodRows ?? []).map((r: { rod_tier: number }) => r.rod_tier)
-  const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number }) => r.fish_id)
+  const caughtFishIds = (collectionRows ?? []).map((r: { fish_id: number; is_golden: boolean }) => r.fish_id)
+  const mountedFishIds = (collectionRows ?? [])
+    .filter((r: { fish_id: number; is_golden: boolean }) => r.is_golden)
+    .map((r: { fish_id: number; is_golden: boolean }) => r.fish_id)
   const fishHoldTier = profile?.fish_hold_tier ?? 0
   // Flat fish_id → inches lookup for the collection drawer. Numeric coercion
   // because Supabase returns NUMERIC columns as strings.
@@ -165,6 +168,7 @@ export default async function FishingPage() {
           ownedRods={ownedRods}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
           caughtFishIds={caughtFishIds}
+          mountedFishIds={mountedFishIds}
           initialPersonalBests={personalBests}
           initialHighestPerfectStreak={profile?.highest_perfect_streak ?? 0}
           initialPerfectStreak={profile?.catch_pending ? 0 : (profile?.current_perfect_streak ?? 0)}

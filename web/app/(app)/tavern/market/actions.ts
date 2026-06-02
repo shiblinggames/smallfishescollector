@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isPremiumActive } from '@/lib/premium'
-import { SHINY_SELL_MULT } from '@/lib/shiny'
 
 const PENDING_SALE_DELAY_MS = 60 * 60 * 1000 // 1 hour
 
@@ -206,121 +205,6 @@ export async function marketSellFish(
   return { earned, doubloons: newDoubloons }
 }
 
-// ── Trophy Hold (shiny variants) ────────────────────────────────────
-// Shinies live in their own table (shiny_catches) as per-instance
-// trophies — never merged into fish_inventory, so each retains its
-// size + caught_at metadata. The Trophy Hold lane reads from there
-// and sells one shiny at a time at exactly SHINY_SELL_MULT × the
-// species' base sell_value. Market multipliers don't apply (a shiny
-// is a fixed-rarity catch, not a market commodity) and there's no
-// non-premium fee or delayed settlement — selling a trophy is
-// rare + intentional, no "convenience tax" warranted.
-
-export type TrophyHoldItem = {
-  id: number
-  fishId: number
-  name: string
-  habitat: string
-  sizeIn: number | null
-  caughtAt: string
-  baseSellValue: number
-  sellPrice: number
-}
-
-export async function getTrophyHold(): Promise<{
-  items: TrophyHoldItem[]
-  doubloons: number
-}> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { items: [], doubloons: 0 }
-
-  const admin = createAdminClient()
-  const [{ data: rows }, { data: profile }] = await Promise.all([
-    admin
-      .from('shiny_catches')
-      .select('id, fish_id, size_in, caught_at, fish_species(name, habitat, sell_value)')
-      .eq('user_id', user.id)
-      .eq('status', 'hold')
-      .order('caught_at', { ascending: false }),
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
-  ])
-
-  type Row = {
-    id: number
-    fish_id: number
-    size_in: number | null
-    caught_at: string
-    fish_species: { name: string; habitat: string; sell_value: number } | null
-  }
-  const items: TrophyHoldItem[] = ((rows ?? []) as unknown as Row[])
-    .filter(r => r.fish_species)
-    .map(r => {
-      const base = r.fish_species!.sell_value ?? 0
-      return {
-        id: r.id,
-        fishId: r.fish_id,
-        name: r.fish_species!.name,
-        habitat: r.fish_species!.habitat,
-        sizeIn: r.size_in,
-        caughtAt: r.caught_at,
-        baseSellValue: base,
-        sellPrice: base * SHINY_SELL_MULT,
-      }
-    })
-
-  return { items, doubloons: (profile?.doubloons as number | null) ?? 0 }
-}
-
-export async function sellShinyTrophy(
-  shinyId: number,
-): Promise<{ earned: number; doubloons: number } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-
-  const { data: row } = await admin
-    .from('shiny_catches')
-    .select('id, status, fish_id, fish_species(name, sell_value)')
-    .eq('id', shinyId)
-    .eq('user_id', user.id)
-    .single()
-
-  type Row = {
-    id: number
-    status: string
-    fish_id: number
-    fish_species: { name: string; sell_value: number } | null
-  }
-  const trophy = row as unknown as Row | null
-
-  if (!trophy) return { error: 'Trophy not found' }
-  if (trophy.status !== 'hold') return { error: 'Trophy not on hold' }
-  if (!trophy.fish_species) return { error: 'Species not found' }
-
-  const earned = (trophy.fish_species.sell_value ?? 0) * SHINY_SELL_MULT
-  if (earned <= 0) return { error: 'Trophy has no value' }
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons')
-    .eq('id', user.id)
-    .single()
-  const newDoubloons = (profile?.doubloons ?? 0) + earned
-
-  await Promise.all([
-    admin.from('shiny_catches')
-      .update({ status: 'sold', sold_at: new Date().toISOString(), sold_for: earned })
-      .eq('id', shinyId),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: earned,
-      reason: `Sold golden ${trophy.fish_species.name}`,
-    }),
-  ])
-
-  return { earned, doubloons: newDoubloons }
-}
+// Shiny sell/mount flow lives in app/(app)/fishing/actions.ts — the
+// decision is forced at the catch result moment, not in the market.
+// See sellGoldenTrophy + mountGoldenTrophy there.

@@ -13,7 +13,7 @@ import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
-import { rollShiny } from '@/lib/shiny'
+import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -301,6 +301,14 @@ export async function reelIn(
        *  blocked (Ancient Deep). Persisted as a row in shiny_catches when
        *  true. */
       isShiny: boolean
+      /** ID of the inserted shiny_catches row (null when not shiny).
+       *  Passed to the forced Sell-or-Mount choice modal so it knows
+       *  which trophy to act on. */
+      shinyId?: number
+      /** True when this species is ALREADY mounted in the player's
+       *  Logbook — the Mount option in the choice modal is disabled
+       *  in that case (each species can only be mounted once). */
+      alreadyMounted?: boolean
     }
   | { caught: false }
   | { error: string }
@@ -588,14 +596,29 @@ export async function reelIn(
   // ── Shiny persistence + admin-flag consume ───────────────────────
   // The roll itself happened above (so the size logic could lock to
   // species max on shinies — see the size block). Here we persist the
-  // row and consume the force_shiny_next_perfect admin override.
+  // row, capture its id for the forced-choice modal, and check whether
+  // the species is already mounted (which disables the Mount option).
+  let shinyId: number | undefined
+  let alreadyMounted = false
   if (isShiny) {
-    await admin.from('shiny_catches').insert({
-      user_id: user.id,
-      fish_id: fish.id,
-      size_in: sizeIn > 0 ? sizeIn : null,
-      status: 'hold',
-    })
+    const { data: inserted } = await admin
+      .from('shiny_catches')
+      .insert({
+        user_id: user.id,
+        fish_id: fish.id,
+        size_in: sizeIn > 0 ? sizeIn : null,
+        status: 'hold',
+      })
+      .select('id')
+      .single()
+    shinyId = inserted?.id as number | undefined
+    const { data: collectionRow } = await admin
+      .from('fish_collection')
+      .select('is_golden')
+      .eq('user_id', user.id)
+      .eq('fish_id', fish.id)
+      .maybeSingle()
+    alreadyMounted = !!collectionRow?.is_golden
   }
   // Consume the test flag on any Perfect — whether or not it triggered
   // the override (so a habitat-blocked Perfect doesn't strand the flag
@@ -663,6 +686,8 @@ export async function reelIn(
     isPB,
     previousBest,
     isShiny,
+    shinyId,
+    alreadyMounted,
   }
 }
 
@@ -1178,5 +1203,102 @@ export async function buyHat(hatId: string): Promise<{ ok: true; doubloons: numb
     reason: `Bought ${def.name} bandana`,
   })
   return { ok: true, doubloons: newDoubloons }
+}
+
+// ── Golden trophy: on-the-spot Sell or Mount choice ─────────────────
+// A shiny catch lands as a row in shiny_catches with status='hold'.
+// The forced-choice modal in the catch result calls one of these to
+// resolve it — both transition the row to a terminal status (sold or
+// mounted) so the trophy can never be re-resolved. The choice is
+// final per-trophy by design: the moment is meant to land with
+// weight, not be deferred into a hold list.
+
+export async function sellGoldenTrophy(
+  shinyId: number,
+): Promise<{ earned: number; doubloons: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: row } = await admin
+    .from('shiny_catches')
+    .select('id, status, fish_id, fish_species(name, sell_value)')
+    .eq('id', shinyId)
+    .eq('user_id', user.id)
+    .single()
+  type Row = {
+    id: number; status: string; fish_id: number
+    fish_species: { name: string; sell_value: number } | null
+  }
+  const trophy = row as unknown as Row | null
+  if (!trophy) return { error: 'Trophy not found' }
+  if (trophy.status !== 'hold') return { error: 'Trophy already resolved' }
+  if (!trophy.fish_species) return { error: 'Species not found' }
+
+  const earned = (trophy.fish_species.sell_value ?? 0) * SHINY_SELL_MULT
+  if (earned <= 0) return { error: 'Trophy has no value' }
+
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons')
+    .eq('id', user.id)
+    .single()
+  const newDoubloons = (profile?.doubloons ?? 0) + earned
+
+  await Promise.all([
+    admin.from('shiny_catches')
+      .update({ status: 'sold', sold_at: new Date().toISOString(), sold_for: earned })
+      .eq('id', shinyId),
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: earned,
+      reason: `Sold golden ${trophy.fish_species.name}`,
+    }),
+  ])
+  return { earned, doubloons: newDoubloons }
+}
+
+export async function mountGoldenTrophy(
+  shinyId: number,
+): Promise<{ ok: true; fishId: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: row } = await admin
+    .from('shiny_catches')
+    .select('id, status, fish_id')
+    .eq('id', shinyId)
+    .eq('user_id', user.id)
+    .single()
+  if (!row) return { error: 'Trophy not found' }
+  if (row.status !== 'hold') return { error: 'Trophy already resolved' }
+
+  // Block remount: each species can only be golden once. Front-end already
+  // disables the Mount button when alreadyMounted is true; this is the
+  // server-side safety net.
+  const { data: existing } = await admin
+    .from('fish_collection')
+    .select('is_golden')
+    .eq('user_id', user.id)
+    .eq('fish_id', row.fish_id)
+    .maybeSingle()
+  if (existing?.is_golden) return { error: 'Already mounted' }
+
+  await Promise.all([
+    admin.from('shiny_catches')
+      .update({ status: 'mounted', sold_at: new Date().toISOString() })
+      .eq('id', shinyId),
+    // fish_collection row always exists by this point (the catch action
+    // upserts it before reaching the shiny resolve), so we update rather
+    // than upsert.
+    admin.from('fish_collection')
+      .update({ is_golden: true })
+      .eq('user_id', user.id)
+      .eq('fish_id', row.fish_id),
+  ])
+  return { ok: true, fishId: row.fish_id }
 }
 
