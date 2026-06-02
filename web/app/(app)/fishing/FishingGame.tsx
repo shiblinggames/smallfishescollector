@@ -1439,6 +1439,54 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
       {/* Card + all its effects in one relative container */}
       <div style={{ position: 'relative' }}>
 
+        {/* ── Cinematic golden light shaft (shiny only) ──────────────
+            A tall, narrow column of warm light that drops down behind
+            the card during the reveal — like the heavens cracking open
+            on a trophy pull. Starts above the card, sweeps down past
+            the bottom over ~1.2s, peaks in opacity around the moment
+            the fish punches in. Soft blur + wide gradient edges so it
+            reads as light, not a shape. */}
+        {isShiny && (
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0, y: -80, scaleY: 0.6 }}
+            animate={{ opacity: [0, 0.7, 0.5, 0], y: [-80, -20, 20, 60], scaleY: [0.6, 1.05, 1.1, 1.2] }}
+            transition={{ duration: 1.4, ease: 'easeOut', delay: 0.1, times: [0, 0.4, 0.65, 1] }}
+            style={{
+              position: 'absolute', top: '-30%', left: '50%',
+              width: 220, height: '160%',
+              marginLeft: -110,
+              background: 'linear-gradient(180deg, transparent 0%, rgba(255,235,160,0.35) 12%, rgba(255,210,90,0.55) 38%, rgba(255,225,140,0.45) 62%, rgba(255,210,90,0.25) 82%, transparent 100%)',
+              filter: 'blur(10px)',
+              pointerEvents: 'none',
+              zIndex: 0,
+              mixBlendMode: 'screen',
+            }}
+          />
+        )}
+
+        {/* ── Outer glow ring — shockwave that radiates outward from
+            behind the card as it lands. Single expanding ring, gold,
+            heavily blurred — the "impact" pulse. Fires once at delay
+            0.16s so it coincides with the card's spring-overshoot
+            apex. */}
+        {isShiny && (
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0.75, scale: 0.6 }}
+            animate={{ opacity: 0, scale: 2.4 }}
+            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.16 }}
+            style={{
+              position: 'absolute', inset: 0,
+              borderRadius: '50%',
+              border: '4px solid rgba(255,225,140,0.85)',
+              boxShadow: '0 0 40px rgba(255,210,90,0.7), inset 0 0 24px rgba(255,235,160,0.6)',
+              filter: 'blur(2px)',
+              pointerEvents: 'none', zIndex: 0,
+            }}
+          />
+        )}
+
         {/* Burst rings — epic gets 2, legendary 3, ancient 5 */}
         {isEpicPlus && (isAncient ? [0, 0.1, 0.22, 0.36, 0.52] : [0, 0.09, ...(isLegendary ? [0.18] : [])]).map((delay, i) => (
           <motion.div key={i}
@@ -1512,9 +1560,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           300% so the gradient has room to travel without exposing the
           repeat seam. */}
       <motion.div
-        initial={{ opacity: 0, y: isShiny ? 32 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.5 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -10 : 0 }}
+        initial={{ opacity: 0, y: isShiny ? -90 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.42 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -22 : 0 }}
         animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: isShiny ? 220 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 13 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.08 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
+        transition={{ type: 'spring', stiffness: isShiny ? 200 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 12 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.12 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
         className={isShiny ? 'overflow-hidden' : 'rounded-2xl overflow-hidden'}
         style={{
           // Shiny gets strongly rounded corners (2.5rem) for a
@@ -2931,6 +2979,20 @@ export default function FishingGame({
     previousBest: number | null
     isShiny?: boolean
   } | null>(null)
+  // Lock-out for golden catches. The card's entrance + burst + ring waves
+  // run for ~1.8s — the button stays hidden for 2.0s so the player must
+  // watch the full reveal before they can claim. Reset every time a new
+  // golden lands so back-to-back catches each get their full moment.
+  const [shinyRevealLocked, setShinyRevealLocked] = useState(false)
+  useEffect(() => {
+    if (!catchResult?.isShiny) {
+      setShinyRevealLocked(false)
+      return
+    }
+    setShinyRevealLocked(true)
+    const t = setTimeout(() => setShinyRevealLocked(false), 2000)
+    return () => clearTimeout(t)
+  }, [catchResult?.isShiny, catchResult?.fish.id])
   const [crateResult, setCrateResult] = useState<
     | { type: 'doubloons'; amount: number }
     | { type: 'bait';      baitType: string; baitName: string; quantity: number }
@@ -5773,10 +5835,36 @@ export default function FishingGame({
                 const isShinyResult = !!catchResult?.isShiny
                 // Golden catches swap Cast Again for a Claim Trophy button —
                 // muscle-memory tap dismisses the trophy moment back to the
-                // ready state instead of auto-casting through it. Forces the
-                // player to actually look at what they caught before fishing
-                // again. Gold colour-shifted so it reads as "claim", not
-                // "continue."
+                // ready state instead of auto-casting through it. While the
+                // reveal animation is still playing (~2s) the button doesn't
+                // even render — replaced by a pulsing "trophy emerging"
+                // caption so the player has nothing to tap until the full
+                // moment plays out. After the lock lifts, the button
+                // spring-pops in.
+                if (isShinyResult && shinyRevealLocked) {
+                  return (
+                    <motion.div key="locked"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 88, gap: 6 }}
+                    >
+                      <motion.div
+                        animate={{ opacity: [0.55, 1, 0.55], scale: [1, 1.08, 1] }}
+                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                        className="font-karla font-700 uppercase"
+                        style={{
+                          fontSize: '0.55rem', letterSpacing: '0.22em',
+                          color: '#fbcc4a',
+                          textShadow: '0 0 10px rgba(251,204,74,0.55)',
+                        }}
+                      >
+                        ✦ Trophy Emerging
+                      </motion.div>
+                    </motion.div>
+                  )
+                }
                 const bg = isShinyResult
                   ? 'radial-gradient(ellipse at 40% 35%, rgba(180,120,30,0.55), rgba(74,32,7,0.25))'
                   : 'radial-gradient(ellipse at 40% 35%, rgba(14,116,144,0.35), rgba(14,116,144,0.12))'
@@ -5803,10 +5891,13 @@ export default function FishingGame({
                       padding: '0 0.5rem',
                       textAlign: 'center',
                     }}
-                    initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+                    initial={isShinyResult ? { opacity: 0, scale: 0.4, rotate: -25 } : { opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
                     exit={{ opacity: 0, scale: 0.92 }}
                     whileTap={{ scale: 0.95, y: 5, boxShadow: '0 1px 0 rgba(0,0,0,0.5)' }}
-                    transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                    transition={isShinyResult
+                      ? { type: 'spring', stiffness: 320, damping: 14 }
+                      : { type: 'spring', stiffness: 600, damping: 22 }}
                   >
                     {!isShinyResult && castRippleKey > 0 && [0, 220, 440].map((delay, i) => (
                       <motion.span key={`${castRippleKey}-${i}`} style={{ position: 'absolute', borderRadius: '50%', width: '100%', height: '100%', border: '1.5px solid rgba(103,212,232,0.55)', background: 'transparent', pointerEvents: 'none' }}
