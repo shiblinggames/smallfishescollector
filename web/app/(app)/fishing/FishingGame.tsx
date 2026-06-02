@@ -1636,7 +1636,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             without scrolling. Tight top/bottom padding + a shrunken image
             keep the whole result block in view even with the Ancient
             banner + 4 pills above on a small phone. */}
-        <div style={{ position: 'relative', zIndex: 2, padding: '0.55rem 1rem 0.7rem' }}>
+        <div style={{ position: 'relative', zIndex: 2, padding: isShiny ? '0.35rem 0.85rem 0.55rem' : '0.55rem 1rem 0.7rem' }}>
           {/* Fish image — entrance bounce so it FEELS like a reveal.
               Wrapped in a position:relative so the transient PB ribbon can
               overlay directly on top of the fish (auto-dismisses ~2.6s
@@ -1649,12 +1649,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             style={{
               position: 'relative',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '0.25rem',
-              // SIR-card sizing — bigger fish needs more vertical room.
-              // Trimmed from 160 to 128 so the whole card fits within
-              // smaller phone viewports (the bottom of the rounded gold
-              // card was getting cut off below 720px tall devices).
-              minHeight: isShiny ? 128 : undefined,
+              // Shiny hugs the fish — no minHeight padding, tighter
+              // marginBottom — so the bigger sprite fills the card chrome
+              // without empty halo space around it.
+              marginBottom: isShiny ? '0.05rem' : '0.25rem',
             }}
           >
             {/* DOPAMINE-SHOT v2 — layered burst sequence on entry. */}
@@ -1841,13 +1839,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                   style={{
                     // Shiny gets a noticeably bigger fish so it dominates
                     // the card like a SIR full-art (the art is meant to
-                    // BE the card, not be framed by the chrome). Height
-                    // trimmed from 140 to 112 to keep the full card on
-                    // smaller phones — the fish still reads dominant
-                    // against the chrome's smaller proportions.
-                    width: isShiny ? '78%' : '62%',
-                    maxWidth: isShiny ? 220 : 170,
-                    height: isShiny ? 112 : 92,
+                    // BE the card, not be framed by the chrome). Tuned
+                    // up to 138px with the surrounding container hugging
+                    // tight (no minHeight padding) so the bigger sprite
+                    // gains presence without the card itself growing.
+                    width: isShiny ? '88%' : '62%',
+                    maxWidth: isShiny ? 240 : 170,
+                    height: isShiny ? 138 : 92,
                     objectFit: 'contain',
                     // Shiny stacks the gold filter (lib/shiny.ts) on top
                     // of a warm drop-shadow for the "hovering metal" feel.
