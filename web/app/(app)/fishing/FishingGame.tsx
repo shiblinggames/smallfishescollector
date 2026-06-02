@@ -1178,14 +1178,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     5: `inset 0 0 32px ${r.color}88, inset 0 0 80px ${r.color}4a, inset 0 0 130px ${r.color}28`,
   }
   const borderOpMap: Record<number, string> = { 1: '55', 2: '70', 3: '88', 4: 'aa', 5: 'cc' }
-  // Shiny goes "gold-framed trophy plaque": warm dark amber interior
-  // (not bright gold — that competed with the fish before) inside a
-  // visible gold border. The body stays dark enough that the bright
-  // gold fish + halo + sparkles read as the brightest things on the
-  // card; the warm gradient + gold frame supply the premium context
-  // signal without crowding the fish.
+  // Shiny goes HOLOGRAPHIC TRADING CARD. Multi-stop jewel-tone
+  // gradient (deep purple → magenta → blue → gold → back) animated
+  // via background-position shift on the card itself — reads as
+  // iridescent foil catching light, completely different from the
+  // flat dark backgrounds of normal catches. Background-size 300%
+  // gives the gradient room to "travel" across the card surface.
   const cardBg = isShiny
-    ? 'linear-gradient(180deg, rgba(46,30,12,0.97) 0%, rgba(20,12,5,0.98) 50%, rgba(40,26,10,0.97) 100%)'
+    ? 'linear-gradient(125deg, rgba(38,14,68,0.97) 0%, rgba(78,26,90,0.97) 18%, rgba(38,40,86,0.97) 36%, rgba(72,34,28,0.97) 58%, rgba(82,58,18,0.97) 75%, rgba(38,14,68,0.97) 100%)'
     : 'rgba(6,16,26,0.96)'
   // Subtle warm inset glow only around the edges — gives the gold
   // border a soft "framed" depth like polished metal catching light.
@@ -1503,21 +1503,42 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
       {/* Card. Shiny punches in faster + bigger overshoot — a real
           spring snap rather than the slow settle the legendary uses.
           Combined with the burst + particle explosion below this is
-          the "dopamine shot" moment when the card lands. */}
+          the "dopamine shot" moment when the card lands.
+          When shiny, the background-position also continuously drifts
+          to create the holographic foil shimmer across the iridescent
+          jewel-tone gradient. background-size on the style is 300%
+          300% so the gradient has room to travel without exposing the
+          repeat seam. */}
       <motion.div
-        initial={{ opacity: 0, y: isShiny ? 32 : isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isShiny ? 0.5 : isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: isShiny ? -10 : 0 }}
-        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: isShiny ? 220 : isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isShiny ? 13 : isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isShiny ? 0.08 : isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
+        initial={isShiny
+          ? { opacity: 0, y: 32, scale: 0.5, rotate: -10, backgroundPosition: '0% 50%' }
+          : { opacity: 0, y: isAncient ? 48 : isLegendary ? 40 : isEpicPlus ? 24 : 16, scale: isAncient ? 0.78 : isLegendary ? 0.84 : isEpicPlus ? 0.91 : 0.96, rotate: 0 }}
+        animate={isShiny
+          ? { opacity: 1, y: 0, scale: 1, rotate: 0, backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }
+          : { opacity: 1, y: 0, scale: 1, rotate: 0 }}
+        transition={isShiny
+          ? {
+              y: { type: 'spring', stiffness: 220, damping: 13, delay: 0.08 },
+              scale: { type: 'spring', stiffness: 220, damping: 13, delay: 0.08 },
+              rotate: { type: 'spring', stiffness: 220, damping: 13, delay: 0.08 },
+              opacity: { duration: 0.3, delay: 0.08 },
+              backgroundPosition: { duration: 9, repeat: Infinity, ease: 'easeInOut' },
+            }
+          : { type: 'spring', stiffness: isAncient ? 110 : isLegendary ? 140 : isEpicPlus ? 210 : 280, damping: isAncient ? 10 : isLegendary ? 11 : isEpicPlus ? 16 : 22, delay: isAncient ? 0.18 : isLegendary ? 0.1 : 0 }}
         className="rounded-2xl overflow-hidden"
         style={{
           border: isShiny
-            // Visible gold border — the "trophy plaque frame" that
-            // signals premium. 1.5px solid gold at strong alpha so
-            // it reads as polished metal at any size. Paired with
-            // the inset shinyGlow for the framed-depth feel.
-            ? '1.5px solid rgba(218,178,98,0.78)'
+            // Thicker gradient-feel gold border — the "trading card
+            // frame" that signals premium. 2px solid gold at strong
+            // alpha so it reads as polished metal at any size. Paired
+            // with the inset shinyGlow for the framed-depth feel.
+            ? '2px solid rgba(228,188,108,0.85)'
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           background: cardBg,
+          // Background-size 300% gives the iridescent gradient room to
+          // shift across the card surface — the framer-motion animation
+          // above drifts backgroundPosition 0%↔100% over 9s.
+          backgroundSize: isShiny ? '300% 300%' : undefined,
           position: 'relative', zIndex: 1,
           // Shiny → its own gold inset glow; everything else → the
           // rarity-tiered inset halo (replaces the prior outer halo
@@ -1871,11 +1892,42 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             )}
           </motion.div>
 
-          {/* Name. Scientific name dropped 2026-05-26 — players don't read
-              Latin and the card needs to feel less informational. */}
-          <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.25rem', color: r.color, lineHeight: 1.1, marginBottom: hasSize ? '0.35rem' : '0.55rem' }}>
+          {/* Name. Shiny gets bigger, more ornate Cinzel + a wide
+              gold gradient text with a soft warm shadow — reads as the
+              centerpiece of the holographic card. Regular catches keep
+              the standard size. */}
+          <p className="font-cinzel font-700 text-center"
+            style={isShiny ? {
+              fontSize: '1.55rem',
+              letterSpacing: '0.06em',
+              lineHeight: 1.1,
+              marginBottom: '0.5rem',
+              background: 'linear-gradient(180deg, #ffeec0 0%, #e6b85a 55%, #a87a2e 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 1px 0 rgba(60,30,4,0.7)) drop-shadow(0 0 18px rgba(251,191,36,0.55))',
+            } : {
+              fontSize: '1.25rem',
+              color: r.color,
+              lineHeight: 1.1,
+              marginBottom: hasSize ? '0.35rem' : '0.55rem',
+            }}>
             {fish.name}
           </p>
+
+          {/* Ornate gold divider — only on shiny. Reads as a holographic
+              card's section break with two flanking diamond dots. */}
+          {isShiny && (
+            <div aria-hidden style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 8, marginBottom: '0.5rem',
+            }}>
+              <div style={{ width: 38, height: 1, background: 'linear-gradient(90deg, transparent, rgba(228,188,108,0.85), transparent)' }} />
+              <span style={{ width: 5, height: 5, transform: 'rotate(45deg)', background: 'rgba(228,188,108,0.95)', boxShadow: '0 0 6px rgba(251,191,36,0.7)' }} />
+              <div style={{ width: 38, height: 1, background: 'linear-gradient(90deg, transparent, rgba(228,188,108,0.85), transparent)' }} />
+            </div>
+          )}
 
           {/* ── Size readout — the new hero of the card ──
               Big counter that ticks up from 0 over ~700ms; range bar below
