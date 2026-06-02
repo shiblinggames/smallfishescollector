@@ -1625,52 +1625,101 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               minHeight: isShiny ? 124 : undefined,
             }}
           >
-            {/* DOPAMINE-SHOT one-shot burst — fires once on mount.
-                A bright radial flash explodes from the fish centre,
-                expanding from scale 0 to 4 while fading. Pure
-                celebration; this is the "wow" beat that makes the
-                catch feel like a real reward. */}
+            {/* DOPAMINE-SHOT v2 — layered burst sequence on entry. */}
             {isShiny && (
-              <div aria-hidden style={{
-                position: 'absolute', top: '50%', left: '50%',
-                width: 180, height: 180,
-                marginLeft: -90, marginTop: -90,
-                pointerEvents: 'none', zIndex: 1,
-              }}>
-                <motion.div
-                  initial={{ opacity: 0.85, scale: 0 }}
-                  animate={{ opacity: 0, scale: 4 }}
-                  transition={{ duration: 0.85, ease: 'easeOut', delay: 0.18 }}
-                  style={{
-                    width: '100%', height: '100%',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(255,235,160,0.95) 0%, rgba(255,200,80,0.65) 22%, rgba(251,191,36,0.25) 50%, transparent 70%)',
-                  }}
-                />
-              </div>
+              <>
+                {/* 1) Bright white-cored flash. Punches the catch with a
+                       hard pop of light before settling into the warmer
+                       burst beneath it. */}
+                <div aria-hidden style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  width: 160, height: 160,
+                  marginLeft: -80, marginTop: -80,
+                  pointerEvents: 'none', zIndex: 1,
+                }}>
+                  <motion.div
+                    initial={{ opacity: 1, scale: 0 }}
+                    animate={{ opacity: 0, scale: 3.6 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.18 }}
+                    style={{
+                      width: '100%', height: '100%',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,235,150,0.75) 28%, rgba(255,200,80,0.4) 55%, transparent 75%)',
+                    }}
+                  />
+                </div>
+
+                {/* 2) Warm gold burst — lingers a little longer than the
+                       white flash, fading from scale 0 to 4.5 over 0.95s. */}
+                <div aria-hidden style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  width: 200, height: 200,
+                  marginLeft: -100, marginTop: -100,
+                  pointerEvents: 'none', zIndex: 1,
+                }}>
+                  <motion.div
+                    initial={{ opacity: 0.85, scale: 0 }}
+                    animate={{ opacity: 0, scale: 4.5 }}
+                    transition={{ duration: 0.95, ease: 'easeOut', delay: 0.22 }}
+                    style={{
+                      width: '100%', height: '100%',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, rgba(255,225,140,0.9) 0%, rgba(255,200,80,0.6) 26%, rgba(251,191,36,0.22) 55%, transparent 75%)',
+                    }}
+                  />
+                </div>
+
+                {/* 3) Concentric ring waves — 3 expanding gold rings,
+                       staggered by 150ms each. Reads like the catch
+                       is sending pulses of energy outward. Each ring
+                       is just a border with no fill, so they read as
+                       sharp pulses rather than soft blooms. */}
+                {[0, 0.15, 0.3].map((extraDelay, i) => (
+                  <div key={`ring-${i}`} aria-hidden style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    width: 70, height: 70,
+                    marginLeft: -35, marginTop: -35,
+                    pointerEvents: 'none', zIndex: 1,
+                  }}>
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0.95 }}
+                      animate={{ scale: 4.2, opacity: 0 }}
+                      transition={{ duration: 1.1, ease: 'easeOut', delay: 0.28 + extraDelay }}
+                      style={{
+                        width: '100%', height: '100%',
+                        borderRadius: '50%',
+                        border: '2px solid rgba(255,225,140,0.85)',
+                        boxShadow: '0 0 16px rgba(255,210,90,0.85), inset 0 0 12px rgba(255,235,160,0.55)',
+                      }}
+                    />
+                  </div>
+                ))}
+              </>
             )}
 
-            {/* Particle burst — 10 sparkles explode outward from the
-                fish centre in a radial fan on mount. Each fades + scales
-                slightly while travelling. Wraps each in a static-positioned
-                span so framer-motion's x/y/scale animation doesn't fight
-                a centering transform. Pure one-shot, no repeat. */}
+            {/* Particle burst — 15 sparkles now (was 10), flying farther
+                (110-160px instead of 75-110), with a tiny random rotation
+                tumble during travel. Wraps each in a static-positioned
+                span so framer-motion's x/y animation doesn't fight a
+                centering transform. */}
             {isShiny && (
               <div aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 3 }}>
-                {Array.from({ length: 10 }).map((_, i) => {
-                  const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.3
-                  const distance = 75 + Math.random() * 35
+                {Array.from({ length: 15 }).map((_, i) => {
+                  const angle = (i / 15) * Math.PI * 2 + Math.random() * 0.25
+                  const distance = 110 + Math.random() * 50
+                  const tumble = (Math.random() - 0.5) * 180
                   return (
                     <motion.span
                       key={i}
-                      initial={{ opacity: 1, x: 0, y: 0, scale: 0.5 }}
+                      initial={{ opacity: 1, x: 0, y: 0, scale: 0.4, rotate: 0 }}
                       animate={{
                         opacity: [1, 1, 0],
                         x: Math.cos(angle) * distance,
                         y: Math.sin(angle) * distance,
-                        scale: [0.5, 1.1, 0.8],
+                        scale: [0.4, 1.2, 0.6],
+                        rotate: tumble,
                       }}
-                      transition={{ duration: 0.85, ease: 'easeOut', delay: 0.22 + i * 0.012, times: [0, 0.55, 1] }}
+                      transition={{ duration: 1.0, ease: 'easeOut', delay: 0.24 + i * 0.008, times: [0, 0.55, 1] }}
                       style={{
                         position: 'absolute',
                         top: -4, left: -4,
@@ -1734,29 +1783,42 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               </div>
             )}
 
-            {/* Fish image. Shiny gets only a modest size bump (68% /
-                108px vs 62% / 92px), the gold filter, and the slow
-                breathing animation. Earlier 82%/150px was oversized
-                and ballooned the whole card. */}
+            {/* Fish image — double-wrap for shiny:
+                  outer motion.div: punch-in animation (one-shot).
+                    scale 0 → 1.25 (big overshoot) → 0.95 → 1.0 over
+                    ~0.65s with a spring-like ease, so the fish
+                    literally PUNCHES INTO the card after the burst.
+                  inner motion.div: breathing animation (infinite),
+                    delayed until after the punch-in lands so the
+                    two never conflict.
+                Earlier 68% / 190px / 108px size kept; the entrance
+                drama comes from the punch-in motion, not raw size. */}
             <motion.div
-              animate={isShiny ? { y: [0, -2.5, 0], scale: [1, 1.022, 1] } : undefined}
-              transition={isShiny ? { duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } : undefined}
+              initial={isShiny ? { scale: 0, opacity: 0 } : false}
+              animate={isShiny ? { scale: [0, 1.25, 0.92, 1.04, 1], opacity: 1 } : undefined}
+              transition={isShiny ? { duration: 0.65, ease: 'easeOut', delay: 0.32, times: [0, 0.45, 0.65, 0.85, 1] } : undefined}
               style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              <FishImg
-                name={fish.name}
-                style={{
-                  width: isShiny ? '68%' : '62%',
-                  maxWidth: isShiny ? 190 : 170,
-                  height: isShiny ? 108 : 92,
-                  objectFit: 'contain',
-                  // Shiny stacks the gold filter (lib/shiny.ts) on top
-                  // of a warm drop-shadow for the "hovering metal" feel.
-                  filter: isShiny
-                    ? `${SHINY_FISH_FILTER} drop-shadow(0 6px 14px rgba(120,70,8,0.45))`
-                    : `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
-                }}
-              />
+              <motion.div
+                animate={isShiny ? { y: [0, -2.5, 0], scale: [1, 1.022, 1] } : undefined}
+                transition={isShiny ? { duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: 1.1 } : undefined}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <FishImg
+                  name={fish.name}
+                  style={{
+                    width: isShiny ? '68%' : '62%',
+                    maxWidth: isShiny ? 190 : 170,
+                    height: isShiny ? 108 : 92,
+                    objectFit: 'contain',
+                    // Shiny stacks the gold filter (lib/shiny.ts) on top
+                    // of a warm drop-shadow for the "hovering metal" feel.
+                    filter: isShiny
+                      ? `${SHINY_FISH_FILTER} drop-shadow(0 6px 14px rgba(120,70,8,0.45))`
+                      : `drop-shadow(0 6px 14px ${r.color}55)${isEpicPlus ? ` drop-shadow(0 0 22px ${r.color}40)` : ''}`,
+                  }}
+                />
+              </motion.div>
             </motion.div>
 
             {/* PB ribbon — overlays the fish on a personal-best catch, then
