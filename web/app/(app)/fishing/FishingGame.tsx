@@ -50,7 +50,7 @@ import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, t
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { formatFishLength, tierShowsPill, type FishSizeTier } from '@/lib/fishSize'
-import { SHINY_FISH_FILTER, SHINY_THEME, pickShinyMessage } from '@/lib/shiny'
+import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
@@ -2037,7 +2037,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               }}
             >
               <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 10px rgba(240,192,64,0.32)' }}>
-                {fish.sell_value.toLocaleString()}<span style={{ fontSize: '0.78rem', marginLeft: 3 }}>⟡</span>
+                {(isShiny ? fish.sell_value * SHINY_SELL_MULT : fish.sell_value).toLocaleString()}<span style={{ fontSize: '0.78rem', marginLeft: 3 }}>⟡</span>
               </span>
               {xpGained > 0 && (
                 <>

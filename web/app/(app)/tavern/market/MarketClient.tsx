@@ -2,8 +2,14 @@
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import Link from 'next/link'
-import { marketSellFish, liquidateAllFish } from './actions'
+import { marketSellFish, liquidateAllFish, sellShinyTrophy, type TrophyHoldItem } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
+import { SHINY_FISH_FILTER, SHINY_THEME } from '@/lib/shiny'
+import { formatFishLength } from '@/lib/fishSize'
+
+function fishImageUrl(name: string) {
+  return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
+}
 
 const HABITAT_COLOR: Record<string, string> = {
   shallows:    '#38bdf8',
@@ -278,22 +284,117 @@ function BrowseRow({ entry }: { entry: MarketFishEntry }) {
   )
 }
 
+// Per-trophy card in the Trophy Hold lane. Each shiny is a discrete
+// row (size + caught-at), unlike the regular Portfolio which stacks
+// by species. The fish image gets the same gold filter used on the
+// catch result card so the lane visually advertises "these are
+// special." Sell price is a flat 10× the species' base sell_value —
+// no market multiplier, no convenience fee, no delayed settlement.
+function TrophyHoldCard({
+  item,
+  onSell,
+  selling,
+}: {
+  item: TrophyHoldItem
+  onSell: (id: number) => void
+  selling: boolean
+}) {
+  const [confirm, setConfirm] = useState(false)
+  return (
+    <div style={{
+      background: 'radial-gradient(circle at 50% 45%, rgba(253,230,138,0.10) 0%, rgba(74,32,7,0.62) 70%, rgba(8,8,6,0.82) 100%)',
+      border: `1px solid ${SHINY_THEME.primary}55`,
+      borderRadius: 12,
+      padding: '0.7rem 0.85rem',
+      boxShadow: `inset 0 0 18px rgba(200,140,40,0.12), inset 0 0 1px ${SHINY_THEME.glow}`,
+      display: 'flex', alignItems: 'center', gap: 12,
+    }}>
+      <div style={{ width: 58, height: 58, flexShrink: 0, position: 'relative' }}>
+        <img
+          src={fishImageUrl(item.name)}
+          alt={item.name}
+          width={58}
+          height={58}
+          style={{
+            width: '100%', height: '100%', objectFit: 'contain',
+            filter: SHINY_FISH_FILTER,
+          }}
+        />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: SHINY_THEME.text }}>
+          Golden {item.name}
+        </p>
+        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#c0a868', letterSpacing: '0.05em' }}>
+          {item.sizeIn != null ? `${formatFishLength(item.sizeIn)} · ` : ''}TROPHY
+        </p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: SHINY_THEME.primary, marginTop: 2, textShadow: '0 0 10px rgba(251,204,74,0.35)' }}>
+          {item.sellPrice.toLocaleString()} ⟡
+        </p>
+      </div>
+      <div style={{ flexShrink: 0 }}>
+        {!confirm ? (
+          <button
+            onClick={() => setConfirm(true)}
+            disabled={selling}
+            className="font-karla font-700 uppercase tracking-[0.1em]"
+            style={{
+              fontSize: '0.58rem', padding: '0.5rem 0.85rem', borderRadius: 8,
+              background: `${SHINY_THEME.primary}18`, border: `1px solid ${SHINY_THEME.primary}55`,
+              color: SHINY_THEME.primary, opacity: selling ? 0.45 : 1, cursor: selling ? 'default' : 'pointer',
+            }}>
+            Sell
+          </button>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={() => { setConfirm(false); onSell(item.id) }}
+              disabled={selling}
+              className="font-karla font-700 uppercase tracking-[0.1em]"
+              style={{
+                fontSize: '0.58rem', padding: '0.45rem 0.7rem', borderRadius: 8,
+                background: `${SHINY_THEME.primary}28`, border: `1px solid ${SHINY_THEME.primary}88`,
+                color: SHINY_THEME.text, opacity: selling ? 0.45 : 1, cursor: selling ? 'default' : 'pointer',
+              }}>
+              {selling ? '…' : 'Confirm'}
+            </button>
+            <button
+              onClick={() => setConfirm(false)}
+              className="font-karla font-600 uppercase tracking-[0.08em]"
+              style={{
+                fontSize: '0.55rem', padding: '0.35rem 0.7rem', borderRadius: 8,
+                background: 'rgba(8,8,6,0.6)', border: '1px solid rgba(255,255,255,0.14)',
+                color: '#9a9488', cursor: 'pointer',
+              }}>
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MarketClient({
   portfolio: initialPortfolio,
   allMarket,
   marketState,
   doubloons: initialDoubloons,
   isPremium,
+  trophyHold: initialTrophyHold,
 }: {
   portfolio: MarketFishEntry[]
   allMarket: MarketFishEntry[]
   marketState: MarketState
   doubloons: number
   isPremium: boolean
+  trophyHold: TrophyHoldItem[]
 }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [selling, setSelling] = useState<number | null>(null)
+  const [trophyHold, setTrophyHold] = useState(initialTrophyHold)
+  const [sellingTrophy, setSellingTrophy] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [pendingSales, setPendingSales] = useState<{ id: string; amount: number; fishCount: number; reason: string; settlesAt: string }[]>([])
   const [pendingNow, setPendingNow] = useState(() => Date.now())
@@ -345,6 +446,20 @@ export default function MarketClient({
         prev.map(e => e.fish_id === fishId ? { ...e, quantity: e.quantity - qty } : e)
             .filter(e => e.quantity > 0)
       )
+    })
+  }
+
+  function handleSellTrophy(id: number) {
+    if (sellingTrophy !== null) return
+    setSellingTrophy(id)
+    startTransition(async () => {
+      const res = await sellShinyTrophy(id)
+      setSellingTrophy(null)
+      if ('error' in res) { showToast(res.error); return }
+      setDoubloons(res.doubloons)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      showToast(`+${res.earned.toLocaleString()} ⟡`)
+      setTrophyHold(prev => prev.filter(t => t.id !== id))
     })
   }
 
@@ -428,6 +543,29 @@ export default function MarketClient({
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Trophy Hold (shiny variants) ── */}
+        {trophyHold.length > 0 && (
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2"
+              style={{ fontSize: '0.65rem', color: SHINY_THEME.primary, textShadow: '0 0 10px rgba(251,204,74,0.35)' }}>
+              Trophy Hold · {trophyHold.length}
+            </p>
+            <p className="font-karla font-400 mb-3" style={{ fontSize: '0.7rem', color: '#9a9488' }}>
+              Golden variants sell at 10× base value. Each one is rare.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {trophyHold.map(t => (
+                <TrophyHoldCard
+                  key={t.id}
+                  item={t}
+                  onSell={handleSellTrophy}
+                  selling={sellingTrophy === t.id}
+                />
+              ))}
             </div>
           </div>
         )}

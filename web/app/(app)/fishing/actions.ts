@@ -395,6 +395,21 @@ export async function reelIn(
   let baitSaved = result === 'perfect' && Math.random() < PERFECT_BAIT_SAVE_CHANCE
   if (!baitSaved && profile.has_phantom_hook) baitSaved = Math.random() < 0.25
 
+  // ── Shiny gate (computed early so the inventory + size logic can branch on it) ──
+  // Shinies are gated on Perfect + a 1/SHINY_ODDS roll, with two admin
+  // overrides (one-shot + persistent) for QA. Habitat-blocked on
+  // ancient_deep but those short-circuited above, so this is safe.
+  //
+  // When shiny: the catch lives EXCLUSIVELY in shiny_catches (per-instance
+  // trophy with size + caught_at metadata). It does NOT also push into
+  // fish_inventory — inventory would stack it under fish_id alongside
+  // regular bass, throwing away its identity. The Trophy Hold lane in the
+  // market sells from shiny_catches directly at 10× value.
+  const isPerfect = result === 'perfect'
+  const forcedShinyOnce = !!profile.force_shiny_next_perfect && isPerfect
+  const forcedShinyAlways = !!profile.force_shiny_always
+  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat })
+
   // Check if new species for bestiary
   const { data: existing } = await admin
     .from('fish_collection')
@@ -415,11 +430,15 @@ export async function reelIn(
     }).eq('user_id', user.id).eq('fish_id', fishId)
   }
 
-  // Upsert sellable inventory — cap at hold capacity
+  // Upsert sellable inventory — cap at hold capacity.
+  // Shinies collapse the cast to a single catch (the trophy), so any
+  // double-catch / jackpot multiplier on the same cast is consumed by
+  // the rare moment. This keeps daily-challenge counters from crediting
+  // ghost regular fish that never landed anywhere.
   const holdCapacity = getFishHold(profile.fish_hold_tier ?? 0).capacity
   const currentHoldCount = (holdRows ?? []).reduce((s: number, r: { quantity: number }) => s + (r.quantity ?? 0), 0)
-  const desired = doubleCatch ? 2 : jackpotMultiplier
-  const catchQty = Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
+  const desired = isShiny ? 1 : (doubleCatch ? 2 : jackpotMultiplier)
+  const catchQty = isShiny ? 1 : Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
 
   const { data: invRow } = await admin
     .from('fish_inventory')
@@ -428,7 +447,10 @@ export async function reelIn(
     .eq('fish_id', fishId)
     .single()
 
-  if (catchQty > 0) {
+  // Shinies skip the regular inventory — they live ONLY in shiny_catches
+  // (per-instance trophy). Any double-catch / jackpot bonus on the same
+  // cast is consumed by the rare moment; the shiny is the whole catch.
+  if (catchQty > 0 && !isShiny) {
     if (invRow) {
       await admin.from('fish_inventory')
         .update({ quantity: invRow.quantity + catchQty })
@@ -513,24 +535,6 @@ export async function reelIn(
 
   // Record challenge score (fire and forget)
   recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})
-
-  // ── Shiny pre-check (only the gate, no DB write yet) ─────────────
-  // Decide shiny FIRST so the size roll can force max-length on
-  // shinies. Shinies are guaranteed Trophy-tier — a small shiny
-  // would feel anticlimactic, and the card hides the size hero
-  // anyway so there's no point rolling random variance.
-  //
-  // Admin overrides (both habitat-gated to skip Ancient Deep):
-  //   force_shiny_next_perfect — one-shot, requires a Perfect, consumed
-  //     on use. For QA testing the catch flow without grinding 1/1000.
-  //   force_shiny_always — persistent, fires on ANY catch (not just
-  //     Perfects), never consumed. For longer-form testing where
-  //     the tester wants every catch to be shiny.
-  const isPerfect = result === 'perfect'
-  const blockedHabitat = fish.habitat === 'ancient_deep'
-  const forcedShinyOnce = !!profile.force_shiny_next_perfect && isPerfect && !blockedHabitat
-  const forcedShinyAlways = !!profile.force_shiny_always && !blockedHabitat
-  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat })
 
   // ── Size variance + personal-best tracking (non-ancient catches) ──
   // Roll a length within the species's [length_min_in, length_max_in] range
