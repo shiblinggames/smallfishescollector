@@ -6450,7 +6450,7 @@ export default function FishingGame({
         {collectionOpen && (
           <motion.div key="collection-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             {...collectionDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
@@ -6459,6 +6459,7 @@ export default function FishingGame({
               borderRadius: '18px 18px 0 0',
               maxHeight: '80vh',
               display: 'flex', flexDirection: 'column',
+              willChange: 'transform',
             }}
           >
             <DrawerHandle dragHandleProps={collectionDrawerDrag.handleProps} />
@@ -7041,7 +7042,7 @@ export default function FishingGame({
         {gearOpen && (
           <motion.div key="gear-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             {...gearDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
@@ -7050,6 +7051,7 @@ export default function FishingGame({
               borderRadius: '18px 18px 0 0',
               padding: '0 1rem 2rem',
               maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              willChange: 'transform',
             }}
           >
             <DrawerHandle dragHandleProps={gearDrawerDrag.handleProps} />
@@ -7203,7 +7205,7 @@ export default function FishingGame({
         {baitOpen && (
           <motion.div key="bait-panel"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             {...baitDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
@@ -7212,6 +7214,7 @@ export default function FishingGame({
               borderRadius: '18px 18px 0 0',
               padding: '0 1rem 2rem',
               maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              willChange: 'transform',
             }}
           >
             <DrawerHandle dragHandleProps={baitDrawerDrag.handleProps} />
@@ -7287,7 +7290,7 @@ export default function FishingGame({
         {dailyOpen && (
           <motion.div key="daily-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             {...dailyDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
@@ -7296,6 +7299,7 @@ export default function FishingGame({
               borderRadius: '18px 18px 0 0',
               padding: '0 1rem 2rem',
               maxHeight: '75vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              willChange: 'transform',
             }}
           >
             <DrawerHandle dragHandleProps={dailyDrawerDrag.handleProps} />
@@ -7455,7 +7459,7 @@ export default function FishingGame({
         {sellOpen && (
           <motion.div key="sell-panel"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             {...sellDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
@@ -7464,6 +7468,7 @@ export default function FishingGame({
               borderRadius: '18px 18px 0 0',
               padding: '0 1rem 2rem',
               maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
+              willChange: 'transform',
             }}
           >
             <DrawerHandle dragHandleProps={sellDrawerDrag.handleProps} />
@@ -7878,7 +7883,7 @@ export default function FishingGame({
         {holdOpen && (
           <motion.div key="hold-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             {...holdDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
@@ -7887,6 +7892,7 @@ export default function FishingGame({
               borderRadius: '18px 18px 0 0',
               maxHeight: '72vh',
               display: 'flex', flexDirection: 'column',
+              willChange: 'transform',
             }}
           >
             {/* Non-scrollable drag zone */}
