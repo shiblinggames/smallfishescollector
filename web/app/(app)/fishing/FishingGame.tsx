@@ -2200,22 +2200,6 @@ function DrawerClose({ onClick }: { onClick: () => void }) {
   )
 }
 
-// Legacy: drag-from-anywhere on the drawer body. Five of the six fishing
-// drawers still use this — fine for short drawers whose inner content
-// doesn't scroll past a screen height. The collection drawer migrated to
-// useDrawerDrag below because its 2-column trophy grid scrolls and the
-// drag-from-anywhere model fights inner scroll gestures.
-function drawerDragProps(onClose: () => void) {
-  return {
-    drag: 'y' as const,
-    dragConstraints: { top: 0 },
-    dragElastic: { top: 0, bottom: 0.35 },
-    onDragEnd: (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
-      if (info.offset.y > 80 || info.velocity.y > 400) onClose()
-    },
-  }
-}
-
 // Drag-only-from-handle variant. `dragListener: false` stops framer-motion
 // from claiming touches anywhere on the drawer body; the handle's
 // onPointerDown is the sole trigger for dragControls.start(). Use this on
@@ -2923,11 +2907,17 @@ export default function FishingGame({
     setExpandedZone(null)
     setTappedFishId(null)
   })
-  // Gear drawer needs the same drag-from-handle-only fix as the collection
-  // drawer — its rod / reel / hook panels scroll, and the old
-  // drag-from-anywhere model was reinterpreting the scroll gesture as a
-  // pull-down-to-close and fighting the inner scroll along the way.
-  const gearDrawerDrag = useDrawerDrag(() => setGearOpen(false))
+  // Every bottom-sheet drawer that can scroll uses the handle-only drag
+  // pattern (useDrawerDrag) instead of the legacy drag-from-anywhere
+  // drawerDragProps. Without this, swiping inside the body to scroll gets
+  // reinterpreted as a pull-down-to-close, fights the inner scroll, and
+  // sometimes leaks the gesture to the page behind. Drag handle pill is
+  // the only thing that triggers the close gesture.
+  const gearDrawerDrag  = useDrawerDrag(() => setGearOpen(false))
+  const baitDrawerDrag  = useDrawerDrag(() => setBaitOpen(false))
+  const dailyDrawerDrag = useDrawerDrag(() => setDailyOpen(false))
+  const sellDrawerDrag  = useDrawerDrag(() => setSellOpen(false))
+  const holdDrawerDrag  = useDrawerDrag(() => setHoldOpen(false))
 
   // Refs for the collection drawer's scrollable body + each zone block.
   // When the player taps a zone header, we want the just-expanded zone's
@@ -7201,7 +7191,7 @@ export default function FishingGame({
           <motion.div key="bait-panel"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            {...drawerDragProps(() => setBaitOpen(false))}
+            {...baitDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
@@ -7211,7 +7201,7 @@ export default function FishingGame({
               maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <DrawerHandle />
+            <DrawerHandle dragHandleProps={baitDrawerDrag.handleProps} />
             <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Bait</p>
@@ -7285,7 +7275,7 @@ export default function FishingGame({
           <motion.div key="daily-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            {...drawerDragProps(() => setDailyOpen(false))}
+            {...dailyDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
@@ -7295,7 +7285,7 @@ export default function FishingGame({
               maxHeight: '75vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <DrawerHandle />
+            <DrawerHandle dragHandleProps={dailyDrawerDrag.handleProps} />
             <div className="flex items-start justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <div>
                 <p className="font-karla font-700 uppercase tracking-[0.20em]"
@@ -7453,7 +7443,7 @@ export default function FishingGame({
           <motion.div key="sell-panel"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            {...drawerDragProps(() => setSellOpen(false))}
+            {...sellDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
@@ -7463,7 +7453,7 @@ export default function FishingGame({
               maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <DrawerHandle />
+            <DrawerHandle dragHandleProps={sellDrawerDrag.handleProps} />
             <div className="flex items-center justify-between mb-5" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Sell</p>
@@ -7876,7 +7866,7 @@ export default function FishingGame({
           <motion.div key="hold-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            {...drawerDragProps(() => setHoldOpen(false))}
+            {...holdDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
@@ -7887,7 +7877,7 @@ export default function FishingGame({
             }}
           >
             {/* Non-scrollable drag zone */}
-            <DrawerHandle />
+            <DrawerHandle dragHandleProps={holdDrawerDrag.handleProps} />
             <div style={{ padding: '0.75rem 1rem 0', flexShrink: 0 }}>
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
