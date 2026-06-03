@@ -7210,7 +7210,7 @@ export default function FishingGame({
             <BaitSelector
               baitInventory={baitInventory}
               selectedBait={selectedBait}
-              onSelect={(type) => { setSelectedBait(type); setBaitOpen(false) }}
+              onSelect={setSelectedBait}
             />
             {/* Quick-buy worms */}
             {(() => {
