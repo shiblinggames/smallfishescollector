@@ -78,8 +78,37 @@ async function DailySection() {
         title="Fish of the Day"
         completed={fotdDone}
         variant="compact"
-        art="/fishoftheday.png"
         accent="#60a5fa"
+        customArt={
+          // FOTD teaser — a fish silhouette (real species sprite blacked
+          // out) with a big red question mark over it. Reads as "what
+          // fish is it today?" much better than the old generic icon.
+          // Largemouth bass picked for its instantly-readable silhouette.
+          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/fish/largemouth-bass.png"
+              alt=""
+              style={{
+                maxWidth: '92%', maxHeight: 78, objectFit: 'contain',
+                filter: 'brightness(0) opacity(0.78)',
+              }}
+            />
+            <span
+              aria-hidden
+              className="font-cinzel font-700"
+              style={{
+                position: 'absolute',
+                fontSize: '3.4rem',
+                lineHeight: 1,
+                color: '#ef4444',
+                textShadow: '0 2px 10px rgba(0,0,0,0.6), 0 0 18px rgba(239,68,68,0.45)',
+                pointerEvents: 'none',
+                marginTop: 4,
+              }}
+            >?</span>
+          </div>
+        }
       />
       {hasChart && (() => {
         const dailyDone = chartCompleted || chartMovesLeft === 0
@@ -120,6 +149,7 @@ function FeaturesSection() {
         title="Tide Run"
         variant="compact"
         art="/boatrun.png"
+        artMaxHeight={68}
         accent="#5da7d4"
       />
     </div>

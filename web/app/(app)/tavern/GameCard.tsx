@@ -18,10 +18,14 @@ interface Props {
   /** Override the compact-card art's max height (default 96). Useful for
    *  art that reads better at a smaller size — e.g. the Tide Run boat. */
   artMaxHeight?: number
+  /** Custom JSX to render in the compact-card art slot in place of `art`.
+   *  Use when the visual needs more than a single `<img>` — e.g. the
+   *  Fish of the Day silhouette + red question mark composite. */
+  customArt?: React.ReactNode
   accent?: string
 }
 
-export default function GameCard({ href, eyebrow, title, statusText, completed, streak, variant = 'default', art, artMaxHeight = 96, accent = '#f0c040' }: Props) {
+export default function GameCard({ href, eyebrow, title, statusText, completed, streak, variant = 'default', art, artMaxHeight = 96, customArt, accent = '#f0c040' }: Props) {
   const router = useRouter()
   const done = !!completed
   const featured = variant === 'featured'
@@ -57,7 +61,15 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
             rather than tracing the silhouette (the PNGs' anti-aliased
             edges leak into the alpha pass). The card's own accent
             border + top-edge highlight already frame the art. */}
-        {art && (
+        {customArt ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            height: 96, marginBottom: 8,
+            opacity: done ? 0.4 : 1,
+          }}>
+            {customArt}
+          </div>
+        ) : art && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 96, marginBottom: 8 }}>
             <img
               src={art}
