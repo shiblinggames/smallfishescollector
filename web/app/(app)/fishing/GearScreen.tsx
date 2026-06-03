@@ -403,6 +403,12 @@ export default function GearScreen({
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
   const [selectedBadgeSlot, setSelectedBadgeSlot] = useState<0 | 1 | 2 | null>(null)
   useEffect(() => { if (openSlot !== 'badge') setSelectedBadgeSlot(null) }, [openSlot])
+  // Rod panel tabs — split owned vs shop so the player sees a focused
+  // view at a time. Defaults to Owned so opening the rod slot shows
+  // their equipped rod + swap options first, not a list of things to
+  // buy. Reset to Owned every time the rod slot closes/reopens.
+  const [rodTab, setRodTab] = useState<'owned' | 'shop'>('owned')
+  useEffect(() => { if (openSlot !== 'rod') setRodTab('owned') }, [openSlot])
 
   // Transient confirmation banner for cosmetic purchases. Clears itself after
   // 2.5s so the player gets a clear "you bought + equipped X" moment instead
@@ -700,6 +706,8 @@ export default function GearScreen({
                   .filter(r => r.cost > 0 && !r.earnedOnly && !ownedRods.includes(r.tier))
                   .sort((a, b) => a.cost - b.cost)
                 const rodLines = rodStatLines(rod)
+                const ownedCount = ownedRodDefs.length
+                const shopCount  = unownedRodDefs.length
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <AnimatePresence>
@@ -729,201 +737,261 @@ export default function GearScreen({
                       )}
                     </AnimatePresence>
 
-                    {/* Equipped rod detail header — what tapping the rod
-                        slot used to skip past. Shows the equipped rod's
-                        image, name, full description, and every active
-                        stat in plain English so a new player can read
-                        what the rod actually DOES, not just decode a
-                        terse stat pill. */}
+                    {/* Owned / Shop tabs — split the panel so the player
+                        sees a focused view at a time. Owned defaults so
+                        opening the rod slot lands on "your rods + equipped
+                        detail" instead of dumping a buy list. */}
                     <div style={{
-                      background: `linear-gradient(180deg, ${rod.color}10 0%, rgba(4,10,18,0.85) 100%)`,
-                      border: `1px solid ${rod.color}55`,
-                      borderRadius: 14,
-                      padding: '0.85rem 0.9rem',
-                      display: 'flex', flexDirection: 'column', gap: 10,
+                      display: 'flex', gap: 4, padding: 3,
+                      background: 'rgba(0,0,0,0.4)', borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.06)',
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')}
-                          alt={rod.name}
-                          className={rodGlowClass(rod)}
-                          style={{
-                            width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
-                            ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : { filter: `drop-shadow(0 2px 8px ${rod.color}66)` }),
-                          } as React.CSSProperties}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
-                            Equipped Rod
-                          </p>
-                          <p className="font-cinzel font-700"
-                            style={{ fontSize: '1.05rem', color: rod.color, lineHeight: 1.1 }}>
-                            {rod.name}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="font-karla font-300"
-                        style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
-                        {rod.description}
-                      </p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {rodLines.map(l => (
-                          <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={rod.color} />
-                        ))}
-                      </div>
-                    </div>
-
-                    <p className="font-karla font-600 uppercase tracking-[0.14em]"
-                      style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
-                      Your Rods · tap to swap
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                      {ownedRodDefs.map(r => {
-                        const isEquipped = r.tier === equippedRodTier
-                        const tagline = rodTagline(r)
+                      {([
+                        { key: 'owned', label: 'Owned', count: ownedCount },
+                        { key: 'shop',  label: 'Shop',  count: shopCount  },
+                      ] as const).map(t => {
+                        const active = rodTab === t.key
                         return (
                           <button
-                            key={r.tier}
-                            onClick={() => { if (!isEquipped) onEquipRod(r.tier) }}
-                            disabled={isEquipped}
-                            className="font-karla font-700"
+                            key={t.key}
+                            onClick={() => setRodTab(t.key)}
+                            className="font-karla font-700 uppercase tracking-[0.12em]"
                             style={{
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                              padding: '0.6rem 0.4rem 0.5rem',
-                              borderRadius: 10,
-                              background: isEquipped ? `${r.color}1f` : 'rgba(4,10,18,0.72)',
-                              border: `1px solid ${isEquipped ? r.color + '90' : 'rgba(255,255,255,0.09)'}`,
-                              boxShadow: isEquipped ? `0 0 14px ${r.color}33` : 'none',
-                              cursor: isEquipped ? 'default' : 'pointer',
-                              position: 'relative',
+                              flex: 1, padding: '0.55rem 0',
+                              background: active ? `${rod.color}1c` : 'transparent',
+                              border: `1px solid ${active ? rod.color + '55' : 'transparent'}`,
+                              borderRadius: 8,
+                              color: active ? rod.color : 'rgba(255,255,255,0.55)',
+                              fontSize: '0.7rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.14s',
                             }}
                           >
-                            <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
-                                alt=""
-                                className={rodGlowClass(r)}
-                                style={{
-                                  width: 44, height: 44, objectFit: 'contain',
-                                  ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
-                                } as React.CSSProperties}
-                              />
-                            </div>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>
-                              {r.name}
-                            </p>
-                            {isEquipped
-                              ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: r.color }}>✓ Equipped</span>
-                              : <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center' }}>{tagline}</span>
-                            }
+                            {t.label} <span style={{ opacity: 0.7, fontWeight: 600 }}>· {t.count}</span>
                           </button>
                         )
                       })}
                     </div>
-                    {unownedRodDefs.length > 0 && (
+
+                    {/* ── Owned tab ── */}
+                    {rodTab === 'owned' && (
                       <>
-                        <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
-                          Available
-                        </p>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                          {unownedRodDefs.map(r => {
-                            const canAfford = doubloons >= r.cost
-                            const tagline = rodTagline(r)
-                            const onTap = () => {
-                              if (!canAfford) return
-                              const buyRodLines = rodStatLines(r)
-                              setPendingPurchase({
-                                name: r.name, color: r.color, cost: r.cost,
-                                onConfirm: async () => { flashPurchase(r.name, r.color, r.cost); await onBuyRod(r.tier) },
-                                // Rich detail panel — mirrors the equipped-rod
-                                // header so the player sees image + name +
-                                // description + every active stat before they
-                                // spend, instead of just "Buy Carbon Rod?".
-                                details: (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {/* Equipped rod detail header — image, name,
+                            description, every active stat in plain English. */}
+                        <div style={{
+                          background: `linear-gradient(180deg, ${rod.color}10 0%, rgba(4,10,18,0.85) 100%)`,
+                          border: `1px solid ${rod.color}55`,
+                          borderRadius: 14,
+                          padding: '0.85rem 0.9rem',
+                          display: 'flex', flexDirection: 'column', gap: 10,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')}
+                              alt={rod.name}
+                              className={rodGlowClass(rod)}
+                              style={{
+                                width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
+                                ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : { filter: `drop-shadow(0 2px 8px ${rod.color}66)` }),
+                              } as React.CSSProperties}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                                style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                                Equipped Rod
+                              </p>
+                              <p className="font-cinzel font-700"
+                                style={{ fontSize: '1.05rem', color: rod.color, lineHeight: 1.1 }}>
+                                {rod.name}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="font-karla font-300"
+                            style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
+                            {rod.description}
+                          </p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {rodLines.map(l => (
+                              <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={rod.color} />
+                            ))}
+                          </div>
+                        </div>
+
+                        {ownedCount > 1 && (
+                          <>
+                            <p className="font-karla font-600 uppercase tracking-[0.14em]"
+                              style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
+                              Tap to Swap
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                              {ownedRodDefs.map(r => {
+                                const isEquipped = r.tier === equippedRodTier
+                                const tagline = rodTagline(r)
+                                return (
+                                  <button
+                                    key={r.tier}
+                                    onClick={() => { if (!isEquipped) onEquipRod(r.tier) }}
+                                    disabled={isEquipped}
+                                    className="font-karla font-700"
+                                    style={{
+                                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                                      padding: '0.6rem 0.4rem 0.5rem',
+                                      borderRadius: 10,
+                                      background: isEquipped ? `${r.color}1f` : 'rgba(4,10,18,0.72)',
+                                      border: `1px solid ${isEquipped ? r.color + '90' : 'rgba(255,255,255,0.09)'}`,
+                                      boxShadow: isEquipped ? `0 0 14px ${r.color}33` : 'none',
+                                      cursor: isEquipped ? 'default' : 'pointer',
+                                      position: 'relative',
+                                    }}
+                                  >
+                                    <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
                                       <img
                                         src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
-                                        alt={r.name}
+                                        alt=""
                                         className={rodGlowClass(r)}
                                         style={{
-                                          width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
-                                          ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 2px 8px ${r.color}66)` }),
+                                          width: 44, height: 44, objectFit: 'contain',
+                                          ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
                                         } as React.CSSProperties}
                                       />
-                                      <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                                          style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
-                                          New Rod
-                                        </p>
-                                        <p className="font-cinzel font-700"
-                                          style={{ fontSize: '1.05rem', color: r.color, lineHeight: 1.1 }}>
-                                          {r.name}
-                                        </p>
+                                    </div>
+                                    <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>
+                                      {r.name}
+                                    </p>
+                                    {isEquipped
+                                      ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: r.color }}>✓ Equipped</span>
+                                      : <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center' }}>{tagline}</span>
+                                    }
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+
+                    {/* ── Shop tab ── */}
+                    {rodTab === 'shop' && (
+                      <>
+                        {shopCount === 0 ? (
+                          <div style={{
+                            padding: '1.4rem 1rem',
+                            background: 'rgba(4,10,18,0.5)',
+                            border: '1px dashed rgba(255,255,255,0.12)',
+                            borderRadius: 12,
+                            textAlign: 'center',
+                          }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#a09890', marginBottom: 4 }}>
+                              You own every rod in the sea.
+                            </p>
+                            <p className="font-karla" style={{ fontSize: '0.75rem', color: '#6a6460' }}>
+                              The shop is bare, Captain.
+                            </p>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {unownedRodDefs.map(r => {
+                              const canAfford = doubloons >= r.cost
+                              const onTap = () => {
+                                if (!canAfford) return
+                                const buyRodLines = rodStatLines(r)
+                                setPendingPurchase({
+                                  name: r.name, color: r.color, cost: r.cost,
+                                  onConfirm: async () => { flashPurchase(r.name, r.color, r.cost); await onBuyRod(r.tier) },
+                                  details: (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
+                                          alt={r.name}
+                                          className={rodGlowClass(r)}
+                                          style={{
+                                            width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
+                                            ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 2px 8px ${r.color}66)` }),
+                                          } as React.CSSProperties}
+                                        />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                                            New Rod
+                                          </p>
+                                          <p className="font-cinzel font-700"
+                                            style={{ fontSize: '1.05rem', color: r.color, lineHeight: 1.1 }}>
+                                            {r.name}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <p className="font-karla font-300"
+                                        style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
+                                        {r.description}
+                                      </p>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                        {buyRodLines.map(l => (
+                                          <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={r.color} />
+                                        ))}
                                       </div>
                                     </div>
-                                    <p className="font-karla font-300"
-                                      style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
-                                      {r.description}
-                                    </p>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                      {buyRodLines.map(l => (
-                                        <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={r.color} />
-                                      ))}
-                                    </div>
-                                  </div>
-                                ),
-                              })
-                            }
-                            return (
-                              <button
-                                key={r.tier}
-                                onClick={onTap}
-                                disabled={!canAfford}
-                                className="font-karla font-700"
-                                style={{
-                                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                                  padding: '0.6rem 0.4rem 0.5rem',
-                                  borderRadius: 10,
-                                  background: 'rgba(4,10,18,0.72)',
-                                  border: `1px solid ${canAfford ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
-                                  cursor: canAfford ? 'pointer' : 'default',
-                                  opacity: canAfford ? 1 : 0.72,
-                                  position: 'relative',
-                                }}
-                              >
-                                <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  ),
+                                })
+                              }
+                              return (
+                                <button
+                                  key={r.tier}
+                                  onClick={onTap}
+                                  disabled={!canAfford}
+                                  className="font-karla"
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '0.75rem 0.85rem',
+                                    borderRadius: 12,
+                                    background: 'rgba(4,10,18,0.72)',
+                                    border: `1px solid ${canAfford ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
+                                    cursor: canAfford ? 'pointer' : 'default',
+                                    opacity: canAfford ? 1 : 0.6,
+                                    textAlign: 'left',
+                                    width: '100%',
+                                  }}
+                                >
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img
                                     src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                     alt=""
                                     className={rodGlowClass(r)}
                                     style={{
-                                      width: 44, height: 44, objectFit: 'contain',
-                                      ...(r.glow
-                                        ? { ['--rod-glow-color' as string]: r.color }
-                                        : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
+                                      width: 48, height: 48, objectFit: 'contain', flexShrink: 0,
+                                      ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
                                       opacity: canAfford ? 1 : 0.65,
                                     } as React.CSSProperties}
                                   />
-                                </div>
-                                <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: canAfford ? '#f0ede8' : '#a0a09a', lineHeight: 1.15, textAlign: 'center' }}>
-                                  {r.name}
-                                </p>
-                                <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center', opacity: 0.85 }}>
-                                  {tagline}
-                                </span>
-                                <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
-                                  {r.cost.toLocaleString()} ⟡
-                                </span>
-                              </button>
-                            )
-                          })}
-                        </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: canAfford ? '#f0ede8' : '#a0a09a', lineHeight: 1.15, marginBottom: 2 }}>
+                                      {r.name}
+                                    </p>
+                                    <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: r.color, lineHeight: 1.3, opacity: 0.85 }}>
+                                      {rodTagline(r)}
+                                    </p>
+                                  </div>
+                                  <div style={{
+                                    display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+                                    gap: 2, flexShrink: 0,
+                                  }}>
+                                    <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                                      style={{ fontSize: '0.56rem', color: canAfford ? r.color : '#5a5956' }}>
+                                      {canAfford ? 'Tap to Buy' : "Can't afford"}
+                                    </span>
+                                    <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04055' }}>
+                                      {r.cost.toLocaleString()} ⟡
+                                    </span>
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
