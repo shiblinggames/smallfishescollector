@@ -6064,12 +6064,17 @@ export default function FishingGame({
                       {/* Story-node book sprite (same /raidlog.png used
                           in expedition raids' story beats). Drop-shadow
                           flips to the flash accent when a noteworthy
-                          catch fires. */}
+                          catch fires. Sized 28px (vs the 36 the other
+                          tile glyphs use) — the book art carries more
+                          visual mass than the bait / crate sprites, so
+                          a smaller image still feels visually equal and
+                          stops the right edge from clipping when the
+                          count grows to "142/142". */}
                       <img
                         src="/raidlog.png"
                         alt=""
                         style={{
-                          width: 36, height: 36, objectFit: 'contain', flexShrink: 0,
+                          width: 28, height: 28, objectFit: 'contain', flexShrink: 0,
                           filter: flashing
                             ? `drop-shadow(0 0 8px ${flashAccent}) drop-shadow(0 1px 4px rgba(0,0,0,0.6))`
                             : 'drop-shadow(0 1px 4px rgba(0,0,0,0.55))',
