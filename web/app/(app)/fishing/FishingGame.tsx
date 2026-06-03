@@ -416,7 +416,7 @@ const TOUR_STEPS: TourStep[] = [
     arrowDir: 'up', arrowAlign: 'center',
   },
   {
-    title: 'Gear, bait, sell',
+    title: 'Gear, bait, hold, log',
     body: 'Your tools live down here. Tap around to see what each does.',
     cardStyle: { bottom: 112, left: 16, right: 16 },
     maxWidth: 240,
@@ -2868,7 +2868,6 @@ export default function FishingGame({
   const hookHasAffordable = nextHookDef ? (doubloons >= nextHookDef.cost && (hookTier + 1) > seenHookTier) : false
   const anyShopAffordable = rodHasAffordable || reelHasAffordable || hookHasAffordable
   const [holdOpen, setHoldOpen]         = useState(false)
-  const [sellOpen, setSellOpen]         = useState(false)
   const [gearOpen, setGearOpen]         = useState(false)
   const [baitOpen, setBaitOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
@@ -2916,7 +2915,6 @@ export default function FishingGame({
   const gearDrawerDrag  = useDrawerDrag(() => setGearOpen(false))
   const baitDrawerDrag  = useDrawerDrag(() => setBaitOpen(false))
   const dailyDrawerDrag = useDrawerDrag(() => setDailyOpen(false))
-  const sellDrawerDrag  = useDrawerDrag(() => setSellOpen(false))
   const holdDrawerDrag  = useDrawerDrag(() => setHoldOpen(false))
 
   // Refs for the collection drawer's scrollable body + each zone block.
@@ -4152,7 +4150,7 @@ export default function FishingGame({
     if ('error' in res) return
     setInventory([])
     window.dispatchEvent(new Event('pending-sales-may-have-changed'))
-    setSellOpen(false)
+    setHoldOpen(false)
   }
 
   // Auto Caster: fire cast again ~1.5s after a result when equipped and conditions allow.
@@ -4495,7 +4493,7 @@ export default function FishingGame({
             Both set state synchronously inside the gesture so iOS PWA
             permits playback in the same call stack. Hidden while any panel
             (hold/sell/gear/bait/collection) is open so they don't float over it. */}
-        {!(holdOpen || sellOpen || gearOpen || baitOpen || collectionOpen) && (
+        {!(holdOpen || gearOpen || baitOpen || collectionOpen) && (
         <div style={{ position: 'absolute', bottom: 110, left: 10, zIndex: 60, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {([
             {
@@ -4909,146 +4907,11 @@ export default function FishingGame({
                 )
               })()}
 
-              {/* Logbook button — rebranded from the old tiny "Fish" pill
-                  so players actually notice the collection exists. The
-                  inline progress bar makes completion legible without
-                  opening the drawer. Two attention states stack:
-                    - uncheckedNewFishIds.size > 0  → subtle persistent pulse
-                      (zone-color border + glow) so the player knows
-                      something's waiting for them
-                    - freshCatchHook != null        → STRONG attention flash
-                      (gold for new species, teal for PB) tied to THIS catch
-                      so the button visibly reacts when a noteworthy fish
-                      lands. Dismissed on cast, cast-again, or tap. */}
-              {(() => {
-                const zoneColor = HABITAT_COLOR[selectedZone]
-                const total = allFishSpecies.length
-                const caught = caughtFishIds.size
-                const pct = total > 0 ? caught / total : 0
-                const hasNew = uncheckedNewFishIds.size > 0
-                const flashing = freshCatchHook != null
-                // Flash colour is correct accent (gold = new species, teal = PB),
-                // unlike the prior raid-node-current keyframe which was a
-                // hardcoded gold box-shadow pulse that overrode any inline
-                // colour. framer-motion drives the flash now so the right
-                // accent + a meaningfully bigger glow lands every cycle.
-                const flashAccent = freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
-                const accent = flashing ? flashAccent : zoneColor
-                return (
-                  <motion.button
-                    key={freshCatchHook ?? 'idle'}
-                    onClick={() => {
-                      const opening = !collectionOpen
-                      setCollectionOpen(o => !o)
-                      setGearOpen(false)
-                      setHoldOpen(false)
-                      // If opening from a flash, auto-expand the zone
-                      // the latest catch lives in so the player lands
-                      // on the right grid instead of the zone list.
-                      if (opening && latestCatchHabitat) {
-                        setExpandedZone(latestCatchHabitat)
-                      }
-                      setFreshCatchHook(null)
-                    }}
-                    animate={flashing ? {
-                      // Big colour-correct pulse: glow expands from a
-                      // moderate baseline to a strong peak each cycle,
-                      // paired with a tiny scale bounce so the eye
-                      // catches the change even mid-fishing. Loops while
-                      // freshCatchHook is set; cleared on cast/cast-again.
-                      boxShadow: [
-                        `0 0 18px ${flashAccent}88, 0 0 36px ${flashAccent}44`,
-                        `0 0 38px ${flashAccent}ee, 0 0 76px ${flashAccent}88`,
-                        `0 0 18px ${flashAccent}88, 0 0 36px ${flashAccent}44`,
-                      ],
-                      scale: [1, 1.05, 1],
-                    } : { scale: 1, boxShadow: hasNew ? `0 0 14px ${zoneColor}55` : '0 0 0 rgba(0,0,0,0)' }}
-                    transition={flashing
-                      ? { duration: 1.2, ease: 'easeInOut', repeat: Infinity }
-                      : { duration: 0.2 }}
-                    style={{
-                      display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch',
-                      height: 36, padding: '0.22rem 0.6rem 0.28rem', borderRadius: 12,
-                      // Solid dark base + accent overlay so the button reads
-                      // legibly against the busy zone scene behind it. The
-                      // previous flashing background was just `${accent}24`
-                      // (~14% alpha colour over fishing art) which left the
-                      // text washed out and the shape unclear.
-                      background: flashing
-                        ? `linear-gradient(180deg, ${flashAccent}55 0%, rgba(8,14,22,0.96) 100%)`
-                        : hasNew
-                          ? `linear-gradient(180deg, ${zoneColor}28 0%, rgba(8,14,22,0.92) 100%)`
-                          : 'rgba(8,14,22,0.9)',
-                      backdropFilter: 'blur(6px)',
-                      WebkitBackdropFilter: 'blur(6px)',
-                      border: `1px solid ${flashing ? flashAccent : hasNew ? accent + 'aa' : accent + '70'}`,
-                      cursor: 'pointer', touchAction: 'manipulation',
-                      position: 'relative',
-                      minWidth: 88,
-                      // Subtle slow ambient pulse for unviewed older entries
-                      // stays on the CSS keyframe; flash state above is
-                      // animated by framer-motion so the box-shadow values
-                      // don't fight the keyframe.
-                      animation: !flashing && hasNew ? 'raid-node-current 2.4s ease-in-out infinite' : 'none',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                      {/* Rest state: a bookmark/journal icon — clearer
-                          glyph than the "Logbook" wordmark for an icon-
-                          led header. Flash state still uses text since
-                          "New!" / "New PB!" conveys WHAT happened in a
-                          way an icon alone can't. */}
-                      {flashing ? (
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                          style={{
-                            fontSize: '0.55rem',
-                            color: '#fff',
-                            lineHeight: 1,
-                            textShadow: `0 0 8px ${flashAccent}`,
-                          }}>
-                          {freshCatchHook === 'pb' ? 'New PB!' : 'New!'}
-                        </span>
-                      ) : (
-                        <svg aria-hidden width="13" height="13" viewBox="0 0 24 24" fill="none"
-                          stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                          style={{ flexShrink: 0 }}>
-                          <path d="M5 4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v17l-7-3-7 3V4z" />
-                        </svg>
-                      )}
-                      <span className="font-cinzel font-700"
-                        style={{
-                          fontSize: '0.78rem',
-                          color: flashing ? '#fff' : accent,
-                          lineHeight: 1,
-                          textShadow: flashing ? `0 0 8px ${flashAccent}` : 'none',
-                        }}>
-                        {caught}
-                        <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.55)' }}>
-                          /{total}
-                        </span>
-                      </span>
-                    </div>
-                    {/* Inline progress fill — visible at-a-glance completion */}
-                    <div style={{ marginTop: 4, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct * 100}%`, background: accent, borderRadius: 2, boxShadow: flashing || hasNew ? `0 0 6px ${accent}aa` : 'none' }} />
-                    </div>
-                    {hasNew && !flashing && (
-                      <span style={{
-                        position: 'absolute', top: -5, right: -5,
-                        minWidth: 16, height: 16, borderRadius: 8,
-                        background: '#f87171',
-                        border: '1.5px solid #08121c',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.5rem', fontWeight: 700, color: '#fff',
-                        paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
-                        fontFamily: 'var(--font-karla)',
-                      }}>
-                        {uncheckedNewFishIds.size}
-                      </span>
-                    )}
-                  </motion.button>
-                )
-              })()}
+              {/* Logbook chip moved out of the header into the bottom
+                  action row (next to Gear / Bait / Hold), so the header
+                  is left with just Ranks + Daily and reads less
+                  congested. See the Logbook tile in the action-row
+                  factory below. */}
             </div>
 
           </div>
@@ -5757,7 +5620,7 @@ export default function FishingGame({
                       now upgraded directly from the fishing page. */}
                   <button
                     type="button"
-                    onClick={() => { setHoldOpen(true); setGearOpen(false); setBaitOpen(false); setSellOpen(false) }}
+                    onClick={() => { setHoldOpen(true); setGearOpen(false); setBaitOpen(false) }}
                     className="font-karla font-700"
                     style={{ fontSize: '0.68rem', color: '#60a5fa', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid rgba(96,165,250,0.4)', paddingBottom: 1 }}
                   >
@@ -6038,7 +5901,7 @@ export default function FishingGame({
 
                 {/* Gear — circle thumbnail with pencil edit overlay */}
                 <button
-                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false); setSellOpen(false) }}
+                  onClick={() => { setGearOpen(o => !o); setHoldOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
                     flexDirection: 'row',
@@ -6088,7 +5951,7 @@ export default function FishingGame({
 
                 {/* Bait — image + readable count */}
                 <button
-                  onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false); setSellOpen(false) }}
+                  onClick={() => { setBaitOpen(o => !o); setGearOpen(false); setHoldOpen(false) }}
                   style={{
                     ...tile,
                     flexDirection: 'row',
@@ -6116,7 +5979,7 @@ export default function FishingGame({
 
                 {/* Hold — fish icon + count */}
                 <button
-                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false); setSellOpen(false) }}
+                  onClick={() => { setHoldOpen(o => !o); setGearOpen(false); setBaitOpen(false) }}
                   style={{
                     ...tile,
                     flexDirection: 'row',
@@ -6139,35 +6002,91 @@ export default function FishingGame({
                   </p>
                 </button>
 
-                {/* Sell — coin icon + value */}
-                <button
-                  onClick={() => { setSellOpen(o => !o); setHoldOpen(false); setGearOpen(false); setBaitOpen(false) }}
-                  style={{
-                    ...tile,
-                    flexDirection: 'row',
-                    alignItems: 'center', justifyContent: 'center',
-                    gap: 6, padding: '0 0.5rem',
-                    background: sellOpen ? 'rgba(240,192,64,0.08)' : 'rgba(4,10,18,0.72)',
-                    border: `1px solid ${sellOpen ? 'rgba(240,192,64,0.28)' : 'rgba(255,255,255,0.12)'}`,
-                  }}
-                >
-                  <span className="font-cinzel font-700" style={{
-                    width: 36, fontSize: '1.7rem', lineHeight: 1,
-                    color: holdTotalValue > 0 ? '#f0c040' : '#3a3835',
-                    textAlign: 'center', flexShrink: 0,
-                  }}>⟡</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, lineHeight: 1 }}>
-                    <span className="font-karla font-700 uppercase" style={{
-                      fontSize: '0.52rem',
-                      letterSpacing: '0.18em',
-                      color: holdTotalValue > 0 ? '#f0c040' : '#8a8784',
-                      lineHeight: 1,
-                    }}>Sell</span>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1, color: holdTotalValue > 0 ? '#f0c040' : '#3a3835', whiteSpace: 'nowrap' }}>
-                      {holdTotalValue > 0 ? holdTotalValue.toLocaleString() : '—'}
-                    </p>
-                  </div>
-                </button>
+                {/* Logbook — book icon + caught/total. Moved here from
+                    the top-right header so the action row carries the
+                    full set of player tools (Gear / Bait / Hold / Log)
+                    and the header has room to breathe. Flash + new-
+                    species notification mirror what the header chip
+                    used to do. */}
+                {(() => {
+                  const zoneColor = HABITAT_COLOR[selectedZone]
+                  const total = allFishSpecies.length
+                  const caught = caughtFishIds.size
+                  const hasNew = uncheckedNewFishIds.size > 0
+                  const flashing = freshCatchHook != null
+                  const flashAccent = freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
+                  const accent = flashing ? flashAccent : zoneColor
+                  return (
+                    <motion.button
+                      key={freshCatchHook ?? 'logbook-tile'}
+                      onClick={() => {
+                        const opening = !collectionOpen
+                        setCollectionOpen(o => !o)
+                        setGearOpen(false)
+                        setHoldOpen(false)
+                        setBaitOpen(false)
+                        if (opening && latestCatchHabitat) {
+                          setExpandedZone(latestCatchHabitat)
+                        }
+                        setFreshCatchHook(null)
+                      }}
+                      animate={flashing ? {
+                        boxShadow: [
+                          `0 0 14px ${flashAccent}88, 0 0 28px ${flashAccent}44`,
+                          `0 0 30px ${flashAccent}ee, 0 0 60px ${flashAccent}88`,
+                          `0 0 14px ${flashAccent}88, 0 0 28px ${flashAccent}44`,
+                        ],
+                      } : { boxShadow: hasNew ? `0 0 12px ${zoneColor}55` : '0 0 0 rgba(0,0,0,0)' }}
+                      transition={flashing
+                        ? { duration: 1.2, ease: 'easeInOut', repeat: Infinity }
+                        : { duration: 0.2 }}
+                      style={{
+                        ...tile,
+                        flexDirection: 'row',
+                        alignItems: 'center', justifyContent: 'center',
+                        gap: 7, padding: '0 0.5rem',
+                        background: collectionOpen
+                          ? `${accent}14`
+                          : flashing
+                            ? `linear-gradient(180deg, ${flashAccent}28 0%, rgba(4,10,18,0.72) 100%)`
+                            : hasNew
+                              ? `linear-gradient(180deg, ${zoneColor}18 0%, rgba(4,10,18,0.72) 100%)`
+                              : 'rgba(4,10,18,0.72)',
+                        border: `1px solid ${collectionOpen ? accent + '55' : flashing ? flashAccent : hasNew ? accent + 'aa' : 'rgba(255,255,255,0.12)'}`,
+                        position: 'relative',
+                      }}
+                    >
+                      <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke={flashing ? '#fff' : accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ flexShrink: 0, filter: flashing ? `drop-shadow(0 0 6px ${flashAccent})` : undefined }}>
+                        <path d="M5 4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v17l-7-3-7 3V4z" />
+                      </svg>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, lineHeight: 1, minWidth: 0 }}>
+                        <span className="font-karla font-700 uppercase" style={{
+                          fontSize: '0.5rem',
+                          letterSpacing: '0.16em',
+                          color: flashing ? '#fff' : accent,
+                          lineHeight: 1,
+                          textShadow: flashing ? `0 0 6px ${flashAccent}` : 'none',
+                        }}>{flashing ? (freshCatchHook === 'pb' ? 'New PB!' : 'New!') : 'Logbook'}</span>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1, color: flashing ? '#fff' : accent, whiteSpace: 'nowrap' }}>
+                          {caught}<span className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)' }}>/{total}</span>
+                        </p>
+                      </div>
+                      {hasNew && !flashing && (
+                        <span style={{
+                          position: 'absolute', top: -5, right: -5,
+                          minWidth: 16, height: 16, borderRadius: 8,
+                          background: '#f87171', border: '1.5px solid #08121c',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.5rem', fontWeight: 700, color: '#fff',
+                          paddingInline: uncheckedNewFishIds.size > 9 ? '0.2rem' : 0,
+                          fontFamily: 'var(--font-karla)',
+                        }}>{uncheckedNewFishIds.size}</span>
+                      )}
+                    </motion.button>
+                  )
+                })()}
 
               </div>
             )
@@ -6236,7 +6155,7 @@ export default function FishingGame({
 
       {/* ── Onboarding tour ── */}
       <AnimatePresence>
-        {tourStep !== null && !collectionOpen && !gearOpen && !baitOpen && !holdOpen && !sellOpen && (
+        {tourStep !== null && !collectionOpen && !gearOpen && !baitOpen && !holdOpen && (
           <>
             <motion.div
               key="tour-backdrop"
@@ -7454,158 +7373,8 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
-      {/* ── Sell panel ── */}
-      <AnimatePresence>
-        {sellOpen && (
-          <motion.div key="sell-panel"
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            {...sellDrawerDrag.motionProps}
-            style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-              background: 'rgba(6,12,20,0.98)',
-              borderTop: '1px solid rgba(255,255,255,0.09)',
-              borderRadius: '18px 18px 0 0',
-              padding: '0 1rem 2rem',
-              maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain',
-              willChange: 'transform',
-            }}
-          >
-            <DrawerHandle dragHandleProps={sellDrawerDrag.handleProps} />
-            <div className="flex items-center justify-between mb-5" style={{ paddingTop: '0.75rem' }}>
-              <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                style={{ fontSize: '0.6rem', color: '#6a6764' }}>Sell</p>
-              <DrawerClose onClick={() => setSellOpen(false)} />
-            </div>
-
-            {inventory.length === 0 ? (
-              <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.8rem', color: '#4a4845' }}>
-                Nothing to sell yet.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {/* Fish Market */}
-                <Link href="/tavern/market" onClick={() => setSellOpen(false)} style={{ textDecoration: 'none' }}>
-                  <div style={{
-                    background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
-                    borderRadius: 16, padding: '1rem 1.1rem',
-                    boxShadow: '0 0 20px rgba(56,189,248,0.06)',
-                  }}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#38bdf8' }}>Fish Market</p>
-                      <span style={{ fontSize: '0.85rem', color: '#38bdf8' }}>→</span>
-                    </div>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
-                      {holdBaseValue.toLocaleString()} ⟡
-                    </p>
-                    <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#38bdf8aa' }}>
-                      Est. market price · live prices update hourly
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Market Liquidate */}
-                <div style={{
-                  background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)',
-                  borderRadius: 16, padding: '1rem 1.1rem',
-                }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Market Liquidate</p>
-                    <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#bda05a', letterSpacing: '0.1em', padding: '0.15rem 0.45rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)' }}>1h delay</span>
-                  </div>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
-                    {holdLiquidateValue.toLocaleString()} ⟡
-                  </p>
-                  <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#bda05a', lineHeight: 1.4 }}>
-                    90% of current market value{isPremium ? '' : ' · 3% fee'} · price locked at sale, settles in 1h
-                  </p>
-                  {!liquidateConfirm ? (
-                    <button
-                      onClick={() => setLiquidateConfirm(true)}
-                      disabled={liquidating || inventory.length === 0}
-                      className="font-karla font-600 uppercase tracking-[0.1em] w-full"
-                      style={{
-                        fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
-                        background: 'rgba(240,192,64,0.14)',
-                        border: '1px solid rgba(240,192,64,0.45)',
-                        color: '#f0c040', opacity: liquidating ? 0.5 : 1,
-                        cursor: liquidating ? 'default' : 'pointer',
-                      }}
-                    >
-                      Liquidate at Market
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                      <button
-                        onClick={() => setLiquidateConfirm(false)}
-                        disabled={liquidating}
-                        className="font-karla font-600 uppercase tracking-[0.1em]"
-                        style={{
-                          flex: 1, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
-                          background: 'rgba(255,255,255,0.04)',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          color: '#a0a09a', cursor: 'pointer',
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleLiquidate}
-                        disabled={liquidating}
-                        className="font-karla font-700 uppercase tracking-[0.1em]"
-                        style={{
-                          flex: 2, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
-                          background: 'linear-gradient(180deg, rgba(240,192,64,0.28) 0%, rgba(240,192,64,0.14) 100%)',
-                          border: '1px solid rgba(240,192,64,0.55)',
-                          color: '#f0c040', cursor: liquidating ? 'default' : 'pointer',
-                          opacity: liquidating ? 0.6 : 1,
-                        }}
-                      >
-                        {liquidating ? 'Submitting…' : 'Confirm — Lock Price'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick Sell */}
-                <div style={{
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 16, padding: '1rem 1.1rem',
-                }}>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Quick Sell</p>
-                    {isFullMoon && (
-                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
-                        fontSize: '0.48rem', color: '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '2rem',
-                        background: 'rgba(226,232,240,0.12)', border: '1px solid rgba(226,232,240,0.3)',
-                      }}>Full Moon · Full Price</span>
-                    )}
-                  </div>
-                  <p className="font-cinzel font-600" style={{ fontSize: '1.4rem', color: isFullMoon ? '#e2e8f0' : '#f0ede8', lineHeight: 1 }}>
-                    {holdTotalValue.toLocaleString()} ⟡
-                  </p>
-                  <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
-                    {isFullMoon
-                      ? 'Full market price · Full Moon Rising'
-                      : <>65% of base value · you lose{' '}<span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span></>
-                    }
-                  </p>
-                  <button
-                    onClick={async () => { for (const item of inventory) await handleSell(item.fish_id, item.quantity) }}
-                    disabled={!!sellPending}
-                    className="font-karla font-600 uppercase tracking-[0.1em] w-full"
-                    style={{ fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
-                      background: isFullMoon ? 'rgba(226,232,240,0.09)' : 'rgba(255,255,255,0.07)',
-                      border: `1px solid ${isFullMoon ? 'rgba(226,232,240,0.28)' : 'rgba(255,255,255,0.15)'}`,
-                      color: isFullMoon ? '#e2e8f0' : '#a0a09a', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
-                    {sellPending ? 'Selling…' : isFullMoon ? 'Sell All at Full Price' : 'Sell All at Discount'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Sell drawer merged into the Fish Hold drawer — see the "Sell
+          Lanes" section there. */}
 
       {/* ── Perfect catch flash overlay ── */}
       <AnimatePresence>
@@ -7898,8 +7667,11 @@ export default function FishingGame({
             {/* Non-scrollable drag zone */}
             <DrawerHandle dragHandleProps={holdDrawerDrag.handleProps} />
             <div style={{ padding: '0.75rem 1rem 0', flexShrink: 0 }}>
-              {/* Header */}
-              <div className="flex items-start justify-between mb-4">
+              {/* Header — capacity on the left, total value on the right.
+                  The Sell tile used to surface total value on the action
+                  row; now it lives inside the drawer so the bottom row
+                  has space for the Logbook tile instead. */}
+              <div className="flex items-start justify-between mb-4" style={{ gap: 12 }}>
                 <div>
                   <p className="font-karla font-700 uppercase tracking-[0.14em]"
                     style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 3 }}>Fish Hold</p>
@@ -7907,7 +7679,18 @@ export default function FishingGame({
                     {holdTotalCount} <span style={{ fontSize: '1.1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
                   </p>
                 </div>
-                <DrawerClose onClick={() => setHoldOpen(false)} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {holdTotalValue > 0 && (
+                    <div style={{ textAlign: 'right' }}>
+                      <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                        style={{ fontSize: '0.6rem', color: '#9a9488', marginBottom: 3 }}>Worth</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#f0c040', lineHeight: 1.05 }}>
+                        {holdBaseValue.toLocaleString()} ⟡
+                      </p>
+                    </div>
+                  )}
+                  <DrawerClose onClick={() => setHoldOpen(false)} />
+                </div>
               </div>
             </div>
 
@@ -7978,28 +7761,160 @@ export default function FishingGame({
                   No fish yet. Cast a line!
                 </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {Object.entries(
-                    inventory.reduce((acc, item) => {
-                      const h = item.fish_species.habitat
-                      acc[h] = (acc[h] ?? 0) + item.quantity
-                      return acc
-                    }, {} as Record<string, number>)
-                  ).map(([habitat, count]) => {
-                    const hColor = HABITAT_COLOR[habitat] ?? '#888'
-                    const label = habitat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                    return (
-                      <div key={habitat} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '0.55rem 0.85rem', borderRadius: 10,
-                        background: `${hColor}0a`, border: `1px solid ${hColor}1a`,
+                <>
+                  {/* By-habitat summary of what you're holding */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                    {Object.entries(
+                      inventory.reduce((acc, item) => {
+                        const h = item.fish_species.habitat
+                        acc[h] = (acc[h] ?? 0) + item.quantity
+                        return acc
+                      }, {} as Record<string, number>)
+                    ).map(([habitat, count]) => {
+                      const hColor = HABITAT_COLOR[habitat] ?? '#888'
+                      const label = habitat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                      return (
+                        <div key={habitat} style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '0.55rem 0.85rem', borderRadius: 10,
+                          background: `${hColor}0a`, border: `1px solid ${hColor}1a`,
+                        }}>
+                          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: hColor }}>{label}</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{count}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* ── Sell lanes ── three options: Market (full price,
+                      navigates out), Market Liquidate (90% with 1h
+                      delay), Quick Sell (65% / full on Full Moon). All
+                      three used to live in their own Sell drawer; merged
+                      in here so the bottom row can host the Logbook. */}
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                    style={{ fontSize: '0.6rem', color: '#9a9488', marginBottom: 10, paddingLeft: 2 }}>
+                    Sell Lanes
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    {/* Fish Market */}
+                    <Link href="/tavern/market" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none' }}>
+                      <div style={{
+                        background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
+                        borderRadius: 16, padding: '1rem 1.1rem',
+                        boxShadow: '0 0 20px rgba(56,189,248,0.06)',
                       }}>
-                        <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: hColor }}>{label}</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{count}</p>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#38bdf8' }}>Fish Market</p>
+                          <span style={{ fontSize: '0.85rem', color: '#38bdf8' }}>→</span>
+                        </div>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
+                          {holdBaseValue.toLocaleString()} ⟡
+                        </p>
+                        <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#38bdf8aa' }}>
+                          Est. market price · live prices update hourly
+                        </p>
                       </div>
-                    )
-                  })}
-                </div>
+                    </Link>
+
+                    {/* Market Liquidate */}
+                    <div style={{
+                      background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)',
+                      borderRadius: 16, padding: '1rem 1.1rem',
+                    }}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Market Liquidate</p>
+                        <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#bda05a', letterSpacing: '0.1em', padding: '0.15rem 0.45rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)' }}>1h delay</span>
+                      </div>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
+                        {holdLiquidateValue.toLocaleString()} ⟡
+                      </p>
+                      <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#bda05a', lineHeight: 1.4 }}>
+                        90% of current market value{isPremium ? '' : ' · 3% fee'} · price locked at sale, settles in 1h
+                      </p>
+                      {!liquidateConfirm ? (
+                        <button
+                          onClick={() => setLiquidateConfirm(true)}
+                          disabled={liquidating || inventory.length === 0}
+                          className="font-karla font-600 uppercase tracking-[0.1em] w-full"
+                          style={{
+                            fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
+                            background: 'rgba(240,192,64,0.14)',
+                            border: '1px solid rgba(240,192,64,0.45)',
+                            color: '#f0c040', opacity: liquidating ? 0.5 : 1,
+                            cursor: liquidating ? 'default' : 'pointer',
+                          }}
+                        >
+                          Liquidate at Market
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                          <button
+                            onClick={() => setLiquidateConfirm(false)}
+                            disabled={liquidating}
+                            className="font-karla font-600 uppercase tracking-[0.1em]"
+                            style={{
+                              flex: 1, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              color: '#a0a09a', cursor: 'pointer',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleLiquidate}
+                            disabled={liquidating}
+                            className="font-karla font-700 uppercase tracking-[0.1em]"
+                            style={{
+                              flex: 2, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
+                              background: 'linear-gradient(180deg, rgba(240,192,64,0.28) 0%, rgba(240,192,64,0.14) 100%)',
+                              border: '1px solid rgba(240,192,64,0.55)',
+                              color: '#f0c040', cursor: liquidating ? 'default' : 'pointer',
+                              opacity: liquidating ? 0.6 : 1,
+                            }}
+                          >
+                            {liquidating ? 'Submitting…' : 'Confirm — Lock Price'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick Sell */}
+                    <div style={{
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: 16, padding: '1rem 1.1rem',
+                    }}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Quick Sell</p>
+                        {isFullMoon && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                            fontSize: '0.48rem', color: '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '2rem',
+                            background: 'rgba(226,232,240,0.12)', border: '1px solid rgba(226,232,240,0.3)',
+                          }}>Full Moon · Full Price</span>
+                        )}
+                      </div>
+                      <p className="font-cinzel font-600" style={{ fontSize: '1.4rem', color: isFullMoon ? '#e2e8f0' : '#f0ede8', lineHeight: 1 }}>
+                        {holdTotalValue.toLocaleString()} ⟡
+                      </p>
+                      <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
+                        {isFullMoon
+                          ? 'Full market price · Full Moon Rising'
+                          : <>65% of base value · you lose{' '}<span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span></>
+                        }
+                      </p>
+                      <button
+                        onClick={async () => { for (const item of inventory) await handleSell(item.fish_id, item.quantity) }}
+                        disabled={!!sellPending}
+                        className="font-karla font-600 uppercase tracking-[0.1em] w-full"
+                        style={{ fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
+                          background: isFullMoon ? 'rgba(226,232,240,0.09)' : 'rgba(255,255,255,0.07)',
+                          border: `1px solid ${isFullMoon ? 'rgba(226,232,240,0.28)' : 'rgba(255,255,255,0.15)'}`,
+                          color: isFullMoon ? '#e2e8f0' : '#a0a09a', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
+                        {sellPending ? 'Selling…' : isFullMoon ? 'Sell All at Full Price' : 'Sell All at Discount'}
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </motion.div>
