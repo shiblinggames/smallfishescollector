@@ -421,8 +421,14 @@ export default function GearScreen({
   // hook / boat / hat / special). Without it a single fat-fingered tap spent
   // doubloons instantly. Tapping a buy tile now stages the purchase here; the
   // overlay's Buy button runs the real `onConfirm`.
+  //
+  // `details` is an optional rich body slot — rod purchases render the full
+  // stat panel here so the player sees what the rod actually does before
+  // spending. Non-rod purchases leave it undefined and fall back to the
+  // simple "Buy [Name]?" title-only layout.
   const [pendingPurchase, setPendingPurchase] = useState<{
     name: string; color: string; cost: number; onConfirm: () => void | Promise<void>
+    details?: React.ReactNode
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -828,9 +834,49 @@ export default function GearScreen({
                             const tagline = rodTagline(r)
                             const onTap = () => {
                               if (!canAfford) return
+                              const buyRodLines = rodStatLines(r)
                               setPendingPurchase({
                                 name: r.name, color: r.color, cost: r.cost,
                                 onConfirm: async () => { flashPurchase(r.name, r.color, r.cost); await onBuyRod(r.tier) },
+                                // Rich detail panel — mirrors the equipped-rod
+                                // header so the player sees image + name +
+                                // description + every active stat before they
+                                // spend, instead of just "Buy Carbon Rod?".
+                                details: (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
+                                        alt={r.name}
+                                        className={rodGlowClass(r)}
+                                        style={{
+                                          width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
+                                          ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 2px 8px ${r.color}66)` }),
+                                        } as React.CSSProperties}
+                                      />
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                                          style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                                          New Rod
+                                        </p>
+                                        <p className="font-cinzel font-700"
+                                          style={{ fontSize: '1.05rem', color: r.color, lineHeight: 1.1 }}>
+                                          {r.name}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <p className="font-karla font-300"
+                                      style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
+                                      {r.description}
+                                    </p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      {buyRodLines.map(l => (
+                                        <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={r.color} />
+                                      ))}
+                                    </div>
+                                  </div>
+                                ),
                               })
                             }
                             return (
@@ -1659,17 +1705,25 @@ export default function GearScreen({
               transition={{ type: 'spring', stiffness: 460, damping: 34 }}
               onClick={e => e.stopPropagation()}
               style={{
-                width: '100%', maxWidth: 320,
+                width: '100%', maxWidth: 360,
+                maxHeight: '88vh', overflowY: 'auto', overscrollBehavior: 'contain',
                 background: 'linear-gradient(180deg, #0e1626 0%, #070b14 100%)',
                 border: `1px solid ${pendingPurchase.color}55`,
-                borderRadius: 18, padding: '1.25rem 1.1rem 1rem',
+                borderRadius: 18, padding: '1.1rem 1rem 1rem',
                 boxShadow: '0 18px 60px rgba(0,0,0,0.6)',
               }}
             >
-              <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: pendingPurchase.color, marginBottom: 6 }}>
-                Buy {pendingPurchase.name}?
-              </p>
-              <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 10 }}>
+              {pendingPurchase.details ? (
+                <>
+                  {pendingPurchase.details}
+                  <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '0.9rem 0 0.75rem' }} />
+                </>
+              ) : (
+                <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: pendingPurchase.color, marginBottom: 6 }}>
+                  Buy {pendingPurchase.name}?
+                </p>
+              )}
+              <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 8 }}>
                 {pendingPurchase.cost.toLocaleString()} ⟡, yours for good once bought.
               </p>
               <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginBottom: 14 }}>
