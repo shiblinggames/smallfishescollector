@@ -223,12 +223,22 @@ export async function submitFishGuess(guessName: string): Promise<{
   const fish = await getTodaysFishPuzzle()
   if (!fish) return { error: 'No fish today' }
 
-  const { data: existing } = await admin
-    .from('daily_fish_attempts')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('date', today)
-    .single()
+  const [{ data: existing }, { data: speciesRow }] = await Promise.all([
+    admin
+      .from('daily_fish_attempts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('date', today)
+      .single(),
+    // fotd_family is the family-word wildcard for clue-ambiguous species
+    // (e.g. all 3 salmon variants accept "Salmon"). NULL for iconic species
+    // where the player should be expected to name the specific variant.
+    admin
+      .from('fish_species')
+      .select('fotd_family')
+      .eq('name', fish.common_name)
+      .maybeSingle(),
+  ])
 
   if (existing?.solved || (existing?.guesses?.length ?? 0) >= MAX_GUESSES) {
     return { error: 'Already finished' }
@@ -236,7 +246,11 @@ export async function submitFishGuess(guessName: string): Promise<{
 
   const guesses: string[] = existing?.guesses ?? []
   const hintsUsed: HintsUsed = (existing?.hints_used as HintsUsed | null) ?? {}
-  const correct = guessName.toLowerCase() === fish.common_name.toLowerCase()
+  const normGuess = guessName.toLowerCase().trim()
+  const fotdFamily = (speciesRow?.fotd_family as string | null) ?? null
+  const correct =
+    normGuess === fish.common_name.toLowerCase() ||
+    (fotdFamily != null && normGuess === fotdFamily.toLowerCase())
   const newGuesses = [...guesses, guessName]
   const isOver = correct || newGuesses.length >= MAX_GUESSES
   const remaining = Math.max(0, STARTING_GEMS - gemsSpent(hintsUsed))
@@ -411,11 +425,22 @@ export async function purchaseHint(type: HintType): Promise<
 export async function getAllFishNames(): Promise<string[]> {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
-  const [{ data: eligible }, { data: todayPuzzle }] = await Promise.all([
+  const [{ data: eligible }, { data: todayPuzzle }, { data: families }] = await Promise.all([
     admin.from('fish_species').select('name').eq('fotd_eligible', true).order('name'),
     admin.from('daily_fish_generated').select('common_name').eq('date', today).single(),
+    // Family wildcards — each distinct fotd_family value is injected into
+    // the picker as a Title-Case option (e.g. "Salmon") so players who can
+    // identify the family but not the variant have something to pick.
+    // submitFishGuess accepts these as correct for any species with a
+    // matching fotd_family.
+    admin.from('fish_species').select('fotd_family').not('fotd_family', 'is', null),
   ])
   const names = new Set((eligible ?? []).map((r: { name: string }) => r.name))
   if (todayPuzzle?.common_name) names.add(todayPuzzle.common_name)
+  for (const r of (families ?? []) as { fotd_family: string | null }[]) {
+    if (!r.fotd_family) continue
+    // "salmon" → "Salmon" — matches the existing species-name capitalization
+    names.add(r.fotd_family.charAt(0).toUpperCase() + r.fotd_family.slice(1))
+  }
   return [...names].sort()
 }
