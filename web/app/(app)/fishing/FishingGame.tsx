@@ -2923,6 +2923,11 @@ export default function FishingGame({
     setExpandedZone(null)
     setTappedFishId(null)
   })
+  // Gear drawer needs the same drag-from-handle-only fix as the collection
+  // drawer — its rod / reel / hook panels scroll, and the old
+  // drag-from-anywhere model was reinterpreting the scroll gesture as a
+  // pull-down-to-close and fighting the inner scroll along the way.
+  const gearDrawerDrag = useDrawerDrag(() => setGearOpen(false))
 
   // Refs for the collection drawer's scrollable body + each zone block.
   // When the player taps a zone header, we want the just-expanded zone's
@@ -7034,7 +7039,7 @@ export default function FishingGame({
           <motion.div key="gear-drawer"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            {...drawerDragProps(() => setGearOpen(false))}
+            {...gearDrawerDrag.motionProps}
             style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
               background: 'rgba(6,12,20,0.98)',
@@ -7044,7 +7049,7 @@ export default function FishingGame({
               maxHeight: '82vh', overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
-            <DrawerHandle />
+            <DrawerHandle dragHandleProps={gearDrawerDrag.handleProps} />
             <div className="flex items-center justify-between mb-4" style={{ paddingTop: '0.75rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.14em]"
                 style={{ fontSize: '0.6rem', color: '#6a6764' }}>Gear &amp; Shop</p>
