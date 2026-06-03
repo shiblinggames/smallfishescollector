@@ -59,11 +59,12 @@ function Pill({ label, color, muted }: { label: string; color?: string; muted?: 
   )
 }
 
-// StatRow — the noob-friendly version of Pill. Pairs the technical
-// value ("+24°", "−25% needle speed") with a plain-English help line
-// so a new player understands what the stat actually DOES in gameplay
-// terms. Use this in the equipped-gear detail headers; Pill stays for
-// the dense rod-tile grid where space is tight.
+// StatRow — the noob-friendly card-style stat block. Pairs the
+// technical value ("+24°", "−25% needle speed") with a plain-English
+// help line so a new player understands what the stat actually DOES.
+// Used in the buy-confirm modal where the player is making a real
+// decision and the extra chrome is worth the vertical space. The
+// equipped-rod recap uses the more compact StatBullet below.
 function StatRow({ title, value, help, color }: { title: string; value: string; help: string; color: string }) {
   return (
     <div style={{
@@ -84,6 +85,29 @@ function StatRow({ title, value, help, color }: { title: string; value: string; 
   )
 }
 
+// StatBullet — compact one-line variant for the equipped-gear recap
+// where the player already knows what they own and wants to glance at
+// stats without scrolling through tall cards. Bold value + short help
+// clause, colored dot for visual rhythm. ~22px per row vs ~60-70px
+// for a StatRow.
+function StatBullet({ value, help, color }: { value: string; help: string; color: string }) {
+  return (
+    <li style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+      <span aria-hidden style={{
+        width: 6, height: 6, borderRadius: '50%',
+        background: color, flexShrink: 0,
+        marginTop: 7,
+        boxShadow: `0 0 6px ${color}88`,
+      }} />
+      <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.78)', lineHeight: 1.45 }}>
+        <span className="font-700" style={{ color }}>{value}</span>
+        {' '}
+        <span style={{ color: 'rgba(240,237,232,0.55)' }}>— {help}</span>
+      </p>
+    </li>
+  )
+}
+
 // Returns every active stat on a rod as a { title, value, help } row
 // for the equipped-rod detail header. Order is "what affects pacing
 // most first" — bite speed and catch zone matter on every single cast;
@@ -92,41 +116,41 @@ function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: str
   const lines: Array<{ title: string; value: string; help: string }> = []
   const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
   if (speedPct > 0) {
-    lines.push({ title: 'Bite Speed', value: `${speedPct}% faster`, help: 'Fish bite sooner after you cast — less waiting between catches.' })
+    lines.push({ title: 'Bite Speed', value: `${speedPct}% faster`, help: 'less waiting between casts' })
   } else if (speedPct < 0) {
-    lines.push({ title: 'Bite Speed', value: `${-speedPct}% slower`, help: 'Fish take longer to bite, but other bonuses make up for it.' })
+    lines.push({ title: 'Bite Speed', value: `${-speedPct}% slower`, help: 'longer wait, made up by other bonuses' })
   }
   if (r.catchZoneBonus > 0) {
-    lines.push({ title: 'Catch Zone', value: `+${r.catchZoneBonus}°`, help: 'Wider green band on the dial — bigger window to land catches.' })
+    lines.push({ title: 'Catch Zone', value: `+${r.catchZoneBonus}°`, help: 'wider green band on the dial' })
   }
   if (r.perfectZoneBonus > 0) {
-    lines.push({ title: 'Perfect Zone', value: `+${r.perfectZoneBonus}°`, help: 'Bigger gold zone on the dial — easier to land Perfects for streak bonuses and bait saves.' })
+    lines.push({ title: 'Perfect Zone', value: `+${r.perfectZoneBonus}°`, help: 'bigger gold zone — easier Perfects' })
   }
   if (r.rarityBonus > 0) {
-    lines.push({ title: 'Rare Bias', value: `+${Math.round(r.rarityBonus * 100)}%`, help: 'Shifts each bite toward rarer species. Stack with rare bait for the best odds.' })
+    lines.push({ title: 'Rare Bias', value: `+${Math.round(r.rarityBonus * 100)}%`, help: 'more rares per bite' })
   }
   if (r.doubleCatchChance >= 1) {
-    lines.push({ title: 'Double Catch', value: 'Always', help: 'Every successful catch lands two fish at once. Your hold fills twice as fast.' })
+    lines.push({ title: 'Double Catch', value: 'Always', help: 'every catch lands two fish at once' })
   } else if (r.doubleCatchChance > 0) {
-    lines.push({ title: 'Double Catch', value: `${Math.round(r.doubleCatchChance * 100)}% chance`, help: 'Sometimes lands two fish on a single catch.' })
+    lines.push({ title: 'Double Catch', value: `${Math.round(r.doubleCatchChance * 100)}% chance`, help: 'sometimes lands two at once' })
   }
   if (r.retryOnMissChance > 0) {
-    lines.push({ title: 'Miss Retry', value: `${Math.round(r.retryOnMissChance * 100)}% chance`, help: 'When you miss the dial, sometimes the fish stays hooked and gives you another spin.' })
+    lines.push({ title: 'Miss Retry', value: `${Math.round(r.retryOnMissChance * 100)}% chance`, help: 'missed dial sometimes refires' })
   }
   if (r.snagImmune) {
-    lines.push({ title: 'Snag Immune', value: 'Yes', help: 'Hitting a snag (red) zone counts as a miss — no extra bait lost.' })
+    lines.push({ title: 'Snag Immune', value: 'Yes', help: 'red zones cost no extra bait' })
   }
   if ((r.jackpotChance ?? 0) > 0) {
-    lines.push({ title: 'Jackpot', value: `${Math.round(r.jackpotChance! * 100)}% × ${r.jackpotMultiplier}`, help: 'Rare chance of landing many fish at once on a single catch. High-roll feature.' })
+    lines.push({ title: 'Jackpot', value: `${Math.round(r.jackpotChance! * 100)}% × ${r.jackpotMultiplier}`, help: 'rare chance of a huge haul' })
   }
   if ((r.crateChanceMult ?? 1) > 1) {
-    lines.push({ title: 'Crate Lure', value: `× ${r.crateChanceMult}`, help: 'Multiplies the chance of hooking a treasure crate on each cast.' })
+    lines.push({ title: 'Crate Lure', value: `× ${r.crateChanceMult}`, help: 'more treasure crates per cast' })
   }
   if ((r.perfectXpMult ?? 1) > 1) {
-    lines.push({ title: 'Perfect XP', value: `× ${r.perfectXpMult}`, help: 'Doubles XP from Perfect catches, including the streak bonus.' })
+    lines.push({ title: 'Perfect XP', value: `× ${r.perfectXpMult}`, help: 'Perfect catches grant double XP' })
   }
   if (lines.length === 0) {
-    lines.push({ title: 'Base Rod', value: '—', help: 'Standard fishing rod. No bonuses, no penalties.' })
+    lines.push({ title: 'Base Rod', value: '—', help: 'standard rod — no bonuses' })
   }
   return lines
 }
@@ -776,46 +800,45 @@ export default function GearScreen({
                     {/* ── Owned tab ── */}
                     {rodTab === 'owned' && (
                       <>
-                        {/* Equipped rod detail header — image, name,
-                            description, every active stat in plain English. */}
+                        {/* Equipped rod recap — image + name + compact
+                            bullet stats. Description dropped: the
+                            bullets already say what the rod does, and
+                            the player picked this rod so they don't
+                            need the marketing copy in the recap. */}
                         <div style={{
                           background: `linear-gradient(180deg, ${rod.color}10 0%, rgba(4,10,18,0.85) 100%)`,
                           border: `1px solid ${rod.color}55`,
                           borderRadius: 14,
-                          padding: '0.85rem 0.9rem',
+                          padding: '0.75rem 0.85rem 0.8rem',
                           display: 'flex', flexDirection: 'column', gap: 10,
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')}
                               alt={rod.name}
                               className={rodGlowClass(rod)}
                               style={{
-                                width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
+                                width: 48, height: 48, objectFit: 'contain', flexShrink: 0,
                                 ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : { filter: `drop-shadow(0 2px 8px ${rod.color}66)` }),
                               } as React.CSSProperties}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                                style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                                style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)', marginBottom: 1 }}>
                                 Equipped Rod
                               </p>
                               <p className="font-cinzel font-700"
-                                style={{ fontSize: '1.05rem', color: rod.color, lineHeight: 1.1 }}>
+                                style={{ fontSize: '1rem', color: rod.color, lineHeight: 1.1 }}>
                                 {rod.name}
                               </p>
                             </div>
                           </div>
-                          <p className="font-karla font-300"
-                            style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
-                            {rod.description}
-                          </p>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <ul style={{ display: 'flex', flexDirection: 'column', gap: 5, listStyle: 'none', padding: 0, margin: 0 }}>
                             {rodLines.map(l => (
-                              <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={rod.color} />
+                              <StatBullet key={l.title} value={l.value} help={l.help} color={rod.color} />
                             ))}
-                          </div>
+                          </ul>
                         </div>
 
                         {ownedCount > 1 && (
