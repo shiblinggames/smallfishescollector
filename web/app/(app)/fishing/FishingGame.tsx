@@ -6061,21 +6061,32 @@ export default function FishingGame({
                         position: 'relative',
                       }}
                     >
-                      <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none"
-                        stroke={flashing ? '#fff' : accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                        style={{ flexShrink: 0, filter: flashing ? `drop-shadow(0 0 6px ${flashAccent})` : undefined }}>
-                        <path d="M5 4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v17l-7-3-7 3V4z" />
-                      </svg>
+                      {/* Story-node book sprite (same /raidlog.png used
+                          in expedition raids' story beats). Drop-shadow
+                          flips to the flash accent when a noteworthy
+                          catch fires. */}
+                      <img
+                        src="/raidlog.png"
+                        alt=""
+                        style={{
+                          width: 36, height: 36, objectFit: 'contain', flexShrink: 0,
+                          filter: flashing
+                            ? `drop-shadow(0 0 8px ${flashAccent}) drop-shadow(0 1px 4px rgba(0,0,0,0.6))`
+                            : 'drop-shadow(0 1px 4px rgba(0,0,0,0.55))',
+                        }}
+                      />
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, lineHeight: 1, minWidth: 0 }}>
-                        <span className="font-karla font-700 uppercase" style={{
-                          fontSize: '0.5rem',
-                          letterSpacing: '0.16em',
-                          color: flashing ? '#fff' : accent,
-                          lineHeight: 1,
-                          textShadow: flashing ? `0 0 6px ${flashAccent}` : 'none',
-                        }}>{flashing ? (freshCatchHook === 'pb' ? 'New PB!' : 'New!') : 'Logbook'}</span>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1, color: flashing ? '#fff' : accent, whiteSpace: 'nowrap' }}>
-                          {caught}<span className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)' }}>/{total}</span>
+                        {flashing && (
+                          <span className="font-karla font-700 uppercase" style={{
+                            fontSize: '0.5rem',
+                            letterSpacing: '0.16em',
+                            color: '#fff',
+                            lineHeight: 1,
+                            textShadow: `0 0 6px ${flashAccent}`,
+                          }}>{freshCatchHook === 'pb' ? 'New PB!' : 'New!'}</span>
+                        )}
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', lineHeight: 1, color: flashing ? '#fff' : accent, whiteSpace: 'nowrap' }}>
+                          {caught}<span className="font-karla font-400" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)' }}>/{total}</span>
                         </p>
                       </div>
                       {hasNew && !flashing && (
