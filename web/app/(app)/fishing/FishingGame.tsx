@@ -2957,6 +2957,8 @@ export default function FishingGame({
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [liquidating, setLiquidating] = useState(false)
   const [liquidateConfirm, setLiquidateConfirm] = useState(false)
+  const [holdUpgradeConfirm, setHoldUpgradeConfirm] = useState(false)
+  const [holdUpgrading, setHoldUpgrading] = useState(false)
   const [buyingWorms, setBuyingWorms] = useState(false)
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
@@ -7667,17 +7669,48 @@ export default function FishingGame({
             {/* Non-scrollable drag zone */}
             <DrawerHandle dragHandleProps={holdDrawerDrag.handleProps} />
             <div style={{ padding: '0.75rem 1rem 0', flexShrink: 0 }}>
-              {/* Header — capacity on the left, total value on the right.
-                  The Sell tile used to surface total value on the action
-                  row; now it lives inside the drawer so the bottom row
-                  has space for the Logbook tile instead. */}
+              {/* Header — capacity on the left with an inline Upgrade pill
+                  (opens the confirm modal), total value on the right. The
+                  old upgrade row that lived below the inventory is gone;
+                  this is the only entry-point now. */}
               <div className="flex items-start justify-between mb-4" style={{ gap: 12 }}>
                 <div>
                   <p className="font-karla font-700 uppercase tracking-[0.14em]"
                     style={{ fontSize: '0.72rem', color: '#9a9488', marginBottom: 3 }}>Fish Hold</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8', lineHeight: 1.1 }}>
-                    {holdTotalCount} <span style={{ fontSize: '1.1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: holdTotalCount >= holdCapacity ? '#f87171' : '#f0ede8', lineHeight: 1.1 }}>
+                      {holdTotalCount} <span style={{ fontSize: '1.1rem', color: '#6a6764' }}>/ {holdCapacity}</span>
+                    </p>
+                    {(() => {
+                      const maxTier = FISH_HOLD_TIERS.length - 1
+                      const isMax = currentFishHoldTier >= maxTier
+                      if (isMax) return null
+                      const next = getFishHold(currentFishHoldTier + 1)
+                      const canAfford = doubloons >= next.cost
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setHoldUpgradeConfirm(true)}
+                          className="font-karla font-700 uppercase tracking-[0.1em]"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '0.3rem 0.65rem', borderRadius: 999,
+                            background: canAfford ? 'rgba(240,192,64,0.14)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${canAfford ? 'rgba(240,192,64,0.55)' : 'rgba(255,255,255,0.14)'}`,
+                            color: canAfford ? '#f0c040' : '#7a7470',
+                            fontSize: '0.58rem',
+                            cursor: 'pointer',
+                            opacity: canAfford ? 1 : 0.85,
+                          }}
+                        >
+                          <svg aria-hidden width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>
+                          </svg>
+                          Upgrade
+                        </button>
+                      )
+                    })()}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {holdTotalValue > 0 && (
@@ -7696,66 +7729,6 @@ export default function FishingGame({
 
             {/* Scrollable content */}
             <div style={{ overflowY: 'auto', overscrollBehavior: 'contain', flex: 1, padding: '0 1rem 2rem' }}>
-              {/* Upgrade fish hold */}
-              {(() => {
-                const maxTier = FISH_HOLD_TIERS.length - 1
-                const isMax = currentFishHoldTier >= maxTier
-                const next = !isMax ? getFishHold(currentFishHoldTier + 1) : null
-                const canAfford = next ? doubloons >= next.cost : false
-                return (
-                  <div style={{ marginBottom: '1rem' }}>
-                    {isMax ? (
-                      <div style={{
-                        padding: '1rem 1.1rem',
-                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: 14,
-                      }}>
-                        <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#6a6764', marginBottom: 4 }}>Fish Hold</p>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', lineHeight: 1 }}>{getFishHold(currentFishHoldTier).name}</p>
-                        <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#4a4845', marginTop: 4 }}>Maximum capacity reached</p>
-                      </div>
-                    ) : (
-                      <button
-                        disabled={!canAfford}
-                        onClick={async () => {
-                          const res = await upgradeFishHold()
-                          if ('ok' in res) {
-                            setCurrentFishHoldTier(res.newTier)
-                            setDoubloons(res.doubloons)
-                            window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-                          }
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '1rem 1.1rem', width: '100%',
-                          background: canAfford ? 'rgba(240,192,64,0.13)' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${canAfford ? 'rgba(240,192,64,0.45)' : 'rgba(255,255,255,0.1)'}`,
-                          borderRadius: 14, cursor: canAfford ? 'pointer' : 'default',
-                          textAlign: 'left',
-                        }}
-                      >
-                        <div>
-                          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: canAfford ? '#f0c040' : '#5a5755', marginBottom: 4 }}>Upgrade Hold</p>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: canAfford ? '#f0ede8' : '#6a6764', lineHeight: 1 }}>{next!.name}</p>
-                          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: canAfford ? 'rgba(240,192,64,0.75)' : '#f0c040', marginTop: 5 }}>
-                            {next!.capacity} slots &nbsp;·&nbsp; {next!.cost.toLocaleString()} ⟡
-                          </p>
-                        </div>
-                        {canAfford && (
-                          <div style={{
-                            flexShrink: 0, marginLeft: '0.75rem',
-                            background: 'rgba(240,192,64,0.18)', border: '1px solid rgba(240,192,64,0.4)',
-                            borderRadius: 8, padding: '0.3rem 0.65rem',
-                          }}>
-                            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#f0c040' }}>Buy</span>
-                          </div>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )
-              })()}
-
               {inventory.length === 0 ? (
                 <p className="font-karla font-300 text-center py-6" style={{ fontSize: '0.8rem', color: '#4a4845' }}>
                   No fish yet. Cast a line!
@@ -7893,6 +7866,128 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
+
+      {/* ── Hold upgrade confirm modal ── */}
+      <PopupShell
+        open={holdUpgradeConfirm}
+        onClose={() => { if (!holdUpgrading) setHoldUpgradeConfirm(false) }}
+        zIndex={150}
+      >
+        {(() => {
+          const maxTier = FISH_HOLD_TIERS.length - 1
+          if (currentFishHoldTier >= maxTier) return null
+          const current = getFishHold(currentFishHoldTier)
+          const next = getFishHold(currentFishHoldTier + 1)
+          const slotsGained = next.capacity - current.capacity
+          const canAfford = doubloons >= next.cost
+          return (
+            <motion.div
+              key="hold-upgrade-confirm"
+              initial={{ opacity: 0, scale: 0.97, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.18 }}
+              role="dialog"
+              aria-modal
+              style={{
+                margin: 'auto', width: '100%', maxWidth: 360,
+                background: 'linear-gradient(180deg, #0e1626 0%, #070b14 100%)',
+                border: '1px solid rgba(240,192,64,0.45)',
+                borderRadius: 18, padding: '1.1rem 1rem 1rem',
+                boxShadow: '0 18px 60px rgba(0,0,0,0.7)',
+              }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.18em] text-center"
+                style={{ fontSize: '0.55rem', color: '#9a8a52', marginBottom: 4 }}>
+                Upgrade Fish Hold
+              </p>
+              <p className="font-cinzel font-700 text-center"
+                style={{ fontSize: '1.05rem', color: '#f0c040', marginBottom: 14 }}>
+                {next.name}
+              </p>
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr auto 1fr',
+                alignItems: 'center', gap: 10,
+                background: 'rgba(0,0,0,0.32)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 12, padding: '0.7rem 0.85rem',
+                marginBottom: 12,
+              }}>
+                <div style={{ textAlign: 'right' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                    style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.45)', marginBottom: 3 }}>Now</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c0bdb8', lineHeight: 1 }}>
+                    {current.capacity}<span className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)' }}> slots</span>
+                  </p>
+                </div>
+                <svg aria-hidden width="18" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(240,192,64,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>
+                </svg>
+                <div style={{ textAlign: 'left' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]"
+                    style={{ fontSize: '0.5rem', color: 'rgba(240,192,64,0.65)', marginBottom: 3 }}>After</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8', lineHeight: 1 }}>
+                    {next.capacity}<span className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#f0c040' }}> slots</span>
+                  </p>
+                </div>
+              </div>
+              <p className="font-karla font-600 text-center"
+                style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.78)', marginBottom: 14 }}>
+                +{slotsGained} slot{slotsGained === 1 ? '' : 's'} for <span style={{ color: '#f0c040' }}>{next.cost.toLocaleString()} ⟡</span>
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setHoldUpgradeConfirm(false)}
+                  disabled={holdUpgrading}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{
+                    flex: 1, padding: '0.7rem 0',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: 'rgba(240,237,232,0.65)',
+                    borderRadius: 12, fontSize: '0.7rem',
+                    cursor: holdUpgrading ? 'default' : 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!canAfford || holdUpgrading}
+                  onClick={async () => {
+                    setHoldUpgrading(true)
+                    const res = await upgradeFishHold()
+                    setHoldUpgrading(false)
+                    if ('ok' in res) {
+                      setCurrentFishHoldTier(res.newTier)
+                      setDoubloons(res.doubloons)
+                      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+                    }
+                    setHoldUpgradeConfirm(false)
+                  }}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{
+                    flex: 2, padding: '0.7rem 0',
+                    background: canAfford ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${canAfford ? 'rgba(240,192,64,0.55)' : 'rgba(255,255,255,0.1)'}`,
+                    color: canAfford ? '#f0c040' : '#5a5755',
+                    borderRadius: 12, fontSize: '0.7rem',
+                    cursor: canAfford && !holdUpgrading ? 'pointer' : 'default',
+                    opacity: holdUpgrading ? 0.65 : 1,
+                  }}
+                >
+                  {holdUpgrading
+                    ? 'Upgrading…'
+                    : canAfford
+                      ? `Upgrade — ${next.cost.toLocaleString()} ⟡`
+                      : 'Not enough doubloons'}
+                </button>
+              </div>
+            </motion.div>
+          )
+        })()}
+      </PopupShell>
 
       {/* ── Challenge session complete overlay ── */}
       {activeSession && sessionDone && !sessionOverlayDismissed && (
