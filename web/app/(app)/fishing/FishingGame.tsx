@@ -4993,24 +4993,37 @@ export default function FishingGame({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                      <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                        style={{
-                          fontSize: '0.55rem',
-                          color: flashing ? '#fff' : accent,
-                          lineHeight: 1,
-                          textShadow: flashing ? `0 0 8px ${flashAccent}` : 'none',
-                        }}>
-                        {flashing ? (freshCatchHook === 'pb' ? 'New PB!' : 'New!') : 'Logbook'}
-                      </span>
+                      {/* Rest state: a bookmark/journal icon — clearer
+                          glyph than the "Logbook" wordmark for an icon-
+                          led header. Flash state still uses text since
+                          "New!" / "New PB!" conveys WHAT happened in a
+                          way an icon alone can't. */}
+                      {flashing ? (
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                          style={{
+                            fontSize: '0.55rem',
+                            color: '#fff',
+                            lineHeight: 1,
+                            textShadow: `0 0 8px ${flashAccent}`,
+                          }}>
+                          {freshCatchHook === 'pb' ? 'New PB!' : 'New!'}
+                        </span>
+                      ) : (
+                        <svg aria-hidden width="13" height="13" viewBox="0 0 24 24" fill="none"
+                          stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                          style={{ flexShrink: 0 }}>
+                          <path d="M5 4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v17l-7-3-7 3V4z" />
+                        </svg>
+                      )}
                       <span className="font-cinzel font-700"
                         style={{
-                          fontSize: '0.76rem',
+                          fontSize: '0.78rem',
                           color: flashing ? '#fff' : accent,
                           lineHeight: 1,
                           textShadow: flashing ? `0 0 8px ${flashAccent}` : 'none',
                         }}>
                         {caught}
-                        <span className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.55)' }}>
+                        <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.55)' }}>
                           /{total}
                         </span>
                       </span>
