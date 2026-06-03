@@ -2956,9 +2956,12 @@ export default function FishingGame({
   const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
   const [sellPending, setSellPending] = useState<number | null>(null)
   const [liquidating, setLiquidating] = useState(false)
-  const [liquidateConfirm, setLiquidateConfirm] = useState(false)
   const [holdUpgradeConfirm, setHoldUpgradeConfirm] = useState(false)
   const [holdUpgrading, setHoldUpgrading] = useState(false)
+  // Which sell-lane row is currently expanded for confirm. Only one
+  // open at a time so the drawer stays tidy. Fish Market isn't in this
+  // set — tapping it just navigates.
+  const [expandedSellLane, setExpandedSellLane] = useState<null | 'quick' | 'liquidate'>(null)
   const [buyingWorms, setBuyingWorms] = useState(false)
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
@@ -4148,7 +4151,7 @@ export default function FishingGame({
     setLiquidating(true)
     const res = await liquidateAllFish()
     setLiquidating(false)
-    setLiquidateConfirm(false)
+    setExpandedSellLane(null)
     if ('error' in res) return
     setInventory([])
     window.dispatchEvent(new Event('pending-sales-may-have-changed'))
@@ -7735,129 +7738,177 @@ export default function FishingGame({
                 </p>
               ) : (
                 <>
-                  {/* ── Sell lanes ── three options: Market (full price,
-                      navigates out), Market Liquidate (90% with 1h
-                      delay), Quick Sell (65% / full on Full Moon). All
-                      three used to live in their own Sell drawer; merged
-                      in here so the bottom row can host the Logbook. */}
-                  <div className="flex flex-col gap-3">
-                    {/* Fish Market */}
-                    <Link href="/tavern/market" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none' }}>
-                      <div style={{
-                        background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
-                        borderRadius: 16, padding: '1rem 1.1rem',
-                        boxShadow: '0 0 20px rgba(56,189,248,0.06)',
-                      }}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#38bdf8' }}>Fish Market</p>
-                          <span style={{ fontSize: '0.85rem', color: '#38bdf8' }}>→</span>
-                        </div>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0ede8', lineHeight: 1 }}>
-                          {holdBaseValue.toLocaleString()} ⟡
-                        </p>
-                        <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#38bdf8aa' }}>
-                          Est. market price · live prices update hourly
-                        </p>
-                      </div>
-                    </Link>
-
-                    {/* Market Liquidate */}
-                    <div style={{
-                      background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)',
-                      borderRadius: 16, padding: '1rem 1.1rem',
-                    }}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Market Liquidate</p>
-                        <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#bda05a', letterSpacing: '0.1em', padding: '0.15rem 0.45rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)' }}>1h delay</span>
-                      </div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>
-                        {holdLiquidateValue.toLocaleString()} ⟡
-                      </p>
-                      <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#bda05a', lineHeight: 1.4 }}>
-                        90% of current market value{isPremium ? '' : ' · 3% fee'} · price locked at sale, settles in 1h
-                      </p>
-                      {!liquidateConfirm ? (
-                        <button
-                          onClick={() => setLiquidateConfirm(true)}
-                          disabled={liquidating || inventory.length === 0}
-                          className="font-karla font-600 uppercase tracking-[0.1em] w-full"
-                          style={{
-                            fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
-                            background: 'rgba(240,192,64,0.14)',
-                            border: '1px solid rgba(240,192,64,0.45)',
-                            color: '#f0c040', opacity: liquidating ? 0.5 : 1,
-                            cursor: liquidating ? 'default' : 'pointer',
-                          }}
-                        >
-                          Liquidate at Market
-                        </button>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                          <button
-                            onClick={() => setLiquidateConfirm(false)}
-                            disabled={liquidating}
-                            className="font-karla font-600 uppercase tracking-[0.1em]"
-                            style={{
-                              flex: 1, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
-                              background: 'rgba(255,255,255,0.04)',
-                              border: '1px solid rgba(255,255,255,0.12)',
-                              color: '#a0a09a', cursor: 'pointer',
-                            }}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleLiquidate}
-                            disabled={liquidating}
-                            className="font-karla font-700 uppercase tracking-[0.1em]"
-                            style={{
-                              flex: 2, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
-                              background: 'linear-gradient(180deg, rgba(240,192,64,0.28) 0%, rgba(240,192,64,0.14) 100%)',
-                              border: '1px solid rgba(240,192,64,0.55)',
-                              color: '#f0c040', cursor: liquidating ? 'default' : 'pointer',
-                              opacity: liquidating ? 0.6 : 1,
-                            }}
-                          >
-                            {liquidating ? 'Submitting…' : 'Confirm — Lock Price'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Quick Sell */}
-                    <div style={{
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: 16, padding: '1rem 1.1rem',
-                    }}>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Quick Sell</p>
-                        {isFullMoon && (
-                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
-                            fontSize: '0.48rem', color: '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '2rem',
-                            background: 'rgba(226,232,240,0.12)', border: '1px solid rgba(226,232,240,0.3)',
-                          }}>Full Moon · Full Price</span>
-                        )}
-                      </div>
-                      <p className="font-cinzel font-600" style={{ fontSize: '1.4rem', color: isFullMoon ? '#e2e8f0' : '#f0ede8', lineHeight: 1 }}>
-                        {holdTotalValue.toLocaleString()} ⟡
-                      </p>
-                      <p className="font-karla font-400 mt-1.5" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
-                        {isFullMoon
-                          ? 'Full market price · Full Moon Rising'
-                          : <>65% of base value · you lose{' '}<span style={{ color: '#f87171' }}>{Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡</span></>
+                  {/* ── Sell lanes ──
+                      One unified neutral container, three rows.
+                      Old design used three differently-coloured cards
+                      (blue / gold / silver) that read as competing
+                      categories instead of a single decision. Now: same
+                      dark background for every row, payout right-
+                      aligned in gold, trade-off below in muted text.
+                      Tap a row to commit (Fish Market navigates, Quick
+                      Sell and Liquidate expand inline for a Cancel /
+                      Confirm pair).
+                      Order is fast→slow / cheap→best so the trade-off
+                      reads left-to-right as you scan down. */}
+                  <div style={{
+                    background: 'rgba(0,0,0,0.32)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 14,
+                    overflow: 'hidden',
+                  }}>
+                    {(() => {
+                      type LaneKey = 'quick' | 'liquidate' | 'market'
+                      const sellingNow = !!sellPending
+                      const quickLossText = isFullMoon
+                        ? 'Full price — Full Moon Rising'
+                        : `Instant · 65% of value · you lose ${Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡`
+                      const lanes: Array<{
+                        key: LaneKey
+                        name: string
+                        payout: string
+                        payoutMuted?: boolean
+                        tradeoff: React.ReactNode
+                        action: 'navigate' | 'confirm'
+                        href?: string
+                        confirmLabel?: string
+                        run?: () => void | Promise<void>
+                        pending?: boolean
+                      }> = [
+                        {
+                          key: 'quick',
+                          name: 'Quick Sell',
+                          payout: `${holdTotalValue.toLocaleString()} ⟡`,
+                          tradeoff: quickLossText,
+                          action: 'confirm',
+                          confirmLabel: sellingNow ? 'Selling…' : 'Sell All Now',
+                          run: async () => {
+                            for (const item of inventory) await handleSell(item.fish_id, item.quantity)
+                            setExpandedSellLane(null)
+                          },
+                          pending: sellingNow,
+                        },
+                        {
+                          key: 'liquidate',
+                          name: 'Liquidate',
+                          payout: `${holdLiquidateValue.toLocaleString()} ⟡`,
+                          tradeoff: `Locks 90% market${isPremium ? '' : ' · 3% fee'} · settles in 1 hour`,
+                          action: 'confirm',
+                          confirmLabel: liquidating ? 'Submitting…' : 'Lock In Price',
+                          run: () => handleLiquidate(),
+                          pending: liquidating,
+                        },
+                        {
+                          key: 'market',
+                          name: 'Fish Market',
+                          payout: `~${holdBaseValue.toLocaleString()} ⟡`,
+                          payoutMuted: true,
+                          tradeoff: 'Set per-species prices — live market updates hourly',
+                          action: 'navigate',
+                          href: '/tavern/market',
+                        },
+                      ]
+                      return lanes.map((lane, idx) => {
+                        const expanded = expandedSellLane === lane.key
+                        const isLast = idx === lanes.length - 1
+                        const onTap = () => {
+                          if (lane.action === 'navigate') return
+                          if (lane.key === 'market') return
+                          setExpandedSellLane(expanded ? null : lane.key)
                         }
-                      </p>
-                      <button
-                        onClick={async () => { for (const item of inventory) await handleSell(item.fish_id, item.quantity) }}
-                        disabled={!!sellPending}
-                        className="font-karla font-600 uppercase tracking-[0.1em] w-full"
-                        style={{ fontSize: '0.65rem', padding: '0.65rem', borderRadius: 10, marginTop: 12,
-                          background: isFullMoon ? 'rgba(226,232,240,0.09)' : 'rgba(255,255,255,0.07)',
-                          border: `1px solid ${isFullMoon ? 'rgba(226,232,240,0.28)' : 'rgba(255,255,255,0.15)'}`,
-                          color: isFullMoon ? '#e2e8f0' : '#a0a09a', opacity: sellPending ? 0.5 : 1, cursor: sellPending ? 'default' : 'pointer' }}>
-                        {sellPending ? 'Selling…' : isFullMoon ? 'Sell All at Full Price' : 'Sell All at Discount'}
-                      </button>
-                    </div>
+                        const rowBody = (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>
+                                {lane.name}
+                              </p>
+                              <p className="font-cinzel font-700" style={{
+                                fontSize: '1.05rem',
+                                color: lane.payoutMuted ? 'rgba(240,192,64,0.7)' : '#f0c040',
+                                lineHeight: 1,
+                                whiteSpace: 'nowrap',
+                              }}>
+                                {lane.payout}
+                                {lane.action === 'navigate' && (
+                                  <span style={{ color: 'rgba(240,192,64,0.55)', fontSize: '0.85rem', marginLeft: 6 }}>↗</span>
+                                )}
+                              </p>
+                            </div>
+                            <p className="font-karla" style={{
+                              fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', marginTop: 4, lineHeight: 1.35,
+                            }}>
+                              {lane.tradeoff}
+                            </p>
+                            {expanded && lane.action === 'confirm' && (
+                              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setExpandedSellLane(null) }}
+                                  disabled={lane.pending}
+                                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                                  style={{
+                                    flex: 1, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
+                                    background: 'rgba(255,255,255,0.04)',
+                                    border: '1px solid rgba(255,255,255,0.14)',
+                                    color: 'rgba(240,237,232,0.65)', cursor: 'pointer',
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); lane.run?.() }}
+                                  disabled={lane.pending}
+                                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                                  style={{
+                                    flex: 2, fontSize: '0.62rem', padding: '0.6rem', borderRadius: 10,
+                                    background: 'rgba(240,192,64,0.16)',
+                                    border: '1px solid rgba(240,192,64,0.55)',
+                                    color: '#f0c040',
+                                    cursor: lane.pending ? 'default' : 'pointer',
+                                    opacity: lane.pending ? 0.65 : 1,
+                                  }}
+                                >
+                                  {lane.confirmLabel}
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )
+                        const sharedStyle: React.CSSProperties = {
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '0.85rem 1rem',
+                          background: expanded ? 'rgba(240,192,64,0.05)' : 'transparent',
+                          border: 'none',
+                          borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                          cursor: 'pointer',
+                          color: 'inherit',
+                          textDecoration: 'none',
+                          transition: 'background 0.14s',
+                        }
+                        if (lane.action === 'navigate' && lane.href) {
+                          return (
+                            <Link
+                              key={lane.key}
+                              href={lane.href}
+                              onClick={() => setHoldOpen(false)}
+                              style={sharedStyle}
+                            >
+                              {rowBody}
+                            </Link>
+                          )
+                        }
+                        return (
+                          <button
+                            key={lane.key}
+                            type="button"
+                            onClick={onTap}
+                            style={sharedStyle}
+                          >
+                            {rowBody}
+                          </button>
+                        )
+                      })
+                    })()}
                   </div>
                 </>
               )}
