@@ -1714,21 +1714,14 @@ export default function GearScreen({
               }}
             >
               {pendingPurchase.details ? (
-                <>
+                <div style={{ marginBottom: 14 }}>
                   {pendingPurchase.details}
-                  <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '0.9rem 0 0.75rem' }} />
-                </>
+                </div>
               ) : (
-                <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: pendingPurchase.color, marginBottom: 6 }}>
+                <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: pendingPurchase.color, marginBottom: 14 }}>
                   Buy {pendingPurchase.name}?
                 </p>
               )}
-              <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.75)', lineHeight: 1.5, marginBottom: 8 }}>
-                {pendingPurchase.cost.toLocaleString()} ⟡, yours for good once bought.
-              </p>
-              <p className="font-karla text-center" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.55)', marginBottom: 14 }}>
-                Your purse: {doubloons.toLocaleString()} ⟡
-              </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   type="button"
