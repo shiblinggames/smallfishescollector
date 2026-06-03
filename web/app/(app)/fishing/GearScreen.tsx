@@ -59,6 +59,78 @@ function Pill({ label, color, muted }: { label: string; color?: string; muted?: 
   )
 }
 
+// StatRow — the noob-friendly version of Pill. Pairs the technical
+// value ("+24°", "−25% needle speed") with a plain-English help line
+// so a new player understands what the stat actually DOES in gameplay
+// terms. Use this in the equipped-gear detail headers; Pill stays for
+// the dense rod-tile grid where space is tight.
+function StatRow({ title, value, help, color }: { title: string; value: string; help: string; color: string }) {
+  return (
+    <div style={{
+      background: 'rgba(0,0,0,0.32)',
+      border: `1px solid ${color}22`,
+      borderRadius: 10,
+      padding: '0.65rem 0.85rem',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.12em]"
+          style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>{title}</p>
+        <p className="font-cinzel font-700"
+          style={{ fontSize: '1rem', color, lineHeight: 1, whiteSpace: 'nowrap' }}>{value}</p>
+      </div>
+      <p className="font-karla font-400"
+        style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.58)', lineHeight: 1.4 }}>{help}</p>
+    </div>
+  )
+}
+
+// Returns every active stat on a rod as a { title, value, help } row
+// for the equipped-rod detail header. Order is "what affects pacing
+// most first" — bite speed and catch zone matter on every single cast;
+// rare bias / jackpot / crate luring only affect outcomes.
+function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: string; help: string }> {
+  const lines: Array<{ title: string; value: string; help: string }> = []
+  const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
+  if (speedPct > 0) {
+    lines.push({ title: 'Bite Speed', value: `${speedPct}% faster`, help: 'Fish bite sooner after you cast — less waiting between catches.' })
+  } else if (speedPct < 0) {
+    lines.push({ title: 'Bite Speed', value: `${-speedPct}% slower`, help: 'Fish take longer to bite, but other bonuses make up for it.' })
+  }
+  if (r.catchZoneBonus > 0) {
+    lines.push({ title: 'Catch Zone', value: `+${r.catchZoneBonus}°`, help: 'Wider green band on the dial — bigger window to land catches.' })
+  }
+  if (r.perfectZoneBonus > 0) {
+    lines.push({ title: 'Perfect Zone', value: `+${r.perfectZoneBonus}°`, help: 'Bigger gold zone on the dial — easier to land Perfects for streak bonuses and bait saves.' })
+  }
+  if (r.rarityBonus > 0) {
+    lines.push({ title: 'Rare Bias', value: `+${Math.round(r.rarityBonus * 100)}%`, help: 'Shifts each bite toward rarer species. Stack with rare bait for the best odds.' })
+  }
+  if (r.doubleCatchChance >= 1) {
+    lines.push({ title: 'Double Catch', value: 'Always', help: 'Every successful catch lands two fish at once. Your hold fills twice as fast.' })
+  } else if (r.doubleCatchChance > 0) {
+    lines.push({ title: 'Double Catch', value: `${Math.round(r.doubleCatchChance * 100)}% chance`, help: 'Sometimes lands two fish on a single catch.' })
+  }
+  if (r.retryOnMissChance > 0) {
+    lines.push({ title: 'Miss Retry', value: `${Math.round(r.retryOnMissChance * 100)}% chance`, help: 'When you miss the dial, sometimes the fish stays hooked and gives you another spin.' })
+  }
+  if (r.snagImmune) {
+    lines.push({ title: 'Snag Immune', value: 'Yes', help: 'Hitting a snag (red) zone counts as a miss — no extra bait lost.' })
+  }
+  if ((r.jackpotChance ?? 0) > 0) {
+    lines.push({ title: 'Jackpot', value: `${Math.round(r.jackpotChance! * 100)}% × ${r.jackpotMultiplier}`, help: 'Rare chance of landing many fish at once on a single catch. High-roll feature.' })
+  }
+  if ((r.crateChanceMult ?? 1) > 1) {
+    lines.push({ title: 'Crate Lure', value: `× ${r.crateChanceMult}`, help: 'Multiplies the chance of hooking a treasure crate on each cast.' })
+  }
+  if ((r.perfectXpMult ?? 1) > 1) {
+    lines.push({ title: 'Perfect XP', value: `× ${r.perfectXpMult}`, help: 'Doubles XP from Perfect catches, including the streak bonus.' })
+  }
+  if (lines.length === 0) {
+    lines.push({ title: 'Base Rod', value: '—', help: 'Standard fishing rod. No bonuses, no penalties.' })
+  }
+  return lines
+}
+
 function ReelIcon({ color }: { color: string }) {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round">
@@ -621,6 +693,7 @@ export default function GearScreen({
                 const unownedRodDefs = RODS
                   .filter(r => r.cost > 0 && !r.earnedOnly && !ownedRods.includes(r.tier))
                   .sort((a, b) => a.cost - b.cost)
+                const rodLines = rodStatLines(rod)
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <AnimatePresence>
@@ -649,6 +722,57 @@ export default function GearScreen({
                         </motion.div>
                       )}
                     </AnimatePresence>
+
+                    {/* Equipped rod detail header — what tapping the rod
+                        slot used to skip past. Shows the equipped rod's
+                        image, name, full description, and every active
+                        stat in plain English so a new player can read
+                        what the rod actually DOES, not just decode a
+                        terse stat pill. */}
+                    <div style={{
+                      background: `linear-gradient(180deg, ${rod.color}10 0%, rgba(4,10,18,0.85) 100%)`,
+                      border: `1px solid ${rod.color}55`,
+                      borderRadius: 14,
+                      padding: '0.85rem 0.9rem',
+                      display: 'flex', flexDirection: 'column', gap: 10,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')}
+                          alt={rod.name}
+                          className={rodGlowClass(rod)}
+                          style={{
+                            width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
+                            ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : { filter: `drop-shadow(0 2px 8px ${rod.color}66)` }),
+                          } as React.CSSProperties}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                            Equipped Rod
+                          </p>
+                          <p className="font-cinzel font-700"
+                            style={{ fontSize: '1.05rem', color: rod.color, lineHeight: 1.1 }}>
+                            {rod.name}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-karla font-300"
+                        style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
+                        {rod.description}
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {rodLines.map(l => (
+                          <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={rod.color} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="font-karla font-600 uppercase tracking-[0.14em]"
+                      style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', marginTop: 4, paddingLeft: 2 }}>
+                      Your Rods · tap to swap
+                    </p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                       {ownedRodDefs.map(r => {
                         const isEquipped = r.tier === equippedRodTier
@@ -682,12 +806,12 @@ export default function GearScreen({
                                 } as React.CSSProperties}
                               />
                             </div>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>
                               {r.name}
                             </p>
                             {isEquipped
-                              ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: r.color }}>✓ Equipped</span>
-                              : <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: r.color, lineHeight: 1.15, textAlign: 'center' }}>{tagline}</span>
+                              ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: r.color }}>✓ Equipped</span>
+                              : <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center' }}>{tagline}</span>
                             }
                           </button>
                         )
@@ -741,13 +865,13 @@ export default function GearScreen({
                                     } as React.CSSProperties}
                                   />
                                 </div>
-                                <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: canAfford ? '#f0ede8' : '#a0a09a', lineHeight: 1.1, textAlign: 'center' }}>
+                                <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: canAfford ? '#f0ede8' : '#a0a09a', lineHeight: 1.15, textAlign: 'center' }}>
                                   {r.name}
                                 </p>
-                                <span className="font-karla font-600" style={{ fontSize: '0.52rem', color: r.color, lineHeight: 1.15, textAlign: 'center', opacity: 0.85 }}>
+                                <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center', opacity: 0.85 }}>
                                   {tagline}
                                 </span>
-                                <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
+                                <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
                                   {r.cost.toLocaleString()} ⟡
                                 </span>
                               </button>
@@ -793,11 +917,38 @@ export default function GearScreen({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: reel.color }}>{reel.name}</p>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {dragPct > 0 ? <Pill label={`−${dragPct}% needle speed`} color={reel.color} /> : <Pill label="Base needle speed" muted />}
+                    {/* Equipped reel detail header */}
+                    <div style={{
+                      background: `linear-gradient(180deg, ${reel.color}10 0%, rgba(4,10,18,0.85) 100%)`,
+                      border: `1px solid ${reel.color}55`,
+                      borderRadius: 14,
+                      padding: '0.85rem 0.9rem',
+                      display: 'flex', flexDirection: 'column', gap: 10,
+                    }}>
+                      <div>
+                        <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                          style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                          Equipped Reel
+                        </p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: reel.color, lineHeight: 1.1 }}>{reel.name}</p>
+                      </div>
+                      <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>{reel.description}</p>
+                      {dragPct > 0 ? (
+                        <StatRow
+                          title="Needle Speed"
+                          value={`${dragPct}% slower`}
+                          help="The catch-zone needle sweeps slower, giving you a bigger window to tap inside the green band."
+                          color={reel.color}
+                        />
+                      ) : (
+                        <StatRow
+                          title="Needle Speed"
+                          value="Standard"
+                          help="The needle sweeps at the base speed. Upgrade your reel to slow it down."
+                          color={reel.color}
+                        />
+                      )}
                     </div>
-                    <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{reel.description}</p>
                     {nextReel ? (
                       <button
                         onClick={() => {
@@ -896,27 +1047,52 @@ export default function GearScreen({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {hook.imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={hook.imageUrl.replace(/\.png$/, '_thumb.png')}
-                          alt={hook.name}
-                          className={hookGlowClass(hook)}
-                          style={{
-                            width: 44, height: 44, objectFit: 'contain',
-                            ...(hook.glow ? {} : { filter: `drop-shadow(0 2px 8px ${hook.color}66)` }),
-                          } as React.CSSProperties}
-                        />
-                      )}
-                      <div>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hook.color }}>{hook.name}</p>
-                        <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-                          {hookTier > 0 ? <Pill label={`+${hookTier * 3}° catch zone`} color={hook.color} /> : <Pill label="No catch zone bonus" muted />}
+                    {/* Equipped hook detail header */}
+                    <div style={{
+                      background: `linear-gradient(180deg, ${hook.color}10 0%, rgba(4,10,18,0.85) 100%)`,
+                      border: `1px solid ${hook.color}55`,
+                      borderRadius: 14,
+                      padding: '0.85rem 0.9rem',
+                      display: 'flex', flexDirection: 'column', gap: 10,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {hook.imageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={hook.imageUrl.replace(/\.png$/, '_thumb.png')}
+                            alt={hook.name}
+                            className={hookGlowClass(hook)}
+                            style={{
+                              width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
+                              ...(hook.glow ? {} : { filter: `drop-shadow(0 2px 8px ${hook.color}66)` }),
+                            } as React.CSSProperties}
+                          />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                            Equipped Hook
+                          </p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: hook.color, lineHeight: 1.1 }}>{hook.name}</p>
                         </div>
                       </div>
+                      <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>{hook.description}</p>
+                      {hookTier > 0 ? (
+                        <StatRow
+                          title="Catch Zone"
+                          value={`+${hookTier * 3}°`}
+                          help="Widens the green band on the dial — bigger window to land a catch on every cast."
+                          color={hook.color}
+                        />
+                      ) : (
+                        <StatRow
+                          title="Catch Zone"
+                          value="Standard"
+                          help="Standard hook size. Upgrade to widen the green catch band on the dial."
+                          color={hook.color}
+                        />
+                      )}
                     </div>
-                    <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{hook.description}</p>
                     {nextHook ? (
                       <button
                         onClick={() => {
@@ -981,13 +1157,39 @@ export default function GearScreen({
 
               {/* ── Line ── */}
               {openSlot === 'line' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: line.color }}>{line.name}</p>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {snagRedPct > 0 ? <Pill label={`−${snagRedPct}% snag zone`} color={line.color} /> : <Pill label="Standard snag zones" muted />}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{
+                    background: `linear-gradient(180deg, ${line.color}10 0%, rgba(4,10,18,0.85) 100%)`,
+                    border: `1px solid ${line.color}55`,
+                    borderRadius: 14,
+                    padding: '0.85rem 0.9rem',
+                    display: 'flex', flexDirection: 'column', gap: 10,
+                  }}>
+                    <div>
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                        style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: 2 }}>
+                        Equipped Line
+                      </p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: line.color, lineHeight: 1.1 }}>{line.name}</p>
+                    </div>
+                    <p className="font-karla font-300" style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>{line.description}</p>
+                    {snagRedPct > 0 ? (
+                      <StatRow
+                        title="Snag Protection"
+                        value={`${snagRedPct}% smaller`}
+                        help="Shrinks the red snag bands on the dial. Fewer lost bait, more catches per cast."
+                        color={line.color}
+                      />
+                    ) : (
+                      <StatRow
+                        title="Snag Protection"
+                        value="Standard"
+                        help="Standard snag zones. New lines auto-unlock as you discover more species."
+                        color={line.color}
+                      />
+                    )}
                   </div>
-                  <p className="font-karla font-300" style={{ fontSize: '0.75rem', color: '#6a6764', lineHeight: 1.55 }}>{line.description}</p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#4a4845', lineHeight: 1.5 }}>
+                  <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#6a6460', lineHeight: 1.5, textAlign: 'center' }}>
                     Lines are earned by catching unique species — no purchase needed.
                   </p>
                 </div>
