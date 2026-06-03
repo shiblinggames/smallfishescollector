@@ -7762,39 +7762,11 @@ export default function FishingGame({
                 </p>
               ) : (
                 <>
-                  {/* By-habitat summary of what you're holding */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-                    {Object.entries(
-                      inventory.reduce((acc, item) => {
-                        const h = item.fish_species.habitat
-                        acc[h] = (acc[h] ?? 0) + item.quantity
-                        return acc
-                      }, {} as Record<string, number>)
-                    ).map(([habitat, count]) => {
-                      const hColor = HABITAT_COLOR[habitat] ?? '#888'
-                      const label = habitat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                      return (
-                        <div key={habitat} style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '0.55rem 0.85rem', borderRadius: 10,
-                          background: `${hColor}0a`, border: `1px solid ${hColor}1a`,
-                        }}>
-                          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: hColor }}>{label}</p>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{count}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
-
                   {/* ── Sell lanes ── three options: Market (full price,
                       navigates out), Market Liquidate (90% with 1h
                       delay), Quick Sell (65% / full on Full Moon). All
                       three used to live in their own Sell drawer; merged
                       in here so the bottom row can host the Logbook. */}
-                  <p className="font-karla font-700 uppercase tracking-[0.14em]"
-                    style={{ fontSize: '0.6rem', color: '#9a9488', marginBottom: 10, paddingLeft: 2 }}>
-                    Sell Lanes
-                  </p>
                   <div className="flex flex-col gap-3">
                     {/* Fish Market */}
                     <Link href="/tavern/market" onClick={() => setHoldOpen(false)} style={{ textDecoration: 'none' }}>
