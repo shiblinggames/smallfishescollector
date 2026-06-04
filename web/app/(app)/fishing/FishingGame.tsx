@@ -2541,12 +2541,17 @@ function DailyResetCountdown() {
 
 /** Tiny live-countdown shown inside the Finn-challenge HUD chip for speed
  *  challenges. Re-renders ~4× a second; cheap. */
-function SpeedClock({ endsAt }: { endsAt: number }) {
+function SpeedClock({ endsAt, paused = false }: { endsAt: number; paused?: boolean }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
+    // While paused, freeze the displayed count by skipping the tick — the
+    // ms shown stays at (endsAt - lastNow). On resume the parent has
+    // already bumped `endsAt` forward by the paused duration, so the
+    // clock picks up at the same number and keeps counting down.
+    if (paused) return
     const t = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(t)
-  }, [])
+  }, [paused])
   const secs = Math.max(0, Math.ceil((endsAt - now) / 1000))
   return (
     <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: secs <= 5 ? '#ef4444' : '#fde68a' }}>
@@ -3736,14 +3741,37 @@ export default function FishingGame({
   }
 
   // Speed challenge timeout — when the clock runs out the challenge fails.
+  // Skipped while a level-up overlay is open so the player isn't taxed
+  // wall-clock time they spent reading the level-up popup (see the pause
+  // effect below — it bumps speedEndsAt forward by the paused duration
+  // so this effect re-runs against the new deadline on resume).
   useEffect(() => {
     if (!finnChallenge?.speedEndsAt) return
+    if (levelUpNotif) return
     const ms = finnChallenge.speedEndsAt - Date.now()
     if (ms <= 0) { resolveFinnChallenge(false); return }
     const t = setTimeout(() => resolveFinnChallenge(false), ms)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finnChallenge?.speedEndsAt])
+  }, [finnChallenge?.speedEndsAt, levelUpNotif])
+
+  // Pause/resume the Finn speed clock around the level-up overlay so the
+  // player doesn't bleed seconds while reading the celebration. On open
+  // we stash the pause timestamp; on close we shift speedEndsAt forward
+  // by the elapsed paused duration. The display freezes during the pause
+  // via SpeedClock's `paused` prop (see component above).
+  const finnPausedAtRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!finnChallenge?.speedEndsAt) return
+    if (levelUpNotif) {
+      if (finnPausedAtRef.current == null) finnPausedAtRef.current = Date.now()
+    } else if (finnPausedAtRef.current != null) {
+      const elapsed = Date.now() - finnPausedAtRef.current
+      finnPausedAtRef.current = null
+      setFinnChallenge(c => c?.speedEndsAt ? { ...c, speedEndsAt: c.speedEndsAt + elapsed } : c)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [levelUpNotif, finnChallenge?.speedEndsAt])
 
   // Phase 1 — cast (from idle)
   async function handleCast() {
@@ -5008,7 +5036,7 @@ export default function FishingGame({
                   : `${finnChallenge.fishCaught ?? 0} / ${finnChallenge.fishTarget} fish`}
               </span>
               {finnChallenge.type === 'speed_catch' && (
-                <SpeedClock endsAt={finnChallenge.speedEndsAt ?? 0} />
+                <SpeedClock endsAt={finnChallenge.speedEndsAt ?? 0} paused={!!levelUpNotif} />
               )}
             </div>
           )}
