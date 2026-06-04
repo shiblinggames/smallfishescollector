@@ -1942,7 +1942,7 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
   }
 
   return (
-    <div style={{ marginBottom: '1.5rem' }}>
+    <div id="chapter-map" style={{ marginBottom: '1.5rem', scrollMarginTop: 90 }}>
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full"
@@ -1953,7 +1953,7 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
         }}
       >
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.55rem' }}>
-          <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', letterSpacing: '0.04em' }}>Raids</span>
+          <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', letterSpacing: '0.04em' }}>Story</span>
           <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>{clearedCount}/{views.length} cleared</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', flexShrink: 0 }}>

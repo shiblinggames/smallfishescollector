@@ -6,6 +6,8 @@ import RaidsSection from './RaidsSection'
 import ShipHero from './ShipHero'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import ExpeditionsTour from './ExpeditionsTour'
+import HubCards from './HubCards'
+import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
 import { getCrewRoster } from '@/app/dev/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
@@ -130,6 +132,73 @@ async function fetchTopRaidProgress(): Promise<{ username: string; score: number
   return { username: rows[0].username, score: rows[0].score }
 }
 
+// ROUTE_LABELS — short display name for a daily voyage route slug.
+// Kept here so the hub card can show "Coastal Run" instead of "coastal"
+// without dragging in voyage internals.
+const ROUTE_LABELS: Record<string, string> = {
+  coastal: 'Coastal Run',
+  open:    'Open Waters',
+  deep:    'Deep Run',
+}
+
+function describeVoyage(
+  todayVoyage: { route: string; created_at: string; duration_ms: number | null } | null,
+  readyVoyage: { route: string } | null,
+): VoyageCardData {
+  if (readyVoyage) {
+    return {
+      status: 'returned',
+      statusLabel: 'Claim reward',
+      routeName: ROUTE_LABELS[readyVoyage.route] ?? readyVoyage.route,
+    }
+  }
+  if (todayVoyage) {
+    const ms = Math.max(0, (new Date(todayVoyage.created_at).getTime() + (todayVoyage.duration_ms ?? 0)) - Date.now())
+    const totalMin = Math.ceil(ms / 60000)
+    const h = Math.floor(totalMin / 60)
+    const m = totalMin % 60
+    const eta = h > 0 ? `${h}h ${m}m` : `${m}m`
+    return {
+      status: 'sailing' as VoyageStatus,
+      statusLabel: `Sailing · ${eta} left`,
+      routeName: ROUTE_LABELS[todayVoyage.route] ?? todayVoyage.route,
+    }
+  }
+  return { status: 'idle', statusLabel: 'Ready to set sail', routeName: null }
+}
+
+// Hub card data is small — campaign next-node summary + voyage state.
+// Server component so we can derive from cached fetchers without
+// adding more round-trips. The actual heavy sections (RaidsSection
+// and DailyVoyagePanel) still render inline below; the hub cards open
+// short ready-check modals that scroll into those sections.
+async function ExpeditionHub() {
+  const [profile, raidMap, dailyVoyageState] = await Promise.all([
+    getCurrentProfile(),
+    cachedRaidMap(),
+    cachedDailyVoyageState(),
+  ])
+
+  // Next main-chain node: first non-cleared, non-sideBranch view.
+  const next = raidMap.views.find(v => v.status !== 'cleared' && !v.node.sideBranch) ?? null
+  const cleared = raidMap.views.filter(v => v.status === 'cleared').length
+  const campaign: CampaignCardData = {
+    nextNodeName: next?.node.label ?? null,
+    nextNodeImage: (next?.node.image ?? null) as string | null,
+    nextNodeLocked: next?.status === 'locked',
+    clearedCount: cleared,
+    totalNodes: raidMap.views.length,
+    repairOwed: profile?.raid_repair_owed ?? 0,
+    equippedItemsCount: ((profile?.equipped_raid_items as string[] | null) ?? []).length,
+  }
+  const voyages = describeVoyage(
+    'error' in dailyVoyageState ? null : (dailyVoyageState.todayVoyage as { route: string; created_at: string; duration_ms: number | null } | null),
+    'error' in dailyVoyageState ? null : (dailyVoyageState.readyVoyage as { route: string } | null),
+  )
+
+  return <HubCards campaign={campaign} voyages={voyages} />
+}
+
 async function RaidsMapSection() {
   const [profile, raidMap, topRaidProgress] = await Promise.all([
     getCurrentProfile(),
@@ -187,16 +256,25 @@ export default async function ExpeditionsPage() {
               <ShipHeroSection />
             </Suspense>
 
-            {/* Voyages — label paints immediately; panel streams in */}
-            <div style={{ marginBottom: '1rem' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', marginBottom: '0.6rem', letterSpacing: '0.04em' }}>Voyages</p>
+            {/* Hub cards — Campaign + Voyages side-by-side. Each opens a
+                ready-check modal that scrolls into the inline section
+                below for the heavy UI. Replaces the old plain section
+                labels ("Voyages" / "Raids"). */}
+            <Suspense fallback={<SkeletonBox height={150} radius={18} style={{ marginBottom: '1.2rem' }} />}>
+              <ExpeditionHub />
+            </Suspense>
+
+            {/* Voyage panel — id="voyage-panel" so the hub card's CTA can
+                scroll-into-view from the modal. */}
+            <div id="voyage-panel" style={{ marginBottom: '1rem', scrollMarginTop: 90 }}>
               <Suspense fallback={<SkeletonBox height={140} radius={14} />}>
                 <DailyVoyageSection />
               </Suspense>
             </div>
 
-            {/* Raids — the slowest section. With streaming, it no longer blocks
-                ShipHero or the voyage panel. */}
+            {/* Story map (RaidsSection) — id="chapter-map" lives on its own
+                wrapper inside RaidsSection. Section label was renamed
+                "Raids" → "Story" inline. */}
             <Suspense fallback={<SkeletonBox height={86} radius={12} />}>
               <RaidsMapSection />
             </Suspense>
