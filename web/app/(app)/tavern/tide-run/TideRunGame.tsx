@@ -344,6 +344,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     nextSpawnAt: 0,
     distance: 0,
     pbMeters: initialBestDistance,   // PB to chase this run (drives the in-water marker)
+    pbCrossedAt: 0,                  // performance.now() when the player passed their PB this run (0 = not yet); drives the crossing flash + post-crossing fade-out
     deathFlashUntil: 0,
     lastScoreUpdate: 0,
     holding: false,         // is the player currently holding to extend a jump?
@@ -557,6 +558,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     g.nextSpawnAt = HAZARD_WARMUP
     g.distance = 0
     g.beaconsSmashed = 0
+    g.pbCrossedAt = 0
     g.deathFlashUntil = 0
     g.lastScoreUpdate = 0
     g.shipVy = 0
@@ -1431,27 +1433,76 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     }
 
     // ── Personal-best marker — a faint pennant in the water at your best
-    //    distance. You sail toward it; passing it = a new record. ──
+    //    distance. Players reported the pennant was distracting during a
+    //    run (visible chrome in the obstacle lane the whole time), so it
+    //    now fades in only on approach: invisible past PB_APPROACH_M
+    //    away, ramps 0→1 alpha across PB_APPROACH_M → PB_FULL_M, holds
+    //    full opacity through the crossing, then briefly flashes + fades
+    //    out so the moment of breaking your record still feels good. ──
     if (g.pbMeters > 0) {
+      const PB_APPROACH_M = 400   // start fading in this far before PB
+      const PB_FULL_M     = 80    // full opacity from here in
+      const PB_FLASH_MS   = 900   // celebration flash window after crossing
+      const PB_LINGER_MS  = 1400  // total time the marker stays drawn after crossing
+
+      // First-frame crossing detection — stamp the time so the flash + fade-out
+      // animate without re-computing each frame.
+      if (g.distance >= g.pbMeters && g.pbCrossedAt === 0) {
+        g.pbCrossedAt = performance.now()
+      }
+
       const pbScreenX = g.pbMeters / METERS_PER_PIXEL - g.scrollX
-      if (pbScreenX > -24 && pbScreenX < cw + 24) {
+      const onScreen  = pbScreenX > -24 && pbScreenX < cw + 24
+
+      // Alpha multiplier — 0 means skip the draw entirely.
+      let alpha = 0
+      let flashT = 0  // 0..1 progress through the celebration flash (0 = none)
+      if (g.pbCrossedAt > 0) {
+        const sinceCross = performance.now() - g.pbCrossedAt
+        if (sinceCross < PB_LINGER_MS) {
+          alpha = 1 - sinceCross / PB_LINGER_MS
+          if (sinceCross < PB_FLASH_MS) flashT = 1 - sinceCross / PB_FLASH_MS
+        }
+      } else {
+        const metersToPB = g.pbMeters - g.distance
+        if (metersToPB <= PB_APPROACH_M) {
+          alpha = metersToPB <= PB_FULL_M
+            ? 1
+            : 1 - (metersToPB - PB_FULL_M) / (PB_APPROACH_M - PB_FULL_M)
+        }
+      }
+
+      if (onScreen && alpha > 0.02) {
         const surfY = seaSurfaceY(pbScreenX + g.scrollX, ch, g.scrollX)
         const topY = Math.max(8, surfY - 78)
         ctx.save()
-        ctx.strokeStyle = 'rgba(189,160,90,0.45)'
+
+        // Crossing flash — a bright halo + slight pennant pulse for ~900ms
+        // after the player passes the marker. Communicates "new record"
+        // without an overlay or HUD bar.
+        if (flashT > 0) {
+          const haloR = 18 + 36 * (1 - flashT)
+          const haloGrad = ctx.createRadialGradient(pbScreenX, topY + 4, 0, pbScreenX, topY + 4, haloR)
+          haloGrad.addColorStop(0, `rgba(255,228,150,${0.55 * flashT})`)
+          haloGrad.addColorStop(1, 'rgba(255,228,150,0)')
+          ctx.fillStyle = haloGrad
+          ctx.fillRect(pbScreenX - haloR, topY - haloR + 4, haloR * 2, haloR * 2)
+        }
+
+        ctx.strokeStyle = `rgba(189,160,90,${0.45 * alpha})`
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.moveTo(pbScreenX, surfY + 2)
         ctx.lineTo(pbScreenX, topY)
         ctx.stroke()
-        ctx.fillStyle = 'rgba(189,160,90,0.55)'
+        ctx.fillStyle = `rgba(189,160,90,${0.55 * alpha})`
         ctx.beginPath()
         ctx.moveTo(pbScreenX, topY)
         ctx.lineTo(pbScreenX + 22, topY + 7)
         ctx.lineTo(pbScreenX, topY + 14)
         ctx.closePath()
         ctx.fill()
-        ctx.fillStyle = 'rgba(240,225,190,0.7)'
+        ctx.fillStyle = `rgba(240,225,190,${0.7 * alpha})`
         ctx.font = '700 9px sans-serif'
         ctx.textAlign = 'center'
         ctx.fillText('BEST', pbScreenX, topY - 5)
