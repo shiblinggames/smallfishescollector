@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import RaidsSection from './RaidsSection'
 import ShipHero from './ShipHero'
-import DailyVoyagePanel from './DailyVoyagePanel'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
@@ -69,24 +68,9 @@ async function ShipHeroSection() {
   )
 }
 
-async function DailyVoyageSection() {
-  const [profile, roster, dailyVoyageState, voyages] = await Promise.all([
-    getCurrentProfile(),
-    cachedCrewRoster(),
-    cachedDailyVoyageState(),
-    cachedVoyageHistory(),
-  ])
-  return (
-    <DailyVoyagePanel
-      roster={roster}
-      shipTier={profile?.ship_tier ?? 0}
-      todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
-      readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
-      expeditionXP={profile?.expedition_xp ?? 0}
-      voyages={voyages}
-    />
-  )
-}
+// DailyVoyageSection removed — the panel now lives inside the Voyages
+// hub-card modal in HubCards.tsx. ExpeditionHub fetches the data once
+// and passes it straight through.
 
 // Fleet-wide #1 on the Raid Progress board. Same scoring as the
 // leaderboard fetchers (cleared[] + distinct raid_completions.raid_id +
@@ -173,11 +157,12 @@ function describeVoyage(
 // (repair, items, crew) inline, so we also pipe through the player's
 // owned items, equipped items, roster, and ship slot counts.
 async function ExpeditionHub() {
-  const [profile, raidMap, dailyVoyageState, roster] = await Promise.all([
+  const [profile, raidMap, dailyVoyageState, roster, voyageHistory] = await Promise.all([
     getCurrentProfile(),
     cachedRaidMap(),
     cachedDailyVoyageState(),
     cachedCrewRoster(),
+    cachedVoyageHistory(),
   ])
 
   const shipTier = profile?.ship_tier ?? 0
@@ -214,6 +199,13 @@ async function ExpeditionHub() {
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
       assignedCrewCount={assignedCount}
+      // Full DailyVoyagePanel-needed props — voyage panel was promoted
+      // into the Voyages hub modal so it's no longer rendered inline.
+      shipTier={shipTier}
+      todayVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.todayVoyage}
+      readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
+      expeditionXP={profile?.expedition_xp ?? 0}
+      voyageHistory={voyageHistory}
     />
   )
 }
@@ -283,13 +275,10 @@ export default async function ExpeditionsPage() {
               <ExpeditionHub />
             </Suspense>
 
-            {/* Voyage panel — id="voyage-panel" so the hub card's CTA can
-                scroll-into-view from the modal. */}
-            <div id="voyage-panel" style={{ marginBottom: '1rem', scrollMarginTop: 90 }}>
-              <Suspense fallback={<SkeletonBox height={140} radius={14} />}>
-                <DailyVoyageSection />
-              </Suspense>
-            </div>
+            {/* DailyVoyagePanel moved into the Voyages hub-card modal —
+                no longer rendered as a standalone section. Tapping the
+                Voyages card opens it in-modal with the full panel
+                (route pick, crew slots, ship-out, claim). */}
 
             {/* Story map (RaidsSection) — id="chapter-map" lives on its own
                 wrapper inside RaidsSection. Section label was renamed

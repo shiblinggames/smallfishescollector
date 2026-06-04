@@ -13,6 +13,9 @@ import { RAID_ITEMS } from '@/lib/raidItems'
 import { saveEquippedRaidItems } from './actions'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { assignCrew, type CrewMember } from '@/app/dev/crew/actions'
+import DailyVoyagePanel from './DailyVoyagePanel'
+import type { DailyVoyage } from './voyageActions'
+import type { VoyageHistoryEntry } from './VoyageHistory'
 
 export type CampaignCardData = {
   nextNodeName: string | null
@@ -42,6 +45,14 @@ interface Props {
   roster: CrewMember[]
   shipCrewSlots: number
   assignedCrewCount: number
+  // DailyVoyagePanel-required props. The panel used to render inline
+  // below the hub; now lives inside the Voyages modal so the data
+  // pipes through here.
+  shipTier: number
+  todayVoyage: DailyVoyage | null
+  readyVoyage: DailyVoyage | null
+  expeditionXP: number
+  voyageHistory: VoyageHistoryEntry[]
 }
 
 const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }> = {
@@ -62,6 +73,7 @@ export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots, assignedCrewCount,
+  shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages'>(null)
@@ -296,73 +308,70 @@ export default function HubCards({
       </PopupShell>
 
       {/* ── Voyages prep modal ─────────────────────────────────────── */}
+      {/* The old standalone DailyVoyagePanel section under the hub
+          cards is gone; its full content now lives inside this modal.
+          Wider maxWidth + maxHeight + scroll so the whole panel
+          (route pick → crew slots → ship-out → claim → results) fits
+          without leaving the hub. Close button at the top right; no
+          secondary CTA since the panel owns the launch flow now. */}
       <PopupShell open={modal === 'voyages'} onClose={() => setModal(null)}>
         <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
           style={{
-            margin: 'auto', width: '100%', maxWidth: 400,
+            margin: 'auto', width: '100%', maxWidth: 480,
             background: 'linear-gradient(180deg, #0c1828 0%, #050a14 100%)',
             border: `1px solid ${vAcc.bd}`,
-            borderRadius: 20, padding: '1.1rem 1rem 1rem',
+            borderRadius: 20,
             boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+            display: 'flex', flexDirection: 'column',
+            maxHeight: '88vh',
+            overflow: 'hidden',
           }}
         >
-          <p className="font-karla font-700 uppercase tracking-[0.18em] text-center"
-            style={{ fontSize: '0.55rem', color: `${vAcc.fg}aa`, marginBottom: 4 }}>
-            Daily Voyage
-          </p>
-          <p className="font-cinzel font-700 text-center"
-            style={{ fontSize: '1.1rem', color: '#f0e8d0', marginBottom: 4 }}>
-            {voyages.status === 'returned' ? 'Your crew is back'
-              : voyages.status === 'sailing' ? 'Crew is at sea'
-              : 'Plan today’s voyage'}
-          </p>
-          <p className="font-karla font-600 text-center"
-            style={{ fontSize: '0.72rem', color: vAcc.fg, marginBottom: 14 }}>
-            {voyages.statusLabel}{voyages.routeName ? ` · ${voyages.routeName}` : ''}
-          </p>
-
-          {voyages.status === 'idle' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
-              <PrepRow
-                label="Crew"
-                detail={`${assignedCrewCount}/${shipCrewSlots} assigned`}
-                ok={assignedCrewCount >= 1}
-                onClick={() => setInnerModal('crew')}
-              />
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0.85rem 1rem 0.6rem',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            flexShrink: 0,
+          }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]"
+                style={{ fontSize: '0.5rem', color: `${vAcc.fg}aa`, marginBottom: 1 }}>
+                Daily
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0e8d0' }}>
+                Voyages
+              </p>
             </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 8 }}>
             <button
               type="button"
               onClick={() => setModal(null)}
-              className="font-karla font-700 uppercase tracking-[0.08em]"
+              aria-label="Close"
               style={{
-                flex: 1, padding: '0.7rem 0',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'rgba(240,237,232,0.6)',
-                borderRadius: 12, fontSize: '0.7rem', cursor: 'pointer',
+                width: 30, height: 30, borderRadius: '50%', padding: 0,
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.16)',
+                color: '#cfcabf', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              Cancel
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
             </button>
-            <button
-              type="button"
-              onClick={() => { setModal(null); scrollToSection('voyage-panel') }}
-              className="font-karla font-700 uppercase tracking-[0.08em]"
-              style={{
-                flex: 2, padding: '0.7rem 0',
-                background: vAcc.bg,
-                border: `1px solid ${vAcc.fg}66`,
-                color: vAcc.fg,
-                borderRadius: 12, fontSize: '0.7rem', cursor: 'pointer',
-              }}
-            >
-              {voyages.status === 'returned' ? 'Claim Reward →'
-                : voyages.status === 'sailing' ? 'View Voyage →'
-                : 'Set Sail →'}
-            </button>
+          </div>
+
+          <div style={{
+            flex: 1, overflowY: 'auto', overscrollBehavior: 'contain',
+            padding: '0.9rem 1rem 1.2rem',
+          }}>
+            <DailyVoyagePanel
+              roster={roster}
+              shipTier={shipTier}
+              todayVoyage={todayVoyage}
+              readyVoyage={readyVoyage}
+              expeditionXP={expeditionXP}
+              voyages={voyageHistory}
+            />
           </div>
         </div>
       </PopupShell>
