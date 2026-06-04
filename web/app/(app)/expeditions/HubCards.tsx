@@ -63,8 +63,11 @@ function scrollToSection(id: string) {
 // full prep screen with crew slots, item slots, Voyage / Raid Score
 // tiles, and the breakdown sheets. Hub modals dispatch this when the
 // player taps "Open Prep" so the prep flow gates the next launch.
-function openPrepDrawer() {
-  window.dispatchEvent(new Event('expedition:open-loadout'))
+// The mode flips the drawer into launch-focused chrome: a "Prepping
+// for..." banner at top + a sticky context-aware commit CTA at the
+// bottom ("Open Story Map →" / "Set Sail →").
+function openPrepDrawer(mode: 'campaign' | 'voyage') {
+  window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { mode } }))
 }
 
 // Status pill colours per voyage state — kept here so the card +
@@ -249,7 +252,7 @@ export default function HubCards({ campaign, voyages }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => { setModal(null); openPrepDrawer() }}
+              onClick={() => { setModal(null); openPrepDrawer('campaign') }}
               className="font-karla font-700 uppercase tracking-[0.08em]"
               style={{
                 flex: 2, padding: '0.7rem 0',
@@ -328,7 +331,7 @@ export default function HubCards({ campaign, voyages }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => { setModal(null); openPrepDrawer() }}
+              onClick={() => { setModal(null); openPrepDrawer('voyage') }}
               className="font-karla font-700 uppercase tracking-[0.08em]"
               style={{
                 flex: 2, padding: '0.7rem 0',

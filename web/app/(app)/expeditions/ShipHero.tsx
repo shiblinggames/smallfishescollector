@@ -284,11 +284,24 @@ export default function ShipHero({
   // Loadout drawer here so the player can review/adjust crew, items,
   // and scores before pulling the trigger. Same component, two entry
   // points (Manage Ship button + hub modal CTA).
+  //
+  // The event's optional `detail.mode` flips the drawer into a launch-
+  // focused shape: a header banner saying what they're prepping for
+  // plus a sticky bottom commit CTA ("Begin Raid →" / "Set Sail →").
+  // Without a mode (Manage Ship entry), the drawer is just the
+  // free-form loadout editor it always was.
+  const [loadoutMode, setLoadoutMode] = useState<'campaign' | 'voyage' | null>(null)
   useEffect(() => {
-    function onOpen() { setLoadoutOpen(true) }
-    window.addEventListener('expedition:open-loadout', onOpen)
-    return () => window.removeEventListener('expedition:open-loadout', onOpen)
+    function onOpen(e: Event) {
+      const detail = (e as CustomEvent<{ mode?: 'campaign' | 'voyage' }>).detail
+      setLoadoutMode(detail?.mode ?? null)
+      setLoadoutOpen(true)
+    }
+    window.addEventListener('expedition:open-loadout', onOpen as EventListener)
+    return () => window.removeEventListener('expedition:open-loadout', onOpen as EventListener)
   }, [])
+  // Clear the mode when the drawer is closed any way (X, drag, backdrop)
+  useEffect(() => { if (!loadoutOpen) setLoadoutMode(null) }, [loadoutOpen])
 
   function closeLoadout() {
     setLoadoutOpen(false)
@@ -692,7 +705,40 @@ export default function ShipHero({
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 1rem 5rem' }}>
+              <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 1rem 6rem' }}>
+
+              {/* Launch-mode banner — only shows when the drawer was
+                  opened from a hub modal with a mode. Tells the player
+                  what they're prepping for so the upcoming crew/item
+                  changes feel purposeful. Without a mode (Manage Ship
+                  entry) the drawer is just the editor. */}
+              {loadoutMode && (
+                <div style={{
+                  background: loadoutMode === 'campaign'
+                    ? 'linear-gradient(180deg, rgba(196,169,106,0.18) 0%, rgba(196,169,106,0.04) 100%)'
+                    : 'linear-gradient(180deg, rgba(125,160,216,0.18) 0%, rgba(125,160,216,0.04) 100%)',
+                  border: `1px solid ${loadoutMode === 'campaign' ? 'rgba(196,169,106,0.42)' : 'rgba(125,160,216,0.42)'}`,
+                  borderRadius: 12, padding: '0.7rem 0.85rem',
+                  marginBottom: '1rem',
+                }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.18em]"
+                    style={{
+                      fontSize: '0.5rem',
+                      color: loadoutMode === 'campaign' ? '#d8c08a' : '#9ab4dc',
+                      marginBottom: 2,
+                    }}>
+                    Prepping for
+                  </p>
+                  <p className="font-cinzel font-700"
+                    style={{ fontSize: '0.9rem', color: '#f0ede8', lineHeight: 1.15 }}>
+                    {loadoutMode === 'campaign' ? 'The next raid' : "Today's voyage"}
+                  </p>
+                  <p className="font-karla font-400"
+                    style={{ fontSize: '0.62rem', color: 'rgba(240,237,232,0.6)', lineHeight: 1.4, marginTop: 4 }}>
+                    Set your crew, equip raid items, check your scores — then commit at the bottom.
+                  </p>
+                </div>
+              )}
 
               {/* Scores — moved from the top of the ShipHero card into the
                   Loadout drawer where they actually matter: the player is
@@ -1204,6 +1250,51 @@ export default function ShipHero({
               </div>
               </>)}
               </div>{/* end scrollable */}
+
+              {/* Sticky launch CTA — only when drawer was opened in a
+                  launch mode. Sits over the scrollable area so the
+                  player always sees the commit button no matter how
+                  far they've scrolled through their loadout. Tapping
+                  closes the drawer + scrolls into the relevant inline
+                  section (chapter map / voyage panel) where the
+                  actual action lives. */}
+              {loadoutMode && (
+                <div
+                  style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    padding: '0.75rem 1rem calc(env(safe-area-inset-bottom, 0px) + 0.85rem)',
+                    background: 'linear-gradient(180deg, rgba(8,14,24,0) 0%, rgba(8,14,24,0.96) 38%, rgba(8,14,24,0.99) 100%)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = loadoutMode === 'campaign' ? 'chapter-map' : 'voyage-panel'
+                      closeLoadout()
+                      setTimeout(() => {
+                        const el = document.getElementById(id)
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 240)
+                    }}
+                    className="font-karla font-700 uppercase tracking-[0.1em]"
+                    style={{
+                      pointerEvents: 'auto',
+                      width: '100%', padding: '0.85rem 0',
+                      borderRadius: 14,
+                      background: loadoutMode === 'campaign'
+                        ? 'linear-gradient(180deg, rgba(196,169,106,0.35) 0%, rgba(196,169,106,0.18) 100%)'
+                        : 'linear-gradient(180deg, rgba(125,160,216,0.32) 0%, rgba(125,160,216,0.16) 100%)',
+                      border: `1px solid ${loadoutMode === 'campaign' ? 'rgba(196,169,106,0.7)' : 'rgba(125,160,216,0.65)'}`,
+                      color: loadoutMode === 'campaign' ? '#f0d695' : '#bcd0ea',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                    }}
+                  >
+                    {loadoutMode === 'campaign' ? 'Open Story Map →' : 'Set Sail →'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </>
         )}
