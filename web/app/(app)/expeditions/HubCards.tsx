@@ -170,25 +170,28 @@ export default function HubCards({
             background: 'rgba(6,12,20,0.92)',
             border: `1px solid ${campaignAccent}30`,
             borderTop: `1px solid ${campaignAccent}55`,
-            borderRadius: 18, padding: '0.9rem 0.9rem 1rem',
+            borderRadius: 18, padding: '0.85rem 0.85rem 0.95rem',
             cursor: 'pointer', textAlign: 'left',
             display: 'flex', flexDirection: 'column',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 72, marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 60, marginBottom: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={campaign.nextNodeImage ?? '/raidlog.png'} alt=""
-              style={{ width: '100%', height: 68, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${campaignAccent}40)` }} />
+              style={{ width: '100%', height: 58, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${campaignAccent}40)` }} />
           </div>
-          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: `${campaignAccent}cc`, marginBottom: 3 }}>Story</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: 4 }}>Campaign</p>
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#9a9488', lineHeight: 1.35 }}>
-            {campaign.nextNodeName
-              ? <>Next: <span style={{ color: '#e8d8a8' }}>{campaign.nextNodeName}</span></>
-              : 'All cleared'}
-            <br />
-            <span style={{ color: '#6a6764' }}>{campaign.clearedCount}/{campaign.totalNodes} done</span>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 6 }}>Campaign</p>
+          <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
+            Story chapters, boss raids, and the hunt for the Finndicate.
           </p>
+          <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${campaignAccent}1c` }}>
+            <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#e8d8a8', lineHeight: 1.3 }}>
+              {campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
+            </p>
+            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a7672', lineHeight: 1.3, marginTop: 2 }}>
+              {campaign.clearedCount}/{campaign.totalNodes} cleared
+            </p>
+          </div>
         </button>
 
         <button
@@ -201,7 +204,7 @@ export default function HubCards({
             border: `1px solid ${voyages.status === 'sailing' ? `${vAcc.fg}80` : vAcc.bd}`,
             borderTop: `1px solid ${voyages.status === 'sailing' ? vAcc.fg : `${vAcc.fg}55`}`,
             boxShadow: voyages.status === 'sailing' ? `0 0 18px ${vAcc.fg}30` : undefined,
-            borderRadius: 18, padding: '0.9rem 0.9rem 1rem',
+            borderRadius: 18, padding: '0.85rem 0.85rem 0.95rem',
             cursor: 'pointer', textAlign: 'left',
             display: 'flex', flexDirection: 'column', position: 'relative',
             overflow: 'hidden',
@@ -217,18 +220,26 @@ export default function HubCards({
               animation: 'shop-pulse 1.6s ease-in-out infinite',
             }} />
           )}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 72, marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 60, marginBottom: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/voyagemap.png" alt=""
               className={voyages.status === 'sailing' ? 'voyage-card-bob' : undefined}
-              style={{ width: '100%', height: 68, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${vAcc.fg}${voyages.status === 'sailing' ? '90' : '50'})` }} />
+              style={{ width: '100%', height: 58, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${vAcc.fg}${voyages.status === 'sailing' ? '90' : '50'})` }} />
           </div>
-          <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: `${vAcc.fg}cc`, marginBottom: 3 }}>Daily</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: 4 }}>Voyages</p>
-          <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: vAcc.fg, lineHeight: 1.35 }}>
-            {voyages.statusLabel}
-            {voyages.routeName && <><br /><span className="font-karla font-600" style={{ color: '#6a6764' }}>{voyages.routeName}</span></>}
+          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 6 }}>Voyages</p>
+          <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
+            Send your crew off to earn doubloons, gems, and rare drops.
           </p>
+          <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${vAcc.fg}1c` }}>
+            <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: vAcc.fg, lineHeight: 1.3 }}>
+              {voyages.statusLabel}
+            </p>
+            {voyages.routeName && (
+              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a7672', lineHeight: 1.3, marginTop: 2 }}>
+                {voyages.routeName}
+              </p>
+            )}
+          </div>
           {/* Voyage-in-progress bar — anchored to the bottom edge of the
               card so the player can see how close the crew is to returning
               at a glance, no modal open required. */}
