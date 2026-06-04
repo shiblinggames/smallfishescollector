@@ -1874,7 +1874,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string> }) {
+export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -1956,7 +1956,31 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
           <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#c4a96a', letterSpacing: '0.04em' }}>Raids</span>
           <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#6a6764' }}>{clearedCount}/{views.length} cleared</span>
         </span>
-        <span style={{ color: '#6a6764', fontSize: '0.9rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', flexShrink: 0 }}>
+          {topRaidProgress && (
+            // Fleet leader on the Raid Progress board — social proof in
+            // the section header. Compact "#1 username · score" pill so
+            // the player sees the current high water mark without
+            // leaving the Expeditions tab.
+            <span
+              className="font-karla font-600"
+              style={{
+                fontSize: '0.58rem',
+                color: 'rgba(196,169,106,0.78)',
+                background: 'rgba(196,169,106,0.08)',
+                border: '1px solid rgba(196,169,106,0.22)',
+                padding: '0.16rem 0.5rem',
+                borderRadius: 999,
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.04em',
+              }}
+            >
+              #1 {topRaidProgress.username}
+              <span style={{ color: '#c4a96a', marginLeft: 4 }}>· {topRaidProgress.score}</span>
+            </span>
+          )}
+          <span style={{ color: '#6a6764', fontSize: '0.9rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
+        </span>
       </button>
 
       {open && (

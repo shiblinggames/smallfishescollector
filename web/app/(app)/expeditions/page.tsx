@@ -86,10 +86,55 @@ async function DailyVoyageSection() {
   )
 }
 
+// Fleet-wide #1 on the Raid Progress board. Same scoring as the
+// leaderboard fetchers (cleared[] + distinct raid_completions.raid_id +
+// has_completed_practice_raid), same tiebreaker (earliest last raid
+// completion wins ties). Lightweight version that only returns the top
+// row + a count — the Raids header surfaces it as "Leader: X · N" so
+// the section opens with a social proof hook.
+async function fetchTopRaidProgress(): Promise<{ username: string; score: number } | null> {
+  const admin = createAdminClient()
+  const [{ data: profiles }, { data: completions }] = await Promise.all([
+    admin.from('profiles')
+      .select('id, username, raid_node_progress, has_completed_practice_raid')
+      .eq('is_admin', false),
+    admin.from('raid_completions').select('user_id, raid_id, completed_at'),
+  ])
+  if (!profiles || profiles.length === 0) return null
+  const lastByUser = new Map<string, string>()
+  const raidsByUser = new Map<string, Set<string>>()
+  for (const c of (completions ?? []) as Array<{ user_id: string; raid_id: string; completed_at: string }>) {
+    const prev = lastByUser.get(c.user_id)
+    if (!prev || c.completed_at > prev) lastByUser.set(c.user_id, c.completed_at)
+    const set = raidsByUser.get(c.user_id) ?? new Set<string>()
+    set.add(c.raid_id)
+    raidsByUser.set(c.user_id, set)
+  }
+  type Row = { username: string; score: number; lastAt: string | null }
+  const rows: Row[] = []
+  for (const p of profiles as Array<{ id: string; username: string | null; raid_node_progress: { cleared?: string[] } | null; has_completed_practice_raid: boolean | null }>) {
+    const clearedCount = Array.isArray(p.raid_node_progress?.cleared) ? p.raid_node_progress!.cleared!.length : 0
+    const bossCount = raidsByUser.get(p.id)?.size ?? 0
+    const skirmish = p.has_completed_practice_raid ? 1 : 0
+    const score = clearedCount + bossCount + skirmish
+    if (score > 0 && p.username) rows.push({ username: p.username, score, lastAt: lastByUser.get(p.id) ?? null })
+  }
+  if (rows.length === 0) return null
+  rows.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    if (a.lastAt && b.lastAt) return a.lastAt < b.lastAt ? -1 : a.lastAt > b.lastAt ? 1 : 0
+    if (a.lastAt) return -1
+    if (b.lastAt) return 1
+    return 0
+  })
+  return { username: rows[0].username, score: rows[0].score }
+}
+
 async function RaidsMapSection() {
-  const [profile, raidMap] = await Promise.all([
+  const [profile, raidMap, topRaidProgress] = await Promise.all([
     getCurrentProfile(),
     cachedRaidMap(),
+    fetchTopRaidProgress(),
   ])
   return (
     <RaidsSection
@@ -101,6 +146,7 @@ async function RaidsMapSection() {
       shipClasses={raidMap.shipClasses}
       seenChapterUnlocks={raidMap.seenChapterUnlocks}
       raidNodeChoices={raidMap.raidNodeChoices}
+      topRaidProgress={topRaidProgress}
     />
   )
 }
