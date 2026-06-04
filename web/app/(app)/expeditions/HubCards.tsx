@@ -35,6 +35,9 @@ export type VoyageCardData = {
   status: VoyageStatus
   statusLabel: string
   routeName: string | null
+  /** 0..1 voyage completion when status is 'sailing', otherwise null. Drives
+   *  the progress bar at the bottom of the hub card. */
+  progress: number | null
 }
 
 interface Props {
@@ -192,32 +195,56 @@ export default function HubCards({
           type="button"
           onClick={() => setModal('voyages')}
           style={{
-            background: 'rgba(6,12,20,0.92)',
-            border: `1px solid ${vAcc.bd}`,
-            borderTop: `1px solid ${vAcc.fg}55`,
+            background: voyages.status === 'sailing'
+              ? `linear-gradient(180deg, ${vAcc.fg}1c 0%, rgba(6,12,20,0.92) 60%)`
+              : 'rgba(6,12,20,0.92)',
+            border: `1px solid ${voyages.status === 'sailing' ? `${vAcc.fg}80` : vAcc.bd}`,
+            borderTop: `1px solid ${voyages.status === 'sailing' ? vAcc.fg : `${vAcc.fg}55`}`,
+            boxShadow: voyages.status === 'sailing' ? `0 0 18px ${vAcc.fg}30` : undefined,
             borderRadius: 18, padding: '0.9rem 0.9rem 1rem',
             cursor: 'pointer', textAlign: 'left',
             display: 'flex', flexDirection: 'column', position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          {voyages.status === 'returned' && (
+          {(voyages.status === 'returned' || voyages.status === 'sailing') && (
             <span aria-hidden style={{
               position: 'absolute', top: 8, right: 8, width: 9, height: 9, borderRadius: 9,
-              background: '#4ade80', boxShadow: '0 0 8px rgba(74,222,128,0.7)',
+              background: voyages.status === 'returned' ? '#4ade80' : vAcc.fg,
+              boxShadow: voyages.status === 'returned'
+                ? '0 0 8px rgba(74,222,128,0.7)'
+                : `0 0 8px ${vAcc.fg}b0`,
               animation: 'shop-pulse 1.6s ease-in-out infinite',
             }} />
           )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 72, marginBottom: 6 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/voyagemap.png" alt=""
-              style={{ width: '100%', height: 68, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${vAcc.fg}50)` }} />
+              className={voyages.status === 'sailing' ? 'voyage-card-bob' : undefined}
+              style={{ width: '100%', height: 68, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${vAcc.fg}${voyages.status === 'sailing' ? '90' : '50'})` }} />
           </div>
           <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: `${vAcc.fg}cc`, marginBottom: 3 }}>Daily</p>
           <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: 4 }}>Voyages</p>
-          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: vAcc.fg, lineHeight: 1.35 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: vAcc.fg, lineHeight: 1.35 }}>
             {voyages.statusLabel}
-            {voyages.routeName && <><br /><span style={{ color: '#6a6764' }}>{voyages.routeName}</span></>}
+            {voyages.routeName && <><br /><span className="font-karla font-600" style={{ color: '#6a6764' }}>{voyages.routeName}</span></>}
           </p>
+          {/* Voyage-in-progress bar — anchored to the bottom edge of the
+              card so the player can see how close the crew is to returning
+              at a glance, no modal open required. */}
+          {voyages.status === 'sailing' && voyages.progress != null && (
+            <div aria-hidden style={{
+              position: 'absolute', left: 0, right: 0, bottom: 0,
+              height: 3, background: 'rgba(0,0,0,0.5)',
+            }}>
+              <div style={{
+                width: `${Math.round(voyages.progress * 100)}%`, height: '100%',
+                background: `linear-gradient(90deg, ${vAcc.fg}, ${vAcc.fg}cc)`,
+                boxShadow: `0 0 6px ${vAcc.fg}`,
+                transition: 'width 0.5s',
+              }} />
+            </div>
+          )}
         </button>
       </div>
 

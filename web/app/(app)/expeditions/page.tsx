@@ -136,10 +136,14 @@ function describeVoyage(
       status: 'returned',
       statusLabel: 'Claim reward',
       routeName: ROUTE_LABELS[readyVoyage.route] ?? readyVoyage.route,
+      progress: null,
     }
   }
   if (todayVoyage) {
-    const ms = Math.max(0, (new Date(todayVoyage.created_at).getTime() + (todayVoyage.duration_ms ?? 0)) - Date.now())
+    const started  = new Date(todayVoyage.created_at).getTime()
+    const duration = Math.max(1, todayVoyage.duration_ms ?? 0)
+    const elapsed  = Math.max(0, Date.now() - started)
+    const ms       = Math.max(0, duration - elapsed)
     const totalMin = Math.ceil(ms / 60000)
     const h = Math.floor(totalMin / 60)
     const m = totalMin % 60
@@ -148,9 +152,10 @@ function describeVoyage(
       status: 'sailing' as VoyageStatus,
       statusLabel: `Sailing · ${eta} left`,
       routeName: ROUTE_LABELS[todayVoyage.route] ?? todayVoyage.route,
+      progress: Math.min(1, elapsed / duration),
     }
   }
-  return { status: 'idle', statusLabel: 'Ready to set sail', routeName: null }
+  return { status: 'idle', statusLabel: 'Ready to set sail', routeName: null, progress: null }
 }
 
 // Hub card data is small — campaign next-node summary + voyage state.

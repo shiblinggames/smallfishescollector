@@ -960,6 +960,18 @@ html, body {
   50%      { transform: scale(1.18); box-shadow: 0 0 10px rgba(74,222,128,0.95); }
 }
 
+/* ── Voyage card: gentle bob when a voyage is in progress ──────────────── */
+/* Boat rocks on its center axis to signal "underway" without yanking the
+   eye. Slow + low amplitude — playful, not distracting. */
+@keyframes voyage-card-bob {
+  0%, 100% { transform: translateY(0)    rotate(-1.2deg); }
+  50%      { transform: translateY(-2px) rotate(1.2deg); }
+}
+.voyage-card-bob {
+  animation: voyage-card-bob 3.4s ease-in-out infinite;
+  transform-origin: 50% 80%;
+}
+
 /* ── Raid sky — drifting clouds + slow sun pulse + water shimmer ───────────── */
 /* Clouds translate from off-right to off-left across the battle stage. The
    three keyframes use different speeds so they never re-sync (organic feel
