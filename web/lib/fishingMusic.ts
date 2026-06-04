@@ -26,6 +26,8 @@
 //     audio elements keeps the session active so the BufferSources
 //     actually output on iOS PWA.
 
+import { getLetOtherAudioPlay } from './audioSession'
+
 let elA: HTMLAudioElement | null = null
 let elB: HTMLAudioElement | null = null
 let current: HTMLAudioElement | null = null
@@ -479,9 +481,14 @@ export function resumeFishingAudioIfReady(): void {
 /** HEAVY path — called by FishingGame's startFishingMusic /
  *  setFishingMusicMuted when the player actually arrives at /fishing.
  *  Builds the audio elements + Web Audio graph + kicks off the soundtrack
- *  and SFX prefetches. Idempotent on second+ calls. */
+ *  and SFX prefetches. Idempotent on second+ calls.
+ *
+ *  No-op when the player has opted to let other apps play music — the
+ *  whole point of that flag is to NOT spin up the `<audio>`-element
+ *  session keeper, which would steal iOS's audio session from Spotify. */
 export function unlockFishingAudio(): void {
   if (typeof document === 'undefined') return
+  if (getLetOtherAudioPlay()) return
   ensureElements()
   setupWebAudio()
   if (audioCtx && audioCtx.state === 'suspended') {
@@ -499,6 +506,7 @@ export function unlockFishingAudio(): void {
 }
 
 export function startFishingMusic(muted: boolean): void {
+  if (getLetOtherAudioPlay()) return
   unlockFishingAudio()
   if (!elA || !elB || !audioCtx || !masterGain) return
   clearPendingPause()
@@ -571,6 +579,7 @@ export function primeFishingTrack(url: string): void {
 }
 
 export function setFishingMusicMuted(muted: boolean): void {
+  if (getLetOtherAudioPlay()) return
   unlockFishingAudio()
   if (!elA || !elB || !audioCtx || !masterGain) return
   clearPendingPause()

@@ -14,6 +14,8 @@
 // muted to avoid any chance of audible interference, started on the
 // first user gesture inside the gesture call stack.
 
+import { getLetOtherAudioPlay } from './audioSession'
+
 let audioCtx: AudioContext | null = null
 let catchBytes: ArrayBuffer | null = null
 let crashBytes: ArrayBuffer | null = null
@@ -164,6 +166,7 @@ function fetchDeath() {
  *  `new AudioContext()` plus a resume), so playback is always sourced
  *  from a context that was born inside a gesture. */
 export function prefetchTideRunAudio(): void {
+  if (getLetOtherAudioPlay()) return
   ensureSessionKeeper()
   fetchCatch()
   fetchCrash()
@@ -199,6 +202,10 @@ export function resumeTideRunAudioIfReady(): void {
  *  this from a gesture handler (a tap inside /tide-run is the
  *  natural fit since the game waits for a tap to start anyway). */
 export function unlockTideRunAudio(): void {
+  // Honour the "let other apps play music" preference — when on, we
+  // never spin up the silent session keeper, so iOS keeps Spotify alive.
+  // The cost is silent SFX on iOS PWA; the player opted in to that.
+  if (getLetOtherAudioPlay()) return
   if (!ensureContext()) return
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})

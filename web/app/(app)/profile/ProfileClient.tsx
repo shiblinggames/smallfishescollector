@@ -994,8 +994,13 @@ export default function ProfileClient({
         </div>
       )}
 
+      {/* ── Audio preferences ── */}
+      <div style={{ marginTop: 32 }}>
+        <LetOtherAudioPlayToggle />
+      </div>
+
       {/* ── Sign out — compact, centered pill (was a full-width bar) ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 36 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
         <button
           onClick={signOut}
           className="font-karla font-600 uppercase tracking-[0.14em]"
@@ -1674,5 +1679,78 @@ function LockBadge() {
       <rect x="4" y="11" width="16" height="10" rx="2"/>
       <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
     </svg>
+  )
+}
+
+// Audio session preference — lets the player keep Spotify / Apple Music
+// playing while Small Fishes is open, at the cost of all in-game audio
+// (the `<audio>`-element session keepers in fishingMusic + tideRunAudio
+// are what hold iOS's playback session and steal it from other apps).
+// Read-on-mount so the toggle reflects the persisted choice; the setter
+// releases any active session immediately on flip so the player doesn't
+// have to leave the page to hear their other music start.
+function LetOtherAudioPlayToggle() {
+  const [allow, setAllow] = useState(false)
+
+  useEffect(() => {
+    // Lazy-load the audio-session module client-side so this component
+    // (rendered inside a server-rendered tree) doesn't pull lib code at
+    // build time. The module reads from localStorage on first call.
+    import('@/lib/audioSession').then(m => setAllow(m.getLetOtherAudioPlay()))
+  }, [])
+
+  function toggle() {
+    const next = !allow
+    setAllow(next)
+    import('@/lib/audioSession').then(m => m.setLetOtherAudioPlay(next))
+    if (next) {
+      // Active release — stop any in-flight session keepers so Spotify
+      // can take over the audio focus without the player leaving the page.
+      import('@/lib/fishingMusic').then(m => m.fadeOutFishingMusic(0)).catch(() => {})
+      import('@/lib/tideRunAudio').then(m => m.teardownTideRunAudio()).catch(() => {})
+    }
+  }
+
+  return (
+    <div style={{
+      maxWidth: 540, margin: '0 auto',
+      padding: '0.85rem 1rem',
+      background: 'rgba(8,12,20,0.55)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 14,
+    }}>
+      <button
+        type="button" onClick={toggle}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+          textAlign: 'left', color: 'inherit',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e8e3d8' }}>
+            Let other apps play music
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8680', lineHeight: 1.4, marginTop: 3 }}>
+            Silences in-game music and sound effects so Spotify, Apple Music, or podcasts can keep playing.
+          </p>
+        </div>
+        <span aria-hidden style={{
+          flexShrink: 0,
+          width: 38, height: 22, borderRadius: 999,
+          background: allow ? 'rgba(96,165,250,0.7)' : 'rgba(255,255,255,0.12)',
+          border: `1px solid ${allow ? 'rgba(96,165,250,0.9)' : 'rgba(255,255,255,0.2)'}`,
+          position: 'relative',
+          transition: 'background 0.15s, border-color 0.15s',
+        }}>
+          <span style={{
+            position: 'absolute', top: 2, left: allow ? 18 : 2,
+            width: 16, height: 16, borderRadius: '50%',
+            background: '#f0ede8',
+            transition: 'left 0.15s',
+          }} />
+        </span>
+      </button>
+    </div>
   )
 }
