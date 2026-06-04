@@ -43,12 +43,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     voyagesData,
     { data: careerAgg },
   ] = await Promise.all([
+    // Featured crew first; if the player hasn't picked anyone, fall
+    // back to whoever's currently on the ship so the section is
+    // informative by default instead of just hiding.
     showcaseCrewIds.length > 0
       ? admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, cards(name, filename, slug)')
+          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .in('id', showcaseCrewIds)
-      : Promise.resolve({ data: [] as any[] }),
+      : admin.from('user_crew')
+          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, cards(name, filename, slug)')
+          .eq('user_id', profile.id)
+          .not('assigned_slot', 'is', null)
+          .order('assigned_slot', { ascending: true }),
 
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
@@ -74,21 +81,23 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     admin.rpc('career_stats', { uid: profile.id }),
   ])
 
-  // Build the player-picked crew showcase, preserving the saved order.
-  const crewById = new Map(((showcaseData.data ?? []) as any[]).map(r => [r.id, r]))
-  const showcaseCrew: ShowcaseCrew[] = showcaseCrewIds
-    .map(id => crewById.get(id))
-    .filter(Boolean)
-    .map((r: any) => ({
-      id: r.id,
-      name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
-      filename: r.cards?.filename ?? '',
-      rarity: r.rarity,
-      power: r.power,
-      dodge: r.dodge,
-      fortune: r.fortune,
-      effects: (r.effects ?? []) as string[],
-    }))
+  // Build the crew showcase. Player's explicit pick preserves their
+  // saved order; the fallback (assigned crew) is already ordered by
+  // assigned_slot ASC from the query.
+  const rawCrew = (showcaseData.data ?? []) as any[]
+  const orderedCrew = showcaseCrewIds.length > 0
+    ? showcaseCrewIds.map(id => rawCrew.find(r => r.id === id)).filter(Boolean)
+    : rawCrew
+  const showcaseCrew: ShowcaseCrew[] = orderedCrew.map((r: any) => ({
+    id: r.id,
+    name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
+    filename: r.cards?.filename ?? '',
+    rarity: r.rarity,
+    power: r.power,
+    dodge: r.dodge,
+    fortune: r.fortune,
+    effects: (r.effects ?? []) as string[],
+  }))
 
   const rarestFish = ((rarestFishData.data ?? []) as any[])
     .map(r => r.fish_species)
