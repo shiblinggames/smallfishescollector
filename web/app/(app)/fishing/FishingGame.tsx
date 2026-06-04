@@ -2560,6 +2560,141 @@ function SpeedClock({ endsAt, paused = false }: { endsAt: number; paused?: boole
   )
 }
 
+// ─── YOLO Rod jackpot celebration ─────────────────────────────────────────
+// Full-screen "you just won big" overlay that mounts on top of the regular
+// result card when the YOLO Rod's ×N jackpot procs. The result card itself
+// stays underneath (with its own ×N banner) as the post-celebration proof
+// surface; this overlay is the dopamine hit before they see the numbers.
+//
+// Structure (~1.8s total, tap anywhere to skip):
+//   - Gold radial flash backdrop fades in
+//   - "JACKPOT" headline slams in with a spring scale
+//   - +N FISH counter ticks 0→qty with cubic ease-out
+//   - 16 coin glyphs erupt outward + up from center
+//   - 24 confetti squares rain from the top
+function JackpotBoomOverlay({ qty, onDone }: { qty: number; onDone: () => void }) {
+  const [displayed, setDisplayed] = useState(0)
+
+  // Auto-dismiss. 1.8s is enough for the counter to finish + the player to
+  // savor the headline; longer than that and it stops feeling like a punch.
+  useEffect(() => {
+    const t = setTimeout(onDone, 1800)
+    return () => clearTimeout(t)
+  }, [onDone])
+
+  // Counter tick — 700ms cubic ease-out so the number cascades fast then
+  // settles. Polling at 30ms is fine for a one-shot animation.
+  useEffect(() => {
+    const start = Date.now()
+    const dur = 700
+    const id = setInterval(() => {
+      const t = Math.min(1, (Date.now() - start) / dur)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setDisplayed(Math.floor(eased * qty))
+      if (t >= 1) {
+        setDisplayed(qty)
+        clearInterval(id)
+      }
+    }, 30)
+    return () => clearInterval(id)
+  }, [qty])
+
+  // 16 coin particles erupting from center on deterministic angles so the
+  // spray reads as intentional, not random. Each gets a tiny stagger.
+  const coins = Array.from({ length: 16 }, (_, i) => ({
+    angle: (i / 16) * Math.PI * 2,
+    distance: 180 + (i % 4) * 28,
+    delay: i * 0.022,
+    rotation: (i * 47) % 360,
+  }))
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onDone}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'radial-gradient(ellipse at center, rgba(249,115,22,0.55) 0%, rgba(15,6,2,0.88) 60%)',
+        cursor: 'pointer',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Confetti rain from the top — each strip falls a hair after the last
+          so the rain reads as continuous rather than a single burst frame. */}
+      {Array.from({ length: 24 }, (_, i) => (
+        <motion.div
+          key={`conf-${i}`}
+          initial={{ left: `${(i / 24) * 100}%`, top: '-5%', rotate: 0, opacity: 0 }}
+          animate={{ top: '105%', rotate: 360 + (i * 17), opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 1.5, delay: i * 0.035, ease: 'linear' }}
+          style={{
+            position: 'absolute',
+            width: 8, height: 12,
+            background: ['#f0c040', '#fb923c', '#fde68a', '#f59e0b'][i % 4],
+            borderRadius: 2,
+            pointerEvents: 'none',
+          }}
+        />
+      ))}
+
+      {/* Coin glyphs erupting from center. translate is composited so this is
+          cheap even with 16 of them on weaker phones. */}
+      {coins.map((p, i) => (
+        <motion.div
+          key={`coin-${i}`}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 0.4, rotate: 0 }}
+          animate={{
+            x: Math.cos(p.angle) * p.distance,
+            y: Math.sin(p.angle) * p.distance - 60,
+            opacity: 0, scale: 1.3, rotate: p.rotation,
+          }}
+          transition={{ duration: 1.1, delay: p.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            fontSize: '1.8rem',
+            color: '#f0c040',
+            textShadow: '0 0 16px rgba(249,115,22,0.9)',
+            pointerEvents: 'none',
+            lineHeight: 1,
+          }}
+        >
+          ⟡
+        </motion.div>
+      ))}
+
+      {/* Headline + counter. Both nested in one spring so the slam-in lands
+          together; pointer-events disabled so the backdrop owns the tap. */}
+      <motion.div
+        initial={{ scale: 0.3, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 13 }}
+        style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          pointerEvents: 'none', textAlign: 'center',
+        }}
+      >
+        <p className="font-cinzel font-700" style={{
+          fontSize: '3.2rem', lineHeight: 1,
+          color: '#fdba74',
+          textShadow: '0 0 32px rgba(249,115,22,0.95), 0 0 64px rgba(249,115,22,0.5)',
+          letterSpacing: '0.05em',
+        }}>
+          JACKPOT
+        </p>
+        <p className="font-cinzel font-700" style={{
+          fontSize: '2rem', lineHeight: 1,
+          color: '#fde68a',
+          textShadow: '0 0 18px rgba(251,191,36,0.75)',
+        }}>
+          +{displayed} <span style={{ fontSize: '1.2rem', letterSpacing: '0.08em' }}>FISH</span>
+        </p>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // ─── Crate slot strip tile ────────────────────────────────────────────────
 // One tile in the decelerating slot strip — icon + label, sized to fill
 // exactly CRATE_TILE_W × CRATE_TILE_H. Each tile uses the same icon/color
@@ -2970,6 +3105,9 @@ export default function FishingGame({
   const [buyingWorms, setBuyingWorms] = useState(false)
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
+  // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
+  // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
+  const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
   const [catchResult, setCatchResult] = useState<{
     fish: FishSpecies
     baitSaved: boolean
@@ -4065,6 +4203,14 @@ export default function FishingGame({
           shinyId: (res as { shinyId?: number }).shinyId,
           alreadyMounted: (res as { alreadyMounted?: boolean }).alreadyMounted ?? false,
         })
+        // YOLO Rod jackpot — fire the full-screen celebration overlay on top
+        // of the result card. Renders particles + a slamming "JACKPOT"
+        // headline + a 0→N counter. Auto-dismisses after ~1.8s; tap anywhere
+        // to skip. The result card stays underneath (with its own ×N banner)
+        // as the post-celebration "proof" surface.
+        if (jackpotHit && actualQty > 1) {
+          setJackpotBoom({ qty: actualQty })
+        }
         // Bump the live PB lookup so the collection drawer reflects the new
         // record without needing a page refresh. Server is authoritative —
         // we only mirror what reelIn already persisted.
@@ -7559,6 +7705,18 @@ export default function FishingGame({
               {castNotice}
             </p>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── YOLO Rod jackpot — full-screen dopamine hit before the result
+            card lands. Auto-dismisses; tap anywhere to skip. */}
+      <AnimatePresence>
+        {jackpotBoom && (
+          <JackpotBoomOverlay
+            key="jackpot-boom"
+            qty={jackpotBoom.qty}
+            onDone={() => setJackpotBoom(null)}
+          />
         )}
       </AnimatePresence>
 
