@@ -54,30 +54,40 @@ async function fetchPerfectStreak(admin: Admin, userId: string) {
   return { top: topRows, myScore, myRank }
 }
 
-// Raid Progress: count of raid_node_progress.cleared entries per player,
-// ties broken by latest raid_completions.completed_at ASC (earlier wins).
-// Mirrors fetchRaidProgressBoard in /leaderboard/page.tsx.
+// Raid Progress: total distinct nodes cleared (everything counts as 1).
+// Combines raid_node_progress.cleared[] (story / milestone / shop /
+// puzzle / event / class-pick) with distinct raid_completions.raid_id
+// (boss nodes) and the skirmish flag (has_completed_practice_raid).
+// Ties broken by latest raid_completions.completed_at ASC. Mirrors
+// fetchRaidProgressBoard in /leaderboard/page.tsx.
 async function fetchRaidProgress(admin: Admin, userId: string) {
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, raid_node_progress')
+    .select('id, username, raid_node_progress, has_completed_practice_raid')
     .eq('is_admin', false)
   if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
 
   const { data: completions } = await admin
     .from('raid_completions')
-    .select('user_id, completed_at')
+    .select('user_id, raid_id, completed_at')
   const lastByUser = new Map<string, string>()
-  for (const c of (completions ?? []) as Array<{ user_id: string; completed_at: string }>) {
+  const raidsByUser = new Map<string, Set<string>>()
+  for (const c of (completions ?? []) as Array<{ user_id: string; raid_id: string; completed_at: string }>) {
     const prev = lastByUser.get(c.user_id)
     if (!prev || c.completed_at > prev) lastByUser.set(c.user_id, c.completed_at)
+    const set = raidsByUser.get(c.user_id) ?? new Set<string>()
+    set.add(c.raid_id)
+    raidsByUser.set(c.user_id, set)
   }
 
   type Row = LeaderboardEntry & { lastAt: string | null }
   const rows: Row[] = []
-  for (const p of profiles as Array<{ id: string; username: string | null; raid_node_progress: { cleared?: string[] } | null }>) {
-    const cleared = Array.isArray(p.raid_node_progress?.cleared) ? p.raid_node_progress!.cleared!.length : 0
-    if (cleared > 0) rows.push({ user_id: p.id, username: p.username ?? '', score: cleared, lastAt: lastByUser.get(p.id) ?? null })
+  for (const p of profiles as Array<{ id: string; username: string | null; raid_node_progress: { cleared?: string[] } | null; has_completed_practice_raid: boolean | null }>) {
+    const clearedCount = Array.isArray(p.raid_node_progress?.cleared) ? p.raid_node_progress!.cleared!.length : 0
+    const bossCount = raidsByUser.get(p.id)?.size ?? 0
+    const skirmish = p.has_completed_practice_raid ? 1 : 0
+    const score = clearedCount + bossCount + skirmish
+    if (score > 0) rows.push({ user_id: p.id, username: p.username ?? '', score, lastAt: lastByUser.get(p.id) ?? null })
   }
   rows.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
