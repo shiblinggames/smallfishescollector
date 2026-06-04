@@ -1,7 +1,9 @@
 import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, computeVoyageScore, computeCombatRating } from '@/lib/expeditions'
+import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
+import { getXPProgress, navLevelBonuses } from '@/lib/expeditionLevel'
 import RaidsSection from './RaidsSection'
 import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
@@ -189,6 +191,32 @@ async function ExpeditionHub() {
 
   const assignedCount = roster.filter(c => c.assignedSlot != null).length
 
+  // Live voyage + raid scores derived from the currently assigned crew —
+  // mirrors ShipHero's loadout math so the modal numbers match what the
+  // player sees on the ship card. Nav-level bonuses apply to raid (the
+  // captain bonus) but not voyage scores, per current convention.
+  const assignedParty: DeployedCrew[] = roster
+    .filter(c => c.assignedSlot != null)
+    .map(c => ({
+      id: c.id, slot: c.assignedSlot as number, rarity: c.rarity,
+      power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects,
+    }))
+  const resolved = resolveDeployedCrew(assignedParty)
+  const xpProgress = getXPProgress(profile?.expedition_xp ?? 0)
+  const navBonus = navLevelBonuses(xpProgress.level)
+  const voyageScore = Math.min(100, Math.round(
+    computeVoyageScore(resolved.totals.power, resolved.totals.dodge, resolved.totals.fortune)
+      * (1 + resolved.voyage.scorePct / 100)
+  ))
+  const raidRating = computeCombatRating(
+    resolved.totals.power + navBonus.power,
+    resolved.totals.dodge + navBonus.navigation,
+    resolved.totals.fortune + navBonus.fortune,
+    shipStats.durability + navBonus.hp,
+    shipStats.minDamage,
+    resolved.raid,
+  )
+
   return (
     <HubCards
       campaign={campaign}
@@ -200,6 +228,9 @@ async function ExpeditionHub() {
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
       assignedCrewCount={assignedCount}
+      shipStats={shipStats}
+      voyageScore={voyageScore}
+      raidScore={raidRating.score}
       // Full DailyVoyagePanel-needed props — voyage panel was promoted
       // into the Voyages hub modal so it's no longer rendered inline.
       shipTier={shipTier}

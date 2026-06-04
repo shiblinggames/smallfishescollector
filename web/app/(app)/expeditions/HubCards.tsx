@@ -16,6 +16,7 @@ import { assignCrew, type CrewMember } from '@/app/dev/crew/actions'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
+import { getRankTitle, type ShipStats } from '@/lib/expeditions'
 
 export type CampaignCardData = {
   nextNodeId: string | null
@@ -46,6 +47,12 @@ interface Props {
   roster: CrewMember[]
   shipCrewSlots: number
   assignedCrewCount: number
+  // Live readiness numbers (mirrors ShipHero's loadout math). Surfaced
+  // inside the prep modals so the player sees what they're committing
+  // with before tapping Begin / Set Sail.
+  shipStats: ShipStats
+  voyageScore: number
+  raidScore: number
   // DailyVoyagePanel-required props. The panel used to render inline
   // below the hub; now lives inside the Voyages modal so the data
   // pipes through here.
@@ -74,6 +81,7 @@ export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots, assignedCrewCount,
+  shipStats, voyageScore, raidScore,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
 }: Props) {
   const router = useRouter()
@@ -229,9 +237,16 @@ export default function HubCards({
             Campaign · The Sunken Hand
           </p>
           <p className="font-cinzel font-700 text-center"
-            style={{ fontSize: '1.1rem', color: '#f0e8d0', marginBottom: 14 }}>
+            style={{ fontSize: '1.1rem', color: '#f0e8d0', marginBottom: 10 }}>
             {campaign.nextNodeName ?? 'Story complete'}
           </p>
+
+          <StatsBlock
+            score={raidScore}
+            scoreLabel="Raid Score"
+            scoreColor="#dca494"
+            shipStats={shipStats}
+          />
 
           {campaign.nextNodeName && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
@@ -381,6 +396,12 @@ export default function HubCards({
             flex: 1, overflowY: 'auto', overscrollBehavior: 'contain',
             padding: '0.9rem 1rem 1.2rem',
           }}>
+            <StatsBlock
+              score={voyageScore}
+              scoreLabel="Voyage Score"
+              scoreColor="#9ab4dc"
+              shipStats={shipStats}
+            />
             <DailyVoyagePanel
               roster={roster}
               shipTier={shipTier}
@@ -532,6 +553,72 @@ export default function HubCards({
         </div>
       </PopupShell>
     </>
+  )
+}
+
+// ── Stats block ───────────────────────────────────────────────────────
+// Compact readiness card surfaced at the top of each prep modal. Big
+// score tile (Raid Score for campaign, Voyage Score for voyages) with
+// rank title, plus a 3-column ship-stats strip (HP / Speed / DMG) so
+// the player sees the hull they're committing alongside their score.
+function StatsBlock({ score, scoreLabel, scoreColor, shipStats }: {
+  score: number
+  scoreLabel: string
+  scoreColor: string
+  shipStats: ShipStats
+}) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 12, padding: '0.7rem 0.85rem', borderRadius: 12,
+        background: `linear-gradient(135deg, ${scoreColor}1a 0%, rgba(8,7,6,0.35) 72%)`,
+        border: `1px solid ${scoreColor}40`,
+        marginBottom: 7,
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <p className="font-karla font-700 uppercase tracking-[0.16em]"
+            style={{ fontSize: '0.5rem', color: `${scoreColor}cc` }}>
+            {scoreLabel}
+          </p>
+          <p className="font-cinzel font-700"
+            style={{ fontSize: '0.74rem', color: scoreColor, fontStyle: 'italic', marginTop: 2 }}>
+            {getRankTitle(score)}
+          </p>
+        </div>
+        <p className="font-cinzel font-700"
+          style={{ fontSize: '1.95rem', lineHeight: 1, color: scoreColor }}>
+          {score}<span style={{ fontSize: '0.78rem', color: `${scoreColor}99` }}>/100</span>
+        </p>
+      </div>
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
+      }}>
+        <StatTile label="HP" value={shipStats.durability} />
+        <StatTile label="Speed" value={shipStats.speed} />
+        <StatTile label="DMG" value={`${shipStats.minDamage}+`} />
+      </div>
+    </div>
+  )
+}
+
+function StatTile({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div style={{
+      padding: '0.45rem 0.5rem', borderRadius: 9,
+      background: 'rgba(0,0,0,0.32)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      textAlign: 'center',
+    }}>
+      <p className="font-karla font-700 uppercase tracking-[0.14em]"
+        style={{ fontSize: '0.48rem', color: '#8a8680' }}>
+        {label}
+      </p>
+      <p className="font-cinzel font-700"
+        style={{ fontSize: '0.88rem', color: '#f0ede8', marginTop: 1 }}>
+        {value}
+      </p>
+    </div>
   )
 }
 
