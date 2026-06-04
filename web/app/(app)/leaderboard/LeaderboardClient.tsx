@@ -44,7 +44,7 @@ type SectionKey = 'fishing' | 'expeditions' | 'tavern'
 /** Master sections — each owns 2 boards. Section order = display order. */
 const SECTIONS: Record<SectionKey, { label: string; boards: BoardKey[] }> = {
   fishing:     { label: 'Fishing',     boards: ['perfectStreak', 'fishingLevel'] },
-  expeditions: { label: 'Expeditions', boards: ['expedition', 'raidProgress'] },
+  expeditions: { label: 'Expeditions', boards: ['raidProgress', 'expedition'] },
   tavern:      { label: 'Tavern',      boards: ['tideRun', 'fishSlots'] },
 }
 
