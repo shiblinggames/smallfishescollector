@@ -59,6 +59,14 @@ function scrollToSection(id: string) {
   }, 220)
 }
 
+// ShipHero listens for this event and opens its Loadout drawer — the
+// full prep screen with crew slots, item slots, Voyage / Raid Score
+// tiles, and the breakdown sheets. Hub modals dispatch this when the
+// player taps "Open Prep" so the prep flow gates the next launch.
+function openPrepDrawer() {
+  window.dispatchEvent(new Event('expedition:open-loadout'))
+}
+
 // Status pill colours per voyage state — kept here so the card +
 // modal stay in sync.
 const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }> = {
@@ -241,7 +249,7 @@ export default function HubCards({ campaign, voyages }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => { setModal(null); scrollToSection('chapter-map') }}
+              onClick={() => { setModal(null); openPrepDrawer() }}
               className="font-karla font-700 uppercase tracking-[0.08em]"
               style={{
                 flex: 2, padding: '0.7rem 0',
@@ -252,9 +260,23 @@ export default function HubCards({ campaign, voyages }: Props) {
                 cursor: 'pointer',
               }}
             >
-              Open Story Map →
+              Open Prep →
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => { setModal(null); scrollToSection('chapter-map') }}
+            className="font-karla font-700 uppercase"
+            style={{
+              width: '100%', padding: '0.55rem 0', marginTop: 8,
+              background: 'transparent', border: 'none',
+              color: 'rgba(240,237,232,0.5)',
+              fontSize: '0.6rem', letterSpacing: '0.1em',
+              cursor: 'pointer',
+            }}
+          >
+            Or view the story map ↓
+          </button>
         </div>
       </PopupShell>
 
@@ -306,7 +328,7 @@ export default function HubCards({ campaign, voyages }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => { setModal(null); scrollToSection('voyage-panel') }}
+              onClick={() => { setModal(null); openPrepDrawer() }}
               className="font-karla font-700 uppercase tracking-[0.08em]"
               style={{
                 flex: 2, padding: '0.7rem 0',
@@ -317,11 +339,23 @@ export default function HubCards({ campaign, voyages }: Props) {
                 cursor: 'pointer',
               }}
             >
-              {voyages.status === 'returned' ? 'Claim Reward →'
-                : voyages.status === 'sailing' ? 'View Voyage →'
-                : 'Open Voyage →'}
+              Open Prep →
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => { setModal(null); scrollToSection('voyage-panel') }}
+            className="font-karla font-700 uppercase"
+            style={{
+              width: '100%', padding: '0.55rem 0', marginTop: 8,
+              background: 'transparent', border: 'none',
+              color: 'rgba(240,237,232,0.5)',
+              fontSize: '0.6rem', letterSpacing: '0.1em',
+              cursor: 'pointer',
+            }}
+          >
+            Or view the voyage panel ↓
+          </button>
         </div>
       </PopupShell>
     </>

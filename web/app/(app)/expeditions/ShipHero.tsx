@@ -279,6 +279,17 @@ export default function ShipHero({
     return () => { document.body.style.overflow = '' }
   }, [loadoutOpen, sheetOpen])
 
+  // The hub-card modal dispatches 'expedition:open-loadout' when the
+  // player taps "Open Prep" to commit to the next launch. We open the
+  // Loadout drawer here so the player can review/adjust crew, items,
+  // and scores before pulling the trigger. Same component, two entry
+  // points (Manage Ship button + hub modal CTA).
+  useEffect(() => {
+    function onOpen() { setLoadoutOpen(true) }
+    window.addEventListener('expedition:open-loadout', onOpen)
+    return () => window.removeEventListener('expedition:open-loadout', onOpen)
+  }, [])
+
   function closeLoadout() {
     setLoadoutOpen(false)
     setSheetOpen(false)
@@ -610,36 +621,10 @@ export default function ShipHero({
           )}
         </div>
 
-        {/* Scores — big, tap a tile for the breakdown. Same 0-100 scale + same
-            nautical title ladder on both sides so they're directly comparable. */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <button
-            onClick={() => setBreakdownScore('voyage')}
-            aria-label="Voyage Score breakdown"
-            style={{ background: 'none', border: 'none', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '0.9rem 1rem', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#7da0d8', marginBottom: 4 }}>Voyage Score</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-              <span className="font-cinzel font-700" style={{ fontSize: '2.25rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</span>
-              <span className="font-karla" style={{ fontSize: '0.72rem', color: '#5a6878' }}>/100</span>
-              <span style={{ fontSize: '0.62rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
-            </div>
-            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9ab4dc', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(voyageScore)}</p>
-          </button>
-          <button
-            onClick={() => setBreakdownScore('raid')}
-            aria-label="Raid Score breakdown"
-            style={{ background: 'none', border: 'none', padding: '0.9rem 1rem', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#d88a6a', marginBottom: 4 }}>Raid Score</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-              <span className="font-cinzel font-700" style={{ fontSize: '2.25rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.score}</span>
-              <span className="font-karla" style={{ fontSize: '0.72rem', color: '#785a4e' }}>/100</span>
-              <span style={{ fontSize: '0.62rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
-            </div>
-            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#dca494', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(raidRating.score)}</p>
-          </button>
-        </div>
+        {/* Score badges moved into the Loadout drawer + the hub
+            modals — Ship Hero now stays focused on ship identity +
+            crew/items management. The numbers live where the player
+            actually makes decisions (during prep, not at-a-glance). */}
 
       </div>
 
@@ -708,6 +693,54 @@ export default function ShipHero({
                 </button>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', padding: '1rem 1rem 5rem' }}>
+
+              {/* Scores — moved from the top of the ShipHero card into the
+                  Loadout drawer where they actually matter: the player is
+                  here to adjust crew + items, and these two numbers tell
+                  them whether the loadout is launch-ready. Tap a tile to
+                  open its breakdown sheet. Same 0-100 + nautical-title
+                  pattern as before. */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+                marginBottom: '1.25rem',
+              }}>
+                <button
+                  onClick={() => setBreakdownScore('voyage')}
+                  aria-label="Voyage Score breakdown"
+                  style={{
+                    background: 'rgba(125,160,216,0.07)',
+                    border: '1px solid rgba(125,160,216,0.28)',
+                    borderRadius: 12, padding: '0.7rem 0.85rem',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#7da0d8', marginBottom: 4 }}>Voyage Score</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</span>
+                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#5a6878' }}>/100</span>
+                    <span style={{ fontSize: '0.58rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
+                  </div>
+                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9ab4dc', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(voyageScore)}</p>
+                </button>
+                <button
+                  onClick={() => setBreakdownScore('raid')}
+                  aria-label="Raid Score breakdown"
+                  style={{
+                    background: 'rgba(216,138,106,0.07)',
+                    border: '1px solid rgba(216,138,106,0.28)',
+                    borderRadius: 12, padding: '0.7rem 0.85rem',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#d88a6a', marginBottom: 4 }}>Raid Score</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.score}</span>
+                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#785a4e' }}>/100</span>
+                    <span style={{ fontSize: '0.58rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
+                  </div>
+                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#dca494', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(raidRating.score)}</p>
+                </button>
+              </div>
 
               {/* Ship preview with skin + rename — large hero image fills
                   the upper area of the drawer. */}
