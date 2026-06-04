@@ -357,6 +357,11 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   const [uiState, setUiState] = useState<GameState>('ready')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(initialBestDistance)
+  // Stamped to performance.now() the frame the player crosses their PB.
+  // Drives the brief "New Best" pulse near the score readout — the
+  // in-world pennant was removed because it competed with the obstacle
+  // lane (players reported it was distracting). Auto-clears after 1.2s.
+  const [newBestStamp, setNewBestStamp] = useState(0)
   // Player's current rank + gap to the next position. Initialised from
   // the server-rendered prop and refreshed after every wreck so a new
   // PB that lifts the player past someone is reflected on the very
@@ -390,6 +395,14 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     setShowTour(false)
     startTransition(() => { void markTideRunTourSeen() })
   }
+
+  // "New Best" pulse — show for 1.2s after the player crosses their PB,
+  // then clear so AnimatePresence can fade it out.
+  useEffect(() => {
+    if (newBestStamp === 0) return
+    const t = setTimeout(() => setNewBestStamp(0), 1200)
+    return () => clearTimeout(t)
+  }, [newBestStamp])
 
   // Keep the in-water PB marker driven off a ref (render() is []-memoized,
   // so reading highScore state directly would go stale across retries).
@@ -559,6 +572,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     g.distance = 0
     g.beaconsSmashed = 0
     g.pbCrossedAt = 0
+    setNewBestStamp(0)
     g.deathFlashUntil = 0
     g.lastScoreUpdate = 0
     g.shipVy = 0
@@ -1143,6 +1157,12 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         g.lastScoreUpdate = now
         setScore(Math.floor(g.distance))
       }
+      // PB crossing — fire the "New Best" pulse once per run. Stamped on
+      // gRef so the React setter only fires the one frame, not every loop.
+      if (g.pbMeters > 0 && g.pbCrossedAt === 0 && g.distance >= g.pbMeters) {
+        g.pbCrossedAt = now
+        setNewBestStamp(now)
+      }
     }
 
     // ── Near-miss: airborne and *just* skimmed over a rock. One-shot per
@@ -1432,83 +1452,10 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
       drawBeacon(ctx, ox, surfaceAtCr, cr.width, cr.height, cr.shatteredAt, g.scrollX)
     }
 
-    // ── Personal-best marker — a faint pennant in the water at your best
-    //    distance. Players reported the pennant was distracting during a
-    //    run (visible chrome in the obstacle lane the whole time), so it
-    //    now fades in only on approach: invisible past PB_APPROACH_M
-    //    away, ramps 0→1 alpha across PB_APPROACH_M → PB_FULL_M, holds
-    //    full opacity through the crossing, then briefly flashes + fades
-    //    out so the moment of breaking your record still feels good. ──
-    if (g.pbMeters > 0) {
-      const PB_APPROACH_M = 400   // start fading in this far before PB
-      const PB_FULL_M     = 80    // full opacity from here in
-      const PB_FLASH_MS   = 900   // celebration flash window after crossing
-      const PB_LINGER_MS  = 1400  // total time the marker stays drawn after crossing
-
-      // First-frame crossing detection — stamp the time so the flash + fade-out
-      // animate without re-computing each frame.
-      if (g.distance >= g.pbMeters && g.pbCrossedAt === 0) {
-        g.pbCrossedAt = performance.now()
-      }
-
-      const pbScreenX = g.pbMeters / METERS_PER_PIXEL - g.scrollX
-      const onScreen  = pbScreenX > -24 && pbScreenX < cw + 24
-
-      // Alpha multiplier — 0 means skip the draw entirely.
-      let alpha = 0
-      let flashT = 0  // 0..1 progress through the celebration flash (0 = none)
-      if (g.pbCrossedAt > 0) {
-        const sinceCross = performance.now() - g.pbCrossedAt
-        if (sinceCross < PB_LINGER_MS) {
-          alpha = 1 - sinceCross / PB_LINGER_MS
-          if (sinceCross < PB_FLASH_MS) flashT = 1 - sinceCross / PB_FLASH_MS
-        }
-      } else {
-        const metersToPB = g.pbMeters - g.distance
-        if (metersToPB <= PB_APPROACH_M) {
-          alpha = metersToPB <= PB_FULL_M
-            ? 1
-            : 1 - (metersToPB - PB_FULL_M) / (PB_APPROACH_M - PB_FULL_M)
-        }
-      }
-
-      if (onScreen && alpha > 0.02) {
-        const surfY = seaSurfaceY(pbScreenX + g.scrollX, ch, g.scrollX)
-        const topY = Math.max(8, surfY - 78)
-        ctx.save()
-
-        // Crossing flash — a bright halo + slight pennant pulse for ~900ms
-        // after the player passes the marker. Communicates "new record"
-        // without an overlay or HUD bar.
-        if (flashT > 0) {
-          const haloR = 18 + 36 * (1 - flashT)
-          const haloGrad = ctx.createRadialGradient(pbScreenX, topY + 4, 0, pbScreenX, topY + 4, haloR)
-          haloGrad.addColorStop(0, `rgba(255,228,150,${0.55 * flashT})`)
-          haloGrad.addColorStop(1, 'rgba(255,228,150,0)')
-          ctx.fillStyle = haloGrad
-          ctx.fillRect(pbScreenX - haloR, topY - haloR + 4, haloR * 2, haloR * 2)
-        }
-
-        ctx.strokeStyle = `rgba(189,160,90,${0.45 * alpha})`
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.moveTo(pbScreenX, surfY + 2)
-        ctx.lineTo(pbScreenX, topY)
-        ctx.stroke()
-        ctx.fillStyle = `rgba(189,160,90,${0.55 * alpha})`
-        ctx.beginPath()
-        ctx.moveTo(pbScreenX, topY)
-        ctx.lineTo(pbScreenX + 22, topY + 7)
-        ctx.lineTo(pbScreenX, topY + 14)
-        ctx.closePath()
-        ctx.fill()
-        ctx.fillStyle = `rgba(240,225,190,${0.7 * alpha})`
-        ctx.font = '700 9px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText('BEST', pbScreenX, topY - 5)
-        ctx.restore()
-      }
-    }
+    // ── PB marker removed (in-water pennant was distracting in the
+    //    obstacle lane). Crossing detection now lives in the score-update
+    //    block above and drives a brief "New Best" pulse near the HUD
+    //    score readout — see newBestStamp + the JSX overlay below. ──
 
     // ── Detection beam (active while beacon detection flash plays) ──
     if (g.detectingUntil > 0) {
@@ -1789,15 +1736,37 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
 
         {uiState === 'playing' && (
           <>
-            <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
+            <div className="absolute top-3 left-0 right-0 flex flex-col items-center pointer-events-none">
               <p className="font-cinzel font-700" style={{
                 fontSize: '2.2rem',
                 color: '#ffffff',
                 textShadow: '0 2px 8px rgba(0,0,0,0.55)',
                 letterSpacing: '0.02em',
+                lineHeight: 1,
               }}>
                 {score}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
               </p>
+              <AnimatePresence>
+                {newBestStamp > 0 && (
+                  <motion.p
+                    key={newBestStamp}
+                    initial={{ opacity: 0, y: -4, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.3 } }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+                    className="font-karla font-700 uppercase"
+                    style={{
+                      marginTop: 4,
+                      fontSize: '0.62rem',
+                      letterSpacing: '0.22em',
+                      color: '#ffd56b',
+                      textShadow: '0 1px 4px rgba(0,0,0,0.65), 0 0 14px rgba(255,213,107,0.55)',
+                    }}
+                  >
+                    ★ New Best
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </div>
             {highScore > 0 && (
               <div className="absolute top-3 right-3 pointer-events-none text-right">
