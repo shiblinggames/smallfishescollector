@@ -641,6 +641,12 @@ export default function RaidCombat({
   const canVolley = playerCharges >= MAX_CHARGES
   // Dodge has a 1-turn cooldown so it can't be spammed defensively.
   const canDodge  = lastPlayerAction !== 'dodge'
+  // Reload no-ops at full magazine — the +1 (and any tide proc bonus)
+  // clamps to MAX_CHARGES on the resolve side, so a reload at 3/3
+  // would burn the turn for zero gain. Disable + relabel the slot
+  // ("Full") so the player understands why instead of fishing for a
+  // missing button.
+  const canReload = playerCharges < MAX_CHARGES
 
   function selectAction(action: EnemyAction) {
     if (subPhase !== 'await_input') return
@@ -2234,6 +2240,7 @@ export default function RaidCombat({
             canFire={canFire}
             canVolley={canVolley}
             canDodge={canDodge}
+            canReload={canReload}
             onSelect={selectAction}
             disabled={subPhase !== 'await_input'}
             highlightedAction={subPhase === 'await_input' ? null : playerAction}
@@ -3173,10 +3180,14 @@ export interface SpecialItem {
   onClick: () => void
 }
 
-function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
+function ActionMenu({ canFire, canVolley, canDodge, canReload, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
   canFire: boolean
   canVolley: boolean
   canDodge: boolean
+  /** False when the magazine's already full — reload would be a wasted
+   *  turn (any extra charge clamps off). Drives a "Full" label so the
+   *  slot stays where it is but reads as unavailable. */
+  canReload: boolean
   onSelect: (a: EnemyAction) => void
   /** When true, no buttons are clickable (we're in reveal / resolve phase). */
   disabled?: boolean
@@ -3226,9 +3237,9 @@ function ActionMenu({ canFire, canVolley, canDodge, onSelect, disabled = false, 
           onClick={tapSpecial}
         />
         <CircleBtn
-          icon={ACTION_ICON.reload} label="Reload" color="#a8b8d0"
-          enabled={!disabled} highlighted={reloadHighlighted}
-          onClick={() => { if (!disabled) onSelect('reload') }}
+          icon={ACTION_ICON.reload} label={canReload ? 'Reload' : 'Full'} color="#a8b8d0"
+          enabled={canReload && !disabled} highlighted={reloadHighlighted}
+          onClick={() => { if (canReload && !disabled) onSelect('reload') }}
         />
         <CircleBtn
           icon={ACTION_ICON.fire} label="Fire" color="#4ade80"
