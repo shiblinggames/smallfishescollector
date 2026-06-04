@@ -8,7 +8,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { applyCrewEffects } from '@/lib/crewEffects'
 import type { LeaderboardEntry, BoardKey, AvatarMap } from './boardUI'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -55,25 +54,39 @@ async function fetchPerfectStreak(admin: Admin, userId: string) {
   return { top: topRows, myScore, myRank }
 }
 
-async function fetchCrewStrength(admin: Admin, userId: string) {
-  const { data: profiles } = await admin.from('profiles').select('id, username').eq('is_admin', false)
+// Raid Progress: count of raid_node_progress.cleared entries per player,
+// ties broken by latest raid_completions.completed_at ASC (earlier wins).
+// Mirrors fetchRaidProgressBoard in /leaderboard/page.tsx.
+async function fetchRaidProgress(admin: Admin, userId: string) {
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, raid_node_progress')
+    .eq('is_admin', false)
   if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { data: crewRows } = await admin.from('user_crew').select('user_id, power, dodge, fortune, effects')
-  const totalsByUser = new Map<string, number[]>()
-  for (const r of ((crewRows ?? []) as any[])) {
-    const eff = applyCrewEffects({ power: r.power, dodge: r.dodge, fortune: r.fortune }, r.effects ?? [])
-    const arr = totalsByUser.get(r.user_id) ?? []
-    arr.push(eff.power + eff.dodge + eff.fortune)
-    totalsByUser.set(r.user_id, arr)
+
+  const { data: completions } = await admin
+    .from('raid_completions')
+    .select('user_id, completed_at')
+  const lastByUser = new Map<string, string>()
+  for (const c of (completions ?? []) as Array<{ user_id: string; completed_at: string }>) {
+    const prev = lastByUser.get(c.user_id)
+    if (!prev || c.completed_at > prev) lastByUser.set(c.user_id, c.completed_at)
   }
-  const rows: LeaderboardEntry[] = []
-  for (const p of profiles as Array<{ id: string; username: string | null }>) {
-    const score = (totalsByUser.get(p.id) ?? []).sort((a, b) => b - a).slice(0, 5).reduce((s, t) => s + t, 0)
-    if (score > 0) rows.push({ user_id: p.id, username: p.username ?? '', score })
+
+  type Row = LeaderboardEntry & { lastAt: string | null }
+  const rows: Row[] = []
+  for (const p of profiles as Array<{ id: string; username: string | null; raid_node_progress: { cleared?: string[] } | null }>) {
+    const cleared = Array.isArray(p.raid_node_progress?.cleared) ? p.raid_node_progress!.cleared!.length : 0
+    if (cleared > 0) rows.push({ user_id: p.id, username: p.username ?? '', score: cleared, lastAt: lastByUser.get(p.id) ?? null })
   }
-  rows.sort((a, b) => b.score - a.score)
-  const top = rows.slice(0, 50)
+  rows.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    if (a.lastAt && b.lastAt) return a.lastAt < b.lastAt ? -1 : a.lastAt > b.lastAt ? 1 : 0
+    if (a.lastAt) return -1
+    if (b.lastAt) return 1
+    return 0
+  })
+  const top: LeaderboardEntry[] = rows.slice(0, 50).map(r => ({ user_id: r.user_id, username: r.username, score: r.score }))
   const myIdx = rows.findIndex(r => r.user_id === userId)
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : 0, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
@@ -101,7 +114,7 @@ export async function getLeaderboardBoards(
   await Promise.all(keys.map(async key => {
     let res: { top: LeaderboardEntry[]; myScore: number; myRank: number | null }
     if (key === 'perfectStreak')      res = await fetchPerfectStreak(admin, user.id)
-    else if (key === 'crewStrength')  res = await fetchCrewStrength(admin, user.id)
+    else if (key === 'raidProgress')  res = await fetchRaidProgress(admin, user.id)
     else {
       const view = VIEW_BY_KEY[key]
       if (!view) return
