@@ -265,9 +265,19 @@ export default function ProfileClient({
   const charSprites = getCharacterSprites(characterColor)
   const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
 
-  const showcaseCrew = selectedShowcase
+  // Showcase honours the player's explicit pick first; if they haven't
+  // featured anyone yet, fall back to whoever's actually on the ship
+  // (assignedSlot non-null, sorted captain → crew). Means the section
+  // is informative on day one instead of just begging the player to
+  // configure it.
+  const featuredCrew = selectedShowcase
     .map(id => crewRoster.find(c => c.id === id))
     .filter((c): c is CrewMember => !!c)
+  const showcaseCrew = featuredCrew.length > 0
+    ? featuredCrew
+    : crewRoster
+        .filter(c => c.assignedSlot != null)
+        .sort((a, b) => (a.assignedSlot as number) - (b.assignedSlot as number))
 
   function handleSaveUsername(e: React.FormEvent) {
     e.preventDefault()
@@ -974,10 +984,11 @@ export default function ProfileClient({
             </div>
           </div>
 
-          {/* Showcase */}
+          {/* Showcase — falls back to the live ship roster when the
+              player hasn't featured anyone yet (see showcaseCrew above). */}
           <div>
-            <SectionLabel>Showcase</SectionLabel>
-            <CrewShowcase crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Feature your best crew on your profile" />
+            <SectionLabel>{featuredCrew.length > 0 ? 'Showcase' : 'Active Crew'}</SectionLabel>
+            <CrewShowcase crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Assign crew to your ship, or feature your favorites here" />
           </div>
 
         </div>
