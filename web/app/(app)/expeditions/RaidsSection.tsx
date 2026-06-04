@@ -1959,24 +1959,26 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', flexShrink: 0 }}>
           {topRaidProgress && (
             // Fleet leader on the Raid Progress board — social proof in
-            // the section header. Compact "#1 username · score" pill so
-            // the player sees the current high water mark without
-            // leaving the Expeditions tab.
+            // the section header. Compact "#1 username · N cleared"
+            // pill so the player sees the current high water mark
+            // without leaving the Expeditions tab.
             <span
-              className="font-karla font-600"
+              className="font-karla font-700"
               style={{
-                fontSize: '0.58rem',
-                color: 'rgba(196,169,106,0.78)',
-                background: 'rgba(196,169,106,0.08)',
-                border: '1px solid rgba(196,169,106,0.22)',
-                padding: '0.16rem 0.5rem',
+                fontSize: '0.62rem',
+                color: '#f0d695',
+                background: 'rgba(196,169,106,0.18)',
+                border: '1px solid rgba(196,169,106,0.55)',
+                padding: '0.2rem 0.6rem',
                 borderRadius: 999,
                 whiteSpace: 'nowrap',
                 letterSpacing: '0.04em',
               }}
             >
-              #1 {topRaidProgress.username}
-              <span style={{ color: '#c4a96a', marginLeft: 4 }}>· {topRaidProgress.score}</span>
+              <span style={{ color: '#c4a96a', marginRight: 4 }}>#1</span>
+              {topRaidProgress.username}
+              <span style={{ color: 'rgba(240,214,149,0.55)', margin: '0 5px' }}>·</span>
+              {topRaidProgress.score} cleared
             </span>
           )}
           <span style={{ color: '#6a6764', fontSize: '0.9rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▾</span>
