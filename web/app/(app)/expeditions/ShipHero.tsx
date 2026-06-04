@@ -388,14 +388,18 @@ export default function ShipHero({
     setSwapTargetItemId(null)
     const next = [...equippedItems, itemId]
     setEquippedItems(next)
-    startTransition(async () => { await saveEquippedRaidItems(next) })
+    startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
   }
 
   function handleUnequipRaidItem(itemId: string) {
     setSwapTargetItemId(null)
     const next = equippedItems.filter(i => i !== itemId)
     setEquippedItems(next)
-    startTransition(async () => { await saveEquippedRaidItems(next) })
+    // router.refresh() re-runs the server components on the page so the
+    // hub card's ready-check modal (which reads profile.equipped_raid_items
+    // server-side) reflects the new state — otherwise it stays stuck on
+    // the count from initial render.
+    startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
   }
 
   /** Swap helper: drop `displacedId` from the equipped list and put
@@ -406,7 +410,7 @@ export default function ShipHero({
     const next = equippedItems.map(id => id === displacedId ? swapTargetItemId : id)
     setSwapTargetItemId(null)
     setEquippedItems(next)
-    startTransition(async () => { await saveEquippedRaidItems(next) })
+    startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
   }
 
   // Live scores via the same resolver the server uses (passive/aura/conditional

@@ -209,9 +209,9 @@ export default function HubCards({ campaign, voyages }: Props) {
                 detail={campaign.repairOwed > 0 ? `${campaign.repairOwed.toLocaleString()} ⟡ to repair` : 'Ready'}
               />
               <ReadyRow
-                label="Raid item equipped"
+                label="Equip items"
                 ok={campaign.equippedItemsCount > 0}
-                detail={campaign.equippedItemsCount > 0 ? `${campaign.equippedItemsCount} equipped` : 'No item equipped'}
+                detail={campaign.equippedItemsCount > 0 ? `${campaign.equippedItemsCount} equipped` : 'None equipped'}
               />
               {campaign.nextNodeLocked && (
                 <ReadyRow
