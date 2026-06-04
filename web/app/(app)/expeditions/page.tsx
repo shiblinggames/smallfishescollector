@@ -173,6 +173,7 @@ async function ExpeditionHub() {
   const equippedRaidItems = (profile?.equipped_raid_items as string[] | null) ?? []
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const campaign: CampaignCardData = {
+    nextNodeId: next?.node.id ?? null,
     nextNodeName: next?.node.label ?? null,
     nextNodeImage: (next?.node.image ?? null) as string | null,
     nextNodeLocked: next?.status === 'locked',

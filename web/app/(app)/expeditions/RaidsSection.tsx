@@ -1941,6 +1941,27 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
     markChapterUnlockSeen(id).catch(() => {})
   }
 
+  // The Story Campaign hub modal fires 'expedition:open-node' with a
+  // nodeId so the player can jump from the prep modal straight into
+  // the current node's detail sheet — no map detour. Mirrors the
+  // map's own tap gating: combat node + ship sunk routes to the
+  // repair prompt instead of opening the sheet.
+  useEffect(() => {
+    function onOpen(e: Event) {
+      const nodeId = (e as CustomEvent<{ nodeId: string }>).detail?.nodeId
+      if (!nodeId) return
+      const view = views.find(v => v.node.id === nodeId)
+      if (!view || view.status === 'locked') return
+      if (repairOwed > 0 && isCombatNode(view.node.type)) {
+        setRepairPromptOpen(true)
+        return
+      }
+      setSelected(view)
+    }
+    window.addEventListener('expedition:open-node', onOpen)
+    return () => window.removeEventListener('expedition:open-node', onOpen)
+  }, [views, repairOwed])
+
   return (
     <div id="chapter-map" style={{ marginBottom: '1.5rem', scrollMarginTop: 90 }}>
       <button

@@ -18,6 +18,7 @@ import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 
 export type CampaignCardData = {
+  nextNodeId: string | null
   nextNodeName: string | null
   nextNodeImage: string | null
   nextNodeLocked: boolean
@@ -92,11 +93,12 @@ export default function HubCards({
     return () => window.removeEventListener('keydown', onKey)
   }, [modal, innerModal])
 
-  function scrollToSection(id: string) {
-    setTimeout(() => {
-      const el = document.getElementById(id)
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 220)
+  // Begin → open the current node's detail sheet directly (no map
+  // detour). RaidsSection listens for this and gates on repair-block.
+  function beginNextNode() {
+    if (!campaign.nextNodeId) return
+    setModal(null)
+    window.dispatchEvent(new CustomEvent('expedition:open-node', { detail: { nodeId: campaign.nextNodeId } }))
   }
 
   const campaignAccent = '#c4a96a'
@@ -289,20 +291,35 @@ export default function HubCards({
             >
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={() => { setModal(null); scrollToSection('chapter-map') }}
-              className="font-karla font-700 uppercase tracking-[0.08em]"
-              style={{
-                flex: 2, padding: '0.7rem 0',
-                background: `${campaignAccent}1c`,
-                border: `1px solid ${campaignAccent}66`,
-                color: campaignAccent,
-                borderRadius: 12, fontSize: '0.7rem', cursor: 'pointer',
-              }}
-            >
-              Open Story Map →
-            </button>
+            {(() => {
+              const beginBlocked =
+                !campaign.nextNodeId ||
+                campaign.nextNodeLocked ||
+                campaign.repairOwed > 0
+              const beginLabel =
+                !campaign.nextNodeId   ? 'Story Complete'
+                : campaign.nextNodeLocked ? 'Node Locked'
+                : campaign.repairOwed > 0 ? 'Repair Ship First'
+                : 'Begin →'
+              return (
+                <button
+                  type="button"
+                  onClick={beginNextNode}
+                  disabled={beginBlocked}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{
+                    flex: 2, padding: '0.7rem 0',
+                    background: beginBlocked ? 'rgba(255,255,255,0.04)' : `${campaignAccent}1c`,
+                    border: `1px solid ${beginBlocked ? 'rgba(255,255,255,0.12)' : `${campaignAccent}66`}`,
+                    color: beginBlocked ? '#5a5856' : campaignAccent,
+                    borderRadius: 12, fontSize: '0.7rem',
+                    cursor: beginBlocked ? 'default' : 'pointer',
+                  }}
+                >
+                  {beginLabel}
+                </button>
+              )
+            })()}
           </div>
         </div>
       </PopupShell>
