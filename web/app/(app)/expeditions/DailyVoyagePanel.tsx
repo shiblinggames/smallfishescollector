@@ -300,11 +300,7 @@ export default function DailyVoyagePanel({
     const hasCrew = savedCrew.length > 0
     return (
       <div>
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
-          border: '1px solid rgba(240,192,64,0.18)',
-          borderRadius: 16, padding: '1.05rem 1.1rem',
-        }}>
+        <div>
           {raidActive ? (
             <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a8868', lineHeight: 1.5 }}>
               Your crew is on a raid. Finish the raid before sending them on a voyage.
@@ -705,12 +701,7 @@ export default function DailyVoyagePanel({
 
     return (
       <div>
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(16,22,36,0.80) 0%, rgba(12,18,30,0.88) 100%)',
-          border: `1px solid ${isComplete ? 'rgba(240,192,64,0.35)' : 'rgba(96,132,210,0.20)'}`,
-          borderRadius: 16, padding: '1.05rem 1.1rem',
-          transition: 'border-color 0.4s',
-        }}>
+        <div>
 
           {/* ── Summary ── */}
           {isComplete ? (
@@ -920,12 +911,7 @@ export default function DailyVoyagePanel({
       <>
       <NavLevelUpOverlay info={levelUpOverlay} onDismiss={() => setLevelUpOverlay(null)} />
       <div>
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(28,20,10,0.72) 0%, rgba(18,14,6,0.80) 100%)',
-          border: '1px solid rgba(240,192,64,0.18)',
-          borderRadius: 16, padding: '1.05rem 1.1rem',
-          display: 'flex', flexDirection: 'column', gap: '0.7rem',
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {/* Loot-hero header */}
           <div style={{ textAlign: 'center' }}>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#c8aa6a' }}>

@@ -8,7 +8,8 @@
       "mcp__supabase__apply_migration",
       "Read(//c/Users/Kong/.claude/projects/c--Users-Kong-Projects-shiblinggames-smallfishes/memory/**)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\" -Recurse -Directory)",
-      "Bash(Select-Object -First 20 FullName)"
+      "Bash(Select-Object -First 20 FullName)",
+      "PowerShell(& \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\" 2>&1)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Kong\\Projects\\shiblinggames\\smallfishes\\web\\app\\u",
