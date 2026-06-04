@@ -1,7 +1,7 @@
 import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
 import RaidsSection from './RaidsSection'
 import ShipHero from './ShipHero'
 import DailyVoyagePanel from './DailyVoyagePanel'
@@ -169,19 +169,24 @@ function describeVoyage(
 
 // Hub card data is small — campaign next-node summary + voyage state.
 // Server component so we can derive from cached fetchers without
-// adding more round-trips. The actual heavy sections (RaidsSection
-// and DailyVoyagePanel) still render inline below; the hub cards open
-// short ready-check modals that scroll into those sections.
+// adding more round-trips. The hub modals now embed the prep flow
+// (repair, items, crew) inline, so we also pipe through the player's
+// owned items, equipped items, roster, and ship slot counts.
 async function ExpeditionHub() {
-  const [profile, raidMap, dailyVoyageState] = await Promise.all([
+  const [profile, raidMap, dailyVoyageState, roster] = await Promise.all([
     getCurrentProfile(),
     cachedRaidMap(),
     cachedDailyVoyageState(),
+    cachedCrewRoster(),
   ])
 
+  const shipTier = profile?.ship_tier ?? 0
+  const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
   // Next main-chain node: first non-cleared, non-sideBranch view.
   const next = raidMap.views.find(v => v.status !== 'cleared' && !v.node.sideBranch) ?? null
   const cleared = raidMap.views.filter(v => v.status === 'cleared').length
+  const equippedRaidItems = (profile?.equipped_raid_items as string[] | null) ?? []
+  const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const campaign: CampaignCardData = {
     nextNodeName: next?.node.label ?? null,
     nextNodeImage: (next?.node.image ?? null) as string | null,
@@ -189,14 +194,28 @@ async function ExpeditionHub() {
     clearedCount: cleared,
     totalNodes: raidMap.views.length,
     repairOwed: profile?.raid_repair_owed ?? 0,
-    equippedItemsCount: ((profile?.equipped_raid_items as string[] | null) ?? []).length,
+    equippedItemsCount: equippedRaidItems.length,
   }
   const voyages = describeVoyage(
     'error' in dailyVoyageState ? null : (dailyVoyageState.todayVoyage as { route: string; created_at: string; duration_ms: number | null } | null),
     'error' in dailyVoyageState ? null : (dailyVoyageState.readyVoyage as { route: string } | null),
   )
 
-  return <HubCards campaign={campaign} voyages={voyages} />
+  const assignedCount = roster.filter(c => c.assignedSlot != null).length
+
+  return (
+    <HubCards
+      campaign={campaign}
+      voyages={voyages}
+      doubloons={profile?.doubloons ?? 0}
+      ownedRaidItems={ownedRaidItems}
+      equippedRaidItems={equippedRaidItems}
+      raidItemSlots={raidItemSlotsForTier(shipTier)}
+      roster={roster}
+      shipCrewSlots={shipStats.crewSlots}
+      assignedCrewCount={assignedCount}
+    />
+  )
 }
 
 async function RaidsMapSection() {
