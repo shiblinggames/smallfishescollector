@@ -1,2 +1,7 @@
 .vercel
 .env*.local
+
+# Banner build artifacts
+.banner/
+small-fishes-banner.gif
+build-banner.mjs
