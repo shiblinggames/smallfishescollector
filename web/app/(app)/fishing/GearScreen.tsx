@@ -702,6 +702,11 @@ export default function GearScreen({
   // buy. Reset to Owned every time the rod slot closes/reopens.
   const [rodTab, setRodTab] = useState<'owned' | 'shop'>('owned')
   const [appearanceTab, setAppearanceTab] = useState<AppearanceTab>('skin')
+  // Pet sub-tab — Pets grid is split by species (Parrots / Monkeys)
+  // so the list stays readable as new species ship. Sub-tab state
+  // lives at the parent so the player's choice persists when they
+  // bounce between the outer tabs.
+  const [petSpeciesTab, setPetSpeciesTab] = useState<'parrot' | 'monkey'>('parrot')
   useEffect(() => { if (openSlot !== 'rod') setRodTab('owned') }, [openSlot])
 
   // Transient confirmation banner for cosmetic purchases. Clears itself after
@@ -1977,8 +1982,46 @@ export default function GearScreen({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#a78bfa' }}>Pets</p>
                       <p className="font-karla font-300" style={{ fontSize: '0.66rem', color: '#7a7268', lineHeight: 1.4 }}>
-                        Pets are a rare drop from crates — gold parrots are the trophy. Tap to equip; tap the equipped one to put it away.
+                        Pets are a rare drop from crates — the golden variants are the trophies. Tap to equip; tap the equipped one to put it away.
                       </p>
+                      {/* Species sub-tabs — add a new entry to this
+                          array when a new species ships. Owned counts
+                          on each tab give the player a quick "what do
+                          I have here?" read without drilling in. */}
+                      <div style={{
+                        display: 'flex', gap: 4, padding: 3,
+                        background: 'rgba(0,0,0,0.4)', borderRadius: 10,
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        {([
+                          { key: 'parrot', label: 'Parrots' },
+                          { key: 'monkey', label: 'Monkeys' },
+                        ] as const).map(t => {
+                          const speciesPets = PETS.filter(p => p.species === t.key)
+                          const ownedHere = speciesPets.filter(p => unlockedPets.includes(p.id)).length
+                          const total = speciesPets.length
+                          const active = petSpeciesTab === t.key
+                          return (
+                            <button
+                              key={t.key}
+                              onClick={() => setPetSpeciesTab(t.key)}
+                              className="font-karla font-700 uppercase tracking-[0.12em]"
+                              style={{
+                                flex: 1, padding: '0.45rem 0',
+                                background: active ? 'rgba(167,139,250,0.16)' : 'transparent',
+                                border: `1px solid ${active ? 'rgba(167,139,250,0.55)' : 'transparent'}`,
+                                borderRadius: 8,
+                                color: active ? '#c4b5fd' : 'rgba(255,255,255,0.55)',
+                                fontSize: '0.62rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.14s',
+                              }}
+                            >
+                              {t.label} <span style={{ opacity: 0.65, fontWeight: 600 }}>· {ownedHere}/{total}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                         {/* "None" — unequip pet */}
                         {(() => {
@@ -2018,7 +2061,7 @@ export default function GearScreen({
                             silhouettes so the player sees what they're chasing
                             without revealing the actual colors (gold parrot
                             stays mysterious until they land it). */}
-                        {PETS.map(p => {
+                        {PETS.filter(p => p.species === petSpeciesTab).map(p => {
                           const owned = unlockedPets.includes(p.id)
                           const isEquipped = equippedPet === p.id
                           const tappable = owned
@@ -2062,7 +2105,7 @@ export default function GearScreen({
                                 />
                               </div>
                               <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: owned ? '#f0ede8' : '#5a5856', lineHeight: 1.1, textAlign: 'center' }}>
-                                {owned ? p.name.replace(/ Parrot$/, '') : '???'}
+                                {owned ? p.name.replace(/ (Parrot|Monkey)$/, '') : '???'}
                               </p>
                               {isEquipped ? (
                                 <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: p.accentColor }}>✓ Equipped</span>
