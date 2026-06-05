@@ -3104,6 +3104,17 @@ export default function FishingGame({
   const [expandedSellLane, setExpandedSellLane] = useState<null | 'quick' | 'liquidate'>(null)
   const [buyingWorms, setBuyingWorms] = useState(false)
   const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
+  // Low-bait warning — fires once when the player's total bait crosses
+  // BELOW the threshold so they aren't ambushed by an "out of bait"
+  // modal. Auto-dismiss after 2.5s. Tracked via ref-of-prev-total so
+  // each downward crossing fires exactly one toast.
+  const [lowBaitMsg, setLowBaitMsg] = useState<string | null>(null)
+  const prevBaitTotalRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!lowBaitMsg) return
+    const t = setTimeout(() => setLowBaitMsg(null), 2500)
+    return () => clearTimeout(t)
+  }, [lowBaitMsg])
   const [hookedFish, setHookedFish] = useState<{ fishId: number; catchDifficulty: number; biteRarity: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
@@ -3447,7 +3458,11 @@ export default function FishingGame({
   }, [hasSeenFishingTour])
 
   useEffect(() => {
-    if (phase === 'catching' && !catchTourShownRef.current) {
+    // Fire on 'hooked' (fish on line, player hasn't entered the dial yet)
+    // instead of 'catching' so the player reads "stop in the green" BEFORE
+    // the dial spins up. Previously the tour appeared mid-minigame and
+    // most first-time players had already lost their first hook by then.
+    if (phase === 'hooked' && !catchTourShownRef.current) {
       catchTourShownRef.current = true
       if (!hasSeenFishingCatchTour) setCatchTourStep(0)
     }
@@ -3591,6 +3606,20 @@ export default function FishingGame({
   function totalBait() {
     return baitInventory.reduce((s, b) => s + b.quantity, 0)
   }
+
+  // Fire the low-bait warning when total bait crosses the 5-cast
+  // threshold downward (e.g. 6→5). Skip 0→1 climbs (bait purchase)
+  // and steady states (no change). Ref-of-prev avoids spamming a
+  // toast on every render — only the actual crossing fires.
+  useEffect(() => {
+    const total = baitInventory.reduce((s, b) => s + b.quantity, 0)
+    const prev = prevBaitTotalRef.current
+    prevBaitTotalRef.current = total
+    if (prev == null) return
+    if (total <= 5 && total > 0 && prev > 5) {
+      setLowBaitMsg(`Low bait — ${total} cast${total === 1 ? '' : 's'} left`)
+    }
+  }, [baitInventory])
 
   // Core cast logic — no phase guard, called from both Cast and Cast Again
   async function doCast() {
@@ -7717,6 +7746,37 @@ export default function FishingGame({
             qty={jackpotBoom.qty}
             onDone={() => setJackpotBoom(null)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── Low-bait warning — surfaces the moment total bait drops to 5
+            or fewer (see effect that watches baitInventory). Fires once
+            per downward crossing, auto-dismisses in 2.5s. Top-centered
+            so the player notices without it occluding the dial. */}
+      <AnimatePresence>
+        {lowBaitMsg && (
+          <motion.div
+            key={lowBaitMsg}
+            initial={{ opacity: 0, y: -8, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 24 }}
+            style={{
+              position: 'absolute', top: 64, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 28,
+              padding: '0.5rem 0.95rem',
+              borderRadius: 999,
+              background: 'linear-gradient(180deg, rgba(248,113,113,0.28) 0%, rgba(120,30,30,0.85) 100%)',
+              border: '1px solid rgba(248,113,113,0.6)',
+              boxShadow: '0 0 18px rgba(248,113,113,0.35)',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.66rem', color: '#fff5f5' }}>
+              {lowBaitMsg}
+            </p>
+          </motion.div>
         )}
       </AnimatePresence>
 
