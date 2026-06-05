@@ -1864,18 +1864,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           80%  { transform: translateX(2px); }
           100% { transform: translateX(0) rotate(0deg); }
         }
-        @keyframes enemy-sink {
-          0%   { transform: scaleX(-1) translateY(0) rotate(0deg); opacity: 1; }
-          15%  { transform: scaleX(-1) translateY(5px) rotate(-3deg); opacity: 0.9; }
-          55%  { transform: scaleX(-1) translateY(40px) rotate(-9deg); opacity: 0.5; filter: brightness(0.5); }
-          100% { transform: scaleX(-1) translateY(90px) rotate(-13deg); opacity: 0; filter: brightness(0.2); }
-        }
-        @keyframes enemy-sink-portrait {
-          0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
-          15%  { transform: translateY(5px) rotate(-3deg); opacity: 0.9; }
-          55%  { transform: translateY(40px) rotate(-9deg); opacity: 0.5; filter: brightness(0.5); }
-          100% { transform: translateY(90px) rotate(-13deg); opacity: 0; filter: brightness(0.2); }
-        }
+        /* Note: enemy-sink keyframes used to live here as a legacy from
+           the ripped voyage page, but nothing referenced them. The
+           working sink animation is now driven by framer-motion inside
+           RaidCombat.tsx (search: enemySinking). */
       `}</style>
     </div>
   )

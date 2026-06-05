@@ -457,6 +457,12 @@ export default function RaidCombat({
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
   const [phaseFlash, setPhaseFlash]   = useState(false)
   const [critFreeze, setCritFreeze]   = useState(false)   // briefly freezes the aim bar at the lock moment
+  // Enemy sink — set true the moment the kill step plays. Switches the
+  // enemy ship sprite from its looping bob to a one-shot fall-and-fade
+  // (~1.3s) so the sink lands during the kill-log + onEnemyDefeated
+  // delay window. Previously the @keyframes existed in RaidGame.tsx
+  // but nothing referenced them (legacy from the ripped voyage page).
+  const [enemySinking, setEnemySinking] = useState(false)
   const [enemyShakeKey, setEnemyShakeKey] = useState(0)
   const [enemyShakeKind, setEnemyShakeKind] = useState<'hit' | 'crit'>('hit')
   const [playerShakeKey, setPlayerShakeKey] = useState(0)
@@ -618,6 +624,7 @@ export default function RaidCombat({
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
+    setEnemySinking(false)  // fresh enemy — clear any leftover sink from a prior fight
     turnRef.current = 1; setTurn(1)
     return () => clearTimeout(promptTimer)
   }, [enemy.id, enemy.name, enemy.hpBase, isBoss])
@@ -1360,6 +1367,10 @@ export default function RaidCombat({
             // delay to either advance to the next enemy in-place or roll
             // into a loot screen (boss only).
             setSubPhase('done')
+            // Sink animation: ~1.3s fall + fade, lined up with the kill
+            // log + onEnemyDefeated cbDelay below so the ship is gone
+            // by the time the loot/next-enemy beat fires.
+            setEnemySinking(true)
             setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
             let cbDelay = 1000
             if (killReward?.gold) {
@@ -1989,8 +2000,16 @@ export default function RaidCombat({
             <motion.img
               src={enemy.image}
               alt={enemy.name}
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+              animate={enemySinking
+                // One-shot sink: drop + tilt + fade over ~1.3s. Anchored
+                // to the same beat as the kill log so the ship is gone
+                // by the time the loot / next-enemy beat lands.
+                ? { y: [0, 5, 40, 90], rotate: [0, -3, -9, -13], opacity: [1, 0.9, 0.5, 0] }
+                // Normal idle bob.
+                : { y: [0, -4, 0] }}
+              transition={enemySinking
+                ? { duration: 1.3, times: [0, 0.15, 0.55, 1], ease: 'easeIn' }
+                : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
               style={{
                 width: '100%', display: 'block', position: 'relative', zIndex: 1,
                 transform: 'scaleX(-1)',  // face the player
