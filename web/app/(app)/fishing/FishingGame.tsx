@@ -4557,8 +4557,16 @@ export default function FishingGame({
     setCrateStrip(null)
     // Don't auto-cast after the player taps Claim — they should decide
     // when to fish next. Clearing crateResult drops the crate panel and
-    // reveals the normal Cast Again button for them to tap manually.
+    // reveals the normal Cast button.
     setCrateResult(null)
+    // Also reset hookedFish + flip phase to 'idle' so the bottom action
+    // slot renders the idle Cast button. Without this, the Cast Again
+    // render gate (`catchResult || missResult`) is false on a fresh
+    // crate claim (no fish caught, no miss recorded), and the slot
+    // goes empty — player can't tap to fish again. Tester report,
+    // 2026-06-05.
+    setHookedFish(null)
+    setPhase('idle')
   }
 
   async function handleClaimDaily(index: 0 | 1 | 2) {

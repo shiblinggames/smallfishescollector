@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
@@ -99,6 +100,7 @@ export default function FishingPageClient({
   initialFinnRevealed: boolean
   initialFinnLastOutcome: 'won' | 'lost' | 'passed' | null
 }) {
+  const router = useRouter()
   const fishingLevel = getLevelFromXP(initialFishingXP)
 
   // Soundtrack lifecycle lives here (NOT in FishingGame) so the music keeps
@@ -162,6 +164,14 @@ export default function FishingPageClient({
   function goBack() {
     localStorage.removeItem(LAST_ZONE_KEY)
     setSelectedZone(null)
+    // CRITICAL: refresh the server component so `initialInventory` (and
+    // every other server-rendered prop) reflects the catches made this
+    // session. Without this, picking a new zone remounts FishingGame
+    // with the page-load snapshot — fish caught in the previous zone
+    // disappear from the visible hold but stay on the server, so the
+    // player gets "hold full" before they think they're at capacity
+    // and can't sell the hidden fish. Tester bug, reported 2026-06-05.
+    router.refresh()
   }
 
   // Swap the soundtrack to match the zone you ENTER (Open Waters has its own
