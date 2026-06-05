@@ -46,7 +46,7 @@ export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
-  hasSeenFishingTour, hasSeenFishingCatchTour, activeSession, username, zoneRewardsClaimed,
+  hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
 }: {
@@ -71,6 +71,7 @@ export default function FishingPageClient({
   initialPerfectStreak: number
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
+  hasSeenFirstCatchCelebration: boolean
   activeSession?: ActiveSession
   username: string
   zoneRewardsClaimed: Record<string, boolean>
@@ -208,6 +209,7 @@ export default function FishingPageClient({
       initialPerfectStreak={initialPerfectStreak}
       hasSeenFishingTour={hasSeenFishingTour}
       hasSeenFishingCatchTour={hasSeenFishingCatchTour}
+      hasSeenFirstCatchCelebration={hasSeenFirstCatchCelebration}
       selectedZone={selectedZone}
       onBack={goBack}
       activeSession={activeSession}

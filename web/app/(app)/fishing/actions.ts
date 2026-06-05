@@ -928,6 +928,16 @@ export async function markFishingCatchTourSeen(): Promise<void> {
   await createAdminClient().from('profiles').update({ has_seen_fishing_catch_tour: true }).eq('id', user.id)
 }
 
+/** One-shot: fired when the player dismisses the first-catch celebration
+ *  overlay. Server-side flag so the moment doesn't replay across devices
+ *  or after a session reset. */
+export async function markFirstCatchCelebrationSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ has_seen_first_catch_celebration: true }).eq('id', user.id)
+}
+
 export async function checkLeaderboardPosition(
   category: 'fishingLevel' | 'perfectStreak',
 ): Promise<{ position: number } | null> {

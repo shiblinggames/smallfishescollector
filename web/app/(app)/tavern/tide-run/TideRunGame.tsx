@@ -630,6 +630,25 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
       g.airborne = true
       g.holding = true
       g.jumpHoldStart = performance.now()
+      // Takeoff splash: ~4 droplets erupt from the boat's foot on the
+      // very next frame so the player sees something move *before* the
+      // boat's Y has visibly integrated the impulse. Without this, the
+      // first frame after a tap is nearly indistinguishable from the
+      // last frame before it (impulse is in shipVy but the dt * vy
+      // distance is only ~10 px) and the jump reads as 50ms late.
+      const shipScreenX = g.cw * SHIP_X_RATIO
+      const surfaceY = seaSurfaceY(shipScreenX + g.shipW / 2 + g.scrollX, g.ch, g.scrollX)
+      for (let i = 0; i < 4; i++) {
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.2
+        const speed = 40 + Math.random() * 60
+        g.splashes.push({
+          worldX: shipScreenX + g.shipW / 2 + g.scrollX + (Math.random() - 0.5) * g.shipW * 0.45,
+          y: surfaceY,
+          vx: Math.cos(angle) * speed * 0.7,
+          vy: Math.sin(angle) * speed * 0.7,
+          age: 0,
+        })
+      }
     }
   }, [reset])
 

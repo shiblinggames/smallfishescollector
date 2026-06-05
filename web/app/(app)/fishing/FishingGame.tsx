@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
@@ -2784,7 +2784,7 @@ export default function FishingGame({
   allFishSpecies, initialCaughtFishIds, initialMountedFishIds,
   initialPersonalBests,
   initialHighestPerfectStreak, initialPerfectStreak,
-  hasSeenFishingTour, hasSeenFishingCatchTour,
+  hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
@@ -2818,6 +2818,7 @@ export default function FishingGame({
   initialPerfectStreak: number
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
+  hasSeenFirstCatchCelebration: boolean
   selectedZone: ZoneKey
   onBack: () => void
   activeSession?: ActiveSession
@@ -3119,6 +3120,13 @@ export default function FishingGame({
   // YOLO Rod jackpot celebration — set when a jackpot resolves, drives the
   // full-screen JackpotBoom overlay. Cleared on auto-dismiss / tap.
   const [jackpotBoom, setJackpotBoom] = useState<{ qty: number } | null>(null)
+  // First-catch celebration — true for the player's very first successful
+  // reel-in if their account flag is still unset. Server-flag gated so it
+  // can't replay across devices. Set + immediately fire the mark-seen
+  // action so the overlay is a one-shot even if the player closes the
+  // tab mid-celebration.
+  const [firstCatchCeleb, setFirstCatchCeleb] = useState(false)
+  const firstCatchArmedRef = useRef(!hasSeenFirstCatchCelebration)
   const [catchResult, setCatchResult] = useState<{
     fish: FishSpecies
     baitSaved: boolean
@@ -4239,6 +4247,15 @@ export default function FishingGame({
         // as the post-celebration "proof" surface.
         if (jackpotHit && actualQty > 1) {
           setJackpotBoom({ qty: actualQty })
+        }
+        // First-catch celebration — armed if the server flag was unset
+        // when the page loaded. Disarm immediately so a crate or double
+        // catch on the same round can't re-fire it. Server-mark is
+        // fire-and-forget; the local disarm is the actual one-shot guard.
+        if (firstCatchArmedRef.current) {
+          firstCatchArmedRef.current = false
+          setFirstCatchCeleb(true)
+          startTransition(() => { markFirstCatchCelebrationSeen().catch(() => {}) })
         }
         // Bump the live PB lookup so the collection drawer reflects the new
         // record without needing a page refresh. Server is authoritative —
@@ -7746,6 +7763,73 @@ export default function FishingGame({
             qty={jackpotBoom.qty}
             onDone={() => setJackpotBoom(null)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── First-catch celebration — fires ONCE per account on the
+            player's first successful reel-in. Welcomes the moment so
+            new players feel the catch land. Server-flagged so it
+            never replays. */}
+      <AnimatePresence>
+        {firstCatchCeleb && (
+          <motion.div
+            key="first-catch-celeb"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={() => setFirstCatchCeleb(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9000,
+              background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.35) 0%, rgba(6,18,12,0.88) 65%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', padding: '1.5rem',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.4, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 240, damping: 14 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: 360, width: '100%',
+                background: 'linear-gradient(180deg, #0d1a14 0%, #050a07 100%)',
+                border: '1px solid rgba(74,222,128,0.55)',
+                borderRadius: 22,
+                padding: '1.8rem 1.4rem 1.4rem',
+                textAlign: 'center',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 32px rgba(74,222,128,0.32)',
+              }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.2em]"
+                style={{ fontSize: '0.6rem', color: 'rgba(134,239,172,0.8)', marginBottom: 8 }}>
+                First Catch
+              </p>
+              <p className="font-cinzel font-700"
+                style={{ fontSize: '1.95rem', color: '#86efac', lineHeight: 1.1, marginBottom: 12, textShadow: '0 0 24px rgba(74,222,128,0.55)' }}>
+                Welcome, Captain.
+              </p>
+              <p className="font-karla font-400"
+                style={{ fontSize: '0.85rem', color: 'rgba(220,240,228,0.78)', lineHeight: 1.55, marginBottom: 18 }}>
+                You just landed your first fish. Sell it for doubloons, or mount it to your collection to build your captain&apos;s legend.
+              </p>
+              <button
+                type="button"
+                onClick={() => setFirstCatchCeleb(false)}
+                className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{
+                  width: '100%', padding: '0.85rem 0',
+                  background: 'rgba(74,222,128,0.18)',
+                  border: '1px solid rgba(74,222,128,0.65)',
+                  color: '#86efac',
+                  borderRadius: 12, fontSize: '0.78rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Set Sail →
+              </button>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
