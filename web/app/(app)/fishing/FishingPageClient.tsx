@@ -48,7 +48,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
   fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, activeSession, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
 }: {
   hookTier: number
@@ -94,6 +94,8 @@ export default function FishingPageClient({
   unlockedBoats: string[]
   equippedHat: string | null
   unlockedHats: string[]
+  equippedPet: string | null
+  unlockedPets: string[]
   initialFinnEncounters: number
   initialFinnWins: number
   initialFinnSeenBeats: string[]
@@ -132,6 +134,14 @@ export default function FishingPageClient({
   const handleHatStateChange = useCallback((equipped: string | null, unlocked: string[]) => {
     setPersistedEquippedHat(equipped)
     setPersistedUnlockedHats(unlocked)
+  }, [])
+  // Pet equip/unlock state — lifted here so zone switches don't lose
+  // the new parrot the player just unlocked from a crate.
+  const [persistedEquippedPet, setPersistedEquippedPet] = useState<string | null>(equippedPet)
+  const [persistedUnlockedPets, setPersistedUnlockedPets] = useState<string[]>(unlockedPets)
+  const handlePetStateChange = useCallback((equipped: string | null, unlocked: string[]) => {
+    setPersistedEquippedPet(equipped)
+    setPersistedUnlockedPets(unlocked)
   }, [])
 
   // Daily challenge progress + claimed flags survive zone remounts. The
@@ -244,6 +254,9 @@ export default function FishingPageClient({
       initialEquippedHat={persistedEquippedHat}
       initialUnlockedHats={persistedUnlockedHats}
       onHatStateChange={handleHatStateChange}
+      initialEquippedPet={persistedEquippedPet}
+      initialUnlockedPets={persistedUnlockedPets}
+      onPetStateChange={handlePetStateChange}
       initialFinnEncounters={initialFinnEncounters}
       initialFinnWins={initialFinnWins}
       initialFinnSeenBeats={initialFinnSeenBeats}

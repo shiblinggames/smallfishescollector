@@ -200,6 +200,8 @@ export default async function FishingPage() {
           unlockedBoats={(profile?.unlocked_boats as string[] | null) ?? []}
           equippedHat={(profile?.equipped_hat as string | null) ?? null}
           unlockedHats={(profile?.unlocked_hats as string[] | null) ?? []}
+          equippedPet={(profile?.equipped_pet as string | null) ?? null}
+          unlockedPets={(profile?.unlocked_pets as string[] | null) ?? []}
           initialFinnEncounters={profile?.finn_encounters ?? 0}
           initialFinnWins={profile?.finn_wins ?? 0}
           initialFinnSeenBeats={(profile?.finn_seen_beats as string[] | null) ?? []}

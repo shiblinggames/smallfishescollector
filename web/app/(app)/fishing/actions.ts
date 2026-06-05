@@ -14,6 +14,7 @@ import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
 import { rollFishSize, type FishSizeTier } from '@/lib/fishSize'
 import { rollShiny, SHINY_SELL_MULT } from '@/lib/shiny'
+import { CRATE_PET_CHANCE, rollPet } from '@/lib/pets'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -755,6 +756,7 @@ export type CrateLoot =
   | { type: 'skin';      skinId: string;   skinName: string }
   | { type: 'hat';       hatId: string;    hatName: string;  hatImageUrl: string  }
   | { type: 'boat';      boatId: string;   boatName: string; boatImageUrl: string }
+  | { type: 'pet';       petId: string;    petName: string;  petImageUrl: string; petAccent: string; isDuplicate: boolean }
 
 export async function reelCrate(_zone: string, tier: CrateTier = 'wooden'): Promise<CrateLoot | { error: string }> {
   const supabase = await createClient()
@@ -766,12 +768,42 @@ export async function reelCrate(_zone: string, tier: CrateTier = 'wooden'): Prom
   await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_crates_opened', n: 1 })
 
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats')
+    .select('doubloons, unlocked_character_colors, unlocked_boats, unlocked_hats, unlocked_pets, equipped_pet')
     .eq('id', user.id).single()
 
   const unlockedSkins = (profile?.unlocked_character_colors as string[] | null) ?? []
   const unlockedBoats = (profile?.unlocked_boats as string[] | null) ?? []
   const unlockedHats  = (profile?.unlocked_hats  as string[] | null) ?? []
+  const unlockedPets  = (profile?.unlocked_pets  as string[] | null) ?? []
+
+  // ── Pet roll — OVERRIDE the normal outcome on hit ─────────────────
+  // Rolled FIRST and exclusively, so the rare moment owns the screen
+  // instead of fighting with a doubloons/bait/cosmetic result. Rates
+  // are tunable in lib/pets.CRATE_PET_CHANCE. Duplicate parrots (same
+  // id) auto-equip the new variant but don't add a second entry to
+  // unlocked_pets — the player still sees the celebration, just with
+  // a "Duplicate" badge in the UI.
+  if (Math.random() < CRATE_PET_CHANCE[tier]) {
+    const pet = rollPet()
+    const isDuplicate = unlockedPets.includes(pet.id)
+    if (!isDuplicate) {
+      await admin.from('profiles').update({
+        unlocked_pets: [...unlockedPets, pet.id],
+        // Auto-equip the first pet so the player sees it land in their
+        // Appearance loadout without an extra tap. Subsequent unlocks
+        // don't auto-equip — the player chooses which to wear.
+        equipped_pet: (profile?.equipped_pet as string | null) ?? pet.id,
+      }).eq('id', user.id)
+    }
+    return {
+      type: 'pet',
+      petId: pet.id, petName: pet.name,
+      petImageUrl: pet.restImageUrl,
+      petAccent: pet.accentColor,
+      isDuplicate,
+    }
+  }
+
   const isOwned = (entry: typeof CRATE_COSMETIC_POOL[number]) => {
     if (entry.kind === 'skin') return unlockedSkins.includes(entry.id)
     if (entry.kind === 'boat') return unlockedBoats.includes(entry.id)
@@ -1187,6 +1219,24 @@ export async function equipHat(hatId: string | null): Promise<{ ok: true } | { e
     if (!unlocked.includes(hatId)) return { error: 'Hat not unlocked' }
   }
   await admin.from('profiles').update({ equipped_hat: hatId }).eq('id', user.id)
+  return { ok: true }
+}
+
+/** Equip / unequip a pet. Pets are crate-only today (no shop), so the
+ *  ownership check rejects any id not in unlocked_pets. Pass null to
+ *  unequip. */
+export async function equipPet(petId: string | null): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  if (petId !== null) {
+    const { data: profile } = await admin.from('profiles').select('unlocked_pets').eq('id', user.id).single()
+    const unlocked = (profile?.unlocked_pets as string[] | null) ?? []
+    if (!unlocked.includes(petId)) return { error: 'Pet not unlocked' }
+  }
+  await admin.from('profiles').update({ equipped_pet: petId }).eq('id', user.id)
   return { ok: true }
 }
 

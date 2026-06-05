@@ -6,6 +6,7 @@ import { HOOKS, hookGlowClass } from '@/lib/hooks'
 import { BADGES, BADGE_SLOT_POSITIONS, type BadgePos, type BadgeFrame } from '@/lib/badges'
 import { BOATS } from '@/lib/boats'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
+import { PETS } from '@/lib/pets'
 
 type Frame = 'rest' | 'wait' | 'cast'
 
@@ -86,6 +87,17 @@ const HAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rot
   cast: { top: 53,   left: 63.8, width: 21.5, rotate: 0 },
 }
 
+// Pet overlay — pets sit on the boat/shoulder. Starting positions are
+// placeholder guesses; tune via the sliders. Same shape as the boat /
+// hat configs so adding new species later is one config block + one
+// render entry. All parrots share these coords because the source PNGs
+// are the same size + shape.
+const PET_DEFAULT: Record<Frame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 20, left: 70, width: 24, rotate: 0 },
+  wait: { top: 20, left: 70, width: 24, rotate: 0 },
+  cast: { top: 20, left: 70, width: 24, rotate: 0 },
+}
+
 function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
 }) {
@@ -142,6 +154,12 @@ export default function FishingTestClient() {
   const [boatEnabled, setBoatEnabled] = useState(true)
   const [hatCfg, setHatCfg] = useState(HAT_DEFAULT)
   const [hatEnabled, setHatEnabled] = useState(true)
+  // Pet — preview/tune. Pet identity (which parrot) is just for the
+  // visual; the position config applies to all parrots equally since
+  // they share the same source dimensions.
+  const [petCfg, setPetCfg] = useState(PET_DEFAULT)
+  const [petEnabled, setPetEnabled] = useState(true)
+  const [petId, setPetId] = useState<string>(PETS[0]?.id ?? 'parrot_red')
   const [showLegacyControls, setShowLegacyControls] = useState(false)
   const [characterColor, setCharacterColor] = useState('default')
   const FRAMES = getCharacterSprites(characterColor) as Record<Frame, string>
@@ -229,6 +247,30 @@ export default function FishingTestClient() {
                 }}
               />
             )}
+
+            {/* Pet overlay — picks the selected parrot's PNG. Position
+                applies the same to all parrots because the source images
+                are uniform size + shape. */}
+            {petEnabled && (() => {
+              const pet = PETS.find(p => p.id === petId) ?? PETS[0]
+              if (!pet) return null
+              return (
+                <img
+                  src={pet.restImageUrl}
+                  alt={pet.name}
+                  style={{
+                    position: 'absolute',
+                    top: `${petCfg[frame].top}%`,
+                    left: `${petCfg[frame].left}%`,
+                    width: `${petCfg[frame].width}%`,
+                    transform: `rotate(${petCfg[frame].rotate}deg)`,
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    filter: `drop-shadow(0 0 6px ${pet.accentColor}55)`,
+                  }}
+                />
+              )
+            })()}
 
             {boatEnabled && (
               <img src={frame === 'cast' ? BOATS[0].castImageUrl : BOATS[0].restImageUrl} alt="boat" style={{
@@ -430,6 +472,56 @@ export default function FishingTestClient() {
           </>
         )}
         </>)}
+
+        {/* ── Pet overlay (always visible — tuning the parrot now) ── */}
+        <p style={{ fontWeight: 700, marginTop: 16, marginBottom: 6, color: '#fff' }}>
+          Pet overlay
+          <button onClick={() => setPetEnabled(!petEnabled)} style={{
+            marginLeft: 8, padding: '2px 8px', fontSize: 10, borderRadius: 4,
+            background: petEnabled ? '#16a34a' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: '#fff', cursor: 'pointer',
+          }}>{petEnabled ? 'On' : 'Off'}</button>
+        </p>
+        {petEnabled && (
+          <>
+            {/* Pet picker — all parrots use the same coords, but the
+                preview color lets you eyeball each variant against the
+                BG. */}
+            <select
+              value={petId}
+              onChange={e => setPetId(e.target.value)}
+              style={{ width: '100%', marginBottom: 8, padding: '4px 6px', background: '#1e2d3e', color: '#fff', border: '1px solid #334', borderRadius: 6, fontSize: 11 }}
+            >
+              {PETS.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <p style={{ fontWeight: 600, marginBottom: 4, color: '#a78bfa' }}>
+              Pet overlay ({frame})
+            </p>
+            <Slider label="top %"    value={petCfg[frame].top}    min={-40} max={100} step={0.1} onChange={v => setPetCfg(p => ({ ...p, [frame]: { ...p[frame], top: v } }))} />
+            <Slider label="left %"   value={petCfg[frame].left}   min={-40} max={120} step={0.1} onChange={v => setPetCfg(p => ({ ...p, [frame]: { ...p[frame], left: v } }))} />
+            <Slider label="width %"  value={petCfg[frame].width}  min={5}   max={120} step={0.1} onChange={v => setPetCfg(p => ({ ...p, [frame]: { ...p[frame], width: v } }))} />
+            <Slider label="rotate °" value={petCfg[frame].rotate} min={-90} max={90}  step={0.5} onChange={v => setPetCfg(p => ({ ...p, [frame]: { ...p[frame], rotate: v } }))} />
+            <button onClick={() => setPetCfg(p => ({ rest: p[frame], wait: p[frame], cast: p[frame] }))} style={{
+              width: '100%', padding: '4px 0', borderRadius: 6, cursor: 'pointer', marginTop: 6,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: '#94a3b8', fontWeight: 600, fontSize: 10,
+            }}>Copy {frame} → all frames</button>
+            {/* Config dump — paste this into FishingGame.tsx as
+                CHAR_PET_OVERLAY once positions feel right. */}
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: 11 }}>Show config (copy to FishingGame)</summary>
+              <pre style={{ fontSize: 10, color: '#cbd5e1', background: '#0b1422', padding: 8, borderRadius: 6, marginTop: 6, whiteSpace: 'pre-wrap' }}>
+{`const CHAR_PET_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: ${petCfg.rest.top}, left: ${petCfg.rest.left}, width: ${petCfg.rest.width}, rotate: ${petCfg.rest.rotate} },
+  wait: { top: ${petCfg.wait.top}, left: ${petCfg.wait.left}, width: ${petCfg.wait.width}, rotate: ${petCfg.wait.rotate} },
+  cast: { top: ${petCfg.cast.top}, left: ${petCfg.cast.left}, width: ${petCfg.cast.width}, rotate: ${petCfg.cast.rotate} },
+}`}
+              </pre>
+            </details>
+          </>
+        )}
 
         {!HOOK_TUNING_MODE && (<>
         {/* 3-pose rod tuner — new upload format (top-left rest,

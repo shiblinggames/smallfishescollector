@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
@@ -2709,6 +2709,7 @@ type CrateRollTileShape =
   | { type: 'skin';      skinId: string;   skinName: string }
   | { type: 'hat';       hatName: string;  hatImageUrl: string  }
   | { type: 'boat';      boatName: string; boatImageUrl: string }
+  | { type: 'pet';       petName: string;  petImageUrl: string; petAccent: string }
 
 function CrateSlotTile({ tile }: { tile: CrateRollTileShape }) {
   const wrapper: React.CSSProperties = {
@@ -2759,6 +2760,16 @@ function CrateSlotTile({ tile }: { tile: CrateRollTileShape }) {
       </div>
     )
   }
+  if (tile.type === 'pet') {
+    return (
+      <div style={wrapper}>
+        <img src={tile.petImageUrl} alt="" style={{ height: 42, width: 42, objectFit: 'contain', filter: `drop-shadow(0 0 8px ${tile.petAccent}66)` }} />
+        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: tile.petAccent, lineHeight: 1 }}>
+          {tile.petName}
+        </p>
+      </div>
+    )
+  }
   // hat / boat — both have an imageUrl
   const img = tile.type === 'hat' ? tile.hatImageUrl : tile.boatImageUrl
   const name = tile.type === 'hat' ? tile.hatName : tile.boatName
@@ -2791,6 +2802,7 @@ export default function FishingGame({
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
+  initialEquippedPet, initialUnlockedPets, onPetStateChange,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
 }: {
   hookTier: number
@@ -2849,6 +2861,9 @@ export default function FishingGame({
   initialEquippedHat: string | null
   initialUnlockedHats: string[]
   onHatStateChange?: (equipped: string | null, unlocked: string[]) => void
+  initialEquippedPet: string | null
+  initialUnlockedPets: string[]
+  onPetStateChange?: (equipped: string | null, unlocked: string[]) => void
   initialFinnEncounters: number
   initialFinnWins: number
   initialFinnSeenBeats: string[]
@@ -2863,6 +2878,10 @@ export default function FishingGame({
   const [equippedHat, setEquippedHat] = useState<string | null>(initialEquippedHat)
   const [unlockedHats, setUnlockedHats] = useState<string[]>(initialUnlockedHats)
   const hatDef = getHat(equippedHat)
+  // Pet state — same shape as hat. Mutations go through onPetStateChange
+  // (in GearScreen below) and equipPet() / the crate drop server action.
+  const [equippedPet, setEquippedPet] = useState<string | null>(initialEquippedPet)
+  const [unlockedPets, setUnlockedPets] = useState<string[]>(initialUnlockedPets)
   const [localEquippedBadges, setLocalEquippedBadges] = useState(equippedBadges)
   const charSrc = getCharSrc(localCharacterColor)
 
@@ -3178,6 +3197,7 @@ export default function FishingGame({
     | { type: 'skin';      skinId: string;   skinName: string }
     | { type: 'hat';       hatId: string;    hatName: string;  hatImageUrl: string  }
     | { type: 'boat';      boatId: string;   boatName: string; boatImageUrl: string }
+    | { type: 'pet';       petId: string;    petName: string;  petImageUrl: string; petAccent: string; isDuplicate: boolean }
     | null
   >(null)
   const [cratePhase, setCratePhase] = useState<'closed' | 'rolling' | 'revealed'>('closed')
@@ -4517,7 +4537,8 @@ export default function FishingGame({
       : result.type === 'bait'    ? { type: 'bait', baitType: result.baitType, baitName: result.baitName, quantity: result.quantity }
       : result.type === 'skin'    ? { type: 'skin', skinId: result.skinId, skinName: result.skinName }
       : result.type === 'hat'     ? { type: 'hat', hatName: result.hatName, hatImageUrl: result.hatImageUrl }
-      :                             { type: 'boat', boatName: result.boatName, boatImageUrl: result.boatImageUrl }
+      : result.type === 'boat'    ? { type: 'boat', boatName: result.boatName, boatImageUrl: result.boatImageUrl }
+      :                             { type: 'pet', petName: result.petName, petImageUrl: result.petImageUrl, petAccent: result.petAccent }
 
     // 17 random fillers, then the reward. The strip animates so the
     // LAST tile lands centered — meaning the spin visibly arrives at
@@ -4552,6 +4573,18 @@ export default function FishingGame({
       setUnlockedHats(prev => prev.includes(result.hatId) ? prev : [...prev, result.hatId])
     } else if (result.type === 'boat') {
       setUnlockedBoats(prev => prev.includes(result.boatId) ? prev : [...prev, result.boatId])
+    } else if (result.type === 'pet') {
+      // Server already added the pet to unlocked_pets + auto-equipped on
+      // first pet ever. Mirror that locally so the Appearance picker
+      // sees the new parrot the moment the claim animation finishes.
+      if (!result.isDuplicate) {
+        setUnlockedPets(prev => {
+          const next = prev.includes(result.petId) ? prev : [...prev, result.petId]
+          onPetStateChange?.(equippedPet ?? result.petId, next)
+          return next
+        })
+        if (!equippedPet) setEquippedPet(result.petId)
+      }
     }
     setCratePhase('closed')
     setCrateStrip(null)
@@ -5566,6 +5599,32 @@ export default function FishingGame({
                               </p>
                               <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>New character color unlocked</p>
                             </div>
+                          ) : crateResult.type === 'pet' ? (
+                            <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
+                              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: `${crateResult.petAccent}cc`, marginBottom: 6 }}>
+                                {crateResult.isDuplicate ? 'Duplicate Pet' : 'Pet Unlocked!'}
+                              </p>
+                              <motion.img
+                                src={crateResult.petImageUrl}
+                                alt=""
+                                initial={{ scale: 0.5, opacity: 0, y: 14 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+                                transition={{ type: 'spring', stiffness: 280, damping: 14, delay: 0.1 }}
+                                style={{
+                                  width: 96, height: 96, objectFit: 'contain',
+                                  margin: '0 auto 10px', display: 'block',
+                                  filter: `drop-shadow(0 0 24px ${crateResult.petAccent}80)`,
+                                }}
+                              />
+                              <p className="font-cinzel font-700" style={{
+                                fontSize: '1.2rem', color: crateResult.petAccent, lineHeight: 1,
+                                textShadow: `0 0 22px ${crateResult.petAccent}80`,
+                              }}>
+                                {crateResult.petName}
+                              </p>
+                              <p className="font-karla" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+                                {crateResult.isDuplicate ? 'You already own this pet' : 'Equip it from your Appearance loadout'}
+                              </p>
+                            </div>
                           ) : crateResult.type === 'hat' || crateResult.type === 'boat' ? (
                             <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
                               <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#4ade8099', marginBottom: 6 }}>Rare Drop!</p>
@@ -5993,7 +6052,7 @@ export default function FishingGame({
                 </motion.div>
               )}
               {phase === 'result' && crateResult && cratePhase === 'revealed' && (() => {
-                const isCosmetic = crateResult.type === 'skin' || crateResult.type === 'hat' || crateResult.type === 'boat'
+                const isCosmetic = crateResult.type === 'skin' || crateResult.type === 'hat' || crateResult.type === 'boat' || crateResult.type === 'pet'
                 const isDoubloons = crateResult.type === 'doubloons'
                 const accent = isCosmetic ? '#4ade80' : isDoubloons ? '#fbbf24' : '#86efac'
                 const accentRgb = isCosmetic ? '74,222,128' : isDoubloons ? '251,191,36' : '134,239,172'
@@ -7338,6 +7397,13 @@ export default function FishingGame({
                   setDoubloons(res.doubloons)
                   window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
                 }
+              }}
+              equippedPet={equippedPet}
+              unlockedPets={unlockedPets}
+              onEquipPet={async (id) => {
+                setEquippedPet(id)
+                onPetStateChange?.(id, unlockedPets)
+                await equipPet(id)
               }}
               hasTideTurner={hasTideTurner}
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}
