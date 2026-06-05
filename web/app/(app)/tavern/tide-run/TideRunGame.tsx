@@ -648,6 +648,14 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
 
     // Base spacing scaled by speed (time-based floor for fairness)
     const baseSpacing = Math.max(HAZARD_SPAWN_SPACING, g.speed * MIN_REACTION_TIME_SEC)
+    // Per-spawn jitter: 0–60 world px (= 0–1 meter) added on top of
+    // baseSpacing wherever we ADVANCE nextSpawnAt. Without it, hazards
+    // land on exact 360 px / 6 m intervals and every crash happens at
+    // the same fractional offset (so wreck scores cluster on the same
+    // 0.X decimal). The reaction-time floors in baseSpacing + the
+    // mid/large rock buffers (medBuffer / lrgBuffer) still apply — this
+    // only ever WIDENS the gap, never shortens it.
+    const spawnAdvance = baseSpacing + Math.random() * 60
 
     // ── Maybe spawn a beacon (looks like a rock, kills you if you jump) ──
     const canBeacon = distance > BEACON_WARMUP_M && g.lastSpawnType !== 'beacon'
@@ -662,7 +670,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         if (baseSpacing < minBuffer) g.nextSpawnAt += (minBuffer - baseSpacing)
       }
       g.beacons.push({ x: g.nextSpawnAt, width, height, shatteredAt: 0 })
-      g.nextSpawnAt += baseSpacing
+      g.nextSpawnAt += spawnAdvance
       g.lastSpawnType = 'beacon'
       return
     }
@@ -734,7 +742,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
               curX += gap
             }
           }
-          g.nextSpawnAt = curX + baseSpacing
+          g.nextSpawnAt = curX + spawnAdvance
         } else {
           // Single shoal — kept narrow if it follows a current still
           // slowing the boat, else random up to the clearable max.
@@ -742,7 +750,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
             ? SHOAL_MIN_WIDTH
             : SHOAL_MIN_WIDTH + Math.random() * (maxClearableWidth - SHOAL_MIN_WIDTH)
           g.shoals.push({ x: shoalStartX, width: wpWidth })
-          g.nextSpawnAt += wpWidth + baseSpacing
+          g.nextSpawnAt += wpWidth + spawnAdvance
         }
 
         g.lastSpawnType = 'shoal'
@@ -808,7 +816,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
 
     const hazardX = g.nextSpawnAt
     g.hazards.push({ x: hazardX, width, height })
-    g.nextSpawnAt += baseSpacing
+    g.nextSpawnAt += spawnAdvance
     g.lastSpawnType = 'rock'
 
     // Maybe drop a current in the gap before the NEXT hazard.
