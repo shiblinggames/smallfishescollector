@@ -289,7 +289,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.03,
       image: '/enemytier2scout.png',
-      portrait: '/krust_worker.jpeg',
+      portrait: '/krust_worker.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
     reg: {
@@ -302,7 +302,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'fire'],
       critChance: 0.06,
       image: '/enemytier2reg.png',
-      portrait: '/krust_soldier.jpeg',
+      portrait: '/krust_soldier.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
     brute: {
@@ -315,7 +315,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       pattern: ['reload', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'fire'],
       critChance: 0.05,
       image: '/enemytier2brute.png',
-      portrait: '/krust_brute.jpeg',
+      portrait: '/krust_brute.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
     elite: {
@@ -332,7 +332,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.10,
       image: '/enemytier2elite.png',
-      portrait: '/krust_overseer.jpeg',
+      portrait: '/krust_overseer.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
     krust: {
