@@ -1647,7 +1647,15 @@ export default function GearScreen({
                     bouncing back to the gear grid; one toast at the
                     top serves all purchases inside this panel. ── */}
               {openSlot === 'appearance' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                // min-height keeps the sheet a stable size as the
+                // player swaps between Skin / Hat / Boat / Pet — each
+                // tab has different content height, so without this
+                // the sheet (which anchors to the viewport bottom)
+                // resizes on every tab tap and the tab strip visibly
+                // jumps. 380px comfortably fits the tallest tab body
+                // (Boat grid) on a typical phone; smaller tabs just
+                // get extra breathing room below.
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 380 }}>
                   <AnimatePresence>
                     {cosmeticToast && (
                       <motion.div
