@@ -547,12 +547,16 @@ function AppearanceSlot({
       }}>
         <div style={{
           position: 'absolute',
-          // Character sprite is ~700px wide with the character + boat
-          // centered around 35-75% and a vertical fishing line baked
-          // in at ~15-20% from the left. Push left:-35% width:160% so
-          // the line clips off the slot's left edge while the character
-          // + boat stay roughly centered in the visible frame.
-          bottom: '0%', left: '-35%', width: '160%',
+          // Tuned crop:
+          //   Character image: line at ~18%, body 35-75%, boat 30-85%
+          //   Pet overlay: rendered at left:62.6 width:41.4 of this box
+          //                → pet visible bird ends ~95% of box width
+          // Balance left:-25% width:125% so:
+          //   - line (image's 18%) maps to -2.5% of slot (clipped)
+          //   - character body centered ~19-69% of slot
+          //   - pet bird right edge lands ~95% of slot (in-frame)
+          //   - boat hull visible across ~30-80% of slot
+          bottom: '0%', left: '-25%', width: '125%',
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={charSrc.rest} alt="" style={{ width: '100%', display: 'block' }} />
