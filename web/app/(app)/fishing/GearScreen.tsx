@@ -547,11 +547,12 @@ function AppearanceSlot({
       }}>
         <div style={{
           position: 'absolute',
-          // bumped width 70% → 130% so the composite zooms in to fill
-          // the slot card; left is pushed negative so the fishing-line
-          // portion of the character sprite (left side) clips off the
-          // visible area while the character body stays centered.
-          bottom: '0%', left: '-15%', width: '130%',
+          // Character sprite is ~700px wide with the character + boat
+          // centered around 35-75% and a vertical fishing line baked
+          // in at ~15-20% from the left. Push left:-35% width:160% so
+          // the line clips off the slot's left edge while the character
+          // + boat stay roughly centered in the visible frame.
+          bottom: '0%', left: '-35%', width: '160%',
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={charSrc.rest} alt="" style={{ width: '100%', display: 'block' }} />
