@@ -451,7 +451,7 @@ export const RAID_MAP: RaidNode[] = [
     requiresNode: 'syndicate',
     requiresNavLevel: 10,
     milestone: { amount: 1000, spend: true },
-    image: '/bilge_eel.jpeg',
+    image: '/bilge_eel.png',
     detail: {
       description:
         "The letter left no address, only a heading: out past the Bilge Strait, into the cold. That is enough to follow, and as luck would have it the whole stretch belongs to the Bilge Eels.\n\nThey bow to nobody. Not the Finndicate, not you, just a knot of thugs squatting on the only water that points where C.K.'s cargo went, charging good coin to cross it. There is no bulling through at your size. They will only deal with a captain who has logged enough sea to be worth the breath (Navigation 10), and even then they expect paying. Slip them 1,000 ⟡ and the way opens onto C.K.'s trail. Keep your purse shut and the trail goes cold as the water.",

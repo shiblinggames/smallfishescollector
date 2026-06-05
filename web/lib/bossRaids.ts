@@ -348,7 +348,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       pattern: ['reload', 'reload', 'fire', 'dodge', 'reload', 'reload', 'fire', 'dodge'],
       critChance: 0.09,
       image: '/enemytier2boss.png',
-      portrait: '/Captainkrust.jpeg',
+      portrait: '/Captainkrust.png',
       damageReduction: 0.20, abilityName: 'Carapace',
     },
   },
