@@ -27,13 +27,16 @@ export interface PetDef {
 }
 
 export const PETS: PetDef[] = [
-  // Parrots — gold rarest, red most common. Weights sum to 100 for a
-  // readable distribution, but the picker normalizes against the live
-  // sum so weights can shift without doing the math.
-  { id: 'parrot_red',      species: 'parrot', name: 'Red Parrot',      weight: 45, restImageUrl: '/parrot_red.png',      accentColor: '#ef4444' },
-  { id: 'parrot_blue',     species: 'parrot', name: 'Blue Parrot',     weight: 28, restImageUrl: '/parrot_blue.png',     accentColor: '#60a5fa' },
+  // Parrots — sand + gold both sit at the rarest tier (weight 3 each).
+  // Red is the most common bird; the rest scale down through blue,
+  // green, charcoal. Weights sum to ~100 for readability, but the
+  // picker normalizes against the live sum so values can shift
+  // freely without doing the math.
+  { id: 'parrot_red',      species: 'parrot', name: 'Red Parrot',      weight: 43, restImageUrl: '/parrot_red.png',      accentColor: '#ef4444' },
+  { id: 'parrot_blue',     species: 'parrot', name: 'Blue Parrot',     weight: 27, restImageUrl: '/parrot_blue.png',     accentColor: '#60a5fa' },
   { id: 'parrot_green',    species: 'parrot', name: 'Green Parrot',    weight: 15, restImageUrl: '/parrot_green.png',    accentColor: '#4ade80' },
   { id: 'parrot_charcoal', species: 'parrot', name: 'Charcoal Parrot', weight: 9,  restImageUrl: '/parrot_charcoal.png', accentColor: '#94a3b8' },
+  { id: 'parrot_sand',     species: 'parrot', name: 'Sand Parrot',     weight: 3,  restImageUrl: '/parrot_sand.png',     accentColor: '#e8c97a' },
   { id: 'parrot_gold',     species: 'parrot', name: 'Gold Parrot',     weight: 3,  restImageUrl: '/parrot_gold.png',     accentColor: '#f0c040' },
 ]
 
