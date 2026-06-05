@@ -241,6 +241,10 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
       ? ['discovery', 'encounter', 'danger', 'discovery', 'encounter', 'danger', 'weather', 'discovery', 'peaceful']
       : route === 'triangle'
       ? ['encounter', 'danger', 'discovery', 'encounter', 'danger', 'weather', 'encounter', 'danger', 'discovery', 'discovery']
+      : route === 'shroud'
+      // Shrouded Reach — longer + heavier than the Triangle. More
+      // discoveries (loot density) and more dangers (real attrition).
+      ? ['danger', 'discovery', 'encounter', 'danger', 'discovery', 'encounter', 'weather', 'danger', 'discovery', 'encounter', 'danger', 'discovery']
       : ['peaceful', 'discovery', 'encounter', 'discovery', 'peaceful', 'discovery', 'weather', 'danger']
 
   // Light shuffle — swap adjacent pairs randomly

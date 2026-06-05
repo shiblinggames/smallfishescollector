@@ -33,12 +33,14 @@ const REC_SCORES: Record<VoyageRoute, number> = {
   open:     20,
   deep:     25,
   triangle: 35,
+  shroud:   50,
 }
 const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = {
   coastal:  1,
   open:     5,
   deep:     15,
   triangle: 25,
+  shroud:   40,
 }
 
 function computeVoyageDurationMs(expeditionLevel: number, totalNav: number): number {
@@ -90,6 +92,9 @@ const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
   open:     { x: 63, y: 32 },
   deep:     { x: 28, y: 43 },
   triangle: { x: 45, y: 59 },
+  // Far edge of the chart — sits past the Triangle to read as
+  // "beyond the maps". Adjust if it collides with another node visually.
+  shroud:   { x: 78, y: 75 },
 }
 
 type DropEntry =
@@ -112,6 +117,11 @@ const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
     { kind: 'bait',    type: 'luminous',       rate: '~20%' },
     { kind: 'special', id: 'phantom_hook',     rate: '~2%' },
   ],
+  // Shrouded Reach — loot table TBD. Will include a new exclusive
+  // fishing-aid item (designed separately). Keep entries here as
+  // fishing-only — voyages are the passive perk loop for players who
+  // skip raids, so this route's drops shouldn't pull from raid pools.
+  shroud: [],
 }
 
 function computeRouteEstimate(
@@ -126,9 +136,9 @@ function computeRouteEstimate(
   const pWin         = Math.min(1, stats.power   / 30)
   const pDodge       = Math.min(1, stats.dodge   / 28)
 
-  const enc = route === 'triangle' ? 3 : route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
-  const dng = route === 'triangle' ? 3 : route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
-  const dis = route === 'triangle' ? 4 : 2
+  const enc = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
+  const dng = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
+  const dis = route === 'shroud' ? 5 : route === 'triangle' ? 4 : 2
 
   const expected =
     dis * pDiscovery * 120 * fortuneScale * rc.payoutScale +
@@ -146,7 +156,7 @@ function computeRouteEstimate(
   }
 
   // XP estimate — same event counts, best/worst case outcomes
-  const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90, triangle: 140 }
+  const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90, triangle: 140, shroud: 220 }
   const xpBase      = XP_BASE[route]
   const xpCrewBonus = crewCount * 12
   const xpMin = xpBase + xpCrewBonus + enc * 5  + dng * 3  + dis * 4

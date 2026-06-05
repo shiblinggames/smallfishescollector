@@ -1,6 +1,6 @@
 export type VoyageEventType = 'discovery' | 'encounter' | 'danger' | 'weather' | 'peaceful'
 export type VoyageEventOutcome = 'success' | 'failure' | 'neutral'
-export type VoyageRoute = 'coastal' | 'open' | 'deep' | 'triangle'
+export type VoyageRoute = 'coastal' | 'open' | 'deep' | 'triangle' | 'shroud'
 
 export interface RouteConfig {
   name: string
@@ -67,6 +67,23 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     crewLossScale: 0.40, // softened 2026-05-23 (1.0 → 0.40)
     gemScale: 2.2,
     baseDoubloons: 380,
+    minShipTier: 2,
+  },
+  // Endgame route — Nav Lv 40 gate (see ROUTE_MIN_LEVELS in
+  // DailyVoyagePanel). Tuned roughly 1.4× the Triangle's economy
+  // (payout + base + gems) and a touch riskier on crew loss, so
+  // late-game players have a meaningful next rung after they outgrow
+  // the Triangle. Color is a deep slate to read as "veiled / colder /
+  // farther out" than the Triangle's crimson danger.
+  shroud: {
+    name: 'The Shrouded Reach',
+    tagline: 'Beyond the maps. Half a crew gets back.',
+    riskLabel: 'Treacherous',
+    color: '#7c8aa8',
+    payoutScale: 1.40,
+    crewLossScale: 0.55,
+    gemScale: 3.0,
+    baseDoubloons: 600,
     minShipTier: 2,
   },
 }
