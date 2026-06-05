@@ -248,30 +248,6 @@ export default function FishingTestClient() {
               />
             )}
 
-            {/* Pet overlay — picks the selected parrot's PNG. Position
-                applies the same to all parrots because the source images
-                are uniform size + shape. */}
-            {petEnabled && (() => {
-              const pet = PETS.find(p => p.id === petId) ?? PETS[0]
-              if (!pet) return null
-              return (
-                <img
-                  src={pet.restImageUrl}
-                  alt={pet.name}
-                  style={{
-                    position: 'absolute',
-                    top: `${petCfg[frame].top}%`,
-                    left: `${petCfg[frame].left}%`,
-                    width: `${petCfg[frame].width}%`,
-                    transform: `rotate(${petCfg[frame].rotate}deg)`,
-                    transformOrigin: 'center center',
-                    pointerEvents: 'none',
-                    filter: `drop-shadow(0 0 6px ${pet.accentColor}55)`,
-                  }}
-                />
-              )
-            })()}
-
             {boatEnabled && (
               <img src={frame === 'cast' ? BOATS[0].castImageUrl : BOATS[0].restImageUrl} alt="boat" style={{
                 position: 'absolute',
@@ -367,6 +343,31 @@ export default function FishingTestClient() {
                 </div>
               )
             })}
+
+            {/* Pet overlay — rendered LAST so it sits in the foreground
+                above the character, hat, boat, rod, reel, hook, and
+                badges. All parrots share these coords because the
+                source PNGs are uniform size + shape. */}
+            {petEnabled && (() => {
+              const pet = PETS.find(p => p.id === petId) ?? PETS[0]
+              if (!pet) return null
+              return (
+                <img
+                  src={pet.restImageUrl}
+                  alt={pet.name}
+                  style={{
+                    position: 'absolute',
+                    top: `${petCfg[frame].top}%`,
+                    left: `${petCfg[frame].left}%`,
+                    width: `${petCfg[frame].width}%`,
+                    transform: `rotate(${petCfg[frame].rotate}deg)`,
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    filter: `drop-shadow(0 0 6px ${pet.accentColor}55)`,
+                  }}
+                />
+              )
+            })()}
           </div>
           </div>
         </div>
