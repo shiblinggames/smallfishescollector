@@ -535,23 +535,23 @@ function AppearanceSlot({
       }}
     >
       {/* Composite preview — same layered stack the fishing game uses
-          (character → hat → boat → pet), rendered at slot size. Mirrors
-          how the player actually looks on the water, so the slot reads
-          as "your loadout" instead of "4 separate sprites". The
-          character sits in the lower portion of the slot so the boat
-          (which extends below + around) has room to sit underneath
-          without overflowing. */}
+          (character → hat → boat → pet). Fills the slot card so the
+          composite isn't dwarfed by empty card space, and the character
+          box is pushed LEFT of the slot frame so the rod's fishing
+          line (drawn into the character sprite, hanging off the left)
+          gets cropped by the slot's overflow:hidden. The character +
+          boat + hat + pet stay centered in the visible area. */}
       <div style={{
-        position: 'relative', width: 100, height: 100,
+        position: 'relative', width: '100%', flex: 1, minHeight: 0,
         overflow: 'hidden',
       }}>
         <div style={{
           position: 'absolute',
-          // Same fishing-game layout: character box at left + bottom
-          // offsets, width:70%. The full character composite (incl.
-          // boat extending outside the char img bounds) fits inside
-          // the 100×100 slot frame.
-          bottom: '10%', left: '15%', width: '70%',
+          // bumped width 70% → 130% so the composite zooms in to fill
+          // the slot card; left is pushed negative so the fishing-line
+          // portion of the character sprite (left side) clips off the
+          // visible area while the character body stays centered.
+          bottom: '0%', left: '-15%', width: '130%',
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={charSrc.rest} alt="" style={{ width: '100%', display: 'block' }} />
