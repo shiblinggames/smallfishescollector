@@ -155,6 +155,104 @@ function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: str
   return lines
 }
 
+// ── Rod stat comparison ──────────────────────────────────────────────────
+// Builds a "current vs new" row list for the rod buy-confirm modal so the
+// player sees the actual delta they're getting — not just the new rod's
+// stats in isolation. Only stats that ACTUALLY DIFFER between the two rods
+// surface here; identical stats are skipped so the modal stays focused on
+// what's changing. Delta arrows + green/red colors carry the upgrade /
+// downgrade / sidegrade signal at a glance.
+type RodStatDelta = {
+  title: string
+  currentLabel: string
+  nextLabel: string
+  delta: 'up' | 'down' | 'same'
+}
+function rodStatDeltas(current: typeof RODS[number], next: typeof RODS[number]): RodStatDelta[] {
+  const rows: RodStatDelta[] = []
+  const pushIfChanged = (
+    title: string,
+    curRaw: number, nxtRaw: number,
+    curLabel: string, nxtLabel: string,
+    higherBetter = true,
+  ) => {
+    if (curRaw === nxtRaw) return
+    rows.push({
+      title, currentLabel: curLabel, nextLabel: nxtLabel,
+      delta: nxtRaw === curRaw ? 'same' : ((higherBetter ? nxtRaw > curRaw : nxtRaw < curRaw) ? 'up' : 'down'),
+    })
+  }
+  // Bite speed: lower biteIntervalMs is faster (better). Express the speed
+  // as % faster than base so the player sees an intuitive "30% → 45%".
+  const curSpeed = Math.round((3800 - current.biteIntervalMs) / 3800 * 100)
+  const nxtSpeed = Math.round((3800 - next.biteIntervalMs) / 3800 * 100)
+  pushIfChanged('Bite Speed', curSpeed, nxtSpeed,
+    curSpeed === 0 ? 'Base' : `${curSpeed}% fast`,
+    nxtSpeed === 0 ? 'Base' : `${nxtSpeed}% fast`)
+  pushIfChanged('Catch Zone', current.catchZoneBonus, next.catchZoneBonus,
+    `+${current.catchZoneBonus}°`, `+${next.catchZoneBonus}°`)
+  pushIfChanged('Perfect Zone', current.perfectZoneBonus, next.perfectZoneBonus,
+    `+${current.perfectZoneBonus}°`, `+${next.perfectZoneBonus}°`)
+  pushIfChanged('Rare Bias', current.rarityBonus, next.rarityBonus,
+    `+${Math.round(current.rarityBonus * 100)}%`, `+${Math.round(next.rarityBonus * 100)}%`)
+  const dcLabel = (v: number) => v === 0 ? 'None' : v >= 1 ? 'Always' : `${Math.round(v * 100)}%`
+  pushIfChanged('Double Catch', current.doubleCatchChance, next.doubleCatchChance,
+    dcLabel(current.doubleCatchChance), dcLabel(next.doubleCatchChance))
+  pushIfChanged('Miss Retry', current.retryOnMissChance, next.retryOnMissChance,
+    current.retryOnMissChance === 0 ? 'None' : `${Math.round(current.retryOnMissChance * 100)}%`,
+    next.retryOnMissChance === 0 ? 'None' : `${Math.round(next.retryOnMissChance * 100)}%`)
+  pushIfChanged('Snag Immune', current.snagImmune ? 1 : 0, next.snagImmune ? 1 : 0,
+    current.snagImmune ? 'Yes' : 'No', next.snagImmune ? 'Yes' : 'No')
+  const curJP = current.jackpotChance ?? 0
+  const nxtJP = next.jackpotChance ?? 0
+  pushIfChanged('Jackpot', curJP, nxtJP,
+    curJP === 0 ? 'None' : `${Math.round(curJP * 100)}% ×${current.jackpotMultiplier}`,
+    nxtJP === 0 ? 'None' : `${Math.round(nxtJP * 100)}% ×${next.jackpotMultiplier}`)
+  pushIfChanged('Crate Lure', current.crateChanceMult ?? 1, next.crateChanceMult ?? 1,
+    `×${current.crateChanceMult ?? 1}`, `×${next.crateChanceMult ?? 1}`)
+  pushIfChanged('Perfect XP', current.perfectXpMult ?? 1, next.perfectXpMult ?? 1,
+    `×${current.perfectXpMult ?? 1}`, `×${next.perfectXpMult ?? 1}`)
+  return rows
+}
+
+// One row in the delta panel — compact "TITLE / current → next / arrow"
+// laid out on a single line so 5-6 changing stats fit without scrolling.
+function StatDeltaRow({ row, color }: { row: RodStatDelta; color: string }) {
+  const deltaColor = row.delta === 'up' ? '#4ade80' : row.delta === 'down' ? '#f87171' : '#a8a39a'
+  const arrow      = row.delta === 'up' ? '▲' : row.delta === 'down' ? '▼' : '·'
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '1fr auto 1fr auto',
+      alignItems: 'center', gap: 10,
+      padding: '0.55rem 0.7rem',
+      background: 'rgba(0,0,0,0.32)',
+      border: `1px solid ${color}1f`,
+      borderRadius: 9,
+    }}>
+      <div style={{ minWidth: 0 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.1em]"
+          style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.45)', marginBottom: 1 }}>
+          {row.title}
+        </p>
+        <p className="font-karla font-600"
+          style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.1 }}>
+          {row.currentLabel}
+        </p>
+      </div>
+      <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', lineHeight: 1 }}>→</span>
+      <div style={{ textAlign: 'right' }}>
+        <p className="font-cinzel font-700"
+          style={{ fontSize: '0.82rem', color: row.delta === 'up' ? color : deltaColor, lineHeight: 1.1 }}>
+          {row.nextLabel}
+        </p>
+      </div>
+      <span aria-hidden style={{ color: deltaColor, fontSize: '0.75rem', fontWeight: 700, lineHeight: 1 }}>
+        {arrow}
+      </span>
+    </div>
+  )
+}
+
 function ReelIcon({ color }: { color: string }) {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round">
@@ -304,7 +402,7 @@ function BaitIcon({ color }: { color: string }) {
 }
 
 function GearSlot({
-  label, image, icon, itemName, color, onClick, small, empty, glowClass, notify,
+  label, image, icon, itemName, color, onClick, small, empty, glowClass, notify, pulseKey,
 }: {
   label: string
   image?: string | null
@@ -319,11 +417,26 @@ function GearSlot({
    *  generic rod-glow pulse. */
   glowClass?: string
   notify?: boolean
+  /** Bump to retrigger a one-shot post-purchase pulse on this tile. */
+  pulseKey?: number
 }) {
   const glow = !!glowClass
   return (
-    <button
+    <motion.button
       onClick={onClick}
+      animate={pulseKey ? {
+        boxShadow: [
+          `0 0 0 0 ${color}cc`,
+          `0 0 0 16px ${color}00`,
+          `0 0 0 0 ${color}00`,
+        ],
+        scale: [1, 1.05, 1],
+      } : undefined}
+      transition={pulseKey ? { duration: 0.7, times: [0, 0.45, 1], ease: 'easeOut' } : undefined}
+      // Remount-key trick — bumping pulseKey re-runs the animate prop
+      // from its initial state, otherwise framer-motion would treat
+      // the prop change as a no-op (no animation re-fire).
+      key={pulseKey ?? 'static'}
       style={{
         position: 'relative',
         width: '100%',
@@ -366,7 +479,7 @@ function GearSlot({
         <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1 }}>{label}</p>
         <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: empty ? '#2e2c2a' : '#d0cdc8', lineHeight: 1.2 }}>{itemName}</p>
       </div>
-    </button>
+    </motion.button>
   )
 }
 
@@ -443,8 +556,15 @@ export default function GearScreen({
     const t = setTimeout(() => setCosmeticToast(null), 2500)
     return () => clearTimeout(t)
   }, [cosmeticToast])
-  function flashPurchase(name: string, color: string, cost: number) {
-    setCosmeticToast({ id: Date.now(), name, color, cost })
+  // Post-purchase juice — when a slot is bought, the corresponding tile in
+  // the gear grid pulses (one-shot box-shadow burst keyed by a Date.now()
+  // timestamp so re-buys of the same slot retrigger). Each GearSlot reads
+  // its own pulseKey via `pulseKeys[slot]` and animates when it changes.
+  const [pulseKeys, setPulseKeys] = useState<Partial<Record<SlotKey, number>>>({})
+  function flashPurchase(name: string, color: string, cost: number, slot?: SlotKey) {
+    const stamp = Date.now()
+    setCosmeticToast({ id: stamp, name, color, cost })
+    if (slot) setPulseKeys(prev => ({ ...prev, [slot]: stamp }))
   }
 
   // Confirmation gate for every doubloon purchase in this menu (rod / reel /
@@ -495,10 +615,10 @@ export default function GearScreen({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
-          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} onClick={() => setOpenSlot('rod')} />
+          <GearSlot label="Rod" image={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')} itemName={rod.name} color={rod.color} glowClass={rodGlowClass(rod)} notify={rodHasAffordable} pulseKey={pulseKeys.rod} onClick={() => setOpenSlot('rod')} />
         </div>
         <div style={{ gridColumn: '1', gridRow: '2' }}>
-          <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} onClick={() => setOpenSlot('hook')} />
+          <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
         </div>
 
         {/* Center row 1: Hat / Bandana */}
@@ -512,6 +632,7 @@ export default function GearScreen({
                 label="Hat Color"
                 color={swatchColor}
                 itemName={hatName}
+                pulseKey={pulseKeys.hat}
                 onClick={() => setOpenSlot('hat')}
                 icon={
                   // eslint-disable-next-line @next/next/no-img-element
@@ -548,7 +669,7 @@ export default function GearScreen({
         </div>
 
         <div style={{ gridColumn: '3', gridRow: '1' }}>
-          <GearSlot label="Reel" image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} onClick={() => setOpenSlot('reel')} />
+          <GearSlot label="Reel" image={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : null} icon={<ReelIcon color={reel.color} />} itemName={reel.name} color={reel.color} notify={reelHasAffordable} pulseKey={pulseKeys.reel} onClick={() => setOpenSlot('reel')} />
         </div>
         <div style={{ gridColumn: '3', gridRow: '2' }}>
           <GearSlot label="Line" image={line.imageUrl ?? null} itemName={line.name} color={line.color} onClick={() => setOpenSlot('line')} />
@@ -566,6 +687,7 @@ export default function GearScreen({
               icon={<SpecialIcon color={equippedDef ? equippedDef.color : '#5a4a7a'} />}
               itemName={equippedDef ? equippedDef.name : 'None'}
               color={equippedDef ? equippedDef.color : '#5a4a7a'}
+              pulseKey={pulseKeys.special}
               onClick={() => setOpenSlot('special')}
               empty={!equippedDef}
             />
@@ -580,6 +702,7 @@ export default function GearScreen({
               label="Boat Color"
               color={swatchColor}
               itemName={boatName}
+              pulseKey={pulseKeys.cosmetic}
               onClick={() => setOpenSlot('cosmetic')}
               icon={
                 // Center via flex, NOT transform — the .boat-glow bob
@@ -738,10 +861,10 @@ export default function GearScreen({
                       {cosmeticToast && (
                         <motion.div
                           key={cosmeticToast.id}
-                          initial={{ opacity: 0, y: -6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.22 }}
+                          initial={{ opacity: 0, y: -6, scale: 0.92 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                          transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                           style={{
                             padding: '0.55rem 0.85rem',
                             borderRadius: 10,
@@ -920,10 +1043,15 @@ export default function GearScreen({
                               const canAfford = doubloons >= r.cost
                               const onTap = () => {
                                 if (!canAfford) return
-                                const buyRodLines = rodStatLines(r)
+                                // Build "what changes vs my current rod" deltas. If two
+                                // rods are stat-identical (rare but possible across re-skins),
+                                // fall back to the new rod's full stat list so the modal
+                                // isn't empty.
+                                const deltas = rodStatDeltas(rod, r)
+                                const fallbackLines = deltas.length === 0 ? rodStatLines(r) : null
                                 setPendingPurchase({
                                   name: r.name, color: r.color, cost: r.cost,
-                                  onConfirm: async () => { flashPurchase(r.name, r.color, r.cost); await onBuyRod(r.tier) },
+                                  onConfirm: async () => { flashPurchase(r.name, r.color, r.cost, 'rod'); await onBuyRod(r.tier) },
                                   details: (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -952,15 +1080,36 @@ export default function GearScreen({
                                         style={{ fontSize: '0.82rem', color: '#a09890', lineHeight: 1.5 }}>
                                         {r.description}
                                       </p>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                        {buyRodLines.map(l => (
-                                          <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={r.color} />
-                                        ))}
-                                      </div>
+                                      {fallbackLines ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                          {fallbackLines.map(l => (
+                                            <StatRow key={l.title} title={l.title} value={l.value} help={l.help} color={r.color} />
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                                            style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                                            What changes
+                                          </p>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                            {deltas.map(d => (
+                                              <StatDeltaRow key={d.title} row={d} color={r.color} />
+                                            ))}
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
                                   ),
                                 })
                               }
+                              // Aspirational view: locked rods show "Need X more"
+                              // with a progress bar (current doubloons / cost)
+                              // along the bottom of the card. Turns "can't afford"
+                              // from a dead-end into a goal the player can see
+                              // closing as they fish.
+                              const need = Math.max(0, r.cost - doubloons)
+                              const progressPct = Math.min(1, doubloons / r.cost)
                               return (
                                 <button
                                   key={r.tier}
@@ -968,48 +1117,70 @@ export default function GearScreen({
                                   disabled={!canAfford}
                                   className="font-karla"
                                   style={{
-                                    display: 'flex', alignItems: 'center', gap: 12,
-                                    padding: '0.75rem 0.85rem',
+                                    position: 'relative',
+                                    display: 'flex', flexDirection: 'column', gap: 0,
+                                    padding: 0,
                                     borderRadius: 12,
                                     background: 'rgba(4,10,18,0.72)',
                                     border: `1px solid ${canAfford ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
                                     cursor: canAfford ? 'pointer' : 'default',
-                                    opacity: canAfford ? 1 : 0.6,
+                                    opacity: canAfford ? 1 : 0.78,
                                     textAlign: 'left',
                                     width: '100%',
+                                    overflow: 'hidden',
                                   }}
                                 >
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img
-                                    src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
-                                    alt=""
-                                    className={rodGlowClass(r)}
-                                    style={{
-                                      width: 48, height: 48, objectFit: 'contain', flexShrink: 0,
-                                      ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
-                                      opacity: canAfford ? 1 : 0.65,
-                                    } as React.CSSProperties}
-                                  />
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: canAfford ? '#f0ede8' : '#a0a09a', lineHeight: 1.15, marginBottom: 2 }}>
-                                      {r.name}
-                                    </p>
-                                    <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: r.color, lineHeight: 1.3, opacity: 0.85 }}>
-                                      {rodTagline(r)}
-                                    </p>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem 0.85rem' }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
+                                      alt=""
+                                      className={rodGlowClass(r)}
+                                      style={{
+                                        width: 48, height: 48, objectFit: 'contain', flexShrink: 0,
+                                        ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
+                                        opacity: canAfford ? 1 : 0.7,
+                                      } as React.CSSProperties}
+                                    />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: canAfford ? '#f0ede8' : '#c4bfb6', lineHeight: 1.15, marginBottom: 2 }}>
+                                        {r.name}
+                                      </p>
+                                      <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: r.color, lineHeight: 1.3, opacity: 0.85 }}>
+                                        {rodTagline(r)}
+                                      </p>
+                                    </div>
+                                    <div style={{
+                                      display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+                                      gap: 2, flexShrink: 0,
+                                    }}>
+                                      <span className="font-karla font-700 uppercase tracking-[0.1em]"
+                                        style={{ fontSize: '0.56rem', color: canAfford ? r.color : '#f87171' }}>
+                                        {canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
+                                      </span>
+                                      <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
+                                        {r.cost.toLocaleString()} ⟡
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div style={{
-                                    display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-                                    gap: 2, flexShrink: 0,
-                                  }}>
-                                    <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                                      style={{ fontSize: '0.56rem', color: canAfford ? r.color : '#5a5956' }}>
-                                      {canAfford ? 'Tap to Buy' : "Can't afford"}
-                                    </span>
-                                    <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04055' }}>
-                                      {r.cost.toLocaleString()} ⟡
-                                    </span>
-                                  </div>
+                                  {/* Progress bar — only on unaffordable rods.
+                                      Sits flush with the card's bottom edge so
+                                      it reads as "fill this up". Color matches
+                                      the rod so each row has its own goal feel. */}
+                                  {!canAfford && (
+                                    <div style={{
+                                      height: 3, width: '100%',
+                                      background: 'rgba(255,255,255,0.06)',
+                                      overflow: 'hidden',
+                                    }}>
+                                      <div style={{
+                                        width: `${progressPct * 100}%`, height: '100%',
+                                        background: `linear-gradient(90deg, ${r.color}99, ${r.color})`,
+                                        boxShadow: `0 0 6px ${r.color}88`,
+                                        transition: 'width 0.4s',
+                                      }} />
+                                    </div>
+                                  )}
                                 </button>
                               )
                             })}
@@ -1032,10 +1203,10 @@ export default function GearScreen({
                       {cosmeticToast && (
                         <motion.div
                           key={cosmeticToast.id}
-                          initial={{ opacity: 0, y: -6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.22 }}
+                          initial={{ opacity: 0, y: -6, scale: 0.92 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                          transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                           style={{
                             padding: '0.55rem 0.85rem',
                             borderRadius: 10,
@@ -1092,7 +1263,7 @@ export default function GearScreen({
                           if (!canAffordReel) return
                           setPendingPurchase({
                             name: nextReel.name, color: nextReel.color, cost: nextReel.cost,
-                            onConfirm: async () => { flashPurchase(nextReel.name, nextReel.color, nextReel.cost); await onBuyReel() },
+                            onConfirm: async () => { flashPurchase(nextReel.name, nextReel.color, nextReel.cost, 'reel'); await onBuyReel() },
                           })
                         }}
                         disabled={!canAffordReel}
@@ -1162,10 +1333,10 @@ export default function GearScreen({
                       {cosmeticToast && (
                         <motion.div
                           key={cosmeticToast.id}
-                          initial={{ opacity: 0, y: -6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: 0.22 }}
+                          initial={{ opacity: 0, y: -6, scale: 0.92 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                          transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                           style={{
                             padding: '0.55rem 0.85rem',
                             borderRadius: 10,
@@ -1236,7 +1407,7 @@ export default function GearScreen({
                           if (!canAffordHook) return
                           setPendingPurchase({
                             name: nextHook.name, color: nextHook.color, cost: nextHook.cost,
-                            onConfirm: async () => { flashPurchase(nextHook.name, nextHook.color, nextHook.cost); await onBuyHook() },
+                            onConfirm: async () => { flashPurchase(nextHook.name, nextHook.color, nextHook.cost, 'hook'); await onBuyHook() },
                           })
                         }}
                         disabled={!canAffordHook}
@@ -1355,7 +1526,7 @@ export default function GearScreen({
                             if (!item.shopCost) return
                             setPendingPurchase({
                               name: item.name, color: item.color, cost: item.shopCost,
-                              onConfirm: async () => { await onBuySpecialItem(item.id) },
+                              onConfirm: async () => { flashPurchase(item.name, item.color, item.shopCost ?? 0, 'special'); await onBuySpecialItem(item.id) },
                             })
                           }}
                         />
@@ -1445,7 +1616,7 @@ export default function GearScreen({
                         if (owned) onEquipBoat(b.id)
                         else if (canAfford) setPendingPurchase({
                           name: b.name, color: b.color, cost: b.cost,
-                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost) },
+                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost, 'cosmetic') },
                         })
                       }
                       return (
@@ -1589,7 +1760,7 @@ export default function GearScreen({
                         if (owned) onEquipHat(h.id)
                         else if (canAfford) setPendingPurchase({
                           name: `${h.name} Bandana`, color: h.color, cost: h.cost,
-                          onConfirm: () => { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost) },
+                          onConfirm: () => { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost, 'hat') },
                         })
                       }
                       return (
