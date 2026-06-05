@@ -72,12 +72,13 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
     cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
   },
-  // Monkey — placeholder positions inherited from parrot; tune on
-  // /fishing-test and paste back here.
+  // Monkey — tuned on /fishing-test. Sits a hair lower + slightly
+  // tighter-left than the parrot to land on the boat hull rather than
+  // the shoulder.
   monkey: {
-    rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
-    wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
-    cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
+    rest: { top: 65.5, left: 62,   width: 41.4, rotate: 0 },
+    wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
+    cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
   },
 }
 
