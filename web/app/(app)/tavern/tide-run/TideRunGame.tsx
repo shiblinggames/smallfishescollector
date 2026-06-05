@@ -136,6 +136,14 @@ const HITBOX_INSET = { top: 0.35, right: 0.12, bottom: 0.08, left: 0.08 }
 
 const METERS_PER_PIXEL = 1 / 60
 
+// 1-decimal formatter for distances on the wreck screen, HUD PB, and
+// leaderboard story. Uses toLocaleString so the comma grouping is kept
+// at higher scores (1,234.5). The live in-run score readout stays
+// integer (calm ticker) — only "settled" numbers get the decimal.
+function fmtDistance(n: number): string {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 type GameState = 'ready' | 'playing' | 'dead'
 
@@ -408,7 +416,11 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   // so reading highScore state directly would go stale across retries).
   useEffect(() => { gRef.current.pbMeters = highScore }, [highScore])
 
-  // Wreck-screen distance count-up (0 → score, ~620ms ease-out).
+  // Wreck-screen distance count-up (0 → score, ~620ms ease-out). Lands
+  // on a 1-decimal final value so the count-up actually shows the
+  // fractional meters as it ticks ("0.0 → 324.4") rather than rounding
+  // the eased samples to an integer mid-animation and then jumping
+  // ".4" at the very end.
   useEffect(() => {
     if (uiState !== 'dead' || score <= 0) { setDeadCount(0); return }
     let raf = 0
@@ -417,7 +429,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     const tick = (t: number) => {
       const f = Math.min(1, (t - start) / DUR)
       const eased = 1 - Math.pow(1 - f, 3)
-      setDeadCount(Math.round(score * eased))
+      setDeadCount(Math.round(score * eased * 10) / 10)
       if (f < 1) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -852,8 +864,10 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         g.state = 'dead'
         g.deathFlashUntil = performance.now() + 250
         setUiState('dead')
-        const finalMeters = Math.floor(g.distance)
-        recordTideRunRun(finalMeters, g.beaconsSmashed).catch(() => {})
+        // 1-decimal precision: wreck score (.toFixed(1) on display) +
+        // server PB. Cumulative lifetime stat stays integer (see floor below).
+        const finalMeters = Math.round(g.distance * 10) / 10
+        recordTideRunRun(Math.floor(g.distance), g.beaconsSmashed).catch(() => {})
         if (finalMeters > highScore) {
           setHighScore(finalMeters)
           // Chain the rank refresh off the PB submission so the wreck
@@ -1138,10 +1152,12 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
       playCrashSfx()
       g.state = 'dead'
       g.deathFlashUntil = performance.now() + 250
-      const finalMeters = Math.floor(g.distance)
+      // 1-decimal precision on the saved/displayed score; cumulative
+      // lifetime stat stays integer.
+      const finalMeters = Math.round(g.distance * 10) / 10
       setScore(finalMeters)
       setUiState('dead')
-      recordTideRunRun(finalMeters, g.beaconsSmashed).catch(() => {})
+      recordTideRunRun(Math.floor(g.distance), g.beaconsSmashed).catch(() => {})
       if (finalMeters > highScore) {
         setHighScore(finalMeters)
         // Chain the rank refresh off the PB submission so the wreck
@@ -1744,7 +1760,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                 letterSpacing: '0.02em',
                 lineHeight: 1,
               }}>
-                {score}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
+                {Math.floor(score)}<span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.75 }}>m</span>
               </p>
               <AnimatePresence>
                 {newBestStamp > 0 && (
@@ -1785,7 +1801,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                   lineHeight: 1.1,
                   marginTop: 2,
                 }}>
-                  {Math.max(score, highScore)}<span style={{ fontSize: '0.6rem', marginLeft: 2, opacity: 0.7 }}>m</span>
+                  {fmtDistance(Math.max(score, highScore))}<span style={{ fontSize: '0.6rem', marginLeft: 2, opacity: 0.7 }}>m</span>
                 </p>
               </div>
             )}
@@ -1822,7 +1838,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
               </div>
               {highScore > 0 && (
                 <p className="font-karla font-700" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.82)', marginTop: 18 }}>
-                  Best: {highScore}m
+                  Best: {fmtDistance(highScore)}m
                 </p>
               )}
             </div>
@@ -1855,7 +1871,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                       color: isNewBest ? '#ffd56b' : '#ffffff',
                       textShadow: isNewBest ? '0 0 22px rgba(255,213,107,0.6)' : 'none',
                     }}>
-                      {deadCount}<span style={{ fontSize: '1.3rem', marginLeft: 6, opacity: 0.75 }}>m</span>
+                      {fmtDistance(deadCount)}<span style={{ fontSize: '1.3rem', marginLeft: 6, opacity: 0.75 }}>m</span>
                     </p>
                     {isNewBest ? (
                       <p className="tr-newbest font-cinzel font-700 mt-3" style={{
@@ -1869,7 +1885,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                       // tail — that math is dispiriting after a wreck,
                       // the PB number alone is enough context.
                       <p className="font-karla font-700 mt-3" style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.78)' }}>
-                        Personal Best: <span style={{ color: '#ffffff' }}>{highScore}m</span>
+                        Personal Best: <span style={{ color: '#ffffff' }}>{fmtDistance(highScore)}m</span>
                       </p>
                     )}
                   </>
@@ -1898,7 +1914,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                   </p>
                   <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#ffd56b', lineHeight: 1.1, textShadow: '0 0 18px rgba(255,213,107,0.45)' }}>
                     <span style={{ marginRight: 8 }}>👑</span>
-                    {topHolder.distance.toLocaleString()}m
+                    {fmtDistance(topHolder.distance)}m
                   </p>
                   <p className="font-karla font-700 mt-1" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.72)' }}>
                     held by <span style={{ color: '#f0ede8', fontWeight: 700 }}>{topHolder.username}</span>
@@ -1936,7 +1952,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
                             You&apos;re #{rank.rank}
                           </p>
                           <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#f5f2ec', lineHeight: 1.35 }}>
-                            <span style={{ color: '#ffd56b' }}>{(rank.nextRankDistance - rank.yourDistance).toLocaleString()}m</span>
+                            <span style={{ color: '#ffd56b' }}>{fmtDistance(rank.nextRankDistance - rank.yourDistance)}m</span>
                             {' '}to catch{' '}
                             <span style={{ color: '#f5f2ec', fontWeight: 700 }}>{rank.nextRankUsername}</span>
                             <span style={{ color: 'rgba(240,237,232,0.55)' }}> · #{rank.rank - 1}</span>

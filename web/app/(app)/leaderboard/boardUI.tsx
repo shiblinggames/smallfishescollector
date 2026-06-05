@@ -38,7 +38,7 @@ export const BOARD_META: Record<BoardKey, {
 }> = {
   fishingLevel:  { label: 'Fishing Level',  accent: '#f0c040', unit: n => `Lv ${getLevelFromXP(n)}`,     subUnit: n => `${n.toLocaleString()} XP` },
   perfectStreak: { label: 'Perfect Streak', accent: '#fb923c', unit: n => `${n}×`,                       subUnit: () => 'perfect', showZone: true },
-  tideRun:       { label: 'Tide Run',       accent: '#5da7d4', unit: n => `${n.toLocaleString()} m`,     subUnit: () => 'best run' },
+  tideRun:       { label: 'Tide Run',       accent: '#5da7d4', unit: n => `${n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m`, subUnit: () => 'best run' },
   fishSlots:     { label: 'Fish Slots',     accent: '#34d399', unit: n => `${n.toLocaleString()} ⟡`,    subUnit: () => 'single spin' },
   expedition:    { label: 'Navigator Level',accent: '#7090c0', unit: n => `Lv ${getExpeditionLevel(n)}`, subUnit: n => `${n.toLocaleString()} XP` },
   raidProgress:  { label: 'Raid Progress',  accent: '#7fd0a0', unit: n => `${n.toLocaleString()}`,       subUnit: n => `${n === 1 ? 'node' : 'nodes'} cleared` },

@@ -32,8 +32,14 @@ async function fetchViewBoard(admin: Admin, view: string, userId: string) {
     admin.from(view).select('user_id, username, score').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50),
     admin.from(view).select('score').eq('user_id', userId).single(),
   ])
-  const topRows = (top ?? []) as LeaderboardEntry[]
-  const myScore = (me as { score?: number } | null)?.score ?? 0
+  // Coerce score → number. The tide-run view exposes numeric(10,1) and
+  // PostgREST serializes numeric as a string by default; downstream
+  // formatters (toLocaleString, arithmetic) would silently break on a
+  // string. The other views' scores are integers but Number() is a no-op
+  // on those, so this is safe across all boards.
+  const topRows = ((top ?? []) as Array<{ user_id: string; username: string; score: number | string }>)
+    .map(r => ({ user_id: r.user_id, username: r.username, score: Number(r.score) })) as LeaderboardEntry[]
+  const myScore = Number((me as { score?: number | string } | null)?.score ?? 0)
   const myRank = await resolveMyRank(admin, view, userId, myScore, topRows)
   return { top: topRows, myScore, myRank }
 }

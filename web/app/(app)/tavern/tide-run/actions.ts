@@ -14,8 +14,13 @@ export async function submitTideRunBest(distance: number): Promise<{ ok: true; b
     if (typeof distance !== 'number' || !isFinite(distance) || distance < 0) {
       return { error: 'Invalid distance' }
     }
-    const meters = Math.floor(distance)
-    if (meters < 1 || meters > 100000) return { error: 'Invalid distance' }
+    // Persist at 1-decimal precision (column is numeric(10,1)). Tighter
+    // separation on the leaderboard — two runs that landed at 324 and 324
+    // before now read as 324.4 and 324.7, no tie. Toggle Math.round
+    // back to floor here if we ever want stricter "integer meters only"
+    // again.
+    const meters = Math.round(distance * 10) / 10
+    if (meters < 0.1 || meters > 100000) return { error: 'Invalid distance' }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -29,7 +34,9 @@ export async function submitTideRunBest(distance: number): Promise<{ ok: true; b
       .single()
     if (!profile) return { error: 'Profile not found' }
 
-    const currentBest = (profile.tide_run_best_distance as number | null) ?? 0
+    // PostgREST may return numeric() as a string — coerce to be safe
+    // so the comparison and the return value are always numbers.
+    const currentBest = Number(profile.tide_run_best_distance ?? 0)
     if (meters <= currentBest) return { ok: true, best: currentBest }
 
     // Stamp the moment alongside the new best so the leaderboard tiebreaks
@@ -153,7 +160,10 @@ export async function getTopTideRunHolder(): Promise<TopTideRunHolder | null> {
     if (!data) return null
     return {
       username: (data as { username: string }).username,
-      distance: (data as { score: number }).score,
+      // Coerce — score is now numeric(10,1); PostgREST can return that
+      // as a string and downstream `.toLocaleString()` would throw on
+      // a string. See submitTideRunBest for the matching coerce.
+      distance: Number((data as { score: number | string }).score),
     }
   } catch {
     return null
@@ -194,7 +204,11 @@ export async function getPlayerTideRunRank(): Promise<PlayerTideRunRank | null> 
       .order('score', { ascending: false })
       .order('created_at', { ascending: true })
 
-    const list = (rows ?? []) as { user_id: string; username: string; score: number }[]
+    // score is numeric(10,1) — PostgREST may serialize as string. Coerce
+    // every row up front so subtraction + display formatting downstream
+    // never sees a string masquerading as a number.
+    const list = ((rows ?? []) as { user_id: string; username: string; score: number | string }[])
+      .map(r => ({ user_id: r.user_id, username: r.username, score: Number(r.score) }))
     const totalPlayers = list.length
 
     const meIdx = list.findIndex(r => r.user_id === user.id)

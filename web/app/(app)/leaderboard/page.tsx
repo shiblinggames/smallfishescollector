@@ -27,8 +27,13 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
     admin.from(view).select('user_id, username, score').order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50),
     admin.from(view).select('score').eq('user_id', userId).single(),
   ])
-  const topRows = (top ?? []) as LeaderboardEntry[]
-  const myScore = (me as any)?.score ?? 0
+  // Coerce score → number. The tide-run view exposes numeric(10,1) and
+  // PostgREST serializes numeric as a string; downstream formatters
+  // (toLocaleString) would silently break on a string. Integer views
+  // pass through Number() unchanged.
+  const topRows = ((top ?? []) as Array<{ user_id: string; username: string; score: number | string }>)
+    .map(r => ({ user_id: r.user_id, username: r.username, score: Number(r.score) })) as LeaderboardEntry[]
+  const myScore = Number((me as { score?: number | string } | null)?.score ?? 0)
   const myRank = await resolveMyRank(admin, view, userId, myScore, topRows)
   return { top: topRows, myScore, myRank }
 }

@@ -25,7 +25,9 @@ export default async function TideRunPage() {
     getPlayerTideRunRank(),
   ])
 
-  const initialBestDistance = (profile?.tide_run_best_distance as number | null) ?? 0
+  // numeric(10,1) — PostgREST often returns numeric as a string. Coerce
+  // so the client always receives a real number.
+  const initialBestDistance = Number(profile?.tide_run_best_distance ?? 0)
   const hasSeenTour = !!profile?.has_seen_tide_run_tour
 
   return (
