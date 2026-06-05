@@ -377,23 +377,78 @@ export default function RaidCombat({
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
   // Nameplate one-shot effects — combine speed-roll-win and
   // successful-dodge into a single state so both flavors animate
-  // cleanly on the same nameplate without stacking framer-motion
-  // wrappers. Each kind has its own animation values; the latest
-  // wins. Both auto-clear after their respective visual lands.
+  // cleanly on the same nameplate. Each kind has its own animation
+  // values; the latest wins.
   //   'speed-win' — initiative roll winner, fires during 'revealing'
   //                 phase so the 380ms beat reads as drama not lag.
   //   'dodge'     — defender successfully dodged an attack; mirrors
   //                 the existing enemy-shake hit-feedback vocabulary
   //                 in reverse (cyan instead of red, evasive flick
   //                 instead of forward lunge).
+  //
+  // We fire via useAnimation() controllers instead of the key-bump
+  // remount trick — bumping a key on the button reloads the avatar
+  // image inside, which the player perceived as a flash. Controls let
+  // us re-run the keyframes without unmounting any child.
   type NameplateFx = { kind: 'speed-win' | 'dodge'; actor: Actor }
   const [nameplateFx, setNameplateFx] = useState<NameplateFx | null>(null)
   const [nameplateFxKey, setNameplateFxKey] = useState(0)
+  const playerNameplateAnim = useAnimation()
+  const enemyNameplateAnim  = useAnimation()
   useEffect(() => {
     if (!nameplateFx) return
     const t = setTimeout(() => setNameplateFx(null), 360)
     return () => clearTimeout(t)
   }, [nameplateFx, nameplateFxKey])
+
+  // Drive the nameplate animation via controls (not animate prop) so a
+  // re-fire doesn't require remounting the button. Each kind/actor pair
+  // has its own keyframe set; the rest border color is recomputed off
+  // the live enemy state so the snap-back lands on the right color
+  // (boss-gold / elite-violet / phase-2-crimson) instead of the
+  // grey default.
+  useEffect(() => {
+    if (!nameplateFx || nameplateFxKey === 0) return
+    const enemyRestBorder =
+      enemyPhase === 2 ? '#ef4444'
+      : isBoss ? '#fbbf24'
+      : isElite ? '#a78bfa'
+      : '#2a3548'
+    if (nameplateFx.actor === 'player') {
+      if (nameplateFx.kind === 'dodge') {
+        playerNameplateAnim.start({
+          x: [0, 5, 0], y: [0, 2, 0], rotate: [0, 3, 0],
+          borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
+          boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 20px rgba(56,189,248,0.6)', '0 0 0 0 rgba(56,189,248,0)'],
+          transition: { duration: 0.22, times: [0, 0.45, 1], ease: 'easeOut' },
+        })
+      } else {
+        playerNameplateAnim.start({
+          x: [0, -4, 0], y: [0, -2, 0], rotate: [0, -2, 0],
+          borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
+          boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 16px rgba(56,189,248,0.45)', '0 0 0 0 rgba(56,189,248,0)'],
+          transition: { duration: 0.28, times: [0, 0.45, 1], ease: 'easeOut' },
+        })
+      }
+    } else {
+      if (nameplateFx.kind === 'dodge') {
+        enemyNameplateAnim.start({
+          x: [0, -5, 0], y: [0, -2, 0], rotate: [0, -3, 0],
+          borderColor: [enemyRestBorder, '#38bdf8', enemyRestBorder],
+          boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 20px rgba(56,189,248,0.6)', '0 0 0 0 rgba(56,189,248,0)'],
+          transition: { duration: 0.22, times: [0, 0.45, 1], ease: 'easeOut' },
+        })
+      } else {
+        enemyNameplateAnim.start({
+          x: [0, 4, 0], y: [0, 2, 0], rotate: [0, 2, 0],
+          borderColor: [enemyRestBorder, '#ef4444', enemyRestBorder],
+          boxShadow: ['0 0 0 0 rgba(239,68,68,0)', '0 0 16px rgba(239,68,68,0.55)', '0 0 0 0 rgba(239,68,68,0)'],
+          transition: { duration: 0.28, times: [0, 0.45, 1], ease: 'easeOut' },
+        })
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameplateFxKey])
   const [resolveLog, setResolveLog] = useState<string[]>([])
   const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
@@ -1804,38 +1859,7 @@ export default function RaidCombat({
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
           className={enemyPhase === 2 ? 'rc-phase2-pulse' : undefined}
-          key={nameplateFx?.actor === 'enemy' ? `efx-${nameplateFxKey}` : 'eidle'}
-          animate={nameplateFx?.actor === 'enemy' ? (
-            nameplateFx.kind === 'dodge'
-              // Dodge: cyan flash + evasive flick up-left (away from
-              // player nameplate). Cyan override on the border for the
-              // beat, then snaps back to the enemy's static border.
-              ? {
-                  x: [0, -5, 0], y: [0, -2, 0],
-                  rotate: [0, -3, 0],
-                  borderColor: [
-                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
-                    '#38bdf8',
-                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
-                  ],
-                  boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 20px rgba(56,189,248,0.6)', '0 0 0 0 rgba(56,189,248,0)'],
-                }
-              // Speed win: red flash + lunge down-right (toward player).
-              : {
-                  x: [0, 4, 0], y: [0, 2, 0],
-                  rotate: [0, 2, 0],
-                  borderColor: [
-                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
-                    '#ef4444',
-                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
-                  ],
-                  boxShadow: ['0 0 0 0 rgba(239,68,68,0)', '0 0 16px rgba(239,68,68,0.55)', '0 0 0 0 rgba(239,68,68,0)'],
-                }
-          ) : undefined}
-          transition={nameplateFx?.actor === 'enemy' ? {
-            duration: nameplateFx.kind === 'dodge' ? 0.22 : 0.28,
-            times: [0, 0.45, 1], ease: 'easeOut',
-          } : undefined}
+          animate={enemyNameplateAnim}
           style={{
             position: 'absolute', top: 10, left: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
@@ -2248,29 +2272,7 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowStats(true)}
           aria-label={`${nameplate} — view stats`}
-          key={nameplateFx?.actor === 'player' ? `pfx-${nameplateFxKey}` : 'pidle'}
-          animate={nameplateFx?.actor === 'player' ? (
-            nameplateFx.kind === 'dodge'
-              // Dodge: cyan flash + brief evasive flick down-right (away
-              // from enemy nameplate), faster + tighter than speed-win.
-              ? {
-                  x: [0, 5, 0], y: [0, 2, 0],
-                  rotate: [0, 3, 0],
-                  borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
-                  boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 20px rgba(56,189,248,0.6)', '0 0 0 0 rgba(56,189,248,0)'],
-                }
-              // Speed win: cyan flash + lunge up-left (toward enemy).
-              : {
-                  x: [0, -4, 0], y: [0, -2, 0],
-                  rotate: [0, -2, 0],
-                  borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
-                  boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 16px rgba(56,189,248,0.45)', '0 0 0 0 rgba(56,189,248,0)'],
-                }
-          ) : undefined}
-          transition={nameplateFx?.actor === 'player' ? {
-            duration: nameplateFx.kind === 'dodge' ? 0.22 : 0.28,
-            times: [0, 0.45, 1], ease: 'easeOut',
-          } : undefined}
+          animate={playerNameplateAnim}
           style={{
             position: 'absolute', bottom: 10, right: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
