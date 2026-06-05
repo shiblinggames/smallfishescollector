@@ -98,6 +98,7 @@ export default async function ProfilePage() {
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
           equippedBoat={(profile?.equipped_boat as string | null) ?? null}
           equippedHat={(profile?.equipped_hat as string | null) ?? null}
+          equippedPet={(profile?.equipped_pet as string | null) ?? null}
           unlockedBadges={(profile?.unlocked_badges as string[] | null) ?? []}
           avatarBgColor={(profile?.avatar_bg_color as string | null) ?? null}
           avatarBorderColor={(profile?.avatar_border_color as string | null) ?? null}

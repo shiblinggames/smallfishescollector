@@ -18,6 +18,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { getBoat, boatGlowClass } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
+import { getPet, PET_OVERLAY } from '@/lib/pets'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -49,6 +50,7 @@ interface Props {
   ancientTrophies: { id: number; name: string }[]
   equippedBoat: string | null
   equippedHat: string | null
+  equippedPet: string | null
   characterColor: string
   unlockedColors: string[]
   doubloons: number
@@ -127,6 +129,7 @@ export default function ProfileClient({
   ancientTrophies,
   equippedBoat,
   equippedHat,
+  equippedPet,
   characterColor: initialCharacterColor,
   unlockedColors: initialUnlockedColors,
   doubloons: initialDoubloons,
@@ -749,6 +752,25 @@ export default function ProfileClient({
                     }} />
                   )
                 })}
+                {/* Pet — last so it sits in the foreground above every
+                    other equipment layer. Mirrors PET_OVERLAY.rest from
+                    FishingGame so the profile silhouette matches the
+                    live fishing render. */}
+                {(() => {
+                  const pet = getPet(equippedPet)
+                  if (!pet) return null
+                  const pp = PET_OVERLAY.rest
+                  return (
+                    <img src={pet.restImageUrl} alt="" style={{
+                      position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
+                      width: `${pp.width}%`,
+                      transform: `rotate(${pp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                      filter: `drop-shadow(0 0 6px ${pet.accentColor}55)`,
+                    }} />
+                  )
+                })()}
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '8px 20px 0' }}>

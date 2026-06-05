@@ -14,6 +14,7 @@ import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
 import { getBoat, boatGlowClass } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
+import { getPet, PET_OVERLAY } from '@/lib/pets'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -59,6 +60,7 @@ interface Props {
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
   equippedBoat?: string | null
   equippedHat?: string | null
+  equippedPet?: string | null
   ownedSpecialIds?: string[]
   raidItemIds?: string[]
   equippedShipSkin?: string | null
@@ -96,7 +98,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
+export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
@@ -335,6 +337,23 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
                     }} />
                   )
                 })}
+                {/* Pet — last so it sits foreground over everything,
+                    matching the FishingGame stack order. */}
+                {(() => {
+                  const pet = getPet(equippedPet)
+                  if (!pet) return null
+                  const pp = PET_OVERLAY.rest
+                  return (
+                    <img src={pet.restImageUrl} alt="" style={{
+                      position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
+                      width: `${pp.width}%`,
+                      transform: `rotate(${pp.rotate}deg)`,
+                      transformOrigin: 'center center',
+                      pointerEvents: 'none',
+                      filter: `drop-shadow(0 0 6px ${pet.accentColor}55)`,
+                    }} />
+                  )
+                })()}
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 0, padding: '8px 20px 0' }}>
