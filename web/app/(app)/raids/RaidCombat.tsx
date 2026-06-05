@@ -375,19 +375,25 @@ export default function RaidCombat({
   const [lastPlayerAction, setLastPlayerAction] = useState<EnemyAction | null>(null)
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
-  // Speed-roll winner feedback — set when subPhase becomes 'revealing'
-  // so the corresponding nameplate flashes + lunges during the 380ms
-  // resolution window. Without this, the reveal phase reads as dead air
-  // ("I locked in → nothing → cannon fires"); the flash sells the
-  // initiative roll as drama instead of latency. Cleared via the
-  // effect below after the visual lands.
-  const [speedWinner, setSpeedWinner] = useState<Actor | null>(null)
-  const [speedWinnerKey, setSpeedWinnerKey] = useState(0)
+  // Nameplate one-shot effects — combine speed-roll-win and
+  // successful-dodge into a single state so both flavors animate
+  // cleanly on the same nameplate without stacking framer-motion
+  // wrappers. Each kind has its own animation values; the latest
+  // wins. Both auto-clear after their respective visual lands.
+  //   'speed-win' — initiative roll winner, fires during 'revealing'
+  //                 phase so the 380ms beat reads as drama not lag.
+  //   'dodge'     — defender successfully dodged an attack; mirrors
+  //                 the existing enemy-shake hit-feedback vocabulary
+  //                 in reverse (cyan instead of red, evasive flick
+  //                 instead of forward lunge).
+  type NameplateFx = { kind: 'speed-win' | 'dodge'; actor: Actor }
+  const [nameplateFx, setNameplateFx] = useState<NameplateFx | null>(null)
+  const [nameplateFxKey, setNameplateFxKey] = useState(0)
   useEffect(() => {
-    if (!speedWinner) return
-    const t = setTimeout(() => setSpeedWinner(null), 320)
+    if (!nameplateFx) return
+    const t = setTimeout(() => setNameplateFx(null), 360)
     return () => clearTimeout(t)
-  }, [speedWinner, speedWinnerKey])
+  }, [nameplateFx, nameplateFxKey])
   const [resolveLog, setResolveLog] = useState<string[]>([])
   const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
@@ -791,8 +797,8 @@ export default function RaidCombat({
     // as drama, not dead air. The matching nameplate flashes its border
     // (cyan for player win, red for enemy) and briefly lunges toward
     // the other side, mirroring the existing hit-feedback vocabulary.
-    setSpeedWinner(first)
-    setSpeedWinnerKey(k => k + 1)
+    setNameplateFx({ kind: 'speed-win', actor: first })
+    setNameplateFxKey(k => k + 1)
 
     // Short beat to register both actions visually, then resolve
     setTimeout(() => {
@@ -1350,6 +1356,20 @@ export default function RaidCombat({
       // away; spending charges visible the moment the cannon fires).
       setPlayerCharges(step.pCharges); setEnemyCharges(step.eCharges)
 
+      // Dodge feedback — when an attack is evaded, the defender's
+      // nameplate gets a cyan flash + sideways flick. Mirrors the
+      // existing enemy-shake hit vocabulary (red + recoil) in
+      // reverse, so successful evasion finally reads as a *win*
+      // instead of a buried log line. Fired ahead of the projectile
+      // delay so the player sees the dodge before the "missed" splat.
+      if (isDodged && step.splatTarget) {
+        const dodger = step.splatTarget
+        setTimeout(() => {
+          setNameplateFx({ kind: 'dodge', actor: dodger })
+          setNameplateFxKey(k => k + 1)
+        }, PROJECTILE_FLIGHT_MS - 80)
+      }
+
       if (isAttack && step.who === 'player') {
         // Player firing: cannon shot + recoil immediately, projectile flies,
         // then splat + shake + HP update + crit flash all together.
@@ -1784,18 +1804,38 @@ export default function RaidCombat({
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
           className={enemyPhase === 2 ? 'rc-phase2-pulse' : undefined}
-          key={speedWinner === 'enemy' ? `ewin-${speedWinnerKey}` : 'eidle'}
-          animate={speedWinner === 'enemy' ? {
-            x: [0, 4, 0], y: [0, 2, 0],
-            rotate: [0, 2, 0],
-            borderColor: [
-              enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
-              '#ef4444',
-              enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
-            ],
-            boxShadow: ['0 0 0 0 rgba(239,68,68,0)', '0 0 16px rgba(239,68,68,0.55)', '0 0 0 0 rgba(239,68,68,0)'],
+          key={nameplateFx?.actor === 'enemy' ? `efx-${nameplateFxKey}` : 'eidle'}
+          animate={nameplateFx?.actor === 'enemy' ? (
+            nameplateFx.kind === 'dodge'
+              // Dodge: cyan flash + evasive flick up-left (away from
+              // player nameplate). Cyan override on the border for the
+              // beat, then snaps back to the enemy's static border.
+              ? {
+                  x: [0, -5, 0], y: [0, -2, 0],
+                  rotate: [0, -3, 0],
+                  borderColor: [
+                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
+                    '#38bdf8',
+                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
+                  ],
+                  boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 20px rgba(56,189,248,0.6)', '0 0 0 0 rgba(56,189,248,0)'],
+                }
+              // Speed win: red flash + lunge down-right (toward player).
+              : {
+                  x: [0, 4, 0], y: [0, 2, 0],
+                  rotate: [0, 2, 0],
+                  borderColor: [
+                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
+                    '#ef4444',
+                    enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
+                  ],
+                  boxShadow: ['0 0 0 0 rgba(239,68,68,0)', '0 0 16px rgba(239,68,68,0.55)', '0 0 0 0 rgba(239,68,68,0)'],
+                }
+          ) : undefined}
+          transition={nameplateFx?.actor === 'enemy' ? {
+            duration: nameplateFx.kind === 'dodge' ? 0.22 : 0.28,
+            times: [0, 0.45, 1], ease: 'easeOut',
           } : undefined}
-          transition={speedWinner === 'enemy' ? { duration: 0.28, times: [0, 0.45, 1], ease: 'easeOut' } : undefined}
           style={{
             position: 'absolute', top: 10, left: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
@@ -2208,14 +2248,29 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowStats(true)}
           aria-label={`${nameplate} — view stats`}
-          key={speedWinner === 'player' ? `pwin-${speedWinnerKey}` : 'pidle'}
-          animate={speedWinner === 'player' ? {
-            x: [0, -4, 0], y: [0, -2, 0],
-            rotate: [0, -2, 0],
-            borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
-            boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 16px rgba(56,189,248,0.45)', '0 0 0 0 rgba(56,189,248,0)'],
+          key={nameplateFx?.actor === 'player' ? `pfx-${nameplateFxKey}` : 'pidle'}
+          animate={nameplateFx?.actor === 'player' ? (
+            nameplateFx.kind === 'dodge'
+              // Dodge: cyan flash + brief evasive flick down-right (away
+              // from enemy nameplate), faster + tighter than speed-win.
+              ? {
+                  x: [0, 5, 0], y: [0, 2, 0],
+                  rotate: [0, 3, 0],
+                  borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
+                  boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 20px rgba(56,189,248,0.6)', '0 0 0 0 rgba(56,189,248,0)'],
+                }
+              // Speed win: cyan flash + lunge up-left (toward enemy).
+              : {
+                  x: [0, -4, 0], y: [0, -2, 0],
+                  rotate: [0, -2, 0],
+                  borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
+                  boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 16px rgba(56,189,248,0.45)', '0 0 0 0 rgba(56,189,248,0)'],
+                }
+          ) : undefined}
+          transition={nameplateFx?.actor === 'player' ? {
+            duration: nameplateFx.kind === 'dodge' ? 0.22 : 0.28,
+            times: [0, 0.45, 1], ease: 'easeOut',
           } : undefined}
-          transition={speedWinner === 'player' ? { duration: 0.28, times: [0, 0.45, 1], ease: 'easeOut' } : undefined}
           style={{
             position: 'absolute', bottom: 10, right: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
@@ -3130,6 +3185,23 @@ function ChargesRow({ charges, max, small }: { charges: number; max: number; sma
 }
 
 function HitsplatOverlay({ text, color, big }: { text: string; color: string; big?: boolean }) {
+  // Magnitude scaling — a 12 damage graze and a 120 damage hit used to
+  // render identically. Now the damage number controls font + glow so
+  // big hits visibly *feel* heavier. Damage parsed from the leading
+  // "-N" pattern; misses ("Dodged"), heals ("+5"), and non-numeric
+  // splats fall through to the default size.
+  const dmgMatch = /^-?(\d+)$/.exec(text)
+  const dmg = dmgMatch ? Number(dmgMatch[1]) : null
+  // Map damage into a 0.85x..1.5x scale, then 1.3x on top for crit (big).
+  // Anchor: 15 dmg = small graze, 50 dmg = default, 100+ dmg = chunky.
+  const mag = dmg != null ? Math.max(0.85, Math.min(1.5, dmg / 50)) : 1
+  const scaleMult = big ? mag * 1.3 : mag
+  const baseFontPx = big ? 20 : 13.6                              // 1.25rem / 0.85rem at 16px root
+  const fontPx     = Math.round(baseFontPx * scaleMult)
+  const padY       = big ? 0.4 : 0.25
+  const padX       = big ? 0.85 : 0.6
+  // Heavier glow on the bigger numbers — same color, more spread.
+  const glowMult = Math.max(0.85, scaleMult)
   return (
     <motion.div
       // Smooth ease-out, no overshoot. The previous cubic-bezier
@@ -3148,13 +3220,13 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
         position: 'absolute', left: '50%', top: '40%', transform: 'translateX(-50%)',
         pointerEvents: 'none', zIndex: 10,
         background: color, color: '#ffffff',
-        padding: big ? '0.4rem 0.85rem' : '0.25rem 0.6rem',
+        padding: `${padY}rem ${padX}rem`,
         borderRadius: big ? 14 : 10,
         fontFamily: 'var(--font-cinzel)', fontWeight: 700,
-        fontSize: big ? '1.25rem' : '0.85rem',
+        fontSize: `${fontPx}px`,
         boxShadow: big
-          ? `0 6px 26px ${color}cc, 0 0 14px ${color}aa`
-          : `0 3px 14px ${color}99, 0 0 8px ${color}55`,
+          ? `0 ${6 * glowMult}px ${26 * glowMult}px ${color}cc, 0 0 ${14 * glowMult}px ${color}aa`
+          : `0 ${3 * glowMult}px ${14 * glowMult}px ${color}99, 0 0 ${8 * glowMult}px ${color}55`,
         textShadow: '0 1px 4px rgba(0,0,0,0.65)',
         whiteSpace: 'nowrap',
       }}

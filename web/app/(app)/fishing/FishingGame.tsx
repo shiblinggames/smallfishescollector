@@ -4602,7 +4602,7 @@ export default function FishingGame({
   const ancientSpecies   = allFishSpecies.filter(f => f.habitat === 'ancient_deep')
   const allAncientCaught = selectedZone === 'ancient_deep' && ancientSpecies.length > 0 && ancientSpecies.every(f => trophyCatches.has(f.id))
   const isFullMoon = activeEvent?.type === 'fullmoon'
-  const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.65)) * i.quantity, 0)
+  const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.75)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
   const liquidateFee     = isPremium ? 1.0 : 0.97
   const holdLiquidateValue = inventory.reduce((s, i) => {
@@ -7963,7 +7963,7 @@ export default function FishingGame({
                       const sellingNow = !!sellPending
                       const quickLossText = isFullMoon
                         ? 'Full price — Full Moon Rising'
-                        : `Instant · 65% of value · you lose ${Math.floor(holdBaseValue * 0.35).toLocaleString()} ⟡`
+                        : `Instant · 75% of value · you lose ${Math.floor(holdBaseValue * 0.25).toLocaleString()} ⟡`
                       const lanes: Array<{
                         key: LaneKey
                         name: string

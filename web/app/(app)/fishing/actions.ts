@@ -885,7 +885,13 @@ export async function sellFish(
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
   const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
-  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.65)) * quantity
+  // Quick-sell at 75% (was 65%) — gives new players a softer floor so
+  // one bad early sell doesn't lock them out of their next rod tier.
+  // The two-lane design is unchanged: market still pays full price,
+  // delayed liquidate still pays 87% after fees, this just narrows
+  // the gap between "convenient" and "punishing." See review notes
+  // on economy: quick-sell was the largest self-inflicted-wound state.
+  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.75)) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
   await Promise.all([
