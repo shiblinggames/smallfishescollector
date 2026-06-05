@@ -15,7 +15,11 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 
 type BaitItem = { bait_type: string; quantity: number }
-type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'cosmetic' | 'hat' | 'character' | 'badge'
+type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'appearance' | 'badge'
+// Sub-tab inside the unified Appearance picker. Skin / Hat / Boat ship
+// today; Pet is reserved here so the tab strip's render list is the
+// only place to touch when the pet system lands.
+type AppearanceTab = 'skin' | 'hat' | 'boat'
 
 function ShopLink({ href, label, color, onClick }: { href: string; label: string; color: string; onClick: () => void }) {
   return (
@@ -483,6 +487,116 @@ function GearSlot({
   )
 }
 
+// ── Unified Appearance slot ───────────────────────────────────────────
+// Replaces the 3 separate Hat / Skin / Boat tiles in the gear grid
+// with one consolidated tile that opens the tabbed Appearance picker.
+// The 2×2 mini-grid keeps the equipped pieces visible at a glance so
+// the player doesn't lose the "what's on me right now" read that the
+// individual tiles used to give. Pet thumbnail slot is reserved (4th
+// position) for when that system lands — drop it in there.
+function AppearanceSlot({
+  characterColor, charSrc, equippedHat, equippedBoat,
+  pulseKey, onClick,
+}: {
+  characterColor: string
+  charSrc: { rest: string } | Record<string, string>
+  equippedHat: string | null
+  equippedBoat: string | null
+  pulseKey?: number
+  onClick: () => void
+}) {
+  const accent = '#a78bfa'
+  const activeHat  = equippedHat  ? HATS.find(h => h.id === equippedHat)   : null
+  const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
+  const characterName = CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor
+  return (
+    <motion.button
+      onClick={onClick}
+      animate={pulseKey ? {
+        boxShadow: [`0 0 0 0 ${accent}cc`, `0 0 0 16px ${accent}00`, `0 0 0 0 ${accent}00`],
+        scale: [1, 1.05, 1],
+      } : undefined}
+      transition={pulseKey ? { duration: 0.7, times: [0, 0.45, 1], ease: 'easeOut' } : undefined}
+      key={pulseKey ?? 'static'}
+      style={{
+        position: 'relative',
+        width: '100%', height: '100%',
+        border: `1px solid ${accent}40`,
+        background: 'rgba(4,10,20,0.75)',
+        borderRadius: 20,
+        padding: '0.6rem 0.5rem 0.55rem',
+        cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+        transition: 'border-color 0.15s, background 0.15s',
+        touchAction: 'manipulation',
+      }}
+    >
+      {/* 2×2 mini-grid of equipped pieces. Slot 4 reserved for pets. */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gridTemplateRows: '1fr 1fr',
+        gap: 4,
+        width: 80, height: 80,
+      }}>
+        {/* Skin */}
+        <div style={{
+          width: 38, height: 38, borderRadius: '50%', overflow: 'hidden',
+          backgroundImage: `url(${charSrc.rest})`,
+          backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
+          border: '1px solid rgba(255,255,255,0.18)',
+          justifySelf: 'center', alignSelf: 'center',
+        }} />
+        {/* Hat */}
+        <div style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'center', alignSelf: 'center' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={activeHat?.restImageUrl ?? '/defaulthat_rest.png'}
+            alt=""
+            style={{
+              width: 32, height: 32, objectFit: 'contain',
+              filter: activeHat ? `drop-shadow(0 0 5px ${activeHat.color}66)` : 'none',
+            }}
+          />
+        </div>
+        {/* Boat */}
+        <div style={{
+          width: 38, height: 38, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          justifySelf: 'center', alignSelf: 'center',
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={activeBoat?.restImageUrl ?? '/boat_default_rest.png'}
+            alt=""
+            className={boatGlowClass(activeBoat)}
+            style={{
+              width: '170%', height: 'auto', display: 'block', flexShrink: 0,
+              filter: activeBoat?.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined,
+            }}
+          />
+        </div>
+        {/* Pet placeholder slot — empty for now; the pet system will
+            render its equipped pet here. Keeping the visual slot
+            present so the player sees their loadout has 4 axes. */}
+        <div style={{
+          width: 38, height: 38,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          justifySelf: 'center', alignSelf: 'center',
+          border: '1px dashed rgba(255,255,255,0.1)',
+          borderRadius: 10,
+        }}>
+          <span style={{ fontSize: '0.55rem', color: '#3a3835', letterSpacing: '0.06em' }}>+</span>
+        </div>
+      </div>
+      <div style={{ textAlign: 'center' }}>
+        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1 }}>Appearance</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: '#d0cdc8', lineHeight: 1.2 }}>{characterName}</p>
+      </div>
+    </motion.button>
+  )
+}
+
 export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
   equippedRodTier, ownedRods, onEquipRod, onBuyRod,
@@ -545,6 +659,7 @@ export default function GearScreen({
   // their equipped rod + swap options first, not a list of things to
   // buy. Reset to Owned every time the rod slot closes/reopens.
   const [rodTab, setRodTab] = useState<'owned' | 'shop'>('owned')
+  const [appearanceTab, setAppearanceTab] = useState<AppearanceTab>('skin')
   useEffect(() => { if (openSlot !== 'rod') setRodTab('owned') }, [openSlot])
 
   // Transient confirmation banner for cosmetic purchases. Clears itself after
@@ -611,7 +726,17 @@ export default function GearScreen({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
 
-      {/* ── Visual gear grid ── */}
+      {/* ── Visual gear grid ──
+          Cosmetic slots (Skin / Hat / Boat — and Pet, once it ships)
+          consolidated into a single Appearance tile in the center
+          column that spans both rows. The picker inside has internal
+          tabs, so adding a new cosmetic type is one entry to the
+          tab strip + one summary thumbnail; the gear grid stays a
+          clean 3-col / 2-row read.
+
+          The Appearance tile renders a 2×2 mini-grid of equipped
+          pieces so the loadout is still legible at a glance without
+          tapping in. */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gridTemplateRows: 'auto auto', gap: 6 }}>
 
         <div style={{ gridColumn: '1', gridRow: '1' }}>
@@ -621,50 +746,16 @@ export default function GearScreen({
           <GearSlot label="Hook" image={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : null} itemName={hook.name} color={hook.color} glowClass={hookGlowClass(hook)} notify={hookHasAffordable} pulseKey={pulseKeys.hook} onClick={() => setOpenSlot('hook')} />
         </div>
 
-        {/* Center row 1: Hat / Bandana */}
-        <div style={{ gridColumn: '2', gridRow: '1' }}>
-          {(() => {
-            const activeHat = equippedHat ? HATS.find(h => h.id === equippedHat) : null
-            const swatchColor = activeHat?.color ?? '#6a6764'
-            const hatName = activeHat?.name ?? 'Default'
-            return (
-              <GearSlot
-                label="Hat Color"
-                color={swatchColor}
-                itemName={hatName}
-                pulseKey={pulseKeys.hat}
-                onClick={() => setOpenSlot('hat')}
-                icon={
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={activeHat?.restImageUrl ?? '/defaulthat_rest.png'}
-                    alt={activeHat?.name ?? 'Default'}
-                    style={{
-                      width: 36, height: 36, objectFit: 'contain',
-                      filter: activeHat ? `drop-shadow(0 0 6px ${swatchColor}55)` : 'none',
-                    }}
-                  />
-                }
-              />
-            )
-          })()}
-        </div>
-
-        {/* Center row 2: Skin (character) */}
-        <div style={{ gridColumn: '2', gridRow: '2' }}>
-          <GearSlot
-            label="Skin"
-            color="#a0a09a"
-            itemName={CHARACTER_COLORS.find(c => c.id === characterColor)?.name ?? characterColor}
-            onClick={() => setOpenSlot('character')}
-            icon={
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
-                backgroundImage: `url(${charSrc.rest})`,
-                backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
-                border: '1px solid rgba(255,255,255,0.2)',
-              }} />
-            }
+        {/* Center: APPEARANCE — spans both rows so it has room for the
+            multi-thumbnail summary + a richer hit target. */}
+        <div style={{ gridColumn: '2', gridRow: '1 / span 2' }}>
+          <AppearanceSlot
+            characterColor={characterColor}
+            charSrc={charSrc}
+            equippedHat={equippedHat}
+            equippedBoat={equippedBoat}
+            pulseKey={pulseKeys.appearance}
+            onClick={() => setOpenSlot('appearance')}
           />
         </div>
 
@@ -676,8 +767,8 @@ export default function GearScreen({
         </div>
       </div>
 
-      {/* Bottom row: Special | Boat Color | Badges */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 6 }}>
+      {/* Bottom row: Special | Badges (Boat moved into Appearance). */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
         {(() => {
           const equippedDef = SPECIAL_ITEMS.find(s => s.id === equippedSpecial)
           return (
@@ -690,40 +781,6 @@ export default function GearScreen({
               pulseKey={pulseKeys.special}
               onClick={() => setOpenSlot('special')}
               empty={!equippedDef}
-            />
-          )
-        })()}
-        {(() => {
-          const activeBoat = equippedBoat ? BOATS.find(b => b.id === equippedBoat) : null
-          const swatchColor = activeBoat?.color ?? DEFAULT_BOAT_COLOR
-          const boatName = activeBoat?.name ?? 'Driftwood'
-          return (
-            <GearSlot
-              label="Boat Color"
-              color={swatchColor}
-              itemName={boatName}
-              pulseKey={pulseKeys.cosmetic}
-              onClick={() => setOpenSlot('cosmetic')}
-              icon={
-                // Center via flex, NOT transform — the .boat-glow bob
-                // animates `transform`, which would otherwise clobber a
-                // transform-based centering offset (broke the Ethereal
-                // skin's thumbnail once equipped).
-                <div style={{
-                  width: 36, height: 36, overflow: 'hidden',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={activeBoat?.restImageUrl ?? '/boat_default_rest.png'}
-                    alt=""
-                    className={boatGlowClass(activeBoat)}
-                    style={{
-                      width: '170%', height: 'auto', display: 'block', flexShrink: 0,
-                    }}
-                  />
-                </div>
-              }
             />
           )
         })()}
@@ -1536,17 +1593,21 @@ export default function GearScreen({
                 </div>
               )}
 
-              {/* ── Cosmetic ── */}
-              {openSlot === 'cosmetic' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* ── Appearance — unified Skin / Hat / Boat picker
+                    (Pet tab reserved for when the pet system ships).
+                    Tabs let the player swap cosmetic axes without
+                    bouncing back to the gear grid; one toast at the
+                    top serves all purchases inside this panel. ── */}
+              {openSlot === 'appearance' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <AnimatePresence>
                     {cosmeticToast && (
                       <motion.div
                         key={cosmeticToast.id}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.22 }}
+                        initial={{ opacity: 0, y: -6, scale: 0.92 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                         style={{
                           padding: '0.55rem 0.85rem',
                           borderRadius: 10,
@@ -1565,7 +1626,91 @@ export default function GearScreen({
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  {/* ── Boat Colors ── */}
+
+                  {/* Tab strip — add a 'pet' entry here when pets ship. */}
+                  <div style={{
+                    display: 'flex', gap: 4, padding: 3,
+                    background: 'rgba(0,0,0,0.4)', borderRadius: 10,
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}>
+                    {([
+                      { key: 'skin', label: 'Skin' },
+                      { key: 'hat',  label: 'Hat'  },
+                      { key: 'boat', label: 'Boat' },
+                    ] as const).map(t => {
+                      const active = appearanceTab === t.key
+                      return (
+                        <button
+                          key={t.key}
+                          onClick={() => setAppearanceTab(t.key)}
+                          className="font-karla font-700 uppercase tracking-[0.12em]"
+                          style={{
+                            flex: 1, padding: '0.55rem 0',
+                            background: active ? 'rgba(167,139,250,0.16)' : 'transparent',
+                            border: `1px solid ${active ? 'rgba(167,139,250,0.55)' : 'transparent'}`,
+                            borderRadius: 8,
+                            color: active ? '#c4b5fd' : 'rgba(255,255,255,0.55)',
+                            fontSize: '0.7rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.14s',
+                          }}
+                        >
+                          {t.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* ── Skin tab body ── */}
+                  {appearanceTab === 'skin' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {CHARACTER_COLORS.map(c => {
+                          const sprites = getCharacterSprites(c.id)
+                          const isActive = characterColor === c.id
+                          const isUnlocked = c.free || unlockedCharacterColors.includes(c.id)
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => {
+                                if (!isUnlocked) return
+                                if (isActive) return
+                                onUpdateColor(c.id)
+                              }}
+                              style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                            >
+                              <div style={{
+                                width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
+                                backgroundImage: `url(${sprites.rest})`,
+                                backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
+                                border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
+                                boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
+                                position: 'relative',
+                                opacity: isUnlocked ? 1 : 0.35,
+                              }}>
+                                {!isUnlocked && (
+                                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)', borderRadius: '50%' }}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
+                                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : isUnlocked ? '#6a6764' : '#3a3835' }}>{c.name}</p>
+                              {!isUnlocked && c.unlockHint && (
+                                <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#4a4845', textAlign: 'center', lineHeight: 1.3, maxWidth: 52 }}>{c.unlockHint}</p>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Boat tab body ── */}
+                  {appearanceTab === 'boat' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Boat Colors</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {/* Default — no overlay */}
@@ -1616,7 +1761,7 @@ export default function GearScreen({
                         if (owned) onEquipBoat(b.id)
                         else if (canAfford) setPendingPurchase({
                           name: b.name, color: b.color, cost: b.cost,
-                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost, 'cosmetic') },
+                          onConfirm: () => { onBuyBoat(b.id); flashPurchase(b.name, b.color, b.cost, 'appearance') },
                         })
                       }
                       return (
@@ -1680,35 +1825,9 @@ export default function GearScreen({
                 </div>
               )}
 
-              {/* ── Hat / Bandana ── */}
-              {openSlot === 'hat' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <AnimatePresence>
-                    {cosmeticToast && (
-                      <motion.div
-                        key={cosmeticToast.id}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.22 }}
-                        style={{
-                          padding: '0.55rem 0.85rem',
-                          borderRadius: 10,
-                          background: `linear-gradient(90deg, ${cosmeticToast.color}26, ${cosmeticToast.color}10)`,
-                          border: `1px solid ${cosmeticToast.color}80`,
-                          boxShadow: `0 0 14px ${cosmeticToast.color}40`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                        }}
-                      >
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8' }}>
-                          ✓ Bought <span style={{ color: cosmeticToast.color }}>{cosmeticToast.name}</span> — now equipped
-                        </p>
-                        <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: cosmeticToast.color }}>
-                          −{cosmeticToast.cost.toLocaleString()} ⟡
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              {/* ── Hat tab body ── */}
+                  {appearanceTab === 'hat' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#bda05a' }}>Hat Color</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {/* None — no bandana */}
@@ -1760,7 +1879,7 @@ export default function GearScreen({
                         if (owned) onEquipHat(h.id)
                         else if (canAfford) setPendingPurchase({
                           name: `${h.name} Bandana`, color: h.color, cost: h.cost,
-                          onConfirm: () => { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost, 'hat') },
+                          onConfirm: () => { onBuyHat(h.id); flashPurchase(`${h.name} Bandana`, h.color, h.cost, 'appearance') },
                         })
                       }
                       return (
@@ -1809,50 +1928,6 @@ export default function GearScreen({
                 </div>
               )}
 
-              {/* ── Character ── */}
-              {openSlot === 'character' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#d0cdc8' }}>Character Color</p>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {CHARACTER_COLORS.map(c => {
-                      const sprites = getCharacterSprites(c.id)
-                      const isActive = characterColor === c.id
-                      const isUnlocked = c.free || unlockedCharacterColors.includes(c.id)
-                      return (
-                        <button
-                          key={c.id}
-                          onClick={() => {
-                            if (!isUnlocked) return
-                            if (isActive) return
-                            onUpdateColor(c.id)
-                          }}
-                          style={{ background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-                        >
-                          <div style={{
-                            width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
-                            backgroundImage: `url(${sprites.rest})`,
-                            backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
-                            border: isActive ? '2px solid #60a5fa' : '2px solid rgba(255,255,255,0.12)',
-                            boxShadow: isActive ? '0 0 10px rgba(96,165,250,0.4)' : 'none',
-                            position: 'relative',
-                            opacity: isUnlocked ? 1 : 0.35,
-                          }}>
-                            {!isUnlocked && (
-                              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)', borderRadius: '50%' }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
-                                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                          <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: isActive ? '#60a5fa' : isUnlocked ? '#6a6764' : '#3a3835' }}>{c.name}</p>
-                          {!isUnlocked && c.unlockHint && (
-                            <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#4a4845', textAlign: 'center', lineHeight: 1.3, maxWidth: 52 }}>{c.unlockHint}</p>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
                 </div>
               )}
 
