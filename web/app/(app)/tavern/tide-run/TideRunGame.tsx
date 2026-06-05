@@ -867,6 +867,12 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         // 1-decimal precision: wreck score (.toFixed(1) on display) +
         // server PB. Cumulative lifetime stat stays integer (see floor below).
         const finalMeters = Math.round(g.distance * 10) / 10
+        // setScore with the precise final value so the wreck-screen
+        // count-up animates to the right decimal. Without this, the
+        // earlier setScore(Math.floor(g.distance)) at detection time
+        // (in the rock-collision branch below) would leave `score`
+        // stuck at an integer and every beacon death would display .0.
+        setScore(finalMeters)
         recordTideRunRun(Math.floor(g.distance), g.beaconsSmashed).catch(() => {})
         if (finalMeters > highScore) {
           setHighScore(finalMeters)
@@ -1087,8 +1093,12 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
           // Start detection flash — gameplay freezes, beam plays, then death
           g.detectingUntil = performance.now() + BEACON_DETECT_FLASH_SEC * 1000
           g.detectingBeaconX = beaconCenterWorldX
-          // Lock in the final score now (distance is frozen during flash)
-          setScore(Math.floor(g.distance))
+          // Lock in the final score now (distance is frozen during the
+          // flash). Pass the float — the live HUD does its own
+          // Math.floor for the calm integer ticker, and the wreck-screen
+          // deadCount animation needs the precise value so the result
+          // doesn't always round down to .0 after a beacon catch.
+          setScore(g.distance)
           // Alarm SFX — fires the instant the beacon catches the airborne
           // ship, before the death overlay.
           playBeaconCatchSfx()
