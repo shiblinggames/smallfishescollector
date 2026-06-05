@@ -19,7 +19,7 @@ import {
 import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
-import { getPet, PET_OVERLAY } from '@/lib/pets'
+import { getPet, getPetOverlay } from '@/lib/pets'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
@@ -5069,7 +5069,7 @@ export default function FishingGame({
                 {(() => {
                   const pet = getPet(equippedPet)
                   if (!pet) return null
-                  const pp = PET_OVERLAY[f]
+                  const pp = getPetOverlay(pet.species, f)
                   return (
                     <img
                       src={pet.restImageUrl}

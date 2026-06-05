@@ -13,7 +13,7 @@
 // Pet ids stay stable across releases. Persisted to
 // profiles.unlocked_pets (text[]) + profiles.equipped_pet (text).
 
-export type PetSpecies = 'parrot'
+export type PetSpecies = 'parrot' | 'monkey'
 
 export interface PetDef {
   id: string
@@ -38,6 +38,11 @@ export const PETS: PetDef[] = [
   { id: 'parrot_charcoal', species: 'parrot', name: 'Charcoal Parrot', weight: 9,  restImageUrl: '/parrot_charcoal.png', accentColor: '#94a3b8' },
   { id: 'parrot_sand',     species: 'parrot', name: 'Sand Parrot',     weight: 3,  restImageUrl: '/parrot_sand.png',     accentColor: '#e8c97a' },
   { id: 'parrot_gold',     species: 'parrot', name: 'Gold Parrot',     weight: 3,  restImageUrl: '/parrot_gold.png',     accentColor: '#f0c040' },
+  // Monkeys — brown common (90%), golden the trophy (10%). Weights
+  // are relative within the monkey pool; species split happens first
+  // via PET_SPECIES_WEIGHTS (75% parrot / 25% monkey).
+  { id: 'monkey_brown',    species: 'monkey', name: 'Brown Monkey',    weight: 90, restImageUrl: '/monkey_brown.png',    accentColor: '#a78a6a' },
+  { id: 'monkey_golden',   species: 'monkey', name: 'Golden Monkey',   weight: 10, restImageUrl: '/monkey_golden.png',   accentColor: '#f0c040' },
 ]
 
 export function getPet(id: string | null | undefined): PetDef | undefined {
@@ -54,22 +59,40 @@ export const CRATE_PET_CHANCE: Record<'wooden' | 'metal' | 'gold' | 'diamond', n
   diamond: 0.08,
 }
 
-/** Per-frame pet overlay positions in the character container —
- *  percentages relative to the character image's bounding box. All pet
- *  variants share these because the source PNGs are uniform size +
- *  shape. Tuned in /fishing-test. Exported so the in-game character
- *  render (FishingGame.tsx) and the Appearance slot composite preview
- *  (GearScreen.tsx) stay in sync — one source of truth. */
-export const PET_OVERLAY: Record<'rest' | 'wait' | 'cast', { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
-  wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
-  cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
+/** Per-species, per-frame overlay positions in the character container.
+ *  Percentages are relative to the character image's bounding box.
+ *  Different species have different silhouettes (the parrot perches
+ *  high, the monkey sits low on the boat etc.) so each species gets
+ *  its own coord set. Tune in /fishing-test. Single source of truth
+ *  shared across FishingGame in-game render + GearScreen Appearance
+ *  composite + /profile and /u/<username> silhouettes. */
+export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', { top: number; left: number; width: number; rotate: number }>> = {
+  parrot: {
+    rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
+    wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
+    cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
+  },
+  // Monkey — placeholder positions inherited from parrot; tune on
+  // /fishing-test and paste back here.
+  monkey: {
+    rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
+    wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
+    cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
+  },
 }
 
-/** Future-proof: when new species ship, add a key here and route the
- *  species pick through it. Single-species today = parrot guaranteed. */
+/** Convenience for callsites that have a PetDef in hand. */
+export function getPetOverlay(species: PetSpecies, frame: 'rest' | 'wait' | 'cast'): { top: number; left: number; width: number; rotate: number } {
+  return PET_OVERLAYS[species][frame]
+}
+
+/** Species split — first roll on a successful pet drop picks which
+ *  species the player gets, then the variant roll picks within that
+ *  species's pool. Tune the species mix here; variant rarity stays
+ *  in the PETS weights. */
 const PET_SPECIES_WEIGHTS: Record<PetSpecies, number> = {
-  parrot: 100,
+  parrot: 75,
+  monkey: 25,
 }
 
 /** Roll a pet on a successful crate pet-roll. Returns the picked

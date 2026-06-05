@@ -13,7 +13,7 @@ import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
-import { PETS, getPet, PET_OVERLAY } from '@/lib/pets'
+import { PETS, getPet, getPetOverlay } from '@/lib/pets'
 
 type BaitItem = { bait_type: string; quantity: number }
 type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'appearance' | 'badge'
@@ -612,7 +612,7 @@ function AppearanceSlot({
           {/* Pet — last child so it sits in the foreground over every
               other layer, exactly like the in-game render. */}
           {activePet && (() => {
-            const pp = PET_OVERLAY.rest
+            const pp = getPetOverlay(activePet.species, 'rest')
             return (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={activePet.restImageUrl} alt="" style={{

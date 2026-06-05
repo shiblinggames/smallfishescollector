@@ -18,7 +18,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { getBoat, boatGlowClass } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
-import { getPet, PET_OVERLAY } from '@/lib/pets'
+import { getPet, getPetOverlay } from '@/lib/pets'
 import { BADGES, BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import { getRod, rodGlowClass } from '@/lib/rods'
 import { getReel } from '@/lib/reels'
@@ -759,7 +759,7 @@ export default function ProfileClient({
                 {(() => {
                   const pet = getPet(equippedPet)
                   if (!pet) return null
-                  const pp = PET_OVERLAY.rest
+                  const pp = getPetOverlay(pet.species, 'rest')
                   return (
                     <img src={pet.restImageUrl} alt="" style={{
                       position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,

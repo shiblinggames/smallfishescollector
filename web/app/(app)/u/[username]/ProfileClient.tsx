@@ -14,7 +14,7 @@ import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
 import { getCharacterSprites } from '@/lib/characters'
 import { getBoat, boatGlowClass } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
-import { getPet, PET_OVERLAY } from '@/lib/pets'
+import { getPet, getPetOverlay } from '@/lib/pets'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
 import { BADGE_MAP, BADGE_SLOT_POSITIONS, type BadgeFrame } from '@/lib/badges'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -342,7 +342,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
                 {(() => {
                   const pet = getPet(equippedPet)
                   if (!pet) return null
-                  const pp = PET_OVERLAY.rest
+                  const pp = getPetOverlay(pet.species, 'rest')
                   return (
                     <img src={pet.restImageUrl} alt="" style={{
                       position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
