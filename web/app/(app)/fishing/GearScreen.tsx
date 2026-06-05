@@ -13,7 +13,7 @@ import { HATS } from '@/lib/hats'
 import { BADGE_MAP, BADGES } from '@/lib/badges'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
-import { PETS, getPet } from '@/lib/pets'
+import { PETS, getPet, PET_OVERLAY } from '@/lib/pets'
 
 type BaitItem = { bait_type: string; quantity: number }
 type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'appearance' | 'badge'
@@ -534,76 +534,93 @@ function AppearanceSlot({
         touchAction: 'manipulation',
       }}
     >
-      {/* 2×2 mini-grid of equipped pieces. Slot 4 reserved for pets. */}
+      {/* Composite preview — same layered stack the fishing game uses
+          (character → hat → boat → pet), rendered at slot size. Mirrors
+          how the player actually looks on the water, so the slot reads
+          as "your loadout" instead of "4 separate sprites". The
+          character sits in the lower portion of the slot so the boat
+          (which extends below + around) has room to sit underneath
+          without overflowing. */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: '1fr 1fr',
-        gap: 4,
-        width: 80, height: 80,
+        position: 'relative', width: 100, height: 100,
+        overflow: 'hidden',
       }}>
-        {/* Skin */}
         <div style={{
-          width: 38, height: 38, borderRadius: '50%', overflow: 'hidden',
-          backgroundImage: `url(${charSrc.rest})`,
-          backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat',
-          border: '1px solid rgba(255,255,255,0.18)',
-          justifySelf: 'center', alignSelf: 'center',
-        }} />
-        {/* Hat */}
-        <div style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'center', alignSelf: 'center' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={activeHat?.restImageUrl ?? '/defaulthat_rest.png'}
-            alt=""
-            style={{
-              width: 32, height: 32, objectFit: 'contain',
-              filter: activeHat ? `drop-shadow(0 0 5px ${activeHat.color}66)` : 'none',
-            }}
-          />
-        </div>
-        {/* Boat */}
-        <div style={{
-          width: 38, height: 38, overflow: 'hidden',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          justifySelf: 'center', alignSelf: 'center',
+          position: 'absolute',
+          // Same fishing-game layout: character box at left + bottom
+          // offsets, width:70%. The full character composite (incl.
+          // boat extending outside the char img bounds) fits inside
+          // the 100×100 slot frame.
+          bottom: '10%', left: '15%', width: '70%',
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={activeBoat?.restImageUrl ?? '/boat_default_rest.png'}
-            alt=""
-            className={boatGlowClass(activeBoat)}
-            style={{
-              width: '170%', height: 'auto', display: 'block', flexShrink: 0,
-              filter: activeBoat?.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined,
-            }}
-          />
+          <img src={charSrc.rest} alt="" style={{ width: '100%', display: 'block' }} />
+          {/* Hat — uses the live hat def's rest-frame position so it
+              lands exactly where it does in-game. */}
+          {activeHat && (() => {
+            const hp = activeHat.positions.rest
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={activeHat.restImageUrl} alt="" style={{
+                position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
+                width: `${hp.width}%`,
+                transform: `rotate(${hp.rotate}deg)`,
+                transformOrigin: 'center center',
+                pointerEvents: 'none',
+              }} />
+            )
+          })()}
+          {/* Default hat sprite as fallback when no hat equipped */}
+          {!activeHat && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/defaulthat_rest.png" alt="" style={{
+              position: 'absolute', top: '53%', left: '57.1%', width: '21.8%',
+              pointerEvents: 'none',
+            }} />
+          )}
+          {/* Boat — same rest-frame positions the fishing game uses. */}
+          {(() => {
+            const boat = activeBoat ?? BOATS[0]
+            if (!boat) return null
+            const bp = boat.positions.rest
+            return (
+              <div style={{
+                position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
+                width: `${bp.width}%`,
+                transform: `rotate(${bp.rotate}deg)`,
+                transformOrigin: 'center center',
+                pointerEvents: 'none',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={boat.restImageUrl}
+                  alt=""
+                  className={boatGlowClass(boat)}
+                  style={{
+                    width: '100%', display: 'block',
+                    filter: boat.glowType === 'ash' ? BOAT_ASH_DARKEN : undefined,
+                  }}
+                />
+              </div>
+            )
+          })()}
+          {/* Pet — last child so it sits in the foreground over every
+              other layer, exactly like the in-game render. */}
+          {activePet && (() => {
+            const pp = PET_OVERLAY.rest
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={activePet.restImageUrl} alt="" style={{
+                position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
+                width: `${pp.width}%`,
+                transform: `rotate(${pp.rotate}deg)`,
+                transformOrigin: 'center center',
+                pointerEvents: 'none',
+                filter: `drop-shadow(0 0 4px ${activePet.accentColor}55)`,
+              }} />
+            )
+          })()}
         </div>
-        {/* Pet slot — equipped pet's silhouette, or a dashed empty
-            placeholder when the player hasn't unlocked one yet. */}
-        {activePet ? (
-          <div style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'center', alignSelf: 'center' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={activePet.restImageUrl}
-              alt=""
-              style={{
-                width: 36, height: 36, objectFit: 'contain',
-                filter: `drop-shadow(0 0 5px ${activePet.accentColor}66)`,
-              }}
-            />
-          </div>
-        ) : (
-          <div style={{
-            width: 38, height: 38,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            justifySelf: 'center', alignSelf: 'center',
-            border: '1px dashed rgba(255,255,255,0.1)',
-            borderRadius: 10,
-          }}>
-            <span style={{ fontSize: '0.55rem', color: '#3a3835', letterSpacing: '0.06em' }}>+</span>
-          </div>
-        )}
       </div>
       <div style={{ textAlign: 'center' }}>
         <p className="font-karla font-600 uppercase" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.14em', marginBottom: 1 }}>Appearance</p>

@@ -19,7 +19,7 @@ import {
 import { liquidateAllFish } from '@/app/(app)/tavern/market/actions'
 import { BOATS, getBoat, boatGlowClass } from '@/lib/boats'
 import { HATS, getHat } from '@/lib/hats'
-import { getPet } from '@/lib/pets'
+import { getPet, PET_OVERLAY } from '@/lib/pets'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
@@ -969,15 +969,9 @@ const CHAR_HOOK_OVERLAY: Record<CharFrame, { top: number; left: number; width: n
   cast: { top: 40.5, left: -73,   width: 204.5, rotate: 66.5 },
 }
 
-// Pet overlay — all parrot variants share these coords because the
-// source PNGs are uniform size + shape. Per-frame so the pet shifts
-// with the boat/character bob across rest/wait/cast. Tuned on
-// /fishing-test (parrot perches on the right side of the boat).
-const CHAR_PET_OVERLAY: Record<CharFrame, { top: number; left: number; width: number; rotate: number }> = {
-  rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
-  wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
-  cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
-}
+// Pet overlay positions live in lib/pets.PET_OVERLAY so the slot
+// composite preview in GearScreen.tsx stays in sync with the in-game
+// render (single source of truth). Tune over there.
 
 function fishImageUrl(name: string) {
   return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
@@ -5075,7 +5069,7 @@ export default function FishingGame({
                 {(() => {
                   const pet = getPet(equippedPet)
                   if (!pet) return null
-                  const pp = CHAR_PET_OVERLAY[f]
+                  const pp = PET_OVERLAY[f]
                   return (
                     <img
                       src={pet.restImageUrl}

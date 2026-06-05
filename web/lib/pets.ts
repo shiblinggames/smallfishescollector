@@ -51,6 +51,18 @@ export const CRATE_PET_CHANCE: Record<'wooden' | 'metal' | 'gold' | 'diamond', n
   diamond: 0.08,
 }
 
+/** Per-frame pet overlay positions in the character container —
+ *  percentages relative to the character image's bounding box. All pet
+ *  variants share these because the source PNGs are uniform size +
+ *  shape. Tuned in /fishing-test. Exported so the in-game character
+ *  render (FishingGame.tsx) and the Appearance slot composite preview
+ *  (GearScreen.tsx) stay in sync — one source of truth. */
+export const PET_OVERLAY: Record<'rest' | 'wait' | 'cast', { top: number; left: number; width: number; rotate: number }> = {
+  rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
+  wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
+  cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
+}
+
 /** Future-proof: when new species ship, add a key here and route the
  *  species pick through it. Single-species today = parrot guaranteed. */
 const PET_SPECIES_WEIGHTS: Record<PetSpecies, number> = {
