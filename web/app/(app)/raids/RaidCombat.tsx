@@ -375,6 +375,19 @@ export default function RaidCombat({
   const [lastPlayerAction, setLastPlayerAction] = useState<EnemyAction | null>(null)
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
+  // Speed-roll winner feedback — set when subPhase becomes 'revealing'
+  // so the corresponding nameplate flashes + lunges during the 380ms
+  // resolution window. Without this, the reveal phase reads as dead air
+  // ("I locked in → nothing → cannon fires"); the flash sells the
+  // initiative roll as drama instead of latency. Cleared via the
+  // effect below after the visual lands.
+  const [speedWinner, setSpeedWinner] = useState<Actor | null>(null)
+  const [speedWinnerKey, setSpeedWinnerKey] = useState(0)
+  useEffect(() => {
+    if (!speedWinner) return
+    const t = setTimeout(() => setSpeedWinner(null), 320)
+    return () => clearTimeout(t)
+  }, [speedWinner, speedWinnerKey])
   const [resolveLog, setResolveLog] = useState<string[]>([])
   const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
   const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
@@ -773,6 +786,13 @@ export default function RaidCombat({
       : (pSpeedRoll >= eSpeedRoll ? 'player' : 'enemy')
     setFirstActor(first)
     setSubPhase('revealing')
+
+    // Fire the speed-roll feedback so the 380ms resolution beat reads
+    // as drama, not dead air. The matching nameplate flashes its border
+    // (cyan for player win, red for enemy) and briefly lunges toward
+    // the other side, mirroring the existing hit-feedback vocabulary.
+    setSpeedWinner(first)
+    setSpeedWinnerKey(k => k + 1)
 
     // Short beat to register both actions visually, then resolve
     setTimeout(() => {
@@ -1752,12 +1772,30 @@ export default function RaidCombat({
         {/* Enemy HP nameplate — top-left, with circular portrait badge.
             Elite encounters paint with a purple-violet accent (border,
             portrait ring, glow) so they read as "this one is different"
-            from the moment they appear. */}
-        <button
+            from the moment they appear.
+
+            motion.button + key={speedWinnerKey} fires a fresh lunge +
+            red border flash each reveal beat when enemy wins
+            initiative (toward player's bottom-right). The animation
+            sweeps from the static border back to it; phase-2 / boss /
+            elite static borders are preserved between beats. */}
+        <motion.button
           type="button"
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
           className={enemyPhase === 2 ? 'rc-phase2-pulse' : undefined}
+          key={speedWinner === 'enemy' ? `ewin-${speedWinnerKey}` : 'eidle'}
+          animate={speedWinner === 'enemy' ? {
+            x: [0, 4, 0], y: [0, 2, 0],
+            rotate: [0, 2, 0],
+            borderColor: [
+              enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
+              '#ef4444',
+              enemyPhase === 2 ? '#ef4444' : isBoss ? '#fbbf24' : isElite ? '#a78bfa' : '#2a3548',
+            ],
+            boxShadow: ['0 0 0 0 rgba(239,68,68,0)', '0 0 16px rgba(239,68,68,0.55)', '0 0 0 0 rgba(239,68,68,0)'],
+          } : undefined}
+          transition={speedWinner === 'enemy' ? { duration: 0.28, times: [0, 0.45, 1], ease: 'easeOut' } : undefined}
           style={{
             position: 'absolute', top: 10, left: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
@@ -1862,7 +1900,7 @@ export default function RaidCombat({
             <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
-        </button>
+        </motion.button>
 
         {/* Enemy boat — sits in the water (below the horizon), farther away than the player */}
         <motion.div
@@ -2160,11 +2198,24 @@ export default function RaidCombat({
         {/* Player HP box — bottom-right. Tap to open the Captain's Ledger
             (full stats + equipped raid items under "Special"). Kept minimal
             visually here; item details live inside the popup, not on the
-            battle screen. */}
-        <button
+            battle screen.
+
+            motion.button + key={speedWinnerKey} so a fresh animation
+            fires every reveal beat when the player wins initiative —
+            border flashes cyan + brief lunge up-left (toward enemy
+            nameplate). Idle uses the static border (#2a3548). */}
+        <motion.button
           type="button"
           onClick={() => setShowStats(true)}
           aria-label={`${nameplate} — view stats`}
+          key={speedWinner === 'player' ? `pwin-${speedWinnerKey}` : 'pidle'}
+          animate={speedWinner === 'player' ? {
+            x: [0, -4, 0], y: [0, -2, 0],
+            rotate: [0, -2, 0],
+            borderColor: ['#2a3548', '#38bdf8', '#2a3548'],
+            boxShadow: ['0 0 0 0 rgba(56,189,248,0)', '0 0 16px rgba(56,189,248,0.45)', '0 0 0 0 rgba(56,189,248,0)'],
+          } : undefined}
+          transition={speedWinner === 'player' ? { duration: 0.28, times: [0, 0.45, 1], ease: 'easeOut' } : undefined}
           style={{
             position: 'absolute', bottom: 10, right: 10, zIndex: 4,
             padding: '0.45rem 0.6rem 0.5rem 0.45rem',
@@ -2205,7 +2256,7 @@ export default function RaidCombat({
             <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
             <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
           </div>
-        </button>
+        </motion.button>
 
       </div>
 
