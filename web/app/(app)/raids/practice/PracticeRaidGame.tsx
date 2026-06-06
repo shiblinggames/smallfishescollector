@@ -45,21 +45,21 @@ const PRACTICE_ENEMIES: Record<string, PracticeEnemy> = {
     shipSpeed: 4, actionMs: 4500,
     pattern: ['reload', 'fire', 'reload', 'fire'],
     critChance: 0.025,
-    image: '/enemytier1.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
+    image: '/enemychapter1rowboat_v2.png', portrait: ENEMY_IMG_BASE + 'reefraider.png', killGold: 20, killXP: 20,
   },
   sniper: {
     id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
     shipSpeed: 3, actionMs: 5500,
     pattern: ['reload', 'dodge', 'fire', 'reload', 'reload', 'reload', 'volley'],
     critChance: 0.10,
-    image: '/enemytier1scout.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
+    image: '/enemychapter1dinghy_v2.png', portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png', killGold: 25, killXP: 30,
   },
   corsair: {
     id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
     shipSpeed: 7, actionMs: 3500,
     pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
     critChance: 0.05,
-    image: '/enemytier1elite.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
+    image: '/enemychapter1sloop_v2.png', portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png', killGold: 35, killXP: 45,
   },
 }
 const NON_BOSS_IDS = ['brute', 'sniper', 'corsair'] as const

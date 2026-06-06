@@ -171,7 +171,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.025,
-      image: '/enemytier1.png',
+      image: '/enemychapter1rowboat_v2.png',
       portrait: ENEMY_IMG_BASE + 'reefraider.png',
     },
     sniper: {
@@ -184,7 +184,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→1→0→1→2→3→0
       pattern: ['reload', 'dodge', 'fire', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.10,
-      image: '/enemytier1scout.png',
+      image: '/enemychapter1dinghy_v2.png',
       portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
     },
     corsair: {
@@ -200,7 +200,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→0→1→1→2→3→0→1→0
       pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'reload', 'volley', 'reload', 'fire'],
       critChance: 0.05,
-      image: '/enemytier1elite.png',
+      image: '/enemychapter1sloop_v2.png',
       portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
     },
     pete: {
@@ -224,7 +224,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       // Charges: 0→1→1→2→2→3→3→0→1→0→1→2→3→0
       pattern: ['reload', 'dodge', 'reload', 'dodge', 'reload', 'dodge', 'volley', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.075,
-      image: '/enemytier1boss.png',
+      image: '/enemychapter1schooner_v2.png',
       portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
     },
   },
@@ -288,7 +288,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.03,
-      image: '/enemytier2scout.png',
+      image: '/enemychapter1sloop_v2.png',
       portrait: '/krust_worker.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -301,7 +301,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→0→1→1→2→1
       pattern: ['reload', 'fire', 'reload', 'dodge', 'reload', 'fire'],
       critChance: 0.06,
-      image: '/enemytier2reg.png',
+      image: '/enemychapter1sloop_v2.png',
       portrait: '/krust_soldier.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -314,7 +314,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→1→2→1→1→2→1
       pattern: ['reload', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'fire'],
       critChance: 0.05,
-      image: '/enemytier2brute.png',
+      image: '/enemychapter1schooner_v2.png',
       portrait: '/krust_brute.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -331,7 +331,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→0→1→0→0→1→0→0
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.10,
-      image: '/enemytier2elite.png',
+      image: '/enemychapter1schooner_v2.png',
       portrait: '/krust_overseer.png',
       damageReduction: 0.15, abilityName: 'Carapace',
     },
@@ -347,7 +347,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       // Charges: 0→1→2→1→1→2→3→2→2
       pattern: ['reload', 'reload', 'fire', 'dodge', 'reload', 'reload', 'fire', 'dodge'],
       critChance: 0.09,
-      image: '/enemytier2boss.png',
+      image: '/enemychapter1brigantine_v2.png',
       portrait: '/Captainkrust.png',
       damageReduction: 0.20, abilityName: 'Carapace',
     },
