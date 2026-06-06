@@ -237,16 +237,13 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
   // raidChallenge.ts), not auto-scaled, so the percentages land
   // exactly where designed instead of inflating denominator drift.
   loot: [
-    // 70% currency (bumped doubloons_300 +2 to absorb the freed weight
-    // from corsair_black → finndicate_hull change)
+    // 70% currency
     { id: 'doubloons_300',        label: '+300 ⟡',                 image: '/smallpile.png',         emoji: '🪙',       rarity: 'common',    weight: 32 },
     { id: 'doubloons_600',        label: '+600 ⟡',                 image: '/dailybonus.png',        emoji: '💰',       rarity: 'uncommon',  weight: 20 },
     { id: 'gems_25',              label: '25 Gems',                 image: null,                     emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
     { id: 'pack',                 label: '100 Gems',                image: null,                     emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
     // 30% special drops. Finndicate Hull is the chapter-1 shared trophy
-    // skin (also drops from Krust at a higher rate). Replaces the old
-    // Corsair Black; corsair_black still exists as a skin def so anyone
-    // who already owns it keeps it equippable, just no longer drops.
+    // skin (also drops from Krust at a higher rate).
     { id: 'finndicate_hull',      label: 'Finndicate Hull',         image: null,                     emoji: '🚢',       rarity: 'epic',      weight: 3,  shipSkinId: 'finndicate_hull' },
     { id: 'corsair_cannon',       label: 'Corsair Cannon',          image: '/corsaircannon-v2.png',     emoji: '💣',       rarity: 'epic',      weight: 20 },
     { id: 'corsair_prime_cannon', label: "Corsair's Prime Cannon",  image: '/corsairsprimecannon.png',emoji: '💣',       rarity: 'legendary', weight: 5  },
@@ -364,16 +361,14 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
   // 70% currency split as Pete; challenge variant overrides this
   // table with doubled special rates in raidChallenge.ts.
   loot: [
-    // 70% currency (dropped doubloons_600 -2 to make room for the
-    // bumped finndicate_hull rate vs the old verdigris_hull)
+    // 70% currency
     { id: 'doubloons_600',     label: '+600 ⟡',                image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 28 },
     { id: 'doubloons_1200',    label: '+1,200 ⟡',              image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 20 },
     { id: 'gems_50',           label: '50 Gems',                image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
     { id: 'pack_2',            label: '200 Gems',               image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
     // 30% special drops. Finndicate Hull is the shared chapter-1 trophy
     // skin (Pete drops it at weight 3; Krust drops at the slightly
-    // higher 7 so this raid is the realistic source). verdigris_hull
-    // still exists as a skin def — see Pete's table note.
+    // higher 7 so this raid is the realistic source).
     { id: 'finndicate_hull',   label: 'Finndicate Hull',        image: null,                      emoji: '🚢',       rarity: 'epic',      weight: 7,  shipSkinId: 'finndicate_hull' },
     { id: 'krusts_carapace',   label: "Krust's Carapace",       image: '/captainshull.png',       emoji: '🛡️',      rarity: 'epic',      weight: 20 },
     { id: 'captains_carapace', label: "Captain's Carapace",     image: '/captainscarapace.png',   emoji: '🛡️',      rarity: 'legendary', weight: 5  },

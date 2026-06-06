@@ -125,8 +125,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     totalFortune:     totalFortune + navBonus.fortune,
     // Skin can swap the ship sprite outright via imageByTier (Finndicate
     // Hull → enemychapter1[tier]); falls back to the default ship art.
-    // The CSS filter (corsair_black / verdigris_hull) is resolved on
-    // the client where the skin is applied to the rendered <img>.
+    // Any skin's CSS filter is resolved client-side on the rendered <img>.
     shipImageUrl:     getShipSkin((profile?.equipped_ship_skin as string | null) ?? '')?.imageByTier?.[shipTier] ?? ship.image,
     shipName:         (profile?.ship_name as string | null) ?? ship.name,
     username:         (profile?.username as string | null) ?? null,
@@ -215,9 +214,7 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   // Legacy "pack" loot ids now pay gems (packs are retired): 100 gems per pack.
   pack:            { gems: 100 },
   pack_2:          { gems: 200 },
-  corsair_black:   { shipSkin: 'corsair_black' },
   corsair_cannon:  { raidItem: 'corsair_cannon' },
-  verdigris_hull:  { shipSkin: 'verdigris_hull' },
   krusts_carapace: { raidItem: 'krusts_carapace' },
   finndicate_hull: { shipSkin: 'finndicate_hull' },
 }
