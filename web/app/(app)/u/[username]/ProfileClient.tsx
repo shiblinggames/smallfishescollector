@@ -451,7 +451,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
             <img
-              src={ship.imageUrl}
+              src={shipSkin?.imageByTier?.[gear.shipTier] ?? ship.imageUrl}
               alt={ship.name}
               style={{
                 width: 200, height: 155,

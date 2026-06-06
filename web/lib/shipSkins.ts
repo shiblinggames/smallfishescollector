@@ -5,6 +5,13 @@ export interface ShipSkinDef {
   filter: string
   color: string
   source: string
+  /** Optional image override keyed by ship tier number. When the player
+   *  has this skin equipped, render sites should use the URL from this
+   *  map for the player's current tier instead of the default ship
+   *  sprite. CSS filter stays available for skins that want to ALSO
+   *  tint the swapped image. Filter-only skins (corsair_black,
+   *  verdigris_hull) omit this and keep working unchanged. */
+  imageByTier?: Record<number, string>
 }
 
 export const SHIP_SKINS: ShipSkinDef[] = [
@@ -39,6 +46,31 @@ export const SHIP_SKINS: ShipSkinDef[] = [
     filter: 'sepia(1) hue-rotate(78deg) saturate(2.6) brightness(0.78) contrast(1.05) drop-shadow(0 0 6px rgba(60,165,110,0.45))',
     color: '#43a884',
     source: "Krust's Consignment",
+  },
+  {
+    // Chapter 1 shared trophy skin. Drops from BOTH Pete's and Krust's
+    // raids (lower weight on Pete, higher on Krust). Unlike the earlier
+    // filter-based skins, this one swaps the player's ship sprite to
+    // the matching chapter-1 enemy hull at the player's current tier —
+    // "you wear the colors of the gang you just sunk." Replaces
+    // corsair_black + verdigris_hull as new loot; the old skins stay
+    // in this file as functional defs so anyone who already owned one
+    // can still equip it.
+    id: 'finndicate_hull',
+    name: 'Finndicate Hull',
+    description: "Paint your ship in the colors of the gang you just sank. Cuts a different silhouette on the water — and a louder one.",
+    filter: 'none',
+    color: '#7a5a3a',
+    source: "Barnacle Pete's + Krust's Raids",
+    imageByTier: {
+      0: '/enemychapter1rowboat_v2.png',
+      1: '/enemychapter1dinghy_v2.png',
+      2: '/enemychapter1sloop_v2.png',
+      3: '/enemychapter1schooner_v2.png',
+      4: '/enemychapter1brigantine_v2.png',
+      5: '/enemychapter1galleon_v2.png',
+      6: '/enemychapter1man-o-war_v2.png',
+    },
   },
 ]
 

@@ -8,6 +8,7 @@ import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { getActiveEffects } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
+import { getShipSkin } from '@/lib/shipSkins'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -122,7 +123,11 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     totalPower:       totalPower   + navBonus.power,
     totalDodge:       totalDodge   + navBonus.navigation,
     totalFortune:     totalFortune + navBonus.fortune,
-    shipImageUrl:     ship.image,
+    // Skin can swap the ship sprite outright via imageByTier (Finndicate
+    // Hull → enemychapter1[tier]); falls back to the default ship art.
+    // The CSS filter (corsair_black / verdigris_hull) is resolved on
+    // the client where the skin is applied to the rendered <img>.
+    shipImageUrl:     getShipSkin((profile?.equipped_ship_skin as string | null) ?? '')?.imageByTier?.[shipTier] ?? ship.image,
     shipName:         (profile?.ship_name as string | null) ?? ship.name,
     username:         (profile?.username as string | null) ?? null,
     characterColor:   (profile?.character_color as string | null) ?? null,
@@ -214,6 +219,7 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   corsair_cannon:  { raidItem: 'corsair_cannon' },
   verdigris_hull:  { shipSkin: 'verdigris_hull' },
   krusts_carapace: { raidItem: 'krusts_carapace' },
+  finndicate_hull: { shipSkin: 'finndicate_hull' },
 }
 
 /** Record a raid clear the MOMENT the boss dies — independent of the

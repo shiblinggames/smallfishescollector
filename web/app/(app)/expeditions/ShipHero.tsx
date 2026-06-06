@@ -518,9 +518,12 @@ export default function ShipHero({
   const previewTotals   = pendingCard ? slotsToTotals(previewSlotsArr) : { power: totalPower, dodge: totalDodge, fortune: totalFortune }
   const previewCount    = previewSlotsArr.filter(Boolean).length
 
-  // Skin filter
+  // Skin: filter-based skins tint the default ship sprite via CSS;
+  // imageByTier skins swap the sprite outright for the player's
+  // current tier (e.g. Finndicate Hull). Falls back to ship default.
   const skinDef     = equippedSkin ? SHIP_SKINS.find(s => s.id === equippedSkin) : undefined
   const skinFilter  = skinDef?.filter ?? 'none'
+  const shipImgSrc  = skinDef?.imageByTier?.[shipTierForSlots] ?? shipStats.image
 
   // Crew available to assign: any roster member not already in another slot
   // (the one already in this slot stays selectable). Sorted by effective stats.
@@ -628,7 +631,7 @@ export default function ShipHero({
           <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '1.1rem auto 0' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={shipStats.image}
+              src={shipImgSrc}
               alt={shipName ?? shipStats.name}
               style={{ width: '100%', display: 'block', objectFit: 'contain', filter: skinFilter, transition: 'filter 0.3s ease' }}
             />
@@ -842,7 +845,7 @@ export default function ShipHero({
               <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={shipStats.image}
+                  src={shipImgSrc}
                   alt={shipName ?? shipStats.name}
                   style={{
                     width: '100%', maxWidth: 220, height: 'auto',

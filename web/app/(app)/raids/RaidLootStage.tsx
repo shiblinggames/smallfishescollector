@@ -253,9 +253,14 @@ export default function RaidLootStage(props: Props) {
                 }}
               >
                 {slotItem.shipSkinId ? (
+                  // imageByTier skins (Finndicate Hull) swap the sprite
+                  // outright — preview the BRIGANTINE variant as the
+                  // marketing shot so the player actually sees what they
+                  // won. Filter-based skins keep using the player's
+                  // current ship + tinted via CSS.
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={shipImageUrl}
+                    src={getShipSkin(slotItem.shipSkinId)?.imageByTier?.[4] ?? shipImageUrl}
                     alt={slotItem.label}
                     style={{
                       width: 80, height: 80, objectFit: 'contain', objectPosition: 'bottom',

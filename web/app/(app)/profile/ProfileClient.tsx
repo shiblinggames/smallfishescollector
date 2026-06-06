@@ -972,7 +972,7 @@ export default function ProfileClient({
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
             <img
-              src={ship.imageUrl}
+              src={shipSkinDef?.imageByTier?.[shipTier] ?? ship.imageUrl}
               alt={ship.name}
               style={{
                 width: 200, height: 155, objectFit: 'contain',
