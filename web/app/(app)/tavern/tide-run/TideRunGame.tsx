@@ -18,7 +18,7 @@ const SHIP_HEIGHT_PCT = 0.095  // small Canabalt-style sprite (~9.5% of canvas h
 // sizing to a mobile-representative reference so the ship stays its tuned
 // pixel size on tall screens (mobile unchanged). Tuned 2026-05-19.
 const SHIP_SIZING_REF_H = 620
-const SHIP_ASPECT     = 1031 / 672   // trimmed boatrun.png
+const SHIP_ASPECT     = 805 / 595    // trimmed boatrun.png (redesigned 2026-06-06)
 
 // Ship physics — Canabalt feel. Boat rides the wave surface; press-and-hold
 // to jump (longer hold → higher jump). No automatic launches off crests.
