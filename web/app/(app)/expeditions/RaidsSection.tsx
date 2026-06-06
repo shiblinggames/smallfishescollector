@@ -209,6 +209,12 @@ function RaidMap({
   // CHAIN. Side-branch challenge raids are optional detours — pulsing one
   // of them as "current" would mislead a player about the main story path.
   const currentIdx = views.findIndex(v => v.status === 'available' && !v.node.sideBranch)
+  // The "next up" node — first non-cleared main-chain node, INCLUDING locked
+  // ones. Diverges from currentIdx when the next-in-line is gated (Nav level,
+  // doubloon coffer, etc.) and there's no available main-chain node to point
+  // at. Drives the locked-reason caption so the player sees what's blocking
+  // them right on the map, not just inside the detail sheet.
+  const nextLockedIdx = views.findIndex(v => v.status !== 'cleared' && !v.node.sideBranch && !v.node.comingSoon)
 
   // Progressive-reveal classification per view. Three states:
   //   revealed — drawn as today (cleared / available / lit-locked)
@@ -348,7 +354,7 @@ function RaidMap({
         // passes through this position, so the chapter reads as
         // "the path goes that way — into uncharted water".
         if (vis === 'fogged') return null
-        const { node, status } = v
+        const { node, status, lockReason } = v
         const isSide = !!node.sideBranch
         // Beacon: chapter-end destination silhouette. Stays non-
         // interactive (it's locked) and is rendered with a heavier
@@ -375,6 +381,14 @@ function RaidMap({
         // node's identity; tapping any non-locked node opens the modal
         // for the full name + story.
         const showLabel = isCurrent && interactive
+        // When the next-up main-chain node is LOCKED (and not a beacon —
+        // beacons already have their own "Chapter end" caption), surface
+        // its name + the lock reason on the map. Uses nextLockedIdx (not
+        // currentIdx) because currentIdx only matches AVAILABLE nodes —
+        // a locked-next-up would otherwise have no caption. Other locked
+        // nodes deeper in the chain stay icon-only to keep the map
+        // readable; their reasons surface in the detail sheet when tapped.
+        const showLockReason = i === nextLockedIdx && locked && !isBeacon && !!lockReason
         return (
           <div
             key={node.id}
@@ -518,6 +532,38 @@ function RaidMap({
                 <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#f5f2ec', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
                   <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
                     {node.label}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* Current-but-locked node — show name + lock reason on the
+                map so the player immediately knows what they need to
+                do, instead of "dim token + lock icon, tap to find
+                out". Mirrors the available-node caption style; lock
+                reason gets its own muted line under the name. */}
+            {showLockReason && !isSide && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginTop: 8,
+                  width: 'max-content',
+                  maxWidth: 170,
+                  textAlign: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
+                <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', lineHeight: 1.45, color: '#d8d4ce', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 6, padding: '1px 7px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                    {node.label}
+                  </span>
+                </p>
+                <p className="font-karla font-600" style={{ fontSize: '0.6rem', lineHeight: 1.35, color: '#c4a96a', marginTop: 4, textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+                  <span style={{ background: 'rgba(6,5,4,0.55)', borderRadius: 5, padding: '1px 6px', boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>
+                    🔒 {lockReason}
                   </span>
                 </p>
               </div>
