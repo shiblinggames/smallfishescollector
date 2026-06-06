@@ -214,10 +214,14 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   // Legacy "pack" loot ids now pay gems (packs are retired): 100 gems per pack.
   pack:            { gems: 100 },
   pack_2:          { gems: 200 },
-  corsair_cannon:  { raidItem: 'corsair_cannon' },
-  krusts_carapace: { raidItem: 'krusts_carapace' },
-  finndicate_hull: { shipSkin: 'finndicate_hull' },
-  chartmaker_hull: { shipSkin: 'chartmaker_hull' },
+  corsair_cannon:          { raidItem: 'corsair_cannon' },
+  corsair_prime_cannon:    { raidItem: 'corsair_prime_cannon' },
+  krusts_carapace:         { raidItem: 'krusts_carapace' },
+  captains_carapace:       { raidItem: 'captains_carapace' },
+  cartographers_astrolabe: { raidItem: 'cartographers_astrolabe' },
+  captains_astrolabe:      { raidItem: 'captains_astrolabe' },
+  finndicate_hull:         { shipSkin:  'finndicate_hull' },
+  chartmaker_hull:         { shipSkin:  'chartmaker_hull' },
 }
 
 /** Record a raid clear the MOMENT the boss dies — independent of the
