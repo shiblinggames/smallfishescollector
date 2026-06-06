@@ -327,9 +327,16 @@ export default function ShipHero({
   const [loadoutMode, setLoadoutMode] = useState<'campaign' | 'voyage' | null>(null)
   useEffect(() => {
     function onOpen(e: Event) {
-      const detail = (e as CustomEvent<{ mode?: 'campaign' | 'voyage' }>).detail
+      const detail = (e as CustomEvent<{ mode?: 'campaign' | 'voyage'; pickSlot?: number }>).detail
       setLoadoutMode(detail?.mode ?? null)
       setLoadoutOpen(true)
+      if (typeof detail?.pickSlot === 'number') {
+        const i = detail.pickSlot
+        setPickerSlot(i)
+        setSheetOpen(true)
+        setSortBy(null)
+        setPendingCard(null)
+      }
     }
     window.addEventListener('expedition:open-loadout', onOpen as EventListener)
     return () => window.removeEventListener('expedition:open-loadout', onOpen as EventListener)

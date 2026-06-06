@@ -293,18 +293,23 @@ export default function HubCards({
                   onRepair={doRepair}
                 />
               )}
-              {/* Crew row — closes the prep modal and opens the ShipHero
-                  Loadout drawer (same picker UX as tapping a ship slot
-                  on the main expedition page). One canonical crew
-                  picker across both surfaces — was previously a bespoke
-                  in-prep editor that diverged from the loadout one. */}
+              {/* Crew row — closes the prep modal and opens the Assign
+                  Crew slot picker directly (skips the Loadout drawer
+                  surface and jumps straight to the same picker UX as
+                  tapping a ship slot circle). Picks the first empty
+                  crew slot (1..N-1; slot 0 = captain). If all crew
+                  slots are full, falls back to slot 1 so the player
+                  can swap. */}
               <PrepRow
                 label="Crew"
                 detail={`${assignedCrewCount}/${shipCrewSlots} assigned`}
                 ok={assignedCrewCount >= 1}
                 onClick={() => {
+                  const filled = new Set(roster.map(c => c.assignedSlot).filter((s): s is number => s != null))
+                  let pickSlot = 1
+                  for (let i = 1; i < shipCrewSlots; i++) { if (!filled.has(i)) { pickSlot = i; break } }
                   setModal(null)
-                  window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { mode: 'campaign' } }))
+                  window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { mode: 'campaign', pickSlot } }))
                 }}
               />
               {/* Items row — tap opens a nested modal to toggle items. */}
