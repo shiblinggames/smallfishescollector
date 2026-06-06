@@ -742,21 +742,27 @@ export default function TackleShopClient({
                     </div>
                     <p className="font-karla font-300 text-[#6a6764] text-sm">{reel.description}</p>
 
-                    {owned && slowerPct > 0 && (
+                    {/* Effect chip — always visible (muted color when not
+                        yet owned) so players can compare upgrades before
+                        buying, matching how hooks display their chips. */}
+                    {slowerPct > 0 ? (
                       <span className="font-karla font-600 inline-block mt-1.5"
                         style={{
-                          fontSize: '0.65rem', color: `${c}bb`,
-                          background: `${c}14`, border: `1px solid ${c}30`,
+                          fontSize: '0.65rem',
+                          color: owned ? `${c}bb` : '#4a4845',
+                          background: owned ? `${c}14` : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${owned ? `${c}30` : 'rgba(255,255,255,0.1)'}`,
                           padding: '0.12rem 0.5rem', borderRadius: '2rem',
                         }}>
                         Needle {slowerPct}% slower
                       </span>
-                    )}
-                    {owned && slowerPct === 0 && (
+                    ) : (
                       <span className="font-karla font-600 inline-block mt-1.5"
                         style={{
-                          fontSize: '0.65rem', color: '#6a6764',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                          fontSize: '0.65rem',
+                          color: owned ? '#6a6764' : '#4a4845',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.1)',
                           padding: '0.12rem 0.5rem', borderRadius: '2rem',
                         }}>
                         Base speed
@@ -826,17 +832,19 @@ export default function TackleShopClient({
                     </div>
                     <p className="font-karla font-300 text-[#6a6764] text-sm">{line.description}</p>
 
-                    {owned && (
-                      <span className="font-karla font-600 inline-block mt-1.5"
-                        style={{
-                          fontSize: '0.65rem', color: smallerPct > 0 ? `${c}bb` : '#6a6764',
-                          background: smallerPct > 0 ? `${c}14` : 'rgba(255,255,255,0.05)',
-                          border: `1px solid ${smallerPct > 0 ? `${c}30` : 'rgba(255,255,255,0.12)'}`,
-                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
-                        }}>
-                        {smallerPct > 0 ? `Snag zones ${smallerPct}% smaller` : 'Standard snag zones'}
-                      </span>
-                    )}
+                    {/* Effect chip — always visible (muted color when not
+                        yet owned) so players can preview what unlocking
+                        the next line will give them, matching hooks. */}
+                    <span className="font-karla font-600 inline-block mt-1.5"
+                      style={{
+                        fontSize: '0.65rem',
+                        color: owned ? (smallerPct > 0 ? `${c}bb` : '#6a6764') : '#4a4845',
+                        background: owned && smallerPct > 0 ? `${c}14` : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${owned && smallerPct > 0 ? `${c}30` : 'rgba(255,255,255,0.1)'}`,
+                        padding: '0.12rem 0.5rem', borderRadius: '2rem',
+                      }}>
+                      {smallerPct > 0 ? `Snag zones ${smallerPct}% smaller` : 'Standard snag zones'}
+                    </span>
 
                     {!owned && line.unlockAt > 0 && (
                       <p className="font-karla font-400 mt-1" style={{ fontSize: '0.78rem', color: '#5a5956' }}>
