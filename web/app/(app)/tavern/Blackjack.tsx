@@ -209,22 +209,41 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.state.doubloons }))
       return
     }
-    // Settled — orchestrate the reveal sequence:
-    //   1. Switch to settle screen with the dealer's first card visible
-    //      and the hole still face-down (holeFlipped=false). Player
-    //      hands are visible immediately (player already saw them).
-    //   2. After 350ms: flip the hole card (580ms 3D rotation).
-    //   3. After the flip completes: deal any additional dealer cards
-    //      one at a time at 500ms intervals.
-    //   4. After the last card: 400ms beat, then reveal the outcome
-    //      panel (net delta, per-hand chips, Play Again button) and
-    //      update the player's doubloons balance.
+    // Settled. Two reveal modes:
+    //
+    //   PLAYER-BUST PATH (every hand busted):
+    //     Player already knows they lost the moment they busted; the
+    //     dealer never had to play. Show "BUST" + outcome immediately,
+    //     no staged dealer-card reveal — matches real blackjack where
+    //     the dealer just collects and moves on.
+    //
+    //   NORMAL PATH (any hand survived to compare against the dealer):
+    //     Stage the reveal so the player gets the satisfaction of
+    //     watching the hole flip and the dealer play out:
+    //       1. Settle screen renders with dealer's hole still face-down.
+    //       2. t=350ms: flip the hole (580ms 3D rotation).
+    //       3. t=930ms+: each extra dealer draw slides in at 500ms intervals.
+    //       4. t=last+400ms: outcome panel + doubloons update.
     clearRevealTimers()
     setResult(r.result)
     setActive(null)
     setPhase('settled')
+
+    const allBusted = r.result.hands.every(h => h.outcome === 'lose' && h.total > 21)
+
+    if (allBusted) {
+      setHoleFlipped(true)
+      setRevealedDealerCount(r.result.dealerCards.length)
+      setOutcomeShown(true)
+      setDoubloons(r.result.newDoubloons)
+      setDailyWagered(r.result.dailyWagered)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
+      return
+    }
+
+    // Normal staged reveal.
     setHoleFlipped(false)
-    setRevealedDealerCount(2)        // initial 2 dealer cards shown right away (one is the still-face-down hole)
+    setRevealedDealerCount(2)
     setOutcomeShown(false)
 
     let elapsed = 350
