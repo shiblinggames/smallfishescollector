@@ -193,14 +193,16 @@ function CrewPanel({
             portrait surfaces the more interesting thing players should care
             about. Headline = first trait; "+N" = how many more are stacked on
             top, hinting "tap the card to see the rest." Buff/flaw color makes
-            the read instant. Hidden entirely when the crew has no traits. */}
-        {effects.length > 0 && (() => {
-          const head = CREW_EFFECTS[effects[0]]
-          if (!head) return null
-          const extra = effects.length - 1
-          const buff = head.kind === 'buff'
-          const tint = buff ? 'rgba(80,200,130,0.95)' : 'rgba(220,90,90,0.95)'
-          const text = buff ? '#cdf5dc' : '#f7c5c5'
+            the read instant. Trait-less crew now show a gray "Neutral" plate
+            so every card has the same silhouette — no more cards looking
+            visually shorter than their effect-having neighbors. */}
+        {(() => {
+          const head = effects.length > 0 ? CREW_EFFECTS[effects[0]] : null
+          const neutral = !head
+          const extra = neutral ? 0 : effects.length - 1
+          const buff = head?.kind === 'buff'
+          const tint = neutral ? 'rgba(150,150,150,0.85)' : buff ? 'rgba(80,200,130,0.95)' : 'rgba(220,90,90,0.95)'
+          const text = neutral ? '#c8c8c8' : buff ? '#cdf5dc' : '#f7c5c5'
           return (
             <div className="font-karla font-700" style={{
               position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
@@ -210,7 +212,8 @@ function CrewPanel({
               padding: '0.12rem 0.42rem', borderRadius: 3, whiteSpace: 'nowrap',
               overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {head.name}{extra > 0 ? <span style={{ color: tint, marginLeft: 4 }}>+{extra}</span> : null}
+              {neutral ? 'Neutral' : head!.name}
+              {extra > 0 ? <span style={{ color: tint, marginLeft: 4 }}>+{extra}</span> : null}
             </div>
           )
         })()}

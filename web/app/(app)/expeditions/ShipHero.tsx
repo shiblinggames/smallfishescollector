@@ -135,7 +135,20 @@ function PickerCrewCard({ card, selected, current, onSelect }: { card: RosterCre
             })}
           </div>
         ) : (
-          <p className="font-karla" style={{ fontSize: '0.56rem', color: '#5a6472' }}>No traits</p>
+          // Gray "Neutral" chip — matches the chip silhouette used on
+          // crew with traits so trait-less members aren't visually
+          // shorter / different. Read as: "this crew has no effects."
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+            <span className="font-karla font-700" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.56rem',
+              padding: '0.08rem 0.35rem', borderRadius: 4,
+              background: 'rgba(140,140,140,0.10)',
+              border: '1px solid rgba(150,150,150,0.30)',
+              color: '#a8aab0',
+            }}>
+              <span style={{ fontStyle: 'italic' }}>Neutral</span>
+            </span>
+          </div>
         )}
 
         {/* Expanded trait detail (scope + full description) */}
