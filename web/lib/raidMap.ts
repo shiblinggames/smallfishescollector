@@ -690,13 +690,8 @@ export const RAID_MAP: RaidNode[] = [
   {
     // Chapter II's boss raid. The Cartographer's full data + engine
     // (Mist Veil crew, Riposte signature, Tides, Astrolabe drops,
-    // challenge variant) are wired and tested; this node + the route
-    // page below complete the player-reachable surface. Held back by
-    // comingSoon until enemy + boss art ships — placeholder image is
-    // the generic raidlog icon. To go live: drop comingSoon, swap
-    // image to `THE_CARTOGRAPHER.enemies.cartographer.portrait`,
-    // and (separately) drop comingSoon on cartographer_reveal when
-    // that narrative is finished.
+    // challenge variant) are wired and tested. Live as of 2026-06-06
+    // once portrait art landed in the enemy-arts bucket.
     id: 'cartographer',
     type: 'raid',
     label: "The Cartographer's Survey",
@@ -704,10 +699,9 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "His ship goes down without a flag or a name on the hull. The seas he drew belong to no one now, and the charts in his cabin name half the danger lines you have not sailed yet.",
     requiresNode: 'cartographer_reveal',
     requiresNavLevel: 28,
-    comingSoon: true,
     route: '/raids/cartographer',
     raidId: THE_CARTOGRAPHER.raidId,
-    image: '/raidlog.png',
+    image: THE_CARTOGRAPHER.enemies.cartographer.portrait,
     detail: {
       description:
         "The Finndicate's chartmaker rides a slow-built galleon under the fog past the danger line, and every freight lane Krust ever ran was a thing he drew first. His crew sails the Sounding Fog for cover, and every aim through it lands a half-read shorter than it ought to. He himself counters a dodge with a brass-bound parry few captains see coming twice. Cut his hull and the chart line cuts with him.",
@@ -721,18 +715,16 @@ export const RAID_MAP: RaidNode[] = [
     // Challenge variant of The Cartographer. Same scaling rules as
     // Pete + Krust challenge nodes. No phase 2 — Riposte is already
     // a second mechanic layer on top of crew-wide Mist Veil; stacking
-    // a third would over-pack the fight. Held back by comingSoon
-    // alongside its parent until art lands.
+    // a third would over-pack the fight.
     id: 'cartographer_challenge',
     type: 'raid',
     label: "Challenge: The Cartographer's Survey",
     flavor: "The chartmaker put a fresh hull under the fog and a tighter watch on the line. He does not lose seas twice.",
     requiresNode: 'cartographer',
-    comingSoon: true,
     route: '/raids/cartographer/challenge',
     raidId: THE_CARTOGRAPHER_CHALLENGE.raidId,
     sideBranch: { parentId: 'cartographer' },
-    image: '/raidlog.png',
+    image: THE_CARTOGRAPHER.enemies.cartographer.portrait,
     detail: {
       description:
         "The same chart line again, sharper for the loss. The fog runs heavier, the Surveyor reads the water cleaner, and the Cartographer himself counters every dodge like a captain who has already seen this fight once. Crack his cabin this run and his own astrolabe rolls at twice the rate.",
