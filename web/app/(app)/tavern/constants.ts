@@ -42,3 +42,14 @@ export const SLOT_PARTIAL_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
 export const SLOTS_MIN_BET   = 10
 export const SLOTS_MAX_BET   = 500
 export const SLOTS_DAILY_CAP = 5000
+
+// ─── Blackjack ───────────────────────────────────────────────────────────────
+// Same wager band as C&A + Fish Slots so the tavern reads coherently.
+// The daily cap is enforced server-side as the sum of `total_wagered`
+// rows from blackjack_hands (initial wager + any doubles + splits +
+// insurance) for that day, NOT just the initial deal — so the cap
+// genuinely bounds the player's day at risk.
+export const BJ_MIN_BET   = 10
+export const BJ_MAX_BET   = 500
+export const BJ_DAILY_CAP = 5000
+export const BJ_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
