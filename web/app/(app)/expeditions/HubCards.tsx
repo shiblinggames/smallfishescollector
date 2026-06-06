@@ -12,7 +12,7 @@ import PopupShell from '@/components/PopupShell'
 import { RAID_ITEMS } from '@/lib/raidItems'
 import { saveEquippedRaidItems } from './actions'
 import { repairShip } from '@/app/(app)/raids/actions'
-import { assignCrew, type CrewMember } from '@/app/dev/crew/actions'
+import type { CrewMember } from '@/app/dev/crew/actions'
 import DailyVoyagePanel from './DailyVoyagePanel'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
@@ -89,7 +89,7 @@ export default function HubCards({
 }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<null | 'campaign' | 'voyages'>(null)
-  const [innerModal, setInnerModal] = useState<null | 'items' | 'crew'>(null)
+  const [innerModal, setInnerModal] = useState<null | 'items'>(null)
   const [, startTransition] = useTransition()
 
   // Esc closes the topmost modal layer
@@ -129,14 +129,6 @@ export default function HubCards({
     }
     startTransition(async () => {
       await saveEquippedRaidItems(next)
-      router.refresh()
-    })
-  }
-
-  // ── Crew assign / unassign — same pattern.
-  function setCrewSlot(crewId: number, slot: number | null) {
-    startTransition(async () => {
-      await assignCrew(crewId, slot)
       router.refresh()
     })
   }
@@ -301,13 +293,19 @@ export default function HubCards({
                   onRepair={doRepair}
                 />
               )}
-              {/* Crew row — tap opens a nested modal to assign / swap
-                  crew slots. Shows current assigned-vs-total count. */}
+              {/* Crew row — closes the prep modal and opens the ShipHero
+                  Loadout drawer (same picker UX as tapping a ship slot
+                  on the main expedition page). One canonical crew
+                  picker across both surfaces — was previously a bespoke
+                  in-prep editor that diverged from the loadout one. */}
               <PrepRow
                 label="Crew"
                 detail={`${assignedCrewCount}/${shipCrewSlots} assigned`}
                 ok={assignedCrewCount >= 1}
-                onClick={() => setInnerModal('crew')}
+                onClick={() => {
+                  setModal(null)
+                  window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { mode: 'campaign' } }))
+                }}
               />
               {/* Items row — tap opens a nested modal to toggle items. */}
               <PrepRow
@@ -544,52 +542,11 @@ export default function HubCards({
         </div>
       </PopupShell>
 
-      {/* ── Nested: Crew editor ────────────────────────────────────── */}
-      <PopupShell open={innerModal === 'crew'} onClose={() => setInnerModal(null)}>
-        <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
-          style={{
-            margin: 'auto', width: '100%', maxWidth: 420,
-            background: 'linear-gradient(180deg, #0e1626 0%, #070b14 100%)',
-            border: '1px solid rgba(125,160,216,0.5)',
-            borderRadius: 20, padding: '1.1rem 1rem 1rem',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
-            maxHeight: '88vh', overflowY: 'auto', overscrollBehavior: 'contain',
-          }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="font-karla font-700 uppercase tracking-[0.16em]"
-                style={{ fontSize: '0.55rem', color: 'rgba(125,160,216,0.7)' }}>
-                Crew Assignments
-              </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0' }}>
-                {assignedCrewCount}/{shipCrewSlots} assigned
-              </p>
-            </div>
-            <button
-              type="button" onClick={() => setInnerModal(null)}
-              aria-label="Close"
-              style={{
-                width: 30, height: 30, borderRadius: '50%', padding: 0,
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.16)',
-                color: '#cfcabf', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <CrewEditor
-            roster={roster}
-            shipSlots={shipCrewSlots}
-            onAssign={setCrewSlot}
-          />
-        </div>
-      </PopupShell>
+      {/* Crew is now handled by the ShipHero Loadout drawer — the
+          Crew prep row dispatches 'expedition:open-loadout' with
+          mode:'campaign' and the loadout drawer hosts the canonical
+          slot picker. One UI, two entry points (Manage Ship button +
+          this prep row). */}
     </>
   )
 }
@@ -764,134 +721,5 @@ function RepairRow({ owed, doubloons, busy, error, onRepair }: {
         </p>
       )}
     </div>
-  )
-}
-
-// ── Crew editor ───────────────────────────────────────────────────────
-// Minimal crew slot manager: shows each slot with its assigned crew (or
-// empty). Tap a slot to open a roster picker showing unassigned crew.
-// Captain is slot 0; remaining slots are crew positions.
-function CrewEditor({ roster, shipSlots, onAssign }: {
-  roster: CrewMember[]
-  shipSlots: number
-  onAssign: (crewId: number, slot: number | null) => void
-}) {
-  const [pickingSlot, setPickingSlot] = useState<number | null>(null)
-  const assignments: (CrewMember | null)[] = Array.from({ length: shipSlots }, (_, i) =>
-    roster.find(c => c.assignedSlot === i) ?? null
-  )
-  const unassigned = roster.filter(c => c.assignedSlot == null)
-
-  return (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {assignments.map((crew, slot) => {
-          const isCaptain = slot === 0
-          return (
-            <div
-              key={slot}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: 10, padding: '0.55rem 0.7rem', borderRadius: 10,
-                background: crew ? 'rgba(125,160,216,0.08)' : 'rgba(0,0,0,0.35)',
-                border: `1px solid ${crew ? 'rgba(125,160,216,0.32)' : 'rgba(255,255,255,0.1)'}`,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setPickingSlot(slot)}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 9,
-                  background: 'none', border: 'none', padding: 0,
-                  cursor: 'pointer', textAlign: 'left',
-                }}
-              >
-                <span className="font-karla font-700 uppercase"
-                  style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: isCaptain ? '#f0c040' : '#7090c0', minWidth: 48 }}>
-                  {isCaptain ? 'Captain' : `Slot ${slot}`}
-                </span>
-                {crew ? (
-                  <div style={{ minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.1 }}>{crew.name}</p>
-                    <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(240,237,232,0.55)' }}>
-                      PWR {crew.power} · AGI {crew.dodge} · FTN {crew.fortune}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#5a5856' }}>Empty — tap to assign</p>
-                )}
-              </button>
-              {crew && (
-                <button
-                  type="button"
-                  onClick={() => onAssign(crew.id, null)}
-                  aria-label="Unassign"
-                  style={{
-                    flexShrink: 0, width: 24, height: 24, borderRadius: '50%',
-                    background: 'rgba(248,113,113,0.1)',
-                    border: '1px solid rgba(248,113,113,0.32)',
-                    color: '#f87171', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Picker — shown when a slot is tapped. Lists unassigned crew. */}
-      {pickingSlot !== null && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-karla font-700 uppercase tracking-[0.14em]"
-              style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)' }}>
-              {pickingSlot === 0 ? 'Pick Captain' : `Pick crew for Slot ${pickingSlot}`}
-            </p>
-            <button
-              type="button"
-              onClick={() => setPickingSlot(null)}
-              className="font-karla font-700 uppercase tracking-[0.08em]"
-              style={{
-                fontSize: '0.55rem', color: 'rgba(240,237,232,0.55)',
-                background: 'transparent', border: 'none', cursor: 'pointer',
-                padding: '0.2rem 0.4rem',
-              }}
-            >Cancel</button>
-          </div>
-          {unassigned.length === 0 ? (
-            <p className="font-karla font-400 text-center py-3" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.4)' }}>
-              No unassigned crew. Unassign someone from a slot first.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {unassigned.map(c => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => { onAssign(c.id, pickingSlot); setPickingSlot(null) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    gap: 8, padding: '0.5rem 0.7rem', borderRadius: 8,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${RARITY_RING[c.rarity] ?? 'rgba(255,255,255,0.12)'}`,
-                    cursor: 'pointer', textAlign: 'left',
-                  }}
-                >
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8' }}>{c.name}</p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: 'rgba(240,237,232,0.55)' }}>
-                    PWR {c.power} · AGI {c.dodge} · FTN {c.fortune}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </>
   )
 }
