@@ -297,15 +297,17 @@ export default function HubCards({
               )}
               {/* Crew row — shows the actual slot circles (captain on
                   the left, crew beside it), mirroring the on-deck row
-                  on the expedition home page. Tapping any slot closes
-                  the prep modal and opens the Assign Crew slot picker
-                  for that specific slot. */}
+                  on the expedition home page. Tapping any slot opens
+                  the Assign Crew picker for that specific slot
+                  OVERLAID on this modal (picker uses a higher z than
+                  PopupShell). The prep modal stays open underneath so
+                  closing/confirming the picker lands the player back
+                  here — never on the loadout drawer. */}
               <CrewSlotRow
                 roster={roster}
                 shipCrewSlots={shipCrewSlots}
                 onPick={(pickSlot) => {
-                  setModal(null)
-                  window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { mode: 'campaign', pickSlot } }))
+                  window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { pickSlot } }))
                 }}
               />
               {/* Items row — tap opens a nested modal to toggle items. */}

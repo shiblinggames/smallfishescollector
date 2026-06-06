@@ -328,15 +328,20 @@ export default function ShipHero({
   useEffect(() => {
     function onOpen(e: Event) {
       const detail = (e as CustomEvent<{ mode?: 'campaign' | 'voyage'; pickSlot?: number }>).detail
-      setLoadoutMode(detail?.mode ?? null)
-      setLoadoutOpen(true)
+      // pickSlot path: open ONLY the slot picker — skip the loadout
+      // drawer entirely so closing/confirming doesn't strand the
+      // player on the drawer surface. Picker overlays whatever modal
+      // triggered it (e.g. the campaign prep modal) at a higher z.
       if (typeof detail?.pickSlot === 'number') {
         const i = detail.pickSlot
         setPickerSlot(i)
         setSheetOpen(true)
         setSortBy(null)
         setPendingCard(null)
+        return
       }
+      setLoadoutMode(detail?.mode ?? null)
+      setLoadoutOpen(true)
     }
     window.addEventListener('expedition:open-loadout', onOpen as EventListener)
     return () => window.removeEventListener('expedition:open-loadout', onOpen as EventListener)
@@ -1344,10 +1349,12 @@ export default function ShipHero({
         )}
       </AnimatePresence>
 
-      {/* Crew picker — opens from the deck slots OR the loadout drawer, so it
-          must live at the top level (not inside the loadout block) to render
-          whether or not the drawer is open. Fixed-positioned; z-index 110+
-          clears the page Nav and the drawer. */}
+      {/* Crew picker — opens from the deck slots, the loadout drawer, OR
+          the campaign prep modal in HubCards. Must live at the top level
+          (not inside the loadout block) to render whether or not the
+          drawer is open. Fixed-positioned; z-index 130+ clears the page
+          Nav, the loadout drawer, AND any sibling PopupShell modal
+          (default z 111) that triggered the picker. */}
       {sheetOpen && (() => {
         const slotAccent = pickerSlot === 0 ? '#f0c040' : '#60a5fa'
         const currentInSlot = pickerSlot !== null ? slots[pickerSlot] : null
@@ -1356,12 +1363,12 @@ export default function ShipHero({
               <>
                 <div
                   onClick={closeSheet}
-                  style={{ position: 'fixed', inset: 0, background: 'rgba(2,4,8,0.78)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', zIndex: 110 }}
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(2,4,8,0.78)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', zIndex: 130 }}
                 />
                 <div
                   onClick={e => e.stopPropagation()}
                   style={{
-                    position: 'fixed', zIndex: 111,
+                    position: 'fixed', zIndex: 131,
                     top: 'max(72px, env(safe-area-inset-top, 0px) + 16px)',
                     bottom: 0,
                     left: 'max(0px, calc(50% - 270px))',
