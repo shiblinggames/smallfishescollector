@@ -234,7 +234,7 @@ const KRUST_CHALLENGE_LOOT: typeof CAPTAIN_KRUST['loot'] = (() => {
 })()
 
 // The Cartographer's challenge loot. Doubles the special-drop rates
-// (Cartographer's Astrolabe 25 → 50, Captain's Astrolabe 5 → 10) so
+// (Cartographer's Astrolabe 25 → 50, Mastercraft Astrolabe 5 → 10) so
 // the legendary Astrolabe becomes the realistic chase reward on
 // challenge runs. Currency shrinks proportionally to keep the total
 // at 100. The 10% "ship skin reserved" slot from the normal loot

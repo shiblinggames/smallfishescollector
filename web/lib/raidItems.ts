@@ -122,8 +122,8 @@ export const RAID_ITEMS: RaidItemDef[] = [
   },
   // The Cartographer's signature drop — same two-tier shape as the
   // Corsair Cannon + Krust's Carapace pairs. Cartographer's Astrolabe
-  // is the standard, dropped from his normal raid. Captain's Astrolabe
-  // is the captain-grade version at higher numbers, dropped only at
+  // is the standard, dropped from his normal raid. Mastercraft Astrolabe
+  // is the master-grade version at higher numbers, dropped only at
   // the chase rate (and bumped by the challenge variant). Both grant
   // a player-side mirror of the boss's Riposte: on a successful dodge,
   // a chance to reflect a slice of the would-be hit back at him.
@@ -142,8 +142,8 @@ export const RAID_ITEMS: RaidItemDef[] = [
   },
   {
     id: 'captains_astrolabe',
-    name: "Captain's Astrolabe",
-    description: "On a successful dodge, 50% chance to deflect 75% of the incoming shot back at the attacker. The brass instrument the Cartographer kept on his own hip.",
+    name: 'Mastercraft Astrolabe',
+    description: "On a successful dodge, 50% chance to deflect 75% of the incoming shot back at the attacker. The Cartographer's own brass instrument, machined to a finer tolerance than any other in his cabin.",
     image: null,
     emoji: '🧭',
     rarity: 'legendary',

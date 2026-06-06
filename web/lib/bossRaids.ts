@@ -556,7 +556,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
     { id: 'pack_2',                 label: '200 Gems',                 image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
     // 30% special drops (ship skin TBA)
     { id: 'cartographers_astrolabe', label: "Cartographer's Astrolabe", image: null,                     emoji: '🧭',       rarity: 'epic',      weight: 25 },
-    { id: 'captains_astrolabe',      label: "Captain's Astrolabe",      image: null,                     emoji: '🧭',       rarity: 'legendary', weight: 5  },
+    { id: 'captains_astrolabe',      label: 'Mastercraft Astrolabe',    image: null,                     emoji: '🧭',       rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
     scout:        { gold: 50,  xp: 50  },
