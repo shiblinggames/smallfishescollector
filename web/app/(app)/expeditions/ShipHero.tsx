@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/(app)/raids/actions'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getShipClass } from '@/lib/shipClasses'
@@ -187,17 +187,38 @@ interface Props {
   shipClasses: Record<string, string>
 }
 
-function DrawerHandle() {
+// Drag handle for the loadout drawer. Touching this strip starts a
+// drag-to-dismiss gesture via the shared dragControls. The drawer
+// itself runs with dragListener=false so touches ANYWHERE ELSE inside
+// the drawer (scrolling content, tapping crew rows, etc.) don't get
+// captured as a drag — they reach the underlying scroll container.
+// Previously the whole drawer was draggable, which made scrolling
+// down look like a drag-down gesture and slammed the drawer closed
+// the moment offset.y crossed 80px or velocity exceeded 400.
+function DrawerHandle({ controls }: { controls: DragControls }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '0.55rem 0 0.1rem', cursor: 'grab' }}>
+    <div
+      onPointerDown={e => controls.start(e)}
+      style={{
+        display: 'flex', justifyContent: 'center',
+        padding: '0.55rem 0 0.45rem',
+        cursor: 'grab',
+        touchAction: 'none',
+      }}
+    >
       <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
     </div>
   )
 }
 
-function drawerDragProps(onClose: () => void) {
+function drawerDragProps(onClose: () => void, controls: DragControls) {
   return {
     drag: 'y' as const,
+    // dragListener=false → motion.div won't auto-attach a pointer
+    // listener; drag only starts when controls.start(e) fires from the
+    // DrawerHandle.
+    dragListener: false,
+    dragControls: controls,
     dragConstraints: { top: 0 },
     dragElastic: { top: 0, bottom: 0.35 },
     onDragEnd: (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
@@ -284,6 +305,10 @@ export default function ShipHero({
 
   // Modal state
   const [loadoutOpen, setLoadoutOpen] = useState(false)
+  // Drag-to-dismiss controls for the loadout drawer. Only fires from
+  // the drag handle (see DrawerHandle), so scrolling inside the
+  // drawer body doesn't get captured as a drag-down gesture.
+  const loadoutDragControls = useDragControls()
   const [breakdownScore, setBreakdownScore] = useState<'voyage' | 'raid' | null>(null)
   // Inline ship-upgrade modal — replaces the old "go to shipyard" link with a
   // one-tap upgrade for the next available tier, with a fall-through link to
@@ -716,7 +741,7 @@ export default function ShipHero({
               key="loadout-drawer"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-              {...drawerDragProps(closeLoadout)}
+              {...drawerDragProps(closeLoadout, loadoutDragControls)}
               style={{
                 position: 'fixed',
                 top: 'max(80px, env(safe-area-inset-top, 0px) + 20px)',
@@ -731,7 +756,7 @@ export default function ShipHero({
                 overflow: 'hidden',
               }}
             >
-              <DrawerHandle />
+              <DrawerHandle controls={loadoutDragControls} />
               {/* Sticky header — outside the scroll container so the close
                   button never scrolls off-screen. */}
               <div style={{
