@@ -26,6 +26,7 @@ export type CampaignCardData = {
   nextNodeName: string | null
   nextNodeImage: string | null
   nextNodeLocked: boolean
+  nextNodeLockReason: string | null
   clearedCount: number
   totalNodes: number
   repairOwed: number
@@ -182,6 +183,11 @@ export default function HubCards({
             <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#e8d8a8', lineHeight: 1.3 }}>
               {campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
             </p>
+            {campaign.nextNodeLocked && campaign.nextNodeLockReason && (
+              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#a8896a', lineHeight: 1.3, marginTop: 2 }}>
+                🔒 {campaign.nextNodeLockReason}
+              </p>
+            )}
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a7672', lineHeight: 1.3, marginTop: 2 }}>
               {campaign.clearedCount}/{campaign.totalNodes} cleared
             </p>
@@ -321,8 +327,8 @@ export default function HubCards({
               />
               {campaign.nextNodeLocked && (
                 <PrepRow
-                  label="Node unlocked"
-                  detail="Clear the previous node first"
+                  label="Node locked"
+                  detail={campaign.nextNodeLockReason ?? 'Locked'}
                   ok={false}
                   disabled
                 />
@@ -352,7 +358,7 @@ export default function HubCards({
                 campaign.repairOwed > 0
               const beginLabel =
                 !campaign.nextNodeId   ? 'Story Complete'
-                : campaign.nextNodeLocked ? 'Node Locked'
+                : campaign.nextNodeLocked ? (campaign.nextNodeLockReason ?? 'Node Locked')
                 : campaign.repairOwed > 0 ? 'Repair Ship First'
                 : 'Begin →'
               return (
