@@ -173,7 +173,7 @@ export interface RaidNode {
 
 // Ship-skin loot previews recolour this ship sprite (the tier-4 brigantine) so
 // players see the skin on an actual hull rather than a flat colour chip.
-const SHIP_SKIN_PREVIEW_IMG = '/models/brigantine.png'
+const SHIP_SKIN_PREVIEW_IMG = '/models/brigantine_v2.png'
 
 /** Derive a drop list (with rolled-once odds) from a boss raid's loot
  *  table so the node sheet and the live crate never drift apart.

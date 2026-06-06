@@ -73,7 +73,7 @@ export default async function MarketplacePage() {
               <Link href="/marketplace/shipyard" style={{ textDecoration: 'none', display: 'block' }}>
                 <DestCard
                   accent="#fb923c"
-                  art="/models/man-o-war.png"
+                  art="/models/man-o-war_v2.png"
                   artWidth={145}
                   eyebrow="Ship"
                   title="Shipyard"
