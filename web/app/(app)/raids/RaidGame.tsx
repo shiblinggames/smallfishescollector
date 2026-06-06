@@ -476,6 +476,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // RaidCombat reads it via prop. Tokens (guaranteedDodge etc.) are
   // tracked inside activeTideEffects and consumed-on-use by the engine.
   const [drawnTides, setDrawnTides] = useState<TideEvent[]>([])
+  // Mirror of drawnTides for use inside handleEnemyDefeated's tide
+  // check — that callback's deps array intentionally omits state that
+  // shouldn't recreate it, so reading `drawnTides` directly captures
+  // the initial empty array and the tide modal never fires. Refs
+  // always read the latest value (see the same pattern below for
+  // navXPRef, playerHPRef, etc.).
+  const drawnTidesRef = useRef<TideEvent[]>([])
   const [activeTideEffects, setActiveTideEffects] = useState<TideEffect[]>([])
   const [pendingTide, setPendingTide] = useState<TideEvent | null>(null)
   const pendingTideAdvanceRef = useRef<(() => void) | null>(null)
@@ -647,9 +654,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     // start empty (each retry rolls fresh). Pete + Krust have no
     // tides config so drawTides returns []; the modal never fires.
     if (config.tides) {
-      setDrawnTides(drawTides(config.tides.slots.length, config.tides.maxTier))
+      const drawn = drawTides(config.tides.slots.length, config.tides.maxTier)
+      setDrawnTides(drawn)
+      drawnTidesRef.current = drawn
     } else {
       setDrawnTides([])
+      drawnTidesRef.current = []
     }
     setActiveTideEffects([])
     setPendingTide(null)
@@ -1211,17 +1221,17 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       // = roundRef.current + 1. If a slot matches AND we haven't already
       // fired for it this run, queue the tide modal and gate the
       // advance behind its pick — same pattern as boss dialogue below.
-      if (config.tides && drawnTides.length > 0) {
+      if (config.tides && drawnTidesRef.current.length > 0) {
         const killCount = roundRef.current + 1
         const slotIdx = config.tides.slots.indexOf(killCount)
-        if (slotIdx >= 0 && !tidesFiredRef.current.has(slotIdx) && drawnTides[slotIdx]) {
+        if (slotIdx >= 0 && !tidesFiredRef.current.has(slotIdx) && drawnTidesRef.current[slotIdx]) {
           tidesFiredRef.current.add(slotIdx)
           pendingTideAdvanceRef.current = () => {
             roundRef.current = nextRound
             resetEnemyForRound(roundRef.current)
             setRoundDisplay(roundRef.current + 1)
           }
-          setPendingTide(drawnTides[slotIdx])
+          setPendingTide(drawnTidesRef.current[slotIdx])
           return
         }
       }
