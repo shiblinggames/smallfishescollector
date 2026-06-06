@@ -394,13 +394,17 @@ export default function HubCards({
       <PopupShell open={modal === 'voyages'} onClose={() => setModal(null)}>
         <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
           style={{
+            // No maxHeight / flex column / overflow:hidden — let the
+            // modal grow to its content and PopupShell own the scroll.
+            // Avoids the double-scroll trap (see note on the inner div
+            // below). Bottom safe-area + tab-bar clearance is already
+            // baked into PopupShell's paddingBottom, so the bottom of
+            // the modal always lands above the tab bar.
             margin: 'auto', width: '100%', maxWidth: 480,
             background: 'linear-gradient(180deg, #0c1828 0%, #050a14 100%)',
             border: `1px solid ${vAcc.bd}`,
             borderRadius: 20,
             boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
-            display: 'flex', flexDirection: 'column',
-            maxHeight: '88vh',
             overflow: 'hidden',
           }}
         >
@@ -408,7 +412,6 @@ export default function HubCards({
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '0.85rem 1rem 0.6rem',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
-            flexShrink: 0,
           }}>
             <div>
               <p className="font-karla font-700 uppercase tracking-[0.16em]"
@@ -437,18 +440,21 @@ export default function HubCards({
             </button>
           </div>
 
-          <div style={{
-            // flex: 1 + minHeight: 0 is the canonical fix for flex
-            // children that need to scroll inside a maxHeight parent.
-            // Without minHeight: 0 the inner div's min-height defaults
-            // to its content's intrinsic height, refuses to shrink,
-            // grows past maxHeight, parent clips it, and overflowY:auto
-            // never activates — players couldn't reach the bottom of
-            // the panel.
-            flex: 1, minHeight: 0,
-            overflowY: 'auto', overscrollBehavior: 'contain',
-            padding: '0.9rem 1rem 1.2rem',
-          }}>
+          {/* No more inner scroll container — the whole modal scrolls
+              inside PopupShell. Previously had `flex: 1 + minHeight: 0
+              + overflowY: auto + overscroll-behavior: contain` which
+              created a double-scroll trap: modal child's maxHeight:88vh
+              often exceeded PopupShell's available area (PopupShell
+              eats ~156px+safe-area for header+tabbar clearance), so
+              PopupShell needed to scroll to reveal the modal's bottom
+              — but `overscroll-behavior: contain` on the inner div
+              swallowed every swipe before it could bubble up. Bottom
+              events of an expanded voyage log were unreachable. Drop
+              the inner scroll layer entirely; modal expands to content,
+              PopupShell scrolls to reveal everything. Header is no
+              longer sticky (it scrolls with the body) — acceptable
+              tradeoff for actually-reachable content. */}
+          <div style={{ padding: '0.9rem 1rem 1.2rem' }}>
             <StatsBlock
               score={voyageScore}
               scoreLabel="Voyage Score"
