@@ -216,6 +216,23 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   krusts_carapace: { raidItem: 'krusts_carapace' },
 }
 
+/** Record a raid clear the MOMENT the boss dies — independent of the
+ *  loot-claim flow. Previously the raid_completions insert was bundled
+ *  inside claimRaidLoot(); any failure (network blip, player closing
+ *  the tab on the victory screen, etc.) silently dropped the clear and
+ *  the next story node stayed locked. Fire-and-forget; loot grant
+ *  remains in claimRaidLoot. */
+export async function recordRaidClear(raidId: string, elapsedMs: number): Promise<void> {
+  if (!raidId || !Number.isFinite(elapsedMs) || elapsedMs <= 0) return
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin
+    .from('raid_completions')
+    .insert({ user_id: user.id, elapsed_ms: Math.floor(elapsedMs), raid_id: raidId })
+}
+
 /** Record a single hit the player landed, keeping profiles.highest_raid_damage
  *  as the all-time max. Fired per new run-best from RaidGame (win OR loss), so
  *  "Biggest Hit" reflects the largest blow ever dealt, not just on clears.
@@ -280,15 +297,14 @@ export async function claimRaidLoot(
     }
   }
 
-  await Promise.all([
-    admin
-      .from('profiles')
-      .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
-      .eq('id', user.id),
-    admin
-      .from('raid_completions')
-      .insert({ user_id: user.id, elapsed_ms: elapsedMs, raid_id: raidId }),
-  ])
+  // raid_completions row is inserted by recordRaidClear() the moment
+  // the boss dies (see RaidGame handleEnemyDefeated). Keeping the
+  // clear independent of the loot grant means a failed loot persist
+  // doesn't strand the player on a still-locked next node.
+  await admin
+    .from('profiles')
+    .update({ doubloons, gems, ship_skins: newSkins, equipped_ship_skin: equippedSkin, raid_items: newRaidItems })
+    .eq('id', user.id)
 
   return {
     newShipSkins: newSkins.filter(s => !ownedSkins.includes(s)),

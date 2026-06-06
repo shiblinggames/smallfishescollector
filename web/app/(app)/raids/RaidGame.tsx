@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { claimRaidLoot, reportRaidSink, recordRaidHit } from './actions'
+import { claimRaidLoot, reportRaidSink, recordRaidHit, recordRaidClear } from './actions'
 import { awardRaidKill } from './raidXPActions'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -560,6 +560,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const reloadSlowRef          = useRef(false)
   const chargesRef            = useRef(1)
   const raidStartTimeRef      = useRef(0)
+  // Fire-once guard for the raid_completions insert. The clear is
+  // recorded the moment the boss dies (see handleEnemyDefeated) so a
+  // failed loot-claim or a closed tab on the victory screen never
+  // strands the player on a locked next node. The ref guarantees one
+  // insert per run even if handleEnemyDefeated is re-entered.
+  const clearRecordedRef      = useRef(false)
   const dodgePrimedRef        = useRef(false)
   const dodgeCooldownRef      = useRef(false)
   const actionLockedRef       = useRef(false)
@@ -619,6 +625,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     dodgePrimeElapsedRef.current = 0
     consecutiveDodgesRef.current = 0
     roundEndingRef.current       = false
+    clearRecordedRef.current     = false
 
     resetEnemyForRound(0)
 
@@ -1114,6 +1121,21 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         if (challengeBadgeId) {
           try { await unlockBadge(challengeBadgeId) } catch { /* badge unlock is best-effort */ }
         }
+        // Persist the raid_completions row NOW (boss is dead) — not
+        // inside claimRaidLoot, which used to be the only writer and
+        // silently dropped the clear if the player closed the tab on
+        // the loot screen or the loot grant failed. Fire-and-forget,
+        // guarded by clearRecordedRef so we never insert twice for
+        // the same run.
+        if (!clearRecordedRef.current) {
+          clearRecordedRef.current = true
+          const clearElapsedMs = performance.now() - raidStartTimeRef.current
+          recordRaidClear(config.raidId, clearElapsedMs).catch(() => {
+            // If the insert fails, clear the guard so the loot-claim
+            // path can still try once as a fallback.
+            clearRecordedRef.current = false
+          })
+        }
         // Award the boss kill XP + the full-clear bonus (25% of the run's kill
         // XP) in one persisted call, but animate the bar in two steps: the kill
         // XP now, then the bonus a beat later, synced to the loot stage's "Full
@@ -1543,6 +1565,15 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
               if (lootClaimed) return
               setLootClaimed(true)
               const elapsedMs = performance.now() - raidStartTimeRef.current
+              // Belt-and-braces: the boss-death recordRaidClear() is
+              // the primary writer, but if that insert failed (network
+              // blip, etc.) clearRecordedRef will be false. Retry once
+              // here so the clear still lands as long as the player
+              // reached the loot screen.
+              if (!clearRecordedRef.current) {
+                clearRecordedRef.current = true
+                recordRaidClear(config.raidId, elapsedMs).catch(() => { clearRecordedRef.current = false })
+              }
               try {
                 const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId)
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
