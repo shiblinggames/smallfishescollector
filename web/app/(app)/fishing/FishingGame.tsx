@@ -7205,7 +7205,14 @@ export default function FishingGame({
               transition={{ duration: 0.18 }}
               style={{
                 margin: 'auto', width: '100%', maxWidth: 360,
-                background: `linear-gradient(180deg, rgba(8,14,24,0.98) 0%, ${rarityColor}10 100%)`,
+                // Layered background — opaque dark base BEHIND a subtle
+                // rarity tint, instead of a single gradient that faded
+                // to ~6% opacity at the bottom (the old recipe let the
+                // fishing scene bleed through the lower half, making
+                // body text hard to read). The tint stays as the
+                // atmospheric flavor; the card itself is now fully
+                // opaque from top to bottom.
+                background: `linear-gradient(180deg, transparent 0%, ${rarityColor}26 100%), rgba(8,14,24,0.98)`,
                 border: `1px solid ${rarityColor}55`,
                 borderRadius: 18,
                 padding: '1.1rem 1rem 1.2rem',
