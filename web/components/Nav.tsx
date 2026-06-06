@@ -84,6 +84,14 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [displayDoubloons, setDisplayDoubloons] = useState(doubloons)
   const [displayGems, setDisplayGems] = useState(gems)
+  // Resync displayDoubloons/displayGems when fresh server props arrive
+  // (router.refresh, navigation, etc.). The useState initializers above
+  // only fire once at mount; without these effects, a server-side
+  // currency change (admin grant, server-action revalidate from another
+  // surface, etc.) would never reach the Nav until the player happened
+  // to perform an in-app action that dispatched a `*-changed` event.
+  useEffect(() => { setDisplayDoubloons(doubloons) }, [doubloons])
+  useEffect(() => { setDisplayGems(gems) }, [gems])
   // Profile-button avatar (desktop nav). Pulled on mount and cached in
   // localStorage so the avatar doesn't flash to "default" between tab
   // switches — Nav lives inside PageTransition which remounts on every
