@@ -553,6 +553,7 @@ function NodeDetailSheet({
   view,
   doubloons,
   ownedRaidItems,
+  equippedRaidItems,
   shipClasses,
   raidRecords,
   pickedEventChoiceId,
@@ -561,6 +562,7 @@ function NodeDetailSheet({
   view: RaidNodeView
   doubloons: number
   ownedRaidItems: string[]
+  equippedRaidItems: string[]
   shipClasses: Record<string, string>
   raidRecords: RaidRecords | null
   /** If this is an event node the player has already cleared, which
@@ -980,6 +982,50 @@ function NodeDetailSheet({
                 {detail.dropsNote}
               </p>
             )}
+            {/* Equip reminder — fires when the player has claimed an item
+                from this cache but hasn't slotted it into their raid
+                loadout yet. Easy to miss otherwise: the item lands in
+                inventory but does nothing until equipped, and the
+                node screen is the last surface the player saw before
+                walking away. Tap routes straight to the loadout
+                drawer so it's one step, not a hunt. */}
+            {cleared && (() => {
+              const ownedChoice = node.choice?.items.find(id => ownedRaidItems.includes(id))
+              if (!ownedChoice || equippedRaidItems.includes(ownedChoice)) return null
+              return (
+                <div style={{
+                  marginTop: '0.85rem',
+                  padding: '0.7rem 0.8rem',
+                  borderRadius: 10,
+                  background: 'rgba(240,192,64,0.10)',
+                  border: '1px solid rgba(240,192,64,0.42)',
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f0d695', lineHeight: 1.45 }}>
+                    <span className="font-700">Don&apos;t forget to equip it.</span> Items stay benched until you slot them into your raid loadout.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose()
+                      window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
+                    }}
+                    className="font-karla font-700 uppercase tracking-[0.08em]"
+                    style={{
+                      padding: '0.5rem 0.7rem', borderRadius: 8,
+                      fontSize: '0.66rem',
+                      background: 'rgba(240,192,64,0.18)',
+                      border: '1px solid rgba(240,192,64,0.55)',
+                      color: '#f0d695',
+                      cursor: 'pointer',
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    Open Loadout →
+                  </button>
+                </div>
+              )
+            })()}
           </div>
         )}
 
@@ -1874,7 +1920,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
+export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -2171,6 +2217,7 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
             view={selected}
             doubloons={doubloons}
             ownedRaidItems={ownedRaidItems}
+            equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
             raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
             pickedEventChoiceId={raidNodeChoices[selected.node.id]}
