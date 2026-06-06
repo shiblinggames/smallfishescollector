@@ -31,18 +31,21 @@ function suitColor(suit: string): string {
 // + suit in the corners and a random fish from the rank's pool drifting
 // over the middle. Fish art is locked per-card-instance via a parent ref
 // cache so it doesn't jitter between re-renders.
+//
+// Single locked size across every screen — the play / settle phase
+// transition was visibly resizing cards before and the jitter was
+// annoying. Picked 64×92 so five cards fit per row on a 360-wide phone
+// without wrapping.
+const CARD_DIMS = { w: 64, h: 92, rankFont: '0.88rem', suitFont: '0.88rem', cornerPad: 5 }
+
 function BlackjackCard({
   card,
   fishArt,
-  size = 'md',
 }: {
   card: Card | 'X'
   fishArt: string | null
-  size?: 'sm' | 'md'
 }) {
-  const dims = size === 'sm'
-    ? { w: 56, h: 80, rankFont: '0.78rem', suitFont: '0.78rem', cornerPad: 4 }
-    : { w: 72, h: 104, rankFont: '1rem', suitFont: '1rem', cornerPad: 5 }
+  const dims = CARD_DIMS
 
   if (card === 'X') {
     return (
@@ -265,7 +268,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {state.dealerCards.map((c, i) => (
-              <BlackjackCard key={i} card={c} fishArt={getFish(-1, i, c)} size="md" />
+              <BlackjackCard key={i} card={c} fishArt={getFish(-1, i, c)} />
             ))}
           </div>
         </div>
@@ -301,7 +304,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {h.cards.map((c, ci) => (
-                  <BlackjackCard key={ci} card={c} fishArt={getFish(hi, ci, c)} size="md" />
+                  <BlackjackCard key={ci} card={c} fishArt={getFish(hi, ci, c)} />
                 ))}
               </div>
             </div>
@@ -397,7 +400,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           </p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {r.dealerCards.map((c, i) => (
-              <BlackjackCard key={i} card={c} fishArt={getFish(-1, i, c)} size="sm" />
+              <BlackjackCard key={i} card={c} fishArt={getFish(-1, i, c)} />
             ))}
           </div>
         </div>
@@ -430,7 +433,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {h.cards.map((card, ci) => (
-                    <BlackjackCard key={ci} card={card} fishArt={getFish(hi, ci, card)} size="sm" />
+                    <BlackjackCard key={ci} card={card} fishArt={getFish(hi, ci, card)} />
                   ))}
                 </div>
               </div>
@@ -481,6 +484,12 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   return (
     <div style={{
       width: '100%', maxWidth: 420, margin: '0 auto',
+      // minHeight floor so the wager → play → settle phase swap
+      // doesn't yank the parent down by 200+ pixels each transition.
+      // Sized to comfortably hold the play screen with a single hand
+      // (~520px); larger content (splits, multi-card hands) grows
+      // past the floor as needed.
+      minHeight: 560,
       background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
       border: '1px solid rgba(196,169,106,0.25)',
       borderRadius: 18,
