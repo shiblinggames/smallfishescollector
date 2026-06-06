@@ -251,6 +251,27 @@ export default function ShipHero({
   // (same trick the upgrade panel uses lower down) so we don't need to
   // thread a separate prop in.
   const [equippedItems, setEquippedItems] = useState<string[]>(initialEquippedRaidItems)
+
+  // Resync local state when fresh server data arrives via router.refresh().
+  // Without these, a mutation in the HubCards prep modal (which fires
+  // router.refresh() to repaint the page) would update the server +
+  // re-render the ShipHero with fresh `roster` / `initialEquippedRaidItems`
+  // props, but the useState initializers above only fire once at mount —
+  // so the loadout drawer would stay stuck on stale assignments / items
+  // even though the data on disk had changed. Crew + items in HubCards
+  // and ShipHero now read from the same source and stay in lockstep.
+  useEffect(() => {
+    const arr: (RosterCrew | null)[] = Array(shipStats.crewSlots).fill(null)
+    for (const c of roster) {
+      if (c.assignedSlot != null && c.assignedSlot >= 0 && c.assignedSlot < shipStats.crewSlots) {
+        arr[c.assignedSlot] = c
+      }
+    }
+    setSlots(arr)
+  }, [roster, shipStats.crewSlots])
+  useEffect(() => {
+    setEquippedItems(initialEquippedRaidItems)
+  }, [initialEquippedRaidItems])
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
   const raidItemSlots = raidItemSlotsForTier(shipTierForSlots)
 
@@ -366,7 +387,10 @@ export default function ShipHero({
     const slot = pickerSlot
     const next = buildSlotsWith(card)
     setSlots(next); notifyCrewChanged(next); closeSheet()
-    startTransition(async () => { await assignCrew(card.id, slot) })
+    // router.refresh() so the HubCards prep modal (which reads roster
+    // assignments from the page's server-fetched props) sees the new
+    // assignment too — otherwise the two surfaces would drift.
+    startTransition(async () => { await assignCrew(card.id, slot); router.refresh() })
   }
 
   function removeFromSlot(i: number, e: React.MouseEvent) {
@@ -374,7 +398,7 @@ export default function ShipHero({
     const crew = slots[i]
     const next = [...slots]; next[i] = null
     setSlots(next); notifyCrewChanged(next)
-    if (crew) startTransition(async () => { await assignCrew(crew.id, null) })
+    if (crew) startTransition(async () => { await assignCrew(crew.id, null); router.refresh() })
   }
 
   // One round "on-deck" slot (filled portrait or empty dashed circle).
