@@ -2,8 +2,9 @@ import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getDailyWagered, getSlotsDailyWagered } from './actions'
-import { DAILY_CAP, SLOTS_DAILY_CAP } from './constants'
+import { getSlotsDailyWagered } from './actions'
+import { getDailyWagered as getBlackjackDailyWagered } from './blackjack/actions'
+import { BJ_DAILY_CAP, SLOTS_DAILY_CAP } from './constants'
 import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
 import GameCard from './GameCard'
@@ -33,7 +34,7 @@ const cachedFotdAttempt = cache(async () => {
   return data
 })
 
-const cachedDailyWagered = cache(() => getDailyWagered())
+const cachedBlackjackDailyWagered = cache(() => getBlackjackDailyWagered())
 const cachedSlotsDailyWagered = cache(() => getSlotsDailyWagered())
 const cachedChartState = cache(() => getChartState())
 
@@ -157,22 +158,22 @@ function FeaturesSection() {
 }
 
 async function ArcadeSection() {
-  const [dailyWagered, slotsDailyWagered] = await Promise.all([
-    cachedDailyWagered(),
+  const [blackjackDailyWagered, slotsDailyWagered] = await Promise.all([
+    cachedBlackjackDailyWagered(),
     cachedSlotsDailyWagered(),
   ])
-  const crownCapReached = dailyWagered >= DAILY_CAP
+  const blackjackCapReached = blackjackDailyWagered >= BJ_DAILY_CAP
   const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
   return (
     <div className="grid grid-cols-2 gap-3">
       <GameCard
-        href="/tavern/crown-and-anchor"
+        href="/tavern/blackjack"
         eyebrow="Arcade"
-        title="Crown & Anchor"
-        completed={crownCapReached}
+        title="Blackjack"
+        completed={blackjackCapReached}
         variant="compact"
-        art="/crownandanchor.png"
-        accent="#fb923c"
+        art="/cardbacknew.png"
+        accent="#c63838"
       />
       <GameCard
         href="/tavern/slots"

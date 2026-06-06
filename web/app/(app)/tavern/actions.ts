@@ -3,89 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET, SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PARTIAL_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_DAILY_CAP } from './constants'
-import type { Symbol, SlotSymbolId } from './constants'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PARTIAL_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_DAILY_CAP } from './constants'
+import type { SlotSymbolId } from './constants'
 
-function randomSymbol(): Symbol {
-  return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
-}
-
-export async function getDailyWagered(): Promise<number> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return 0
-  const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
-  const { data } = await admin
-    .from('dice_rolls')
-    .select('wager')
-    .eq('user_id', user.id)
-    .gte('created_at', today)
-  return (data ?? []).reduce((sum, r) => sum + r.wager, 0)
-}
-
-export interface RollResult {
-  result: Symbol[]
-  matches: number
-  payout: number
-  net: number
-  newDoubloons: number
-  dailyWagered: number
-}
-
-export async function rollDice(symbol: Symbol, wager: number): Promise<RollResult | { error: string }> {
-  if (!SYMBOLS.includes(symbol)) return { error: 'Invalid symbol' }
-  if (wager < MIN_BET || wager > MAX_BET) return { error: 'Invalid wager' }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons')
-    .eq('id', user.id)
-    .single()
-  if (!profile || profile.doubloons < wager) return { error: 'Insufficient doubloons' }
-
-  const today = new Date().toISOString().split('T')[0]
-  const { data: todayRolls } = await admin
-    .from('dice_rolls')
-    .select('wager')
-    .eq('user_id', user.id)
-    .gte('created_at', today)
-  const totalWagered = (todayRolls ?? []).reduce((sum, r) => sum + r.wager, 0)
-  if (totalWagered + wager > DAILY_CAP) return { error: `Daily limit reached (${DAILY_CAP} ⟡)` }
-
-  const result: Symbol[] = [randomSymbol(), randomSymbol(), randomSymbol()]
-  const matches = result.filter((s) => s === symbol).length
-  // Standard Crown & Anchor: every matching die returns your wager
-  // PLUS 1× the wager as winnings. So 1 match → 2× return (+1× net),
-  // 2 → 3× return (+2× net), 3 → 4× return (+3× net). Matches the
-  // displayed rules ("win 1× · 2× · 3×") and lands the game at ~92%
-  // RTP — same neighborhood as Fish Slots. Was previously
-  // `wager * matches` which made 1 match break even, gave the game a
-  // ~50% theoretical house edge, and contradicted the rules line at
-  // the bottom of the screen.
-  const payout = matches > 0 ? wager * (matches + 1) : 0
-  const net = payout - wager
-  const newDoubloons = profile.doubloons + net
-
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
-    admin.from('dice_rolls').insert({ user_id: user.id, symbol, wager, result, matches, payout }),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: net,
-      reason: `Crown & Anchor: ${matches} match${matches !== 1 ? 'es' : ''} on ${symbol}`,
-    }),
-  ])
-
-  revalidatePath('/tavern')
-  return { result, matches, payout, net, newDoubloons, dailyWagered: totalWagered + wager }
-}
+// Crown & Anchor was retired 2026-06-06 — replaced by Blackjack
+// (app/(app)/tavern/blackjack/actions.ts). The dice_rolls table stays
+// in the DB as historical record but no code writes to it anymore.
 
 // ─── Fish Slots ───────────────────────────────────────────────────────────────
 

@@ -1,9 +1,6 @@
-export const SYMBOLS = ['anchor', 'crown', 'heart', 'diamond', 'spade', 'club'] as const
-export type Symbol = typeof SYMBOLS[number]
-
-export const DAILY_CAP = 5000
-export const MAX_BET   = 500
-export const MIN_BET   = 10
+// Crown & Anchor constants (SYMBOLS, DAILY_CAP, MAX_BET, MIN_BET) were
+// removed 2026-06-06 when C&A was retired in favor of Blackjack. The
+// Blackjack equivalents (BJ_*) are defined below.
 
 // ─── Fish Slots ───────────────────────────────────────────────────────────────
 
