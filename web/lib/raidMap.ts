@@ -292,10 +292,9 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     subtitle:   'The shadow you have been pulling at finally has a name.',
     // Post-Krust setup arc: finndicate_notice → smugglers_chart →
     // last_cache → cartographer_reveal → cartographer → cartographer_challenge.
-    // Both raid nodes are wired but gated by comingSoon (art assets
-    // still pending). A chapter_2_class node will land later — when
-    // it does, this lastNodeId bumps to that, mirroring chapter I.
-    // Chapter III only starts after a new RAID_CHAPTERS entry is added.
+    // A chapter_2_class node will land later — when it does, this
+    // lastNodeId bumps to that, mirroring chapter I. Chapter III only
+    // starts after a new RAID_CHAPTERS entry is added.
     lastNodeId: 'cartographer_challenge',
   },
 ]
@@ -654,10 +653,10 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The scouts sail off, one way or another, and word of your name passes through the cold water faster than any chart of yours could chase it.",
     requiresNode: 'last_cache',
     requiresNavLevel: 25,
-    // Soft-disabled while the narrative + balance of the three choices
-    // (and what the "release" mercy path quietly buys later) is still
-    // being designed. Drop this flag when the node is ready to ship.
-    comingSoon: true,
+    // Mercy path ("release") currently pays no immediate outcome; its
+    // delayed payoff is wired in later content. The choice copy hints
+    // at it ("the cold water remembers") so players sense the cost is
+    // not zero, but no mechanic backs it yet — wire when ready.
     image: '/raidlog.png',
     event: {
       choices: [
@@ -670,7 +669,7 @@ export const RAID_MAP: RaidNode[] = [
         {
           id: 'release',
           label: 'Cut them loose',
-          description: "Send them back untouched and without a message. A captain who keeps the high water remembers his own, and sometimes that earns him a sail in his lee when he needs one.",
+          description: "Send them back untouched and without a message. A captain who keeps the high water remembers his own, and sometimes that earns him a sail in his lee when he needs one. The cold water has a long memory.",
           outcome: { type: 'none' },
         },
         {
