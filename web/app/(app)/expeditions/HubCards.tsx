@@ -438,7 +438,15 @@ export default function HubCards({
           </div>
 
           <div style={{
-            flex: 1, overflowY: 'auto', overscrollBehavior: 'contain',
+            // flex: 1 + minHeight: 0 is the canonical fix for flex
+            // children that need to scroll inside a maxHeight parent.
+            // Without minHeight: 0 the inner div's min-height defaults
+            // to its content's intrinsic height, refuses to shrink,
+            // grows past maxHeight, parent clips it, and overflowY:auto
+            // never activates — players couldn't reach the bottom of
+            // the panel.
+            flex: 1, minHeight: 0,
+            overflowY: 'auto', overscrollBehavior: 'contain',
             padding: '0.9rem 1rem 1.2rem',
           }}>
             <StatsBlock
