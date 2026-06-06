@@ -13,7 +13,10 @@ import { RAID_ITEMS } from '@/lib/raidItems'
 import { saveEquippedRaidItems } from './actions'
 import { repairShip } from '@/app/(app)/raids/actions'
 import type { CrewMember } from '@/app/dev/crew/actions'
+import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import DailyVoyagePanel from './DailyVoyagePanel'
+
+const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import { getRankTitle, type ShipStats } from '@/lib/expeditions'
@@ -49,7 +52,6 @@ interface Props {
   raidItemSlots: number
   roster: CrewMember[]
   shipCrewSlots: number
-  assignedCrewCount: number
   // Live readiness numbers (mirrors ShipHero's loadout math). Surfaced
   // inside the prep modals so the player sees what they're committing
   // with before tapping Begin / Set Sail.
@@ -83,7 +85,7 @@ const RARITY_RING: Record<number, string> = {
 export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
-  roster, shipCrewSlots, assignedCrewCount,
+  roster, shipCrewSlots,
   shipStats, voyageScore, raidScore,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
 }: Props) {
@@ -293,21 +295,15 @@ export default function HubCards({
                   onRepair={doRepair}
                 />
               )}
-              {/* Crew row — closes the prep modal and opens the Assign
-                  Crew slot picker directly (skips the Loadout drawer
-                  surface and jumps straight to the same picker UX as
-                  tapping a ship slot circle). Picks the first empty
-                  crew slot (1..N-1; slot 0 = captain). If all crew
-                  slots are full, falls back to slot 1 so the player
-                  can swap. */}
-              <PrepRow
-                label="Crew"
-                detail={`${assignedCrewCount}/${shipCrewSlots} assigned`}
-                ok={assignedCrewCount >= 1}
-                onClick={() => {
-                  const filled = new Set(roster.map(c => c.assignedSlot).filter((s): s is number => s != null))
-                  let pickSlot = 1
-                  for (let i = 1; i < shipCrewSlots; i++) { if (!filled.has(i)) { pickSlot = i; break } }
+              {/* Crew row — shows the actual slot circles (captain on
+                  the left, crew beside it), mirroring the on-deck row
+                  on the expedition home page. Tapping any slot closes
+                  the prep modal and opens the Assign Crew slot picker
+                  for that specific slot. */}
+              <CrewSlotRow
+                roster={roster}
+                shipCrewSlots={shipCrewSlots}
+                onPick={(pickSlot) => {
                   setModal(null)
                   window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { mode: 'campaign', pickSlot } }))
                 }}
@@ -625,6 +621,74 @@ function StatTile({ label, value }: { label: string; value: number | string }) {
 // ── Prep row primitive ────────────────────────────────────────────────
 // Single tappable row with a check icon, label, and a side detail. Used
 // for Crew / Equip Items inside the campaign + voyages modals.
+// Crew row showing the actual slot circles (captain on the left, crew
+// to the right) — mirrors the on-deck row from the expedition home
+// page. Each circle is tappable: filled circles show the assigned
+// crew portrait with a rarity ring, empty circles show a dashed +.
+// Tap → fires onPick(slotIndex), parent dispatches the loadout event.
+function CrewSlotRow({ roster, shipCrewSlots, onPick }: {
+  roster: CrewMember[]
+  shipCrewSlots: number
+  onPick: (slot: number) => void
+}) {
+  const slots: (CrewMember | null)[] = Array(shipCrewSlots).fill(null)
+  for (const c of roster) {
+    if (c.assignedSlot != null && c.assignedSlot >= 0 && c.assignedSlot < shipCrewSlots) {
+      slots[c.assignedSlot] = c
+    }
+  }
+  const CAPTAIN_SIZE = 48
+  const CREW_SIZE = 40
+  function circle(card: CrewMember | null, i: number, size: number) {
+    const isCaptain = i === 0
+    const rc = card ? (CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764') : '#6a6764'
+    const ring = card ? (isCaptain ? '#f0c040' : rc) : (isCaptain ? '#f0c040' : 'rgba(255,255,255,0.55)')
+    if (card) {
+      return (
+        <button type="button" onClick={() => onPick(i)} aria-label={isCaptain ? 'Change captain' : `Change crew slot ${i + 1}`}
+          style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: `2px solid ${ring}`, padding: 0, background: 'rgba(6,9,16,0.85)', boxShadow: '0 2px 6px rgba(0,0,0,0.55)' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={CREW_IMG_BASE + card.filename} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+        </button>
+      )
+    }
+    return (
+      <button type="button" onClick={() => onPick(i)} aria-label={isCaptain ? 'Assign captain' : `Assign crew slot ${i + 1}`}
+        style={{ width: size, height: size, borderRadius: '50%', border: `2px dashed ${ring}`, background: 'rgba(6,9,16,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+        <svg width={size * 0.36} height={size * 0.36} viewBox="0 0 24 24" fill="none" stroke={isCaptain ? '#f0c040' : 'rgba(255,255,255,0.7)'} strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    )
+  }
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '0.55rem 0.7rem', borderRadius: 10,
+      background: 'rgba(0,0,0,0.32)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}>
+      {/* Captain — own little cluster on the left with a crown */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+        <div style={{ position: 'relative' }}>
+          <div aria-hidden style={{ position: 'absolute', top: -9, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}>
+              <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
+            </svg>
+          </div>
+          {circle(slots[0], 0, CAPTAIN_SIZE)}
+        </div>
+      </div>
+      {/* Divider */}
+      <div aria-hidden style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.08)', margin: '0.15rem 0' }} />
+      {/* Crew slots row */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 7, flex: 1 }}>
+        {slots.slice(1).map((c, idx) => (
+          <div key={idx + 1}>{circle(c, idx + 1, CREW_SIZE)}</div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function PrepRow({ label, detail, ok, onClick, disabled }: {
   label: string
   detail: string

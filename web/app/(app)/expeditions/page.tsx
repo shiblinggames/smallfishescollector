@@ -194,7 +194,6 @@ async function ExpeditionHub() {
     'error' in dailyVoyageState ? null : (dailyVoyageState.readyVoyage as { route: string } | null),
   )
 
-  const assignedCount = roster.filter(c => c.assignedSlot != null).length
 
   // Live voyage + raid scores derived from the currently assigned crew —
   // mirrors ShipHero's loadout math so the modal numbers match what the
@@ -232,7 +231,6 @@ async function ExpeditionHub() {
       raidItemSlots={raidItemSlotsForTier(shipTier)}
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
-      assignedCrewCount={assignedCount}
       shipStats={shipStats}
       voyageScore={voyageScore}
       raidScore={raidRating.score}
