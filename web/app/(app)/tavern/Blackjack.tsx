@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { BJ_BET_PRESETS, BJ_DAILY_CAP, BJ_MAX_BET, BJ_MIN_BET } from './constants'
 import {
   dealBlackjack, hit, stand, doubleDown, split,
@@ -37,6 +38,37 @@ function suitColor(suit: string): string {
 // annoying. Picked 64×92 so five cards fit per row on a 360-wide phone
 // without wrapping.
 const CARD_DIMS = { w: 64, h: 92, rankFont: '0.88rem', suitFont: '0.88rem', cornerPad: 5 }
+
+// 3D flip wrapper — used for the dealer's hole card. Renders the
+// cardback on the front face and the real card on the back face; a
+// 180° rotateY transition flips between them. backfaceVisibility:
+// hidden hides whichever face is rotated away. Pure CSS, no library.
+function FlipCard({ flipped, card, fishArt }: { flipped: boolean; card: Card; fishArt: string | null }) {
+  return (
+    <div style={{ perspective: 900, width: CARD_DIMS.w, height: CARD_DIMS.h, flexShrink: 0 }}>
+      <div style={{
+        position: 'relative', width: '100%', height: '100%',
+        transformStyle: 'preserve-3d',
+        transition: 'transform 580ms cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden',
+        }}>
+          <BlackjackCard card="X" fishArt={null} />
+        </div>
+        <div style={{
+          position: 'absolute', inset: 0,
+          WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden',
+          transform: 'rotateY(180deg)',
+        }}>
+          <BlackjackCard card={card} fishArt={fishArt} />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function BlackjackCard({
   card,
@@ -131,6 +163,22 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   // Reset whenever a new hand deals.
   const fishCacheRef = useRef<Map<string, string>>(new Map())
 
+  // Reveal sequence on settle. The server returns the full result
+  // instantly, but UX-wise we want the player to watch the dealer's
+  // hole card flip, then any extra dealer draws come in one at a time,
+  // before the outcome panel slides up. These flags drive that
+  // staging — see the timeouts in applyActionResult below.
+  const [holeFlipped, setHoleFlipped] = useState(false)
+  const [revealedDealerCount, setRevealedDealerCount] = useState(0)
+  const [outcomeShown, setOutcomeShown] = useState(false)
+  // Track pending timeouts so a fast Play-Again tap doesn't leave
+  // stale fires racing the next hand.
+  const revealTimersRef = useRef<number[]>([])
+  function clearRevealTimers() {
+    for (const id of revealTimersRef.current) clearTimeout(id)
+    revealTimersRef.current = []
+  }
+
   function getFish(handIdx: number, cardIdx: number, card: Card | 'X'): string | null {
     if (card === 'X') return null
     const key = `${handIdx}-${cardIdx}-${card}`
@@ -159,14 +207,44 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       setDailyWagered(BJ_DAILY_CAP - r.state.dailyRemaining)
       setPhase('play')
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.state.doubloons }))
-    } else {
-      setResult(r.result)
+      return
+    }
+    // Settled — orchestrate the reveal sequence:
+    //   1. Switch to settle screen with the dealer's first card visible
+    //      and the hole still face-down (holeFlipped=false). Player
+    //      hands are visible immediately (player already saw them).
+    //   2. After 350ms: flip the hole card (580ms 3D rotation).
+    //   3. After the flip completes: deal any additional dealer cards
+    //      one at a time at 500ms intervals.
+    //   4. After the last card: 400ms beat, then reveal the outcome
+    //      panel (net delta, per-hand chips, Play Again button) and
+    //      update the player's doubloons balance.
+    clearRevealTimers()
+    setResult(r.result)
+    setActive(null)
+    setPhase('settled')
+    setHoleFlipped(false)
+    setRevealedDealerCount(2)        // initial 2 dealer cards shown right away (one is the still-face-down hole)
+    setOutcomeShown(false)
+
+    let elapsed = 350
+    revealTimersRef.current.push(window.setTimeout(() => setHoleFlipped(true), elapsed))
+    elapsed += 580                    // flip duration
+
+    const extraDealer = Math.max(0, r.result.dealerCards.length - 2)
+    for (let i = 0; i < extraDealer; i++) {
+      elapsed += 500
+      const target = 3 + i           // revealedDealerCount after this fires
+      revealTimersRef.current.push(window.setTimeout(() => setRevealedDealerCount(target), elapsed))
+    }
+
+    elapsed += 400
+    revealTimersRef.current.push(window.setTimeout(() => {
+      setOutcomeShown(true)
       setDoubloons(r.result.newDoubloons)
       setDailyWagered(r.result.dailyWagered)
-      setActive(null)
-      setPhase('settled')
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
-    }
+    }, elapsed))
   }
 
   function fireAction(fn: () => Promise<{ kind: 'active'; state: ClientState } | { kind: 'settled'; result: SettleResult } | { error: string }>) {
@@ -177,16 +255,28 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   }
 
   function startDeal() {
+    clearRevealTimers()
     fishCacheRef.current.clear()
     setResult(null)
+    setHoleFlipped(false)
+    setRevealedDealerCount(0)
+    setOutcomeShown(false)
     fireAction(() => dealBlackjack(wager))
   }
 
   function nextHand() {
+    clearRevealTimers()
     setResult(null)
     setActive(null)
+    setHoleFlipped(false)
+    setRevealedDealerCount(0)
+    setOutcomeShown(false)
     setPhase('wager')
   }
+
+  // Clear pending reveal timers on unmount so a navigated-away player
+  // doesn't get a stray setState after the component is gone.
+  useEffect(() => () => clearRevealTimers(), [])
 
   // ── Renderers ──────────────────────────────────────────────────────────
 
@@ -268,7 +358,15 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {state.dealerCards.map((c, i) => (
-              <BlackjackCard key={i} card={c} fishArt={getFish(-1, i, c)} />
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: -18, scale: 0.85 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.28, delay: i * 0.08 }}
+                style={{ flexShrink: 0 }}
+              >
+                <BlackjackCard card={c} fishArt={getFish(-1, i, c)} />
+              </motion.div>
             ))}
           </div>
         </div>
@@ -304,7 +402,15 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {h.cards.map((c, ci) => (
-                  <BlackjackCard key={ci} card={c} fishArt={getFish(hi, ci, c)} />
+                  <motion.div
+                    key={ci}
+                    initial={{ opacity: 0, y: -18, scale: 0.85 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.28, delay: ci * 0.08 }}
+                    style={{ flexShrink: 0 }}
+                  >
+                    <BlackjackCard card={c} fishArt={getFish(hi, ci, c)} />
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -384,28 +490,67 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     const net = r.netDelta
     const netColor = net > 0 ? '#7ad3a0' : net < 0 ? '#f08a8a' : '#c4a96a'
     const headlineWord = net > 0 ? 'Winner' : net < 0 ? 'Down' : 'Push'
+    const dealerTotalVisible = holeFlipped
+      ? r.dealerTotal
+      : (() => {
+          // Pre-flip: only the up card counts in the visible total —
+          // hides the implied total that would otherwise spoil the
+          // hole reveal.
+          const up = r.dealerCards[0]
+          const rank = up.charAt(0)
+          if (rank === 'A') return 11
+          if (rank === 'T' || rank === 'J' || rank === 'Q' || rank === 'K') return 10
+          return Number(rank)
+        })()
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-        <div style={{ textAlign: 'center' }}>
+        {/* Net delta — fades in only after the reveal finishes. */}
+        <motion.div
+          initial={false}
+          animate={{ opacity: outcomeShown ? 1 : 0, y: outcomeShown ? 0 : -8 }}
+          transition={{ duration: 0.35 }}
+          style={{ textAlign: 'center', pointerEvents: outcomeShown ? 'auto' : 'none' }}
+        >
           <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: netColor, marginBottom: 4 }}>{headlineWord}</p>
           <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: netColor, lineHeight: 1 }}>
             {net > 0 ? '+' : ''}{net.toLocaleString()} ⟡
           </p>
-        </div>
+        </motion.div>
 
-        {/* Dealer */}
+        {/* Dealer — cards reveal in sequence; index 1 is the FlipCard hole. */}
         <div>
           <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a', marginBottom: 6 }}>
-            Dealer · {r.dealerTotal}{r.dealerBust ? ' · Bust' : r.dealerNatural ? ' · Blackjack' : ''}
+            Dealer · {dealerTotalVisible}{outcomeShown && r.dealerBust ? ' · Bust' : outcomeShown && r.dealerNatural ? ' · Blackjack' : ''}
           </p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {r.dealerCards.map((c, i) => (
-              <BlackjackCard key={i} card={c} fishArt={getFish(-1, i, c)} />
-            ))}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+            {r.dealerCards.map((c, i) => {
+              if (i >= revealedDealerCount) return null
+              const fish = getFish(-1, i, c)
+              if (i === 1) {
+                // Hole card — always rendered, flips when holeFlipped.
+                return <FlipCard key={i} flipped={holeFlipped} card={c} fishArt={fish} />
+              }
+              // First card was already visible during play; later cards
+              // slide in as they're drawn.
+              return (
+                <motion.div
+                  key={i}
+                  initial={i >= 2 ? { opacity: 0, y: -18, scale: 0.85 } : false}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.32 }}
+                  style={{ flexShrink: 0 }}
+                >
+                  <BlackjackCard card={c} fishArt={fish} />
+                </motion.div>
+              )
+            })}
           </div>
         </div>
 
-        {/* Player hands */}
+        {/* Player hands — cards visible immediately. Outcome chip only
+            shows up post-reveal so the player doesn't see the verdict
+            spoiled before the dealer plays out. */}
         <div>
           <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7ad3a0', marginBottom: 6 }}>
             Your Hand{r.hands.length > 1 ? 's' : ''}
@@ -419,17 +564,42 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               <div key={hi} style={{
                 marginBottom: hi === r.hands.length - 1 ? 0 : 10,
                 padding: '0.6rem 0.7rem',
-                background: `${c}12`,
-                border: `1px solid ${c}55`,
+                background: outcomeShown ? `${c}12` : 'rgba(255,255,255,0.025)',
+                border: `1px solid ${outcomeShown ? c + '55' : 'rgba(255,255,255,0.08)'}`,
                 borderRadius: 10,
+                transition: 'background 0.3s, border-color 0.3s',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: c, letterSpacing: '0.1em' }}>
-                    {label} · {h.total}{h.doubled ? ' · DD' : ''}
-                  </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: c }}>
-                    {h.net > 0 ? '+' : ''}{h.net.toLocaleString()} ⟡
-                  </p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, minHeight: '0.95rem' }}>
+                  <AnimatePresence>
+                    {outcomeShown && (
+                      <motion.p
+                        key="outcome-label"
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="font-karla font-700 uppercase"
+                        style={{ fontSize: '0.58rem', color: c, letterSpacing: '0.1em' }}
+                      >
+                        {label} · {h.total}{h.doubled ? ' · DD' : ''}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                  <AnimatePresence>
+                    {outcomeShown && (
+                      <motion.p
+                        key="outcome-net"
+                        initial={{ opacity: 0, x: 6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="font-cinzel font-700"
+                        style={{ fontSize: '0.8rem', color: c }}
+                      >
+                        {h.net > 0 ? '+' : ''}{h.net.toLocaleString()} ⟡
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {h.cards.map((card, ci) => (
@@ -441,37 +611,52 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           })}
         </div>
 
-        {r.insurance.taken && (
-          <div style={{
-            padding: '0.55rem 0.7rem',
-            borderRadius: 8,
-            background: 'rgba(125,160,216,0.08)',
-            border: '1px solid rgba(125,160,216,0.35)',
-            fontSize: '0.7rem',
-          }}>
-            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ color: '#bcd0ea' }}>
-              Insurance · {r.insurance.win ? 'Hit' : 'Miss'}
-            </p>
-            <p className="font-karla" style={{ color: '#9aa4b5', marginTop: 2 }}>
-              {r.insurance.amount} ⟡ side-bet · {r.insurance.net > 0 ? '+' : ''}{r.insurance.net.toLocaleString()} ⟡
-            </p>
-          </div>
-        )}
+        <AnimatePresence>
+          {outcomeShown && r.insurance.taken && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                padding: '0.55rem 0.7rem',
+                borderRadius: 8,
+                background: 'rgba(125,160,216,0.08)',
+                border: '1px solid rgba(125,160,216,0.35)',
+                fontSize: '0.7rem',
+              }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ color: '#bcd0ea' }}>
+                Insurance · {r.insurance.win ? 'Hit' : 'Miss'}
+              </p>
+              <p className="font-karla" style={{ color: '#9aa4b5', marginTop: 2 }}>
+                {r.insurance.amount} ⟡ side-bet · {r.insurance.net > 0 ? '+' : ''}{r.insurance.net.toLocaleString()} ⟡
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <button
-          type="button"
-          onClick={nextHand}
-          className="font-cinzel font-700 uppercase tracking-[0.08em]"
-          style={{
-            padding: '0.85rem 0', borderRadius: 12,
-            background: 'rgba(240,192,64,0.18)',
-            border: '1px solid rgba(240,192,64,0.55)',
-            color: '#f0d695',
-            fontSize: '0.82rem', cursor: 'pointer',
-          }}
-        >
-          Play Again →
-        </button>
+        <AnimatePresence>
+          {outcomeShown && (
+            <motion.button
+              key="play-again"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              type="button"
+              onClick={nextHand}
+              className="font-cinzel font-700 uppercase tracking-[0.08em]"
+              style={{
+                padding: '0.85rem 0', borderRadius: 12,
+                background: 'rgba(240,192,64,0.18)',
+                border: '1px solid rgba(240,192,64,0.55)',
+                color: '#f0d695',
+                fontSize: '0.82rem', cursor: 'pointer',
+              }}
+            >
+              Play Again →
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
     )
   }
