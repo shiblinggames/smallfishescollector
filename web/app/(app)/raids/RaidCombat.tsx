@@ -2624,26 +2624,34 @@ function PlayerStatsPopup({
             this run. Each row shows the friendly description per
             effect from lib/tides.describeEffect, grouped under one
             "Active Tides" header. Hidden when no tides have fired. */}
-        {tideEffects.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#bae6fd', letterSpacing: '0.16em', marginBottom: 6 }}>
-              Active Tides
-            </p>
-            <div style={{
-              display: 'flex', flexDirection: 'column', gap: 4,
-              padding: '0.65rem 0.75rem',
-              background: 'rgba(125,211,252,0.06)',
-              border: '1px solid rgba(125,211,252,0.22)',
-              borderRadius: 12,
-            }}>
-              {tideEffects.map((e, i) => (
-                <p key={i} className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(231,238,246,0.78)', lineHeight: 1.4 }}>
-                  <span style={{ color: '#bae6fd' }}>•</span> {describeEffect(e)}
-                </p>
-              ))}
+        {(() => {
+          // Skip marker effects whose describeEffect returns '' — they
+          // shouldn't surface as a blank ledger row.
+          const lines = tideEffects
+            .map(e => describeEffect(e))
+            .filter(s => s.length > 0)
+          if (lines.length === 0) return null
+          return (
+            <div style={{ marginBottom: 14 }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#bae6fd', letterSpacing: '0.16em', marginBottom: 6 }}>
+                Active Tides
+              </p>
+              <div style={{
+                display: 'flex', flexDirection: 'column', gap: 4,
+                padding: '0.65rem 0.75rem',
+                background: 'rgba(125,211,252,0.06)',
+                border: '1px solid rgba(125,211,252,0.22)',
+                borderRadius: 12,
+              }}>
+                {lines.map((label, i) => (
+                  <p key={i} className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(231,238,246,0.78)', lineHeight: 1.4 }}>
+                    <span style={{ color: '#bae6fd' }}>•</span> {label}
+                  </p>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Classes — chapter-end picks. Read-only summary so the
             player can confirm mid-fight which classes are scaling

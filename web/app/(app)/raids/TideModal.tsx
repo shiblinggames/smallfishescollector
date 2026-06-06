@@ -103,27 +103,36 @@ export default function TideModal({ tide, onPicked }: Props) {
               <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(231,238,246,0.72)', lineHeight: 1.45, marginBottom: c.effects.length > 0 ? 7 : 0 }}>
                 {c.description}
               </p>
-              {c.effects.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {c.effects.map((e, i) => (
-                    <span
-                      key={i}
-                      className="font-karla font-600"
-                      style={{
-                        fontSize: '0.6rem',
-                        padding: '0.15rem 0.45rem',
-                        borderRadius: 4,
-                        background: 'rgba(125,211,252,0.10)',
-                        border: '1px solid rgba(125,211,252,0.26)',
-                        color: '#bae6fd',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {describeEffect(e)}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {c.effects.length > 0 && (() => {
+                // Filter empty strings (marker-only effects like the
+                // n=0 startHpDelta placeholders) so we don't render
+                // blank chips. describeEffect returns '' for those.
+                const chips = c.effects
+                  .map(e => describeEffect(e))
+                  .filter(s => s.length > 0)
+                if (chips.length === 0) return null
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {chips.map((label, i) => (
+                      <span
+                        key={i}
+                        className="font-karla font-600"
+                        style={{
+                          fontSize: '0.6rem',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: 4,
+                          background: 'rgba(125,211,252,0.10)',
+                          border: '1px solid rgba(125,211,252,0.26)',
+                          color: '#bae6fd',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                )
+              })()}
             </button>
           ))}
         </div>

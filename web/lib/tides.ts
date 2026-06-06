@@ -16,6 +16,16 @@
 // the combat path (RaidCombat / RaidGame). Adding a new kind is two
 // things: (1) extend the TideEffect union, (2) wire it into the matching
 // roll / HP / charge path.
+//
+// COPY CONVENTIONS (audited 2026-06-06):
+//   - Choice descriptions are plain English: benefit first, then cost
+//     in a second sentence. Numbers always explicit, no jargon.
+//   - "cannonballs" everywhere (not "charges" or "shots").
+//   - Scopes: "next fight" / "boss fight" / "all run". Never "for one
+//     upcoming fight" or "on the next fight" (inconsistent).
+//   - HP changes phrased "+N HP" / "-N HP" / "starts with N less HP",
+//     never "at -N HP" (ambiguous — looks like a total).
+//   - Effect chips (describeEffect) mirror the description's vocab.
 
 /** Discrete effect kinds. Each carries the data needed to apply it.
  *  Some are run-scoped, some are one-fight, some are one-shot tokens.
@@ -51,7 +61,9 @@ export type TideEffect =
   | { kind: 'startOfFightHeal'; n: number }
   // ── Charges (cannonballs) ───────────────────────────────────────
   /** Extra charges at the START of fights. scope=allRemaining for run,
-   *  oneFight for a single upcoming encounter. */
+   *  oneFight for a single upcoming encounter.
+   *  Sentinel: n <= -10 means "set to 0 for that fight" (clamped on
+   *  apply). describeEffect renders this as "Start with 0 cannonballs". */
   | { kind: 'startCharges'; n: number; scope: 'nextFight' | 'allRemaining' }
   /** % chance per reload to gain +bonus extra cannonballs (procs feel cool). */
   | { kind: 'reloadProc'; chance: number; bonusCharges: number }
@@ -80,7 +92,10 @@ export interface TideChoice {
   /** Stable id for analytics / Ledger ordering. */
   id: string
   label: string
-  /** One-sentence card body: what happens + the trade. */
+  /** Short, plain-English card body: benefit first, then cost. Numbers
+   *  explicit. Effect chips render below the description with the
+   *  precise mechanic; description sets the trade in plain words so a
+   *  player who doesn't scan chips still understands. */
   description: string
   /** Effects fired in order on pick. Can be empty (the safe opt-out). */
   effects: TideEffect[]
@@ -101,6 +116,12 @@ export interface TideEvent {
 // Tier 4 = endgame / mythic. New effect kinds CAN be introduced later
 // as new raids ship; the union above is append-only friendly.
 
+// Sentinel: pass n: NO_CHARGES (-99) to startCharges to mean "start
+// that fight with zero cannonballs." The apply path clamps to 0; the
+// describeEffect helper renders it as "Start the fight with 0 cannonballs"
+// instead of the meaningless "-99 starting cannonballs."
+const NO_CHARGES = -99
+
 export const TIDE_POOL: TideEvent[] = [
   // ── 1 ─────────────────────────────────────────────────────────────
   {
@@ -112,7 +133,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'strip',
         label: 'Strip the hold',
-        description: "+10% crit chance all run. The wreck's cries carry through the fog; enemies hit 10% harder.",
+        description: "+10% crit chance all run. Enemies hit you 10% harder all run.",
         effects: [
           { kind: 'critChanceBonus', chance: 0.10 },
           { kind: 'incomingDmgMult', mult: 1.10, scope: 'allRemaining' },
@@ -121,7 +142,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'medical',
         label: 'Take the medical chest',
-        description: '+25 HP immediately. The chest belonged to someone; word gets around the docks (-50 ⟡ at raid end).',
+        description: '+25 HP now. Costs you 50 ⟡ at raid end.',
         effects: [
           { kind: 'instantHeal', n: 25 },
           { kind: 'doubloonsAtRaidEnd', n: -50 },
@@ -130,7 +151,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'sail_past',
         label: 'Sail past',
-        description: 'Nothing. The wake stays clean.',
+        description: 'Nothing happens. Clean wake.',
         effects: [],
       },
     ],
@@ -145,7 +166,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'follow',
         label: 'Follow the bell',
-        description: 'Sail straight toward the sound. Start the boss fight at -10 HP from the loss of the lead.',
+        description: 'The bell was a lure. Boss fight starts with 10 less HP. No upside.',
         effects: [
           { kind: 'startHpDelta', n: -10, scope: 'boss' },
         ],
@@ -153,17 +174,16 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'hold',
         label: 'Hold your course',
-        description: 'Nothing. The safe heading.',
+        description: 'Nothing happens. The safe heading.',
         effects: [],
       },
       {
         id: 'sail_wide',
         label: 'Sail wide of the bell',
-        description: '+15% volley damage on the boss fight only. Time cost: start the boss fight with 0 charges.',
+        description: '+15% volley damage in the boss fight. Next fight starts with 0 cannonballs.',
         effects: [
           { kind: 'bossVolleyDmgMult', mult: 1.15 },
-          { kind: 'startHpDelta', n: 0, scope: 'boss' }, // marker only — charges handled below
-          { kind: 'startCharges', n: -99, scope: 'nextFight' }, // negative clamped to 0 in apply path
+          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
         ],
       },
     ],
@@ -179,7 +199,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'refill',
         label: 'Refill stores',
-        description: '10% chance per reload to gain +1 cannonball, all run. Refilling under fire costs blood: -10 HP next fight.',
+        description: 'Every reload has a 10% chance to load +1 cannonball, all run. -10 HP next fight.',
         effects: [
           { kind: 'reloadProc', chance: 0.10, bonusCharges: 1 },
           { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
@@ -188,16 +208,16 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'rig',
         label: 'Rig it as a one-shot',
-        description: 'Next enemy starts at half HP. You spent your shots prepping; start that fight with 0 charges.',
+        description: 'Next enemy starts at half HP. That fight starts with 0 cannonballs.',
         effects: [
           { kind: 'enemyHpScale', mult: 0.5, scope: 'nextFight' },
-          { kind: 'startCharges', n: -99, scope: 'nextFight' },
+          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
         ],
       },
       {
         id: 'heave',
         label: 'Heave it overboard',
-        description: '+1 guaranteed dodge for the next fight. The deck is clean again.',
+        description: '1 guaranteed dodge next fight (no roll needed).',
         effects: [
           { kind: 'guaranteedDodge', n: 1 },
         ],
@@ -214,7 +234,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'read',
         label: 'Read it',
-        description: '+5% crit zone width all run. The reading absorbs you; -10 HP next fight (the wheel went unattended).',
+        description: 'Gold crit zone is 5% wider all run. -10 HP next fight (wheel went unattended).',
         effects: [
           { kind: 'critZoneScale', mult: 1.05 },
           { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
@@ -223,7 +243,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'pocket',
         label: 'Pocket the bottle',
-        description: '+150 ⟡ at raid end. You stowed it instead of preparing; start the next fight at -1 charge.',
+        description: '+150 ⟡ at raid end. Next fight starts with 1 fewer cannonball.',
         effects: [
           { kind: 'doubloonsAtRaidEnd', n: 150 },
           { kind: 'startCharges', n: -1, scope: 'nextFight' },
@@ -232,7 +252,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'toss',
         label: 'Toss it back',
-        description: 'Nothing. The bottle drifts on.',
+        description: 'Nothing happens. The bottle drifts on.',
         effects: [],
       },
     ],
@@ -248,32 +268,25 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'cut_loose',
         label: 'Cut it loose',
-        description: 'The freed whale buoys you over a swell. +5 HP next fight + 10% volley damage on the next fight.',
+        description: '+5 HP next fight. +10% volley damage all run.',
         effects: [
           { kind: 'startHpDelta', n: 5, scope: 'nextFight' },
           { kind: 'volleyDmgMult', mult: 1.10 },
-          // Note: volleyDmgMult is run-scoped in the schema; we'll
-          // expire it after the next fight in RaidGame's state path.
-          // For now it's "10% volley dmg" for the rest of the run as a
-          // small tier-1 boon if we don't track scope yet. If the
-          // expire-after-fight plumbing isn't built, this is fine.
         ],
       },
       {
         id: 'harvest',
         label: 'Harvest it',
-        description: '+10% fire damage all run. The cries draw attention; -1 effective dodge for the next 2 fights.',
+        description: '+10% fire damage all run. -10% dodge next fight (cries draw attention).',
         effects: [
           { kind: 'fireDmgMult', mult: 1.10 },
           { kind: 'dodgeBonus', chance: -0.10, scope: 'nextFight' },
-          // The "next 2 fights" is approximated by allRemaining vs nextFight scope;
-          // exact 2-fight scope is a future addition. For tier 1 we'll cap at one fight.
         ],
       },
       {
         id: 'netting',
         label: 'Take only the netting',
-        description: '+2 starting cannonballs for one upcoming fight. Clean trade, no downside.',
+        description: '+2 cannonballs at the start of the next fight. No downside.',
         effects: [
           { kind: 'startCharges', n: 2, scope: 'nextFight' },
         ],
@@ -290,7 +303,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'trim',
         label: 'Trim sails for speed',
-        description: '+15% fire damage for the next fight. The trim wastes wind on the run-up; -2 speed for the next fight.',
+        description: '+15% fire damage next fight. -2 ship speed for the next 2 fights.',
         effects: [
           { kind: 'fireDmgMult', mult: 1.15 },
           { kind: 'speedDelta', n: -2, scope: 'next2Fights' },
@@ -299,16 +312,16 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'stay',
         label: 'Stay the course',
-        description: 'Nothing. No trim, no advantage, no cost.',
+        description: 'Nothing happens. No trade either way.',
         effects: [],
       },
       {
         id: 'anchor',
         label: 'Drop the sea anchor',
-        description: '-15% incoming damage for the next fight. Costs you the prep window; start that fight with 0 charges.',
+        description: 'Take 15% less damage next fight. That fight starts with 0 cannonballs.',
         effects: [
           { kind: 'incomingDmgMult', mult: 0.85, scope: 'nextFight' },
-          { kind: 'startCharges', n: -99, scope: 'nextFight' },
+          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
         ],
       },
     ],
@@ -323,7 +336,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'beach',
         label: 'Beach the ship and patch the hull',
-        description: 'Full HP restore. Caulking-fire smoke draws attention; start the boss fight at -15 HP.',
+        description: 'Full HP restore. Boss fight starts with 15 less HP (your smoke draws attention).',
         effects: [
           { kind: 'fullHeal' },
           { kind: 'startHpDelta', n: -15, scope: 'boss' },
@@ -332,7 +345,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'quick_patch',
         label: 'Quick patch in the bow',
-        description: '+25 HP. Small time cost; start the boss fight at -5 HP.',
+        description: '+25 HP now. Boss fight starts with 5 less HP.',
         effects: [
           { kind: 'instantHeal', n: 25 },
           { kind: 'startHpDelta', n: -5, scope: 'boss' },
@@ -341,7 +354,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'sail_on',
         label: 'Sail on',
-        description: 'Nothing. Save your hull for whatever is ahead.',
+        description: 'Nothing happens. Save your hull for whatever is ahead.',
         effects: [],
       },
     ],
@@ -356,7 +369,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'live_fire',
         label: 'Live-fire drill',
-        description: '+5% crit chance all run. The drill used up shots; start the next fight at -1 charge.',
+        description: '+5% crit chance all run. Next fight starts with 1 fewer cannonball.',
         effects: [
           { kind: 'critChanceBonus', chance: 0.05 },
           { kind: 'startCharges', n: -1, scope: 'nextFight' },
@@ -365,7 +378,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'damage_control',
         label: 'Damage-control rehearsal',
-        description: '+5 HP at the start of every remaining fight. The crew is tired by the time you reach the boss; start the boss fight at -15 HP.',
+        description: '+5 HP at the start of every remaining fight. Boss fight starts with 15 less HP (crew is tired).',
         effects: [
           { kind: 'startOfFightHeal', n: 5 },
           { kind: 'startHpDelta', n: -15, scope: 'boss' },
@@ -374,7 +387,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'skip',
         label: 'Skip the drill',
-        description: 'Nothing. Save the time.',
+        description: 'Nothing happens. Save the time.',
         effects: [],
       },
     ],
@@ -405,29 +418,55 @@ export function drawTides(n: number, maxTier: number): TideEvent[] {
 // ──────────────────────────────────────────────────────────────────────
 
 /** Friendly one-line description of an effect for the Captain's Ledger
- *  "Active Tides" section. Keeps the player oriented on what's running. */
+ *  "Active Tides" section AND the chip row on the TideModal choice
+ *  cards. Mirrors the wording of the choice descriptions (cannonballs,
+ *  next fight / boss fight / all run) so a player who scans either
+ *  surface reads the same thing.
+ *
+ *  Returns '' for marker effects that shouldn't surface (e.g. a
+ *  startHpDelta n=0 placeholder); both consumers filter empty strings. */
 export function describeEffect(e: TideEffect): string {
   switch (e.kind) {
     case 'damageMult':            return `${pct(e.mult - 1)} damage all run`
     case 'fireDmgMult':           return `${pct(e.mult - 1)} fire damage`
     case 'volleyDmgMult':         return `${pct(e.mult - 1)} volley damage`
     case 'critChanceBonus':       return `${pct(e.chance)} crit chance`
-    case 'critZoneScale':         return `${pct(e.mult - 1)} crit zone width`
-    case 'incomingDmgMult':       return `${pct(1 - e.mult)} damage taken (${e.scope === 'nextFight' ? 'next fight' : 'all run'})`
+    case 'critZoneScale':         return `Crit zone ${pct(e.mult - 1)} wider`
+    case 'incomingDmgMult': {
+      const scope = e.scope === 'nextFight' ? 'next fight' : 'all run'
+      if (e.mult > 1) return `Take ${pct(e.mult - 1)} more damage, ${scope}`
+      return `Take ${pct(1 - e.mult)} less damage, ${scope}`
+    }
     case 'incomingCritReduction': return `Enemies crit ${pct(e.chance)} less often`
-    case 'instantHeal':           return `+${e.n} HP applied`
+    case 'instantHeal':           return `+${e.n} HP now`
     case 'fullHeal':              return 'Full HP restored'
-    case 'startHpDelta':          return `${e.n >= 0 ? '+' : ''}${e.n} HP entering ${e.scope === 'boss' ? 'the boss fight' : 'next fight'}`
-    case 'startOfFightHeal':      return `+${e.n} HP at the start of every fight`
-    case 'startCharges':          return `${e.n >= 0 ? '+' : ''}${e.n} starting cannonballs ${e.scope === 'nextFight' ? 'next fight' : 'every fight'}`
+    case 'startHpDelta': {
+      if (e.n === 0) return ''   // marker only
+      const sign = e.n >= 0 ? '+' : ''
+      const scope = e.scope === 'boss' ? 'boss fight' : 'next fight'
+      return `${sign}${e.n} HP entering ${scope}`
+    }
+    case 'startOfFightHeal':      return `+${e.n} HP at every fight start`
+    case 'startCharges': {
+      const scope = e.scope === 'nextFight' ? 'next fight' : 'every fight'
+      if (e.n <= -10) return `0 cannonballs ${scope}`
+      if (e.n < 0)    return `${e.n} starting cannonball${Math.abs(e.n) === 1 ? '' : 's'} ${scope}`
+      return `+${e.n} starting cannonball${e.n === 1 ? '' : 's'} ${scope}`
+    }
     case 'reloadProc':            return `${pct(e.chance)} chance per reload for +${e.bonusCharges} cannonball${e.bonusCharges === 1 ? '' : 's'}`
-    case 'dodgeBonus':            return `${pct(e.chance)} dodge ${e.scope === 'nextFight' ? 'next fight' : 'all run'}`
-    case 'guaranteedDodge':       return `${e.n} guaranteed dodge${e.n === 1 ? '' : 's'} banked`
-    case 'speedDelta':            return `${e.n >= 0 ? '+' : ''}${e.n} speed ${e.scope === 'allRemaining' ? 'all run' : 'next 2 fights'}`
+    case 'dodgeBonus': {
+      const scope = e.scope === 'nextFight' ? 'next fight' : 'all run'
+      return `${pct(e.chance)} dodge, ${scope}`
+    }
+    case 'guaranteedDodge':       return `${e.n} guaranteed dodge${e.n === 1 ? '' : 's'}`
+    case 'speedDelta': {
+      const scope = e.scope === 'allRemaining' ? 'all run' : 'next 2 fights'
+      return `${e.n >= 0 ? '+' : ''}${e.n} ship speed, ${scope}`
+    }
     case 'bossDamageMult':        return `${pct(e.mult - 1)} damage to boss`
     case 'bossVolleyDmgMult':     return `${pct(e.mult - 1)} volley damage to boss`
     case 'enemyHpScale':          return `Next enemy ${pct(1 - e.mult)} weaker`
-    case 'enemyStartChargesDelta':return `Next enemy starts at ${e.n >= 0 ? '+' : ''}${e.n} cannonball${Math.abs(e.n) === 1 ? '' : 's'}`
+    case 'enemyStartChargesDelta':return `Next enemy starts with ${Math.abs(e.n)} fewer cannonball${Math.abs(e.n) === 1 ? '' : 's'}`
     case 'doubloonsAtRaidEnd':    return `${e.n >= 0 ? '+' : ''}${e.n} ⟡ at raid end`
   }
 }
