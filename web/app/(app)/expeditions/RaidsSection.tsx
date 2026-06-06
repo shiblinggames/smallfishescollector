@@ -28,7 +28,7 @@ const MAIN_ACCENT = '#c4a96a'
 // Default art per node type, used when a node has no own `image`. Lets
 // every shop (and any future shops) share one icon without per-node data.
 const TYPE_IMAGE: Record<string, string | undefined> = {
-  shop:   '/raidshop.jpeg',
+  shop:   '/raidshop.png',
   puzzle: '/puzzle.png',
 }
 
