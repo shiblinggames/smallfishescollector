@@ -272,6 +272,13 @@ export default function ShipHero({
   // (same trick the upgrade panel uses lower down) so we don't need to
   // thread a separate prop in.
   const [equippedItems, setEquippedItems] = useState<string[]>(initialEquippedRaidItems)
+  // Raid items use the same slot-tap-to-open-picker pattern as crew.
+  // The picker shows every owned item with a status chip ("Equipped",
+  // "In Slot N", or "Equip"); tapping a row assigns it to the active
+  // slot (swap-aware: if the picked item is already equipped in
+  // another slot, the slots swap positions).
+  const [itemPickerSlot, setItemPickerSlot] = useState<number | null>(null)
+  const [itemSheetOpen, setItemSheetOpen]   = useState(false)
 
   // Resync local state when fresh server data arrives via router.refresh().
   // Without these, a mutation in the HubCards prep modal (which fires
@@ -334,9 +341,9 @@ export default function ShipHero({
   const [, startTransition] = useTransition()
 
   useEffect(() => {
-    document.body.style.overflow = (loadoutOpen || sheetOpen) ? 'hidden' : ''
+    document.body.style.overflow = (loadoutOpen || sheetOpen || itemSheetOpen) ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
-  }, [loadoutOpen, sheetOpen])
+  }, [loadoutOpen, sheetOpen, itemSheetOpen])
 
   // The hub-card modal dispatches 'expedition:open-loadout' when the
   // player taps "Open Prep" to commit to the next launch. We open the
@@ -468,46 +475,67 @@ export default function ShipHero({
     startTransition(async () => { await equipShipSkin(skinId) })
   }
 
-  // Raid item equip/unequip + swap. When the slots are full and the
-  // player taps a new unequipped item, the row expands inline with a
-  // "Replace which?" picker (see swapTargetItemId below) — they pick
-  // which equipped item to displace, then handleSwapRaidItem fires.
-  // No more two-tap unequip-then-equip dance.
-  const [swapTargetItemId, setSwapTargetItemId] = useState<string | null>(null)
+  // Raid items use a slot-tap picker (mirrors crew). Tap any slot
+  // circle to open a bottom-sheet showing every owned item; tap an
+  // item to assign it to the active slot. Swap-aware: if the picked
+  // item is already in another slot, the two positions swap.
+  function openItemPicker(slot: number) {
+    setItemPickerSlot(slot)
+    setItemSheetOpen(true)
+  }
 
-  function handleEquipRaidItem(itemId: string) {
-    if (equippedItems.includes(itemId)) return
-    if (equippedItems.length >= raidItemSlots) {
-      // Full — show the replace picker for THIS row instead of silently
-      // refusing. Tapping the same item again (or X) closes the picker.
-      setSwapTargetItemId(prev => prev === itemId ? null : itemId)
-      return
+  function closeItemSheet() {
+    setItemSheetOpen(false)
+    setItemPickerSlot(null)
+  }
+
+  /** Place `itemId` into the active picker slot. Handles four cases:
+   *  - Item not equipped + target empty → append
+   *  - Item not equipped + target filled → replace at index
+   *  - Item equipped elsewhere + target filled → SWAP positions
+   *  - Item equipped elsewhere + target empty → move (vacate old, append) */
+  function assignItemToSlot(itemId: string) {
+    if (itemPickerSlot === null) return
+    const targetIdx = itemPickerSlot
+    const itemCurrentIdx = equippedItems.indexOf(itemId)
+    if (itemCurrentIdx === targetIdx) { closeItemSheet(); return }
+
+    let next: string[]
+    if (itemCurrentIdx !== -1 && targetIdx < equippedItems.length) {
+      // True swap — both positions filled; trade them.
+      next = [...equippedItems]
+      next[targetIdx] = itemId
+      next[itemCurrentIdx] = equippedItems[targetIdx]
+    } else if (itemCurrentIdx !== -1) {
+      // Item equipped elsewhere, target slot is trailing-empty.
+      // Storage is dense so empty trailing slots collapse — move the
+      // item to the end of the array, which renders at targetIdx.
+      next = equippedItems.filter((_, i) => i !== itemCurrentIdx)
+      next.push(itemId)
+    } else if (targetIdx < equippedItems.length) {
+      // Not equipped, replace whatever sits at this position.
+      next = equippedItems.map((id, i) => i === targetIdx ? itemId : id)
+    } else {
+      // Not equipped, fill an empty trailing slot.
+      next = [...equippedItems, itemId]
     }
-    setSwapTargetItemId(null)
-    const next = [...equippedItems, itemId]
+
     setEquippedItems(next)
+    closeItemSheet()
+    // router.refresh() re-runs the server components so the prep modal's
+    // ready-check (server-rendered from profile.equipped_raid_items)
+    // reflects the new state too.
     startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
   }
 
-  function handleUnequipRaidItem(itemId: string) {
-    setSwapTargetItemId(null)
-    const next = equippedItems.filter(i => i !== itemId)
+  /** Empty the active picker slot (Remove button in the picker
+   *  header). Compacts the dense storage; trailing slots that
+   *  were just-tapped pickers won't change their open-slot state. */
+  function removeFromActiveItemSlot() {
+    if (itemPickerSlot === null || itemPickerSlot >= equippedItems.length) return
+    const next = equippedItems.filter((_, idx) => idx !== itemPickerSlot)
     setEquippedItems(next)
-    // router.refresh() re-runs the server components on the page so the
-    // hub card's ready-check modal (which reads profile.equipped_raid_items
-    // server-side) reflects the new state — otherwise it stays stuck on
-    // the count from initial render.
-    startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
-  }
-
-  /** Swap helper: drop `displacedId` from the equipped list and put
-   *  `swapTargetItemId` in its position. Preserves slot order so the
-   *  loadout reads stable across swaps (no awkward shuffling). */
-  function handleSwapRaidItem(displacedId: string) {
-    if (!swapTargetItemId) return
-    const next = equippedItems.map(id => id === displacedId ? swapTargetItemId : id)
-    setSwapTargetItemId(null)
-    setEquippedItems(next)
+    closeItemSheet()
     startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
   }
 
@@ -1165,164 +1193,65 @@ export default function ShipHero({
               })()}
 
               {/* ── Raid Items ──
-                  Hybrid loadout pattern: a non-interactive slot row at
-                  the top shows "what am I taking into the raid?" at a
-                  glance; the list below is the sole action surface.
-                  Tap an unequipped item → equips into the next free
-                  slot. Tap an equipped item → unequips. When the slots
-                  are FULL and the player taps a new unequipped item,
-                  the row expands inline with a "Replace which?" picker
-                  (handleSwapRaidItem) so swap is one explicit beat —
-                  no more two-tap unequip-then-equip dance.
-              */}
+                  Slot-tap-to-picker pattern — mirrors crew. The slot
+                  row IS the action surface: tap an empty slot to fill
+                  it, tap a filled slot to swap or remove what's in it.
+                  Picker (rendered at the top level of this component)
+                  shows every owned item with a status chip ("Equipped",
+                  "In Slot N", or "Equip"); tapping a row assigns it to
+                  the active slot. Swap-aware. */}
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Raid Items</p>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
-                Equip up to {raidItemSlots}. Bigger ships hold more. Effects only apply in raids, not voyages.
+                Tap a slot to assign an item. {raidItemSlots} slot{raidItemSlots === 1 ? '' : 's'} on your hull (bigger ships hold more). Effects only apply in raids, not voyages.
               </p>
-              <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
-                {/* Slot row — pure visual loadout glance, no tap. The
-                    list below is where actions happen. */}
-                <div style={{ padding: '0.9rem 1rem 1rem', borderBottom: ownedRaidItems.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Loadout · {equippedItems.length}/{raidItemSlots}</p>
-                  <div style={{ display: 'flex', gap: '0.7rem' }}>
-                    {Array.from({ length: raidItemSlots }, (_, i) => i).map(i => {
-                      const itemId  = equippedItems[i]
-                      const itemDef = itemId ? getRaidItem(itemId) : null
-                      const color   = itemDef ? RARITY_ITEM_COLOR[itemDef.rarity] : null
-                      return (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-                          {itemDef ? (
-                            <>
-                              <div
-                                aria-label={`Equipped: ${itemDef.name}`}
-                                style={{ position: 'relative', width: 60, height: 60, borderRadius: 12, background: `${color}11`, border: `1.5px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
-                              >
-                                {itemDef.image ? (
-                                  /* eslint-disable-next-line @next/next/no-img-element */
-                                  <img src={itemDef.image} alt={itemDef.name} style={{ width: 38, height: 38, objectFit: 'contain' }} />
-                                ) : (
-                                  <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{itemDef.emoji}</span>
-                                )}
-                              </div>
-                              <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.62rem', color: color ?? '#b8b3ac', maxWidth: 60, lineHeight: 1.2 }}>{itemDef.name}</p>
-                            </>
-                          ) : (
-                            <>
-                              <div style={{ width: 60, height: 60, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                              </div>
-                              <p className="font-karla font-600 text-center" style={{ fontSize: '0.62rem', color: '#5a5550', maxWidth: 60, lineHeight: 1.2 }}>Empty</p>
-                            </>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Owned items — single action surface. Equipped rows
-                    carry rarity-colored borders and a tap-to-unequip
-                    target; unequipped rows tap to equip (or expand the
-                    swap picker if loadout is full). */}
-                {ownedRaidItems.length > 0 ? (
-                  <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {ownedRaidItems.map(itemId => {
-                      const def      = getRaidItem(itemId)
-                      if (!def) return null
-                      const color    = RARITY_ITEM_COLOR[def.rarity]
-                      const equipped = equippedItems.includes(itemId)
-                      const full     = equippedItems.length >= raidItemSlots && !equipped
-                      const showSwap = swapTargetItemId === itemId
-                      return (
-                        <div key={itemId} style={{ display: 'flex', flexDirection: 'column' }}>
-                          <button
-                            onClick={equipped ? () => handleUnequipRaidItem(itemId) : () => handleEquipRaidItem(itemId)}
-                            style={{
-                              background: equipped ? `${color}14` : showSwap ? 'rgba(96,165,250,0.10)' : 'rgba(255,255,255,0.04)',
-                              border: `1.5px solid ${equipped ? color + '60' : showSwap ? 'rgba(96,165,250,0.55)' : 'rgba(255,255,255,0.12)'}`,
-                              borderRadius: showSwap ? '10px 10px 0 0' : 10,
-                              padding: '0.7rem 0.85rem',
-                              display: 'flex', alignItems: 'center', gap: '0.8rem',
-                              cursor: 'pointer', width: '100%', textAlign: 'left',
-                              transition: 'background 0.15s, border-color 0.15s',
-                            }}
-                          >
-                            {def.image ? (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={def.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
-                            ) : (
-                              <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: equipped ? color : '#f0ede8', marginBottom: 3 }}>{def.name}</p>
-                              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
-                            </div>
-                            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.62rem', color: equipped ? color : full ? '#60a5fa' : '#7a7674', flexShrink: 0 }}>
-                              {equipped ? 'Equipped' : showSwap ? 'Cancel' : full ? 'Swap' : 'Equip'}
-                            </span>
-                          </button>
-                          {/* Inline "Replace which?" picker — only when this
-                              row is the swap target. Three (or fewer) small
-                              thumbs of the currently equipped items; tap
-                              one to displace it in favor of this row's
-                              item. Attaches under the row with a shared
-                              accent border so the relationship reads
-                              clearly. */}
-                          {showSwap && (
+              <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem', padding: '0.9rem 1rem 1rem' }}>
+                <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Loadout · {equippedItems.length}/{raidItemSlots}</p>
+                <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+                  {Array.from({ length: raidItemSlots }, (_, i) => i).map(i => {
+                    const itemId  = equippedItems[i]
+                    const itemDef = itemId ? getRaidItem(itemId) : null
+                    const color   = itemDef ? RARITY_ITEM_COLOR[itemDef.rarity] : null
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => openItemPicker(i)}
+                        aria-label={itemDef ? `Slot ${i + 1}: ${itemDef.name}. Tap to change.` : `Slot ${i + 1}: empty. Tap to assign.`}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem',
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                        }}
+                      >
+                        {itemDef ? (
+                          <>
                             <div
-                              role="group"
-                              aria-label="Replace which equipped item?"
-                              style={{
-                                padding: '0.7rem 0.85rem 0.85rem',
-                                background: 'rgba(96,165,250,0.06)',
-                                border: '1.5px solid rgba(96,165,250,0.55)',
-                                borderTop: 'none',
-                                borderRadius: '0 0 10px 10px',
-                                display: 'flex', flexDirection: 'column', gap: '0.55rem',
-                              }}
+                              style={{ position: 'relative', width: 60, height: 60, borderRadius: 12, background: `${color}11`, border: `1.5px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
                             >
-                              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#7aa7e8' }}>Replace which?</p>
-                              <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap' }}>
-                                {equippedItems.map(eqId => {
-                                  const eqDef = getRaidItem(eqId)
-                                  if (!eqDef) return null
-                                  const eqColor = RARITY_ITEM_COLOR[eqDef.rarity]
-                                  return (
-                                    <button
-                                      key={eqId}
-                                      onClick={() => handleSwapRaidItem(eqId)}
-                                      title={`Replace ${eqDef.name} with ${def.name}`}
-                                      style={{
-                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                                        padding: '0.45rem 0.55rem 0.5rem',
-                                        background: `${eqColor}10`,
-                                        border: `1.5px solid ${eqColor}66`,
-                                        borderRadius: 10,
-                                        cursor: 'pointer',
-                                        minWidth: 70,
-                                      }}
-                                    >
-                                      {eqDef.image ? (
-                                        /* eslint-disable-next-line @next/next/no-img-element */
-                                        <img src={eqDef.image} alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                                      ) : (
-                                        <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>{eqDef.emoji}</span>
-                                      )}
-                                      <span className="font-karla font-600 truncate text-center" style={{ fontSize: '0.6rem', color: eqColor, maxWidth: 60, lineHeight: 1.15 }}>{eqDef.name}</span>
-                                    </button>
-                                  )
-                                })}
-                              </div>
+                              {itemDef.image ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={itemDef.image} alt={itemDef.name} style={{ width: 38, height: 38, objectFit: 'contain' }} />
+                              ) : (
+                                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{itemDef.emoji}</span>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ padding: '0.85rem 1rem' }}>
-                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#6a6460' }}>No items yet.</p>
-                  </div>
+                            <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.62rem', color: color ?? '#b8b3ac', maxWidth: 60, lineHeight: 1.2 }}>{itemDef.name}</p>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ width: 60, height: 60, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                            </div>
+                            <p className="font-karla font-600 text-center" style={{ fontSize: '0.62rem', color: '#7a7470', maxWidth: 60, lineHeight: 1.2 }}>Empty</p>
+                          </>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                {ownedRaidItems.length === 0 && (
+                  <p className="font-karla" style={{ fontSize: '0.7rem', color: '#6a6460', marginTop: '0.85rem', lineHeight: 1.5 }}>
+                    No items yet. Clear raids to earn them.
+                  </p>
                 )}
               </div>
               </>)}
@@ -1538,6 +1467,164 @@ export default function ShipHero({
                   })()}
                 </div>
               </>
+        )
+      })()}
+
+      {/* Raid item picker — opens from any slot circle in the loadout
+          drawer's Raid Items section. Same z-stack as the crew picker
+          (130/131) so it overlays the loadout drawer cleanly. Lists
+          every owned item with a status chip; tap to assign to the
+          active slot. assignItemToSlot is swap-aware (see its docstring
+          for the four-case branch). */}
+      {itemSheetOpen && itemPickerSlot !== null && (() => {
+        const slotIdx = itemPickerSlot
+        const currentItemId = equippedItems[slotIdx]
+        const currentDef = currentItemId ? getRaidItem(currentItemId) : null
+        const currentColor = currentDef ? RARITY_ITEM_COLOR[currentDef.rarity] : '#6a6764'
+        const slotAccent = '#d4ba78'
+        return (
+          <>
+            <div
+              onClick={closeItemSheet}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(2,4,8,0.78)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', zIndex: 130 }}
+            />
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: 'fixed', zIndex: 131,
+                top: 'max(72px, env(safe-area-inset-top, 0px) + 16px)',
+                bottom: 0,
+                left: 'max(0px, calc(50% - 270px))',
+                right: 'max(0px, calc(50% - 270px))',
+                background: 'linear-gradient(180deg, #1a1610 0%, #0a0907 100%)',
+                borderTop: `2px solid ${slotAccent}`,
+                borderLeft: '1px solid rgba(255,255,255,0.12)',
+                borderRight: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '20px 20px 0 0',
+                boxShadow: '0 -10px 44px rgba(0,0,0,0.6)',
+                display: 'flex', flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Header */}
+              <div style={{ padding: '1.1rem 1.25rem 0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div style={{ minWidth: 0 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: slotAccent, marginBottom: 4 }}>
+                    Item · Slot {slotIdx + 1}
+                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f5f2ec', lineHeight: 1.1 }}>
+                    Assign Item
+                  </p>
+                  {currentDef ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, maxWidth: '100%', padding: '0.22rem 0.55rem 0.22rem 0.28rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 6, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${currentColor}`, background: `${currentColor}11`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {currentDef.image ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={currentDef.image} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ fontSize: '0.9rem', lineHeight: 1 }}>{currentDef.emoji}</span>
+                        )}
+                      </div>
+                      <span className="font-karla truncate" style={{ fontSize: '0.66rem', color: '#9aa0a6', minWidth: 0 }}>
+                        Currently <span className="font-700" style={{ color: '#dfe9e3' }}>{currentDef.name}</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="font-karla" style={{ marginTop: 7, fontSize: '0.66rem', color: '#6a6764' }}>This slot is empty.</p>
+                  )}
+                </div>
+                <button onClick={closeItemSheet} aria-label="Close" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0, marginLeft: '0.75rem' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2aca3" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              {/* Body — owned items list. The "Empty this slot" row only
+                  surfaces when the slot currently holds an item. */}
+              <div
+                style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '1rem 1.25rem 1.5rem', overscrollBehavior: 'contain' }}
+              >
+                {ownedRaidItems.length === 0 ? (
+                  <p className="font-karla text-center" style={{ fontSize: '0.85rem', color: '#8a857c', padding: '3rem 1rem', lineHeight: 1.6 }}>No items yet.<br />Clear raids to earn them.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    {currentDef && (
+                      <button
+                        type="button"
+                        onClick={removeFromActiveItemSlot}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: 10,
+                          background: 'rgba(248,113,113,0.08)',
+                          border: '1px solid rgba(248,113,113,0.35)',
+                          color: '#fca5a5',
+                          fontSize: '0.74rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        }}
+                        className="font-karla font-700 uppercase tracking-[0.08em]"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        Empty this slot
+                      </button>
+                    )}
+                    {ownedRaidItems.map(itemId => {
+                      const def = getRaidItem(itemId)
+                      if (!def) return null
+                      const color = RARITY_ITEM_COLOR[def.rarity]
+                      const equippedAtIdx = equippedItems.indexOf(itemId)
+                      const isHere = equippedAtIdx === slotIdx
+                      const isElsewhere = equippedAtIdx !== -1 && equippedAtIdx !== slotIdx
+                      return (
+                        <button
+                          key={itemId}
+                          type="button"
+                          onClick={isHere ? undefined : () => assignItemToSlot(itemId)}
+                          disabled={isHere}
+                          style={{
+                            background: isHere ? `${color}1f` : 'rgba(255,255,255,0.04)',
+                            border: `1.5px solid ${isHere ? color + '70' : isElsewhere ? 'rgba(125,211,252,0.45)' : 'rgba(255,255,255,0.12)'}`,
+                            borderRadius: 10,
+                            padding: '0.75rem 0.85rem',
+                            display: 'flex', alignItems: 'center', gap: '0.8rem',
+                            cursor: isHere ? 'default' : 'pointer',
+                            width: '100%', textAlign: 'left',
+                            opacity: isHere ? 0.85 : 1,
+                          }}
+                        >
+                          {def.image ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={def.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+                          ) : (
+                            <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: isHere ? color : '#f0ede8', marginBottom: 3 }}>{def.name}</p>
+                            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
+                          </div>
+                          <span
+                            className="font-karla font-700 uppercase tracking-[0.06em]"
+                            style={{
+                              fontSize: '0.6rem',
+                              color: isHere ? color : isElsewhere ? '#7dd3fc' : '#9ae6b4',
+                              padding: '0.22rem 0.5rem',
+                              borderRadius: 999,
+                              background: isHere ? `${color}1a` : isElsewhere ? 'rgba(125,211,252,0.10)' : 'rgba(154,230,180,0.10)',
+                              border: `1px solid ${isHere ? color + '45' : isElsewhere ? 'rgba(125,211,252,0.32)' : 'rgba(154,230,180,0.32)'}`,
+                              flexShrink: 0,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {isHere ? 'Equipped' : isElsewhere ? `In Slot ${equippedAtIdx + 1}` : 'Equip'}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
         )
       })()}
 
