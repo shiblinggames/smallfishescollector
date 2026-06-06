@@ -131,7 +131,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'cartographers_astrolabe',
     name: "Cartographer's Astrolabe",
     description: 'On a successful dodge, 30% chance to deflect half the incoming shot back at the attacker.',
-    image: null,
+    image: '/cartographersastrolabe.png',
     emoji: '🧭',
     rarity: 'epic',
     effects: [
@@ -144,7 +144,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'captains_astrolabe',
     name: 'Mastercraft Astrolabe',
     description: "On a successful dodge, 50% chance to deflect 75% of the incoming shot back at the attacker. The Cartographer's own brass instrument, machined to a finer tolerance than any other in his cabin.",
-    image: null,
+    image: '/mastercraftastrolabe.png',
     emoji: '🧭',
     rarity: 'legendary',
     effects: [
