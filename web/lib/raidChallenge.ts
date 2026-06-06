@@ -238,13 +238,11 @@ const KRUST_CHALLENGE_LOOT: typeof CAPTAIN_KRUST['loot'] = (() => {
 })()
 
 // The Cartographer's challenge loot. Doubles the special-drop rates
-// (Cartographer's Astrolabe 25 → 50, Mastercraft Astrolabe 5 → 10) so
-// the legendary Astrolabe becomes the realistic chase reward on
-// challenge runs. Currency shrinks proportionally to keep the total
-// at 100. The 10% "ship skin reserved" slot from the normal loot
-// table is folded into the epic Astrolabe weight here until the
-// Cartographer ship skin lands; then redistribute (e.g. skin 10 /
-// epic 40 / legendary 10).
+// (Cartographer's Astrolabe 20 → 40, Mastercraft Astrolabe 5 → 10,
+// Chartmaker Hull 5 → 10) so the legendary Astrolabe becomes the
+// realistic chase on challenge runs and the trophy skin stays on the
+// table at a meaningful rate. Currency shrinks proportionally to keep
+// the total at 100.
 const CARTOGRAPHER_CHALLENGE_LOOT: typeof THE_CARTOGRAPHER['loot'] = (() => {
   const byId = Object.fromEntries(THE_CARTOGRAPHER.loot.map(l => [l.id, l]))
   const w = (id: string, weight: number) => ({ ...byId[id], weight })
@@ -253,7 +251,8 @@ const CARTOGRAPHER_CHALLENGE_LOOT: typeof THE_CARTOGRAPHER['loot'] = (() => {
     w('doubloons_1200',          10),
     w('gems_50',                 10),
     w('pack_2',                   5),
-    w('cartographers_astrolabe', 50),
+    w('chartmaker_hull',         10),
+    w('cartographers_astrolabe', 40),
     w('captains_astrolabe',      10),
   ]
 })()

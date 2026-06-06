@@ -217,6 +217,7 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   corsair_cannon:  { raidItem: 'corsair_cannon' },
   krusts_carapace: { raidItem: 'krusts_carapace' },
   finndicate_hull: { shipSkin: 'finndicate_hull' },
+  chartmaker_hull: { shipSkin: 'chartmaker_hull' },
 }
 
 /** Record a raid clear the MOMENT the boss dies — independent of the

@@ -35,6 +35,27 @@ export const SHIP_SKINS: ShipSkinDef[] = [
       6: '/enemychapter1man-o-war_v2.png',
     },
   },
+  {
+    // Chapter 2 shared trophy skin. Drops from BOTH the Cartographer
+    // (raid 3) and the still-unbuilt raid 4 (which will share this
+    // chapter's enemy art). Same swap-the-sprite mechanic as the
+    // chapter 1 Finndicate Hull, painted in the chapter 2 palette.
+    id: 'chartmaker_hull',
+    name: 'Chartmaker Hull',
+    description: "Take the Cartographer's colors for your own. The mist that hid his chart line now drifts off your hull.",
+    filter: 'none',
+    color: '#6a7888',
+    source: "The Cartographer's Survey + Raid 4",
+    imageByTier: {
+      0: '/enemychapter2rowboat_v2.png',
+      1: '/enemychapter2dinghy_v2.png',
+      2: '/enemychapter2sloop_v2.png',
+      3: '/enemychapter2schooner_v2.png',
+      4: '/enemychapter2brigantine_v2.png',
+      5: '/enemychapter2galleon_v2.png',
+      6: '/enemychapter2man-o-war_v2.png',
+    },
+  },
 ]
 
 export function getShipSkin(id: string): ShipSkinDef | undefined {

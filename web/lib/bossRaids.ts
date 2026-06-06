@@ -424,7 +424,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→0→1→0
       pattern: ['reload', 'fire', 'reload', 'fire'],
       critChance: 0.05,
-      image: '/enemytier3scout.png',
+      image: '/enemychapter2sloop_v2.png',
       portrait: ENEMY_IMG_BASE + 'driftscout.png',
       aimFogDensity: 0.40, aimFogName: 'Mist Veil',
     },
@@ -446,7 +446,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→3→2→0→0
       pattern: ['reload', 'reload', 'reload', 'fire', 'volley', 'dodge'],
       critChance: 0.07,
-      image: '/enemytier3reg.png',
+      image: '/enemychapter2schooner_v2.png',
       portrait: ENEMY_IMG_BASE + 'soundinghand.png',
       aimFogDensity: 0.45, aimFogName: 'Mist Veil',
     },
@@ -466,7 +466,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→0→0→1→0→0
       pattern: ['reload', 'reload', 'volley', 'dodge', 'reload', 'fire', 'dodge'],
       critChance: 0.06,
-      image: '/enemytier3brute.png',
+      image: '/enemychapter2schooner_v2.png',
       portrait: ENEMY_IMG_BASE + 'wakebreaker.png',
       aimFogDensity: 0.45, aimFogName: 'Mist Veil',
     },
@@ -491,7 +491,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→1→0→1→2→0→0
       pattern: ['reload', 'reload', 'fire', 'fire', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.11,
-      image: '/enemytier3elite.png',
+      image: '/enemychapter2brigantine_v2.png',
       portrait: ENEMY_IMG_BASE + 'thesurveyor.png',
       aimFogDensity: 0.55, aimFogName: 'Mist Veil',
     },
@@ -519,7 +519,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
       // Charges: 0→1→2→3→2→1→2→0→0
       pattern: ['reload', 'reload', 'reload', 'fire', 'fire', 'reload', 'volley', 'dodge'],
       critChance: 0.10,
-      image: '/enemytier3boss.png',
+      image: '/enemychapter2brigantine_v2.png',
       portrait: ENEMY_IMG_BASE + 'thecartographer.png',
       aimFogDensity: 0.70, aimFogName: 'Mist Veil',
       parryChance: 0.30, parryDamagePct: 0.25, parryName: 'Riposte',
@@ -549,16 +549,19 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   tides: { slots: [3, 6], maxTier: 1 },
   // Same 70/30 currency/special split as Pete + Krust. The Astrolabe
   // pair are the chase items — mirror the Carapace pair from Krust
-  // (Epic at the standard rate, Legendary at the chase rate). Ship
-  // skin slot is still TODO; will land when Cartographer art ships.
+  // (Epic at the standard rate, Legendary at the chase rate).
+  // Chartmaker Hull is the chapter-2 shared trophy skin (lower rate
+  // here; raid 4 will drop it at the realistic chase rate when it
+  // lands), carved out of the slot the astrolabe held in reserve.
   loot: [
     // 70% currency
     { id: 'doubloons_600',          label: '+600 ⟡',                  image: '/smallpile.png',          emoji: '🪙',       rarity: 'common',    weight: 30 },
     { id: 'doubloons_1200',         label: '+1,200 ⟡',                image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 20 },
     { id: 'gems_50',                label: '50 Gems',                  image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
     { id: 'pack_2',                 label: '200 Gems',                 image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
-    // 30% special drops (ship skin TBA)
-    { id: 'cartographers_astrolabe', label: "Cartographer's Astrolabe", image: '/cartographersastrolabe.png', emoji: '🧭',       rarity: 'epic',      weight: 25 },
+    // 30% special drops
+    { id: 'chartmaker_hull',         label: 'Chartmaker Hull',          image: null,                          emoji: '🚢',       rarity: 'epic',      weight: 5,  shipSkinId: 'chartmaker_hull' },
+    { id: 'cartographers_astrolabe', label: "Cartographer's Astrolabe", image: '/cartographersastrolabe.png', emoji: '🧭',       rarity: 'epic',      weight: 20 },
     { id: 'captains_astrolabe',      label: 'Mastercraft Astrolabe',    image: '/mastercraftastrolabe.png',   emoji: '🧭',       rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
