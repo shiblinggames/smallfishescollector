@@ -172,7 +172,7 @@ async function ArcadeSection() {
         title="Blackjack"
         completed={blackjackCapReached}
         variant="compact"
-        art="/cardbacknew.png"
+        art="/crownandanchor.png"
         accent="#c63838"
       />
       <GameCard
