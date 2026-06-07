@@ -1,0 +1,78 @@
+'use client'
+
+import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
+
+interface Props {
+  href: string
+  title: string
+  /** Three-stop gradient stops: top atmospheric → middle → bottom deep.
+   *  Each card defines its own scene tint (sea blue for Tide Run,
+   *  velvet red for Blackjack, etc.) so the hub reads as a row of
+   *  distinct places rather than identical buttons. */
+  gradient: readonly [string, string, string]
+  /** Border + glow accent — should match the gradient family so the
+   *  card's edge feels like part of the same scene. */
+  accent: string
+  /** Bespoke scene art rendered absolute inside the card. ScenicCard
+   *  owns the gradient bg, border, bottom scrim, title, and tap feel
+   *  — scenes just supply the illustration + animation. */
+  children: React.ReactNode
+}
+
+/** Shared chrome for the new "scenic" tavern cards. Same outer
+ *  dimensions as the legacy compact GameCard (168px tall, fills its
+ *  grid cell) so the hub grid stays uniform regardless of which
+ *  treatment each card uses. */
+export default function ScenicCard({ href, title, gradient, accent, children }: Props) {
+  const router = useRouter()
+  return (
+    <motion.div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(href)}
+      onKeyDown={(e) => e.key === 'Enter' && router.push(href)}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+      style={{
+        position: 'relative',
+        height: 168,
+        borderRadius: 18,
+        overflow: 'hidden',
+        background: `linear-gradient(180deg, ${gradient[0]} 0%, ${gradient[1]} 55%, ${gradient[2]} 100%)`,
+        border: `1px solid ${accent}80`,
+        borderTop: `1px solid ${accent}e0`,
+        cursor: 'pointer',
+        userSelect: 'none',
+        boxShadow: `0 4px 12px rgba(0,0,0,0.4), 0 0 18px ${accent}1a`,
+      }}
+    >
+      {children}
+      {/* Bottom scrim — gradient fade from transparent to near-opaque
+          dark so the title reads cleanly against busy art. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          height: 70,
+          background: 'linear-gradient(180deg, transparent 0%, rgba(6,15,28,0.85) 55%, rgba(6,15,28,0.98) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <p
+        className="font-cinzel font-700"
+        style={{
+          position: 'absolute',
+          left: 0, right: 0, bottom: 14,
+          textAlign: 'center',
+          fontSize: '1.2rem',
+          color: '#ffffff',
+          letterSpacing: '0.02em',
+          textShadow: `0 2px 6px rgba(0,0,0,0.7), 0 0 14px ${accent}59`,
+        }}
+      >
+        {title}
+      </p>
+    </motion.div>
+  )
+}

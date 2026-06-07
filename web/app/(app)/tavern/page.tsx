@@ -3,8 +3,13 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
-import GameCard from './GameCard'
 import TideRunCard from './TideRunCard'
+import DailyBonusCard from './DailyBonusCard'
+import FishOfTheDayCard from './FishOfTheDayCard'
+import ChartTheCourseCard from './ChartTheCourseCard'
+import RecruitCrewCard from './RecruitCrewCard'
+import BlackjackHubCard from './BlackjackHubCard'
+import FishSlotsCard from './FishSlotsCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
@@ -38,58 +43,9 @@ async function DailySection() {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <GameCard
-        href="/tavern/daily-bonus"
-        title="Daily Bonus"
-        variant="compact"
-        art="/dailybonus.png"
-        accent="#f0c040"
-      />
-      <GameCard
-        href="/tavern/fish-of-the-day"
-        title="Fish of the Day"
-        variant="compact"
-        accent="#60a5fa"
-        customArt={
-          // FOTD teaser — a fish silhouette (real species sprite blacked
-          // out) with a big red question mark over it. Reads as "what
-          // fish is it today?" much better than the old generic icon.
-          // Largemouth bass picked for its instantly-readable silhouette.
-          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/fish/largemouth-bass.png"
-              alt=""
-              style={{
-                maxWidth: '92%', maxHeight: 78, objectFit: 'contain',
-                filter: 'brightness(0) opacity(0.78)',
-              }}
-            />
-            <span
-              aria-hidden
-              className="font-cinzel font-700"
-              style={{
-                position: 'absolute',
-                fontSize: '3.4rem',
-                lineHeight: 1,
-                color: '#ef4444',
-                textShadow: '0 2px 10px rgba(0,0,0,0.6), 0 0 18px rgba(239,68,68,0.45)',
-                pointerEvents: 'none',
-                marginTop: 4,
-              }}
-            >?</span>
-          </div>
-        }
-      />
-      {hasChart && (
-        <GameCard
-          href="/charting"
-          title="Chart the Course"
-          variant="compact"
-          art="/chartthecourse.png"
-          accent="#f0c040"
-        />
-      )}
+      <DailyBonusCard />
+      <FishOfTheDayCard />
+      {hasChart && <ChartTheCourseCard />}
     </div>
   )
 }
@@ -101,13 +57,7 @@ async function DailySection() {
 function FeaturesSection() {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <GameCard
-        href="/packs"
-        title="Recruit Crew"
-        variant="compact"
-        art="/recruitcrew.png"
-        accent="#c8a870"
-      />
+      <RecruitCrewCard />
       <TideRunCard />
     </div>
   )
@@ -116,20 +66,8 @@ function FeaturesSection() {
 function ArcadeSection() {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <GameCard
-        href="/tavern/blackjack"
-        title="Blackjack"
-        variant="compact"
-        art="/crownandanchor.png"
-        accent="#c63838"
-      />
-      <GameCard
-        href="/tavern/slots"
-        title="Fish Slots"
-        variant="compact"
-        art="/fishslots.png"
-        accent="#a78bfa"
-      />
+      <BlackjackHubCard />
+      <FishSlotsCard />
     </div>
   )
 }
