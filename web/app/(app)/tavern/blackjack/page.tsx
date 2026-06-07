@@ -21,13 +21,10 @@ export default async function BlackjackPage() {
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
-      <div className="px-6 pt-8 pb-5 text-center">
-        <h1 className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem' }}>
-          Blackjack
-        </h1>
-      </div>
-
-      <div className="px-6 pb-12">
+      {/* No page-level h1 — the Blackjack card carries its own title
+          in the modal header. Two "Blackjack"s stacked vertically
+          looked like a layout bug. */}
+      <div className="px-6 pt-6 pb-12">
         <Blackjack
           doubloons={profile?.doubloons ?? 0}
           dailyWagered={dailyWagered}
