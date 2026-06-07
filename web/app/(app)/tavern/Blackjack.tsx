@@ -1639,10 +1639,17 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     )
   }
 
-  // Re-sync wager state if doubloons drop below it
+  // Re-sync wager state if it no longer fits the player's chip stack
+  // (lost a hand and dropped below the previously-selected wager) or
+  // exceeds the per-hand cap. Compares against CHIPS, not doubloons —
+  // the chip table is the player's spendable pool, and gating on
+  // doubloons here was a pre-buy-in-flow leftover that clamped
+  // wagers to whatever doubloons the player had after their buy-in
+  // (e.g., bought in 1000 chips with 50 doubloons left → max wager
+  // silently capped at 50 even with 1000 on the table).
   useEffect(() => {
-    if (wager > doubloons) setWager(BJ_BET_PRESETS[0])
-  }, [doubloons, wager])
+    if (wager > Math.min(BJ_MAX_BET, chips)) setWager(BJ_BET_PRESETS[0])
+  }, [chips, wager])
 
   return (
     <div style={{
