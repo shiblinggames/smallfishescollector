@@ -448,6 +448,33 @@ function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing' }: { card: 
   )
 }
 
+/** Casino-felt rules text printed between the dealer cards and the
+ *  pot pill on both play and settle. Mimics how real blackjack tables
+ *  have the house rules printed on the felt surface (3:2 payout, dealer
+ *  standing on all 17, insurance 2:1). Decorative — low-opacity gold so
+ *  it sits behind the action visually without competing. Reflects the
+ *  actual rules: dealerPlay in lib/blackjack.ts loops while total < 17
+ *  (stands on all 17 including soft 17 / S17 house rule), and settleHand
+ *  pays naturals 3:2 / regular wins 1:1 / insurance side-bet 2:1. */
+function TableRules() {
+  return (
+    <p
+      className="font-karla font-700 uppercase"
+      style={{
+        fontSize: '0.52rem',
+        letterSpacing: '0.22em',
+        color: '#a68a4a',
+        opacity: 0.5,
+        textAlign: 'center',
+        lineHeight: 1.5,
+        padding: '0.4rem 0 0.2rem',
+      }}
+    >
+      Blackjack pays 3 to 2  ·  Dealer stands on all 17  ·  Insurance pays 2 to 1
+    </p>
+  )
+}
+
 /** Visual pot indicator. Lives in a fixed slot between the dealer and
  *  player rows so the player can watch their stake build (initial
  *  wager, doubles, splits, insurance) and drain on settle. The number
@@ -1145,6 +1172,10 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           </div>
         </div>
 
+        {/* Casino-felt rules printed across the table between dealer
+            and pot — decorative reminder of the house rules. */}
+        <TableRules />
+
         {/* Pot — fixed slot between dealer and player. Counts up from
             chips as bets land, drains to chips on settle outcome. */}
         <PotPill value={animatedPot} />
@@ -1178,17 +1209,44 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           // red for bust, gold for naturals once fully revealed,
           // cream otherwise.
           const totalColor = isBust ? '#f08a8a' : showNatural ? '#f0c040' : '#f0e8d0'
-          // Label: "You" for single-hand, "Hand N" for splits. Active
-          // hand on a split lights up green so it's obvious where the
-          // next Hit/Stand will apply.
-          const label = state.hands.length === 1 ? 'You' : `Hand ${hi + 1}`
-          const labelColor = isActive && state.hands.length > 1 ? '#7ad3a0' : '#a68a4a'
+          // Label: "You" for single-hand, "Hand N" for splits. On splits
+          // the active hand also lights up green AND gets an "Active"
+          // pill so the player can't miss which hand the next Hit /
+          // Stand applies to; non-active split hands dim to opacity 0.4
+          // so the active one really stands out visually.
+          const isSplit = state.hands.length > 1
+          const label = isSplit ? `Hand ${hi + 1}` : 'You'
+          const labelColor = isActive && isSplit ? '#7ad3a0' : '#a68a4a'
+          const inactiveSplit = isSplit && !isActive
           return (
-            <div key={hi}>
+            <div key={hi} style={{ opacity: inactiveSplit ? 0.42 : 1, transition: 'opacity 0.3s' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: labelColor }}>
-                  {label}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: labelColor }}>
+                    {label}
+                  </p>
+                  {isActive && isSplit && (
+                    <motion.span
+                      key="active-pill"
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+                      className="font-karla font-700 uppercase tracking-[0.14em]"
+                      style={{
+                        fontSize: '0.55rem',
+                        color: '#7ad3a0',
+                        background: 'rgba(122,211,160,0.14)',
+                        border: '1px solid rgba(122,211,160,0.55)',
+                        padding: '0.18rem 0.5rem',
+                        borderRadius: 999,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#7ad3a0' }} />
+                      Active
+                    </motion.span>
+                  )}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <AnimatePresence>
                     {isBust && (
@@ -1373,6 +1431,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             })}
           </div>
         </motion.div>
+
+        {/* Casino-felt rules printed across the table between dealer
+            and pot — same as the play screen so the layout stays
+            consistent across phases. */}
+        <TableRules />
 
         {/* Pot — holds the wager visible through the dealer reveal,
             drains to 0 when outcomeShown fires (mirrored by the chips
