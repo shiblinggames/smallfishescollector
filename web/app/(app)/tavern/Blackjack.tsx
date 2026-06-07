@@ -352,7 +352,7 @@ const CARD_DIMS = { w: 78, h: 112, rankFont: '1.25rem', suitFont: '1.2rem', corn
 // cardback on the front face and the real card on the back face; a
 // 180° rotateY transition flips between them. backfaceVisibility:
 // hidden hides whichever face is rotated away. Pure CSS, no library.
-function FlipCard({ flipped, card, fishArt, duration = 820 }: { flipped: boolean; card: Card; fishArt: string | null; duration?: number }) {
+function FlipCard({ flipped, card, fishArt, duration = 820 }: { flipped: boolean; card: Card | null; fishArt: string | null; duration?: number }) {
   return (
     <div style={{ perspective: 900, width: CARD_DIMS.w, height: CARD_DIMS.h, flexShrink: 0 }}>
       <div style={{
@@ -372,7 +372,7 @@ function FlipCard({ flipped, card, fishArt, duration = 820 }: { flipped: boolean
           WebkitBackfaceVisibility: 'hidden', backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
         }}>
-          <BlackjackCard card={card} fishArt={fishArt} />
+          {card !== null && <BlackjackCard card={card} fishArt={fishArt} />}
         </div>
       </div>
     </div>
@@ -383,24 +383,36 @@ function FlipCard({ flipped, card, fishArt, duration = 820 }: { flipped: boolean
  *  it mounts — the "card dealt to the player" animation used during
  *  the initial deal and on hit/double draws. Pass card='X' to render
  *  a card that lands face-down and stays there (the dealer hole).
- *  Uses the same FlipCard structure as the settle-time hole reveal,
- *  just with a snappier ~480ms flip (the settle hole gets 820ms for
- *  drama; in-deal flips need to clear before the next card lands).
+ *
+ *  mode='dealing' (default): slide in + flip after 180ms.
+ *  mode='revealed': render face-up statically, no slide / no flip —
+ *    used when a card was already shown on a prior screen (settle
+ *    screen rendering cards the player saw during play) so the DOM
+ *    structure stays identical across phase changes and the browser
+ *    doesn't tear down + rebuild the 3D context.
+ *
+ *  Always wraps motion.div + FlipCard so the 3D layer is identical
+ *  whether the card is hidden, dealing, or already revealed —
+ *  prevents the stutter that happens when the play→settle transition
+ *  swaps a plain BlackjackCard for a 3D FlipCard at the same slot.
+ *
  *  onFlipComplete fires once when the flip animation finishes (or
- *  immediately for hidden cards) so the parent can defer the hand
- *  total update until the card has visually settled face-up. */
-function DealtCard({ card, fishArt, onFlipComplete }: { card: Card | 'X'; fishArt: string | null; onFlipComplete?: () => void }) {
+ *  immediately for revealed/hidden cards) so the parent can defer
+ *  the hand total update until the card has visually settled face-up.
+ */
+function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing' }: { card: Card | 'X'; fishArt: string | null; onFlipComplete?: () => void; mode?: 'dealing' | 'revealed' }) {
   const isHidden = card === 'X'
-  const [flipped, setFlipped] = useState(false)
+  const [flipped, setFlipped] = useState(mode === 'revealed' && !isHidden)
   // Ref-mirror the callback so re-rendering the parent with a fresh
   // arrow function doesn't re-trigger the mount effect and replay the
   // flip from scratch.
   const onFlipCompleteRef = useRef(onFlipComplete)
   useEffect(() => { onFlipCompleteRef.current = onFlipComplete })
   useEffect(() => {
-    if (isHidden) {
-      // No flip — call back on the next tick so the parent's flip-gated
-      // total advances immediately for hidden cards.
+    if (mode === 'revealed' || isHidden) {
+      // Already-revealed cards (settle screen rendering cards the
+      // player saw during play) and hidden cards both call back on
+      // the next tick — no flip animation to wait for.
       const id = window.setTimeout(() => onFlipCompleteRef.current?.(), 0)
       return () => clearTimeout(id)
     }
@@ -412,19 +424,26 @@ function DealtCard({ card, fishArt, onFlipComplete }: { card: Card | 'X'; fishAr
     const startId = window.setTimeout(() => setFlipped(true), 180)
     const doneId  = window.setTimeout(() => onFlipCompleteRef.current?.(), 180 + 480 + 30)
     return () => { clearTimeout(startId); clearTimeout(doneId) }
-  }, [isHidden])
+  }, [isHidden, mode])
   return (
     <motion.div
-      initial={{ opacity: 0, y: -22, scale: 0.85 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      initial={mode === 'revealed' ? false : { opacity: 0, y: -22, scale: 0.85 }}
+      animate={mode === 'revealed' ? false : { opacity: 1, y: 0, scale: 1 }}
       whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
       whileTap={{ scale: 0.96 }}
-      transition={{ duration: 0.36, ease: 'easeOut' }}
+      transition={mode === 'revealed' ? { duration: 0 } : { duration: 0.36, ease: 'easeOut' }}
       style={{ flexShrink: 0, cursor: 'pointer' }}
     >
-      {isHidden
-        ? <BlackjackCard card="X" fishArt={null} />
-        : <FlipCard flipped={flipped} card={card as Card} fishArt={fishArt} duration={480} />}
+      {/* Always FlipCard (even for hidden) so the 3D context stays
+          consistent across phase transitions. Hidden case passes
+          card=null which makes FlipCard's front face render nothing
+          — only the cardback (back face) is visible. */}
+      <FlipCard
+        flipped={!isHidden && flipped}
+        card={isHidden ? null : (card as Card)}
+        fishArt={isHidden ? null : fishArt}
+        duration={480}
+      />
     </motion.div>
   )
 }
@@ -1313,14 +1332,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               if (i >= revealedDealerCount) return null
               const fish = getFish(-1, i, c)
               if (i === 1) {
-                // Hole card — always rendered, flips when holeFlipped.
-                // Uses the longer 820ms FlipCard duration for the big
-                // dramatic reveal moment.
-                return <FlipCard key={i} flipped={holeFlipped} card={c} fishArt={fish} />
-              }
-              if (i === 0) {
-                // Up card — was already face-up during play, just sits
-                // there. No flip, no mount animation.
+                // Hole card — wrapped in the same motion.div as
+                // DealtCard so the cross-phase DOM stays identical
+                // (play used DealtCard with card='X', settle uses
+                // FlipCard with the real card; same outer wrap means
+                // no 3D-layer teardown/rebuild on transition). The
+                // 820ms duration here is the dramatic dealer reveal.
                 return (
                   <motion.div
                     key={i}
@@ -1328,9 +1345,17 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                     whileTap={{ scale: 0.96 }}
                     style={{ flexShrink: 0, cursor: 'pointer' }}
                   >
-                    <BlackjackCard card={c} fishArt={fish} />
+                    <FlipCard flipped={holeFlipped} card={c} fishArt={fish} duration={820} />
                   </motion.div>
                 )
+              }
+              if (i === 0) {
+                // Up card — already face-up from play. Use DealtCard
+                // in 'revealed' mode so the wrapping motion.div +
+                // FlipCard structure matches what the play screen
+                // renders, eliminating the brief stutter from a
+                // structural swap at phase transition.
+                return <DealtCard key={i} card={c} fishArt={fish} mode="revealed" />
               }
               // Extra dealer draws (i >= 2). Use DealtCard so they slide
               // in face-down and flip to face-up, matching how every
@@ -1422,14 +1447,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {h.cards.map((card, ci) => (
-                    <motion.div
-                      key={ci}
-                      whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
-                      whileTap={{ scale: 0.96 }}
-                      style={{ flexShrink: 0, cursor: 'pointer' }}
-                    >
-                      <BlackjackCard card={card} fishArt={getFish(hi, ci, card)} />
-                    </motion.div>
+                    // mode='revealed' so the structure matches what the
+                    // play screen rendered for these same cards (DealtCard
+                    // motion.div + FlipCard), eliminating the brief 3D
+                    // layer teardown/rebuild stutter at phase transition.
+                    <DealtCard key={ci} card={card} fishArt={getFish(hi, ci, card)} mode="revealed" />
                   ))}
                 </div>
               </motion.div>
