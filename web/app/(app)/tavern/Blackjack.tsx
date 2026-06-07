@@ -1078,72 +1078,45 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             chips as bets land, drains to chips on settle outcome. */}
         <PotPill value={animatedPot} />
 
-        {/* Player hands — section label only; each row owns its own
-            big total so we don't print the number twice in the
-            single-hand case. */}
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7ad3a0', marginBottom: 8 }}>
-            {state.hands.length === 1 ? 'Your Hand' : `Hand ${state.activeHandIdx + 1} of ${state.hands.length}`}
-          </p>
-          {state.hands.map((h, hi) => {
-            // During the initial deal, only the first hand exists and
-            // we render up to playerVisibleCount cards. Stood/active
-            // signals are silenced while the deal is mid-flight — the
-            // breathe + green ACTIVE chip would lie about state (the
-            // hand isn't yours yet to act on).
-            const visibleHandCards = dealing && hi === 0 ? h.cards.slice(0, playerVisibleCount) : h.cards
-            const visibleTotal = dealing && hi === 0
-              ? handValue(visibleHandCards).total
-              : h.total
-            const handIsNaturalReveal = dealing && hi === 0 && playerVisibleCount === 2 && h.isNatural
-            const isActive = !dealing && hi === state.activeHandIdx && !h.busted && !h.stood
-            return (
-            <motion.div
-              key={hi}
-              // Active hand breathes — a tiny scale pulse that immediately
-              // reads "your move," especially helpful when split puts
-              // two hands side-by-side. Off for stood/busted hands and
-              // off during the deal-reveal animation.
-              animate={isActive ? { scale: [1, 1.012, 1] } : { scale: 1 }}
-              transition={isActive ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-              style={{
-                marginBottom: hi === state.hands.length - 1 ? 0 : 10,
-                padding: '0.65rem 0.75rem',
-                background: handIsNaturalReveal
-                  ? 'rgba(240,192,64,0.10)'
-                  : isActive ? 'rgba(122,211,160,0.08)'
-                  : h.busted ? 'rgba(240,138,138,0.06)'
-                  : 'rgba(255,255,255,0.025)',
-                border: `1px solid ${
-                  handIsNaturalReveal ? 'rgba(240,192,64,0.5)'
-                  : isActive ? 'rgba(122,211,160,0.35)'
-                  : h.busted ? 'rgba(240,138,138,0.3)'
-                  : 'rgba(255,255,255,0.08)'
-                }`,
-                borderRadius: 12,
-                boxShadow: handIsNaturalReveal ? '0 0 26px rgba(240,192,64,0.32)' : isActive ? '0 0 18px rgba(122,211,160,0.18)' : 'none',
-                transformOrigin: 'center',
-                transition: 'background 0.3s, border-color 0.3s, box-shadow 0.45s',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, minHeight: '1.4rem' }}>
-                <p className="font-karla font-700 uppercase" style={{
-                  fontSize: '0.64rem',
-                  color: handIsNaturalReveal ? '#f0c040' : '#7a948a',
-                  letterSpacing: '0.1em',
-                }}>
-                  {dealing && hi === 0
-                    ? (playerVisibleCount === 0 ? '…' : handIsNaturalReveal ? 'BLACKJACK' : 'DEAL')
-                    : h.busted ? 'BUST' : h.stood ? 'STOOD' : isActive ? 'ACTIVE' : 'WAITING'} · {h.wager} ⟡{h.doubled ? ' · DD' : ''}{h.isSplit ? ' · SPLIT' : ''}
+        {/* Player hands — same visual structure as the dealer block
+            above (label + total on right, cards below). No
+            background card, no wager chip, no ACTIVE label — the pot
+            indicator carries the wager, the colored total carries the
+            bust/21/blackjack state, and on splits the label color +
+            content carry whose turn it is. Keeps the play surface
+            visually consistent top-to-bottom. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {state.hands.map((h, hi) => {
+          // During the initial deal, only the first hand exists; we
+          // render up to playerVisibleCount cards and compute the
+          // total from what's visible (not the final total) so the
+          // number ticks up alongside the cards landing.
+          const visibleHandCards = dealing && hi === 0 ? h.cards.slice(0, playerVisibleCount) : h.cards
+          const visibleTotal = dealing && hi === 0
+            ? handValue(visibleHandCards).total
+            : h.total
+          const isActive = !dealing && hi === state.activeHandIdx && !h.busted && !h.stood
+          const isBust = h.busted
+          const showNatural = h.isNatural && !dealing
+          // Total color signals state without needing a bust/21 chip:
+          // red for bust, gold for naturals + on-screen 21 reveal,
+          // cream otherwise.
+          const totalColor = isBust ? '#f08a8a' : (showNatural || (dealing && hi === 0 && playerVisibleCount === 2 && h.isNatural)) ? '#f0c040' : '#f0e8d0'
+          // Label: "You" for single-hand, "Hand N" for splits. Active
+          // hand on a split lights up green so it's obvious where the
+          // next Hit/Stand will apply.
+          const label = state.hands.length === 1 ? 'You' : `Hand ${hi + 1}`
+          const labelColor = isActive && state.hands.length > 1 ? '#7ad3a0' : '#a68a4a'
+          return (
+            <div key={hi}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: labelColor }}>
+                  {label}
                 </p>
-                <p className="font-cinzel font-700" style={{
-                  fontSize: '1.4rem',
-                  color: handIsNaturalReveal ? '#f0c040' : h.busted ? '#f08a8a' : h.isNatural && !dealing ? '#f0c040' : '#f0e8d0',
-                  lineHeight: 1,
-                }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
                   {visibleHandCards.length === 0
-                    ? '–'
-                    : <><CountUp value={visibleTotal} duration={350} />{(!dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.65rem', marginLeft: 4 }}>(soft)</span> : ''}{h.isNatural && !dealing ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
+                    ? '?'
+                    : <><CountUp value={visibleTotal} duration={350} />{(!dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>(soft)</span> : ''}{showNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
@@ -1151,8 +1124,9 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   <DealtCard key={ci} card={c} fishArt={getFish(hi, ci, c)} />
                 ))}
               </div>
-            </motion.div>
-          )})}
+            </div>
+          )
+        })}
         </div>
 
         {/* Action bar — gated on the deal animation finishing AND on
@@ -1280,109 +1254,46 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             on loss). */}
         <PotPill value={animatedPot} />
 
-        {/* Player hands — cards visible immediately. Outcome chip only
-            shows up post-reveal so the player doesn't see the verdict
-            spoiled before the dealer plays out. */}
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7ad3a0', marginBottom: 6 }}>
-            Your Hand{r.hands.length > 1 ? 's' : ''}
-          </p>
+        {/* Player hands — same visual structure as the dealer block
+            (label + colored total + cards). No background card, no
+            wager chip, no outcome chip. The total color carries the
+            state (red bust, green win, gold blackjack/push), the
+            celebration overlay and the chips header animation carry
+            the amount won/lost. Keeps the surface visually consistent
+            top-to-bottom with the dealer block. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {r.hands.map((h, hi) => {
             const isWin = h.outcome === 'win' || h.outcome === 'blackjack'
             const isLose = h.outcome === 'lose'
             const isBust = h.total > 21
             const isNatural21 = h.outcome === 'blackjack'
-            const isStood21 = !isBust && h.total === 21 && !isNatural21
-            // Pre-reveal state: player-side facts only (bust / 21 / total
-            // — things the player could compute themselves from the cards
-            // already on the table). Reveal-time color shifts to the full
-            // outcome palette once the dealer plays out.
-            const preColor = isBust ? '#f08a8a' : (isStood21 || isNatural21) ? '#f0c040' : '#c4a96a'
-            const c = isWin ? '#7ad3a0' : isLose ? '#f08a8a' : '#c4a96a'
-            const label = h.outcome === 'blackjack' ? 'Blackjack 3:2' : h.outcome === 'win' ? 'Win' : h.outcome === 'push' ? 'Push' : isBust ? 'Bust' : h.outcome === 'lose' ? 'Lose' : h.outcome
-            // Bust shake + winning glow fire as soon as the row mounts
-            // for the bust case (it's a player-side fact — they already
-            // know they busted, no reason to hide it) and on outcomeShown
-            // for the winning glow (don't spoil dealer comparison wins
-            // until the dealer plays out).
-            const glowShadow = outcomeShown && isWin ? `0 0 24px ${c}55` : 'none'
+            // Total color:
+            //  • Pre-reveal — bust=red, natural blackjack=gold, else cream
+            //  • Post-reveal — win=green, lose=red, push/natural=gold
+            const totalColor = outcomeShown
+              ? (isWin ? '#7ad3a0' : isLose ? '#f08a8a' : '#f0c040')
+              : (isBust ? '#f08a8a' : isNatural21 ? '#f0c040' : '#f0e8d0')
+            // Label color matches: green on win, red on lose, muted gold
+            // otherwise.
+            const labelColor = outcomeShown
+              ? (isWin ? '#7ad3a0' : isLose ? '#f08a8a' : '#a68a4a')
+              : '#a68a4a'
+            const label = r.hands.length === 1 ? 'You' : `Hand ${hi + 1}`
             return (
               <motion.div
                 key={hi}
-                animate={isBust
-                  ? { x: [0, -5, 5, -4, 4, -2, 2, 0] }
-                  : { x: 0 }}
+                // Bust shake fires as soon as the row mounts — player-side
+                // fact, no reason to gate on outcomeShown.
+                animate={isBust ? { x: [0, -5, 5, -4, 4, -2, 2, 0] } : { x: 0 }}
                 transition={isBust ? { duration: 0.55, ease: 'easeInOut' } : { duration: 0 }}
-                style={{
-                  marginBottom: hi === r.hands.length - 1 ? 0 : 10,
-                  padding: '0.6rem 0.7rem',
-                  // Pre-reveal: bust hands tint red immediately; stood-21
-                  // hands tint gold; everything else stays neutral until
-                  // the dealer plays out and the win/lose color lands.
-                  background: outcomeShown
-                    ? `${c}14`
-                    : isBust ? 'rgba(240,138,138,0.10)'
-                    : (isStood21 || isNatural21) ? 'rgba(240,192,64,0.08)'
-                    : 'rgba(255,255,255,0.025)',
-                  border: `1px solid ${
-                    outcomeShown ? c + '5a'
-                    : isBust ? 'rgba(240,138,138,0.45)'
-                    : (isStood21 || isNatural21) ? 'rgba(240,192,64,0.4)'
-                    : 'rgba(255,255,255,0.08)'
-                  }`,
-                  borderRadius: 10,
-                  boxShadow: glowShadow,
-                  transition: 'background 0.3s, border-color 0.3s, box-shadow 0.45s',
-                }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, minHeight: '0.95rem' }}>
-                  {/* Pre-reveal label always shows the player's total +
-                      a BUST / 21 stamp if applicable, so they get
-                      immediate confirmation of what their hit did.
-                      Crossfades into the full outcome label when the
-                      dealer reveal finishes. */}
-                  <AnimatePresence mode="wait">
-                    {outcomeShown ? (
-                      <motion.p
-                        key="outcome-label"
-                        initial={{ opacity: 0, x: -6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="font-karla font-700 uppercase"
-                        style={{ fontSize: '0.64rem', color: c, letterSpacing: '0.1em' }}
-                      >
-                        {label} · {h.total}{h.doubled ? ' · DD' : ''}
-                      </motion.p>
-                    ) : (
-                      <motion.p
-                        key="pre-label"
-                        initial={{ opacity: 0, scale: isBust ? 0.7 : 0.85 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: isBust ? 380 : 340, damping: isBust ? 14 : 20 }}
-                        className="font-karla font-700 uppercase"
-                        style={{ fontSize: '0.64rem', color: preColor, letterSpacing: '0.1em' }}
-                      >
-                        {isBust ? `Bust · ${h.total}` : isNatural21 ? `Blackjack · 21` : isStood21 ? `21` : `Hand · ${h.total}`}{h.doubled ? ' · DD' : ''}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                  <AnimatePresence>
-                    {outcomeShown && (
-                      <motion.p
-                        key="outcome-net"
-                        initial={{ opacity: 0, x: 6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="font-cinzel font-700"
-                        style={{ fontSize: '0.8rem', color: c }}
-                      >
-                        {h.net > 0 ? '+' : ''}{h.net.toLocaleString()} ⟡
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: labelColor }}>
+                    {label}
+                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
+                    {h.total}{isNatural21 ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}
+                  </p>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {h.cards.map((card, ci) => (
