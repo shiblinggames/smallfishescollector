@@ -10,10 +10,6 @@ import {
 } from './blackjack/actions'
 import type { Card, Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
-import {
-  primeBlackjackAudio, playBjSfx,
-  isBlackjackAudioMuted, setBlackjackAudioMuted,
-} from '@/lib/blackjackAudio'
 
 interface Props {
   doubloons: number
@@ -392,14 +388,6 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   // a fresh burst; the CoinFlight component remounts via key and
   // self-removes after its animation completes.
   const [coinFlightKey, setCoinFlightKey] = useState(0)
-  // Audio mute toggle; reads initial value from localStorage via the lib.
-  const [audioMuted, setAudioMuted] = useState(false)
-  useEffect(() => { setAudioMuted(isBlackjackAudioMuted()) }, [])
-  function toggleMute() {
-    const next = !audioMuted
-    setAudioMuted(next)
-    setBlackjackAudioMuted(next)
-  }
   function clearRevealTimers() {
     for (const id of revealTimersRef.current) clearTimeout(id)
     revealTimersRef.current = []
@@ -428,20 +416,6 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     if ('error' in r) { setError(r.error); return }
     setError(null)
     if (r.kind === 'active') {
-      // Detect what changed so we can fire the right SFX. New cards in
-      // any hand or in the dealer area means a draw happened (deal/hit
-      // /double/split). Reading by total card count is simpler than
-      // diffing individual hands.
-      const prevCardCount = (active?.hands.reduce((n, h) => n + h.cards.length, 0) ?? 0)
-        + (active?.dealerCards.filter(c => c !== 'X').length ?? 0)
-      const nextCardCount = r.state.hands.reduce((n, h) => n + h.cards.length, 0)
-        + r.state.dealerCards.filter(c => c !== 'X').length
-      const newCards = nextCardCount - prevCardCount
-      // Soft stagger so simultaneous-draw events (initial deal: 4 cards)
-      // sound like real card placements rather than one mash.
-      for (let i = 0; i < newCards; i++) {
-        setTimeout(() => playBjSfx('cardSlide'), i * 90)
-      }
       setActive(r.state)
       setDoubloons(r.state.doubloons)
       setDailyWagered(BJ_DAILY_CAP - r.state.dailyRemaining)
@@ -480,7 +454,6 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
       // Sharp double-tap haptic for bust — distinct from a regular loss.
       vibrate([30, 60, 30])
-      playBjSfx('bust')
       return
     }
 
@@ -490,20 +463,14 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     setOutcomeShown(false)
 
     let elapsed = 350
-    revealTimersRef.current.push(window.setTimeout(() => {
-      setHoleFlipped(true)
-      playBjSfx('holeFlip')
-    }, elapsed))
+    revealTimersRef.current.push(window.setTimeout(() => setHoleFlipped(true), elapsed))
     elapsed += 580                    // flip duration
 
     const extraDealer = Math.max(0, r.result.dealerCards.length - 2)
     for (let i = 0; i < extraDealer; i++) {
       elapsed += 500
       const target = 3 + i           // revealedDealerCount after this fires
-      revealTimersRef.current.push(window.setTimeout(() => {
-        setRevealedDealerCount(target)
-        playBjSfx('cardSlide')
-      }, elapsed))
+      revealTimersRef.current.push(window.setTimeout(() => setRevealedDealerCount(target), elapsed))
     }
 
     elapsed += 400
@@ -518,10 +485,10 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       const hasNaturalWin = r.result.hands.some(h => h.outcome === 'blackjack')
       const hasAnyWin     = r.result.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
       const allPush       = r.result.hands.every(h => h.outcome === 'push')
-      if (hasNaturalWin)     { vibrate([60, 40, 60, 40, 120]); playBjSfx('blackjack'); setCoinFlightKey(k => k + 1) }
-      else if (hasAnyWin)    { vibrate([50, 30, 50]);          playBjSfx('win');        setCoinFlightKey(k => k + 1) }
-      else if (allPush)      { vibrate(20);                    playBjSfx('push') }
-      else                   { vibrate(40) /* loss: silence is enough */ }
+      if (hasNaturalWin)     { vibrate([60, 40, 60, 40, 120]); setCoinFlightKey(k => k + 1) }
+      else if (hasAnyWin)    { vibrate([50, 30, 50]);          setCoinFlightKey(k => k + 1) }
+      else if (allPush)      { vibrate(20) }
+      else                   { vibrate(40) }
     }, elapsed))
   }
 
@@ -533,10 +500,6 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   }
 
   function startDeal() {
-    // Prime audio on this gesture — the audio session needs to come up
-    // INSIDE a user gesture or iOS will sandbox it.
-    primeBlackjackAudio()
-    playBjSfx('chipClink')
     clearRevealTimers()
     fishCacheRef.current.clear()
     setResult(null)
@@ -739,7 +702,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               <button
                 type="button"
                 disabled={isPending || doubloons < Math.floor(state.hands[0].wager / 2)}
-                onClick={() => { playBjSfx('chipClink'); fireAction(acceptInsurance) }}
+                onClick={() => fireAction(acceptInsurance)}
                 className="font-karla font-700 uppercase tracking-[0.06em]"
                 style={{
                   flex: 1, padding: '0.65rem 0', borderRadius: 10,
@@ -775,10 +738,10 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
             <ActionButton label="Hit" icon="hit" onClick={() => fireAction(hit)} disabled={!state.canHit || isPending} accent="#7ad3a0" />
             <ActionButton label="Stand" icon="stand" onClick={() => fireAction(stand)} disabled={!state.canStand || isPending} accent="#c4a96a" />
             {state.canDouble && (
-              <ActionButton label={`Double · ${activeHand?.wager} ⟡`} icon="double" onClick={() => { playBjSfx('chipClink'); fireAction(doubleDown) }} disabled={isPending} accent="#7aa7e8" />
+              <ActionButton label={`Double · ${activeHand?.wager} ⟡`} icon="double" onClick={() => fireAction(doubleDown)} disabled={isPending} accent="#7aa7e8" />
             )}
             {state.canSplit && (
-              <ActionButton label={`Split · ${state.hands[0].wager} ⟡`} icon="split" onClick={() => { playBjSfx('chipClink'); fireAction(split) }} disabled={isPending} accent="#d0a0e8" />
+              <ActionButton label={`Split · ${state.hands[0].wager} ⟡`} icon="split" onClick={() => fireAction(split)} disabled={isPending} accent="#d0a0e8" />
             )}
           </div>
         )}
@@ -1094,38 +1057,9 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div>
-              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>Tavern</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>Blackjack</p>
-            </div>
-            <button
-              type="button"
-              onClick={toggleMute}
-              aria-label={audioMuted ? 'Unmute sounds' : 'Mute sounds'}
-              title={audioMuted ? 'Unmute' : 'Mute'}
-              style={{
-                width: 30, height: 30, borderRadius: 999,
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                color: audioMuted ? '#7a7470' : '#c4a96a',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', padding: 0,
-              }}
-            >
-              {audioMuted ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                  <line x1="23" y1="9" x2="17" y2="15" />
-                  <line x1="17" y1="9" x2="23" y2="15" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-                </svg>
-              )}
-            </button>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>Tavern</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>Blackjack</p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
