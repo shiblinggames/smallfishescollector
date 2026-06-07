@@ -189,7 +189,7 @@ function DailyCapBar({ wagered, cap }: { wagered: number; cap: number }) {
           style={{ height: '100%', borderRadius: 999, background: color }}
         />
       </div>
-      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7470', marginTop: 5, letterSpacing: '0.04em' }}>
+      <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a7470', marginTop: 5, letterSpacing: '0.04em' }}>
         {remaining > 0
           ? `${remaining.toLocaleString()} ⟡ daily cap remaining`
           : 'Daily cap reached'}
@@ -202,7 +202,7 @@ function DailyCapBar({ wagered, cap }: { wagered: number; cap: number }) {
 // transition was visibly resizing cards before and the jitter was
 // annoying. Picked 64×92 so five cards fit per row on a 360-wide phone
 // without wrapping.
-const CARD_DIMS = { w: 64, h: 92, rankFont: '0.88rem', suitFont: '0.88rem', cornerPad: 5 }
+const CARD_DIMS = { w: 64, h: 92, rankFont: '1.05rem', suitFont: '1rem', cornerPad: 5 }
 
 // 3D flip wrapper — used for the dealer's hole card. Renders the
 // cardback on the front face and the real card on the back face; a
@@ -284,8 +284,8 @@ function BlackjackCard({
           alt=""
           aria-hidden
           style={{
-            position: 'absolute', top: '20%', left: '4%',
-            width: '92%', height: '60%', objectFit: 'contain',
+            position: 'absolute', top: '26%', left: '4%',
+            width: '92%', height: '50%', objectFit: 'contain',
             opacity: 0.58,
             mixBlendMode: 'multiply',
             pointerEvents: 'none',
@@ -609,7 +609,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#7a948a', letterSpacing: '0.1em' }}>
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.64rem', color: '#7a948a', letterSpacing: '0.1em' }}>
                   {h.busted ? 'BUST' : h.stood ? 'STOOD' : isActive ? 'ACTIVE' : 'WAITING'} · {h.wager} ⟡{h.doubled ? ' · DD' : ''}{h.isSplit ? ' · SPLIT' : ''}
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: h.busted ? '#f08a8a' : h.isNatural ? '#f0c040' : '#f0e8d0' }}>
@@ -833,11 +833,12 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                 transition={{ duration: 0.35, delay: 0.05 }}
                 className="font-karla"
                 style={{
-                  fontSize: '0.74rem',
-                  color: '#a09988',
+                  fontSize: '0.82rem',
+                  color: '#b8ada0',
                   fontStyle: 'italic',
-                  marginTop: 8,
+                  marginTop: 10,
                   textAlign: 'center',
+                  letterSpacing: '0.01em',
                 }}
               >
                 {dealerLine(r)}
@@ -890,7 +891,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25 }}
                         className="font-karla font-700 uppercase"
-                        style={{ fontSize: '0.58rem', color: c, letterSpacing: '0.1em' }}
+                        style={{ fontSize: '0.64rem', color: c, letterSpacing: '0.1em' }}
                       >
                         {label} · {h.total}{h.doubled ? ' · DD' : ''}
                       </motion.p>
@@ -1011,7 +1012,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           </div>
           <div style={{ textAlign: 'right' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
-            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7470', marginTop: 4 }}>balance</p>
+            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a7470', marginTop: 4 }}>balance</p>
           </div>
         </div>
         <DailyCapBar wagered={dailyWagered} cap={BJ_DAILY_CAP} />
@@ -1033,11 +1034,11 @@ function ActionButton({ label, onClick, disabled, accent }: { label: string; onC
       className="font-karla font-700 uppercase tracking-[0.06em]"
       style={{
         flex: 1, minWidth: 100,
-        padding: '0.75rem 0', borderRadius: 10,
+        padding: '0.85rem 0', borderRadius: 10,
         background: disabled ? 'rgba(255,255,255,0.04)' : `${accent}1f`,
         border: `1px solid ${disabled ? 'rgba(255,255,255,0.1)' : accent + '88'}`,
         color: disabled ? '#5a5550' : accent,
-        fontSize: '0.78rem',
+        fontSize: '0.86rem',
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
     >
