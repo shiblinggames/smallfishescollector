@@ -663,13 +663,13 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
         {/* Action bar — always rendered. Insurance prompt is its own
             modal overlay (rendered at the modal root, below). */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <ActionButton label="Hit" icon="hit" onClick={() => fireAction(hit)} disabled={!state.canHit || isPending} accent="#7ad3a0" />
-          <ActionButton label="Stand" icon="stand" onClick={() => fireAction(stand)} disabled={!state.canStand || isPending} accent="#c4a96a" />
+          <ActionButton label="Hit"   onClick={() => fireAction(hit)}        disabled={!state.canHit || isPending} />
+          <ActionButton label="Stand" onClick={() => fireAction(stand)}      disabled={!state.canStand || isPending} />
           {state.canDouble && (
-            <ActionButton label={`Double · ${activeHand?.wager} ⟡`} icon="double" onClick={() => fireAction(doubleDown)} disabled={isPending} accent="#7aa7e8" />
+            <ActionButton label="Double" chip={`${activeHand?.wager} ⟡`} onClick={() => fireAction(doubleDown)} disabled={isPending} />
           )}
           {state.canSplit && (
-            <ActionButton label={`Split · ${state.hands[0].wager} ⟡`} icon="split" onClick={() => fireAction(split)} disabled={isPending} accent="#d0a0e8" />
+            <ActionButton label="Split"  chip={`${state.hands[0].wager} ⟡`} onClick={() => fireAction(split)} disabled={isPending} />
           )}
         </div>
 
@@ -1094,84 +1094,68 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   )
 }
 
-type ActionIcon = 'hit' | 'stand' | 'double' | 'split'
-
-/** Small inline glyphs for each action — gives the button bar a quicker
- *  visual scan, especially for first-time players who don't yet pair
- *  the words "double" / "split" with the strategic moment. Mono-stroke
- *  SVGs so they tint via currentColor and match the button accent. */
-function ActionIconSvg({ icon }: { icon: ActionIcon }) {
-  const stroke = 'currentColor'
-  const sw = 1.8
-  const common = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke, strokeWidth: sw, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  switch (icon) {
-    case 'hit':
-      // Plus sign — "deal me another card"
-      return (
-        <svg {...common}><path d="M12 5v14M5 12h14" /></svg>
-      )
-    case 'stand':
-      // Open palm — "hold"
-      return (
-        <svg {...common}>
-          <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11" />
-          <path d="M12 11V4.5a1.5 1.5 0 0 1 3 0V11" />
-          <path d="M15 11V5.5a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6 6 6 0 0 1-6-6v-3a1.5 1.5 0 0 1 3 0" />
-        </svg>
-      )
-    case 'double':
-      // ×2
-      return (
-        <svg {...common}>
-          <path d="M6 8l6 6M12 8l-6 6" />
-          <path d="M16 8h4M16 16h4M18 8v8" />
-        </svg>
-      )
-    case 'split':
-      // Branching arrow — one to two
-      return (
-        <svg {...common}>
-          <path d="M12 4v6" />
-          <path d="M12 10c-4 0-4 4-8 4M12 10c4 0 4 4 8 4" />
-          <path d="M2 12l2 2 2-2M22 12l-2 2-2-2" />
-        </svg>
-      )
-  }
-}
-
-function ActionButton({ label, onClick, disabled, accent, icon }: { label: string; onClick: () => void; disabled: boolean; accent: string; icon?: ActionIcon }) {
-  // Chunky tactile button: gradient body, inset highlight on top edge,
-  // crisp accent border, soft drop-shadow. Press state dents inward.
+/** Action button — restrained tavern-style stamp. Dark glass body
+ *  (rgba(8,5,2,0.7)) with a thin parchment-gold border + bold Cinzel
+ *  uppercase label. No colored gradients per button (was reading as
+ *  cheesy + chaotic with four different accent hues competing in one
+ *  row). Differentiation comes from typography hierarchy and an
+ *  optional gold chip-amount slipped after the label for bet-cost
+ *  actions (Double / Split). Hover brightens the border + adds a
+ *  subtle text glow; press dents the button via translateY.
+ *
+ *  `accent` is no longer used to tint the body — kept on the signature
+ *  for caller compatibility but unused. Hit/Stand/Double/Split all
+ *  share the same visual treatment now. */
+function ActionButton({ label, chip, onClick, disabled }: {
+  label: string
+  chip?: string             // optional cost suffix, e.g. "50 ⟡"
+  onClick: () => void
+  disabled: boolean
+  accent?: string           // retained for caller compatibility, unused
+  icon?: never              // icons retired — pure typography now
+}) {
   return (
     <motion.button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      whileHover={!disabled ? { y: -1 } : undefined}
+      whileHover={!disabled ? { y: -1.5 } : undefined}
       whileTap={!disabled ? { y: 1, scale: 0.985 } : undefined}
       transition={{ type: 'spring', stiffness: 480, damping: 28 }}
-      className="font-cinzel font-700 uppercase tracking-[0.06em]"
+      className="font-cinzel font-700 uppercase"
       style={{
-        flex: 1, minWidth: 100,
-        padding: '0.95rem 0.6rem', borderRadius: 12,
+        flex: 1, minWidth: 96,
+        padding: '1.05rem 0.7rem',
+        borderRadius: 4,
         background: disabled
-          ? 'rgba(255,255,255,0.03)'
-          : `linear-gradient(180deg, ${accent}30 0%, ${accent}10 100%)`,
-        border: `1.5px solid ${disabled ? 'rgba(255,255,255,0.08)' : accent + 'aa'}`,
-        color: disabled ? '#4a4540' : accent,
+          ? 'rgba(8,5,2,0.45)'
+          : 'rgba(8,5,2,0.72)',
+        border: `1px solid ${disabled ? 'rgba(196,169,106,0.16)' : 'rgba(196,169,106,0.5)'}`,
+        color: disabled ? '#5a5550' : '#d4ba78',
         fontSize: '0.95rem',
+        letterSpacing: '0.18em',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        // Top inset gives the chip a glossy-edge feel; bottom shadow
-        // anchors it; outer drop-shadow lifts it off the felt.
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
         boxShadow: disabled
           ? 'none'
-          : `inset 0 1px 0 ${accent}55, inset 0 -2px 0 rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.45)`,
-        textShadow: disabled ? 'none' : '0 1px 0 rgba(0,0,0,0.45)',
+          : 'inset 0 1px 0 rgba(240,214,149,0.18), inset 0 -1px 0 rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.45)',
+        textShadow: disabled ? 'none' : '0 1px 0 rgba(0,0,0,0.6)',
+        transition: 'background 0.15s, border-color 0.15s, color 0.15s',
       }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.borderColor = 'rgba(240,214,149,0.85)' }}
+      onMouseLeave={e => { if (!disabled) e.currentTarget.style.borderColor = 'rgba(196,169,106,0.5)' }}
     >
-      {icon && <ActionIconSvg icon={icon} />}
       <span>{label}</span>
+      {chip && (
+        <span style={{
+          color: disabled ? '#4a4540' : '#f0c040',
+          fontFamily: 'inherit',
+          letterSpacing: '0.08em',
+          fontSize: '0.86rem',
+        }}>
+          {chip}
+        </span>
+      )}
     </motion.button>
   )
 }
