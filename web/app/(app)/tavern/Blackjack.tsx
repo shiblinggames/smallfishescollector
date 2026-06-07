@@ -1159,62 +1159,39 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
 
   function renderSettleScreen(r: SettleResult) {
     // Dealer total reflects ONLY the cards that have actually been
-    // revealed on screen — not the final hand. Pre-hole-flip that's
-    // just the up card; once flipped, both first two; then it ticks up
-    // as each extra dealer draw slides in. Using r.dealerTotal here
-    // (the final value) would spoil the result before the cards land.
-    const visibleDealerCount = holeFlipped ? revealedDealerCount : 1
-    const visibleDealerCards = r.dealerCards.slice(0, Math.max(1, visibleDealerCount))
-    const dealerTotalVisible = handValue(visibleDealerCards).total
+    // revealed on screen — not the final hand. While the hole is
+    // face-down, total reads '?' (matching the play screen during
+    // the player's turn, so the layout doesn't shift when settle
+    // mounts). Once holeFlipped goes true, the total includes up +
+    // hole and ticks up as each extra draw lands.
+    const dealerTotalVisible: number | null = holeFlipped
+      ? handValue(r.dealerCards.slice(0, Math.max(2, revealedDealerCount))).total
+      : null
+    const dealerTotalColor = outcomeShown && r.dealerBust ? '#f08a8a'
+      : outcomeShown && r.dealerNatural ? '#f0c040'
+      : '#f0e8d0'
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-        {/* Net-delta panel removed — the cumulative session tally lives
-            in the header instead so this surface doesn't flex between
-            hands. Hand-level outcome chips below still reveal in step
-            with the dealer flip. */}
-
-        {/* Dealer — cards reveal in sequence; index 1 is the FlipCard hole.
-            When dealer busts, the whole row gets a red glow + "Bust"
-            stamp post-reveal, mirroring how player-bust hands look. */}
+        {/* Dealer — same shape as the play screen + player block so
+            the surface doesn't shift when settle mounts. Label on
+            left, colored total on right ('?' until hole flips, then
+            the running sum). Row gets a bust shake on dealer bust
+            instead of a red panel — matches the player row. */}
         <motion.div
-          animate={outcomeShown && r.dealerBust
-            ? { boxShadow: ['0 0 0 rgba(240,138,138,0)', '0 0 24px rgba(240,138,138,0.45)', '0 0 16px rgba(240,138,138,0.28)'] }
-            : { boxShadow: '0 0 0 rgba(0,0,0,0)' }}
-          transition={{ duration: 0.6 }}
-          style={{
-            padding: outcomeShown && r.dealerBust ? '0.5rem 0.55rem' : 0,
-            margin: outcomeShown && r.dealerBust ? '-0.5rem -0.55rem' : 0,
-            borderRadius: 12,
-            background: outcomeShown && r.dealerBust ? 'rgba(240,138,138,0.06)' : 'transparent',
-            border: outcomeShown && r.dealerBust ? '1px solid rgba(240,138,138,0.28)' : '1px solid transparent',
-            transition: 'background 0.3s, border-color 0.3s, padding 0.3s, margin 0.3s',
-          }}
+          animate={outcomeShown && r.dealerBust ? { x: [0, -5, 5, -4, 4, -2, 2, 0] } : { x: 0 }}
+          transition={outcomeShown && r.dealerBust ? { duration: 0.55, ease: 'easeInOut' } : { duration: 0 }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>
-              Dealer · {dealerTotalVisible}{outcomeShown && r.dealerNatural ? ' · Blackjack' : ''}
+              Dealer
             </p>
-            <AnimatePresence>
-              {outcomeShown && r.dealerBust && (
-                <motion.span
-                  initial={{ opacity: 0, scale: 0.6, rotate: -8 }}
-                  animate={{ opacity: 1, scale: 1, rotate: -4 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 14 }}
-                  className="font-karla font-700 uppercase tracking-[0.14em]"
-                  style={{
-                    fontSize: '0.62rem',
-                    color: '#f08a8a',
-                    background: 'rgba(240,138,138,0.14)',
-                    border: '1px solid rgba(240,138,138,0.5)',
-                    padding: '0.18rem 0.5rem',
-                    borderRadius: 5,
-                  }}
-                >
-                  Bust
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: dealerTotalColor, lineHeight: 1 }}>
+              {dealerTotalVisible === null
+                ? '?'
+                : <CountUp value={dealerTotalVisible} duration={350} />}
+              {outcomeShown && r.dealerNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
             {r.dealerCards.map((c, i) => {
