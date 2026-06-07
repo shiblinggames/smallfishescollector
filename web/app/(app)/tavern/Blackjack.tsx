@@ -1500,6 +1500,22 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 WebkitBackdropFilter: 'blur(4px)',
               }}
             />
+            {/* Fixed flex container does the centering — framer-motion's
+                animate={{ y, scale }} on the inner card composes into
+                `transform`, which would otherwise clobber any
+                `transform: translate(-50%, -50%)` we set inline and
+                push the card off-screen on phones. Outer wrap is
+                pointer-events: none so taps outside the card fall
+                through to the backdrop. */}
+            <div
+              key="ins-card-wrap"
+              style={{
+                position: 'fixed', inset: 0, zIndex: 201,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '1.1rem',
+                pointerEvents: 'none',
+              }}
+            >
             <motion.div
               key="ins-card"
               initial={{ opacity: 0, scale: 0.9, y: 12 }}
@@ -1507,14 +1523,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               exit={{ opacity: 0, scale: 0.95, y: -8 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26 }}
               style={{
-                position: 'fixed', zIndex: 201,
-                left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-                width: 'calc(100% - 2.2rem)', maxWidth: 340,
+                width: '100%', maxWidth: 340,
                 padding: '1.25rem 1.1rem 1.1rem',
                 borderRadius: 14,
                 background: 'linear-gradient(180deg, #1c2538 0%, #0d1320 100%)',
                 border: '1.5px solid rgba(125,160,216,0.55)',
                 boxShadow: '0 24px 48px rgba(0,0,0,0.7)',
+                pointerEvents: 'auto',
               }}
             >
               <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7aa7e8', marginBottom: 5 }}>
@@ -1565,6 +1580,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 </button>
               </div>
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>
