@@ -9,7 +9,7 @@ import {
   type ClientState, type SettleResult,
 } from './blackjack/actions'
 import { buyInChips, cashOutChips } from './blackjack/actions'
-import type { Card, Rank } from '@/lib/blackjack'
+import { handValue, type Card, type Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
 
 interface Props {
@@ -214,31 +214,6 @@ function CoinFlight() {
       ))}
     </div>
   )
-}
-
-/** Pirate-voice one-liner from the barkeep, picked by outcome shape.
- *  Short, terse, in-character — no em-dashes, no AI-sounding phrasing
- *  per the project's copy voice rule. Shown as an italic line under
- *  the dealer area once the outcome reveals; adds a bit of character
- *  to events that would otherwise just be a number flash. */
-function dealerLine(r: SettleResult): string {
-  const hasNaturalPlayer = r.hands.some(h => h.outcome === 'blackjack')
-  const allBust   = r.hands.every(h => h.outcome === 'lose' && h.total > 21)
-  const allPush   = r.hands.every(h => h.outcome === 'push')
-  const anyWin    = r.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
-  const fiveCardWin = r.hands.some(h => h.cards.length >= 5 && h.total <= 21 && (h.outcome === 'win' || h.outcome === 'blackjack'))
-  const insuranceWin = r.insurance.taken && r.insurance.win
-
-  // Order matters — higher-rarity events win the slot.
-  if (hasNaturalPlayer) return 'Three to two, captain.'
-  if (r.dealerNatural)  return 'House shows the natural.'
-  if (r.dealerBust)     return 'Dealer goes overboard.'
-  if (insuranceWin)     return 'Side bet stays afloat.'
-  if (fiveCardWin)      return 'Long road home.'
-  if (allBust)          return 'Over the line.'
-  if (allPush)          return 'Even waters.'
-  if (anyWin)           return 'Yours, captain.'
-  return 'Dealer takes the pot.'
 }
 
 /** Decorative card-stack silhouette — represents the 8-deck shoe the
@@ -858,18 +833,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   }
 
   function renderSettleScreen(r: SettleResult) {
-    const dealerTotalVisible = holeFlipped
-      ? r.dealerTotal
-      : (() => {
-          // Pre-flip: only the up card counts in the visible total —
-          // hides the implied total that would otherwise spoil the
-          // hole reveal.
-          const up = r.dealerCards[0]
-          const rank = up.charAt(0)
-          if (rank === 'A') return 11
-          if (rank === 'T' || rank === 'J' || rank === 'Q' || rank === 'K') return 10
-          return Number(rank)
-        })()
+    // Dealer total reflects ONLY the cards that have actually been
+    // revealed on screen — not the final hand. Pre-hole-flip that's
+    // just the up card; once flipped, both first two; then it ticks up
+    // as each extra dealer draw slides in. Using r.dealerTotal here
+    // (the final value) would spoil the result before the cards land.
+    const visibleDealerCount = holeFlipped ? revealedDealerCount : 1
+    const visibleDealerCards = r.dealerCards.slice(0, Math.max(1, visibleDealerCount))
+    const dealerTotalVisible = handValue(visibleDealerCards).total
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
@@ -945,30 +916,6 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               )
             })}
           </div>
-          {/* Dealer one-liner — fades in once the reveal completes.
-              Italic in the barkeep's voice. */}
-          <AnimatePresence>
-            {outcomeShown && (
-              <motion.p
-                key="dealer-line"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35, delay: 0.05 }}
-                className="font-karla"
-                style={{
-                  fontSize: '0.82rem',
-                  color: '#b8ada0',
-                  fontStyle: 'italic',
-                  marginTop: 10,
-                  textAlign: 'center',
-                  letterSpacing: '0.01em',
-                }}
-              >
-                {dealerLine(r)}
-              </motion.p>
-            )}
-          </AnimatePresence>
         </motion.div>
 
         {/* Player hands — cards visible immediately. Outcome chip only
