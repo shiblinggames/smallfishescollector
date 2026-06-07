@@ -611,8 +611,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
 
   /** Stage the post-hand reveal: hole flip → extra dealer draws →
    *  outcome panel + celebration. Factored out so the natural-blackjack
-   *  path can run the deal animation first, then call this. */
-  function startSettleReveal(result: SettleResult) {
+   *  path can run the deal animation first, then call this.
+   *  `skipInitialHold` is set when the player just watched their bust
+   *  / 21 card flip in on a held play screen — no need to give them
+   *  another long pause before the hole flip; settle mounts and the
+   *  dealer turn begins almost immediately. */
+  function startSettleReveal(result: SettleResult, opts: { skipInitialHold?: boolean } = {}) {
     clearRevealTimers()
     setResult(result)
     setActive(null)
@@ -626,9 +630,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     // a beat to register before the dealer reveal pulls their eye to
     // the top of the screen — the BUST / 21 stamp surfaces immediately
     // on settle mount, so this hold is the pause that lets them read it.
+    // Skipped when the player already saw the card flip in on a held
+    // play screen (the digestion happened there, not here).
     const anyPlayerBust    = result.hands.some(h => h.total > 21)
     const anyPlayerStood21 = result.hands.some(h => h.total === 21 && h.outcome !== 'blackjack')
-    const initialHold = anyPlayerBust ? 1900 : anyPlayerStood21 ? 1500 : 650
+    const initialHold = opts.skipInitialHold
+      ? 250
+      : anyPlayerBust ? 1900 : anyPlayerStood21 ? 1500 : 650
 
     let elapsed = initialHold
     revealTimersRef.current.push(window.setTimeout(() => setHoleFlipped(true), elapsed))
@@ -731,8 +739,31 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       return
     }
 
-    // Mid-hand settle (hit/stand/double/split resolved): straight to
-    // the dealer reveal.
+    // Mid-hand settle (hit/stand/double/split resolved). If the result
+    // includes a new card the player just drew (hit-to-bust,
+    // hit-to-21, double-bust, double-stand), hold the play screen for
+    // a beat so the new card flips in via DealtCard's mount animation
+    // before we transition to the dealer reveal. Without this the
+    // card jumps straight to settle layout face-up with no flip — it
+    // reads as a calculator output, not a card being dealt.
+    const newCardLanded = !!active && (
+      r.result.hands.length > active.hands.length
+      || r.result.hands.some((h, i) => h.cards.length > (active.hands[i]?.cards.length ?? 0))
+    )
+    if (newCardLanded) {
+      setActive(synthActiveFromResult(r.result))
+      setPhase('play')
+      const anyBust = r.result.hands.some(h => h.total > 21)
+      // ~660ms for DealtCard's slide (360ms) + flip (180ms delay +
+      // 480ms transition) plus dwell. Bust gets extra to really land.
+      const hold = anyBust ? 1700 : 1300
+      revealTimersRef.current.push(window.setTimeout(() => {
+        startSettleReveal(r.result, { skipInitialHold: true })
+      }, hold))
+      return
+    }
+
+    // Player stood (no new card) — straight to dealer reveal.
     startSettleReveal(r.result)
   }
 
@@ -1069,11 +1100,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           )})}
         </div>
 
-        {/* Action bar — gated on the deal animation finishing. Until
-            then, an empty slot holds the vertical space so the modal
-            doesn't jump when buttons mount. */}
+        {/* Action bar — gated on the deal animation finishing AND on
+            at least one hand still being playable. Mid-hand settle
+            holds (when the player just busted or stood-21) synth all
+            hands as stood/busted, so the buttons hide cleanly while
+            the new card flips in. Empty slot holds the vertical space
+            so the modal doesn't jump when buttons mount/unmount. */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minHeight: 60 }}>
-          {!dealing && (
+          {!dealing && state.hands.some(h => !h.busted && !h.stood) && (
             <>
               <ActionButton label="Hit"   onClick={() => fireAction(hit)}        disabled={!state.canHit || isPending} />
               <ActionButton label="Stand" onClick={() => fireAction(stand)}      disabled={!state.canStand || isPending} />
@@ -1159,23 +1193,28 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               const fish = getFish(-1, i, c)
               if (i === 1) {
                 // Hole card — always rendered, flips when holeFlipped.
+                // Uses the longer 820ms FlipCard duration for the big
+                // dramatic reveal moment.
                 return <FlipCard key={i} flipped={holeFlipped} card={c} fishArt={fish} />
               }
-              // First card was already visible during play; later cards
-              // slide in as they're drawn.
-              return (
-                <motion.div
-                  key={i}
-                  initial={i >= 2 ? { opacity: 0, y: -18, scale: 0.85 } : false}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
-                  whileTap={{ scale: 0.96 }}
-                  transition={{ duration: 0.32 }}
-                  style={{ flexShrink: 0, cursor: 'pointer' }}
-                >
-                  <BlackjackCard card={c} fishArt={fish} />
-                </motion.div>
-              )
+              if (i === 0) {
+                // Up card — was already face-up during play, just sits
+                // there. No flip, no mount animation.
+                return (
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                    whileTap={{ scale: 0.96 }}
+                    style={{ flexShrink: 0, cursor: 'pointer' }}
+                  >
+                    <BlackjackCard card={c} fishArt={fish} />
+                  </motion.div>
+                )
+              }
+              // Extra dealer draws (i >= 2). Use DealtCard so they slide
+              // in face-down and flip to face-up, matching how every
+              // other card in the game gets dealt.
+              return <DealtCard key={i} card={c} fishArt={fish} />
             })}
           </div>
         </motion.div>
