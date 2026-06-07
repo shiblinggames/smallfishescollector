@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
 import GameCard from './GameCard'
+import TideRunBoatArt from './TideRunBoatArt'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
@@ -111,8 +112,7 @@ function FeaturesSection() {
         href="/tavern/tide-run"
         title="Tide Run"
         variant="compact"
-        art="/boatrun.png"
-        artMaxHeight={68}
+        customArt={<TideRunBoatArt />}
         accent="#5da7d4"
       />
     </div>
