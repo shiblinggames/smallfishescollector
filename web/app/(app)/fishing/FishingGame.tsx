@@ -4471,6 +4471,13 @@ export default function FishingGame({
     setHoldOpen(false)
     setGearOpen(false)
     setShinyChoiceModalOpen(false)
+    // Transition back to idle so the action slot re-renders the Cast
+    // button. Without this, phase stays 'result' with catchResult /
+    // missResult / crateResult all null — neither the Cast Again branch
+    // (gated on `catchResult || missResult`) nor the idle Cast button
+    // (gated on `phase === 'idle'`) renders, and the player gets
+    // stranded with no action after picking Sell or Mount on a golden.
+    setPhase('idle')
   }
 
   // Forced choice modal handlers — both terminal, the trophy can't be
