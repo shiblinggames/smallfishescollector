@@ -803,8 +803,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
         {/* Net delta — fades in only after the reveal finishes. Spring
-            punch + count-up + sparkle on Blackjack. */}
-        <div style={{ position: 'relative', textAlign: 'center', minHeight: '3.2rem' }}>
+            punch + count-up + sparkle on Blackjack.
+            Fixed-height slot (~3.8rem to fit the 2.4rem Blackjack
+            number + the 0.55rem eyebrow + 4px gap) with absolutely-
+            positioned content, so the motion.div mounting at outcome
+            time can't push the dealer/hand rows below it down. The
+            slot occupies the same vertical space regardless of state,
+            and the spring animation lives entirely inside it. */}
+        <div style={{ position: 'relative', height: '3.8rem' }}>
           <AnimatePresence>
             {outcomeShown && (
               <motion.div
@@ -812,6 +818,15 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 initial={{ opacity: 0, scale: hasBlackjack ? 1.6 : 1.35, y: -4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: hasBlackjack ? 280 : 360, damping: hasBlackjack ? 14 : 18 }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                }}
               >
                 <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: netColor, marginBottom: 4 }}>
                   {hasBlackjack ? 'Blackjack' : headlineWord}
@@ -1138,18 +1153,17 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       overflow: 'hidden',     // clip coin trails that escape the modal
     }}>
       {/* Header: chip stack + cash-out shortcut. The Nav already shows
-          the player's doubloon balance — no need to duplicate it. The
-          page-level "Blackjack" title is gone too; just the chip
-          display + the day-cap bar live here. Header collapses to the
-          DailyCapBar on the buy-in screen since there are no chips
-          yet to display. */}
+          the player's doubloon balance — no need to duplicate it.
+          Daily-cap bar ONLY shows on the buy-in screen — once you're at
+          the table with chips, the cap is irrelevant info (chips can
+          churn freely without re-hitting the buy-in cap). */}
       <div style={{
         marginBottom: '1.1rem',
         paddingBottom: '0.85rem',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        {phase !== 'buyIn' && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+        {phase !== 'buyIn' ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
               <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Chips</p>
               <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>{chips.toLocaleString()} ⟡</p>
@@ -1173,8 +1187,9 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               </button>
             )}
           </div>
+        ) : (
+          <DailyCapBar wagered={dailyWagered} cap={BJ_DAILY_CAP} />
         )}
-        <DailyCapBar wagered={dailyWagered} cap={BJ_DAILY_CAP} />
       </div>
 
       {phase === 'buyIn' && renderBuyInScreen()}
