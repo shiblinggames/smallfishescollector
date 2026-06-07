@@ -1124,8 +1124,8 @@ function ActionButton({ label, chip, onClick, disabled }: {
       transition={{ type: 'spring', stiffness: 480, damping: 28 }}
       className="font-cinzel font-700 uppercase"
       style={{
-        flex: 1, minWidth: 96,
-        padding: '1.05rem 0.7rem',
+        flex: 1, minWidth: 72,
+        padding: '0.7rem 0.55rem',
         borderRadius: 4,
         background: disabled
           ? 'rgba(8,5,2,0.45)'
@@ -1133,9 +1133,16 @@ function ActionButton({ label, chip, onClick, disabled }: {
         border: `1px solid ${disabled ? 'rgba(196,169,106,0.16)' : 'rgba(196,169,106,0.5)'}`,
         color: disabled ? '#5a5550' : '#d4ba78',
         fontSize: '0.95rem',
-        letterSpacing: '0.18em',
+        letterSpacing: '0.16em',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+        // Stack label + chip vertically inside the button. Locked min
+        // height so Hit/Stand (label only) line up with Double/Split
+        // (label + chip). Without this, the bet buttons would be
+        // taller and the row would look uneven.
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 3,
+        minHeight: 60,
         boxShadow: disabled
           ? 'none'
           : 'inset 0 1px 0 rgba(240,214,149,0.18), inset 0 -1px 0 rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.45)',
@@ -1145,13 +1152,14 @@ function ActionButton({ label, chip, onClick, disabled }: {
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.borderColor = 'rgba(240,214,149,0.85)' }}
       onMouseLeave={e => { if (!disabled) e.currentTarget.style.borderColor = 'rgba(196,169,106,0.5)' }}
     >
-      <span>{label}</span>
+      <span style={{ lineHeight: 1 }}>{label}</span>
       {chip && (
         <span style={{
           color: disabled ? '#4a4540' : '#f0c040',
           fontFamily: 'inherit',
-          letterSpacing: '0.08em',
-          fontSize: '0.86rem',
+          letterSpacing: '0.06em',
+          fontSize: '0.7rem',
+          lineHeight: 1,
         }}>
           {chip}
         </span>
