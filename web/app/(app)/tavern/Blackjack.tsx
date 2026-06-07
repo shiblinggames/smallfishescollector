@@ -450,12 +450,12 @@ function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing' }: { card: 
 
 /** Casino-felt rules text printed between the dealer cards and the
  *  pot pill on both play and settle. Mimics how real blackjack tables
- *  have the house rules printed on the felt surface (3:2 payout, dealer
- *  standing on all 17, insurance 2:1). Decorative — low-opacity gold so
- *  it sits behind the action visually without competing. Reflects the
- *  actual rules: dealerPlay in lib/blackjack.ts loops while total < 17
- *  (stands on all 17 including soft 17 / S17 house rule), and settleHand
- *  pays naturals 3:2 / regular wins 1:1 / insurance side-bet 2:1. */
+ *  have the house rules printed on the felt surface (3:2 payout, H17,
+ *  insurance 2:1). Decorative — low-opacity gold so it sits behind
+ *  the action visually without competing. Reflects the actual rules:
+ *  dealerPlay in lib/blackjack.ts hits on soft 17 (H17 house rule),
+ *  and settleHand pays naturals 3:2 / regular wins 1:1 / insurance
+ *  side-bet 2:1. */
 function TableRules() {
   return (
     <p
@@ -470,7 +470,7 @@ function TableRules() {
         padding: '0.4rem 0 0.2rem',
       }}
     >
-      Blackjack pays 3 to 2  ·  Dealer stands on all 17  ·  Insurance pays 2 to 1
+      Blackjack pays 3 to 2  ·  Dealer hits soft 17  ·  Insurance pays 2 to 1
     </p>
   )
 }

@@ -5,7 +5,8 @@
 // one of A 2 3 4 5 6 7 8 9 T J Q K and suit is one of H D C S.
 //
 // House rules (locked in 2026-06-06):
-//   - Dealer stands on all 17 (including soft 17)
+//   - Dealer hits soft 17 (H17 — slightly more house-favorable than
+//     S17; the more common modern-casino rule)
 //   - Natural blackjack pays 3:2
 //   - Regular win pays 1:1
 //   - Push on tie
@@ -102,11 +103,15 @@ export function canSplit(cards: readonly Card[]): boolean {
   return cards.length === 2 && cardRank(cards[0]) === cardRank(cards[1])
 }
 
-/** Dealer auto-play: keep hitting until total >= 17. Stands on all 17,
- *  including soft 17 (house rule). Returns the final hand. */
+/** Dealer auto-play (H17 — hit soft 17). Keep drawing while the hand
+ *  is under 17, OR exactly 17 with an active ace counting as 11.
+ *  Stands on hard 17+ and on any 18+. Returns the final hand. */
 export function dealerPlay(shoe: Card[], dealerCards: Card[]): Card[] {
   const hand = [...dealerCards]
-  while (handValue(hand).total < 17) {
+  while (true) {
+    const { total, soft } = handValue(hand)
+    const shouldHit = total < 17 || (total === 17 && soft)
+    if (!shouldHit) break
     hand.push(drawCard(shoe))
   }
   return hand
