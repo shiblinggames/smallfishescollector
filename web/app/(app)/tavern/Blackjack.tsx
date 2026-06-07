@@ -452,6 +452,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   // and let the deal animation finish first; an effect transitions us
   // into the settle reveal once dealRevealCount hits 4.
   const [pendingSettle, setPendingSettle] = useState<SettleResult | null>(null)
+  // Ref-backed flag mirroring "is the next action result the response
+  // to a fresh deal?" — set true in startDeal, cleared in
+  // applyActionResult. Refs avoid the stale-closure trap where the
+  // applyActionResult captured by fireAction's startTransition
+  // callback would otherwise read the pre-setDealRevealCount value
+  // and skip kickOffDealReveal.
+  const pendingFreshDealRef = useRef(false)
   // Track pending timeouts so a fast Play-Again tap doesn't leave
   // stale fires racing the next hand.
   const revealTimersRef = useRef<number[]>([])
@@ -593,10 +600,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     if ('error' in r) { setError(r.error); return }
     setError(null)
 
-    // Is this the response to a fresh deal? startDeal() resets
-    // dealRevealCount to 0 right before calling dealBlackjack; any
-    // other action (hit/stand/double/split) leaves it at 4.
-    const isFreshDeal = dealRevealCount < 4
+    // Read the fresh-deal flag from the ref (state read here would be
+    // stale — applyActionResult was captured by fireAction's
+    // startTransition before the setDealRevealCount(0) in startDeal
+    // had a chance to apply). Clear the flag immediately so a
+    // mid-hand action right after can't be mis-classified.
+    const isFreshDeal = pendingFreshDealRef.current
+    pendingFreshDealRef.current = false
 
     if (r.kind === 'active') {
       setActive(r.state)
@@ -658,7 +668,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setHoleFlipped(false)
     setRevealedDealerCount(0)
     setOutcomeShown(false)
-    setDealRevealCount(0)            // marks the next response as a fresh deal
+    setDealRevealCount(0)
+    pendingFreshDealRef.current = true   // read by applyActionResult on response
     fireAction(() => dealBlackjack(wager))
   }
 
@@ -671,6 +682,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setRevealedDealerCount(0)
     setOutcomeShown(false)
     setDealRevealCount(4)            // idle — deal animation not running
+    pendingFreshDealRef.current = false
     // If the player's been busted out completely, push them to buy-in
     // instead of a useless wager screen they can't act on.
     setPhase(chips > 0 ? 'wager' : 'buyIn')
