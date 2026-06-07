@@ -247,7 +247,10 @@ function DailyCapBar({ wagered, cap }: { wagered: number; cap: number }) {
 // transition was visibly resizing cards before and the jitter was
 // annoying. Picked 64×92 so five cards fit per row on a 360-wide phone
 // without wrapping.
-const CARD_DIMS = { w: 64, h: 92, rankFont: '1.05rem', suitFont: '1rem', cornerPad: 5 }
+// Bumped 64×92 → 78×112 — corners read at arm's length, deck silhouette
+// is more imposing. Four cards per row still fit on a 360-wide phone
+// (4 × 78 + gaps ≈ 330px); five-card hands wrap to a second row.
+const CARD_DIMS = { w: 78, h: 112, rankFont: '1.25rem', suitFont: '1.2rem', cornerPad: 6 }
 
 // 3D flip wrapper — used for the dealer's hole card. Renders the
 // cardback on the front face and the real card on the back face; a
@@ -423,41 +426,17 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.state.doubloons }))
       return
     }
-    // Settled. Two reveal modes:
-    //
-    //   PLAYER-BUST PATH (every hand busted):
-    //     Player already knows they lost the moment they busted; the
-    //     dealer never had to play. Show "BUST" + outcome immediately,
-    //     no staged dealer-card reveal — matches real blackjack where
-    //     the dealer just collects and moves on.
-    //
-    //   NORMAL PATH (any hand survived to compare against the dealer):
-    //     Stage the reveal so the player gets the satisfaction of
-    //     watching the hole flip and the dealer play out:
-    //       1. Settle screen renders with dealer's hole still face-down.
-    //       2. t=350ms: flip the hole (580ms 3D rotation).
-    //       3. t=930ms+: each extra dealer draw slides in at 500ms intervals.
-    //       4. t=last+400ms: outcome panel + doubloons update.
+    // Settled — stage the reveal so the player always sees the hole
+    // flip and any dealer draws come in one at a time, even on bust:
+    //   1. Settle screen renders with dealer's hole still face-down.
+    //   2. t=350ms: flip the hole (580ms 3D rotation).
+    //   3. t=930ms+: each extra dealer draw slides in at 500ms intervals.
+    //   4. t=last+400ms: outcome panel + doubloons update.
     clearRevealTimers()
     setResult(r.result)
     setActive(null)
     setPhase('settled')
 
-    const allBusted = r.result.hands.every(h => h.outcome === 'lose' && h.total > 21)
-
-    if (allBusted) {
-      setHoleFlipped(true)
-      setRevealedDealerCount(r.result.dealerCards.length)
-      setOutcomeShown(true)
-      setDoubloons(r.result.newDoubloons)
-      setDailyWagered(r.result.dailyWagered)
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
-      // Sharp double-tap haptic for bust — distinct from a regular loss.
-      vibrate([30, 60, 30])
-      return
-    }
-
-    // Normal staged reveal.
     setHoleFlipped(false)
     setRevealedDealerCount(2)
     setOutcomeShown(false)
@@ -608,7 +587,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>Dealer</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0e8d0' }}>{dealerTotalDisplay}</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#f0e8d0', lineHeight: 1 }}>{dealerTotalDisplay}</p>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {state.dealerCards.map((c, i) => (
@@ -633,7 +612,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7ad3a0' }}>
               {state.hands.length === 1 ? 'Your Hand' : `Hand ${state.activeHandIdx + 1} of ${state.hands.length}`}
             </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0e8d0' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#f0e8d0', lineHeight: 1 }}>
               {activeHand ? <CountUp value={activeHand.total} duration={350} /> : ''}
             </p>
           </div>
@@ -661,8 +640,8 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.64rem', color: '#7a948a', letterSpacing: '0.1em' }}>
                   {h.busted ? 'BUST' : h.stood ? 'STOOD' : isActive ? 'ACTIVE' : 'WAITING'} · {h.wager} ⟡{h.doubled ? ' · DD' : ''}{h.isSplit ? ' · SPLIT' : ''}
                 </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: h.busted ? '#f08a8a' : h.isNatural ? '#f0c040' : '#f0e8d0' }}>
-                  <CountUp value={h.total} duration={350} />{h.soft && h.total !== 21 ? ' (soft)' : ''}{h.isNatural ? ' · BJ' : ''}
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: h.busted ? '#f08a8a' : h.isNatural ? '#f0c040' : '#f0e8d0', lineHeight: 1 }}>
+                  <CountUp value={h.total} duration={350} />{h.soft && h.total !== 21 ? <span style={{ fontSize: '0.65rem', marginLeft: 4 }}>(soft)</span> : ''}{h.isNatural ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>· BJ</span> : ''}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -684,67 +663,18 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           )})}
         </div>
 
-        {/* Insurance prompt OR action bar */}
-        {state.insuranceOffered ? (
-          <div style={{
-            padding: '0.85rem 0.85rem 0.95rem',
-            borderRadius: 12,
-            background: 'rgba(125,160,216,0.10)',
-            border: '1px solid rgba(125,160,216,0.45)',
-          }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#bcd0ea', marginBottom: 4 }}>
-              Insurance?
-            </p>
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9aa4b5', marginBottom: 10, lineHeight: 1.45 }}>
-              Dealer shows an Ace. For {Math.floor(state.hands[0].wager / 2)} ⟡ you can side-bet that the hole card is a 10-value. Pays 2:1 if dealer has natural Blackjack.
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                disabled={isPending || doubloons < Math.floor(state.hands[0].wager / 2)}
-                onClick={() => fireAction(acceptInsurance)}
-                className="font-karla font-700 uppercase tracking-[0.06em]"
-                style={{
-                  flex: 1, padding: '0.65rem 0', borderRadius: 10,
-                  background: 'rgba(125,160,216,0.32)',
-                  border: '1px solid rgba(125,160,216,0.7)',
-                  color: '#dde8f6',
-                  fontSize: '0.74rem',
-                  cursor: isPending ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Take · {Math.floor(state.hands[0].wager / 2)} ⟡
-              </button>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() => fireAction(declineInsurance)}
-                className="font-karla font-700 uppercase tracking-[0.06em]"
-                style={{
-                  flex: 1, padding: '0.65rem 0', borderRadius: 10,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: '#a8a39c',
-                  fontSize: '0.74rem',
-                  cursor: isPending ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Decline
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <ActionButton label="Hit" icon="hit" onClick={() => fireAction(hit)} disabled={!state.canHit || isPending} accent="#7ad3a0" />
-            <ActionButton label="Stand" icon="stand" onClick={() => fireAction(stand)} disabled={!state.canStand || isPending} accent="#c4a96a" />
-            {state.canDouble && (
-              <ActionButton label={`Double · ${activeHand?.wager} ⟡`} icon="double" onClick={() => fireAction(doubleDown)} disabled={isPending} accent="#7aa7e8" />
-            )}
-            {state.canSplit && (
-              <ActionButton label={`Split · ${state.hands[0].wager} ⟡`} icon="split" onClick={() => fireAction(split)} disabled={isPending} accent="#d0a0e8" />
-            )}
-          </div>
-        )}
+        {/* Action bar — always rendered. Insurance prompt is its own
+            modal overlay (rendered at the modal root, below). */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <ActionButton label="Hit" icon="hit" onClick={() => fireAction(hit)} disabled={!state.canHit || isPending} accent="#7ad3a0" />
+          <ActionButton label="Stand" icon="stand" onClick={() => fireAction(stand)} disabled={!state.canStand || isPending} accent="#c4a96a" />
+          {state.canDouble && (
+            <ActionButton label={`Double · ${activeHand?.wager} ⟡`} icon="double" onClick={() => fireAction(doubleDown)} disabled={isPending} accent="#7aa7e8" />
+          )}
+          {state.canSplit && (
+            <ActionButton label={`Split · ${state.hands[0].wager} ⟡`} icon="split" onClick={() => fireAction(split)} disabled={isPending} accent="#d0a0e8" />
+          )}
+        </div>
 
         {error && (
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center' }}>{error}</p>
@@ -1077,6 +1007,92 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           the burst, which is how each new win re-triggers the animation.
           key === 0 = never won yet → don't render. */}
       {coinFlightKey > 0 && <CoinFlight key={coinFlightKey} />}
+
+      {/* Insurance pop-up. Pure overlay over the play area; dismisses
+          itself the moment the player picks an option. Backdrop blur +
+          centered card; matches the dealer-card area's visual weight. */}
+      <AnimatePresence>
+        {phase === 'play' && active?.insuranceOffered && (
+          <>
+            <motion.div
+              key="ins-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 20,
+                background: 'rgba(2,4,8,0.7)',
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+              }}
+            />
+            <motion.div
+              key="ins-card"
+              initial={{ opacity: 0, scale: 0.9, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -8 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              style={{
+                position: 'absolute', zIndex: 21,
+                left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+                width: 'calc(100% - 2.2rem)', maxWidth: 340,
+                padding: '1.25rem 1.1rem 1.1rem',
+                borderRadius: 14,
+                background: 'linear-gradient(180deg, #1c2538 0%, #0d1320 100%)',
+                border: '1.5px solid rgba(125,160,216,0.55)',
+                boxShadow: '0 24px 48px rgba(0,0,0,0.7)',
+              }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7aa7e8', marginBottom: 5 }}>
+                Side Bet
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#dde8f6', lineHeight: 1, marginBottom: 10 }}>
+                Insurance?
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9aa4b5', marginBottom: 14, lineHeight: 1.5 }}>
+                Dealer shows an Ace. For {Math.floor(active.hands[0].wager / 2)} ⟡ you can side-bet that the hole card is a 10-value. Pays 2:1 if dealer has natural Blackjack.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  disabled={isPending || doubloons < Math.floor(active.hands[0].wager / 2)}
+                  onClick={() => fireAction(acceptInsurance)}
+                  className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                  style={{
+                    flex: 1, padding: '0.85rem 0', borderRadius: 11,
+                    background: 'linear-gradient(180deg, rgba(125,160,216,0.5) 0%, rgba(125,160,216,0.2) 100%)',
+                    border: '1.5px solid rgba(125,160,216,0.8)',
+                    color: '#eef4ff',
+                    fontSize: '0.85rem',
+                    cursor: isPending ? 'not-allowed' : 'pointer',
+                    boxShadow: 'inset 0 1px 0 rgba(125,160,216,0.5), inset 0 -2px 0 rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.45)',
+                    textShadow: '0 1px 0 rgba(0,0,0,0.45)',
+                  }}
+                >
+                  Take · {Math.floor(active.hands[0].wager / 2)} ⟡
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => fireAction(declineInsurance)}
+                  className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                  style={{
+                    flex: 1, padding: '0.85rem 0', borderRadius: 11,
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    color: '#c5beb4',
+                    fontSize: '0.85rem',
+                    cursor: isPending ? 'not-allowed' : 'pointer',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 8px rgba(0,0,0,0.45)',
+                    textShadow: '0 1px 0 rgba(0,0,0,0.45)',
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -1127,25 +1143,38 @@ function ActionIconSvg({ icon }: { icon: ActionIcon }) {
 }
 
 function ActionButton({ label, onClick, disabled, accent, icon }: { label: string; onClick: () => void; disabled: boolean; accent: string; icon?: ActionIcon }) {
+  // Chunky tactile button: gradient body, inset highlight on top edge,
+  // crisp accent border, soft drop-shadow. Press state dents inward.
   return (
-    <button
+    <motion.button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="font-karla font-700 uppercase tracking-[0.06em]"
+      whileHover={!disabled ? { y: -1 } : undefined}
+      whileTap={!disabled ? { y: 1, scale: 0.985 } : undefined}
+      transition={{ type: 'spring', stiffness: 480, damping: 28 }}
+      className="font-cinzel font-700 uppercase tracking-[0.06em]"
       style={{
         flex: 1, minWidth: 100,
-        padding: '0.85rem 0', borderRadius: 10,
-        background: disabled ? 'rgba(255,255,255,0.04)' : `${accent}1f`,
-        border: `1px solid ${disabled ? 'rgba(255,255,255,0.1)' : accent + '88'}`,
-        color: disabled ? '#5a5550' : accent,
-        fontSize: '0.86rem',
+        padding: '0.95rem 0.6rem', borderRadius: 12,
+        background: disabled
+          ? 'rgba(255,255,255,0.03)'
+          : `linear-gradient(180deg, ${accent}30 0%, ${accent}10 100%)`,
+        border: `1.5px solid ${disabled ? 'rgba(255,255,255,0.08)' : accent + 'aa'}`,
+        color: disabled ? '#4a4540' : accent,
+        fontSize: '0.95rem',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+        // Top inset gives the chip a glossy-edge feel; bottom shadow
+        // anchors it; outer drop-shadow lifts it off the felt.
+        boxShadow: disabled
+          ? 'none'
+          : `inset 0 1px 0 ${accent}55, inset 0 -2px 0 rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.45)`,
+        textShadow: disabled ? 'none' : '0 1px 0 rgba(0,0,0,0.45)',
       }}
     >
       {icon && <ActionIconSvg icon={icon} />}
       <span>{label}</span>
-    </button>
+    </motion.button>
   )
 }
