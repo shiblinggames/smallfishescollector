@@ -448,30 +448,34 @@ function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing' }: { card: 
   )
 }
 
-/** Casino-felt rules text printed between the dealer cards and the
- *  pot pill on both play and settle. Mimics how real blackjack tables
- *  have the house rules printed on the felt surface (3:2 payout, H17,
- *  insurance 2:1). Decorative — low-opacity gold so it sits behind
- *  the action visually without competing. Reflects the actual rules:
- *  dealerPlay in lib/blackjack.ts hits on soft 17 (H17 house rule),
- *  and settleHand pays naturals 3:2 / regular wins 1:1 / insurance
- *  side-bet 2:1. */
-function TableRules() {
+/** Single line of "felt etching" — uppercase low-opacity gold text
+ *  anchored to the right edge of the card row. Cards flex from the
+ *  left and cover this when the hand grows past two cards. Stays out
+ *  of normal flow (position: absolute) so adding the rule lines never
+ *  shifts the play surface vertically — they sit behind the cards as
+ *  decoration, not a new row. */
+function FeltRule({ text }: { text: string }) {
   return (
-    <p
+    <span
+      aria-hidden
       className="font-karla font-700 uppercase"
       style={{
-        fontSize: '0.52rem',
-        letterSpacing: '0.22em',
+        position: 'absolute',
+        right: 4,
+        top: '50%',
+        transform: 'translateY(-50%)',
         color: '#a68a4a',
-        opacity: 0.5,
-        textAlign: 'center',
-        lineHeight: 1.5,
-        padding: '0.4rem 0 0.2rem',
+        opacity: 0.32,
+        fontSize: '0.5rem',
+        letterSpacing: '0.22em',
+        whiteSpace: 'nowrap',
+        pointerEvents: 'none',
+        zIndex: 0,
+        textShadow: '0 1px 0 rgba(0,0,0,0.5)',
       }}
     >
-      Blackjack pays 3 to 2  ·  Dealer hits soft 17  ·  Insurance pays 2 to 1
-    </p>
+      {text}
+    </span>
   )
 }
 
@@ -1165,16 +1169,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>Dealer</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#f0e8d0', lineHeight: 1 }}>{dealerTotalDisplay}</p>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+          <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+            <FeltRule text="Dealer hits soft 17" />
             {visibleDealerCards.map((c, i) => (
               <DealtCard key={i} card={c} fishArt={getFish(-1, i, c)} />
             ))}
           </div>
         </div>
-
-        {/* Casino-felt rules printed across the table between dealer
-            and pot — decorative reminder of the house rules. */}
-        <TableRules />
 
         {/* Pot — fixed slot between dealer and player. Counts up from
             chips as bets land, drains to chips on settle outcome. */}
@@ -1277,7 +1278,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   </p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+              <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+                {hi === 0 && <FeltRule text="Blackjack pays 3 to 2  ·  Insurance pays 2 to 1" />}
                 {visibleHandCards.map((c, ci) => (
                   <DealtCard
                     key={ci}
@@ -1385,7 +1387,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+          <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+            <FeltRule text="Dealer hits soft 17" />
             {r.dealerCards.map((c, i) => {
               if (i >= revealedDealerCount) return null
               const fish = getFish(-1, i, c)
@@ -1431,11 +1434,6 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             })}
           </div>
         </motion.div>
-
-        {/* Casino-felt rules printed across the table between dealer
-            and pot — same as the play screen so the layout stays
-            consistent across phases. */}
-        <TableRules />
 
         {/* Pot — holds the wager visible through the dealer reveal,
             drains to 0 when outcomeShown fires (mirrored by the chips
@@ -1508,7 +1506,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {hi === 0 && <FeltRule text="Blackjack pays 3 to 2  ·  Insurance pays 2 to 1" />}
                   {h.cards.map((card, ci) => (
                     // mode='revealed' so the structure matches what the
                     // play screen rendered for these same cards (DealtCard
