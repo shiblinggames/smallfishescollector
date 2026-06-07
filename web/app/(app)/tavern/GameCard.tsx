@@ -4,7 +4,10 @@ import { useRouter } from 'next/navigation'
 
 interface Props {
   href: string
-  eyebrow: string
+  /** Optional uppercase tag above the title. Omit for a cleaner card
+   *  where the title alone carries the label. ✓ Done badge still
+   *  renders on its own row when the eyebrow is missing. */
+  eyebrow?: string
   title: string
   /** Optional subtext under the title. Drop it for a more compact card —
    *  the eyebrow + title + ✓ Done badge usually carry enough meaning. */
@@ -83,16 +86,20 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
             />
           </div>
         )}
-        {/* Eyebrow + done */}
-        <div className="flex items-center gap-2 mb-1">
-          <p className="font-karla font-700 uppercase tracking-[0.12em]"
-            style={{ fontSize: '0.52rem', color: accent + 'cc', flex: 1 }}>
-            {eyebrow}
-          </p>
-          {done && (
-            <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: '#4ade80', whiteSpace: 'nowrap' }}>✓ Done</span>
-          )}
-        </div>
+        {/* Eyebrow + done. Whole row collapses when both are absent. */}
+        {(eyebrow || done) && (
+          <div className="flex items-center gap-2 mb-1">
+            {eyebrow && (
+              <p className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.52rem', color: accent + 'cc', flex: 1 }}>
+                {eyebrow}
+              </p>
+            )}
+            {done && (
+              <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: '#4ade80', whiteSpace: 'nowrap', marginLeft: eyebrow ? 0 : 'auto' }}>✓ Done</span>
+            )}
+          </div>
+        )}
         <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: statusText ? '0.3rem' : 0 }}>
           {title}
         </p>
@@ -131,15 +138,19 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
     >
       {/* Left: text content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="flex items-center gap-2 mb-2">
-          <p className="font-karla font-600 uppercase tracking-[0.12em]"
-            style={{ fontSize: '0.56rem', color: accent + 'cc', flex: 1 }}>
-            {eyebrow}
-          </p>
-          {done && (
-            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#4ade80', whiteSpace: 'nowrap' }}>✓ Done</span>
-          )}
-        </div>
+        {(eyebrow || done) && (
+          <div className="flex items-center gap-2 mb-2">
+            {eyebrow && (
+              <p className="font-karla font-600 uppercase tracking-[0.12em]"
+                style={{ fontSize: '0.56rem', color: accent + 'cc', flex: 1 }}>
+                {eyebrow}
+              </p>
+            )}
+            {done && (
+              <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#4ade80', whiteSpace: 'nowrap', marginLeft: eyebrow ? 0 : 'auto' }}>✓ Done</span>
+            )}
+          </div>
+        )}
 
         <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.2, marginBottom: statusText ? '0.35rem' : 0 }}>
           {title}

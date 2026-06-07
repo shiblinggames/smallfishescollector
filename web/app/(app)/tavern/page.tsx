@@ -60,13 +60,13 @@ async function DailySection() {
   const chartCompleted = hasChart && !!chartState.progress.completed_at
   const chartMovesLeft = hasChart ? chartState.movesAvailable : 0
 
-  // No statusText on cards by design — the eyebrow + title + ✓ Done badge
-  // carry enough meaning, and dropping subtext makes the grid more compact.
+  // No statusText / no eyebrow on cards by design — the title + ✓ Done
+  // badge carry enough meaning since each section already has its own
+  // heading above, and dropping the extra labels keeps the grid clean.
   return (
     <div className="grid grid-cols-2 gap-3">
       <GameCard
         href="/tavern/daily-bonus"
-        eyebrow="Daily"
         title="Daily Bonus"
         completed={allClaimed}
         variant="compact"
@@ -75,7 +75,6 @@ async function DailySection() {
       />
       <GameCard
         href="/tavern/fish-of-the-day"
-        eyebrow="Daily"
         title="Fish of the Day"
         completed={fotdDone}
         variant="compact"
@@ -116,7 +115,6 @@ async function DailySection() {
         return (
           <GameCard
             href="/charting"
-            eyebrow="Daily"
             title="Chart the Course"
             completed={dailyDone}
             variant="compact"
@@ -138,7 +136,6 @@ function FeaturesSection() {
     <div className="grid grid-cols-2 gap-3">
       <GameCard
         href="/packs"
-        eyebrow="Crew"
         title="Recruit Crew"
         variant="compact"
         art="/recruitcrew.png"
@@ -146,7 +143,6 @@ function FeaturesSection() {
       />
       <GameCard
         href="/tavern/tide-run"
-        eyebrow="Featured"
         title="Tide Run"
         variant="compact"
         art="/boatrun.png"
@@ -168,7 +164,6 @@ async function ArcadeSection() {
     <div className="grid grid-cols-2 gap-3">
       <GameCard
         href="/tavern/blackjack"
-        eyebrow="Arcade"
         title="Blackjack"
         completed={blackjackCapReached}
         variant="compact"
@@ -177,7 +172,6 @@ async function ArcadeSection() {
       />
       <GameCard
         href="/tavern/slots"
-        eyebrow="Arcade"
         title="Fish Slots"
         completed={slotsCapReached}
         variant="compact"
