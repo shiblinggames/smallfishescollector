@@ -299,13 +299,13 @@ const CARD_DIMS = { w: 78, h: 112, rankFont: '1.25rem', suitFont: '1.2rem', corn
 // cardback on the front face and the real card on the back face; a
 // 180° rotateY transition flips between them. backfaceVisibility:
 // hidden hides whichever face is rotated away. Pure CSS, no library.
-function FlipCard({ flipped, card, fishArt }: { flipped: boolean; card: Card; fishArt: string | null }) {
+function FlipCard({ flipped, card, fishArt, duration = 820 }: { flipped: boolean; card: Card; fishArt: string | null; duration?: number }) {
   return (
     <div style={{ perspective: 900, width: CARD_DIMS.w, height: CARD_DIMS.h, flexShrink: 0 }}>
       <div style={{
         position: 'relative', width: '100%', height: '100%',
         transformStyle: 'preserve-3d',
-        transition: 'transform 820ms cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: `transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`,
         transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
       }}>
         <div style={{
@@ -323,6 +323,40 @@ function FlipCard({ flipped, card, fishArt }: { flipped: boolean; card: Card; fi
         </div>
       </div>
     </div>
+  )
+}
+
+/** Card that slides in face-down and flips to face-up shortly after
+ *  it mounts — the "card dealt to the player" animation used during
+ *  the initial deal and on hit/double draws. Pass card='X' to render
+ *  a card that lands face-down and stays there (the dealer hole).
+ *  Uses the same FlipCard structure as the settle-time hole reveal,
+ *  just with a snappier ~480ms flip (the settle hole gets 820ms for
+ *  drama; in-deal flips need to clear before the next card lands). */
+function DealtCard({ card, fishArt }: { card: Card | 'X'; fishArt: string | null }) {
+  const isHidden = card === 'X'
+  const [flipped, setFlipped] = useState(false)
+  useEffect(() => {
+    if (isHidden) return
+    // Tiny delay so the slide-in motion (0.36s) reads first; the flip
+    // starts while the card is still settling, total deal-in feels
+    // like one fluid motion.
+    const id = window.setTimeout(() => setFlipped(true), 180)
+    return () => clearTimeout(id)
+  }, [isHidden])
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -22, scale: 0.85 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+      whileTap={{ scale: 0.96 }}
+      transition={{ duration: 0.36, ease: 'easeOut' }}
+      style={{ flexShrink: 0, cursor: 'pointer' }}
+    >
+      {isHidden
+        ? <BlackjackCard card="X" fishArt={null} />
+        : <FlipCard flipped={flipped} card={card as Card} fishArt={fishArt} duration={480} />}
+    </motion.div>
   )
 }
 
@@ -495,20 +529,17 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     && buyInAmount <= Math.min(BJ_BUY_IN_MAX, doubloons, dailyRemaining)
     && !isPending
 
-  /** Stage the deal animation. Four cards, player-first:
-   *  player[0] @ 220ms · player[1] @ 720ms · dealer[0] @ 1220ms ·
-   *  dealer[1] (face-down) @ 1720ms. Cards land cleanly with the
-   *  existing per-card slide-in (initial: opacity 0, y:-18) — this
-   *  just delays each card's mount via dealRevealCount.
-   *  Player-first (not strict alternating-casino) so the natural-
-   *  Blackjack moment lands cleanly: both your cards arrive back-to-
-   *  back, the BLACKJACK chip pops the instant the second one lands,
-   *  THEN we move to the dealer. Single-player video table — no
-   *  reason to interleave around an empty seat.
+  /** Stage the deal animation. Four cards in true casino order:
+   *  player[0] @ 240ms · dealer[0] @ 880ms · player[1] @ 1520ms ·
+   *  dealer[1] (face-down) @ 2160ms. Each card slides in face-down
+   *  and flips to its face (DealtCard handles the flip; the hole at
+   *  count=4 is rendered as 'X' and stays face-down). 640ms between
+   *  cards leaves room for the ~500ms flip to read clearly before the
+   *  next card lands.
    *  Called from applyActionResult when a fresh deal lands (kind=
    *  'active' OR kind='settled' on a natural). */
   function kickOffDealReveal() {
-    const stops = [220, 720, 1220, 1720]
+    const stops = [240, 880, 1520, 2160]
     stops.forEach((t, i) => {
       revealTimersRef.current.push(window.setTimeout(() => setDealRevealCount(i + 1), t))
     })
@@ -648,11 +679,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     if (dealRevealCount !== 4 || !pendingSettle) return
     const r = pendingSettle
     const hasPlayerNatural = r.hands.some(h => h.outcome === 'blackjack')
-    // Player-first dealing means the BLACKJACK chip pops at count=2,
-    // not count=4 — so by the time we're here the celebration moment
-    // has already been on screen ~1s. 800ms more is plenty of breath
-    // before the dealer reveal kicks in.
-    const holdMs = hasPlayerNatural ? 800 : 500
+    // True casino order: player[1] lands at count=3, flips ~500ms
+    // later — so the BLACKJACK chip pops shortly before count=4 (the
+    // dealer hole slide). 1100ms hold after count=4 lets the natural
+    // moment really land before the dealer reveal pulls focus.
+    const holdMs = hasPlayerNatural ? 1100 : 500
     const id = window.setTimeout(() => {
       setPendingSettle(null)
       startSettleReveal(r)
@@ -863,15 +894,17 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
 
   function renderGameScreen(state: ClientState) {
     const activeHand = state.hands[state.activeHandIdx]
-    // Initial-deal reveal slicing. Player-first order: counts 1+2 add
-    // your two cards back-to-back; counts 3+4 add the dealer's up-card
-    // and face-down hole. On a split or mid-hand hit, dealRevealCount
-    // sits at 4 and these slices return the full hands unchanged —
-    // splits don't replay the animation; the new card per split-hand
-    // slides in via its own motion mount.
+    // Initial-deal reveal slicing. True casino order alternating
+    // around the table: count 1 = player[0], count 2 = dealer[0],
+    // count 3 = player[1], count 4 = dealer[1] face-down.
+    // Player visible = ceil(count/2), dealer visible = floor(count/2).
+    // On a split or mid-hand hit, dealRevealCount sits at 4 and these
+    // slices return the full hands unchanged — splits don't replay
+    // the animation; the new card per split-hand slides in via its
+    // own motion mount.
     const dealing = dealRevealCount < 4
-    const playerVisibleCount = dealing ? Math.min(dealRevealCount, 2) : Number.POSITIVE_INFINITY
-    const dealerVisibleCount = dealing ? Math.max(0, dealRevealCount - 2) : Number.POSITIVE_INFINITY
+    const playerVisibleCount = dealing ? Math.ceil(dealRevealCount / 2) : Number.POSITIVE_INFINITY
+    const dealerVisibleCount = dealing ? Math.floor(dealRevealCount / 2) : Number.POSITIVE_INFINITY
     const visibleDealerCards = dealing
       ? state.dealerCards.slice(0, dealerVisibleCount)
       : state.dealerCards
@@ -890,17 +923,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
             {visibleDealerCards.map((c, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: -18, scale: 0.85 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
-                whileTap={{ scale: 0.96 }}
-                transition={{ duration: 0.36, ease: 'easeOut' }}
-                style={{ flexShrink: 0, cursor: 'pointer' }}
-              >
-                <BlackjackCard card={c} fishArt={getFish(-1, i, c)} />
-              </motion.div>
+              <DealtCard key={i} card={c} fishArt={getFish(-1, i, c)} />
             ))}
           </div>
         </div>
@@ -975,17 +998,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
                 {visibleHandCards.map((c, ci) => (
-                  <motion.div
-                    key={ci}
-                    initial={{ opacity: 0, y: -18, scale: 0.85 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
-                    whileTap={{ scale: 0.96 }}
-                    transition={{ duration: 0.36, ease: 'easeOut' }}
-                    style={{ flexShrink: 0, cursor: 'pointer' }}
-                  >
-                    <BlackjackCard card={c} fishArt={getFish(hi, ci, c)} />
-                  </motion.div>
+                  <DealtCard key={ci} card={c} fishArt={getFish(hi, ci, c)} />
                 ))}
               </div>
             </motion.div>
