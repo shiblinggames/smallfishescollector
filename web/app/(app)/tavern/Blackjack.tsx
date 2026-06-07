@@ -413,6 +413,40 @@ function DealtCard({ card, fishArt }: { card: Card | 'X'; fishArt: string | null
   )
 }
 
+/** Visual pot indicator. Lives in a fixed slot between the dealer and
+ *  player rows so the player can watch their stake build (initial
+ *  wager, doubles, splits, insurance) and drain on settle. The number
+ *  itself comes from useAnimatedNumber upstream — this just renders
+ *  the pill and dims it when empty so the slot doesn't appear blank
+ *  between hands. */
+function PotPill({ value }: { value: number }) {
+  const empty = value <= 0
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 42 }}>
+      <motion.div
+        animate={{
+          scale: empty ? 0.86 : 1,
+          opacity: empty ? 0.32 : 1,
+        }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 10,
+          padding: '0.42rem 1.05rem',
+          borderRadius: 999,
+          background: 'linear-gradient(180deg, rgba(60,42,16,0.62) 0%, rgba(28,18,4,0.62) 100%)',
+          border: `1px solid ${empty ? 'rgba(196,169,106,0.22)' : 'rgba(196,169,106,0.6)'}`,
+          boxShadow: empty ? 'none' : '0 0 22px rgba(240,192,64,0.20), 0 4px 14px rgba(0,0,0,0.45)',
+        }}
+      >
+        <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Pot</span>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1 }}>
+          {value.toLocaleString()} ⟡
+        </p>
+      </motion.div>
+    </div>
+  )
+}
+
 function BlackjackCard({
   card,
   fishArt,
@@ -563,6 +597,23 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   const tally = chips - sessionBuyIns
   const animatedChips = useAnimatedNumber(chips, 950)
   const animatedTally = useAnimatedNumber(tally, 950)
+
+  // Pot indicator. Lives between dealer and player rows on play +
+  // settle, showing the total committed to the table for this hand
+  // (initial wager + any doubles + splits + insurance). Animates from
+  // chips → pot when bets land, drains pot → 0 on outcome (chips
+  // animation handles the matching upward count). Source of truth is
+  // active.totalWagered during play; on settle we hold the last value
+  // until outcomeShown fires, then drain.
+  const [potAmount, setPotAmount] = useState(0)
+  const animatedPot = useAnimatedNumber(potAmount, 850)
+  useEffect(() => {
+    if (phase === 'play' && active) setPotAmount(active.totalWagered)
+    else if (phase === 'wager' || phase === 'buyIn') setPotAmount(0)
+  }, [phase, active?.totalWagered, active])
+  useEffect(() => {
+    if (phase === 'settled' && outcomeShown) setPotAmount(0)
+  }, [phase, outcomeShown])
 
   function clearRevealTimers() {
     for (const id of revealTimersRef.current) clearTimeout(id)
@@ -1023,6 +1074,10 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           </div>
         </div>
 
+        {/* Pot — fixed slot between dealer and player. Counts up from
+            chips as bets land, drains to chips on settle outcome. */}
+        <PotPill value={animatedPot} />
+
         {/* Player hands — section label only; each row owns its own
             big total so we don't print the number twice in the
             single-hand case. */}
@@ -1218,6 +1273,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             })}
           </div>
         </motion.div>
+
+        {/* Pot — holds the wager visible through the dealer reveal,
+            drains to 0 when outcomeShown fires (mirrored by the chips
+            animation in the header ticking up on win / staying flat
+            on loss). */}
+        <PotPill value={animatedPot} />
 
         {/* Player hands — cards visible immediately. Outcome chip only
             shows up post-reveal so the player doesn't see the verdict
