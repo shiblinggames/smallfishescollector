@@ -33,6 +33,76 @@ function suitColor(suit: string): string {
 // over the middle. Fish art is locked per-card-instance via a parent ref
 // cache so it doesn't jitter between re-renders.
 //
+// ── Satisfaction helpers ───────────────────────────────────────────────────
+
+/** Animated number that eases up from 0 to `value` over `duration` ms.
+ *  Cubic ease-out so it lands soft. Used for the net-delta payout — a
+ *  static "+250 ⟡" is less satisfying than watching the chips count up. */
+function CountUp({ value, duration = 750, prefix = '' }: { value: number; duration?: number; prefix?: string }) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    let raf = 0
+    let start: number | null = null
+    const sign = value < 0 ? -1 : 1
+    const absTarget = Math.abs(value)
+    const tick = (t: number) => {
+      if (start === null) start = t
+      const p = Math.min(1, (t - start) / duration)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setDisplay(Math.round(absTarget * eased) * sign)
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    setDisplay(0)
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [value, duration])
+  return <>{prefix}{display.toLocaleString()}</>
+}
+
+/** Tiny haptic on supported devices. Web Vibration API: iOS Safari
+ *  silently no-ops, Android Chrome buzzes for real. Patterns chosen so
+ *  blackjack feels noticeably stronger than a regular win. */
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator === 'undefined' || !navigator.vibrate) return
+  try { navigator.vibrate(pattern) } catch { /* ignore — some browsers refuse */ }
+}
+
+/** Localized sparkle burst over a hand on big wins. Pure CSS via
+ *  framer-motion; each particle drifts up + fades. No screen-wide flash
+ *  (would violate the project's "subtle juice" rule). */
+function SparkleBurst({ accent }: { accent: string }) {
+  // 7 particles, randomized horizontal offsets, staggered slight
+  // delays so they don't all leave at once.
+  const particles = Array.from({ length: 7 }, (_, i) => ({
+    i,
+    left: 10 + Math.random() * 80,
+    delay: i * 0.04,
+    glyph: ['✨','⭐','✨','✦','✨','✦','⭐'][i],
+  }))
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {particles.map(p => (
+        <motion.div
+          key={p.i}
+          initial={{ opacity: 0, y: 0, scale: 0.6 }}
+          animate={{ opacity: [0, 1, 1, 0], y: -70, scale: [0.6, 1.1, 1, 0.9] }}
+          transition={{ duration: 1.4, delay: p.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            top: '40%',
+            left: `${p.left}%`,
+            fontSize: '1.1rem',
+            color: accent,
+            textShadow: `0 0 8px ${accent}`,
+          }}
+        >
+          {p.glyph}
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
 // Single locked size across every screen — the play / settle phase
 // transition was visibly resizing cards before and the jitter was
 // annoying. Picked 64×92 so five cards fit per row on a 360-wide phone
@@ -238,6 +308,8 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       setDoubloons(r.result.newDoubloons)
       setDailyWagered(r.result.dailyWagered)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
+      // Sharp double-tap haptic for bust — distinct from a regular loss.
+      vibrate([30, 60, 30])
       return
     }
 
@@ -263,6 +335,16 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       setDoubloons(r.result.newDoubloons)
       setDailyWagered(r.result.dailyWagered)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
+      // Outcome-tiered haptic. Blackjack = long satisfying buzz;
+      // dealer-bust win = quick double-tap; regular win = short;
+      // push = barely a tick; loss = soft thud.
+      const hasNaturalWin = r.result.hands.some(h => h.outcome === 'blackjack')
+      const hasAnyWin     = r.result.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
+      const allPush       = r.result.hands.every(h => h.outcome === 'push')
+      if (hasNaturalWin)     vibrate([60, 40, 60, 40, 120])
+      else if (hasAnyWin)    vibrate([50, 30, 50])
+      else if (allPush)      vibrate(20)
+      else                   vibrate(40)
     }, elapsed))
   }
 
@@ -522,20 +604,38 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           return Number(rank)
         })()
 
+    const hasBlackjack = r.hands.some(h => h.outcome === 'blackjack')
+    const isBigWin     = hasBlackjack || net >= 200
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-        {/* Net delta — fades in only after the reveal finishes. */}
-        <motion.div
-          initial={false}
-          animate={{ opacity: outcomeShown ? 1 : 0, y: outcomeShown ? 0 : -8 }}
-          transition={{ duration: 0.35 }}
-          style={{ textAlign: 'center', pointerEvents: outcomeShown ? 'auto' : 'none' }}
-        >
-          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: netColor, marginBottom: 4 }}>{headlineWord}</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '2rem', color: netColor, lineHeight: 1 }}>
-            {net > 0 ? '+' : ''}{net.toLocaleString()} ⟡
-          </p>
-        </motion.div>
+        {/* Net delta — fades in only after the reveal finishes. Spring
+            punch + count-up + sparkle on Blackjack. */}
+        <div style={{ position: 'relative', textAlign: 'center', minHeight: '3.2rem' }}>
+          <AnimatePresence>
+            {outcomeShown && (
+              <motion.div
+                key="net"
+                initial={{ opacity: 0, scale: hasBlackjack ? 1.6 : 1.35, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: hasBlackjack ? 280 : 360, damping: hasBlackjack ? 14 : 18 }}
+              >
+                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: netColor, marginBottom: 4 }}>
+                  {hasBlackjack ? 'Blackjack' : headlineWord}
+                </p>
+                <p className="font-cinzel font-700" style={{
+                  fontSize: hasBlackjack ? '2.4rem' : '2rem',
+                  color: netColor,
+                  lineHeight: 1,
+                  textShadow: isBigWin ? `0 0 22px ${netColor}80` : 'none',
+                }}>
+                  <CountUp value={net} prefix={net > 0 ? '+' : ''} /> ⟡
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {outcomeShown && hasBlackjack && <SparkleBurst accent={netColor} />}
+        </div>
 
         {/* Dealer — cards reveal in sequence; index 1 is the FlipCard hole. */}
         <div>
@@ -577,17 +677,30 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           {r.hands.map((h, hi) => {
             const isWin = h.outcome === 'win' || h.outcome === 'blackjack'
             const isLose = h.outcome === 'lose'
+            const isBust = h.outcome === 'lose' && h.total > 21
             const c = isWin ? '#7ad3a0' : isLose ? '#f08a8a' : '#c4a96a'
-            const label = h.outcome === 'blackjack' ? 'Blackjack 3:2' : h.outcome === 'win' ? 'Win' : h.outcome === 'push' ? 'Push' : h.outcome === 'lose' ? 'Lose' : h.outcome
+            const label = h.outcome === 'blackjack' ? 'Blackjack 3:2' : h.outcome === 'win' ? 'Win' : h.outcome === 'push' ? 'Push' : isBust ? 'Bust' : h.outcome === 'lose' ? 'Lose' : h.outcome
+            // Pulsing colored glow on the winning hand row + a brief
+            // single-shake transform on the busting hand. Both keyed
+            // on outcomeShown so they fire in sync with the reveal.
+            const glowShadow = outcomeShown && isWin ? `0 0 24px ${c}55` : 'none'
             return (
-              <div key={hi} style={{
-                marginBottom: hi === r.hands.length - 1 ? 0 : 10,
-                padding: '0.6rem 0.7rem',
-                background: outcomeShown ? `${c}12` : 'rgba(255,255,255,0.025)',
-                border: `1px solid ${outcomeShown ? c + '55' : 'rgba(255,255,255,0.08)'}`,
-                borderRadius: 10,
-                transition: 'background 0.3s, border-color 0.3s',
-              }}>
+              <motion.div
+                key={hi}
+                animate={outcomeShown && isBust
+                  ? { x: [0, -5, 5, -4, 4, -2, 2, 0] }
+                  : { x: 0 }}
+                transition={outcomeShown && isBust ? { duration: 0.42, ease: 'easeInOut' } : { duration: 0 }}
+                style={{
+                  marginBottom: hi === r.hands.length - 1 ? 0 : 10,
+                  padding: '0.6rem 0.7rem',
+                  background: outcomeShown ? `${c}14` : 'rgba(255,255,255,0.025)',
+                  border: `1px solid ${outcomeShown ? c + '5a' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: 10,
+                  boxShadow: glowShadow,
+                  transition: 'background 0.3s, border-color 0.3s, box-shadow 0.45s',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, minHeight: '0.95rem' }}>
                   <AnimatePresence>
                     {outcomeShown && (
@@ -625,7 +738,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                     <BlackjackCard key={ci} card={card} fishArt={getFish(hi, ci, card)} />
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )
           })}
         </div>
