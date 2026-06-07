@@ -494,9 +494,15 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     // calculator) — each beat lets the player register what just
     // happened before the next one lands:
     //   1. Settle screen renders with dealer's hole still face-down.
-    //   2. t=650ms: flip the hole (820ms 3D rotation — kept long).
-    //   3. t=1470ms+: each extra dealer draw slides in at 850ms intervals.
+    //   2. t=initialHold ms: flip the hole (820ms 3D rotation — kept long).
+    //   3. t=+850ms intervals: each extra dealer draw slides in.
     //   4. t=last+800ms: outcome panel + doubloons update + celebration.
+    //
+    // initialHold gets extended when the player ended on a bust or a
+    // stood-21 — those are decisive moments the player needs time to
+    // register before the dealer reveal pulls their eye to the top.
+    // The bust stamp / "21" stamp surface immediately on settle mount,
+    // so this hold is the pause that lets them read it.
     clearRevealTimers()
     setResult(r.result)
     setActive(null)
@@ -506,7 +512,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setRevealedDealerCount(2)
     setOutcomeShown(false)
 
-    let elapsed = 650
+    const anyPlayerBust    = r.result.hands.some(h => h.total > 21)
+    const anyPlayerStood21 = r.result.hands.some(h => h.total === 21 && h.outcome !== 'blackjack')
+    const initialHold = anyPlayerBust ? 1900 : anyPlayerStood21 ? 1500 : 650
+
+    let elapsed = initialHold
     revealTimersRef.current.push(window.setTimeout(() => setHoleFlipped(true), elapsed))
     elapsed += 820                    // flip duration
 
@@ -928,33 +938,59 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           {r.hands.map((h, hi) => {
             const isWin = h.outcome === 'win' || h.outcome === 'blackjack'
             const isLose = h.outcome === 'lose'
-            const isBust = h.outcome === 'lose' && h.total > 21
+            const isBust = h.total > 21
+            const isNatural21 = h.outcome === 'blackjack'
+            const isStood21 = !isBust && h.total === 21 && !isNatural21
+            // Pre-reveal state: player-side facts only (bust / 21 / total
+            // — things the player could compute themselves from the cards
+            // already on the table). Reveal-time color shifts to the full
+            // outcome palette once the dealer plays out.
+            const preColor = isBust ? '#f08a8a' : (isStood21 || isNatural21) ? '#f0c040' : '#c4a96a'
             const c = isWin ? '#7ad3a0' : isLose ? '#f08a8a' : '#c4a96a'
             const label = h.outcome === 'blackjack' ? 'Blackjack 3:2' : h.outcome === 'win' ? 'Win' : h.outcome === 'push' ? 'Push' : isBust ? 'Bust' : h.outcome === 'lose' ? 'Lose' : h.outcome
-            // Pulsing colored glow on the winning hand row + a brief
-            // single-shake transform on the busting hand. Both keyed
-            // on outcomeShown so they fire in sync with the reveal.
+            // Bust shake + winning glow fire as soon as the row mounts
+            // for the bust case (it's a player-side fact — they already
+            // know they busted, no reason to hide it) and on outcomeShown
+            // for the winning glow (don't spoil dealer comparison wins
+            // until the dealer plays out).
             const glowShadow = outcomeShown && isWin ? `0 0 24px ${c}55` : 'none'
             return (
               <motion.div
                 key={hi}
-                animate={outcomeShown && isBust
+                animate={isBust
                   ? { x: [0, -5, 5, -4, 4, -2, 2, 0] }
                   : { x: 0 }}
-                transition={outcomeShown && isBust ? { duration: 0.42, ease: 'easeInOut' } : { duration: 0 }}
+                transition={isBust ? { duration: 0.55, ease: 'easeInOut' } : { duration: 0 }}
                 style={{
                   marginBottom: hi === r.hands.length - 1 ? 0 : 10,
                   padding: '0.6rem 0.7rem',
-                  background: outcomeShown ? `${c}14` : 'rgba(255,255,255,0.025)',
-                  border: `1px solid ${outcomeShown ? c + '5a' : 'rgba(255,255,255,0.08)'}`,
+                  // Pre-reveal: bust hands tint red immediately; stood-21
+                  // hands tint gold; everything else stays neutral until
+                  // the dealer plays out and the win/lose color lands.
+                  background: outcomeShown
+                    ? `${c}14`
+                    : isBust ? 'rgba(240,138,138,0.10)'
+                    : (isStood21 || isNatural21) ? 'rgba(240,192,64,0.08)'
+                    : 'rgba(255,255,255,0.025)',
+                  border: `1px solid ${
+                    outcomeShown ? c + '5a'
+                    : isBust ? 'rgba(240,138,138,0.45)'
+                    : (isStood21 || isNatural21) ? 'rgba(240,192,64,0.4)'
+                    : 'rgba(255,255,255,0.08)'
+                  }`,
                   borderRadius: 10,
                   boxShadow: glowShadow,
                   transition: 'background 0.3s, border-color 0.3s, box-shadow 0.45s',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, minHeight: '0.95rem' }}>
-                  <AnimatePresence>
-                    {outcomeShown && (
+                  {/* Pre-reveal label always shows the player's total +
+                      a BUST / 21 stamp if applicable, so they get
+                      immediate confirmation of what their hit did.
+                      Crossfades into the full outcome label when the
+                      dealer reveal finishes. */}
+                  <AnimatePresence mode="wait">
+                    {outcomeShown ? (
                       <motion.p
                         key="outcome-label"
                         initial={{ opacity: 0, x: -6 }}
@@ -965,6 +1001,18 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                         style={{ fontSize: '0.64rem', color: c, letterSpacing: '0.1em' }}
                       >
                         {label} · {h.total}{h.doubled ? ' · DD' : ''}
+                      </motion.p>
+                    ) : (
+                      <motion.p
+                        key="pre-label"
+                        initial={{ opacity: 0, scale: isBust ? 0.7 : 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: isBust ? 380 : 340, damping: isBust ? 14 : 20 }}
+                        className="font-karla font-700 uppercase"
+                        style={{ fontSize: '0.64rem', color: preColor, letterSpacing: '0.1em' }}
+                      >
+                        {isBust ? `Bust · ${h.total}` : isNatural21 ? `Blackjack · 21` : isStood21 ? `21` : `Hand · ${h.total}`}{h.doubled ? ' · DD' : ''}
                       </motion.p>
                     )}
                   </AnimatePresence>
