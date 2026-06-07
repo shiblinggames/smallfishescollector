@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BJ_BET_PRESETS, BJ_DAILY_CAP, BJ_MAX_BET, BJ_MIN_BET } from './constants'
+import { BJ_BET_PRESETS, BJ_BUY_IN_PRESETS, BJ_BUY_IN_MAX, BJ_BUY_IN_MIN, BJ_DAILY_CAP, BJ_MAX_BET, BJ_MIN_BET } from './constants'
 import {
   dealBlackjack, hit, stand, doubleDown, split,
   acceptInsurance, declineInsurance,
@@ -376,7 +376,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     resumed ? 'play' : (initialChips > 0 ? 'wager' : 'buyIn')
   )
   const [wager, setWager] = useState<number>(BJ_BET_PRESETS[0])
-  const [buyInAmount, setBuyInAmount] = useState<number>(100)
+  const [buyInAmount, setBuyInAmount] = useState<number>(500)
   const [active, setActive] = useState<ClientState | null>(resumed)
   const [result, setResult] = useState<SettleResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -427,8 +427,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   const canDeal = wager >= BJ_MIN_BET
     && wager <= Math.min(BJ_MAX_BET, chips)
     && !isPending
-  const canBuyIn = buyInAmount >= BJ_MIN_BET
-    && buyInAmount <= Math.min(BJ_MAX_BET, doubloons, dailyRemaining)
+  const canBuyIn = buyInAmount >= BJ_BUY_IN_MIN
+    && buyInAmount <= Math.min(BJ_BUY_IN_MAX, doubloons, dailyRemaining)
     && !isPending
 
   function applyActionResult(r: { kind: 'active'; state: ClientState } | { kind: 'settled'; result: SettleResult } | { error: string }) {
@@ -565,14 +565,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             </p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#f0e8d0', lineHeight: 1.1 }}>Buy chips</p>
             <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09988', marginTop: 6, lineHeight: 1.5 }}>
-              Trade {dailyRemaining > 0 ? <>up to <span style={{ color: '#f0c040' }}>{Math.min(BJ_MAX_BET, doubloons, dailyRemaining).toLocaleString()} ⟡</span></> : '⟡'} for chips to play with. Cash out any time.
+              Trade {dailyRemaining > 0 ? <>up to <span style={{ color: '#f0c040' }}>{Math.min(BJ_BUY_IN_MAX, doubloons, dailyRemaining).toLocaleString()} ⟡</span></> : '⟡'} for chips to play with. Cash out any time.
             </p>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {BJ_BET_PRESETS.map(amt => {
-            const disabled = amt > Math.min(BJ_MAX_BET, doubloons, dailyRemaining)
+          {BJ_BUY_IN_PRESETS.map(amt => {
+            const disabled = amt > Math.min(BJ_BUY_IN_MAX, doubloons, dailyRemaining)
             const selected = buyInAmount === amt
             return (
               <button

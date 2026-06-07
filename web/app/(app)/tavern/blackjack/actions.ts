@@ -8,7 +8,7 @@ import {
   dealerPlay, settleHand, settleInsurance, cardRank,
   type Card, type SettledHand, type HandOutcome,
 } from '@/lib/blackjack'
-import { BJ_MIN_BET, BJ_MAX_BET, BJ_DAILY_CAP } from '../constants'
+import { BJ_MIN_BET, BJ_MAX_BET, BJ_DAILY_CAP, BJ_BUY_IN_MIN, BJ_BUY_IN_MAX } from '../constants'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
@@ -129,7 +129,9 @@ export interface BuyInResult {
  *  doubloons. Errors out if the player still has an active hand (you
  *  can't add to your stack mid-hand). */
 export async function buyInChips(amount: number): Promise<BuyInResult | { error: string }> {
-  if (!Number.isInteger(amount) || amount <= 0) return { error: 'Invalid amount' }
+  if (!Number.isInteger(amount) || amount < BJ_BUY_IN_MIN || amount > BJ_BUY_IN_MAX) {
+    return { error: 'Invalid amount' }
+  }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }

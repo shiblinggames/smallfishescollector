@@ -47,6 +47,13 @@ export const SLOTS_DAILY_CAP = 5000
 // insurance) for that day, NOT just the initial deal — so the cap
 // genuinely bounds the player's day at risk.
 export const BJ_MIN_BET   = 10
-export const BJ_MAX_BET   = 500
-export const BJ_DAILY_CAP = 5000
+export const BJ_MAX_BET   = 500    // per-hand wager ceiling
+export const BJ_DAILY_CAP = 5000   // also serves as the per-buy-in ceiling
 export const BJ_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
+// Buy-in is a budget commitment (chips on the table that can churn freely
+// without re-hitting the daily cap), so it scales up to the full 5,000
+// cap in one go. Lets a player fund a longer session without having to
+// step out for repeat buy-ins between hands.
+export const BJ_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
+export const BJ_BUY_IN_MIN = 10
+export const BJ_BUY_IN_MAX = BJ_DAILY_CAP
