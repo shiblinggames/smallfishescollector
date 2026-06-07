@@ -741,7 +741,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       revealTimersRef.current.push(window.setTimeout(() => setRevealedDealerCount(target), elapsed))
     }
 
-    elapsed += 800
+    // Wait for the last drawn dealer card's flip to complete (~690ms
+    // mount → flip-done), so the displayed total reflects the final
+    // hand before the outcome resolves. If dealer didn't draw extras,
+    // the hole flip's 820ms is already baked into `elapsed`.
+    if (extraDealer > 0) elapsed += 690
+    // Dwell before outcomeShown so the BUST chip / final total has
+    // time to register. Longer on dealer bust so the moment lands.
+    elapsed += result.dealerBust ? 1200 : 700
     revealTimersRef.current.push(window.setTimeout(() => {
       setOutcomeShown(true)
       setChips(result.newChips)
@@ -1163,11 +1170,35 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: labelColor }}>
                   {label}
                 </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
-                  {cardsForTotal.length === 0
-                    ? '?'
-                    : <><CountUp value={computedTotal} duration={350} />{(fullyRevealed && !dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>(soft)</span> : ''}{showNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AnimatePresence>
+                    {isBust && (
+                      <motion.span
+                        key="bust"
+                        initial={{ opacity: 0, scale: 0.55, x: 14 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ type: 'spring', stiffness: 340, damping: 15 }}
+                        className="font-karla font-700 uppercase tracking-[0.14em]"
+                        style={{
+                          fontSize: '0.6rem',
+                          color: '#f08a8a',
+                          background: 'rgba(240,138,138,0.14)',
+                          border: '1px solid rgba(240,138,138,0.5)',
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: 6,
+                        }}
+                      >
+                        Bust
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
+                    {cardsForTotal.length === 0
+                      ? '?'
+                      : <><CountUp value={computedTotal} duration={350} />{(fullyRevealed && !dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>(soft)</span> : ''}{showNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
+                  </p>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
                 {visibleHandCards.map((c, ci) => (
@@ -1223,7 +1254,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     const dealerTotalVisible: number | null = dealerTotalCardCount === 0
       ? null
       : handValue(r.dealerCards.slice(0, dealerTotalCardCount)).total
-    const dealerTotalColor = outcomeShown && r.dealerBust ? '#f08a8a'
+    // Bust state flips ON the moment the last bust card's flip
+    // completes (not at outcomeShown) so the BUST chip + red total
+    // get a beat to register before the outcome panel resolves.
+    const dealerBustVisible = dealerTotalVisible !== null && dealerTotalVisible > 21
+    const dealerTotalColor = dealerBustVisible ? '#f08a8a'
       : outcomeShown && r.dealerNatural ? '#f0c040'
       : '#f0e8d0'
 
@@ -1235,19 +1270,43 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             the running sum). Row gets a bust shake on dealer bust
             instead of a red panel — matches the player row. */}
         <motion.div
-          animate={outcomeShown && r.dealerBust ? { x: [0, -5, 5, -4, 4, -2, 2, 0] } : { x: 0 }}
-          transition={outcomeShown && r.dealerBust ? { duration: 0.55, ease: 'easeInOut' } : { duration: 0 }}
+          animate={dealerBustVisible ? { x: [0, -5, 5, -4, 4, -2, 2, 0] } : { x: 0 }}
+          transition={dealerBustVisible ? { duration: 0.55, ease: 'easeInOut' } : { duration: 0 }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>
               Dealer
             </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: dealerTotalColor, lineHeight: 1 }}>
-              {dealerTotalVisible === null
-                ? '?'
-                : <CountUp value={dealerTotalVisible} duration={350} />}
-              {outcomeShown && r.dealerNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AnimatePresence>
+                {dealerBustVisible && (
+                  <motion.span
+                    key="dealer-bust"
+                    initial={{ opacity: 0, scale: 0.55, x: 14 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ type: 'spring', stiffness: 340, damping: 15 }}
+                    className="font-karla font-700 uppercase tracking-[0.14em]"
+                    style={{
+                      fontSize: '0.6rem',
+                      color: '#f08a8a',
+                      background: 'rgba(240,138,138,0.14)',
+                      border: '1px solid rgba(240,138,138,0.5)',
+                      padding: '0.2rem 0.55rem',
+                      borderRadius: 6,
+                    }}
+                  >
+                    Bust
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: dealerTotalColor, lineHeight: 1 }}>
+                {dealerTotalVisible === null
+                  ? '?'
+                  : <CountUp value={dealerTotalVisible} duration={350} />}
+                {outcomeShown && r.dealerNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}
+              </p>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
             {r.dealerCards.map((c, i) => {
@@ -1333,9 +1392,33 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: labelColor }}>
                     {label}
                   </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
-                    {h.total}{isNatural21 ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AnimatePresence>
+                      {isBust && (
+                        <motion.span
+                          key="bust"
+                          initial={{ opacity: 0, scale: 0.55, x: 14 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ type: 'spring', stiffness: 340, damping: 15 }}
+                          className="font-karla font-700 uppercase tracking-[0.14em]"
+                          style={{
+                            fontSize: '0.6rem',
+                            color: '#f08a8a',
+                            background: 'rgba(240,138,138,0.14)',
+                            border: '1px solid rgba(240,138,138,0.5)',
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: 6,
+                          }}
+                        >
+                          Bust
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
+                      {h.total}{isNatural21 ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}
+                    </p>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {h.cards.map((card, ci) => (
