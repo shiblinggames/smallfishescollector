@@ -385,17 +385,33 @@ function FlipCard({ flipped, card, fishArt, duration = 820 }: { flipped: boolean
  *  a card that lands face-down and stays there (the dealer hole).
  *  Uses the same FlipCard structure as the settle-time hole reveal,
  *  just with a snappier ~480ms flip (the settle hole gets 820ms for
- *  drama; in-deal flips need to clear before the next card lands). */
-function DealtCard({ card, fishArt }: { card: Card | 'X'; fishArt: string | null }) {
+ *  drama; in-deal flips need to clear before the next card lands).
+ *  onFlipComplete fires once when the flip animation finishes (or
+ *  immediately for hidden cards) so the parent can defer the hand
+ *  total update until the card has visually settled face-up. */
+function DealtCard({ card, fishArt, onFlipComplete }: { card: Card | 'X'; fishArt: string | null; onFlipComplete?: () => void }) {
   const isHidden = card === 'X'
   const [flipped, setFlipped] = useState(false)
+  // Ref-mirror the callback so re-rendering the parent with a fresh
+  // arrow function doesn't re-trigger the mount effect and replay the
+  // flip from scratch.
+  const onFlipCompleteRef = useRef(onFlipComplete)
+  useEffect(() => { onFlipCompleteRef.current = onFlipComplete })
   useEffect(() => {
-    if (isHidden) return
+    if (isHidden) {
+      // No flip — call back on the next tick so the parent's flip-gated
+      // total advances immediately for hidden cards.
+      const id = window.setTimeout(() => onFlipCompleteRef.current?.(), 0)
+      return () => clearTimeout(id)
+    }
     // Tiny delay so the slide-in motion (0.36s) reads first; the flip
     // starts while the card is still settling, total deal-in feels
-    // like one fluid motion.
-    const id = window.setTimeout(() => setFlipped(true), 180)
-    return () => clearTimeout(id)
+    // like one fluid motion. onFlipComplete fires once the 480ms CSS
+    // flip transition wraps (plus a 30ms buffer so the face has fully
+    // committed visually before the total ticks).
+    const startId = window.setTimeout(() => setFlipped(true), 180)
+    const doneId  = window.setTimeout(() => onFlipCompleteRef.current?.(), 180 + 480 + 30)
+    return () => { clearTimeout(startId); clearTimeout(doneId) }
   }, [isHidden])
   return (
     <motion.div
@@ -614,6 +630,31 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   useEffect(() => {
     if (phase === 'settled' && outcomeShown) setPotAmount(0)
   }, [phase, outcomeShown])
+
+  // Flip-gated counts. Card values only count toward the displayed
+  // hand totals AFTER the card has finished its flip animation, so
+  // the digits don't tick up while the face is still hidden mid-spin.
+  // Each DealtCard fires onFlipComplete (~690ms after mount) which
+  // bumps the relevant counter; total = handValue of cards[0..count].
+  //  • handFlipCounts[hi] → flipped card count per player hand
+  //  • dealerTotalCardCount → flipped dealer card count (settle screen)
+  //    advances to 2 when the hole-card FlipCard completes (820ms after
+  //    holeFlipped goes true), and to 3+ as extra DealtCards complete.
+  const [handFlipCounts, setHandFlipCounts] = useState<Record<number, number>>({})
+  const [dealerTotalCardCount, setDealerTotalCardCount] = useState(0)
+  useEffect(() => {
+    // Hole card flip uses FlipCard (820ms) not DealtCard, so we time
+    // the dealer-total advance from holeFlipped explicitly. Resets
+    // when holeFlipped goes back to false (a fresh settle reveal).
+    if (!holeFlipped) {
+      setDealerTotalCardCount(0)
+      return
+    }
+    const id = window.setTimeout(() => {
+      setDealerTotalCardCount(prev => Math.max(prev, 2))
+    }, 820)
+    return () => clearTimeout(id)
+  }, [holeFlipped])
 
   function clearRevealTimers() {
     for (const id of revealTimersRef.current) clearTimeout(id)
@@ -855,6 +896,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setRevealedDealerCount(0)
     setOutcomeShown(false)
     setDealRevealCount(0)
+    setHandFlipCounts({})
+    setDealerTotalCardCount(0)
     pendingFreshDealRef.current = true   // read by applyActionResult on response
     fireAction(() => dealBlackjack(wager))
   }
@@ -868,6 +911,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setRevealedDealerCount(0)
     setOutcomeShown(false)
     setDealRevealCount(4)            // idle — deal animation not running
+    setHandFlipCounts({})
+    setDealerTotalCardCount(0)
     pendingFreshDealRef.current = false
     // If the player's been busted out completely, push them to buy-in
     // instead of a useless wager screen they can't act on.
@@ -1088,20 +1133,25 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {state.hands.map((h, hi) => {
           // During the initial deal, only the first hand exists; we
-          // render up to playerVisibleCount cards and compute the
-          // total from what's visible (not the final total) so the
-          // number ticks up alongside the cards landing.
+          // render up to playerVisibleCount cards.
           const visibleHandCards = dealing && hi === 0 ? h.cards.slice(0, playerVisibleCount) : h.cards
-          const visibleTotal = dealing && hi === 0
-            ? handValue(visibleHandCards).total
-            : h.total
+          // Total uses ONLY cards that have completed their flip — so
+          // the digits don't tick up while the face is still spinning.
+          // handFlipCounts[hi] increments via each DealtCard's
+          // onFlipComplete (~690ms after mount).
+          const flippedForTotal = Math.min(visibleHandCards.length, handFlipCounts[hi] ?? 0)
+          const cardsForTotal = visibleHandCards.slice(0, flippedForTotal)
+          const computedTotal = cardsForTotal.length > 0 ? handValue(cardsForTotal).total : 0
+          const fullyRevealed = flippedForTotal === visibleHandCards.length
           const isActive = !dealing && hi === state.activeHandIdx && !h.busted && !h.stood
-          const isBust = h.busted
-          const showNatural = h.isNatural && !dealing
+          // Bust / natural state only resolves once the final card has
+          // flipped and we know the full hand value.
+          const isBust = fullyRevealed && computedTotal > 21
+          const showNatural = fullyRevealed && h.isNatural && !dealing
           // Total color signals state without needing a bust/21 chip:
-          // red for bust, gold for naturals + on-screen 21 reveal,
+          // red for bust, gold for naturals once fully revealed,
           // cream otherwise.
-          const totalColor = isBust ? '#f08a8a' : (showNatural || (dealing && hi === 0 && playerVisibleCount === 2 && h.isNatural)) ? '#f0c040' : '#f0e8d0'
+          const totalColor = isBust ? '#f08a8a' : showNatural ? '#f0c040' : '#f0e8d0'
           // Label: "You" for single-hand, "Hand N" for splits. Active
           // hand on a split lights up green so it's obvious where the
           // next Hit/Stand will apply.
@@ -1114,14 +1164,19 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   {label}
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
-                  {visibleHandCards.length === 0
+                  {cardsForTotal.length === 0
                     ? '?'
-                    : <><CountUp value={visibleTotal} duration={350} />{(!dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>(soft)</span> : ''}{showNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
+                    : <><CountUp value={computedTotal} duration={350} />{(fullyRevealed && !dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>(soft)</span> : ''}{showNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
                 {visibleHandCards.map((c, ci) => (
-                  <DealtCard key={ci} card={c} fishArt={getFish(hi, ci, c)} />
+                  <DealtCard
+                    key={ci}
+                    card={c}
+                    fishArt={getFish(hi, ci, c)}
+                    onFlipComplete={() => setHandFlipCounts(prev => ({ ...prev, [hi]: Math.max(prev[hi] ?? 0, ci + 1) }))}
+                  />
                 ))}
               </div>
             </div>
@@ -1158,15 +1213,16 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   }
 
   function renderSettleScreen(r: SettleResult) {
-    // Dealer total reflects ONLY the cards that have actually been
-    // revealed on screen — not the final hand. While the hole is
-    // face-down, total reads '?' (matching the play screen during
-    // the player's turn, so the layout doesn't shift when settle
-    // mounts). Once holeFlipped goes true, the total includes up +
-    // hole and ticks up as each extra draw lands.
-    const dealerTotalVisible: number | null = holeFlipped
-      ? handValue(r.dealerCards.slice(0, Math.max(2, revealedDealerCount))).total
-      : null
+    // Dealer total reflects only cards that have COMPLETED their flip
+    // animation — '?' while the hole is still face-down, '?' while
+    // the hole is mid-spin (820ms hole flip), then jumps to up+hole
+    // once the flip settles. Extra draws each advance the count via
+    // DealtCard's onFlipComplete (~690ms after each card mounts).
+    // dealerTotalCardCount is the shared state; it starts at 0 on
+    // settle mount and counts up as cards finish revealing.
+    const dealerTotalVisible: number | null = dealerTotalCardCount === 0
+      ? null
+      : handValue(r.dealerCards.slice(0, dealerTotalCardCount)).total
     const dealerTotalColor = outcomeShown && r.dealerBust ? '#f08a8a'
       : outcomeShown && r.dealerNatural ? '#f0c040'
       : '#f0e8d0'
@@ -1219,8 +1275,17 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               }
               // Extra dealer draws (i >= 2). Use DealtCard so they slide
               // in face-down and flip to face-up, matching how every
-              // other card in the game gets dealt.
-              return <DealtCard key={i} card={c} fishArt={fish} />
+              // other card in the game gets dealt. onFlipComplete bumps
+              // dealerTotalCardCount so the dealer total tick waits for
+              // the face to commit before counting this card.
+              return (
+                <DealtCard
+                  key={i}
+                  card={c}
+                  fishArt={fish}
+                  onFlipComplete={() => setDealerTotalCardCount(prev => Math.max(prev, i + 1))}
+                />
+              )
             })}
           </div>
         </motion.div>
@@ -1357,6 +1422,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                             setRevealedDealerCount(0)
                             setOutcomeShown(false)
                             setDealRevealCount(0)
+                            setHandFlipCounts({})
+                            setDealerTotalCardCount(0)
                             pendingFreshDealRef.current = true
                             fishCacheRef.current.clear()
                             fireAction(() => dealBlackjack(amt))
