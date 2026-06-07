@@ -495,15 +495,20 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     && buyInAmount <= Math.min(BJ_BUY_IN_MAX, doubloons, dailyRemaining)
     && !isPending
 
-  /** Stage the deal animation. Four cards in casino order:
-   *  player[0] @ 220ms · dealer[0] @ 620ms · player[1] @ 1020ms ·
-   *  dealer[1] (face-down) @ 1420ms. Cards land cleanly with the
+  /** Stage the deal animation. Four cards, player-first:
+   *  player[0] @ 220ms · player[1] @ 720ms · dealer[0] @ 1220ms ·
+   *  dealer[1] (face-down) @ 1720ms. Cards land cleanly with the
    *  existing per-card slide-in (initial: opacity 0, y:-18) — this
    *  just delays each card's mount via dealRevealCount.
+   *  Player-first (not strict alternating-casino) so the natural-
+   *  Blackjack moment lands cleanly: both your cards arrive back-to-
+   *  back, the BLACKJACK chip pops the instant the second one lands,
+   *  THEN we move to the dealer. Single-player video table — no
+   *  reason to interleave around an empty seat.
    *  Called from applyActionResult when a fresh deal lands (kind=
    *  'active' OR kind='settled' on a natural). */
   function kickOffDealReveal() {
-    const stops = [220, 620, 1020, 1420]
+    const stops = [220, 720, 1220, 1720]
     stops.forEach((t, i) => {
       revealTimersRef.current.push(window.setTimeout(() => setDealRevealCount(i + 1), t))
     })
@@ -643,7 +648,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     if (dealRevealCount !== 4 || !pendingSettle) return
     const r = pendingSettle
     const hasPlayerNatural = r.hands.some(h => h.outcome === 'blackjack')
-    const holdMs = hasPlayerNatural ? 1300 : 500
+    // Player-first dealing means the BLACKJACK chip pops at count=2,
+    // not count=4 — so by the time we're here the celebration moment
+    // has already been on screen ~1s. 800ms more is plenty of breath
+    // before the dealer reveal kicks in.
+    const holdMs = hasPlayerNatural ? 800 : 500
     const id = window.setTimeout(() => {
       setPendingSettle(null)
       startSettleReveal(r)
@@ -854,14 +863,15 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
 
   function renderGameScreen(state: ClientState) {
     const activeHand = state.hands[state.activeHandIdx]
-    // Initial-deal reveal slicing. Deal order is casino-standard
-    // (player[0], dealer[0], player[1], dealer[1]-down). On a split or
-    // mid-hand hit, dealRevealCount sits at 4 and these slices return
-    // the full hands unchanged. Splits don't replay the animation —
-    // the new card per split-hand slides in via its own motion mount.
+    // Initial-deal reveal slicing. Player-first order: counts 1+2 add
+    // your two cards back-to-back; counts 3+4 add the dealer's up-card
+    // and face-down hole. On a split or mid-hand hit, dealRevealCount
+    // sits at 4 and these slices return the full hands unchanged —
+    // splits don't replay the animation; the new card per split-hand
+    // slides in via its own motion mount.
     const dealing = dealRevealCount < 4
-    const playerVisibleCount = dealing ? Math.ceil(dealRevealCount / 2) : Number.POSITIVE_INFINITY
-    const dealerVisibleCount = dealing ? Math.floor(dealRevealCount / 2) : Number.POSITIVE_INFINITY
+    const playerVisibleCount = dealing ? Math.min(dealRevealCount, 2) : Number.POSITIVE_INFINITY
+    const dealerVisibleCount = dealing ? Math.max(0, dealRevealCount - 2) : Number.POSITIVE_INFINITY
     const visibleDealerCards = dealing
       ? state.dealerCards.slice(0, dealerVisibleCount)
       : state.dealerCards
