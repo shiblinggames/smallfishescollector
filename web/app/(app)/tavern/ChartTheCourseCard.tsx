@@ -10,7 +10,7 @@ export default function ChartTheCourseCard() {
   return (
     <ScenicCard
       href="/charting"
-      title="Chart the Course"
+      title="Charting"
       gradient={['#3a2510', '#1f1408', '#0f0905']}
       accent="#e3a857"
     >
