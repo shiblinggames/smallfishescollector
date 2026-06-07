@@ -10,6 +10,10 @@ import {
 } from './blackjack/actions'
 import type { Card, Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
+import {
+  primeBlackjackAudio, playBjSfx,
+  isBlackjackAudioMuted, setBlackjackAudioMuted,
+} from '@/lib/blackjackAudio'
 
 interface Props {
   doubloons: number
@@ -97,6 +101,51 @@ function SparkleBurst({ accent }: { accent: string }) {
           }}
         >
           {p.glyph}
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+/** Burst of doubloon glyphs that flies from the player-hand area up to
+ *  the balance number in the header. Pure decorative — fires on any
+ *  player win. Each coin animates from a slightly randomized start
+ *  position toward the top-right with stagger + scale-down + rotation,
+ *  giving a "chips collecting" feel. Self-cleans after the animation
+ *  (parent unmounts via a changing `key`). */
+function CoinFlight() {
+  // 8 coins, randomized start offsets so they look like a handful
+  // rather than a row.
+  const coins = Array.from({ length: 8 }, (_, i) => ({
+    i,
+    startLeft: 30 + Math.random() * 40,   // % of container width
+    startTop:  55 + Math.random() * 20,   // % of container height
+    delay:     i * 0.06,
+    rot:       (Math.random() - 0.5) * 540,
+  }))
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10, overflow: 'hidden' }}>
+      {coins.map(c => (
+        <motion.div
+          key={c.i}
+          initial={{ left: `${c.startLeft}%`, top: `${c.startTop}%`, opacity: 0, scale: 0.6, rotate: 0 }}
+          animate={{
+            left: '88%',
+            top: '24px',
+            opacity: [0, 1, 1, 0],
+            scale: [0.6, 1.2, 1, 0.5],
+            rotate: c.rot,
+          }}
+          transition={{ duration: 0.85, delay: c.delay, ease: [0.4, 0, 0.2, 1] }}
+          style={{
+            position: 'absolute',
+            fontSize: '1.15rem',
+            color: '#f0c040',
+            textShadow: '0 0 12px rgba(240,192,64,0.85)',
+            fontWeight: 700,
+          }}
+        >
+          ⟡
         </motion.div>
       ))}
     </div>
@@ -339,6 +388,18 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   // Track pending timeouts so a fast Play-Again tap doesn't leave
   // stale fires racing the next hand.
   const revealTimersRef = useRef<number[]>([])
+  // Coin-flight overlay: bumps a counter each time we want to fire
+  // a fresh burst; the CoinFlight component remounts via key and
+  // self-removes after its animation completes.
+  const [coinFlightKey, setCoinFlightKey] = useState(0)
+  // Audio mute toggle; reads initial value from localStorage via the lib.
+  const [audioMuted, setAudioMuted] = useState(false)
+  useEffect(() => { setAudioMuted(isBlackjackAudioMuted()) }, [])
+  function toggleMute() {
+    const next = !audioMuted
+    setAudioMuted(next)
+    setBlackjackAudioMuted(next)
+  }
   function clearRevealTimers() {
     for (const id of revealTimersRef.current) clearTimeout(id)
     revealTimersRef.current = []
@@ -367,6 +428,20 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     if ('error' in r) { setError(r.error); return }
     setError(null)
     if (r.kind === 'active') {
+      // Detect what changed so we can fire the right SFX. New cards in
+      // any hand or in the dealer area means a draw happened (deal/hit
+      // /double/split). Reading by total card count is simpler than
+      // diffing individual hands.
+      const prevCardCount = (active?.hands.reduce((n, h) => n + h.cards.length, 0) ?? 0)
+        + (active?.dealerCards.filter(c => c !== 'X').length ?? 0)
+      const nextCardCount = r.state.hands.reduce((n, h) => n + h.cards.length, 0)
+        + r.state.dealerCards.filter(c => c !== 'X').length
+      const newCards = nextCardCount - prevCardCount
+      // Soft stagger so simultaneous-draw events (initial deal: 4 cards)
+      // sound like real card placements rather than one mash.
+      for (let i = 0; i < newCards; i++) {
+        setTimeout(() => playBjSfx('cardSlide'), i * 90)
+      }
       setActive(r.state)
       setDoubloons(r.state.doubloons)
       setDailyWagered(BJ_DAILY_CAP - r.state.dailyRemaining)
@@ -405,6 +480,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
       // Sharp double-tap haptic for bust — distinct from a regular loss.
       vibrate([30, 60, 30])
+      playBjSfx('bust')
       return
     }
 
@@ -414,14 +490,20 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     setOutcomeShown(false)
 
     let elapsed = 350
-    revealTimersRef.current.push(window.setTimeout(() => setHoleFlipped(true), elapsed))
+    revealTimersRef.current.push(window.setTimeout(() => {
+      setHoleFlipped(true)
+      playBjSfx('holeFlip')
+    }, elapsed))
     elapsed += 580                    // flip duration
 
     const extraDealer = Math.max(0, r.result.dealerCards.length - 2)
     for (let i = 0; i < extraDealer; i++) {
       elapsed += 500
       const target = 3 + i           // revealedDealerCount after this fires
-      revealTimersRef.current.push(window.setTimeout(() => setRevealedDealerCount(target), elapsed))
+      revealTimersRef.current.push(window.setTimeout(() => {
+        setRevealedDealerCount(target)
+        playBjSfx('cardSlide')
+      }, elapsed))
     }
 
     elapsed += 400
@@ -436,10 +518,10 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       const hasNaturalWin = r.result.hands.some(h => h.outcome === 'blackjack')
       const hasAnyWin     = r.result.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
       const allPush       = r.result.hands.every(h => h.outcome === 'push')
-      if (hasNaturalWin)     vibrate([60, 40, 60, 40, 120])
-      else if (hasAnyWin)    vibrate([50, 30, 50])
-      else if (allPush)      vibrate(20)
-      else                   vibrate(40)
+      if (hasNaturalWin)     { vibrate([60, 40, 60, 40, 120]); playBjSfx('blackjack'); setCoinFlightKey(k => k + 1) }
+      else if (hasAnyWin)    { vibrate([50, 30, 50]);          playBjSfx('win');        setCoinFlightKey(k => k + 1) }
+      else if (allPush)      { vibrate(20);                    playBjSfx('push') }
+      else                   { vibrate(40) /* loss: silence is enough */ }
     }, elapsed))
   }
 
@@ -451,6 +533,10 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   }
 
   function startDeal() {
+    // Prime audio on this gesture — the audio session needs to come up
+    // INSIDE a user gesture or iOS will sandbox it.
+    primeBlackjackAudio()
+    playBjSfx('chipClink')
     clearRevealTimers()
     fishCacheRef.current.clear()
     setResult(null)
@@ -653,7 +739,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               <button
                 type="button"
                 disabled={isPending || doubloons < Math.floor(state.hands[0].wager / 2)}
-                onClick={() => fireAction(acceptInsurance)}
+                onClick={() => { playBjSfx('chipClink'); fireAction(acceptInsurance) }}
                 className="font-karla font-700 uppercase tracking-[0.06em]"
                 style={{
                   flex: 1, padding: '0.65rem 0', borderRadius: 10,
@@ -686,13 +772,13 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <ActionButton label="Hit" onClick={() => fireAction(hit)} disabled={!state.canHit || isPending} accent="#7ad3a0" />
-            <ActionButton label="Stand" onClick={() => fireAction(stand)} disabled={!state.canStand || isPending} accent="#c4a96a" />
+            <ActionButton label="Hit" icon="hit" onClick={() => fireAction(hit)} disabled={!state.canHit || isPending} accent="#7ad3a0" />
+            <ActionButton label="Stand" icon="stand" onClick={() => fireAction(stand)} disabled={!state.canStand || isPending} accent="#c4a96a" />
             {state.canDouble && (
-              <ActionButton label={`Double · ${activeHand?.wager} ⟡`} onClick={() => fireAction(doubleDown)} disabled={isPending} accent="#7aa7e8" />
+              <ActionButton label={`Double · ${activeHand?.wager} ⟡`} icon="double" onClick={() => { playBjSfx('chipClink'); fireAction(doubleDown) }} disabled={isPending} accent="#7aa7e8" />
             )}
             {state.canSplit && (
-              <ActionButton label={`Split · ${state.hands[0].wager} ⟡`} onClick={() => fireAction(split)} disabled={isPending} accent="#d0a0e8" />
+              <ActionButton label={`Split · ${state.hands[0].wager} ⟡`} icon="split" onClick={() => { playBjSfx('chipClink'); fireAction(split) }} disabled={isPending} accent="#d0a0e8" />
             )}
           </div>
         )}
@@ -987,6 +1073,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
 
   return (
     <div style={{
+      position: 'relative',   // anchor for coin-flight overlay
       width: '100%', maxWidth: 420, margin: '0 auto',
       // minHeight floor so the wager → play → settle phase swap
       // doesn't yank the parent down by 200+ pixels each transition.
@@ -999,6 +1086,7 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       borderRadius: 18,
       padding: '1.25rem 1.1rem 1.4rem',
       boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
+      overflow: 'hidden',     // clip coin trails that escape the modal
     }}>
       <div style={{
         marginBottom: '1.25rem',
@@ -1006,9 +1094,38 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>Tavern</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>Blackjack</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>Tavern</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>Blackjack</p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-label={audioMuted ? 'Unmute sounds' : 'Mute sounds'}
+              title={audioMuted ? 'Unmute' : 'Mute'}
+              style={{
+                width: 30, height: 30, borderRadius: 999,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                color: audioMuted ? '#7a7470' : '#c4a96a',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', padding: 0,
+              }}
+            >
+              {audioMuted ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                  <line x1="23" y1="9" x2="17" y2="15" />
+                  <line x1="17" y1="9" x2="23" y2="15" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                </svg>
+              )}
+            </button>
           </div>
           <div style={{ textAlign: 'right' }}>
             <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
@@ -1021,11 +1138,61 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       {phase === 'wager' && renderWagerScreen()}
       {phase === 'play' && active && renderGameScreen(active)}
       {phase === 'settled' && result && renderSettleScreen(result)}
+
+      {/* Coin-flight overlay. Bumping coinFlightKey unmounts/remounts
+          the burst, which is how each new win re-triggers the animation.
+          key === 0 = never won yet → don't render. */}
+      {coinFlightKey > 0 && <CoinFlight key={coinFlightKey} />}
     </div>
   )
 }
 
-function ActionButton({ label, onClick, disabled, accent }: { label: string; onClick: () => void; disabled: boolean; accent: string }) {
+type ActionIcon = 'hit' | 'stand' | 'double' | 'split'
+
+/** Small inline glyphs for each action — gives the button bar a quicker
+ *  visual scan, especially for first-time players who don't yet pair
+ *  the words "double" / "split" with the strategic moment. Mono-stroke
+ *  SVGs so they tint via currentColor and match the button accent. */
+function ActionIconSvg({ icon }: { icon: ActionIcon }) {
+  const stroke = 'currentColor'
+  const sw = 1.8
+  const common = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke, strokeWidth: sw, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  switch (icon) {
+    case 'hit':
+      // Plus sign — "deal me another card"
+      return (
+        <svg {...common}><path d="M12 5v14M5 12h14" /></svg>
+      )
+    case 'stand':
+      // Open palm — "hold"
+      return (
+        <svg {...common}>
+          <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11" />
+          <path d="M12 11V4.5a1.5 1.5 0 0 1 3 0V11" />
+          <path d="M15 11V5.5a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6 6 6 0 0 1-6-6v-3a1.5 1.5 0 0 1 3 0" />
+        </svg>
+      )
+    case 'double':
+      // ×2
+      return (
+        <svg {...common}>
+          <path d="M6 8l6 6M12 8l-6 6" />
+          <path d="M16 8h4M16 16h4M18 8v8" />
+        </svg>
+      )
+    case 'split':
+      // Branching arrow — one to two
+      return (
+        <svg {...common}>
+          <path d="M12 4v6" />
+          <path d="M12 10c-4 0-4 4-8 4M12 10c4 0 4 4 8 4" />
+          <path d="M2 12l2 2 2-2M22 12l-2 2-2-2" />
+        </svg>
+      )
+  }
+}
+
+function ActionButton({ label, onClick, disabled, accent, icon }: { label: string; onClick: () => void; disabled: boolean; accent: string; icon?: ActionIcon }) {
   return (
     <button
       type="button"
@@ -1040,9 +1207,11 @@ function ActionButton({ label, onClick, disabled, accent }: { label: string; onC
         color: disabled ? '#5a5550' : accent,
         fontSize: '0.86rem',
         cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
       }}
     >
-      {label}
+      {icon && <ActionIconSvg icon={icon} />}
+      <span>{label}</span>
     </button>
   )
 }
