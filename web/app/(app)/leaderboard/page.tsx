@@ -15,7 +15,10 @@ async function resolveMyRank(
   myScore: number,
   top: LeaderboardEntry[],
 ): Promise<number | null> {
-  if (myScore <= 0) return null
+  // Caller is expected to skip this when the user has no row in the
+  // view (myScore = null upstream). Once they DO have a row, every
+  // score — including 0 or negative for signed-score boards like
+  // Blackjack — gets a real rank.
   const idx = top.findIndex(e => e.user_id === userId)
   if (idx >= 0) return idx + 1
   const { count } = await admin.from(view).select('*', { count: 'exact', head: true }).gt('score', myScore)
@@ -33,8 +36,13 @@ async function fetchBoard(admin: ReturnType<typeof createAdminClient>, view: str
   // pass through Number() unchanged.
   const topRows = ((top ?? []) as Array<{ user_id: string; username: string; score: number | string }>)
     .map(r => ({ user_id: r.user_id, username: r.username, score: Number(r.score) })) as LeaderboardEntry[]
-  const myScore = Number((me as { score?: number | string } | null)?.score ?? 0)
-  const myRank = await resolveMyRank(admin, view, userId, myScore, topRows)
+  // myScore = null when the player has no row in the view (haven't
+  // played / no score). Boards that allow signed scores (Blackjack)
+  // need to distinguish "broke even, 0 net" (number) from "never
+  // played" (null) so the "you" tile and rank chip render correctly.
+  const myRow = me as { score?: number | string } | null
+  const myScore: number | null = myRow === null ? null : Number(myRow.score)
+  const myRank = myScore === null ? null : await resolveMyRank(admin, view, userId, myScore, topRows)
   return { top: topRows, myScore, myRank }
 }
 
@@ -54,7 +62,7 @@ async function fetchRaidProgressBoard(admin: ReturnType<typeof createAdminClient
     .from('profiles')
     .select('id, username, raid_node_progress, has_completed_practice_raid')
     .eq('is_admin', false)
-  if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: 0, myRank: null as number | null }
+  if (!profiles || profiles.length === 0) return { top: [] as LeaderboardEntry[], myScore: null as number | null, myRank: null as number | null }
 
   const { data: completions } = await admin
     .from('raid_completions')
@@ -87,7 +95,7 @@ async function fetchRaidProgressBoard(admin: ReturnType<typeof createAdminClient
   })
   const top: LeaderboardEntry[] = rows.slice(0, 50).map(r => ({ user_id: r.user_id, username: r.username, score: r.score }))
   const myIdx = rows.findIndex(r => r.user_id === userId)
-  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : 0, myRank: myIdx >= 0 ? myIdx + 1 : null }
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
 async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
@@ -101,8 +109,9 @@ async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClien
     admin.from('leaderboard_perfect_streak').select('score').eq('user_id', userId).single(),
   ])
   const topRows = (top ?? []) as LeaderboardEntry[]
-  const myScore = (me as any)?.score ?? 0
-  const myRank = await resolveMyRank(admin, 'leaderboard_perfect_streak', userId, myScore, topRows)
+  const myRow = me as { score?: number } | null
+  const myScore: number | null = myRow === null ? null : (myRow.score ?? 0)
+  const myRank = myScore === null ? null : await resolveMyRank(admin, 'leaderboard_perfect_streak', userId, myScore, topRows)
   return { top: topRows, myScore, myRank }
 }
 

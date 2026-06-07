@@ -129,8 +129,9 @@ export default function LeaderboardModal({
             unit={meta.unit}
             subUnit={meta.subUnit}
             showZone={meta.showZone}
+            valueColor={meta.valueColor}
             data={data.boards[activeTab] ?? []}
-            myScore={data.myScores[activeTab] ?? 0}
+            myScore={data.myScores[activeTab] ?? null}
             currentUserId={data.currentUserId}
             avatars={data.avatars}
           />

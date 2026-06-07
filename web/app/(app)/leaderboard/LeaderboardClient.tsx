@@ -9,13 +9,16 @@ import {
 export type { LeaderboardEntry } from './boardUI'
 
 interface MyScores {
-  fishing: number
-  perfectStreak: number
-  tideRun: number
-  fishSlots: number
-  blackjack: number
-  expedition: number
-  raidProgress: number
+  // null = player has no entry on this board (no row in the underlying
+  // view). A number (incl. 0 or negative on signed-score boards like
+  // Blackjack) means they have a rank and the "you" tile renders.
+  fishing: number | null
+  perfectStreak: number | null
+  tideRun: number | null
+  fishSlots: number | null
+  blackjack: number | null
+  expedition: number | null
+  raidProgress: number | null
 }
 
 interface MyRanks {
@@ -71,7 +74,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'blackjack' ? blackjack
     : k === 'expedition' ? expedition
     : raidProgress
-  const scoreOf = (k: BoardKey): number =>
+  const scoreOf = (k: BoardKey): number | null =>
     k === 'fishingLevel' ? myScores.fishing
     : k === 'perfectStreak' ? myScores.perfectStreak
     : k === 'tideRun' ? myScores.tideRun
@@ -204,6 +207,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
         unit={meta.unit}
         subUnit={meta.subUnit}
         showZone={meta.showZone}
+        valueColor={meta.valueColor}
         data={dataOf(activeTab)}
         myScore={scoreOf(activeTab)}
         currentUserId={currentUserId}

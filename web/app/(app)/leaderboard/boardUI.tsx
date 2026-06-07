@@ -28,19 +28,29 @@ export type AvatarMap = Record<string, {
 }>
 
 /** Per-board display metadata. Single source of truth for label, accent,
- *  and how a raw score renders (unit / sub-unit / zone badges). */
+ *  and how a raw score renders (unit / sub-unit / zone badges).
+ *  Optional valueColor overrides the value text color per-row from the
+ *  score itself — used by Blackjack so winners read green and losers
+ *  read red regardless of which rank they're sitting at. */
 export const BOARD_META: Record<BoardKey, {
   label: string
   accent: string
   unit: (n: number) => string
   subUnit: (n: number) => string
   showZone?: boolean
+  valueColor?: (n: number) => string
 }> = {
   fishingLevel:  { label: 'Fishing Level',  accent: '#f0c040', unit: n => `Lv ${getLevelFromXP(n)}`,     subUnit: n => `${n.toLocaleString()} XP` },
   perfectStreak: { label: 'Perfect Streak', accent: '#fb923c', unit: n => `${n}×`,                       subUnit: () => 'perfect', showZone: true },
   tideRun:       { label: 'Tide Run',       accent: '#5da7d4', unit: n => `${n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m`, subUnit: () => 'best run' },
   fishSlots:     { label: 'Fish Slots',     accent: '#34d399', unit: n => `${n.toLocaleString()} ⟡`,    subUnit: () => 'single spin' },
-  blackjack:     { label: 'Blackjack',      accent: '#c63838', unit: n => `+${n.toLocaleString()} ⟡`,   subUnit: () => 'net winnings' },
+  blackjack:     {
+    label: 'Blackjack',
+    accent: '#c63838',
+    unit:    n => `${n > 0 ? '+' : ''}${n.toLocaleString()} ⟡`,
+    subUnit: n => n > 0 ? 'net winnings' : n < 0 ? 'net loss' : 'break-even',
+    valueColor: n => n > 0 ? '#7fd49a' : n < 0 ? '#e07070' : '#a09988',
+  },
   expedition:    { label: 'Navigator Level',accent: '#7090c0', unit: n => `Lv ${getExpeditionLevel(n)}`, subUnit: n => `${n.toLocaleString()} XP` },
   raidProgress:  { label: 'Raid Progress',  accent: '#7fd0a0', unit: n => `${n.toLocaleString()}`,       subUnit: n => `${n === 1 ? 'node' : 'nodes'} cleared` },
 }
@@ -115,13 +125,20 @@ interface SectionProps {
   unit: (n: number) => string
   subUnit: (n: number) => string
   data: LeaderboardEntry[]
-  myScore: number
+  /** Player's score. null = player has no entry on this board (hasn't
+   *  played / no score yet); a number (incl. 0 or negative for boards
+   *  that accept signed scores like Blackjack) means they have a rank. */
+  myScore: number | null
   currentUserId: string
   showZone?: boolean
   avatars: AvatarMap
+  /** Optional per-row value text color from the score. When provided,
+   *  used for ranks 4+ and the "you outside top 50" tile (top 3 keep
+   *  their medal colors since those are positional indicators). */
+  valueColor?: (n: number) => string
 }
 
-export function LeaderboardSection({ accent, unit, subUnit, data, myScore, currentUserId, showZone, avatars }: SectionProps) {
+export function LeaderboardSection({ accent, unit, subUnit, data, myScore, currentUserId, showZone, avatars, valueColor }: SectionProps) {
   const top3 = data.slice(0, 3)
   const rest = data.slice(3)
   const myRank = data.findIndex(e => e.user_id === currentUserId) + 1
@@ -228,7 +245,7 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                   {showZone && <ZoneBadge zone={entry.zone} />}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: isMe ? accent : '#6a6764' }}>
+                  <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: valueColor ? valueColor(entry.score) : (isMe ? accent : '#6a6764') }}>
                     {unit(entry.score)}
                   </p>
                   <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#3a3835' }}>
@@ -241,8 +258,10 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
         </div>
       )}
 
-      {/* You if outside top 50 */}
-      {!inTop50 && myScore > 0 && (
+      {/* You if outside top 50 — shown whenever the player has a score
+          on the board (myScore !== null), including 0 / negative on
+          boards that allow signed scores (e.g. Blackjack). */}
+      {!inTop50 && myScore !== null && (
         <div style={{ marginTop: '1rem' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
@@ -260,8 +279,8 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
             />
             <p className="flex-1 font-karla font-700" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>You</p>
             <div style={{ textAlign: 'right' }}>
-              <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: accent }}>{unit(myScore)}</p>
-              <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: accent + '80' }}>{subUnit(myScore)}</p>
+              <p className="font-cinzel font-600" style={{ fontSize: '0.75rem', color: valueColor ? valueColor(myScore) : accent }}>{unit(myScore)}</p>
+              <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: (valueColor ? valueColor(myScore) : accent) + '80' }}>{subUnit(myScore)}</p>
             </div>
           </div>
         </div>
