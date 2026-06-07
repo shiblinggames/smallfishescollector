@@ -62,6 +62,35 @@ function CountUp({ value, duration = 750, prefix = '' }: { value: number; durati
   return <>{prefix}{display.toLocaleString()}</>
 }
 
+/** Animates a number from its PREVIOUS rendered value to its new
+ *  value over `duration` ms. Unlike CountUp (which always starts from
+ *  0 on mount), this is meant for live counters — chips, session
+ *  tally — where the start point is whatever was on screen before
+ *  the change. Cubic ease-out so big swings feel weighty. Returns the
+ *  raw number so the consumer can format / colorize / sign it. */
+function useAnimatedNumber(value: number, duration = 900): number {
+  const [display, setDisplay] = useState(value)
+  const prevRef = useRef(value)
+  useEffect(() => {
+    const start = prevRef.current
+    if (start === value) { setDisplay(value); return }
+    const delta = value - start
+    let raf = 0
+    let startTime: number | null = null
+    const tick = (t: number) => {
+      if (startTime === null) startTime = t
+      const p = Math.min(1, (t - startTime) / duration)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setDisplay(Math.round(start + delta * eased))
+      if (p < 1) raf = requestAnimationFrame(tick)
+      else { prevRef.current = value; setDisplay(value) }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => { cancelAnimationFrame(raf); prevRef.current = value }
+  }, [value, duration])
+  return display
+}
+
 /** Tiny haptic on supported devices. Web Vibration API: iOS Safari
  *  silently no-ops, Android Chrome buzzes for real. Patterns chosen so
  *  blackjack feels noticeably stronger than a regular win. */
@@ -125,47 +154,71 @@ function SettleCelebration({ tier, amount }: { tier: 'blackjack' | 'win' | 'push
       {(isBlackjack || isWin) && (
         <SparkleBurst accent={accent} intensity={isBlackjack ? 1.8 : 1} />
       )}
-      <motion.div
-        initial={{ opacity: 0, scale: isBlackjack ? 0.4 : 0.7, y: 30 }}
-        animate={{
-          opacity: [0, 1, 1, 0],
-          scale: isBlackjack ? [0.4, 1.15, 1, 1.05] : [0.7, 1.08, 1, 1],
-          y: [30, 0, -8, -40],
-        }}
-        transition={{
-          duration: isBlackjack ? 2.8 : 2.2,
-          times: [0, 0.18, 0.7, 1],
-          ease: 'easeOut',
-        }}
-        style={{
-          position: 'absolute',
-          top: '32%',
-          left: 0, right: 0,
-          textAlign: 'center',
-          textShadow: isBlackjack
-            ? '0 0 28px rgba(240,192,64,0.7), 0 4px 14px rgba(0,0,0,0.55)'
-            : '0 0 18px rgba(127,212,154,0.45), 0 3px 10px rgba(0,0,0,0.5)',
-        }}
-      >
-        <p className="font-cinzel font-700" style={{
-          fontSize: headlineSize,
-          color: accent,
-          lineHeight: 1,
-          letterSpacing: isBlackjack ? '0.06em' : '0.02em',
-          marginBottom: 8,
-        }}>
-          {headline}
-        </p>
-        {amount !== 0 && (
+      {/* Flex wrap centers the plaque horizontally; positioning the
+          plaque against the top third of the modal so it sits above
+          the cards but not over the chips header. */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        paddingTop: '24%',
+      }}>
+        <motion.div
+          initial={{ opacity: 0, scale: isBlackjack ? 0.4 : 0.7, y: 30 }}
+          animate={{
+            opacity: [0, 1, 1, 0],
+            scale: isBlackjack ? [0.4, 1.15, 1, 1.05] : [0.7, 1.08, 1, 1],
+            y: [30, 0, -8, -40],
+          }}
+          transition={{
+            duration: isBlackjack ? 2.8 : 2.2,
+            times: [0, 0.18, 0.7, 1],
+            ease: 'easeOut',
+          }}
+          style={{
+            maxWidth: '86%',
+            padding: isBlackjack ? '18px 26px 20px' : '14px 22px 16px',
+            borderRadius: 16,
+            // Glassy dark plaque: high-contrast backdrop for the gold/
+            // green text so it pops against the busy card layout
+            // underneath. backdrop-filter blurs the cards behind it
+            // for extra separation on supporting browsers.
+            background: isBlackjack
+              ? 'linear-gradient(180deg, rgba(28,18,4,0.92) 0%, rgba(10,6,2,0.92) 100%)'
+              : 'linear-gradient(180deg, rgba(6,14,9,0.88) 0%, rgba(4,8,5,0.88) 100%)',
+            border: isBlackjack
+              ? '1.5px solid rgba(240,192,64,0.65)'
+              : '1.5px solid rgba(127,212,154,0.55)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: isBlackjack
+              ? '0 18px 50px rgba(0,0,0,0.7), 0 0 60px rgba(240,192,64,0.35)'
+              : '0 14px 36px rgba(0,0,0,0.65), 0 0 40px rgba(127,212,154,0.22)',
+            textAlign: 'center',
+            textShadow: isBlackjack
+              ? '0 0 18px rgba(240,192,64,0.55), 0 3px 10px rgba(0,0,0,0.55)'
+              : '0 0 12px rgba(127,212,154,0.4), 0 2px 8px rgba(0,0,0,0.5)',
+          }}
+        >
           <p className="font-cinzel font-700" style={{
-            fontSize: isBlackjack ? '2.1rem' : '1.5rem',
+            fontSize: headlineSize,
             color: accent,
             lineHeight: 1,
+            letterSpacing: isBlackjack ? '0.06em' : '0.02em',
+            marginBottom: amount !== 0 ? 8 : 0,
           }}>
-            <CountUp value={amount} duration={isBlackjack ? 1100 : 800} prefix={amount > 0 ? '+' : ''} /> ⟡
+            {headline}
           </p>
-        )}
-      </motion.div>
+          {amount !== 0 && (
+            <p className="font-cinzel font-700" style={{
+              fontSize: isBlackjack ? '2.1rem' : '1.5rem',
+              color: accent,
+              lineHeight: 1,
+            }}>
+              <CountUp value={amount} duration={isBlackjack ? 1100 : 800} prefix={amount > 0 ? '+' : ''} /> ⟡
+            </p>
+          )}
+        </motion.div>
+      </div>
     </div>
   )
 }
@@ -500,6 +553,17 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   // a fresh burst; the CoinFlight component remounts via key and
   // self-removes after its animation completes.
   const [coinFlightKey, setCoinFlightKey] = useState(0)
+
+  // Header counters animate from prev value → new value on every change
+  // (instead of jumping), so the player visually sees their chips +/-
+  // the hand's net delta. Tally is chips - sessionBuyIns and can swing
+  // negative; the sign + color shift with the displayed value so a
+  // tally counting from -100 to +200 reads naturally as the digits
+  // tick through zero.
+  const tally = chips - sessionBuyIns
+  const animatedChips = useAnimatedNumber(chips, 950)
+  const animatedTally = useAnimatedNumber(tally, 950)
+
   function clearRevealTimers() {
     for (const id of revealTimersRef.current) clearTimeout(id)
     revealTimersRef.current = []
@@ -1388,38 +1452,40 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             <div>
               <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Chips</p>
               <motion.p
-                // Brief scale punch on the chips number every time a
-                // hand settles — drawing the player's eye to where the
-                // value just moved. Key bound to handId so each settle
-                // re-fires; transformOrigin left so the digits don't
-                // drift around when they pulse.
+                // Scale punch + count-up combine: the pulse draws the
+                // eye, the digits tick through the delta. Key bound to
+                // handId so each settle re-fires; transformOrigin left
+                // so the digits don't drift when they pulse.
                 key={`chips-${result?.handId ?? 'idle'}`}
-                animate={{ scale: phase === 'settled' && outcomeShown ? [1, 1.24, 1] : 1 }}
-                transition={{ duration: 0.85, times: [0, 0.32, 1], ease: 'easeOut' }}
+                animate={{ scale: phase === 'settled' && outcomeShown ? [1, 1.18, 1] : 1 }}
+                transition={{ duration: 0.95, times: [0, 0.32, 1], ease: 'easeOut' }}
                 className="font-cinzel font-700"
                 style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1, transformOrigin: 'left center' }}
               >
-                {chips.toLocaleString()} ⟡
+                {animatedChips.toLocaleString()} ⟡
               </motion.p>
             </div>
             <div style={{ textAlign: 'center', minWidth: 88 }}>
               {sessionBuyIns > 0 ? (() => {
-                const tally = chips - sessionBuyIns
-                const up = tally > 0
-                const flat = tally === 0
-                const color = flat ? '#8a8478' : up ? '#7fd49a' : '#e07070'
-                const sign = up ? '+' : ''
+                // Sign + color track the ANIMATED value, not the target
+                // — so a tally swinging from -100 → +200 visually
+                // counts through zero with the red→grey→green color
+                // shift mid-animation. Feels honest.
+                const displayUp = animatedTally > 0
+                const displayFlat = animatedTally === 0
+                const color = displayFlat ? '#8a8478' : displayUp ? '#7fd49a' : '#e07070'
+                const sign = displayUp ? '+' : ''
                 return (
                   <>
                     <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Session</p>
                     <motion.p
                       key={`tally-${result?.handId ?? 'idle'}`}
-                      animate={{ scale: phase === 'settled' && outcomeShown ? [1, 1.2, 1] : 1 }}
-                      transition={{ duration: 0.85, times: [0, 0.32, 1], ease: 'easeOut', delay: 0.05 }}
+                      animate={{ scale: phase === 'settled' && outcomeShown ? [1, 1.16, 1] : 1 }}
+                      transition={{ duration: 0.95, times: [0, 0.32, 1], ease: 'easeOut', delay: 0.05 }}
                       className="font-cinzel font-700"
                       style={{ fontSize: '1.05rem', color, lineHeight: 1 }}
                     >
-                      {sign}{tally.toLocaleString()} ⟡
+                      {sign}{animatedTally.toLocaleString()} ⟡
                     </motion.p>
                   </>
                 )
