@@ -13,6 +13,7 @@ interface MyScores {
   perfectStreak: number
   tideRun: number
   fishSlots: number
+  blackjack: number
   expedition: number
   raidProgress: number
 }
@@ -22,6 +23,7 @@ interface MyRanks {
   perfectStreak: number | null
   tideRun: number | null
   fishSlots: number | null
+  blackjack: number | null
   expedition: number | null
   raidProgress: number | null
 }
@@ -31,6 +33,7 @@ interface Props {
   perfectStreak: LeaderboardEntry[]
   tideRun: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
+  blackjack: LeaderboardEntry[]
   expedition: LeaderboardEntry[]
   raidProgress: LeaderboardEntry[]
   myScores: MyScores
@@ -41,11 +44,13 @@ interface Props {
 
 type SectionKey = 'fishing' | 'expeditions' | 'tavern'
 
-/** Master sections — each owns 2 boards. Section order = display order. */
+/** Master sections. Tavern owns 3 boards (Tide Run / Fish Slots /
+ *  Blackjack); the board pill grid below adapts its column count to
+ *  match each section's length. */
 const SECTIONS: Record<SectionKey, { label: string; boards: BoardKey[] }> = {
   fishing:     { label: 'Fishing',     boards: ['perfectStreak', 'fishingLevel'] },
   expeditions: { label: 'Expeditions', boards: ['raidProgress', 'expedition'] },
-  tavern:      { label: 'Tavern',      boards: ['tideRun', 'fishSlots'] },
+  tavern:      { label: 'Tavern',      boards: ['tideRun', 'fishSlots', 'blackjack'] },
 }
 
 const PODIUM_COLORS: Record<number, string> = { 1: '#f0c040', 2: '#c0c8d4', 3: '#c47a3a' }
@@ -53,7 +58,7 @@ const NEUTRAL_TEXT = '#d8d4cf'
 const NEUTRAL_BORDER = 'rgba(255,255,255,0.10)'
 const NEUTRAL_BORDER_TOP = 'rgba(255,255,255,0.18)'
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, expedition, raidProgress, myScores, myRanks, currentUserId, avatars }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, blackjack, expedition, raidProgress, myScores, myRanks, currentUserId, avatars }: Props) {
   const [section, setSection] = useState<SectionKey>('fishing')
   const [activeTab, setActiveTab] = useState<BoardKey>(SECTIONS.fishing.boards[0])
 
@@ -63,6 +68,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'perfectStreak' ? perfectStreak
     : k === 'tideRun' ? tideRun
     : k === 'fishSlots' ? fishSlots
+    : k === 'blackjack' ? blackjack
     : k === 'expedition' ? expedition
     : raidProgress
   const scoreOf = (k: BoardKey): number =>
@@ -70,6 +76,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'perfectStreak' ? myScores.perfectStreak
     : k === 'tideRun' ? myScores.tideRun
     : k === 'fishSlots' ? myScores.fishSlots
+    : k === 'blackjack' ? myScores.blackjack
     : k === 'expedition' ? myScores.expedition
     : myScores.raidProgress
   const rankOf = (k: BoardKey): number | null =>
@@ -77,6 +84,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'perfectStreak' ? myRanks.perfectStreak
     : k === 'tideRun' ? myRanks.tideRun
     : k === 'fishSlots' ? myRanks.fishSlots
+    : k === 'blackjack' ? myRanks.blackjack
     : k === 'expedition' ? myRanks.expedition
     : myRanks.raidProgress
 
@@ -120,8 +128,10 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
         })}
       </div>
 
-      {/* ── Board pills for the active section ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: '1.25rem' }}>
+      {/* ── Board pills for the active section. Column count tracks
+            the section's board count so a 3-board section (Tavern)
+            doesn't leave an orphan slot. */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${SECTIONS[section].boards.length}, 1fr)`, gap: 6, marginBottom: '1.25rem' }}>
         {SECTIONS[section].boards.map(key => {
           const b = BOARD_META[key]
           const isActive = activeTab === key

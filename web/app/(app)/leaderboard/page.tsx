@@ -113,12 +113,13 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, expeditionData, raidProgressData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, blackjackData, expeditionData, raidProgressData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_tide_run', user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
+    fetchBoard(admin, 'leaderboard_blackjack', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
     fetchRaidProgressBoard(admin, user.id),
   ])
@@ -132,6 +133,7 @@ export default async function LeaderboardPage() {
     ...perfectStreakData.top.map(e => e.user_id),
     ...tideRunData.top.map(e => e.user_id),
     ...fishSlotsData.top.map(e => e.user_id),
+    ...blackjackData.top.map(e => e.user_id),
     ...expeditionData.top.map(e => e.user_id),
     ...raidProgressData.top.map(e => e.user_id),
   ])
@@ -171,6 +173,7 @@ export default async function LeaderboardPage() {
             perfectStreak={perfectStreakData.top}
             tideRun={tideRunData.top}
             fishSlots={fishSlotsData.top}
+            blackjack={blackjackData.top}
             expedition={expeditionData.top}
             raidProgress={raidProgressData.top}
             myScores={{
@@ -178,6 +181,7 @@ export default async function LeaderboardPage() {
               perfectStreak: perfectStreakData.myScore,
               tideRun: tideRunData.myScore,
               fishSlots: fishSlotsData.myScore,
+              blackjack: blackjackData.myScore,
               expedition: expeditionData.myScore,
               raidProgress: raidProgressData.myScore,
             }}
@@ -186,6 +190,7 @@ export default async function LeaderboardPage() {
               perfectStreak: perfectStreakData.myRank,
               tideRun: tideRunData.myRank,
               fishSlots: fishSlotsData.myRank,
+              blackjack: blackjackData.myRank,
               expedition: expeditionData.myRank,
               raidProgress: raidProgressData.myRank,
             }}

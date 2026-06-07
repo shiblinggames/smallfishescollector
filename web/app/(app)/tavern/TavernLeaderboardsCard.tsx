@@ -37,20 +37,22 @@ async function fetchTop(view: string): Promise<TopRow> {
 }
 
 async function loadHighlights(): Promise<LeaderboardHighlight[]> {
-  // Four boards in parallel. Order in the returned array drives the
+  // Five boards in parallel. Order in the returned array drives the
   // rotation order; Tide Run leads because it's the most-engaged
   // board today.
-  const [tideRun, fishing, expedition, fishSlots] = await Promise.all([
+  const [tideRun, fishing, expedition, fishSlots, blackjack] = await Promise.all([
     fetchTop('leaderboard_tide_run'),
     fetchTop('leaderboard_fishing'),
     fetchTop('leaderboard_expedition'),
     fetchTop('leaderboard_fish_slots'),
+    fetchTop('leaderboard_blackjack'),
   ])
   const out: LeaderboardHighlight[] = []
   if (tideRun)    out.push({ board: 'Tide Run',  username: tideRun.username,    scoreLabel: `${tideRun.score.toLocaleString()}m` })
   if (fishing)    out.push({ board: 'Fishing',   username: fishing.username,    scoreLabel: `Lv ${getLevelFromXP(fishing.score)}` })
   if (expedition) out.push({ board: 'Navigator', username: expedition.username, scoreLabel: `Lv ${getExpeditionLevel(expedition.score)}` })
   if (fishSlots)  out.push({ board: 'Fish Slots', username: fishSlots.username, scoreLabel: `${fishSlots.score.toLocaleString()} ⟡` })
+  if (blackjack)  out.push({ board: 'Blackjack', username: blackjack.username, scoreLabel: `+${blackjack.score.toLocaleString()} ⟡` })
   return out
 }
 

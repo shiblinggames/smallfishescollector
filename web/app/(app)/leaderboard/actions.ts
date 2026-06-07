@@ -16,6 +16,7 @@ const VIEW_BY_KEY: Partial<Record<BoardKey, string>> = {
   fishingLevel: 'leaderboard_fishing',
   tideRun:      'leaderboard_tide_run',
   fishSlots:    'leaderboard_fish_slots',
+  blackjack:    'leaderboard_blackjack',
   expedition:   'leaderboard_expedition',
 }
 
