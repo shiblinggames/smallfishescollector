@@ -103,6 +103,101 @@ function SparkleBurst({ accent }: { accent: string }) {
   )
 }
 
+/** Pirate-voice one-liner from the barkeep, picked by outcome shape.
+ *  Short, terse, in-character — no em-dashes, no AI-sounding phrasing
+ *  per the project's copy voice rule. Shown as an italic line under
+ *  the dealer area once the outcome reveals; adds a bit of character
+ *  to events that would otherwise just be a number flash. */
+function dealerLine(r: SettleResult): string {
+  const hasNaturalPlayer = r.hands.some(h => h.outcome === 'blackjack')
+  const allBust   = r.hands.every(h => h.outcome === 'lose' && h.total > 21)
+  const allPush   = r.hands.every(h => h.outcome === 'push')
+  const anyWin    = r.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
+  const fiveCardWin = r.hands.some(h => h.cards.length >= 5 && h.total <= 21 && (h.outcome === 'win' || h.outcome === 'blackjack'))
+  const insuranceWin = r.insurance.taken && r.insurance.win
+
+  // Order matters — higher-rarity events win the slot.
+  if (hasNaturalPlayer) return 'Three to two, captain.'
+  if (r.dealerNatural)  return 'House shows the natural.'
+  if (r.dealerBust)     return 'Dealer goes overboard.'
+  if (insuranceWin)     return 'Side bet stays afloat.'
+  if (fiveCardWin)      return 'Long road home.'
+  if (allBust)          return 'Over the line.'
+  if (allPush)          return 'Even waters.'
+  if (anyWin)           return 'Yours, captain.'
+  return 'Dealer takes the pot.'
+}
+
+/** Decorative card-stack silhouette — represents the 8-deck shoe the
+ *  cards come from. Pure cosmetic: gives the wager screen a focal
+ *  point and silently communicates that the game uses a multi-deck
+ *  shoe. Each layer uses the cardback art with a small offset stack
+ *  effect. */
+function DeckStack({ width = 64 }: { width?: number }) {
+  const height = Math.round(width * (CARD_DIMS.h / CARD_DIMS.w))
+  // Four stacked layers — top layer has full opacity, ones below
+  // slightly dimmer to fake the depth. Each layer is offset diagonally
+  // by 2px to suggest a chunky deck rather than a single card.
+  const layers = [3, 2, 1, 0]   // render order: bottom first
+  return (
+    <div style={{ position: 'relative', width: width + 8, height: height + 8, flexShrink: 0 }}>
+      {layers.map(i => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            top: i * 2,
+            left: i * 2,
+            width,
+            height,
+            borderRadius: 6,
+            backgroundImage: 'url(/cardbacknew.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.45)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            opacity: 1 - i * 0.08,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Daily-cap progress bar — a thin colored fill that grades from
+ *  green → amber → red as the player approaches the daily wager cap.
+ *  More glanceable than the old "X ⟡ daily cap remaining" text. The
+ *  numeric remainder is kept underneath for precision. */
+function DailyCapBar({ wagered, cap }: { wagered: number; cap: number }) {
+  const pct = Math.min(1, wagered / cap)
+  const remaining = Math.max(0, cap - wagered)
+  // Color band:
+  //   0-60%  green (4ade80)
+  //   60-90% amber (f0c040)
+  //   90%+   red   (f08a8a)
+  const color = pct < 0.6 ? '#4ade80' : pct < 0.9 ? '#f0c040' : '#f08a8a'
+  return (
+    <div>
+      <div style={{
+        height: 4, borderRadius: 999,
+        background: 'rgba(255,255,255,0.07)',
+        overflow: 'hidden',
+      }}>
+        <motion.div
+          animate={{ width: `${pct * 100}%`, backgroundColor: color }}
+          transition={{ width: { duration: 0.6, ease: 'easeOut' }, backgroundColor: { duration: 0.4 } }}
+          style={{ height: '100%', borderRadius: 999, background: color }}
+        />
+      </div>
+      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7470', marginTop: 5, letterSpacing: '0.04em' }}>
+        {remaining > 0
+          ? `${remaining.toLocaleString()} ⟡ daily cap remaining`
+          : 'Daily cap reached'}
+      </p>
+    </div>
+  )
+}
+
 // Single locked size across every screen — the play / settle phase
 // transition was visibly resizing cards before and the jitter was
 // annoying. Picked 64×92 so five cards fit per row on a 360-wide phone
@@ -384,16 +479,25 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   function renderWagerScreen() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        <div style={{ textAlign: 'center' }}>
-          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a', marginBottom: 4 }}>
-            New Hand
-          </p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#f0e8d0' }}>Place your wager</p>
-          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', marginTop: 6 }}>
-            {dailyRemaining > 0
-              ? <>Up to {Math.min(BJ_MAX_BET, doubloons, dailyRemaining).toLocaleString()} ⟡ this hand · {dailyRemaining.toLocaleString()} ⟡ daily cap remaining</>
-              : 'Daily limit reached — come back tomorrow'}
-          </p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Decorative shoe — soft idle wiggle so it feels alive. */}
+          <motion.div
+            animate={{ rotate: [-1.2, 1.2, -1.2] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <DeckStack width={68} />
+          </motion.div>
+          <div style={{ textAlign: 'center' }}>
+            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a', marginBottom: 4 }}>
+              Eight-deck shoe
+            </p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0e8d0' }}>Place your wager</p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', marginTop: 6 }}>
+              {dailyRemaining > 0
+                ? <>Up to {Math.min(BJ_MAX_BET, doubloons, dailyRemaining).toLocaleString()} ⟡ this hand</>
+                : 'Daily limit reached — come back tomorrow'}
+            </p>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -463,8 +567,10 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                 key={i}
                 initial={{ opacity: 0, y: -18, scale: 0.85 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                whileTap={{ scale: 0.96 }}
                 transition={{ duration: 0.28, delay: i * 0.08 }}
-                style={{ flexShrink: 0 }}
+                style={{ flexShrink: 0, cursor: 'pointer' }}
               >
                 <BlackjackCard card={c} fishArt={getFish(-1, i, c)} />
               </motion.div>
@@ -479,26 +585,35 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               {state.hands.length === 1 ? 'Your Hand' : `Hand ${state.activeHandIdx + 1} of ${state.hands.length}`}
             </p>
             <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0e8d0' }}>
-              {activeHand ? activeHand.total : ''}
+              {activeHand ? <CountUp value={activeHand.total} duration={350} /> : ''}
             </p>
           </div>
-          {state.hands.map((h, hi) => (
-            <div
+          {state.hands.map((h, hi) => {
+            const isActive = hi === state.activeHandIdx && !h.busted && !h.stood
+            return (
+            <motion.div
               key={hi}
+              // Active hand breathes — a tiny scale pulse that immediately
+              // reads "your move," especially helpful when split puts
+              // two hands side-by-side. Off for stood/busted hands.
+              animate={isActive ? { scale: [1, 1.012, 1] } : { scale: 1 }}
+              transition={isActive ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
               style={{
                 marginBottom: hi === state.hands.length - 1 ? 0 : 10,
                 padding: '0.65rem 0.75rem',
-                background: hi === state.activeHandIdx ? 'rgba(122,211,160,0.08)' : 'rgba(255,255,255,0.025)',
-                border: `1px solid ${hi === state.activeHandIdx ? 'rgba(122,211,160,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                background: isActive ? 'rgba(122,211,160,0.08)' : h.busted ? 'rgba(240,138,138,0.06)' : 'rgba(255,255,255,0.025)',
+                border: `1px solid ${isActive ? 'rgba(122,211,160,0.35)' : h.busted ? 'rgba(240,138,138,0.3)' : 'rgba(255,255,255,0.08)'}`,
                 borderRadius: 12,
+                boxShadow: isActive ? '0 0 18px rgba(122,211,160,0.18)' : 'none',
+                transformOrigin: 'center',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', color: '#7a948a', letterSpacing: '0.1em' }}>
-                  {h.busted ? 'BUST' : h.stood ? 'STOOD' : hi === state.activeHandIdx ? 'ACTIVE' : 'WAITING'} · {h.wager} ⟡{h.doubled ? ' · DD' : ''}{h.isSplit ? ' · SPLIT' : ''}
+                  {h.busted ? 'BUST' : h.stood ? 'STOOD' : isActive ? 'ACTIVE' : 'WAITING'} · {h.wager} ⟡{h.doubled ? ' · DD' : ''}{h.isSplit ? ' · SPLIT' : ''}
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: h.busted ? '#f08a8a' : h.isNatural ? '#f0c040' : '#f0e8d0' }}>
-                  {h.total}{h.soft && h.total !== 21 ? ' (soft)' : ''}{h.isNatural ? ' · BJ' : ''}
+                  <CountUp value={h.total} duration={350} />{h.soft && h.total !== 21 ? ' (soft)' : ''}{h.isNatural ? ' · BJ' : ''}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -507,15 +622,17 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                     key={ci}
                     initial={{ opacity: 0, y: -18, scale: 0.85 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
+                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                    whileTap={{ scale: 0.96 }}
                     transition={{ duration: 0.28, delay: ci * 0.08 }}
-                    style={{ flexShrink: 0 }}
+                    style={{ flexShrink: 0, cursor: 'pointer' }}
                   >
                     <BlackjackCard card={c} fishArt={getFish(hi, ci, c)} />
                   </motion.div>
                 ))}
               </div>
-            </div>
-          ))}
+            </motion.div>
+          )})}
         </div>
 
         {/* Insurance prompt OR action bar */}
@@ -637,11 +754,48 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           {outcomeShown && hasBlackjack && <SparkleBurst accent={netColor} />}
         </div>
 
-        {/* Dealer — cards reveal in sequence; index 1 is the FlipCard hole. */}
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a', marginBottom: 6 }}>
-            Dealer · {dealerTotalVisible}{outcomeShown && r.dealerBust ? ' · Bust' : outcomeShown && r.dealerNatural ? ' · Blackjack' : ''}
-          </p>
+        {/* Dealer — cards reveal in sequence; index 1 is the FlipCard hole.
+            When dealer busts, the whole row gets a red glow + "Bust"
+            stamp post-reveal, mirroring how player-bust hands look. */}
+        <motion.div
+          animate={outcomeShown && r.dealerBust
+            ? { boxShadow: ['0 0 0 rgba(240,138,138,0)', '0 0 24px rgba(240,138,138,0.45)', '0 0 16px rgba(240,138,138,0.28)'] }
+            : { boxShadow: '0 0 0 rgba(0,0,0,0)' }}
+          transition={{ duration: 0.6 }}
+          style={{
+            padding: outcomeShown && r.dealerBust ? '0.5rem 0.55rem' : 0,
+            margin: outcomeShown && r.dealerBust ? '-0.5rem -0.55rem' : 0,
+            borderRadius: 12,
+            background: outcomeShown && r.dealerBust ? 'rgba(240,138,138,0.06)' : 'transparent',
+            border: outcomeShown && r.dealerBust ? '1px solid rgba(240,138,138,0.28)' : '1px solid transparent',
+            transition: 'background 0.3s, border-color 0.3s, padding 0.3s, margin 0.3s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>
+              Dealer · {dealerTotalVisible}{outcomeShown && r.dealerNatural ? ' · Blackjack' : ''}
+            </p>
+            <AnimatePresence>
+              {outcomeShown && r.dealerBust && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.6, rotate: -8 }}
+                  animate={{ opacity: 1, scale: 1, rotate: -4 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 14 }}
+                  className="font-karla font-700 uppercase tracking-[0.14em]"
+                  style={{
+                    fontSize: '0.62rem',
+                    color: '#f08a8a',
+                    background: 'rgba(240,138,138,0.14)',
+                    border: '1px solid rgba(240,138,138,0.5)',
+                    padding: '0.18rem 0.5rem',
+                    borderRadius: 5,
+                  }}
+                >
+                  Bust
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
             {r.dealerCards.map((c, i) => {
               if (i >= revealedDealerCount) return null
@@ -657,15 +811,40 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                   key={i}
                   initial={i >= 2 ? { opacity: 0, y: -18, scale: 0.85 } : false}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
+                  whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                  whileTap={{ scale: 0.96 }}
                   transition={{ duration: 0.32 }}
-                  style={{ flexShrink: 0 }}
+                  style={{ flexShrink: 0, cursor: 'pointer' }}
                 >
                   <BlackjackCard card={c} fishArt={fish} />
                 </motion.div>
               )
             })}
           </div>
-        </div>
+          {/* Dealer one-liner — fades in once the reveal completes.
+              Italic in the barkeep's voice. */}
+          <AnimatePresence>
+            {outcomeShown && (
+              <motion.p
+                key="dealer-line"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35, delay: 0.05 }}
+                className="font-karla"
+                style={{
+                  fontSize: '0.74rem',
+                  color: '#a09988',
+                  fontStyle: 'italic',
+                  marginTop: 8,
+                  textAlign: 'center',
+                }}
+              >
+                {dealerLine(r)}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Player hands — cards visible immediately. Outcome chip only
             shows up post-reveal so the player doesn't see the verdict
@@ -735,7 +914,14 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {h.cards.map((card, ci) => (
-                    <BlackjackCard key={ci} card={card} fishArt={getFish(hi, ci, card)} />
+                    <motion.div
+                      key={ci}
+                      whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                      whileTap={{ scale: 0.96 }}
+                      style={{ flexShrink: 0, cursor: 'pointer' }}
+                    >
+                      <BlackjackCard card={card} fishArt={getFish(hi, ci, card)} />
+                    </motion.div>
                   ))}
                 </div>
               </motion.div>
@@ -814,19 +1000,21 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
     }}>
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: '1.25rem',
         paddingBottom: '0.85rem',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>Tavern</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>Blackjack</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>Tavern</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>Blackjack</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
+            <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7470', marginTop: 4 }}>balance</p>
+          </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
-          <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7470', marginTop: 4 }}>{dailyRemaining.toLocaleString()} ⟡ daily cap</p>
-        </div>
+        <DailyCapBar wagered={dailyWagered} cap={BJ_DAILY_CAP} />
       </div>
 
       {phase === 'wager' && renderWagerScreen()}
