@@ -45,16 +45,15 @@ export default function GameCard({ href, eyebrow, title, statusText, streak, var
           border: `1px solid ${accent}30`,
           borderTop: `1px solid ${accent}55`,
           borderRadius: 18,
-          padding: '0.9rem 0.9rem 1rem',
+          padding: '0.9rem 0.7rem 0.95rem',
           cursor: 'pointer',
           userSelect: 'none',
-          // Locked height so every compact card in the tavern hub renders
-          // the same size, regardless of which section it sits in or
-          // whether its title wraps. Was previously content-hugged with
-          // a comment about grid auto-equalization — but that only
-          // equalized within a row, leaving Daily / Arcade rows at
-          // different heights when their titles wrapped differently.
-          height: 188,
+          // Locked height tight to art + centered title — bumped down
+          // from 188 since we no longer render the eyebrow / subtext /
+          // streak / ✓ Done badge that used to live below the title.
+          // Same height across all cards so the grid stays uniform
+          // across Daily / Featured / Arcade rows.
+          height: 168,
         }}
       >
         {/* Top: art. No drop-shadow filter here — at compact sizes the
@@ -65,12 +64,12 @@ export default function GameCard({ href, eyebrow, title, statusText, streak, var
         {customArt ? (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: 96, marginBottom: 8,
+            height: 96, marginBottom: 4,
           }}>
             {customArt}
           </div>
         ) : art && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 96, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 96, marginBottom: 4 }}>
             <img
               src={art}
               alt=""
@@ -83,25 +82,31 @@ export default function GameCard({ href, eyebrow, title, statusText, streak, var
             />
           </div>
         )}
-        {eyebrow && (
-          <p className="font-karla font-700 uppercase tracking-[0.12em] mb-1"
-            style={{ fontSize: '0.52rem', color: accent + 'cc' }}>
-            {eyebrow}
+        {/* Title block fills the remaining vertical space below the
+            art and centers itself in it — keeps the layout symmetric
+            whether the title is one line ("Blackjack") or two ("Fish
+            of the Day"). */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, textAlign: 'center' }}>
+          {eyebrow && (
+            <p className="font-karla font-700 uppercase tracking-[0.12em]"
+              style={{ fontSize: '0.52rem', color: accent + 'cc' }}>
+              {eyebrow}
+            </p>
+          )}
+          <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.18 }}>
+            {title}
           </p>
-        )}
-        <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: statusText ? '0.3rem' : 0 }}>
-          {title}
-        </p>
-        {statusText && (
-          <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#a8a5a0', lineHeight: 1.45 }}>
-            {statusText}
-          </p>
-        )}
-        {streak != null && streak > 0 && (
-          <p className="font-karla font-700 mt-1.5" style={{ fontSize: '0.58rem', color: accent }}>
-            {streak}d streak
-          </p>
-        )}
+          {statusText && (
+            <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#a8a5a0', lineHeight: 1.45 }}>
+              {statusText}
+            </p>
+          )}
+          {streak != null && streak > 0 && (
+            <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: accent }}>
+              {streak}d streak
+            </p>
+          )}
+        </div>
       </div>
     )
   }
