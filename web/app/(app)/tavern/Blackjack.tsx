@@ -1072,10 +1072,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           })}
         </div>
 
-        <button
+        <motion.button
           type="button"
           disabled={!canBuyIn}
           onClick={doBuyIn}
+          whileTap={canBuyIn ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
+          transition={{ type: 'spring', stiffness: 600, damping: 22 }}
           className="font-cinzel font-700 uppercase tracking-[0.1em]"
           style={{
             padding: '0.95rem 0', borderRadius: 14,
@@ -1087,7 +1089,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           }}
         >
           {isPending ? 'Buying…' : `Buy ${buyInAmount.toLocaleString()} ⟡ in chips`}
-        </button>
+        </motion.button>
 
         {error && (
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center' }}>{error}</p>
@@ -1130,10 +1132,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           </div>
         </div>
 
-        <button
+        <motion.button
           type="button"
           disabled={!canDeal}
           onClick={startDeal}
+          whileTap={canDeal ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
+          transition={{ type: 'spring', stiffness: 600, damping: 22 }}
           className="font-cinzel font-700 uppercase tracking-[0.1em]"
           style={{
             padding: '0.95rem 0', borderRadius: 14,
@@ -1145,7 +1149,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           }}
         >
           {isPending ? 'Dealing…' : `Deal · ${wager.toLocaleString()} ⟡`}
-        </button>
+        </motion.button>
 
         {error && (
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center' }}>{error}</p>
@@ -1581,10 +1585,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                     {BJ_BET_PRESETS.map(amt => {
                       const disabled = amt > Math.min(BJ_MAX_BET, chips) || isPending
                       return (
-                        <button
+                        <motion.button
                           key={amt}
                           type="button"
                           disabled={disabled}
+                          whileTap={!disabled ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
+                          transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                           onClick={() => {
                             setWager(amt)
                             // Bypass the wager screen — go straight to
@@ -1624,7 +1630,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                           }}
                         >
                           {amt} ⟡
-                        </button>
+                        </motion.button>
                       )
                     })}
                   </div>
@@ -1858,10 +1864,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 Dealer shows an Ace. For {Math.floor(active.hands[0].wager / 2)} ⟡ you can side-bet that the hole card is a 10-value. Pays 2:1 if dealer has natural Blackjack.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
+                <motion.button
                   type="button"
                   disabled={isPending || doubloons < Math.floor(active.hands[0].wager / 2)}
                   onClick={() => fireAction(acceptInsurance)}
+                  whileTap={!isPending ? { y: 3, scale: 0.94, borderColor: 'rgba(155,195,240,1)' } : undefined}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   className="font-cinzel font-700 uppercase tracking-[0.06em]"
                   style={{
                     flex: 1, padding: '0.85rem 0', borderRadius: 11,
@@ -1875,11 +1883,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   }}
                 >
                   Take · {Math.floor(active.hands[0].wager / 2)} ⟡
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   type="button"
                   disabled={isPending}
                   onClick={() => fireAction(declineInsurance)}
+                  whileTap={!isPending ? { y: 3, scale: 0.94, borderColor: 'rgba(255,255,255,0.5)' } : undefined}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   className="font-cinzel font-700 uppercase tracking-[0.06em]"
                   style={{
                     flex: 1, padding: '0.85rem 0', borderRadius: 11,
@@ -1893,7 +1903,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   }}
                 >
                   Decline
-                </button>
+                </motion.button>
               </div>
             </motion.div>
             </div>
@@ -1930,8 +1940,8 @@ function ActionButton({ label, chip, onClick, disabled }: {
       disabled={disabled}
       onClick={onClick}
       whileHover={!disabled ? { y: -1.5 } : undefined}
-      whileTap={!disabled ? { y: 1, scale: 0.985 } : undefined}
-      transition={{ type: 'spring', stiffness: 480, damping: 28 }}
+      whileTap={!disabled ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
+      transition={{ type: 'spring', stiffness: 600, damping: 22 }}
       className="font-cinzel font-700 uppercase"
       style={{
         flex: 1, minWidth: 72,
