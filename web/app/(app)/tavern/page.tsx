@@ -1,10 +1,6 @@
 import { Suspense, cache } from 'react'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getSlotsDailyWagered } from './actions'
-import { getDailyWagered as getBlackjackDailyWagered } from './blackjack/actions'
-import { BJ_DAILY_CAP, SLOTS_DAILY_CAP } from './constants'
 import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
 import GameCard from './GameCard'
@@ -15,60 +11,35 @@ import { CHARACTER_COLORS } from '@/lib/characters'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
 
-// Same streaming pattern as /expeditions: shell + Nav paint as soon as profile
-// arrives, then each card-group section streams in via its own Suspense
-// boundary. Shared deps go through cache() so each section fetches what it
-// needs without duplicate Supabase calls.
-
-const cachedFotdAttempt = cache(async () => {
-  const user = await getCurrentUser()
-  if (!user) return null
-  const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
-  const { data } = await admin
-    .from('daily_fish_attempts')
-    .select('solved, guesses')
-    .eq('user_id', user.id)
-    .eq('date', today)
-    .single()
-  return data
-})
-
-const cachedBlackjackDailyWagered = cache(() => getBlackjackDailyWagered())
-const cachedSlotsDailyWagered = cache(() => getSlotsDailyWagered())
+// Same streaming pattern as /expeditions: shell + Nav paint as soon as
+// profile arrives, then each card-group section streams in via its own
+// Suspense boundary. The previous version of this file also computed
+// per-game "done today / cap reached" flags so cards could dim with a
+// ✓ Done badge; that treatment was removed (cards should all read the
+// same regardless of completion), and along with it went the Supabase
+// roundtrips that fed it (cachedFotdAttempt + cachedBlackjackDailyWagered
+// + cachedSlotsDailyWagered + the premium / last_*_claim profile reads).
+// Only chartState survives because hasChart still gates whether the
+// Chart the Course card mounts at all.
 const cachedChartState = cache(() => getChartState())
 
 // ── Sections ────────────────────────────────────────────────────────────────
 
 async function DailySection() {
-  const [profile, fotdAttempt, chartState] = await Promise.all([
-    getCurrentProfile(),
-    cachedFotdAttempt(),
-    cachedChartState(),
-  ])
-  const today = new Date().toISOString().split('T')[0]
-  const isPremium = isPremiumActive(profile)
-  const allClaimed =
-    profile?.last_daily_claim === today &&
-    (!isPremium || profile?.last_pack_claim === today)
-  const fotdDone = !!fotdAttempt && (fotdAttempt.solved || (fotdAttempt.guesses?.length ?? 0) >= 6)
+  const chartState = await cachedChartState()
 
-  // Chart the Course folded into Daily on 2026-05-26 — used to live in its
-  // own "Contest" section. The daily-grant model (1 move per day, no stacking)
-  // makes it a daily login ritual like the others, not a sprint race.
+  // Chart the Course folded into Daily on 2026-05-26 — used to live in
+  // its own "Contest" section. The daily-grant model (1 move per day,
+  // no stacking) makes it a daily login ritual like the others, not a
+  // sprint race. The card only mounts when the player actually has a
+  // chart in progress; outside that window it's just two cards.
   const hasChart = chartState && !('error' in chartState)
-  const chartCompleted = hasChart && !!chartState.progress.completed_at
-  const chartMovesLeft = hasChart ? chartState.movesAvailable : 0
 
-  // No statusText / no eyebrow on cards by design — the title + ✓ Done
-  // badge carry enough meaning since each section already has its own
-  // heading above, and dropping the extra labels keeps the grid clean.
   return (
     <div className="grid grid-cols-2 gap-3">
       <GameCard
         href="/tavern/daily-bonus"
         title="Daily Bonus"
-        completed={allClaimed}
         variant="compact"
         art="/dailybonus.png"
         accent="#f0c040"
@@ -76,7 +47,6 @@ async function DailySection() {
       <GameCard
         href="/tavern/fish-of-the-day"
         title="Fish of the Day"
-        completed={fotdDone}
         variant="compact"
         accent="#60a5fa"
         customArt={
@@ -110,19 +80,15 @@ async function DailySection() {
           </div>
         }
       />
-      {hasChart && (() => {
-        const dailyDone = chartCompleted || chartMovesLeft === 0
-        return (
-          <GameCard
-            href="/charting"
-            title="Chart the Course"
-            completed={dailyDone}
-            variant="compact"
-            art="/chartthecourse.png"
-            accent="#f0c040"
-          />
-        )
-      })()}
+      {hasChart && (
+        <GameCard
+          href="/charting"
+          title="Chart the Course"
+          variant="compact"
+          art="/chartthecourse.png"
+          accent="#f0c040"
+        />
+      )}
     </div>
   )
 }
@@ -153,19 +119,12 @@ function FeaturesSection() {
   )
 }
 
-async function ArcadeSection() {
-  const [blackjackDailyWagered, slotsDailyWagered] = await Promise.all([
-    cachedBlackjackDailyWagered(),
-    cachedSlotsDailyWagered(),
-  ])
-  const blackjackCapReached = blackjackDailyWagered >= BJ_DAILY_CAP
-  const slotsCapReached = slotsDailyWagered >= SLOTS_DAILY_CAP
+function ArcadeSection() {
   return (
     <div className="grid grid-cols-2 gap-3">
       <GameCard
         href="/tavern/blackjack"
         title="Blackjack"
-        completed={blackjackCapReached}
         variant="compact"
         art="/crownandanchor.png"
         accent="#c63838"
@@ -173,7 +132,6 @@ async function ArcadeSection() {
       <GameCard
         href="/tavern/slots"
         title="Fish Slots"
-        completed={slotsCapReached}
         variant="compact"
         art="/fishslots.png"
         accent="#a78bfa"

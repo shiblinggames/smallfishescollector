@@ -14,7 +14,6 @@ interface Props {
   statusText?: string
   info?: string[]
   icon?: React.ReactNode
-  completed?: boolean
   streak?: number
   variant?: 'default' | 'featured' | 'compact'
   art?: string
@@ -28,9 +27,8 @@ interface Props {
   accent?: string
 }
 
-export default function GameCard({ href, eyebrow, title, statusText, completed, streak, variant = 'default', art, artMaxHeight = 96, customArt, accent = '#f0c040' }: Props) {
+export default function GameCard({ href, eyebrow, title, statusText, streak, variant = 'default', art, artMaxHeight = 96, customArt, accent = '#f0c040' }: Props) {
   const router = useRouter()
-  const done = !!completed
   const featured = variant === 'featured'
   const compact = variant === 'compact'
 
@@ -44,19 +42,19 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
         style={{
           display: 'flex', flexDirection: 'column',
           background: 'rgba(6,12,20,0.92)',
-          border: `1px solid ${done ? 'rgba(255,255,255,0.08)' : `${accent}30`}`,
-          borderTop: `1px solid ${done ? 'rgba(255,255,255,0.08)' : `${accent}55`}`,
+          border: `1px solid ${accent}30`,
+          borderTop: `1px solid ${accent}55`,
           borderRadius: 18,
           padding: '0.9rem 0.9rem 1rem',
           cursor: 'pointer',
-          opacity: done ? 0.55 : 1,
           userSelect: 'none',
-          transition: 'opacity 0.15s',
-          // No minHeight — cards hug their content. (Used to be 200px
-          // so the statusText line had room; now that subtext is gone,
-          // a fixed floor left dead space at the bottom.) Grid cells
-          // auto-equalize row height side-by-side, so cards still line
-          // up cleanly even when titles wrap differently.
+          // Locked height so every compact card in the tavern hub renders
+          // the same size, regardless of which section it sits in or
+          // whether its title wraps. Was previously content-hugged with
+          // a comment about grid auto-equalization — but that only
+          // equalized within a row, leaving Daily / Arcade rows at
+          // different heights when their titles wrapped differently.
+          height: 188,
         }}
       >
         {/* Top: art. No drop-shadow filter here — at compact sizes the
@@ -68,7 +66,6 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             height: 96, marginBottom: 8,
-            opacity: done ? 0.4 : 1,
           }}>
             {customArt}
           </div>
@@ -81,24 +78,16 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
                 width: '100%',
                 height: artMaxHeight,
                 objectFit: 'contain',
-                opacity: done ? 0.4 : 0.95,
+                opacity: 0.95,
               }}
             />
           </div>
         )}
-        {/* Eyebrow + done. Whole row collapses when both are absent. */}
-        {(eyebrow || done) && (
-          <div className="flex items-center gap-2 mb-1">
-            {eyebrow && (
-              <p className="font-karla font-700 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.52rem', color: accent + 'cc', flex: 1 }}>
-                {eyebrow}
-              </p>
-            )}
-            {done && (
-              <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: '#4ade80', whiteSpace: 'nowrap', marginLeft: eyebrow ? 0 : 'auto' }}>✓ Done</span>
-            )}
-          </div>
+        {eyebrow && (
+          <p className="font-karla font-700 uppercase tracking-[0.12em] mb-1"
+            style={{ fontSize: '0.52rem', color: accent + 'cc' }}>
+            {eyebrow}
+          </p>
         )}
         <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.15, marginBottom: statusText ? '0.3rem' : 0 }}>
           {title}
@@ -108,7 +97,7 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
             {statusText}
           </p>
         )}
-        {!done && streak != null && streak > 0 && (
+        {streak != null && streak > 0 && (
           <p className="font-karla font-700 mt-1.5" style={{ fontSize: '0.58rem', color: accent }}>
             {streak}d streak
           </p>
@@ -126,30 +115,21 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
       style={{
         display: 'flex', alignItems: 'stretch', gap: '1rem',
         background: 'rgba(6,12,20,0.92)',
-        border: `1px solid ${done ? 'rgba(255,255,255,0.08)' : featured ? `${accent}40` : `${accent}28`}`,
-        borderTop: `1px solid ${done ? 'rgba(255,255,255,0.08)' : featured ? `${accent}66` : `${accent}44`}`,
+        border: `1px solid ${featured ? `${accent}40` : `${accent}28`}`,
+        borderTop: `1px solid ${featured ? `${accent}66` : `${accent}44`}`,
         borderRadius: 20,
         padding: '1.3rem 1.4rem 1.25rem',
         cursor: 'pointer',
-        opacity: done ? 0.55 : 1,
         userSelect: 'none',
-        transition: 'opacity 0.15s',
       }}
     >
       {/* Left: text content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {(eyebrow || done) && (
-          <div className="flex items-center gap-2 mb-2">
-            {eyebrow && (
-              <p className="font-karla font-600 uppercase tracking-[0.12em]"
-                style={{ fontSize: '0.56rem', color: accent + 'cc', flex: 1 }}>
-                {eyebrow}
-              </p>
-            )}
-            {done && (
-              <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#4ade80', whiteSpace: 'nowrap', marginLeft: eyebrow ? 0 : 'auto' }}>✓ Done</span>
-            )}
-          </div>
+        {eyebrow && (
+          <p className="font-karla font-600 uppercase tracking-[0.12em] mb-2"
+            style={{ fontSize: '0.56rem', color: accent + 'cc' }}>
+            {eyebrow}
+          </p>
         )}
 
         <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.2, marginBottom: statusText ? '0.35rem' : 0 }}>
@@ -162,7 +142,7 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
           </p>
         )}
 
-        {!done && streak != null && streak > 0 && (
+        {streak != null && streak > 0 && (
           <p className="font-karla font-600 mt-1.5" style={{ fontSize: '0.65rem', color: accent }}>
             {streak}d streak
           </p>
@@ -182,7 +162,7 @@ export default function GameCard({ href, eyebrow, title, statusText, completed, 
               width: '100%',
               height: 110,
               objectFit: 'contain',
-              opacity: done ? 0.4 : 0.88,
+              opacity: 0.88,
               filter: `drop-shadow(0 4px 16px ${accent}50)`,
             }}
           />
