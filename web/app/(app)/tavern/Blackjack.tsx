@@ -8,11 +8,13 @@ import {
   acceptInsurance, declineInsurance,
   type ClientState, type SettleResult,
 } from './blackjack/actions'
+import { buyInChips, cashOutChips } from './blackjack/actions'
 import type { Card, Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
 
 interface Props {
   doubloons: number
+  chips: number
   dailyWagered: number
   resumed: ClientState | null
   fishArtPool: FishArtPool
@@ -361,11 +363,20 @@ function BlackjackCard({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: initialDailyWagered, resumed, fishArtPool }: Props) {
+export default function Blackjack({ doubloons: initialDoubloons, chips: initialChips, dailyWagered: initialDailyWagered, resumed, fishArtPool }: Props) {
   const [doubloons, setDoubloons] = useState(initialDoubloons)
+  const [chips, setChips] = useState(initialChips)
   const [dailyWagered, setDailyWagered] = useState(initialDailyWagered)
-  const [phase, setPhase] = useState<'wager' | 'play' | 'settled'>(resumed ? 'play' : 'wager')
+  // Phases:
+  //   buyIn   — no chips at the table; player picks how much to convert
+  //   wager   — chips on the table; player picks bet for next hand
+  //   play    — hand in progress
+  //   settled — reveal sequence + Play Again
+  const [phase, setPhase] = useState<'buyIn' | 'wager' | 'play' | 'settled'>(
+    resumed ? 'play' : (initialChips > 0 ? 'wager' : 'buyIn')
+  )
   const [wager, setWager] = useState<number>(BJ_BET_PRESETS[0])
+  const [buyInAmount, setBuyInAmount] = useState<number>(100)
   const [active, setActive] = useState<ClientState | null>(resumed)
   const [result, setResult] = useState<SettleResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -411,8 +422,13 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
   }
 
   const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyWagered)
+  // Wager is bounded by chip stack, not doubloons — chips are what's on
+  // the table. Daily cap is enforced at buy-in only.
   const canDeal = wager >= BJ_MIN_BET
-    && wager <= Math.min(BJ_MAX_BET, doubloons, dailyRemaining)
+    && wager <= Math.min(BJ_MAX_BET, chips)
+    && !isPending
+  const canBuyIn = buyInAmount >= BJ_MIN_BET
+    && buyInAmount <= Math.min(BJ_MAX_BET, doubloons, dailyRemaining)
     && !isPending
 
   function applyActionResult(r: { kind: 'active'; state: ClientState } | { kind: 'settled'; result: SettleResult } | { error: string }) {
@@ -420,10 +436,10 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     setError(null)
     if (r.kind === 'active') {
       setActive(r.state)
+      setChips(r.state.chips)
       setDoubloons(r.state.doubloons)
       setDailyWagered(BJ_DAILY_CAP - r.state.dailyRemaining)
       setPhase('play')
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.state.doubloons }))
       return
     }
     // Settled — stage the reveal so the player always sees the hole
@@ -455,9 +471,9 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     elapsed += 400
     revealTimersRef.current.push(window.setTimeout(() => {
       setOutcomeShown(true)
-      setDoubloons(r.result.newDoubloons)
+      setChips(r.result.newChips)
+      setDoubloons(r.result.doubloons)
       setDailyWagered(r.result.dailyWagered)
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.result.newDoubloons }))
       // Outcome-tiered haptic. Blackjack = long satisfying buzz;
       // dealer-bust win = quick double-tap; regular win = short;
       // push = barely a tick; loss = soft thud.
@@ -495,7 +511,36 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
     setHoleFlipped(false)
     setRevealedDealerCount(0)
     setOutcomeShown(false)
-    setPhase('wager')
+    // If the player's been busted out completely, push them to buy-in
+    // instead of a useless wager screen they can't act on.
+    setPhase(chips > 0 ? 'wager' : 'buyIn')
+  }
+
+  function doBuyIn() {
+    if (!canBuyIn) return
+    setError(null)
+    startTransition(async () => {
+      const r = await buyInChips(buyInAmount)
+      if ('error' in r) { setError(r.error); return }
+      setChips(r.newChips)
+      setDoubloons(r.newDoubloons)
+      setDailyWagered(r.dailyWagered)
+      setPhase('wager')
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+    })
+  }
+
+  function doCashOut() {
+    if (chips <= 0 || isPending) return
+    setError(null)
+    startTransition(async () => {
+      const r = await cashOutChips()
+      if ('error' in r) { setError(r.error); return }
+      setChips(0)
+      setDoubloons(r.newDoubloons)
+      setPhase('buyIn')
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+    })
   }
 
   // Clear pending reveal timers on unmount so a navigated-away player
@@ -504,11 +549,10 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
 
   // ── Renderers ──────────────────────────────────────────────────────────
 
-  function renderWagerScreen() {
+  function renderBuyInScreen() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Decorative shoe — soft idle wiggle so it feels alive. */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.85rem' }}>
           <motion.div
             animate={{ rotate: [-1.2, 1.2, -1.2] }}
             transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
@@ -517,13 +561,11 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           </motion.div>
           <div style={{ textAlign: 'center' }}>
             <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a', marginBottom: 4 }}>
-              Eight-deck shoe
+              Sit Down
             </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0e8d0' }}>Place your wager</p>
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', marginTop: 6 }}>
-              {dailyRemaining > 0
-                ? <>Up to {Math.min(BJ_MAX_BET, doubloons, dailyRemaining).toLocaleString()} ⟡ this hand</>
-                : 'Daily limit reached — come back tomorrow'}
+            <p className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#f0e8d0', lineHeight: 1.1 }}>Buy chips</p>
+            <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09988', marginTop: 6, lineHeight: 1.5 }}>
+              Trade {dailyRemaining > 0 ? <>up to <span style={{ color: '#f0c040' }}>{Math.min(BJ_MAX_BET, doubloons, dailyRemaining).toLocaleString()} ⟡</span></> : '⟡'} for chips to play with. Cash out any time.
             </p>
           </div>
         </div>
@@ -531,13 +573,13 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {BJ_BET_PRESETS.map(amt => {
             const disabled = amt > Math.min(BJ_MAX_BET, doubloons, dailyRemaining)
-            const selected = wager === amt
+            const selected = buyInAmount === amt
             return (
               <button
                 key={amt}
                 type="button"
                 disabled={disabled || isPending}
-                onClick={() => setWager(amt)}
+                onClick={() => setBuyInAmount(amt)}
                 className="font-karla font-700"
                 style={{
                   padding: '0.7rem 0', borderRadius: 10,
@@ -552,6 +594,64 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
               </button>
             )
           })}
+        </div>
+
+        <button
+          type="button"
+          disabled={!canBuyIn}
+          onClick={doBuyIn}
+          className="font-cinzel font-700 uppercase tracking-[0.1em]"
+          style={{
+            padding: '0.95rem 0', borderRadius: 14,
+            background: canBuyIn ? 'linear-gradient(180deg, rgba(240,192,64,0.35) 0%, rgba(196,169,106,0.18) 100%)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${canBuyIn ? '#f0c040' : 'rgba(255,255,255,0.1)'}`,
+            color: canBuyIn ? '#f0d695' : '#5a5550',
+            fontSize: '0.95rem', letterSpacing: '0.08em',
+            cursor: canBuyIn ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {isPending ? 'Buying…' : `Buy ${buyInAmount.toLocaleString()} ⟡ in chips`}
+        </button>
+
+        {error && (
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center' }}>{error}</p>
+        )}
+      </div>
+    )
+  }
+
+  function renderWagerScreen() {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+        <div>
+          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 10 }}>
+            Wager
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {BJ_BET_PRESETS.map(amt => {
+              const disabled = amt > Math.min(BJ_MAX_BET, chips)
+              const selected = wager === amt
+              return (
+                <button
+                  key={amt}
+                  type="button"
+                  disabled={disabled || isPending}
+                  onClick={() => setWager(amt)}
+                  className="font-karla font-700"
+                  style={{
+                    padding: '0.7rem 0', borderRadius: 10,
+                    background: selected ? 'rgba(240,192,64,0.12)' : 'rgba(4,10,20,0.5)',
+                    border: `1px solid ${selected ? '#f0c040' : 'rgba(255,255,255,0.12)'}`,
+                    color: disabled ? '#3a3835' : selected ? '#f0c040' : '#9a9488',
+                    fontSize: '0.85rem',
+                    cursor: disabled || isPending ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {amt} ⟡
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <button
@@ -978,24 +1078,47 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
       boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
       overflow: 'hidden',     // clip coin trails that escape the modal
     }}>
+      {/* Header: chip stack + cash-out shortcut. The Nav already shows
+          the player's doubloon balance — no need to duplicate it. The
+          page-level "Blackjack" title is gone too; just the chip
+          display + the day-cap bar live here. Header collapses to the
+          DailyCapBar on the buy-in screen since there are no chips
+          yet to display. */}
       <div style={{
-        marginBottom: '1.25rem',
+        marginBottom: '1.1rem',
         paddingBottom: '0.85rem',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>Tavern</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0' }}>Blackjack</p>
+        {phase !== 'buyIn' && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Chips</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>{chips.toLocaleString()} ⟡</p>
+            </div>
+            {(phase === 'wager' || phase === 'settled') && chips > 0 && (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={doCashOut}
+                className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{
+                  padding: '0.5rem 0.85rem', borderRadius: 999,
+                  background: 'rgba(196,169,106,0.1)',
+                  border: '1px solid rgba(196,169,106,0.45)',
+                  color: '#c4a96a',
+                  fontSize: '0.62rem',
+                  cursor: isPending ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cash Out
+              </button>
+            )}
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
-            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a7470', marginTop: 4 }}>balance</p>
-          </div>
-        </div>
+        )}
         <DailyCapBar wagered={dailyWagered} cap={BJ_DAILY_CAP} />
       </div>
 
+      {phase === 'buyIn' && renderBuyInScreen()}
       {phase === 'wager' && renderWagerScreen()}
       {phase === 'play' && active && renderGameScreen(active)}
       {phase === 'settled' && result && renderSettleScreen(result)}

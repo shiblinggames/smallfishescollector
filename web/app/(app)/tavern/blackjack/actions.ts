@@ -67,8 +67,9 @@ export interface ClientState {
   canStand: boolean
   canDouble: boolean
   canSplit: boolean
-  dailyRemaining: number        // doubloons still allowed today, post-this-hand
-  doubloons: number             // current balance (post-this-hand)
+  dailyRemaining: number        // doubloons still allowed to buy in today
+  chips: number                 // current chip balance (post-this-hand)
+  doubloons: number             // doubloons balance (off-table)
 }
 
 export interface SettleResult {
@@ -79,9 +80,10 @@ export interface SettleResult {
   dealerBust: boolean
   dealerNatural: boolean
   insurance: { taken: boolean; amount: number; paid: number; net: number; win: boolean }
-  netDelta: number              // total change in doubloons across the hand
-  newDoubloons: number
-  dailyWagered: number
+  netDelta: number              // total change in chips across the hand
+  newChips: number              // chip balance post-settle
+  doubloons: number             // doubloons balance (unchanged by hand-level actions)
+  dailyWagered: number          // sum of today's buy-ins
 }
 
 export type ActionResult =
@@ -90,23 +92,131 @@ export type ActionResult =
   | { error: string }
 
 // ── Daily-wager helper ──
+//
+// "Daily wagered" now tracks BUY-INS (doubloons committed to the table),
+// not per-hand wagers. Conceptually it's "max at-risk doubloons per
+// day" — and since chips never leave the table until cash-out, the
+// at-risk amount IS the buy-in. Players can churn through 50,000 in
+// chip wagers from a single 500 buy-in without re-hitting the cap.
 
-async function getDailyWageredTotal(userId: string): Promise<number> {
+async function getDailyBuyInTotal(userId: string): Promise<number> {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
   const { data } = await admin
-    .from('blackjack_hands')
-    .select('total_wagered')
+    .from('blackjack_buy_ins')
+    .select('amount')
     .eq('user_id', userId)
     .gte('created_at', today)
-  return (data ?? []).reduce((sum, r) => sum + (r.total_wagered as number), 0)
+  return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
 }
 
 export async function getDailyWagered(): Promise<number> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
-  return getDailyWageredTotal(user.id)
+  return getDailyBuyInTotal(user.id)
+}
+
+// ── Buy-in / Cash-out ──
+
+export interface BuyInResult {
+  newDoubloons: number
+  newChips: number
+  dailyWagered: number
+}
+
+/** Convert N doubloons → N chips. Enforces daily-wager cap + sufficient
+ *  doubloons. Errors out if the player still has an active hand (you
+ *  can't add to your stack mid-hand). */
+export async function buyInChips(amount: number): Promise<BuyInResult | { error: string }> {
+  if (!Number.isInteger(amount) || amount <= 0) return { error: 'Invalid amount' }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const active = await loadActiveHand(user.id)
+  if (active) return { error: 'Finish your hand first' }
+
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, blackjack_chips')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+  const doubloons = profile.doubloons as number
+  const chips = (profile.blackjack_chips as number | null) ?? 0
+  if (doubloons < amount) return { error: 'Insufficient doubloons' }
+
+  const dailyAlready = await getDailyBuyInTotal(user.id)
+  if (dailyAlready + amount > BJ_DAILY_CAP) {
+    return { error: `Daily limit reached (${BJ_DAILY_CAP} ⟡)` }
+  }
+
+  const newDoubloons = doubloons - amount
+  const newChips = chips + amount
+
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons, blackjack_chips: newChips }).eq('id', user.id),
+    admin.from('blackjack_buy_ins').insert({ user_id: user.id, amount }),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -amount, reason: `Blackjack: buy-in ${amount} ⟡` }),
+  ])
+
+  revalidatePath('/tavern')
+  return { newDoubloons, newChips, dailyWagered: dailyAlready + amount }
+}
+
+export interface CashOutResult {
+  newDoubloons: number
+  cashedOut: number
+}
+
+/** Convert all chips → doubloons. No-op if chips are zero. Errors if
+ *  there's still an active hand — settle first. */
+export async function cashOutChips(): Promise<CashOutResult | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const active = await loadActiveHand(user.id)
+  if (active) return { error: 'Finish your hand first' }
+
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, blackjack_chips')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+  const doubloons = profile.doubloons as number
+  const chips = (profile.blackjack_chips as number | null) ?? 0
+  if (chips <= 0) return { error: 'No chips to cash out' }
+
+  const newDoubloons = doubloons + chips
+
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons, blackjack_chips: 0 }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: chips, reason: `Blackjack: cash-out ${chips} ⟡` }),
+  ])
+
+  revalidatePath('/tavern')
+  return { newDoubloons, cashedOut: chips }
+}
+
+export async function getBlackjackChipsAndDoubloons(): Promise<{ chips: number; doubloons: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { chips: 0, doubloons: 0 }
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('profiles')
+    .select('doubloons, blackjack_chips')
+    .eq('id', user.id)
+    .single()
+  return {
+    chips: (data?.blackjack_chips as number | null) ?? 0,
+    doubloons: (data?.doubloons as number | null) ?? 0,
+  }
 }
 
 // ── Helpers: state ↔ client view ──
@@ -122,6 +232,7 @@ function toClientState(
   handId: number,
   state: ServerState,
   totalWagered: number,
+  chips: number,
   doubloons: number,
   dailyRemaining: number,
 ): ClientState {
@@ -130,14 +241,15 @@ function toClientState(
   const initialWager = state.hands[0]?.wager ?? 0
   const canHit    = isPlayerTurn && !!activeHand && !activeHand.busted && !activeHand.stood
   const canStand  = canHit
+  // Double / split now gate on CHIPS (the in-game stake), not doubloons.
   const canDouble = canHit
     && activeHand.cards.length === 2
     && !activeHand.isSplit
-    && doubloons >= activeHand.wager
+    && chips >= activeHand.wager
   const canSplitNow = canHit
     && state.hands.length === 1     // no re-splitting
     && canSplit(activeHand.cards)
-    && doubloons >= initialWager
+    && chips >= initialWager
   const dealerCards: CardOrBack[] = state.phase === 'settled'
     ? state.dealerCards
     : [state.dealerCards[0], 'X']
@@ -158,6 +270,7 @@ function toClientState(
     canDouble,
     canSplit: canSplitNow,
     dailyRemaining,
+    chips,
     doubloons,
   }
 }
@@ -212,11 +325,11 @@ async function finalizeSettlement(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons')
+    .select('doubloons, blackjack_chips')
     .eq('id', userId)
     .single()
-  const currentDoubloons = (profile?.doubloons as number | null) ?? 0
-  const newDoubloons = currentDoubloons + totalReturned
+  const currentChips = (profile?.blackjack_chips as number | null) ?? 0
+  const newChips = currentChips + totalReturned   // wagers already deducted from chips at action time
 
   const resultJson = {
     hands: settled,
@@ -241,8 +354,11 @@ async function finalizeSettlement(
   if (state.insuranceTaken)    reasonParts.push(insurance.win ? 'ins +' : 'ins -')
   const reason = `Blackjack: ${reasonParts.join(', ')}`
 
+  // Hand-level settle updates CHIPS only; doubloons move on cash-out.
+  // No doubloon_transactions row here — chip movement is internal to
+  // the table session and would otherwise bloat the ledger.
   await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', userId),
+    admin.from('profiles').update({ blackjack_chips: newChips }).eq('id', userId),
     admin.from('blackjack_hands').update({
       status: 'settled',
       state: null,            // free the active-state JSON
@@ -250,14 +366,11 @@ async function finalizeSettlement(
       net_delta: netDelta,
       settled_at: new Date().toISOString(),
     }).eq('id', handId),
-    admin.from('doubloon_transactions').insert({
-      user_id: userId,
-      amount: netDelta,
-      reason,
-    }),
   ])
+  void reason
 
-  const dailyWagered = await getDailyWageredTotal(userId)
+  const dailyWagered = await getDailyBuyInTotal(userId)
+  const currentDoubloons = (profile?.doubloons as number | null) ?? 0
 
   return {
     handId,
@@ -268,7 +381,8 @@ async function finalizeSettlement(
     dealerNatural,
     insurance: { taken: state.insuranceTaken, amount: state.insuranceAmount, paid: insurance.paid, net: insurance.net, win: insurance.win },
     netDelta,
-    newDoubloons,
+    newChips,
+    doubloons: currentDoubloons,
     dailyWagered,
     // Wager fields for the SettleResult shape — caller-facing values
     // already baked into the hand row at this point. Not duplicated.
@@ -298,15 +412,23 @@ async function persistActiveHand(handId: number, state: ServerState, totalWagere
   await admin.from('blackjack_hands').update({ state, total_wagered: totalWagered }).eq('id', handId)
 }
 
+/** Read the player's chip balance (the table-side spendable purse).
+ *  Doubloons are the off-table currency and don't move during hands. */
+async function getChips(userId: string): Promise<number> {
+  const admin = createAdminClient()
+  const { data } = await admin.from('profiles').select('blackjack_chips').eq('id', userId).single()
+  return (data?.blackjack_chips as number | null) ?? 0
+}
+
+async function setChips(userId: string, chips: number): Promise<void> {
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ blackjack_chips: chips }).eq('id', userId)
+}
+
 async function getDoubloons(userId: string): Promise<number> {
   const admin = createAdminClient()
   const { data } = await admin.from('profiles').select('doubloons').eq('id', userId).single()
   return (data?.doubloons as number | null) ?? 0
-}
-
-async function setDoubloons(userId: string, doubloons: number): Promise<void> {
-  const admin = createAdminClient()
-  await admin.from('profiles').update({ doubloons }).eq('id', userId)
 }
 
 // ── Public actions ──
@@ -334,13 +456,10 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
     await finalizeSettlement(user.id, orphan.id, s, orphan.initial_wager, orphan.total_wagered)
   }
 
-  const doubloons = await getDoubloons(user.id)
-  if (doubloons < wager) return { error: 'Insufficient doubloons' }
-
-  const dailyAlready = await getDailyWageredTotal(user.id)
-  if (dailyAlready + wager > BJ_DAILY_CAP) {
-    return { error: `Daily limit reached (${BJ_DAILY_CAP} ⟡)` }
-  }
+  // Wagers come out of CHIPS, not doubloons. Daily cap is enforced
+  // at buy-in, not per-hand — chips on the table can churn freely.
+  const chips = await getChips(user.id)
+  if (chips < wager) return { error: 'Not enough chips' }
 
   // Build a fresh shoe + deal 2-2
   const shoe = newShoe()
@@ -363,8 +482,8 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
     phase: dealerUpRank === 'A' ? 'insuranceOffered' : 'playerTurn',
   }
 
-  // Charge the wager up front
-  await setDoubloons(user.id, doubloons - wager)
+  // Pull the wager out of chips up front
+  await setChips(user.id, chips - wager)
 
   // Insert the hand row
   const { data: row } = await admin
@@ -378,24 +497,22 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
   revalidatePath('/tavern')
 
   // Resolve naturals immediately when no insurance gate.
-  // (Insurance gate: the player must decide insurance before any
-  //  natural-BJ resolution — that's the rule. Defer to acceptInsurance
-  //  / declineInsurance handlers.)
   if (state.phase === 'playerTurn') {
     const dealerNaturalCheck = isNaturalBlackjack(state.dealerCards)
     if (playerNatural || dealerNaturalCheck) {
       state.hands.forEach(h => { h.stood = true })
       state.activeHandIdx = state.hands.length
       state.phase = 'settled'
-      // dealer cards already known; no further draw needed since both naturals are 2-card hands
       const result = await finalizeSettlement(user.id, handId, state, wager, wager)
       return { kind: 'settled', result }
     }
   }
 
-  const newDoubloons = doubloons - wager
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - (dailyAlready + wager))
-  return { kind: 'active', state: toClientState(handId, state, wager, newDoubloons, dailyRemaining) }
+  const newChips = chips - wager
+  const dailyAlready = await getDailyBuyInTotal(user.id)
+  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const doubloons = await getDoubloons(user.id)
+  return { kind: 'active', state: toClientState(handId, state, wager, newChips, doubloons, dailyRemaining) }
 }
 
 /** Accept insurance: charge half wager, resolve dealer natural check. */
@@ -409,16 +526,10 @@ export async function acceptInsurance(): Promise<ActionResult> {
 
   const initialWager = hand.initial_wager
   const insurance = Math.floor(initialWager / 2)
-  const doubloons = await getDoubloons(user.id)
-  if (doubloons < insurance) return { error: 'Insufficient doubloons for insurance' }
+  const chips = await getChips(user.id)
+  if (chips < insurance) return { error: 'Not enough chips for insurance' }
 
-  const dailyAlready = await getDailyWageredTotal(user.id)
-  if (dailyAlready - hand.total_wagered + (hand.total_wagered + insurance) > BJ_DAILY_CAP) {
-    // The hand's existing wager already counts in dailyAlready; we add only the delta.
-    return { error: `Daily limit reached (${BJ_DAILY_CAP} ⟡)` }
-  }
-
-  await setDoubloons(user.id, doubloons - insurance)
+  await setChips(user.id, chips - insurance)
   hand.state.insuranceTaken = true
   hand.state.insuranceAmount = insurance
   hand.state.insuranceResolved = true
@@ -440,9 +551,11 @@ export async function acceptInsurance(): Promise<ActionResult> {
   const totalWagered = hand.total_wagered + insurance
   await persistActiveHand(hand.id, hand.state, totalWagered)
 
-  const newDoubloons = doubloons - insurance
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - (dailyAlready + insurance))
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newDoubloons, dailyRemaining) }
+  const newChips = chips - insurance
+  const dailyAlready = await getDailyBuyInTotal(user.id)
+  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const doubloons = await getDoubloons(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining) }
 }
 
 /** Decline insurance: no charge; check dealer natural anyway, resolve if hit. */
@@ -469,10 +582,11 @@ export async function declineInsurance(): Promise<ActionResult> {
 
   hand.state.phase = 'playerTurn'
   await persistActiveHand(hand.id, hand.state, hand.total_wagered)
+  const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
-  const dailyAlready = await getDailyWageredTotal(user.id)
+  const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, doubloons, dailyRemaining) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining) }
 }
 
 export async function hit(): Promise<ActionResult> {
@@ -497,10 +611,11 @@ export async function hit(): Promise<ActionResult> {
     return { kind: 'settled', result }
   }
 
+  const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
-  const dailyAlready = await getDailyWageredTotal(user.id)
+  const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, doubloons, dailyRemaining) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining) }
 }
 
 export async function stand(): Promise<ActionResult> {
@@ -522,10 +637,11 @@ export async function stand(): Promise<ActionResult> {
     return { kind: 'settled', result }
   }
 
+  const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
-  const dailyAlready = await getDailyWageredTotal(user.id)
+  const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, doubloons, dailyRemaining) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining) }
 }
 
 export async function doubleDown(): Promise<ActionResult> {
@@ -540,14 +656,10 @@ export async function doubleDown(): Promise<ActionResult> {
   if (active.cards.length !== 2) return { error: 'Can only double on initial two cards' }
   if (active.isSplit) return { error: 'No double after split (house rule)' }
 
-  const doubloons = await getDoubloons(user.id)
-  if (doubloons < active.wager) return { error: 'Insufficient doubloons to double' }
-  const dailyAlready = await getDailyWageredTotal(user.id)
-  if (dailyAlready + active.wager > BJ_DAILY_CAP) {
-    return { error: `Daily limit reached (${BJ_DAILY_CAP} ⟡)` }
-  }
+  const chips = await getChips(user.id)
+  if (chips < active.wager) return { error: 'Not enough chips to double' }
 
-  await setDoubloons(user.id, doubloons - active.wager)
+  await setChips(user.id, chips - active.wager)
   active.wager *= 2
   active.doubled = true
   active.cards.push(drawCard(hand.state.shoe))
@@ -563,9 +675,11 @@ export async function doubleDown(): Promise<ActionResult> {
     return { kind: 'settled', result }
   }
 
-  const newDoubloons = doubloons - (active.wager / 2)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - (dailyAlready + (active.wager / 2)))
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newDoubloons, dailyRemaining) }
+  const newChips = chips - (active.wager / 2)
+  const dailyAlready = await getDailyBuyInTotal(user.id)
+  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const doubloons = await getDoubloons(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining) }
 }
 
 export async function split(): Promise<ActionResult> {
@@ -580,15 +694,11 @@ export async function split(): Promise<ActionResult> {
   if (!active || active.cards.length !== 2 || !canSplit(active.cards)) return { error: 'Cannot split' }
 
   const initialWager = hand.initial_wager
-  const doubloons = await getDoubloons(user.id)
-  if (doubloons < initialWager) return { error: 'Insufficient doubloons to split' }
-  const dailyAlready = await getDailyWageredTotal(user.id)
-  if (dailyAlready + initialWager > BJ_DAILY_CAP) {
-    return { error: `Daily limit reached (${BJ_DAILY_CAP} ⟡)` }
-  }
+  const chips = await getChips(user.id)
+  if (chips < initialWager) return { error: 'Not enough chips to split' }
 
   // Charge the second wager
-  await setDoubloons(user.id, doubloons - initialWager)
+  await setChips(user.id, chips - initialWager)
 
   // Split: each hand gets one of the original cards + one new draw
   const [c1, c2] = active.cards
@@ -623,9 +733,11 @@ export async function split(): Promise<ActionResult> {
     return { kind: 'settled', result }
   }
 
-  const newDoubloons = doubloons - initialWager
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - (dailyAlready + initialWager))
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newDoubloons, dailyRemaining) }
+  const newChips = chips - initialWager
+  const dailyAlready = await getDailyBuyInTotal(user.id)
+  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const doubloons = await getDoubloons(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining) }
 }
 
 /** Resume the active hand on page load (or return null if none). */
@@ -635,8 +747,9 @@ export async function resumeHand(): Promise<ClientState | null> {
   if (!user) return null
   const hand = await loadActiveHand(user.id)
   if (!hand) return null
+  const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
-  const dailyAlready = await getDailyWageredTotal(user.id)
+  const dailyAlready = await getDailyBuyInTotal(user.id)
   const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  return toClientState(hand.id, hand.state, hand.total_wagered, doubloons, dailyRemaining)
+  return toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining)
 }

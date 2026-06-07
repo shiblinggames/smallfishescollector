@@ -9,11 +9,12 @@ export default async function BlackjackPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Parallel: profile + daily wager + any resumed hand + fish art pool.
-  // resumeHand returns null when the player has no active hand;
-  // when set, the client jumps straight to the play phase.
+  // Parallel: profile (doubloons + chips) + daily wager + any resumed
+  // hand + fish art pool. resumeHand returns null when the player has
+  // no active hand; chips > 0 puts them on the wager screen; chips ==
+  // 0 puts them on the buy-in screen.
   const [{ data: profile }, dailyWagered, resumed, fishArtPool] = await Promise.all([
-    supabase.from('profiles').select('doubloons').eq('id', user.id).single(),
+    supabase.from('profiles').select('doubloons, blackjack_chips').eq('id', user.id).single(),
     getDailyWagered(),
     resumeHand(),
     getFishArtPool(),
@@ -21,12 +22,10 @@ export default async function BlackjackPage() {
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
-      {/* No page-level h1 — the Blackjack card carries its own title
-          in the modal header. Two "Blackjack"s stacked vertically
-          looked like a layout bug. */}
       <div className="px-6 pt-6 pb-12">
         <Blackjack
           doubloons={profile?.doubloons ?? 0}
+          chips={profile?.blackjack_chips ?? 0}
           dailyWagered={dailyWagered}
           resumed={resumed}
           fishArtPool={fishArtPool}
