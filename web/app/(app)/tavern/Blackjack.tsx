@@ -1353,16 +1353,23 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                           disabled={disabled}
                           onClick={() => {
                             setWager(amt)
-                            // Bypass the wager screen — go straight to dealing.
-                            // nextHand() resets reveal state then setPhase('wager');
-                            // we want to skip that and call startDeal-equivalent
-                            // logic directly.
+                            // Bypass the wager screen — go straight to
+                            // dealing, but match startDeal's full reset
+                            // so the deal-reveal animation fires. Prior
+                            // version skipped setDealRevealCount(0) +
+                            // pendingFreshDealRef.current = true, which
+                            // meant the next response got classified as
+                            // mid-hand (isFreshDeal=false) and the cards
+                            // landed all at once instead of one at a time.
                             clearRevealTimers()
                             setResult(null)
+                            setPendingSettle(null)
                             setActive(null)
                             setHoleFlipped(false)
                             setRevealedDealerCount(0)
                             setOutcomeShown(false)
+                            setDealRevealCount(0)
+                            pendingFreshDealRef.current = true
                             fishCacheRef.current.clear()
                             fireAction(() => dealBlackjack(amt))
                           }}
