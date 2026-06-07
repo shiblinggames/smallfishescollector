@@ -448,34 +448,48 @@ function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing' }: { card: 
   )
 }
 
-/** Single line of "felt etching" — uppercase low-opacity gold text
- *  anchored to the right edge of the card row. Cards flex from the
- *  left and cover this when the hand grows past two cards. Stays out
- *  of normal flow (position: absolute) so adding the rule lines never
- *  shifts the play surface vertically — they sit behind the cards as
- *  decoration, not a new row. */
-function FeltRule({ text }: { text: string }) {
+/** "Felt etching" — uppercase low-opacity gold text anchored to the
+ *  right edge of the card row. Pass a string for a single line or an
+ *  array for stacked lines (e.g., the player-side rules where
+ *  Blackjack 3:2 sits above Insurance 2:1). Cards flex from the left
+ *  and cover this when the hand grows past two cards. Stays out of
+ *  normal flow (position: absolute) so adding rule lines never shifts
+ *  the play surface vertically — sits behind the cards as decoration,
+ *  not a new row. */
+function FeltRule({ text }: { text: string | readonly string[] }) {
+  const lines = Array.isArray(text) ? text : [text as string]
   return (
-    <span
+    <div
       aria-hidden
-      className="font-karla font-700 uppercase"
       style={{
         position: 'absolute',
         right: 4,
         top: '50%',
         transform: 'translateY(-50%)',
-        color: '#a68a4a',
-        opacity: 0.32,
-        fontSize: '0.5rem',
-        letterSpacing: '0.22em',
-        whiteSpace: 'nowrap',
+        textAlign: 'right',
         pointerEvents: 'none',
         zIndex: 0,
-        textShadow: '0 1px 0 rgba(0,0,0,0.5)',
       }}
     >
-      {text}
-    </span>
+      {lines.map((line, i) => (
+        <p
+          key={i}
+          className="font-karla font-700 uppercase"
+          style={{
+            color: '#a68a4a',
+            opacity: 0.32,
+            fontSize: '0.5rem',
+            letterSpacing: '0.22em',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.55,
+            textShadow: '0 1px 0 rgba(0,0,0,0.5)',
+            margin: 0,
+          }}
+        >
+          {line}
+        </p>
+      ))}
+    </div>
   )
 }
 
@@ -1279,7 +1293,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 </div>
               </div>
               <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
-                {hi === 0 && <FeltRule text="Blackjack pays 3 to 2  ·  Insurance pays 2 to 1" />}
+                {hi === 0 && <FeltRule text={['Blackjack pays 3 to 2', 'Insurance pays 2 to 1']} />}
                 {visibleHandCards.map((c, ci) => (
                   <DealtCard
                     key={ci}
@@ -1507,7 +1521,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   </div>
                 </div>
                 <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {hi === 0 && <FeltRule text="Blackjack pays 3 to 2  ·  Insurance pays 2 to 1" />}
+                  {hi === 0 && <FeltRule text={['Blackjack pays 3 to 2', 'Insurance pays 2 to 1']} />}
                   {h.cards.map((card, ci) => (
                     // mode='revealed' so the structure matches what the
                     // play screen rendered for these same cards (DealtCard
