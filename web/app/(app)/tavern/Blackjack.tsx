@@ -606,16 +606,13 @@ export default function Blackjack({ doubloons: initialDoubloons, dailyWagered: i
           </div>
         </div>
 
-        {/* Player hands */}
+        {/* Player hands — section label only; each row owns its own
+            big total so we don't print the number twice in the
+            single-hand case. */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7ad3a0' }}>
-              {state.hands.length === 1 ? 'Your Hand' : `Hand ${state.activeHandIdx + 1} of ${state.hands.length}`}
-            </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#f0e8d0', lineHeight: 1 }}>
-              {activeHand ? <CountUp value={activeHand.total} duration={350} /> : ''}
-            </p>
-          </div>
+          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7ad3a0', marginBottom: 8 }}>
+            {state.hands.length === 1 ? 'Your Hand' : `Hand ${state.activeHandIdx + 1} of ${state.hands.length}`}
+          </p>
           {state.hands.map((h, hi) => {
             const isActive = hi === state.activeHandIdx && !h.busted && !h.stood
             return (
