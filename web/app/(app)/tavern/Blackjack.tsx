@@ -1138,8 +1138,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               key="ins-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
+              // position: fixed so the overlay anchors to the viewport,
+              // not the Blackjack modal. On phones where the modal is
+              // taller than the viewport, an absolute "top: 50%" lands
+              // the card below the fold — switching to fixed centers
+              // it in the visible area regardless of scroll position.
               style={{
-                position: 'absolute', inset: 0, zIndex: 20,
+                position: 'fixed', inset: 0, zIndex: 200,
                 background: 'rgba(2,4,8,0.7)',
                 backdropFilter: 'blur(4px)',
                 WebkitBackdropFilter: 'blur(4px)',
@@ -1152,7 +1157,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               exit={{ opacity: 0, scale: 0.95, y: -8 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26 }}
               style={{
-                position: 'absolute', zIndex: 21,
+                position: 'fixed', zIndex: 201,
                 left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
                 width: 'calc(100% - 2.2rem)', maxWidth: 340,
                 padding: '1.25rem 1.1rem 1.1rem',
