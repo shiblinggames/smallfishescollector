@@ -14,7 +14,7 @@ export default async function BlackjackPage() {
   // no active hand; chips > 0 puts them on the wager screen; chips ==
   // 0 puts them on the buy-in screen.
   const [{ data: profile }, dailyWagered, resumed, fishArtPool] = await Promise.all([
-    supabase.from('profiles').select('doubloons, blackjack_chips').eq('id', user.id).single(),
+    supabase.from('profiles').select('doubloons, blackjack_chips, blackjack_session_buy_ins').eq('id', user.id).single(),
     getDailyWagered(),
     resumeHand(),
     getFishArtPool(),
@@ -26,6 +26,7 @@ export default async function BlackjackPage() {
         <Blackjack
           doubloons={profile?.doubloons ?? 0}
           chips={profile?.blackjack_chips ?? 0}
+          sessionBuyIns={profile?.blackjack_session_buy_ins ?? 0}
           dailyWagered={dailyWagered}
           resumed={resumed}
           fishArtPool={fishArtPool}

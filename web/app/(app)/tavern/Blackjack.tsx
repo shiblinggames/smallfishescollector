@@ -15,6 +15,7 @@ import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
 interface Props {
   doubloons: number
   chips: number
+  sessionBuyIns: number
   dailyWagered: number
   resumed: ClientState | null
   fishArtPool: FishArtPool
@@ -69,41 +70,6 @@ function vibrate(pattern: number | number[]) {
   try { navigator.vibrate(pattern) } catch { /* ignore — some browsers refuse */ }
 }
 
-/** Localized sparkle burst over a hand on big wins. Pure CSS via
- *  framer-motion; each particle drifts up + fades. No screen-wide flash
- *  (would violate the project's "subtle juice" rule). */
-function SparkleBurst({ accent }: { accent: string }) {
-  // 7 particles, randomized horizontal offsets, staggered slight
-  // delays so they don't all leave at once.
-  const particles = Array.from({ length: 7 }, (_, i) => ({
-    i,
-    left: 10 + Math.random() * 80,
-    delay: i * 0.04,
-    glyph: ['✨','⭐','✨','✦','✨','✦','⭐'][i],
-  }))
-  return (
-    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      {particles.map(p => (
-        <motion.div
-          key={p.i}
-          initial={{ opacity: 0, y: 0, scale: 0.6 }}
-          animate={{ opacity: [0, 1, 1, 0], y: -70, scale: [0.6, 1.1, 1, 0.9] }}
-          transition={{ duration: 1.4, delay: p.delay, ease: 'easeOut' }}
-          style={{
-            position: 'absolute',
-            top: '40%',
-            left: `${p.left}%`,
-            fontSize: '1.1rem',
-            color: accent,
-            textShadow: `0 0 8px ${accent}`,
-          }}
-        >
-          {p.glyph}
-        </motion.div>
-      ))}
-    </div>
-  )
-}
 
 /** Burst of doubloon glyphs that flies from the player-hand area up to
  *  the balance number in the header. Pure decorative — fires on any
@@ -363,9 +329,13 @@ function BlackjackCard({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export default function Blackjack({ doubloons: initialDoubloons, chips: initialChips, dailyWagered: initialDailyWagered, resumed, fishArtPool }: Props) {
+export default function Blackjack({ doubloons: initialDoubloons, chips: initialChips, sessionBuyIns: initialSessionBuyIns, dailyWagered: initialDailyWagered, resumed, fishArtPool }: Props) {
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [chips, setChips] = useState(initialChips)
+  // Cumulative doubloons bought in this session (resets on cash-out or
+  // when chips fall to 0). The header session tally is `chips - sessionBuyIns`
+  // — green when up, red when down. Replaces the per-hand net-delta panel.
+  const [sessionBuyIns, setSessionBuyIns] = useState(initialSessionBuyIns)
   const [dailyWagered, setDailyWagered] = useState(initialDailyWagered)
   // Phases:
   //   buyIn   — no chips at the table; player picks how much to convert
@@ -438,6 +408,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       setActive(r.state)
       setChips(r.state.chips)
       setDoubloons(r.state.doubloons)
+      setSessionBuyIns(r.state.sessionBuyIns)
       setDailyWagered(BJ_DAILY_CAP - r.state.dailyRemaining)
       setPhase('play')
       return
@@ -473,6 +444,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       setOutcomeShown(true)
       setChips(r.result.newChips)
       setDoubloons(r.result.doubloons)
+      setSessionBuyIns(r.result.sessionBuyIns)
       setDailyWagered(r.result.dailyWagered)
       // Outcome-tiered haptic. Blackjack = long satisfying buzz;
       // dealer-bust win = quick double-tap; regular win = short;
@@ -524,6 +496,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       if ('error' in r) { setError(r.error); return }
       setChips(r.newChips)
       setDoubloons(r.newDoubloons)
+      setSessionBuyIns(r.sessionBuyIns)
       setDailyWagered(r.dailyWagered)
       setPhase('wager')
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
@@ -538,6 +511,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       if ('error' in r) { setError(r.error); return }
       setChips(0)
       setDoubloons(r.newDoubloons)
+      setSessionBuyIns(r.sessionBuyIns)
       setPhase('buyIn')
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     })
@@ -781,9 +755,6 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   }
 
   function renderSettleScreen(r: SettleResult) {
-    const net = r.netDelta
-    const netColor = net > 0 ? '#7ad3a0' : net < 0 ? '#f08a8a' : '#c4a96a'
-    const headlineWord = net > 0 ? 'Winner' : net < 0 ? 'Down' : 'Push'
     const dealerTotalVisible = holeFlipped
       ? r.dealerTotal
       : (() => {
@@ -797,53 +768,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           return Number(rank)
         })()
 
-    const hasBlackjack = r.hands.some(h => h.outcome === 'blackjack')
-    const isBigWin     = hasBlackjack || net >= 200
-
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-        {/* Net delta — fades in only after the reveal finishes. Spring
-            punch + count-up + sparkle on Blackjack.
-            Fixed-height slot (~3.8rem to fit the 2.4rem Blackjack
-            number + the 0.55rem eyebrow + 4px gap) with absolutely-
-            positioned content, so the motion.div mounting at outcome
-            time can't push the dealer/hand rows below it down. The
-            slot occupies the same vertical space regardless of state,
-            and the spring animation lives entirely inside it. */}
-        <div style={{ position: 'relative', height: '3.8rem' }}>
-          <AnimatePresence>
-            {outcomeShown && (
-              <motion.div
-                key="net"
-                initial={{ opacity: 0, scale: hasBlackjack ? 1.6 : 1.35, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: hasBlackjack ? 280 : 360, damping: hasBlackjack ? 14 : 18 }}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                }}
-              >
-                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: netColor, marginBottom: 4 }}>
-                  {hasBlackjack ? 'Blackjack' : headlineWord}
-                </p>
-                <p className="font-cinzel font-700" style={{
-                  fontSize: hasBlackjack ? '2.4rem' : '2rem',
-                  color: netColor,
-                  lineHeight: 1,
-                  textShadow: isBigWin ? `0 0 22px ${netColor}80` : 'none',
-                }}>
-                  <CountUp value={net} prefix={net > 0 ? '+' : ''} /> ⟡
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {outcomeShown && hasBlackjack && <SparkleBurst accent={netColor} />}
-        </div>
+        {/* Net-delta panel removed — the cumulative session tally lives
+            in the header instead so this surface doesn't flex between
+            hands. Hand-level outcome chips below still reveal in step
+            with the dealer flip. */}
 
         {/* Dealer — cards reveal in sequence; index 1 is the FlipCard hole.
             When dealer busts, the whole row gets a red glow + "Bust"
@@ -1163,29 +1093,53 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
         {phase !== 'buyIn' ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          // Three-up header: chips (left), session tally (center), Cash
+          // Out (right). The session tally is `chips - sessionBuyIns` —
+          // green when net-up, red when net-down. Sits in a fixed-height
+          // center slot so the row never reflows between hands, replacing
+          // the per-hand net-delta animation that used to shift the UI.
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}>
             <div>
               <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Chips</p>
               <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>{chips.toLocaleString()} ⟡</p>
             </div>
-            {(phase === 'wager' || phase === 'settled') && chips > 0 && (
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={doCashOut}
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{
-                  padding: '0.5rem 0.85rem', borderRadius: 999,
-                  background: 'rgba(196,169,106,0.1)',
-                  border: '1px solid rgba(196,169,106,0.45)',
-                  color: '#c4a96a',
-                  fontSize: '0.62rem',
-                  cursor: isPending ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Cash Out
-              </button>
-            )}
+            <div style={{ textAlign: 'center', minWidth: 88 }}>
+              {sessionBuyIns > 0 ? (() => {
+                const tally = chips - sessionBuyIns
+                const up = tally > 0
+                const flat = tally === 0
+                const color = flat ? '#8a8478' : up ? '#7fd49a' : '#e07070'
+                const sign = up ? '+' : ''
+                return (
+                  <>
+                    <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Session</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>
+                      {sign}{tally.toLocaleString()} ⟡
+                    </p>
+                  </>
+                )
+              })() : null}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {(phase === 'wager' || phase === 'settled') && chips > 0 && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={doCashOut}
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                  style={{
+                    padding: '0.5rem 0.85rem', borderRadius: 999,
+                    background: 'rgba(196,169,106,0.1)',
+                    border: '1px solid rgba(196,169,106,0.45)',
+                    color: '#c4a96a',
+                    fontSize: '0.62rem',
+                    cursor: isPending ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Cash Out
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <DailyCapBar wagered={dailyWagered} cap={BJ_DAILY_CAP} />
