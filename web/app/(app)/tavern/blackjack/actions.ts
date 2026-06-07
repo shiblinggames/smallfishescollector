@@ -22,7 +22,7 @@ interface ServerHand {
   isSplit: boolean      // hand was created via split (used to block double-after-split)
 }
 
-type Phase = 'insuranceOffered' | 'playerTurn' | 'settled'
+export type Phase = 'insuranceOffered' | 'playerTurn' | 'settled'
 
 interface ServerState {
   shoe: Card[]

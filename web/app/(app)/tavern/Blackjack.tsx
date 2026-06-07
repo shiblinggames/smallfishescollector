@@ -6,7 +6,7 @@ import { BJ_BET_PRESETS, BJ_BUY_IN_PRESETS, BJ_BUY_IN_MAX, BJ_BUY_IN_MIN, BJ_DAI
 import {
   dealBlackjack, hit, stand, doubleDown, split,
   acceptInsurance, declineInsurance,
-  type ClientState, type SettleResult,
+  type ClientState, type SettleResult, type Phase, type CardOrBack,
 } from './blackjack/actions'
 import { buyInChips, cashOutChips } from './blackjack/actions'
 import { handValue, type Card, type Rank } from '@/lib/blackjack'
@@ -440,6 +440,18 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   const [holeFlipped, setHoleFlipped] = useState(false)
   const [revealedDealerCount, setRevealedDealerCount] = useState(0)
   const [outcomeShown, setOutcomeShown] = useState(false)
+  // Deal-reveal animation. The initial 4-card deal (player[0],
+  // dealer[0], player[1], dealer[1]-face-down) gets staged one card
+  // at a time so the moment the second player card lands feels like
+  // a reveal — especially for naturals, where the Ace-next-to-Ten
+  // moment is the celebration. dealRevealCount stays at 4 outside of
+  // a fresh deal (resumed hands, hits, etc.) so cards render as-is.
+  const [dealRevealCount, setDealRevealCount] = useState(4)
+  // When a fresh deal resolves immediately to settled (natural
+  // blackjack — player and/or dealer), we hold the SettleResult here
+  // and let the deal animation finish first; an effect transitions us
+  // into the settle reveal once dealRevealCount hits 4.
+  const [pendingSettle, setPendingSettle] = useState<SettleResult | null>(null)
   // Track pending timeouts so a fast Play-Again tap doesn't leave
   // stale fires racing the next hand.
   const revealTimersRef = useRef<number[]>([])
@@ -476,35 +488,26 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     && buyInAmount <= Math.min(BJ_BUY_IN_MAX, doubloons, dailyRemaining)
     && !isPending
 
-  function applyActionResult(r: { kind: 'active'; state: ClientState } | { kind: 'settled'; result: SettleResult } | { error: string }) {
-    if ('error' in r) { setError(r.error); return }
-    setError(null)
-    if (r.kind === 'active') {
-      setActive(r.state)
-      setChips(r.state.chips)
-      setDoubloons(r.state.doubloons)
-      setSessionBuyIns(r.state.sessionBuyIns)
-      setDailyWagered(BJ_DAILY_CAP - r.state.dailyRemaining)
-      setPhase('play')
-      return
-    }
-    // Settled — stage the reveal so the player always sees the hole
-    // flip and any dealer draws come in one at a time, even on bust.
-    // Pacing tuned slow-and-deliberate (the dealer is the show, not a
-    // calculator) — each beat lets the player register what just
-    // happened before the next one lands:
-    //   1. Settle screen renders with dealer's hole still face-down.
-    //   2. t=initialHold ms: flip the hole (820ms 3D rotation — kept long).
-    //   3. t=+850ms intervals: each extra dealer draw slides in.
-    //   4. t=last+800ms: outcome panel + doubloons update + celebration.
-    //
-    // initialHold gets extended when the player ended on a bust or a
-    // stood-21 — those are decisive moments the player needs time to
-    // register before the dealer reveal pulls their eye to the top.
-    // The bust stamp / "21" stamp surface immediately on settle mount,
-    // so this hold is the pause that lets them read it.
+  /** Stage the deal animation. Four cards in casino order:
+   *  player[0] @ 220ms · dealer[0] @ 620ms · player[1] @ 1020ms ·
+   *  dealer[1] (face-down) @ 1420ms. Cards land cleanly with the
+   *  existing per-card slide-in (initial: opacity 0, y:-18) — this
+   *  just delays each card's mount via dealRevealCount.
+   *  Called from applyActionResult when a fresh deal lands (kind=
+   *  'active' OR kind='settled' on a natural). */
+  function kickOffDealReveal() {
+    const stops = [220, 620, 1020, 1420]
+    stops.forEach((t, i) => {
+      revealTimersRef.current.push(window.setTimeout(() => setDealRevealCount(i + 1), t))
+    })
+  }
+
+  /** Stage the post-hand reveal: hole flip → extra dealer draws →
+   *  outcome panel + celebration. Factored out so the natural-blackjack
+   *  path can run the deal animation first, then call this. */
+  function startSettleReveal(result: SettleResult) {
     clearRevealTimers()
-    setResult(r.result)
+    setResult(result)
     setActive(null)
     setPhase('settled')
 
@@ -512,15 +515,19 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setRevealedDealerCount(2)
     setOutcomeShown(false)
 
-    const anyPlayerBust    = r.result.hands.some(h => h.total > 21)
-    const anyPlayerStood21 = r.result.hands.some(h => h.total === 21 && h.outcome !== 'blackjack')
+    // initialHold scales with the player's end state. Bust / 21 need
+    // a beat to register before the dealer reveal pulls their eye to
+    // the top of the screen — the BUST / 21 stamp surfaces immediately
+    // on settle mount, so this hold is the pause that lets them read it.
+    const anyPlayerBust    = result.hands.some(h => h.total > 21)
+    const anyPlayerStood21 = result.hands.some(h => h.total === 21 && h.outcome !== 'blackjack')
     const initialHold = anyPlayerBust ? 1900 : anyPlayerStood21 ? 1500 : 650
 
     let elapsed = initialHold
     revealTimersRef.current.push(window.setTimeout(() => setHoleFlipped(true), elapsed))
     elapsed += 820                    // flip duration
 
-    const extraDealer = Math.max(0, r.result.dealerCards.length - 2)
+    const extraDealer = Math.max(0, result.dealerCards.length - 2)
     for (let i = 0; i < extraDealer; i++) {
       elapsed += 850
       const target = 3 + i           // revealedDealerCount after this fires
@@ -530,22 +537,111 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     elapsed += 800
     revealTimersRef.current.push(window.setTimeout(() => {
       setOutcomeShown(true)
-      setChips(r.result.newChips)
-      setDoubloons(r.result.doubloons)
-      setSessionBuyIns(r.result.sessionBuyIns)
-      setDailyWagered(r.result.dailyWagered)
+      setChips(result.newChips)
+      setDoubloons(result.doubloons)
+      setSessionBuyIns(result.sessionBuyIns)
+      setDailyWagered(result.dailyWagered)
       // Outcome-tiered haptic. Blackjack = long satisfying buzz;
       // dealer-bust win = quick double-tap; regular win = short;
       // push = barely a tick; loss = soft thud.
-      const hasNaturalWin = r.result.hands.some(h => h.outcome === 'blackjack')
-      const hasAnyWin     = r.result.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
-      const allPush       = r.result.hands.every(h => h.outcome === 'push')
+      const hasNaturalWin = result.hands.some(h => h.outcome === 'blackjack')
+      const hasAnyWin     = result.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
+      const allPush       = result.hands.every(h => h.outcome === 'push')
       if (hasNaturalWin)     { vibrate([60, 40, 60, 40, 120]); setCoinFlightKey(k => k + 1) }
       else if (hasAnyWin)    { vibrate([50, 30, 50]);          setCoinFlightKey(k => k + 1) }
       else if (allPush)      { vibrate(20) }
       else                   { vibrate(40) }
     }, elapsed))
   }
+
+  /** Synthesize a ClientState from a SettleResult so the play screen
+   *  can render the deal animation for a natural blackjack (server
+   *  resolves naturals immediately, so we never receive an "active"
+   *  intermediate state for those). The dealer's hole stays masked
+   *  until the settle reveal flips it. */
+  function synthActiveFromResult(rr: SettleResult): ClientState {
+    const playerHand = rr.hands[0]
+    return {
+      handId: rr.handId,
+      phase: 'playerTurn' as Phase,
+      hands: rr.hands.map(h => ({
+        cards: h.cards,
+        wager: h.wager,
+        doubled: h.doubled,
+        stood: true,
+        busted: h.total > 21,
+        isNatural: h.outcome === 'blackjack',
+        isSplit: false,
+        total: h.total,
+        soft: false,
+      })),
+      activeHandIdx: 0,
+      dealerCards: [rr.dealerCards[0], 'X' as CardOrBack],
+      dealerUpCard: rr.dealerCards[0],
+      dealerTotal: null,
+      insuranceOffered: false,
+      insuranceTaken: rr.insurance.taken,
+      insuranceAmount: rr.insurance.amount,
+      totalWagered: (playerHand?.wager ?? 0),
+      canHit: false, canStand: false, canDouble: false, canSplit: false,
+      dailyRemaining: 0,
+      chips: 0, doubloons: 0, sessionBuyIns: 0,
+    }
+  }
+
+  function applyActionResult(r: { kind: 'active'; state: ClientState } | { kind: 'settled'; result: SettleResult } | { error: string }) {
+    if ('error' in r) { setError(r.error); return }
+    setError(null)
+
+    // Is this the response to a fresh deal? startDeal() resets
+    // dealRevealCount to 0 right before calling dealBlackjack; any
+    // other action (hit/stand/double/split) leaves it at 4.
+    const isFreshDeal = dealRevealCount < 4
+
+    if (r.kind === 'active') {
+      setActive(r.state)
+      setChips(r.state.chips)
+      setDoubloons(r.state.doubloons)
+      setSessionBuyIns(r.state.sessionBuyIns)
+      setDailyWagered(BJ_DAILY_CAP - r.state.dailyRemaining)
+      setPhase('play')
+      if (isFreshDeal) kickOffDealReveal()
+      return
+    }
+
+    // Settled. If this is a fresh-deal settle (natural blackjack —
+    // player and/or dealer), run the deal animation FIRST so the
+    // player sees the natural reveal itself, then transition to the
+    // post-hand reveal via the dealRevealCount === 4 effect below.
+    if (isFreshDeal) {
+      setActive(synthActiveFromResult(r.result))
+      setPendingSettle(r.result)
+      setPhase('play')
+      kickOffDealReveal()
+      return
+    }
+
+    // Mid-hand settle (hit/stand/double/split resolved): straight to
+    // the dealer reveal.
+    startSettleReveal(r.result)
+  }
+
+  // After the deal animation completes on a natural-blackjack hand,
+  // hold the moment briefly so the player reads "BLACKJACK · 21" on
+  // their hand row, then kick off the dealer reveal.
+  useEffect(() => {
+    if (dealRevealCount !== 4 || !pendingSettle) return
+    const r = pendingSettle
+    const hasPlayerNatural = r.hands.some(h => h.outcome === 'blackjack')
+    const holdMs = hasPlayerNatural ? 1300 : 500
+    const id = window.setTimeout(() => {
+      setPendingSettle(null)
+      startSettleReveal(r)
+    }, holdMs)
+    revealTimersRef.current.push(id)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealRevealCount, pendingSettle])
 
   function fireAction(fn: () => Promise<{ kind: 'active'; state: ClientState } | { kind: 'settled'; result: SettleResult } | { error: string }>) {
     startTransition(async () => {
@@ -558,9 +654,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     clearRevealTimers()
     fishCacheRef.current.clear()
     setResult(null)
+    setPendingSettle(null)
     setHoleFlipped(false)
     setRevealedDealerCount(0)
     setOutcomeShown(false)
+    setDealRevealCount(0)            // marks the next response as a fresh deal
     fireAction(() => dealBlackjack(wager))
   }
 
@@ -568,9 +666,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     clearRevealTimers()
     setResult(null)
     setActive(null)
+    setPendingSettle(null)
     setHoleFlipped(false)
     setRevealedDealerCount(0)
     setOutcomeShown(false)
+    setDealRevealCount(4)            // idle — deal animation not running
     // If the player's been busted out completely, push them to buy-in
     // instead of a useless wager screen they can't act on.
     setPhase(chips > 0 ? 'wager' : 'buyIn')
@@ -742,7 +842,22 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
 
   function renderGameScreen(state: ClientState) {
     const activeHand = state.hands[state.activeHandIdx]
-    const dealerTotalDisplay = state.dealerTotal !== null ? state.dealerTotal : '?'
+    // Initial-deal reveal slicing. Deal order is casino-standard
+    // (player[0], dealer[0], player[1], dealer[1]-down). On a split or
+    // mid-hand hit, dealRevealCount sits at 4 and these slices return
+    // the full hands unchanged. Splits don't replay the animation —
+    // the new card per split-hand slides in via its own motion mount.
+    const dealing = dealRevealCount < 4
+    const playerVisibleCount = dealing ? Math.ceil(dealRevealCount / 2) : Number.POSITIVE_INFINITY
+    const dealerVisibleCount = dealing ? Math.floor(dealRevealCount / 2) : Number.POSITIVE_INFINITY
+    const visibleDealerCards = dealing
+      ? state.dealerCards.slice(0, dealerVisibleCount)
+      : state.dealerCards
+    const dealerTotalDisplay = dealing
+      ? (dealerVisibleCount === 0
+          ? '?'
+          : handValue(state.dealerCards.slice(0, dealerVisibleCount).filter((c): c is Card => c !== 'X')).total)
+      : (state.dealerTotal !== null ? state.dealerTotal : '?')
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
         {/* Dealer */}
@@ -751,15 +866,15 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>Dealer</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#f0e8d0', lineHeight: 1 }}>{dealerTotalDisplay}</p>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {state.dealerCards.map((c, i) => (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+            {visibleDealerCards.map((c, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: -18, scale: 0.85 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
                 whileTap={{ scale: 0.96 }}
-                transition={{ duration: 0.28, delay: i * 0.08 }}
+                transition={{ duration: 0.36, ease: 'easeOut' }}
                 style={{ flexShrink: 0, cursor: 'pointer' }}
               >
                 <BlackjackCard card={c} fishArt={getFish(-1, i, c)} />
@@ -776,42 +891,75 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             {state.hands.length === 1 ? 'Your Hand' : `Hand ${state.activeHandIdx + 1} of ${state.hands.length}`}
           </p>
           {state.hands.map((h, hi) => {
-            const isActive = hi === state.activeHandIdx && !h.busted && !h.stood
+            // During the initial deal, only the first hand exists and
+            // we render up to playerVisibleCount cards. Stood/active
+            // signals are silenced while the deal is mid-flight — the
+            // breathe + green ACTIVE chip would lie about state (the
+            // hand isn't yours yet to act on).
+            const visibleHandCards = dealing && hi === 0 ? h.cards.slice(0, playerVisibleCount) : h.cards
+            const visibleTotal = dealing && hi === 0
+              ? handValue(visibleHandCards).total
+              : h.total
+            const handIsNaturalReveal = dealing && hi === 0 && playerVisibleCount === 2 && h.isNatural
+            const isActive = !dealing && hi === state.activeHandIdx && !h.busted && !h.stood
             return (
             <motion.div
               key={hi}
               // Active hand breathes — a tiny scale pulse that immediately
               // reads "your move," especially helpful when split puts
-              // two hands side-by-side. Off for stood/busted hands.
+              // two hands side-by-side. Off for stood/busted hands and
+              // off during the deal-reveal animation.
               animate={isActive ? { scale: [1, 1.012, 1] } : { scale: 1 }}
               transition={isActive ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
               style={{
                 marginBottom: hi === state.hands.length - 1 ? 0 : 10,
                 padding: '0.65rem 0.75rem',
-                background: isActive ? 'rgba(122,211,160,0.08)' : h.busted ? 'rgba(240,138,138,0.06)' : 'rgba(255,255,255,0.025)',
-                border: `1px solid ${isActive ? 'rgba(122,211,160,0.35)' : h.busted ? 'rgba(240,138,138,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                background: handIsNaturalReveal
+                  ? 'rgba(240,192,64,0.10)'
+                  : isActive ? 'rgba(122,211,160,0.08)'
+                  : h.busted ? 'rgba(240,138,138,0.06)'
+                  : 'rgba(255,255,255,0.025)',
+                border: `1px solid ${
+                  handIsNaturalReveal ? 'rgba(240,192,64,0.5)'
+                  : isActive ? 'rgba(122,211,160,0.35)'
+                  : h.busted ? 'rgba(240,138,138,0.3)'
+                  : 'rgba(255,255,255,0.08)'
+                }`,
                 borderRadius: 12,
-                boxShadow: isActive ? '0 0 18px rgba(122,211,160,0.18)' : 'none',
+                boxShadow: handIsNaturalReveal ? '0 0 26px rgba(240,192,64,0.32)' : isActive ? '0 0 18px rgba(122,211,160,0.18)' : 'none',
                 transformOrigin: 'center',
+                transition: 'background 0.3s, border-color 0.3s, box-shadow 0.45s',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.64rem', color: '#7a948a', letterSpacing: '0.1em' }}>
-                  {h.busted ? 'BUST' : h.stood ? 'STOOD' : isActive ? 'ACTIVE' : 'WAITING'} · {h.wager} ⟡{h.doubled ? ' · DD' : ''}{h.isSplit ? ' · SPLIT' : ''}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, minHeight: '1.4rem' }}>
+                <p className="font-karla font-700 uppercase" style={{
+                  fontSize: '0.64rem',
+                  color: handIsNaturalReveal ? '#f0c040' : '#7a948a',
+                  letterSpacing: '0.1em',
+                }}>
+                  {dealing && hi === 0
+                    ? (playerVisibleCount === 0 ? '…' : handIsNaturalReveal ? 'BLACKJACK' : 'DEAL')
+                    : h.busted ? 'BUST' : h.stood ? 'STOOD' : isActive ? 'ACTIVE' : 'WAITING'} · {h.wager} ⟡{h.doubled ? ' · DD' : ''}{h.isSplit ? ' · SPLIT' : ''}
                 </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: h.busted ? '#f08a8a' : h.isNatural ? '#f0c040' : '#f0e8d0', lineHeight: 1 }}>
-                  <CountUp value={h.total} duration={350} />{h.soft && h.total !== 21 ? <span style={{ fontSize: '0.65rem', marginLeft: 4 }}>(soft)</span> : ''}{h.isNatural ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>· BJ</span> : ''}
+                <p className="font-cinzel font-700" style={{
+                  fontSize: '1.4rem',
+                  color: handIsNaturalReveal ? '#f0c040' : h.busted ? '#f08a8a' : h.isNatural && !dealing ? '#f0c040' : '#f0e8d0',
+                  lineHeight: 1,
+                }}>
+                  {visibleHandCards.length === 0
+                    ? '–'
+                    : <><CountUp value={visibleTotal} duration={350} />{(!dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.65rem', marginLeft: 4 }}>(soft)</span> : ''}{h.isNatural && !dealing ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {h.cards.map((c, ci) => (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
+                {visibleHandCards.map((c, ci) => (
                   <motion.div
                     key={ci}
                     initial={{ opacity: 0, y: -18, scale: 0.85 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
                     whileTap={{ scale: 0.96 }}
-                    transition={{ duration: 0.28, delay: ci * 0.08 }}
+                    transition={{ duration: 0.36, ease: 'easeOut' }}
                     style={{ flexShrink: 0, cursor: 'pointer' }}
                   >
                     <BlackjackCard card={c} fishArt={getFish(hi, ci, c)} />
@@ -822,16 +970,21 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           )})}
         </div>
 
-        {/* Action bar — always rendered. Insurance prompt is its own
-            modal overlay (rendered at the modal root, below). */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <ActionButton label="Hit"   onClick={() => fireAction(hit)}        disabled={!state.canHit || isPending} />
-          <ActionButton label="Stand" onClick={() => fireAction(stand)}      disabled={!state.canStand || isPending} />
-          {state.canDouble && (
-            <ActionButton label="Double" chip={`${activeHand?.wager} ⟡`} onClick={() => fireAction(doubleDown)} disabled={isPending} />
-          )}
-          {state.canSplit && (
-            <ActionButton label="Split"  chip={`${state.hands[0].wager} ⟡`} onClick={() => fireAction(split)} disabled={isPending} />
+        {/* Action bar — gated on the deal animation finishing. Until
+            then, an empty slot holds the vertical space so the modal
+            doesn't jump when buttons mount. */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minHeight: 60 }}>
+          {!dealing && (
+            <>
+              <ActionButton label="Hit"   onClick={() => fireAction(hit)}        disabled={!state.canHit || isPending} />
+              <ActionButton label="Stand" onClick={() => fireAction(stand)}      disabled={!state.canStand || isPending} />
+              {state.canDouble && (
+                <ActionButton label="Double" chip={`${activeHand?.wager} ⟡`} onClick={() => fireAction(doubleDown)} disabled={isPending} />
+              )}
+              {state.canSplit && (
+                <ActionButton label="Split"  chip={`${state.hands[0].wager} ⟡`} onClick={() => fireAction(split)} disabled={isPending} />
+              )}
+            </>
           )}
         </div>
 
@@ -1294,7 +1447,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           itself the moment the player picks an option. Backdrop blur +
           centered card; matches the dealer-card area's visual weight. */}
       <AnimatePresence>
-        {phase === 'play' && active?.insuranceOffered && (
+        {phase === 'play' && active?.insuranceOffered && dealRevealCount === 4 && (
           <>
             <motion.div
               key="ins-backdrop"
