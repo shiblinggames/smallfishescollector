@@ -1030,26 +1030,85 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           )}
         </AnimatePresence>
 
+        {/* One-tap re-deal: instead of a Play Again button → wager
+            screen, the bet-preset row appears right here once the
+            outcome lands. Tapping a preset deals immediately at that
+            amount. Falls back to a Buy-In CTA if the player busted
+            out completely (chips below the smallest preset). */}
         <AnimatePresence>
           {outcomeShown && (
-            <motion.button
-              key="play-again"
+            <motion.div
+              key="post-settle-actions"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              type="button"
-              onClick={nextHand}
-              className="font-cinzel font-700 uppercase tracking-[0.08em]"
-              style={{
-                padding: '0.85rem 0', borderRadius: 12,
-                background: 'rgba(240,192,64,0.18)',
-                border: '1px solid rgba(240,192,64,0.55)',
-                color: '#f0d695',
-                fontSize: '0.82rem', cursor: 'pointer',
-              }}
             >
-              Play Again →
-            </motion.button>
+              {chips >= BJ_MIN_BET ? (
+                <>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
+                    Deal Next Hand
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {BJ_BET_PRESETS.map(amt => {
+                      const disabled = amt > Math.min(BJ_MAX_BET, chips) || isPending
+                      return (
+                        <button
+                          key={amt}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => {
+                            setWager(amt)
+                            // Bypass the wager screen — go straight to dealing.
+                            // nextHand() resets reveal state then setPhase('wager');
+                            // we want to skip that and call startDeal-equivalent
+                            // logic directly.
+                            clearRevealTimers()
+                            setResult(null)
+                            setActive(null)
+                            setHoleFlipped(false)
+                            setRevealedDealerCount(0)
+                            setOutcomeShown(false)
+                            fishCacheRef.current.clear()
+                            fireAction(() => dealBlackjack(amt))
+                          }}
+                          className="font-cinzel font-700 uppercase tracking-[0.1em]"
+                          style={{
+                            padding: '0.85rem 0', borderRadius: 10,
+                            background: disabled
+                              ? 'rgba(255,255,255,0.04)'
+                              : 'linear-gradient(180deg, rgba(240,192,64,0.35) 0%, rgba(196,169,106,0.16) 100%)',
+                            border: `1px solid ${disabled ? 'rgba(255,255,255,0.1)' : '#f0c040'}`,
+                            color: disabled ? '#5a5550' : '#f0d695',
+                            fontSize: '0.88rem',
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            boxShadow: disabled ? 'none' : 'inset 0 1px 0 rgba(240,214,149,0.25), 0 2px 6px rgba(0,0,0,0.4)',
+                            textShadow: disabled ? 'none' : '0 1px 0 rgba(0,0,0,0.45)',
+                          }}
+                        >
+                          {amt} ⟡
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setResult(null); setActive(null); setHoleFlipped(false); setRevealedDealerCount(0); setOutcomeShown(false); setPhase('buyIn') }}
+                  className="font-cinzel font-700 uppercase tracking-[0.08em]"
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 0', borderRadius: 12,
+                    background: 'rgba(240,192,64,0.18)',
+                    border: '1px solid rgba(240,192,64,0.55)',
+                    color: '#f0d695',
+                    fontSize: '0.82rem', cursor: 'pointer',
+                  }}
+                >
+                  Buy More Chips →
+                </button>
+              )}
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
