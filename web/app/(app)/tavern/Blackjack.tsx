@@ -70,6 +70,106 @@ function vibrate(pattern: number | number[]) {
   try { navigator.vibrate(pattern) } catch { /* ignore — some browsers refuse */ }
 }
 
+/** Sparkle particles that drift up + fade. Pure CSS via framer-motion;
+ *  positioned as an absolute overlay so it never pushes anything around.
+ *  `intensity` scales count + spread + duration for the Blackjack tier. */
+function SparkleBurst({ accent, intensity = 1 }: { accent: string; intensity?: number }) {
+  const count = Math.round(7 * intensity)
+  const drift = 90 * intensity
+  const duration = 1.4 + (intensity - 1) * 0.8
+  const particles = Array.from({ length: count }, (_, i) => ({
+    i,
+    left: 8 + Math.random() * 84,
+    top: 25 + Math.random() * 40,
+    delay: i * 0.06,
+    glyph: ['✨','⭐','✨','✦','✨','✦','⭐','✨','✦','⭐','✨','✦'][i % 12],
+  }))
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {particles.map(p => (
+        <motion.div
+          key={p.i}
+          initial={{ opacity: 0, y: 0, scale: 0.5 }}
+          animate={{ opacity: [0, 1, 1, 0], y: -drift, scale: [0.5, 1.2 * intensity, 1.05 * intensity, 0.85] }}
+          transition={{ duration, delay: p.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            top: `${p.top}%`,
+            left: `${p.left}%`,
+            fontSize: `${1 + (intensity - 1) * 0.4}rem`,
+            color: accent,
+            textShadow: `0 0 10px ${accent}`,
+          }}
+        >
+          {p.glyph}
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+/** Big settle-screen celebration overlay. Absolutely positioned over
+ *  the modal interior so the layout doesn't flex — sits above the
+ *  cards, pointer-events:none so it can't block Play Again. Three
+ *  tiers: Blackjack (loudest), Win, Push. Loss returns null (don't
+ *  celebrate the dealer winning). */
+function SettleCelebration({ tier, amount }: { tier: 'blackjack' | 'win' | 'push' | 'loss'; amount: number }) {
+  if (tier === 'loss') return null
+  const isBlackjack = tier === 'blackjack'
+  const isWin       = tier === 'win'
+  const accent = isBlackjack ? '#f0c040' : isWin ? '#7fd49a' : '#c4a96a'
+  const headline = isBlackjack ? 'BLACKJACK' : isWin ? 'Winner' : 'Push'
+  const headlineSize = isBlackjack ? '2.6rem' : '1.7rem'
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 50 }}>
+      {(isBlackjack || isWin) && (
+        <SparkleBurst accent={accent} intensity={isBlackjack ? 1.8 : 1} />
+      )}
+      <motion.div
+        initial={{ opacity: 0, scale: isBlackjack ? 0.4 : 0.7, y: 30 }}
+        animate={{
+          opacity: [0, 1, 1, 0],
+          scale: isBlackjack ? [0.4, 1.15, 1, 1.05] : [0.7, 1.08, 1, 1],
+          y: [30, 0, -8, -40],
+        }}
+        transition={{
+          duration: isBlackjack ? 2.8 : 2.2,
+          times: [0, 0.18, 0.7, 1],
+          ease: 'easeOut',
+        }}
+        style={{
+          position: 'absolute',
+          top: '32%',
+          left: 0, right: 0,
+          textAlign: 'center',
+          textShadow: isBlackjack
+            ? '0 0 28px rgba(240,192,64,0.7), 0 4px 14px rgba(0,0,0,0.55)'
+            : '0 0 18px rgba(127,212,154,0.45), 0 3px 10px rgba(0,0,0,0.5)',
+        }}
+      >
+        <p className="font-cinzel font-700" style={{
+          fontSize: headlineSize,
+          color: accent,
+          lineHeight: 1,
+          letterSpacing: isBlackjack ? '0.06em' : '0.02em',
+          marginBottom: 8,
+        }}>
+          {headline}
+        </p>
+        {amount !== 0 && (
+          <p className="font-cinzel font-700" style={{
+            fontSize: isBlackjack ? '2.1rem' : '1.5rem',
+            color: accent,
+            lineHeight: 1,
+          }}>
+            <CountUp value={amount} duration={isBlackjack ? 1100 : 800} prefix={amount > 0 ? '+' : ''} /> ⟡
+          </p>
+        )}
+      </motion.div>
+    </div>
+  )
+}
+
 
 /** Burst of doubloon glyphs that flies from the player-hand area up to
  *  the balance number in the header. Pure decorative — fires on any
@@ -230,7 +330,7 @@ function FlipCard({ flipped, card, fishArt }: { flipped: boolean; card: Card; fi
       <div style={{
         position: 'relative', width: '100%', height: '100%',
         transformStyle: 'preserve-3d',
-        transition: 'transform 580ms cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'transform 820ms cubic-bezier(0.4, 0, 0.2, 1)',
         transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
       }}>
         <div style={{
@@ -414,11 +514,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       return
     }
     // Settled — stage the reveal so the player always sees the hole
-    // flip and any dealer draws come in one at a time, even on bust:
+    // flip and any dealer draws come in one at a time, even on bust.
+    // Pacing tuned slow-and-deliberate (the dealer is the show, not a
+    // calculator) — each beat lets the player register what just
+    // happened before the next one lands:
     //   1. Settle screen renders with dealer's hole still face-down.
-    //   2. t=350ms: flip the hole (580ms 3D rotation).
-    //   3. t=930ms+: each extra dealer draw slides in at 500ms intervals.
-    //   4. t=last+400ms: outcome panel + doubloons update.
+    //   2. t=650ms: flip the hole (820ms 3D rotation — kept long).
+    //   3. t=1470ms+: each extra dealer draw slides in at 850ms intervals.
+    //   4. t=last+800ms: outcome panel + doubloons update + celebration.
     clearRevealTimers()
     setResult(r.result)
     setActive(null)
@@ -428,18 +531,18 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setRevealedDealerCount(2)
     setOutcomeShown(false)
 
-    let elapsed = 350
+    let elapsed = 650
     revealTimersRef.current.push(window.setTimeout(() => setHoleFlipped(true), elapsed))
-    elapsed += 580                    // flip duration
+    elapsed += 820                    // flip duration
 
     const extraDealer = Math.max(0, r.result.dealerCards.length - 2)
     for (let i = 0; i < extraDealer; i++) {
-      elapsed += 500
+      elapsed += 850
       const target = 3 + i           // revealedDealerCount after this fires
       revealTimersRef.current.push(window.setTimeout(() => setRevealedDealerCount(target), elapsed))
     }
 
-    elapsed += 400
+    elapsed += 800
     revealTimersRef.current.push(window.setTimeout(() => {
       setOutcomeShown(true)
       setChips(r.result.newChips)
@@ -1101,7 +1204,20 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}>
             <div>
               <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Chips</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1 }}>{chips.toLocaleString()} ⟡</p>
+              <motion.p
+                // Brief scale punch on the chips number every time a
+                // hand settles — drawing the player's eye to where the
+                // value just moved. Key bound to handId so each settle
+                // re-fires; transformOrigin left so the digits don't
+                // drift around when they pulse.
+                key={`chips-${result?.handId ?? 'idle'}`}
+                animate={{ scale: phase === 'settled' && outcomeShown ? [1, 1.24, 1] : 1 }}
+                transition={{ duration: 0.85, times: [0, 0.32, 1], ease: 'easeOut' }}
+                className="font-cinzel font-700"
+                style={{ fontSize: '1.4rem', color: '#f0c040', lineHeight: 1, transformOrigin: 'left center' }}
+              >
+                {chips.toLocaleString()} ⟡
+              </motion.p>
             </div>
             <div style={{ textAlign: 'center', minWidth: 88 }}>
               {sessionBuyIns > 0 ? (() => {
@@ -1113,9 +1229,15 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 return (
                   <>
                     <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Session</p>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>
+                    <motion.p
+                      key={`tally-${result?.handId ?? 'idle'}`}
+                      animate={{ scale: phase === 'settled' && outcomeShown ? [1, 1.2, 1] : 1 }}
+                      transition={{ duration: 0.85, times: [0, 0.32, 1], ease: 'easeOut', delay: 0.05 }}
+                      className="font-cinzel font-700"
+                      style={{ fontSize: '1.05rem', color, lineHeight: 1 }}
+                    >
                       {sign}{tally.toLocaleString()} ⟡
-                    </p>
+                    </motion.p>
                   </>
                 )
               })() : null}
@@ -1150,6 +1272,23 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       {phase === 'wager' && renderWagerScreen()}
       {phase === 'play' && active && renderGameScreen(active)}
       {phase === 'settled' && result && renderSettleScreen(result)}
+
+      {/* Settle celebration — absolute overlay over the modal interior.
+          Mounts when outcomeShown flips true (after the reveal beats
+          finish), keyed by handId so each new settle re-plays from
+          scratch. Pointer-events:none so Play Again stays tappable
+          through it. Position: absolute (relative to the modal root,
+          which is already position-implicit via its layout context).
+          Loss tier returns null inside the component — we don't
+          celebrate losses. */}
+      {phase === 'settled' && result && outcomeShown && (() => {
+        const hasBlackjack = result.hands.some(h => h.outcome === 'blackjack')
+        const hasWin       = result.hands.some(h => h.outcome === 'win' || h.outcome === 'blackjack')
+        const allPush      = result.hands.every(h => h.outcome === 'push')
+        const tier: 'blackjack' | 'win' | 'push' | 'loss' =
+          hasBlackjack ? 'blackjack' : hasWin ? 'win' : allPush ? 'push' : 'loss'
+        return <SettleCelebration key={`celeb-${result.handId}`} tier={tier} amount={result.netDelta} />
+      })()}
 
       {/* Coin-flight overlay. Bumping coinFlightKey unmounts/remounts
           the burst, which is how each new win re-triggers the animation.
