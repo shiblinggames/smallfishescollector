@@ -647,6 +647,8 @@ export default function GearScreen({
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
   fishingLevel,
+  showWaitTimer,
+  onToggleShowWaitTimer,
   onClose,
 }: {
   baitInventory: BaitItem[]
@@ -691,6 +693,8 @@ export default function GearScreen({
   onEquipSpecial: (itemId: string | null) => void
   onBuySpecialItem: (itemId: string) => Promise<void>
   fishingLevel: number
+  showWaitTimer: boolean
+  onToggleShowWaitTimer: (next: boolean) => void
   onClose: () => void
 }) {
   const [openSlot, setOpenSlot] = useState<SlotKey | null>(null)
@@ -901,6 +905,55 @@ export default function GearScreen({
           </div>
         )}
       </div>
+
+      {/* ── Preferences ── single-row toggle for the cast→bite count-up
+          shown in the waiting pill. Persists to profiles.show_wait_timer
+          so it carries across devices. Sits below the loadout stats so
+          gear info reads first, prefs are a quieter foot-of-the-modal
+          touch. */}
+      <button
+        type="button"
+        onClick={() => onToggleShowWaitTimer(!showWaitTimer)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          width: '100%',
+          background: 'rgba(4,10,20,0.75)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 20,
+          padding: '0.85rem 0.95rem',
+          cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e0ddd8' }}>
+            Cast timer
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.65rem', color: '#7a7770', marginTop: 2, lineHeight: 1.35 }}>
+            Show elapsed seconds while waiting for a bite.
+          </p>
+        </div>
+        <div
+          aria-hidden
+          style={{
+            flexShrink: 0,
+            position: 'relative',
+            width: 38, height: 22,
+            borderRadius: 999,
+            background: showWaitTimer ? 'rgba(96,165,250,0.55)' : 'rgba(255,255,255,0.10)',
+            border: `1px solid ${showWaitTimer ? 'rgba(96,165,250,0.85)' : 'rgba(255,255,255,0.18)'}`,
+            transition: 'background 0.18s, border-color 0.18s',
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            top: 2, left: showWaitTimer ? 18 : 2,
+            width: 16, height: 16, borderRadius: '50%',
+            background: showWaitTimer ? '#f0ede8' : '#9a9690',
+            transition: 'left 0.18s, background 0.18s',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.45)',
+          }} />
+        </div>
+      </button>
 
       {/* ── Item detail modal ── */}
       <AnimatePresence>

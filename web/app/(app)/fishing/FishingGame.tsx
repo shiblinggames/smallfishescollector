@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import {
@@ -2800,7 +2800,7 @@ export default function FishingGame({
   allFishSpecies, initialCaughtFishIds, initialMountedFishIds,
   initialPersonalBests,
   initialHighestPerfectStreak, initialPerfectStreak,
-  hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration,
+  hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
@@ -2836,6 +2836,7 @@ export default function FishingGame({
   hasSeenFishingTour: boolean
   hasSeenFishingCatchTour: boolean
   hasSeenFirstCatchCelebration: boolean
+  initialShowWaitTimer: boolean
   selectedZone: ZoneKey
   onBack: () => void
   activeSession?: ActiveSession
@@ -3274,6 +3275,18 @@ export default function FishingGame({
   const [perfectFlash, setPerfectFlash] = useState(false)
   const [perfectBurstKey, setPerfectBurstKey] = useState(0)
   const [waitMessage, setWaitMessage] = useState('')
+
+  // Cast→bite count-up state lives here; the useEffect that drives it
+  // is below the castAnimDone declaration since it depends on that.
+  const [showWaitTimer, setShowWaitTimer] = useState(initialShowWaitTimer)
+  const [waitElapsedMs, setWaitElapsedMs] = useState<number | null>(null)
+  // Persist toggle changes to the profile (fire-and-forget). The toggle
+  // itself updates local state immediately so the UI responds without
+  // waiting for the round-trip.
+  function updateShowWaitTimer(next: boolean) {
+    setShowWaitTimer(next)
+    void persistShowWaitTimer(next).catch(() => { /* best-effort */ })
+  }
   const [retryFlash, setRetryFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
 
@@ -3525,6 +3538,25 @@ export default function FishingGame({
     const t2 = setTimeout(() => setCastAnimDone(true), 1500)
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [phase])
+
+  // Cast→bite count-up driver. Player-toggleable from the Gear modal's
+  // Preferences row. When on, the waiting pill shows elapsed seconds
+  // since the pill became visible (so it starts at 0.0 each cast, not
+  // mid-cast-animation). Deliberately a count-UP not a countdown — the
+  // endpoint stays mysterious; only the relative time tells you whether
+  // a bait is fast or slow.
+  useEffect(() => {
+    if (phase !== 'casting' || !castAnimDone || !showWaitTimer) {
+      setWaitElapsedMs(null)
+      return
+    }
+    const startedAt = Date.now()
+    setWaitElapsedMs(0)
+    const id = window.setInterval(() => {
+      setWaitElapsedMs(Date.now() - startedAt)
+    }, 100)
+    return () => clearInterval(id)
+  }, [phase, castAnimDone, showWaitTimer])
 
   // Needle animation during catching phase
   useEffect(() => {
@@ -5399,6 +5431,20 @@ export default function FishingGame({
                         <p className="font-karla font-600" style={{ fontSize: '1rem', color: '#e8e4de' }}>
                           {waitMessage}
                         </p>
+                        {showWaitTimer && waitElapsedMs !== null && (
+                          <p
+                            className="font-karla font-700"
+                            style={{
+                              fontSize: '0.7rem',
+                              color: '#8a8480',
+                              letterSpacing: '0.06em',
+                              marginTop: 6,
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {(waitElapsedMs / 1000).toFixed(1)}s
+                          </p>
+                        )}
                         <div style={{
                           position: 'absolute', bottom: -7, left: '50%',
                           transform: 'translateX(-50%) rotate(45deg)',
@@ -7466,6 +7512,8 @@ export default function FishingGame({
                   }
                 }
               }}
+              showWaitTimer={showWaitTimer}
+              onToggleShowWaitTimer={updateShowWaitTimer}
               onClose={() => setGearOpen(false)}
             />
           </motion.div>

@@ -970,6 +970,16 @@ export async function markFirstCatchCelebrationSeen(): Promise<void> {
   await createAdminClient().from('profiles').update({ has_seen_first_catch_celebration: true }).eq('id', user.id)
 }
 
+/** Toggle for the cast→bite count-up shown in the waiting pill.
+ *  Stored on profiles so it syncs across devices. Toggled from the
+ *  Preferences row in the Gear modal. */
+export async function setShowWaitTimer(value: boolean): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await createAdminClient().from('profiles').update({ show_wait_timer: value }).eq('id', user.id)
+}
+
 export async function checkLeaderboardPosition(
   category: 'fishingLevel' | 'perfectStreak',
 ): Promise<{ position: number } | null> {

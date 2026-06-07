@@ -175,6 +175,7 @@ export default async function FishingPage() {
           hasSeenFishingTour={profile?.has_seen_fishing_tour ?? false}
           hasSeenFishingCatchTour={profile?.has_seen_fishing_catch_tour ?? false}
           hasSeenFirstCatchCelebration={profile?.has_seen_first_catch_celebration ?? false}
+          initialShowWaitTimer={(profile as { show_wait_timer?: boolean } | null)?.show_wait_timer ?? true}
           activeSession={activeSession ?? undefined}
           initialDailyChallenge={dailyChallenge}
           username={profile?.username ?? ''}
