@@ -29,10 +29,20 @@ const SECTION_ROSTER = '#6fa8c9'  // cool steel "your manifest"
 
 // Panel tones: warm brown wood for the board, cool slate for your own crew, so
 // the two are obviously different at a glance.
-const RECRUIT_PANEL_BG = 'linear-gradient(157deg, #271d12 0%, #150e08 100%)'
-const RECRUIT_PANEL_BORDER = '#46341f'
-const ROSTER_PANEL_BG = 'linear-gradient(157deg, #1a2331 0%, #0a0f16 100%)'
-const ROSTER_PANEL_BORDER = '#324453'
+// Card panels were tinted warm-brown (recruits) and cool-slate (roster) to
+// distinguish the two regions, but with class chips, assignment pips, and
+// rarity-bordered portraits all carrying color now, the panel tints were
+// adding noise without adding signal. Both panels go neutral charcoal so
+// the colored elements pop against a calm backdrop. Same gradient shape so
+// the card silhouette doesn't change.
+const PANEL_BG     = 'linear-gradient(157deg, #1c1c1e 0%, #0d0d0f 100%)'
+const PANEL_BORDER = '#2e2e32'
+// Aliases kept so existing prop default + detail-modal references compile
+// unchanged. Both point at the same neutral now.
+const RECRUIT_PANEL_BG = PANEL_BG
+const RECRUIT_PANEL_BORDER = PANEL_BORDER
+const ROSTER_PANEL_BG = PANEL_BG
+const ROSTER_PANEL_BORDER = PANEL_BORDER
 
 // Shared action-button look: gradient fill, soft shadow, uppercase label.
 const BTN_BASE: React.CSSProperties = {
