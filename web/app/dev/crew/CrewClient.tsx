@@ -10,6 +10,7 @@ import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META, CREW_EFFECTS } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
+import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import TickingNumber from '@/components/TickingNumber'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -224,9 +225,28 @@ function CrewPanel({
       {/* Manifest detail */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
         <div>
-          <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em' }}>
-            {name}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+            <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {name}
+            </p>
+            {/* Level chip — only shown for roster crew (xp > 0 means they've
+                been recruited; board candidates always read as fresh, no chip).
+                Gold tone matches the loot/reward economy. */}
+            {xp > 0 && (() => {
+              const lv = crewLevelFromXP(xp)
+              return (
+                <span className="font-cinzel font-700" style={{
+                  flexShrink: 0,
+                  fontSize: '0.62rem', letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: '#f0c040', background: 'rgba(240,192,64,0.12)',
+                  border: '1px solid rgba(240,192,64,0.42)',
+                  padding: '0.12rem 0.42rem', borderRadius: 4, lineHeight: 1.2,
+                }}>
+                  Lv {lv}
+                </span>
+              )
+            })()}
+          </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
             {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'} Crew
           </p>
@@ -298,6 +318,13 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
   // Mute the rarity color toward sepia so even Legendary cards read as
   // "remembered" rather than triumphant. Mix with parchment tone.
   const routeName = crew.diedOnRoute ? (ROUTE_LABEL[crew.diedOnRoute] ?? crew.diedOnRoute) : 'an unknown voyage'
+  // Lifetime stat distribution + final level — surfaced here as the eulogy
+  // since players don't see per-level distribution during play. Affinity is
+  // the crew's own rolled stats (same signal applyLevelBonuses uses), so
+  // the memorial faithfully reproduces what the crew earned in life.
+  const finalLevel = crewLevelFromXP(crew.xp)
+  const lifetimeBonus = levelStatBonuses(finalLevel, { power: crew.power, dodge: crew.dodge, fortune: crew.fortune })
+  const hasLevel = finalLevel > 1
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -330,9 +357,22 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
         <div>
-          <p className="font-pirata" style={{ fontSize: '1.05rem', color: '#d6c4a3', lineHeight: 1, letterSpacing: '0.02em' }}>
-            {crew.name}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
+            <p className="font-pirata" style={{ fontSize: '1.05rem', color: '#d6c4a3', lineHeight: 1, letterSpacing: '0.02em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {crew.name}
+            </p>
+            {hasLevel && (
+              <span className="font-cinzel font-700" style={{
+                flexShrink: 0,
+                fontSize: '0.56rem', letterSpacing: '0.08em',
+                color: '#c8a060', background: 'rgba(200,160,96,0.12)',
+                border: '1px solid rgba(200,160,96,0.35)',
+                padding: '0.1rem 0.36rem', borderRadius: 3, lineHeight: 1.1,
+              }}>
+                Lv {finalLevel}
+              </span>
+            )}
+          </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: `${color}cc`, marginTop: 3 }}>
             {RARITY_NAMES[(crew.rarity as CrewRarity)] ?? 'Common'} Crew
           </p>
@@ -345,6 +385,19 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
             <span style={{ color: 'rgba(214,196,163,0.5)' }}> · {formatFallDate(crew.diedAt)}</span>
           </p>
         </div>
+
+        {/* Lifetime stat distribution — the eulogy line. Only shown if the
+            crew actually leveled (no point reading "+0 +0 +0" on a fresh
+            Lv 1 loss). Pokemon-like reveal: hidden during play, surfaced
+            after death so each fallen crew has a "what they earned" stat
+            sheet on their memorial. */}
+        {hasLevel && (lifetimeBonus.power + lifetimeBonus.dodge + lifetimeBonus.fortune > 0) && (
+          <p className="font-karla italic" style={{ fontSize: '0.62rem', color: 'rgba(214,196,163,0.55)', lineHeight: 1.3 }}>
+            Earned <span style={{ color: STAT_COLOR.power }}>+{lifetimeBonus.power} PWR</span>
+            {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{lifetimeBonus.dodge} AGI</span>
+            {' · '}<span style={{ color: STAT_COLOR.fortune }}>+{lifetimeBonus.fortune} FTN</span>
+          </p>
+        )}
 
         {crew.effects.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
@@ -780,6 +833,37 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 </div>
                 <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05, marginTop: '0.6rem' }}>{it.name}</p>
                 <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'} Crew</p>
+
+                {/* Level + XP bar — only shown for roster crew (board recruits
+                    are pre-XP so the bar would be meaningless). Hidden when
+                    Lv 100 — show a "Master" badge instead. The next-tick
+                    distribution stays hidden by design (player surprise at
+                    each milestone) — graveyard memorials surface the
+                    full lifetime distribution after the fact. */}
+                {dXp >= 0 && 'xp' in it && (() => {
+                  const prog = crewXPProgress(dXp)
+                  const atMax = prog.level >= CREW_MAX_LEVEL
+                  return (
+                    <div style={{ marginTop: '0.7rem' }}>
+                      <div className="flex items-baseline justify-between" style={{ marginBottom: 4 }}>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0c040', letterSpacing: '0.06em' }}>
+                          {atMax ? 'Lv 100 · Master' : `Lv ${prog.level}`}
+                        </span>
+                        <span className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)' }}>
+                          {atMax ? 'Fully trained' : `${prog.xpInLevel.toLocaleString()} / ${prog.xpForLevel.toLocaleString()} XP`}
+                        </span>
+                      </div>
+                      <div style={{ width: '100%', height: 6, background: 'rgba(0,0,0,0.4)', borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(240,192,64,0.18)' }}>
+                        <div style={{
+                          height: '100%', width: `${Math.round(prog.progress * 100)}%`,
+                          background: 'linear-gradient(90deg, #f0c040 0%, #d9b563 100%)',
+                          boxShadow: '0 0 6px rgba(240,192,64,0.4)',
+                          transition: 'width 0.5s ease',
+                        }} />
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Stats header + ? toggle. Inline glossary below
                     explains what each stat actually does in raids +

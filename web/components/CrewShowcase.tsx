@@ -5,6 +5,7 @@
 
 import { applyCrewEffects } from '@/lib/crewEffects'
 import { RARITY_COLORS, RARITY_NAMES, type CrewRarity } from '@/lib/crewGen'
+import { crewLevelFromXP } from '@/lib/crewLevel'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
@@ -31,6 +32,7 @@ export type ShowcaseCrew = {
 export function CrewPortrait({ crew, w = 100, dimmed }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
   const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects, crew.xp ?? 0)
+  const level = crewLevelFromXP(crew.xp ?? 0)
   return (
     <div style={{
       width: w, flexShrink: 0, borderRadius: 10, overflow: 'hidden',
@@ -41,6 +43,20 @@ export function CrewPortrait({ crew, w = 100, dimmed }: { crew: ShowcaseCrew; w?
       <div style={{ position: 'relative', width: '100%', height: w, background: `radial-gradient(ellipse at 50% 32%, ${color}26 0%, #070504 74%)` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={artSrc(crew.filename)} alt={crew.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} />
+        {/* Lv chip — top-right corner of the portrait, only shown when the
+            crew has actually leveled. Bragging surface on visit-by-anyone
+            profiles ("oh damn this player has a Lv 47 Doby"). */}
+        {level > 1 && (
+          <span className="font-cinzel font-700" style={{
+            position: 'absolute', top: 4, right: 4,
+            fontSize: '0.52rem', letterSpacing: '0.06em',
+            color: '#f0c040', background: 'rgba(7,5,4,0.85)',
+            border: '1px solid rgba(240,192,64,0.5)',
+            padding: '0.1rem 0.32rem', borderRadius: 3, lineHeight: 1,
+          }}>
+            Lv {level}
+          </span>
+        )}
       </div>
       <div style={{ padding: '0.3rem 0.4rem 0.42rem' }}>
         <p className="font-pirata" style={{ fontSize: '0.92rem', color: '#ecdcbd', lineHeight: 1, textAlign: 'center' }}>{crew.name}</p>
