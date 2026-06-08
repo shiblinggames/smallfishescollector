@@ -28,11 +28,12 @@ async function resolveNames(admin: Admin, ids: number[]): Promise<Map<number, st
   if (ids.length === 0) return new Map()
   const { data } = await admin
     .from('user_crew')
-    .select('id, cards(name, slug)')
+    .select('id, nickname, cards(name, slug)')
     .in('id', ids)
   const out = new Map<number, string>()
   for (const row of ((data ?? []) as any[])) {
-    out.set(row.id, crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'))
+    const nickname = (row.nickname as string | null) ?? null
+    out.set(row.id, nickname ?? crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'))
   }
   return out
 }

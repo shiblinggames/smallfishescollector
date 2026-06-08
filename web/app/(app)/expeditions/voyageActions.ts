@@ -242,7 +242,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const { data: crewRows } = await admin
     .from('user_crew')
-    .select('id, rarity, cards(name, slug)')
+    .select('id, rarity, nickname, cards(name, slug)')
     .eq('user_id', user.id)
     .in('id', voyage.crew_variant_ids)
   const crewMeta: VoyageCrewMember[] = (voyage.crew_variant_ids).map(id => {
@@ -250,7 +250,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     if (!row) return null
     return {
       variantId: id,
-      name: crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'),
+      name: (row.nickname as string | null) ?? crewDisplayName(row.cards?.slug ?? '', row.cards?.name ?? 'Crew'),
       rarity: RARITY_NAMES[(row.rarity as CrewRarity)] ?? 'Common',
     }
   }).filter((c): c is VoyageCrewMember => c !== null)
