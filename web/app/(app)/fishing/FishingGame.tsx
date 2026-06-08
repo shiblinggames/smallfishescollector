@@ -4436,7 +4436,7 @@ export default function FishingGame({
   }
 
   // Auto Caster: handle the whole post-catch flow when equipped.
-  //   • Regular catch → recast 500ms after the result lands.
+  //   • Regular catch → recast 1000ms after the result lands.
   //   • Crate appears (closed) → auto-tap Open ~700ms in (player sees
   //     the closed-chest beat first, then the spin plays naturally).
   //   • Crate revealed → auto-claim 1200ms in (long enough to read
@@ -4472,7 +4472,7 @@ export default function FishingGame({
     const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
     if (currentBaitQty <= 0 || currentHoldCount >= holdCapacity) return
-    const t = setTimeout(() => { handleCastAgain() }, 500)
+    const t = setTimeout(() => { handleCastAgain() }, 1000)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, equippedSpecial, ownedAutoCaster, cratePhase, catchResult?.isShiny, crateResult])
