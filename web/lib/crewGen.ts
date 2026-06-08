@@ -114,21 +114,59 @@ export function rollStats(
   return { power: stats[0], dodge: stats[1], fortune: stats[2] }
 }
 
-/** Roll carried effect ids (0-2) from the pool the crew's rarity is allowed:
- *  Common/Rare get only the basic passive-flat traits; Epic+ also unlock the
- *  stronger percent/raid/voyage/conditional/aura effects. Buff vs flaw is
- *  unbiased within the allowed pool. */
-export function rollEffectIds(rarity: CrewRarity): string[] {
-  const r = Math.random()
-  const count = r < 0.25 ? 0 : r < 0.70 ? 1 : 2
-  const pool = effectPoolForRarity(rarity)
-  const out: string[] = []
-  for (let i = 0; i < count; i++) {
-    if (pool.length === 0) break
-    const idx = randInt(0, pool.length - 1)
-    out.push(pool.splice(idx, 1)[0]) // no duplicate effect on one crew member
+// ── Trait roll (new system, 2026-06-08) ────────────────────────────────────
+// Every crew member rolls ONE trait at recruit. The trait is a stat triple
+// {power, dodge, fortune} where each value is in [-3, +3], rolled per-stat
+// with a rarity-weighted magnitude distribution and a 50/50 sign. Net swing
+// is bounded -9 to +9 by construction. There's no fixed pool of named traits
+// any more — the trait identity IS the stat combo, encoded as 's:P,D,F' so it
+// fits the existing user_crew.effects: string[] column without a migration.
+//
+// Magnitude weights below were tuned so Common crew cluster around zero
+// (~22% are fully neutral) and Legendary crew are likely to hit the ±3
+// extremes (~40% chance per stat). See crewEffects.decodeTraitStats /
+// traitLabel for the parse + display side.
+const MAG_WEIGHTS: Record<CrewRarity, [number, number, number, number]> = {
+  1: [60, 25, 10,  5],   // Common:     P(0,1,2,3) magnitude
+  2: [40, 30, 20, 10],   // Rare
+  3: [25, 25, 30, 20],   // Epic
+  4: [10, 20, 30, 40],   // Legendary
+}
+
+function rollMagnitude(rarity: CrewRarity): number {
+  const w = MAG_WEIGHTS[rarity]
+  const total = w[0] + w[1] + w[2] + w[3]
+  let r = Math.random() * total
+  for (let i = 0; i < 4; i++) {
+    if (r < w[i]) return i
+    r -= w[i]
   }
-  return out
+  return 0
+}
+
+export interface RolledTrait {
+  power:   number
+  dodge:   number
+  fortune: number
+}
+
+/** Roll one stat-only trait for a crew of the given rarity. Each stat is
+ *  rolled independently — magnitude from the rarity-weighted table, sign
+ *  50/50 — so a single trait can land anywhere from (-3,-3,-3) to (+3,+3,+3). */
+export function rollTrait(rarity: CrewRarity): RolledTrait {
+  return {
+    power:   rollMagnitude(rarity) * (Math.random() < 0.5 ? -1 : 1),
+    dodge:   rollMagnitude(rarity) * (Math.random() < 0.5 ? -1 : 1),
+    fortune: rollMagnitude(rarity) * (Math.random() < 0.5 ? -1 : 1),
+  }
+}
+
+/** Encode a rolled trait as a single string id ('s:P,D,F') so it fits the
+ *  existing user_crew.effects: string[] column. Returns null when the trait
+ *  is fully neutral so we can store [] (= no trait) for those crew. */
+export function encodeTraitId(t: RolledTrait): string | null {
+  if (t.power === 0 && t.dodge === 0 && t.fortune === 0) return null
+  return `s:${t.power},${t.dodge},${t.fortune}`
 }
 
 export interface RolledCrew {
@@ -147,5 +185,6 @@ export function rollCrew(
   profile: { power: number; dodge: number; fortune: number },
 ): RolledCrew {
   const stats = rollStats(rarity, profile)
-  return { cardId, rarity, ...stats, effects: rollEffectIds(rarity) }
+  const traitId = encodeTraitId(rollTrait(rarity))
+  return { cardId, rarity, ...stats, effects: traitId ? [traitId] : [] }
 }

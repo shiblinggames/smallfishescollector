@@ -143,28 +143,147 @@ export function effectSummary(e: CrewEffect): string {
   return parts.join(' · ')
 }
 
-/** Base stats plus the net of all PASSIVE (always-on) effects: flat first, then
- *  percent, each stat clamped to >= 1. Raid/voyage/conditional/aura effects do
- *  NOT touch this base line (they apply in their own context, in Phase 2). */
+// ── Simplified trait system (2026-06-08) ────────────────────────────────────
+// Traits are stat triples now ({power, dodge, fortune} each in [-3,+3], net
+// -9..+9) — no auras, no percentages, no raid/voyage/conditional effects.
+// New recruits roll a single 's:P,D,F' encoded trait via lib/crewGen
+// rollTrait/encodeTraitId. Legacy crew with old named ids (dead_eye etc.)
+// get migrated *implicitly*: decodeTraitStats below honors their `flat`
+// field only if they had NO non-flat behaviour. If they had any pct / raid
+// / voyage / conditional / aura effect the trait is treated as lost
+// (returns null) — per the design call, old crew don't keep half-broken
+// special traits, only the strictly flat-stat ones survive.
+
+export interface TraitStats {
+  power:   number
+  dodge:   number
+  fortune: number
+}
+
+/** Decode a trait id to its stat triple. Returns null if the id is unknown
+ *  or refers to a legacy trait whose flat-only filter strips it (e.g. an
+ *  aura with no flat field, or a percent-only buff). */
+export function decodeTraitStats(id: string): TraitStats | null {
+  if (id.startsWith('s:')) {
+    const parts = id.slice(2).split(',').map(Number)
+    if (parts.length === 3 && parts.every(n => Number.isInteger(n) && n >= -3 && n <= 3)) {
+      return { power: parts[0], dodge: parts[1], fortune: parts[2] }
+    }
+    return null
+  }
+  // Legacy id — honour the flat field if and only if the trait had NO
+  // non-flat behaviour. Otherwise the trait is lost.
+  const old = CREW_EFFECTS[id]
+  if (!old) return null
+  const hasNonFlat = !!(old.pct || old.raid || old.voyage || old.cond || old.scope === 'aura' || old.scope === 'conditional' || old.scope === 'raid' || old.scope === 'voyage')
+  if (hasNonFlat) return null
+  if (!old.flat) return null
+  return {
+    power:   old.flat.power   ?? 0,
+    dodge:   old.flat.dodge   ?? 0,
+    fortune: old.flat.fortune ?? 0,
+  }
+}
+
+/** Aggregate every readable trait on a crew into one stat triple. Old
+ *  crew with multiple legacy effects sum them all. */
+export function netTraitStats(ids: string[] | null | undefined): TraitStats {
+  const out: TraitStats = { power: 0, dodge: 0, fortune: 0 }
+  if (!ids) return out
+  for (const id of ids) {
+    const s = decodeTraitStats(id)
+    if (!s) continue
+    out.power   += s.power
+    out.dodge   += s.dodge
+    out.fortune += s.fortune
+  }
+  return out
+}
+
+// ── Generated trait labels ──────────────────────────────────────────────────
+// Maps a stat triple to an evocative name. The label is pure cosmetic —
+// players see the exact stat deltas next to it on the detail modal — so the
+// pool is small enough to memorize but big enough to feel fresh.
+
+const SINGLE_LABELS: Record<'power'|'dodge'|'fortune', { pos: [string, string, string]; neg: [string, string, string] }> = {
+  power:   { pos: ['Brawler',   'Strong',     'Titan'   ], neg: ['Soft',      'Weak',       'Feeble'  ] },
+  dodge:   { pos: ['Quick',     'Nimble',     'Phantom' ], neg: ['Sluggish',  'Lumbering',  'Anchored'] },
+  fortune: { pos: ['Lucky',     'Fortunate',  'Charmed' ], neg: ['Unlucky',   'Hexed',      'Doomed'  ] },
+}
+
+/** Generate an evocative label for a trait. Empty string when the trait is
+ *  fully neutral (caller renders no row). */
+export function traitLabel(s: TraitStats): string {
+  const stats = (['power','dodge','fortune'] as const)
+  const nonZero = stats.filter(k => s[k] !== 0)
+
+  if (nonZero.length === 0) return ''
+
+  // Single-stat trait → use the dedicated name + magnitude tier.
+  if (nonZero.length === 1) {
+    const k = nonZero[0]
+    const v = s[k]
+    const tier = Math.min(3, Math.abs(v)) - 1     // 0..2
+    return v > 0 ? SINGLE_LABELS[k].pos[tier] : SINGLE_LABELS[k].neg[tier]
+  }
+
+  // Two-stat trait → name by the pair of stats moved and their dominant sign.
+  if (nonZero.length === 2) {
+    const positive = nonZero.filter(k => s[k] > 0)
+    const negative = nonZero.filter(k => s[k] < 0)
+    const pair = nonZero.map(k => k).sort().join('+')
+    // All same sign — combo names per pair.
+    if (positive.length === 2) {
+      return ({ 'dodge+power': 'Warrior', 'fortune+power': 'Hunter', 'dodge+fortune': 'Scout' } as Record<string, string>)[pair] ?? 'Gifted'
+    }
+    if (negative.length === 2) {
+      return ({ 'dodge+power': 'Battered', 'fortune+power': 'Forsaken', 'dodge+fortune': 'Listless' } as Record<string, string>)[pair] ?? 'Cursed'
+    }
+    // Mixed signs — opportunistic combo.
+    return ({ 'dodge+power': 'Glass Cannon', 'fortune+power': 'Reckless', 'dodge+fortune': 'Slippery' } as Record<string, string>)[pair] ?? 'Quirky'
+  }
+
+  // Three-stat trait → broad labels by net direction.
+  const net = s.power + s.dodge + s.fortune
+  const allPos = stats.every(k => s[k] > 0)
+  const allNeg = stats.every(k => s[k] < 0)
+  if (allPos) {
+    if (net >= 8) return 'Demigod'
+    if (net >= 5) return 'Champion'
+    return 'Versatile'
+  }
+  if (allNeg) {
+    if (net <= -8) return 'Damned'
+    if (net <= -5) return 'Plagued'
+    return 'Burdened'
+  }
+  // Mixed signs across all three.
+  return net >= 0 ? 'Mercurial' : 'Errant'
+}
+
+/** Whether a trait is a net buff, flaw, or neutral — drives the color
+ *  treatment in the detail modal. */
+export function traitKind(s: TraitStats): 'buff' | 'flaw' | 'neutral' {
+  const net = s.power + s.dodge + s.fortune
+  if (net > 0) return 'buff'
+  if (net < 0) return 'flaw'
+  return 'neutral'
+}
+
+/** Base stats plus the net of every readable trait on the crew. Simplified
+ *  from the old percentage/raid/voyage/aura math — traits are stat-only
+ *  now. Level bonuses fold in first so the trait sums onto a level-scaled
+ *  base. */
 export function applyCrewEffects(
   base: { power: number; dodge: number; fortune: number },
   ids: string[] | null | undefined,
   xp = 0,
 ): { power: number; dodge: number; fortune: number } {
-  // Level bonuses fold into the base FIRST so percent effects amplify a
-  // leveled crew's stronger stats (a +25% Power crew at Lv 30 is meaningfully
-  // stronger than the same crew at Lv 1).
   const leveled = xp > 0 ? applyLevelBonuses(base, xp) : base
-  const flat = { power: 0, dodge: 0, fortune: 0 }
-  const pct = { power: 0, dodge: 0, fortune: 0 }
-  for (const e of resolveEffects(ids)) {
-    if (e.scope !== 'always') continue
-    if (e.flat) { flat.power += e.flat.power ?? 0; flat.dodge += e.flat.dodge ?? 0; flat.fortune += e.flat.fortune ?? 0 }
-    if (e.pct) { pct.power += e.pct.power ?? 0; pct.dodge += e.pct.dodge ?? 0; pct.fortune += e.pct.fortune ?? 0 }
-  }
+  const t = netTraitStats(ids)
   return {
-    power: Math.max(1, Math.round((leveled.power + flat.power) * (1 + pct.power / 100))),
-    dodge: Math.max(1, Math.round((leveled.dodge + flat.dodge) * (1 + pct.dodge / 100))),
-    fortune: Math.max(1, Math.round((leveled.fortune + flat.fortune) * (1 + pct.fortune / 100))),
+    power:   Math.max(1, leveled.power   + t.power),
+    dodge:   Math.max(1, leveled.dodge   + t.dodge),
+    fortune: Math.max(1, leveled.fortune + t.fortune),
   }
 }

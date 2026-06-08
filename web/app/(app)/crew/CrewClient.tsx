@@ -10,7 +10,7 @@ import {
 } from './actions'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
-import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META, CREW_EFFECTS } from '@/lib/crewEffects'
+import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
@@ -575,27 +575,26 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
           </p>
         )}
 
-        {crew.effects.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
-            {crew.effects.slice(0, 4).map(eid => {
-              const e = CREW_EFFECTS[eid]
-              if (!e) return null
-              const buff = e.kind === 'buff'
-              return (
-                <span key={eid} className="font-karla font-700" style={{
-                  fontSize: '0.5rem', letterSpacing: '0.06em', textTransform: 'uppercase',
-                  color: buff ? '#9cc7a8' : '#c79c9c',
-                  background: buff ? 'rgba(60,120,80,0.18)' : 'rgba(140,60,60,0.18)',
-                  border: `1px solid ${buff ? 'rgba(120,180,140,0.4)' : 'rgba(180,110,110,0.4)'}`,
-                  borderRadius: 3, padding: '0.12rem 0.4rem',
-                }}>{e.name}</span>
-              )
-            })}
-            {crew.effects.length > 4 && (
-              <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: 'rgba(214,196,163,0.5)', padding: '0.12rem 0.2rem' }}>+{crew.effects.length - 4}</span>
-            )}
-          </div>
-        )}
+        {(() => {
+          // New trait system: each crew has at most one stat-only trait.
+          // Show the generated label as a single sepia-tinted chip.
+          const t = netTraitStats(crew.effects)
+          const label = traitLabel(t)
+          if (!label) return null
+          const kind = traitKind(t)
+          const buff = kind === 'buff'
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
+              <span className="font-karla font-700" style={{
+                fontSize: '0.5rem', letterSpacing: '0.06em', textTransform: 'uppercase',
+                color: buff ? '#9cc7a8' : '#c79c9c',
+                background: buff ? 'rgba(60,120,80,0.18)' : 'rgba(140,60,60,0.18)',
+                border: `1px solid ${buff ? 'rgba(120,180,140,0.4)' : 'rgba(180,110,110,0.4)'}`,
+                borderRadius: 3, padding: '0.12rem 0.4rem',
+              }}>{label}</span>
+            </div>
+          )
+        })()}
       </div>
     </motion.div>
   )
@@ -611,11 +610,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // each stat actually does in raids + voyages. Reset when the modal
   // closes so it starts collapsed for the next card.
   const [statsGlossaryOpen, setStatsGlossaryOpen] = useState(false)
-  // Which trait row is expanded inside the detail modal. Tap a row to
-  // open its description; tap again (or open another) to swap. Closed on
-  // modal close. Stays scoped to a single trait at a time so the modal
-  // doesn't balloon back into its old busy layout.
-  const [expandedTrait, setExpandedTrait] = useState<string | null>(null)
+  // expandedTrait state used to exist for the old per-trait description
+  // expander; the simplified one-row Trait section doesn't need it.
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
@@ -1219,8 +1215,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           // pre-XP (effectively Lv 1). Roster members carry their xp.
           const dXp  = 'xp' in it ? it.xp : 0
           const dEff = applyCrewEffects(dBase, it.effects, dXp)
-          const dResolved = resolveEffects(it.effects)
-          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setExpandedTrait(null) }
+          // Net trait stats — simplified system has one trait per crew, a
+          // stat triple in [-3,+3] per stat. label/kind drive the row.
+          const dTrait = netTraitStats(it.effects)
+          const dTraitLabel = traitLabel(dTrait)
+          const dTraitKind = traitKind(dTrait)
+          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false) }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -1429,55 +1429,37 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   )}
                 </AnimatePresence>
 
-                {/* Traits — compact list. Each entry is one line: name +
-                    summary, color-coded buff/flaw. Tap any row to expand
-                    its description; details stay collapsed by default so
-                    the modal leads with class + stats + level info (the
-                    things the player actually decides on) rather than
-                    burying them under big trait cards. */}
-                {dResolved.length > 0 && (
+                {/* Trait — under the new system each crew has at most one
+                    stat-only trait (a {power,dodge,fortune} delta with
+                    each value in [-3,+3]). Show the generated label as
+                    the row title and a compact stat line ('+2 PWR · -1
+                    AGI') as the summary; buff/flaw/neutral color tracks
+                    the net direction. No description to expand any more
+                    — the line IS the description. */}
+                {dTraitLabel && (
                   <>
-                    <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)', marginBottom: '0.3rem' }}>Traits</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '0.6rem' }}>
-                      {dResolved.map((e, idx) => {
-                        const buff = e.kind === 'buff'
-                        const summary = effectSummary(e)
-                        const expanded = expandedTrait === e.id
-                        return (
-                          <button
-                            key={e.id}
-                            type="button"
-                            onClick={() => setExpandedTrait(expanded ? null : e.id)}
-                            style={{
-                              display: 'flex', flexDirection: 'column',
-                              gap: 2, width: '100%',
-                              padding: '0.4rem 0', textAlign: 'left',
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              borderTop: idx === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                              <span className="font-cinzel font-700" style={{
-                                fontSize: '0.78rem', fontStyle: 'italic',
-                                color: buff ? '#9fd9b1' : '#e09a9a',
-                              }}>
-                                {e.name}
-                              </span>
-                              {summary && (
-                                <span className="font-karla font-700" style={{
-                                  fontSize: '0.7rem', whiteSpace: 'nowrap',
-                                  color: buff ? '#7fdfa3' : '#f08a8a',
-                                }}>{summary}</span>
-                              )}
-                            </div>
-                            {expanded && (
-                              <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4, marginTop: 2 }}>
-                                {e.desc}
-                              </p>
-                            )}
-                          </button>
-                        )
-                      })}
+                    <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)', marginBottom: '0.3rem' }}>Trait</p>
+                    <div style={{
+                      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                      gap: 8, padding: '0.4rem 0', marginBottom: '0.6rem',
+                    }}>
+                      <span className="font-cinzel font-700" style={{
+                        fontSize: '0.86rem', fontStyle: 'italic',
+                        color: dTraitKind === 'buff' ? '#9fd9b1' : dTraitKind === 'flaw' ? '#e09a9a' : 'rgba(255,255,255,0.6)',
+                      }}>
+                        {dTraitLabel}
+                      </span>
+                      <span className="font-karla font-700" style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', fontSize: '0.7rem' }}>
+                        {(['power','dodge','fortune'] as const).map(k => {
+                          const v = dTrait[k]
+                          if (v === 0) return null
+                          return (
+                            <span key={k} style={{ color: v > 0 ? '#7fdfa3' : '#f08a8a', whiteSpace: 'nowrap' }}>
+                              {v > 0 ? '+' : ''}{v} {STAT_LABEL[k]}
+                            </span>
+                          )
+                        })}
+                      </span>
                     </div>
                   </>
                 )}
