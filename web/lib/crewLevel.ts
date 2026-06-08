@@ -1,20 +1,23 @@
-// Crew leveling — LINEAR curve. Flat XP_PER_LEVEL means every level costs the
-// same, so a player's mental model is dead simple: "one raid ≈ one level"
-// (Krust raid = 910 player XP, crew earn the same per-kill total, lands just
-// under one level). No exponential late-game wall, no compressed early ramp —
-// just steady, predictable progression. Lv 1 → Lv 100 = 99,000 XP = ~109
-// Krust raids, ~3-4 months for an engaged player who runs one raid a day.
+// Crew leveling — ARITHMETIC progression. Each level costs BASE_LEVEL_COST +
+// (lv-1) * COST_INCREMENT, so the slope is linear (each level takes a fixed
+// amount more than the last), not exponential. This avoids both failure modes
+// we hit with geometric curves: the early ramp doesn't blaze (Lv 1→2 = 350 XP
+// = substantial), and the late game grows slowly enough to stay achievable
+// without a wall.
 //
-// Pacing examples:
-//   - Krust raid (910 XP):           ~1 level per raid
-//   - Future Ch3 raid (~400 XP):     ~0.4 levels per raid
-//   - Triangle voyage (220 XP):      ~0.22 levels per voyage
-//   - Coastal voyage (30 XP):        ~0.03 levels per voyage
+// Pacing examples at Krust = 910 XP per raid:
+//   - Lv  1→2:    350 XP    → first raid lands at Lv 3 (no free territory)
+//   - Lv 10→11:   755 XP    → ~1.2 levels per raid
+//   - Lv 50→51: 2,555 XP    → ~0.36 levels per raid (mid-game)
+//   - Lv 99→100: 4,760 XP   → ~5 raids per level (late-game grind)
+// Total to Lv 100: ~252,945 XP = ~278 Krust raids = ~9 months at 1 raid/day,
+// ~5 months at 2 raids/day.
 //
-// We tried two geometric shapes earlier and both broke in different ways
-// (BASE=6, growth=1.086 → free first 30 levels; BASE=60, growth=1.05 →
-// gentler but still uneven). Linear is the right shape for "one raid = one
-// thing the player can feel" — switched 2026-06-08.
+// Tuning history: tried player-shape÷10 (BASE=6, growth=1.086 — too cheap
+// early, 910 XP = Lv 33); then gentler geometric (BASE=60, growth=1.05 —
+// still uneven); then pure-linear flat 1000/level (no late-game grind feel).
+// Arithmetic is the right shape for "real progress every level, more work
+// late but never a wall." Tuned 2026-06-08 against player feedback.
 //
 // What grants stats vs what's just progress:
 //   - Lv 3, 6, 9, ..., 99 → +1 stat tick (33 milestones)
@@ -30,12 +33,15 @@
 // play (no "next tick: Power" preview); the graveyard memorial surfaces the
 // final lifetime distribution as a tribute.
 
-const XP_PER_LEVEL = 1000
+const BASE_LEVEL_COST = 350    // XP cost of Lv 1→2
+const COST_INCREMENT  = 45     // each subsequent level costs this much more
 
 function computeXPTable(): number[] {
   const table: number[] = [0]
+  let total = 0
   for (let lv = 1; lv <= 99; lv++) {
-    table.push(lv * XP_PER_LEVEL)
+    total += BASE_LEVEL_COST + (lv - 1) * COST_INCREMENT
+    table.push(total)
   }
   return table
 }
