@@ -19,7 +19,7 @@ import DailyVoyagePanel from './DailyVoyagePanel'
 const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
-import { getRankTitle, type ShipStats } from '@/lib/expeditions'
+import type { ShipStats } from '@/lib/expeditions'
 
 export type CampaignCardData = {
   nextNodeId: string | null
@@ -111,34 +111,33 @@ function HubCrewStrip({
       onClick={open}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e as unknown as React.MouseEvent) } }}
       style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '0.5rem 0.6rem',
-        background: `${accent}0a`,
-        border: `1px solid ${accent}33`,
-        borderRadius: 10, marginBottom: 8,
-        cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s',
+        display: 'flex', alignItems: 'center', gap: 6,
+        marginBottom: 6,
+        cursor: 'pointer',
       }}
     >
       {crew.length === 0 ? (
-        <>
-          <p className="font-karla font-600" style={{ flex: 1, fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>
-            No {label} assigned
-          </p>
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: accent }}>Assign →</span>
-        </>
+        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.2 }}>
+          No {label} · <span style={{ color: accent }}>Assign →</span>
+        </p>
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 4, flex: 1, flexWrap: 'wrap' }}>
-            {crew.map(c => (
+          {/* Overlapping avatars — −6px margin between each gives a tight
+              stacked-portrait look that occupies the same vertical space
+              as a single line of text. */}
+          <div style={{ display: 'flex', flex: 'none' }}>
+            {crew.map((c, i) => (
               <div
                 key={c.id}
                 title={c.name}
                 style={{
-                  position: 'relative', width: 30, height: 30, borderRadius: '50%',
+                  position: 'relative', width: 22, height: 22, borderRadius: '50%',
                   overflow: 'hidden',
-                  border: `1.5px solid ${accent}aa`,
-                  boxShadow: `0 1px 4px rgba(0,0,0,0.55), 0 0 6px ${accent}33`,
-                  background: `radial-gradient(circle at 50% 35%, ${accent}26 0%, #050403 75%)`,
+                  border: `1.5px solid ${accent}cc`,
+                  boxShadow: `0 1px 3px rgba(0,0,0,0.6)`,
+                  background: `radial-gradient(circle at 50% 35%, ${accent}33 0%, #050403 75%)`,
+                  marginLeft: i === 0 ? 0 : -6,
+                  zIndex: crew.length - i,
                   flexShrink: 0,
                 }}
               >
@@ -146,12 +145,12 @@ function HubCrewStrip({
                 <img
                   src={`${SUPA}/storage/v1/object/public/card-arts/${c.filename}`}
                   alt={c.name}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 22%', padding: 1 }}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 22%' }}
                 />
               </div>
             ))}
           </div>
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: accent, whiteSpace: 'nowrap' }}>Manage →</span>
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: accent, whiteSpace: 'nowrap' }}>Manage →</span>
         </>
       )}
     </div>
@@ -664,36 +663,19 @@ export default function HubCards({
 // score tile (Raid Score for campaign, Voyage Score for voyages) with
 // rank title, plus a 3-column ship-stats strip (HP / Speed / DMG) so
 // the player sees the hull they're committing alongside their score.
-function StatsBlock({ score, scoreLabel, scoreColor, shipStats }: {
-  score: number
-  scoreLabel: string
-  scoreColor: string
+// Voyage Score / Raid Score banners used to live atop this block. Removed
+// 2026-06-08 — both were confusing players who didn't have a clear mental
+// model for the 0-100 nautical ladder. Concrete ship stats (HP / Speed /
+// DMG) stay because they're literal and actionable. score / scoreLabel /
+// scoreColor props stay on the type for API stability but are ignored.
+function StatsBlock({ shipStats }: {
+  score?: number
+  scoreLabel?: string
+  scoreColor?: string
   shipStats: ShipStats
 }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: 12, padding: '0.7rem 0.85rem', borderRadius: 12,
-        background: `linear-gradient(135deg, ${scoreColor}1a 0%, rgba(8,7,6,0.35) 72%)`,
-        border: `1px solid ${scoreColor}40`,
-        marginBottom: 7,
-      }}>
-        <div style={{ minWidth: 0 }}>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]"
-            style={{ fontSize: '0.5rem', color: `${scoreColor}cc` }}>
-            {scoreLabel}
-          </p>
-          <p className="font-cinzel font-700"
-            style={{ fontSize: '0.74rem', color: scoreColor, fontStyle: 'italic', marginTop: 2 }}>
-            {getRankTitle(score)}
-          </p>
-        </div>
-        <p className="font-cinzel font-700"
-          style={{ fontSize: '1.95rem', lineHeight: 1, color: scoreColor }}>
-          {score}<span style={{ fontSize: '0.78rem', color: `${scoreColor}99` }}>/100</span>
-        </p>
-      </div>
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
       }}>
