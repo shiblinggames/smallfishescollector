@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
-  assignToVoyage, assignToRaid, benchCrew, promoteToCaptain,
+  assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
 import { crewAssignment } from '@/lib/crewAssignment'
@@ -643,6 +643,43 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // milestone (Lv 10 / 25 / 40 / 75 / 100) so the player can see what
   // they're working toward. Reset on modal close.
   const [classExpanded, setClassExpanded] = useState(false)
+
+  // One-shot rename state — when the player taps the pencil next to their
+  // crew's name in the detail modal, an inline input appears; saving fires
+  // renameCrew (server-side guard rejects if nickname is already set). All
+  // state resets on modal close.
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [renameDraft, setRenameDraft] = useState('')
+  const [renameErr, setRenameErr] = useState<string | null>(null)
+  const [renameSaving, setRenameSaving] = useState(false)
+  function startRename(currentName: string) {
+    setRenameDraft(currentName)
+    setRenameErr(null)
+    setRenameOpen(true)
+  }
+  function cancelRename() {
+    setRenameOpen(false)
+    setRenameErr(null)
+  }
+  async function commitRename(crewId: number) {
+    const clean = renameDraft.trim()
+    if (clean.length < 1) { setRenameErr('Pick a name first.'); return }
+    if (clean.length > 30) { setRenameErr('Name must be 30 characters or fewer.'); return }
+    setRenameSaving(true)
+    setRenameErr(null)
+    try {
+      const res = await renameCrew(crewId, clean)
+      if ('error' in res) { setRenameErr(res.error); return }
+      setState(res.state)
+      // Pull the freshly-renamed crew row back into the detail modal so
+      // the name update lands without reopening the card.
+      const updated = res.state.roster.find(c => c.id === crewId)
+      if (updated) setDetail({ kind: 'roster', item: updated })
+      setRenameOpen(false)
+    } finally {
+      setRenameSaving(false)
+    }
+  }
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
@@ -1252,7 +1289,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const dTrait = netTraitStats(it.effects)
           const dTraitLabel = traitLabel(dTrait)
           const dTraitKind = traitKind(dTrait)
-          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false) }
+          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false); setRenameOpen(false); setRenameErr(null) }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -1274,7 +1311,96 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(it.filename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
                 </div>
-                <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05, marginTop: '0.6rem' }}>{it.name}</p>
+                {/* Crew name + one-shot rename. Roster crew with no
+                    nickname yet get a small pencil next to the name; tap
+                    to swap into an inline input. Already-named or board
+                    recruits just show the static name. */}
+                {(() => {
+                  const isRoster = detail.kind === 'roster'
+                  const m = isRoster ? (it as CrewMember) : null
+                  const canRename = isRoster && m && m.nickname === null
+                  if (renameOpen && canRename && m) {
+                    return (
+                      <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                        <input
+                          autoFocus
+                          value={renameDraft}
+                          onChange={e => setRenameDraft(e.target.value)}
+                          maxLength={30}
+                          placeholder={it.name}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); commitRename(m.id) }
+                            if (e.key === 'Escape') { e.preventDefault(); cancelRename() }
+                          }}
+                          className="font-pirata"
+                          style={{
+                            width: '100%', maxWidth: 240,
+                            textAlign: 'center', fontSize: '1.5rem',
+                            color: '#ecdcbd', background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(240,192,64,0.55)',
+                            borderRadius: 8, padding: '0.3rem 0.6rem',
+                            outline: 'none',
+                          }}
+                        />
+                        <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(240,192,64,0.7)', textAlign: 'center', lineHeight: 1.35 }}>
+                          You can only name a crew member once.
+                        </p>
+                        {renameErr && (
+                          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#f2b0b0', textAlign: 'center' }}>{renameErr}</p>
+                        )}
+                        <div className="flex" style={{ gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => commitRename(m.id)}
+                            disabled={renameSaving}
+                            className="font-karla font-700 uppercase"
+                            style={{
+                              padding: '0.4rem 1rem', fontSize: '0.66rem', letterSpacing: '0.08em',
+                              background: 'linear-gradient(180deg, rgba(74,200,130,0.36), rgba(46,140,92,0.2))',
+                              border: '1px solid rgba(122,226,162,0.6)', color: '#dcf8e7',
+                              borderRadius: 7, cursor: renameSaving ? 'not-allowed' : 'pointer',
+                              opacity: renameSaving ? 0.6 : 1,
+                            }}
+                          >{renameSaving ? 'Saving…' : 'Save'}</button>
+                          <button
+                            type="button"
+                            onClick={cancelRename}
+                            disabled={renameSaving}
+                            className="font-karla font-700 uppercase"
+                            style={{
+                              padding: '0.4rem 1rem', fontSize: '0.66rem', letterSpacing: '0.08em',
+                              background: 'rgba(255,255,255,0.06)',
+                              border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.7)',
+                              borderRadius: 7, cursor: 'pointer',
+                            }}
+                          >Cancel</button>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginTop: '0.6rem' }}>
+                      <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05 }}>{it.name}</p>
+                      {canRename && (
+                        <button
+                          type="button"
+                          onClick={() => startRename(it.name)}
+                          aria-label="Rename this crew (one time only)"
+                          title="Rename · once only"
+                          style={{
+                            background: 'transparent', border: 'none', padding: '0.2rem',
+                            color: 'rgba(255,255,255,0.45)', cursor: 'pointer', lineHeight: 1,
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
                 <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
 
                 {/* Level + XP bar — only shown for roster crew (board recruits

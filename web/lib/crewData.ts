@@ -32,7 +32,7 @@ export async function loadDeployedParty(
   // the row for the Crew Hall Graveyard tab but never deployed.
   const { data } = await admin
     .from('user_crew')
-    .select(`id, ${slotCol}, rarity, power, dodge, fortune, effects, xp, cards(name, filename, slug)`)
+    .select(`id, ${slotCol}, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)`)
     .eq('user_id', userId)
     .is('died_at', null)
     .not(slotCol, 'is', null)
@@ -50,7 +50,7 @@ export async function loadDeployedParty(
       effects: (r.effects ?? []) as string[],
       xp: (r.xp as number | null) ?? 0,
       slug: (r.cards?.slug as string | undefined)?.toLowerCase() ?? '',
-      name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
+      name: (r.nickname as string | null) ?? crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
       catalogName: (r.cards?.name ?? 'Crew') as string,
       filename: (r.cards?.filename ?? '') as string,
     }))

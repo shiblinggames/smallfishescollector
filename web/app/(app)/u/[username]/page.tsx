@@ -51,12 +51,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // their visit-by-anyone profile.
     showcaseCrewIds.length > 0
       ? admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, xp, cards(name, filename, slug)')
+          .select('id, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .is('died_at', null)
           .in('id', showcaseCrewIds)
       : admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, xp, cards(name, filename, slug)')
+          .select('id, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .is('died_at', null)
           // Public showcase fallback = the voyage track (player's public-
@@ -97,7 +97,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     : rawCrew
   const showcaseCrew: ShowcaseCrew[] = orderedCrew.map((r: any) => ({
     id: r.id,
-    name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
+    name: (r.nickname as string | null) ?? crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
     filename: r.cards?.filename ?? '',
     slug: (r.cards?.slug as string | undefined)?.toLowerCase() ?? '',
     rarity: r.rarity,

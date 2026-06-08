@@ -36,7 +36,12 @@ export type BoardCandidate = {
 export type CrewMember = {
   id: number
   cardId: number
+  /** Resolved display name — player nickname if set, otherwise the
+   *  species-default nickname from `crewDisplayName(slug, name)`. */
   name: string
+  /** Player-set nickname, or null if never renamed. One-shot — if non-null
+   *  the rename affordance in the detail modal hides itself. */
+  nickname: string | null
   filename: string
   /** Species slug (lower-cased card slug). Drives crew-class lookup via
    *  CLASS_BY_SLUG — every species maps to exactly one class. */
@@ -143,9 +148,11 @@ function toCandidate(r: any, meta: Map<number, CardMeta>): BoardCandidate {
 
 function toMember(r: any, meta: Map<number, CardMeta>): CrewMember {
   const m = meta.get(r.card_id)
+  const nickname = (r.nickname as string | null) ?? null
   return {
     id: r.id, cardId: r.card_id,
-    name: m ? crewDisplayName(m.slug, m.name) : 'Unknown',
+    name: nickname ?? (m ? crewDisplayName(m.slug, m.name) : 'Unknown'),
+    nickname,
     filename: m?.filename ?? '',
     slug: (m?.slug ?? '').toLowerCase(),
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
@@ -199,7 +206,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Crew Hall Graveyard tab, not the active roster.
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -233,7 +240,7 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
   const { meta } = await loadCards(admin)
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -446,6 +453,36 @@ export async function benchCrew(crewId: number): Promise<CrewActionResult> {
   return applyAssignment(user.id, crewId, null, null)
 }
 
+/** One-shot crew rename. Sets `nickname` if it's still null; rejects every
+ *  attempt after that so a name lands once and lives forever (same shape as
+ *  the username rename flow). Trims whitespace, length-clamps to 1-30 chars,
+ *  rejects empty strings. */
+export async function renameCrew(crewId: number, nickname: string): Promise<CrewActionResult | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const clean = nickname.trim()
+  if (clean.length < 1) return { error: 'Pick a name first.' }
+  if (clean.length > 30) return { error: 'Name must be 30 characters or fewer.' }
+
+  const admin = createAdminClient()
+  const { data: crew } = await admin
+    .from('user_crew')
+    .select('id, nickname')
+    .eq('id', crewId).eq('user_id', user.id).is('died_at', null)
+    .single()
+  if (!crew) return { error: 'Crew not found' }
+  if ((crew as any).nickname != null) return { error: 'This crew has already been named.' }
+
+  const { error } = await admin.from('user_crew')
+    .update({ nickname: clean })
+    .eq('id', crewId).eq('user_id', user.id)
+  if (error) return { error: 'Could not save the name. Try again.' }
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
+}
+
 /** Promote an already-assigned crew to captain (slot 0) on whichever track
  *  they're on. Swaps slot indices with the current slot-0 holder if one
  *  exists; if slot 0 is empty, the crew just moves to it. No-op if the
@@ -518,7 +555,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
   const { meta } = await loadCards(admin)
   const { data: rows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, xp, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, xp, nickname, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
     .eq('user_id', user.id)
     .not('died_at', 'is', null)
     .order('died_at', { ascending: false })
@@ -527,9 +564,11 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
     // voyage is a single object via the explicit FK join, but PostgREST
     // typings sometimes default it to an array — handle both shapes.
     const voyage = Array.isArray(r.voyage) ? r.voyage[0] : r.voyage
+    const nickname = (r.nickname as string | null) ?? null
     return {
       id: r.id, cardId: r.card_id,
-      name: m ? crewDisplayName(m.slug, m.name) : 'Unknown',
+      name: nickname ?? (m ? crewDisplayName(m.slug, m.name) : 'Unknown'),
+      nickname,
       filename: m?.filename ?? '',
       slug: (m?.slug ?? '').toLowerCase(),
       rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
