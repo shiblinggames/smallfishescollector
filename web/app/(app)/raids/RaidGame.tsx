@@ -463,6 +463,20 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [winXP, setWinXP]               = useState(0)
   const [winPhase, setWinPhase]         = useState<'summary' | 'claimed'>('summary')
   const [winIsBoss, setWinIsBoss]       = useState(false)
+  // Crew XP accumulator. Server returns per-crew old/new XP after every kill.
+  // We keep the ORIGINAL oldXP/oldLevel from the first time we saw each crew
+  // and overwrite newXP/newLevel each kill — so when the loot stage reads
+  // this on boss death, it gets a full "earned across the raid" snapshot
+  // ("Doby Lv 12 → 14, +910 XP") rather than just the last-kill delta.
+  const crewXPAccumRef = useRef<Map<number, { id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }>>(new Map())
+  function mergeCrewXPGrants(grants: { id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }[]) {
+    const m = crewXPAccumRef.current
+    for (const g of grants) {
+      const prev = m.get(g.id)
+      if (prev) m.set(g.id, { ...g, oldXP: prev.oldXP, oldLevel: prev.oldLevel })
+      else m.set(g.id, g)
+    }
+  }
   // Boss pre-fight dialogue. When advancing into a boss round we stash the
   // pending advance here, render the dialogue modal, and only fire the
   // advance when the dialogue is dismissed (Engage tap).
@@ -1154,6 +1168,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         try {
           const before = navXPRef.current
           const res = await awardRaidKill(xp + bonus, gold)
+          mergeCrewXPGrants(res.crewXP)
           const killTotal = res.newExpeditionXP - bonus
           const oldLevel = getLevelFromXP(before)
           const killLevel = getLevelFromXP(killTotal)
@@ -1257,9 +1272,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
       // <RaidCombat /> remounts it fresh with the next enemy.
     }
 
-    let res: { newExpeditionXP: number; newDoubloonTotal: number } | null = null
+    let res: Awaited<ReturnType<typeof awardRaidKill>> | null = null
     try { res = await awardRaidKill(xp, gold) } catch { /* save failed */ }
     if (!res) { setTimeout(advanceToNext, 400); return }
+    mergeCrewXPGrants(res.crewXP)
 
     const oldLevel = getLevelFromXP(navXPRef.current)
     const newLevel = getLevelFromXP(res.newExpeditionXP)
@@ -1295,6 +1311,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setIsClaiming(true)
     try {
       const res = await awardRaidKill(winXP, winGold)
+      mergeCrewXPGrants(res.crewXP)
       const oldLevel = getLevelFromXP(navXPRef.current)
       const newLevel = getLevelFromXP(res.newExpeditionXP)
       navXPRef.current = res.newExpeditionXP
@@ -1556,6 +1573,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             boss={bossEnemy}
             killGold={winGold}
             killXP={winXP}
+            crewXP={Array.from(crewXPAccumRef.current.values())}
             loot={config.loot}
             slotFinal={slotFinal}
             lootAmount={lootAmount}

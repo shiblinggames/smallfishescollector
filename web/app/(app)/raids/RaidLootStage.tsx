@@ -36,6 +36,12 @@ interface Props {
   /** Whether the parent is currently saving the claim. Disables the button
    *  and shows a "Saving…" label. */
   claiming?: boolean
+  /** Per-crew XP accumulated across THE ENTIRE RAID (not just the boss kill).
+   *  Each entry's oldXP/oldLevel reflects the state before the first kill the
+   *  crew was alive for; newXP/newLevel reflects the state after the boss.
+   *  Streamed into the log after the kill narration so the player sees
+   *  "Doby +910 XP · Lv 12 → 14" as part of the loot screen. */
+  crewXP?: { id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }[]
 }
 
 type Phase = 'pending' | 'spinning' | 'landed' | 'revealed'
@@ -50,6 +56,7 @@ export default function RaidLootStage(props: Props) {
     loot, slotFinal, lootAmount, fortuneMult,
     shipImageUrl, shipFilter, shipName,
     onClaim, claiming = false,
+    crewXP = [],
   } = props
 
   const [phase, setPhase]               = useState<Phase>('pending')
@@ -68,11 +75,26 @@ export default function RaidLootStage(props: Props) {
       `You sank ${boss.name}!`,
       `Plunder: +${fmtGold(killGold)} ⟡`,
       `Nav XP: +${killXP}`,
-      `${boss.name} dropped a plunder crate.`,
     ]
+    // Crew XP lines, one per crew that earned any. Inserted between the Nav
+    // XP narration and the crate reveal so the player reads it like the
+    // captain's log of who grew this raid. Level-ups get an arrow tail.
+    for (const c of crewXP) {
+      const delta = c.newXP - c.oldXP
+      if (delta <= 0) continue
+      lines.push(
+        c.newLevel > c.oldLevel
+          ? `${c.name} +${delta.toLocaleString()} XP · Lv ${c.oldLevel} → ${c.newLevel}`
+          : `${c.name} +${delta.toLocaleString()} XP`
+      )
+    }
+    lines.push(`${boss.name} dropped a plunder crate.`)
     lines.forEach((line, i) => {
       setTimeout(() => setLogLines(prev => [...prev, line]), i * 320)
     })
+    // crewXP intentionally not in deps — the captain's-log narration is
+    // an on-mount one-shot, and mountedRef gates re-runs anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boss.name, killGold, killXP])
 
   // ─── Slot machine tick ─────────────────────────────────────────────────────

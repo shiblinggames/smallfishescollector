@@ -197,6 +197,7 @@ export default function DailyVoyagePanel({
   const [error, setError] = useState<string | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<VoyageRoute | null>(null)
   const [claimedBait, setClaimedBait] = useState<{ type: string; qty: number }[]>([])
+  const [crewXP, setCrewXP] = useState<{ id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }[]>([])
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
   const [claimedPhantomHook, setClaimedPhantomHook] = useState(false)
   const [claimedSkinId, setClaimedSkinId] = useState<string | null>(null)
@@ -292,6 +293,7 @@ export default function DailyVoyagePanel({
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
       if (res.earnedGems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.newGemTotal }))
       setClaimedBait(res.earnedBait)
+      setCrewXP(res.crewXP)
       if (res.newTideTurner) setClaimedTideTurner(true)
       if (res.newPhantomHook) setClaimedPhantomHook(true)
       if (res.unlockedSkinId) setClaimedSkinId(res.unlockedSkinId)
@@ -947,6 +949,36 @@ export default function DailyVoyagePanel({
               <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a8868' }}>The crew returned empty-handed.</p>
             )}
           </div>
+
+          {/* Crew XP gained — survivor payouts. Surfaces level-up moments
+              inline so the player sees "Doby +180 XP · Lv 12 → 14" right
+              next to the doubloon hero. Same gold tone as the level
+              chips on roster cards so it reads as one visual system. */}
+          {crewXP.length > 0 && (
+            <div style={{
+              background: 'rgba(240,192,64,0.06)',
+              border: '1px solid rgba(240,192,64,0.22)',
+              borderRadius: 8, padding: '0.55rem 0.8rem',
+            }}>
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#f0c040', marginBottom: '0.3rem' }}>
+                Crew earned XP
+              </p>
+              {crewXP.map(c => {
+                const leveled = c.newLevel > c.oldLevel
+                return (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginTop: '0.2rem' }}>
+                    <p className="font-pirata" style={{ fontSize: '0.85rem', color: '#ecdcbd', lineHeight: 1.2 }}>
+                      {c.name}
+                    </p>
+                    <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: leveled ? '#f0c040' : '#a78a5a', lineHeight: 1.2, textShadow: leveled ? '0 0 8px rgba(240,192,64,0.5)' : 'none' }}>
+                      +{(c.newXP - c.oldXP).toLocaleString()} XP
+                      {leveled && <span style={{ marginLeft: 6 }}>· Lv {c.oldLevel} → {c.newLevel}</span>}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {claimedBait.length > 0 && (
             <div style={{

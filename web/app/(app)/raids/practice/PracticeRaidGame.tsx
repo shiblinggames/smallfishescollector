@@ -803,7 +803,7 @@ export default function PracticeRaidGame({
       setPhase('win')
     }
 
-    let res: { newExpeditionXP: number; newDoubloonTotal: number } | null = null
+    let res: Awaited<ReturnType<typeof awardPracticeKill>> | null = null
     try { res = await awardPracticeKill(xp, gold) } catch { /* save failed */ }
     if (!res) { setTimeout(showPostBattle, 400); return }
 
