@@ -700,11 +700,23 @@ export default function ShipHero({
                 with the per-track party views. */}
           </div>
 
-          {/* Actions — Manage Ship only. Recruit moved into Crew
-              Management (the Recruit Board tab); having a duplicate
-              entry on the hub crowded the ship hero without adding
-              anything the player couldn't reach via the Crew tab. */}
+          {/* Actions — Manage Crew (deep-link to /dev/crew) on the left,
+              Manage Ship on the right. Matched pill styling so the pair
+              reads as one row of management entries. */}
           <div style={{ position: 'relative', display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: '0.85rem' }}>
+            <Link href="/dev/crew" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
+              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>
+              {/* Small crew icon — two stacked portrait silhouettes */}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Manage Crew
+            </Link>
             <button onClick={() => setLoadoutOpen(true)} className="font-karla font-700 uppercase tracking-[0.06em]" style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
               color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
