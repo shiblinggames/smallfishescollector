@@ -13,6 +13,7 @@ import { voyageXP, getLevelFromXP } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
+import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -195,7 +196,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; earnedBait: { type: string; qty: number }[]; xpEarned: number; newExpeditionXP: number; oldExpeditionLevel: number; newExpeditionLevel: number; newTideTurner: boolean; newPhantomHook: boolean; unlockedSkinId?: string } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; earnedBait: { type: string; qty: number }[]; xpEarned: number; newExpeditionXP: number; oldExpeditionLevel: number; newExpeditionLevel: number; newTideTurner: boolean; newPhantomHook: boolean; unlockedSkinId?: string; crewXP: CrewXPGrant[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -284,7 +285,12 @@ export async function revealVoyageResults(voyageId: number): Promise<
     .eq('status', 'revealed')
   if ((completedVoyages ?? 0) + 1 >= 100) await unlockBadge('fleet_admiral')
 
-  await Promise.all([
+  // Crew XP: surviving crew earn the player's full voyage XP payout. Lost
+  // crew earn nothing (the soft-delete that follows will skip them anyway
+  // because grant_crew_xp_to_ids gates on died_at IS NULL — belt + braces).
+  const survivorIds = (voyage.crew_variant_ids as number[]).filter(id => !voyage.crew_lost.includes(id))
+
+  const [, , , crewXP] = await Promise.all([
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
     // Soft-delete: lost crew get died_at + died_on_voyage_id stamped
@@ -293,12 +299,13 @@ export async function revealVoyageResults(voyageId: number): Promise<
     // Every live-roster read (recruit, voyage assign, raid loadout,
     // public profile) filters `WHERE died_at IS NULL` to keep fallen
     // crew out of active UI.
-    ...(voyage.crew_lost.length > 0
-      ? [admin.from('user_crew')
+    voyage.crew_lost.length > 0
+      ? admin.from('user_crew')
           .update({ died_at: new Date().toISOString(), died_on_voyage_id: voyageId, assigned_slot: null })
           .eq('user_id', user.id)
-          .in('id', voyage.crew_lost)]
-      : []),
+          .in('id', voyage.crew_lost)
+      : Promise.resolve(null),
+    grantXPToCrewIds(admin, user.id, survivorIds, xpEarned),
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]
       : []),
@@ -327,7 +334,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     })
   })
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, earnedBait, xpEarned, newExpeditionXP, oldExpeditionLevel, newExpeditionLevel, newTideTurner, newPhantomHook, unlockedSkinId }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, earnedBait, xpEarned, newExpeditionXP, oldExpeditionLevel, newExpeditionLevel, newTideTurner, newPhantomHook, unlockedSkinId, crewXP }
 }
 
 export async function fetchVoyageCaptainsLog(voyageId: number): Promise<{ log: string | null } | { error: string }> {

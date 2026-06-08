@@ -3,14 +3,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
+import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 
 export async function awardRaidKill(
   xp: number,
   doubloons: number,
-): Promise<{ newExpeditionXP: number; newDoubloonTotal: number }> {
+): Promise<{ newExpeditionXP: number; newDoubloonTotal: number; crewXP: CrewXPGrant[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0 }
+  if (!user) return { newExpeditionXP: 0, newDoubloonTotal: 0, crewXP: [] }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -30,10 +31,17 @@ export async function awardRaidKill(
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
   const newDoubloonTotal = (profile?.doubloons ?? 0) + scaledDoubloons
 
-  await admin.from('profiles').update({
-    expedition_xp: newExpeditionXP,
-    doubloons: newDoubloonTotal,
-  }).eq('id', user.id)
+  // Crew earn the SAME per-kill XP the player just earned (no nav multiplier —
+  // gunner-buffed captains don't grow crew faster). Every alive, assigned
+  // crew gets bumped via a single atomic RPC; level-up deltas come back so
+  // the end-of-encounter overlay can flash crew level-ups.
+  const [, crewXP] = await Promise.all([
+    admin.from('profiles').update({
+      expedition_xp: newExpeditionXP,
+      doubloons: newDoubloonTotal,
+    }).eq('id', user.id),
+    grantXPToAssignedCrew(admin, user.id, xp),
+  ])
 
-  return { newExpeditionXP, newDoubloonTotal }
+  return { newExpeditionXP, newDoubloonTotal, crewXP }
 }
