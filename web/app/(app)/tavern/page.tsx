@@ -110,21 +110,19 @@ export default async function TavernPage() {
             <FeaturesSection />
           </div>
 
-          {/* Arcade — anytime-play, hiscore-driven games. Moved up
-              above Daily on 2026-06-07 so the high-engagement
-              minigames are nearer the top of the surface. */}
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
-            <Suspense fallback={<ArcadeCardsSkeleton />}>
-              <ArcadeSection />
-            </Suspense>
-          </div>
-
           {/* Daily — true daily rituals only (login claims). */}
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
             <Suspense fallback={<DailyCardsSkeleton />}>
               <DailySection />
+            </Suspense>
+          </div>
+
+          {/* Arcade — anytime-play, hiscore-driven games. */}
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
+            <Suspense fallback={<ArcadeCardsSkeleton />}>
+              <ArcadeSection />
             </Suspense>
           </div>
 
