@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
@@ -233,71 +234,29 @@ function CrewPanel({
       <span style={corner({ bottom: 4, left: 4, borderBottom: b, borderLeft: b })} />
       <span style={corner({ bottom: 4, right: 4, borderBottom: b, borderRight: b })} />
 
-      {/* Arched portrait niche */}
+      {/* Portrait wrapper — position:relative + overflow:visible so corner
+          badges can hang at the top corners without being clipped by the
+          arched niche below (which needs overflow:hidden for image
+          clipping). Niche keeps its own clip mask; badges sit on top. */}
       <div style={{
-        position: 'relative', width: 102, flexShrink: 0, alignSelf: 'flex-start', height: 112,
-        borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
-        border: `2px solid ${color}`,
-        boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
-        background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
+        position: 'relative', width: 102, height: 112,
+        flexShrink: 0, alignSelf: 'flex-start',
       }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={artSrc(filename)} alt={name} style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
-        }} />
-        {/* inner frame line */}
-        <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
-
-        {/* Assignment badge — small corner pip at top-right of the portrait,
-            big enough to read instantly but with NO text to cut off. Voyage
-            shows ⚓ in teal, raid shows ⚔ in crimson, both with a tinted
-            ring + drop shadow so they pop against the portrait. Benched
-            crew get no badge so absence reads as "available". The narrower
-            badge also leaves room for the Lock chip (when at sea) to sit
-            beside it without colliding. */}
-        {assignment && assignment !== 'bench' && (() => {
-          const accent = assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
-          const icon   = assignment === 'voyage' ? '⚓' : '⚔'
-          const label  = assignment === 'voyage' ? 'On Voyage' : 'On Raid'
-          return (
-            <div
-              title={label}
-              aria-label={label}
-              style={{
-                position: 'absolute', top: 4, right: 4,
-                width: 24, height: 24, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: `radial-gradient(circle at 35% 30%, ${accent}ff 0%, ${accent}d0 70%)`,
-                border: `1.5px solid ${accent}`,
-                boxShadow: `0 2px 6px rgba(0,0,0,0.55), 0 0 10px ${accent}66, inset 0 1px 0 rgba(255,255,255,0.3)`,
-                color: '#0a0a0a',
-                fontSize: '0.78rem', lineHeight: 1,
-                pointerEvents: 'none',
-              }}
-            >
-              <span aria-hidden>{icon}</span>
-            </div>
-          )
-        })()}
-        {locked && (
-          <div
-            title="This crew is currently at sea on a voyage."
-            style={{
-              position: 'absolute', top: 4, left: 4,
-              width: 24, height: 24, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(7,5,3,0.92)',
-              border: '1.5px solid rgba(255,180,90,0.7)',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.55), 0 0 8px rgba(255,180,90,0.35)',
-              color: '#ffd8a3',
-              fontSize: '0.78rem', lineHeight: 1,
-              pointerEvents: 'none',
-            }}
-          >
-            <span aria-hidden>🔒</span>
-          </div>
-        )}
+        {/* Arched portrait niche */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
+          border: `2px solid ${color}`,
+          boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
+          background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={artSrc(filename)} alt={name} style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
+          }} />
+          {/* inner frame line */}
+          <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
         {/* Class nameplate — replaces the old trait teaser. Class is now the
             bigger identity decision (species-locked, drives the raid Special
             ability), so the portrait reads as the role at a glance: "Mender",
@@ -325,7 +284,57 @@ function CrewPanel({
             </div>
           )
         })()}
-      </div>
+        </div>{/* end arched niche */}
+
+        {/* Status badges sit on the WRAPPER (overflow:visible), so they
+            can hang at the top corners without being clipped by the
+            niche's arch + overflow:hidden. Tucked just outside the niche
+            border so they read as decals attached to the portrait. */}
+        {assignment && assignment !== 'bench' && (() => {
+          const accent = assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
+          const icon   = assignment === 'voyage' ? '⚓' : '⚔'
+          const label  = assignment === 'voyage' ? 'On Voyage' : 'On Raid'
+          return (
+            <div
+              title={label}
+              aria-label={label}
+              style={{
+                position: 'absolute', top: -6, right: -6,
+                width: 26, height: 26, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `radial-gradient(circle at 35% 30%, ${accent}ff 0%, ${accent}d0 70%)`,
+                border: `1.5px solid ${accent}`,
+                boxShadow: `0 2px 7px rgba(0,0,0,0.6), 0 0 12px ${accent}66, inset 0 1px 0 rgba(255,255,255,0.3)`,
+                color: '#0a0a0a',
+                fontSize: '0.85rem', lineHeight: 1,
+                pointerEvents: 'none',
+                zIndex: 2,
+              }}
+            >
+              <span aria-hidden>{icon}</span>
+            </div>
+          )
+        })()}
+        {locked && (
+          <div
+            title="This crew is currently at sea on a voyage."
+            style={{
+              position: 'absolute', top: -6, left: -6,
+              width: 26, height: 26, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(7,5,3,0.94)',
+              border: '1.5px solid rgba(255,180,90,0.7)',
+              boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(255,180,90,0.4)',
+              color: '#ffd8a3',
+              fontSize: '0.85rem', lineHeight: 1,
+              pointerEvents: 'none',
+              zIndex: 2,
+            }}
+          >
+            <span aria-hidden>🔒</span>
+          </div>
+        )}
+      </div>{/* end portrait wrapper */}
 
       {/* Manifest detail */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
@@ -553,11 +562,24 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // stays as the memorial tab. The graveyard fetch is lazy (first time the
   // tab is opened) so the page-load cost stays the same for players who
   // never click it.
-  const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard'>('roster')
+  // Deep-link support — Expedition hub cards link to /dev/crew?tab=roster
+  // &filter=raid|voyage so tapping a crew portrait there lands the player
+  // on the right view. Read once on mount; any value not in the allow-set
+  // falls back to the default.
+  const searchParams = useSearchParams()
+  const initialTab    = (() => {
+    const t = searchParams?.get('tab')
+    return t === 'recruits' || t === 'graveyard' || t === 'roster' ? t : 'roster'
+  })() as 'roster' | 'recruits' | 'graveyard'
+  const initialFilter = (() => {
+    const f = searchParams?.get('filter')
+    return f === 'raid' || f === 'voyage' || f === 'all' ? f : 'all'
+  })() as 'all' | 'raid' | 'voyage'
+  const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard'>(initialTab)
   // Roster sub-filter — Full shows everything, Raid shows just the raid
   // party, Voyage shows just the voyage party. Raid first because raids
   // take precedence over voyages in the player's loadout decisions.
-  const [rosterFilter, setRosterFilter] = useState<'all' | 'raid' | 'voyage'>('all')
+  const [rosterFilter, setRosterFilter] = useState<'all' | 'raid' | 'voyage'>(initialFilter)
   const [graveyard, setGraveyard] = useState<FallenCrew[] | null>(null)
   const [graveyardLoading, setGraveyardLoading] = useState(false)
   const reveal = useReveal()

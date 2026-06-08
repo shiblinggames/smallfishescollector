@@ -692,43 +692,19 @@ export default function ShipHero({
               style={{ width: '100%', display: 'block', objectFit: 'contain', filter: skinFilter, transition: 'filter 0.3s ease' }}
             />
 
-            {/* Crew on the deck: captain at the helm (own row) with the rest of
-                the crew below. `bottom` positions the block over the deck — tune
-                this one value if it sits high/low on a given ship hull. */}
-            <div style={{ position: 'absolute', left: 0, right: 0, bottom: '13%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
-              {/* Captain — own row, crowned + labelled */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <div style={{ position: 'relative' }}>
-                  <div aria-hidden style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}>
-                      <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
-                    </svg>
-                  </div>
-                  {deckSlot(0, 54)}
-                </div>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.16em', color: '#f0c040', background: 'rgba(6,9,16,0.82)', padding: '0.1rem 0.45rem', borderRadius: 999, boxShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>Captain</span>
-              </div>
-
-              {/* Crew — row(s) below the captain */}
-              {slots.length > 1 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, maxWidth: '94%' }}>
-                  {slots.slice(1).map((_, idx) => (
-                    <div key={idx + 1}>{deckSlot(idx + 1, 44)}</div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Crew-on-deck overlay was here. Crew assignment lives in
+                Crew Management now (track-split: voyage party vs raid
+                party), and the hub cards below surface each track's crew
+                in-context. The ship hero stays focused on ship identity
+                (name + level + image + Manage Ship) without competing
+                with the per-track party views. */}
           </div>
 
-          {/* Actions — recruit crew + manage ship (matched pills, no wrap) */}
+          {/* Actions — Manage Ship only. Recruit moved into Crew
+              Management (the Recruit Board tab); having a duplicate
+              entry on the hub crowded the ship hero without adding
+              anything the player couldn't reach via the Crew tab. */}
           <div style={{ position: 'relative', display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: '0.85rem' }}>
-            <Link href="/packs" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
-              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-            }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-              Recruit
-            </Link>
             <button onClick={() => setLoadoutOpen(true)} className="font-karla font-700 uppercase tracking-[0.06em]" style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
               color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
@@ -737,9 +713,6 @@ export default function ShipHero({
               Manage Ship
             </button>
           </div>
-          {!hasCrew && (
-            <p className="font-karla" style={{ position: 'relative', textAlign: 'center', fontSize: '0.68rem', color: '#5a5248', marginTop: '0.5rem' }}>Tap a slot on deck to add your crew.</p>
-          )}
         </div>
 
         {/* Score badges moved into the Loadout drawer + the hub

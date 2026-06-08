@@ -83,6 +83,81 @@ const RARITY_RING: Record<number, string> = {
   5: 'rgba(251,146,60,0.65)',
 }
 
+// Inline portrait strip used on each hub card to surface the track's
+// assigned crew (raid for Campaign, voyage for Voyages). Tapping any
+// portrait — or the empty-state placeholder — navigates to Crew
+// Management with the corresponding sub-filter preselected so the
+// player lands directly on the party they meant to manage.
+function HubCrewStrip({
+  crew, accent, track, router, label,
+}: {
+  crew: CrewMember[]
+  accent: string
+  track: 'voyage' | 'raid'
+  router: ReturnType<typeof useRouter>
+  label: string
+}) {
+  const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const href = `/dev/crew?tab=roster&filter=${track}`
+  const open = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    router.push(href)
+  }
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e as unknown as React.MouseEvent) } }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '0.5rem 0.6rem',
+        background: `${accent}0a`,
+        border: `1px solid ${accent}33`,
+        borderRadius: 10, marginBottom: 8,
+        cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s',
+      }}
+    >
+      {crew.length === 0 ? (
+        <>
+          <p className="font-karla font-600" style={{ flex: 1, fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>
+            No {label} assigned
+          </p>
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: accent }}>Assign →</span>
+        </>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 4, flex: 1, flexWrap: 'wrap' }}>
+            {crew.map(c => (
+              <div
+                key={c.id}
+                title={c.name}
+                style={{
+                  position: 'relative', width: 30, height: 30, borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: `1.5px solid ${accent}aa`,
+                  boxShadow: `0 1px 4px rgba(0,0,0,0.55), 0 0 6px ${accent}33`,
+                  background: `radial-gradient(circle at 50% 35%, ${accent}26 0%, #050403 75%)`,
+                  flexShrink: 0,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${SUPA}/storage/v1/object/public/card-arts/${c.filename}`}
+                  alt={c.name}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 22%', padding: 1 }}
+                />
+              </div>
+            ))}
+          </div>
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: accent, whiteSpace: 'nowrap' }}>Manage →</span>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
@@ -91,6 +166,14 @@ export default function HubCards({
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
 }: Props) {
   const router = useRouter()
+  // Compute each track's party once. Filtering by voyage_slot / raid_slot
+  // mirrors how the rest of the system treats the split.
+  const raidParty = roster
+    .filter(c => c.raidSlot !== null)
+    .sort((a, b) => (a.raidSlot as number) - (b.raidSlot as number))
+  const voyageParty = roster
+    .filter(c => c.voyageSlot !== null)
+    .sort((a, b) => (a.voyageSlot as number) - (b.voyageSlot as number))
   const [modal, setModal] = useState<null | 'campaign' | 'voyages'>(null)
   const [innerModal, setInnerModal] = useState<null | 'items'>(null)
   const [, startTransition] = useTransition()
@@ -179,6 +262,7 @@ export default function HubCards({
           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
             Story chapters, boss raids, and the hunt for the Finndicate.
           </p>
+          <HubCrewStrip crew={raidParty} accent="#e07c7c" track="raid" router={router} label="raid crew" />
           <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${campaignAccent}1c` }}>
             <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#e8d8a8', lineHeight: 1.3 }}>
               {campaign.nextNodeName ? `Next: ${campaign.nextNodeName}` : 'All cleared'}
@@ -230,6 +314,7 @@ export default function HubCards({
           <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
             Send your crew off to earn doubloons, gems, and rare drops.
           </p>
+          <HubCrewStrip crew={voyageParty} accent="#5fa8c9" track="voyage" router={router} label="voyage crew" />
           <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${vAcc.fg}1c` }}>
             <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: vAcc.fg, lineHeight: 1.3 }}>
               {voyages.statusLabel}
