@@ -203,7 +203,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, locked = false, dimmed, hint, frameAccent = '#b08d4f',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, locked = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -938,7 +938,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
             {state.board.map((c: BoardCandidate) => {
               const panel = (
-                <CrewPanel name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
+                <CrewPanel name={c.name} filename={c.filename} rarity={c.rarity}
                   base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} slug={c.slug} dimmed={c.recruited}
                   hint={c.effects.length > 0 && !c.recruited && !viewed.has(`board:${c.id}`)}
                   onClick={() => openDetail('board', c)}>
@@ -1096,7 +1096,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 return (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
                     {visibleRoster.map((m: CrewMember) => (
-                      <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
+                      <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity}
                         bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                         base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
                         assignment={crewAssignment(m)}
