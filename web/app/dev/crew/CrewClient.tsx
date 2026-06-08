@@ -4,9 +4,10 @@ import { useState, useEffect, useRef, useTransition, type ReactNode } from 'reac
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
-  assignToVoyage, assignToRaid, benchCrew, crewAssignment,
+  assignToVoyage, assignToRaid, benchCrew,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
+import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META, CREW_EFFECTS } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'

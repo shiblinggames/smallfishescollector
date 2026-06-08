@@ -55,13 +55,10 @@ export type CrewMember = {
   xp: number
 }
 
-/** Derived helper: where is this crew assigned right now? */
-export type CrewAssignment = 'voyage' | 'raid' | 'bench'
-export function crewAssignment(c: { voyageSlot: number | null; raidSlot: number | null }): CrewAssignment {
-  if (c.voyageSlot !== null) return 'voyage'
-  if (c.raidSlot !== null) return 'raid'
-  return 'bench'
-}
+// NOTE: helper crewAssignment + type CrewAssignment USED to live here, but
+// 'use server' files in Next.js strip every non-async export. They moved
+// to web/lib/crewAssignment.ts so both server (this file's callers) and
+// client (CrewClient) can import them.
 
 export type CrewState = {
   board: BoardCandidate[]
