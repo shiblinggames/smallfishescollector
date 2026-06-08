@@ -821,21 +821,24 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         )}
 
         {/* Top-level tabs — Roster is the default + primary focus. Recruit
-            Board sits behind its own tab so its reroll-heavy UI doesn't
-            crowd the page for players who are mostly looking at their
-            existing crew. */}
+            Board (shortened to "Recruits" so 3 tabs fit on one row at
+            narrow phone widths) sits behind its own tab so its reroll-
+            heavy UI doesn't crowd the page. Counts drop inline next to
+            the label as a dim "· N" suffix instead of a separate pill —
+            same information density, half the horizontal footprint. */}
         {(() => {
           const tabs = [
-            { id: 'roster' as const,    label: 'Roster',        accent: SECTION_ROSTER,  count: state.roster.length },
-            { id: 'recruits' as const,  label: 'Recruit Board', accent: SECTION_RECRUIT, count: state.board.filter(c => !c.recruited).length },
-            { id: 'graveyard' as const, label: 'Graveyard',     accent: '#9c8055',       count: graveyard?.length ?? null },
+            { id: 'roster' as const,    label: 'Roster',   accent: SECTION_ROSTER,  count: state.roster.length },
+            { id: 'recruits' as const,  label: 'Recruits', accent: SECTION_RECRUIT, count: state.board.filter(c => !c.recruited).length },
+            { id: 'graveyard' as const, label: 'Graves',   accent: '#9c8055',       count: graveyard?.length ?? null },
           ]
           return (
             <div role="tablist" className="flex items-center" style={{
-              gap: 4, marginBottom: '1.2rem',
-              background: 'rgba(0,0,0,0.25)', padding: 4, borderRadius: 10,
+              gap: 3, marginBottom: '1.2rem',
+              background: 'rgba(0,0,0,0.25)', padding: 3, borderRadius: 10,
               border: '1px solid rgba(255,255,255,0.08)',
-              flexWrap: 'wrap',
+              flexWrap: 'nowrap',
+              overflowX: 'auto',
             }}>
               {tabs.map(t => {
                 const active = activeTab === t.id
@@ -847,24 +850,24 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     onClick={() => setActiveTab(t.id)}
                     className="font-cinzel font-700 uppercase"
                     style={{
-                      flex: '1 1 auto',
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      padding: '0.55rem 0.9rem', borderRadius: 7,
-                      fontSize: '0.78rem', letterSpacing: '0.09em',
+                      flex: '1 1 0',
+                      minWidth: 0,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      padding: '0.5rem 0.45rem', borderRadius: 7,
+                      fontSize: '0.7rem', letterSpacing: '0.06em',
                       background: active ? `${t.accent}26` : 'transparent',
                       border: `1px solid ${active ? `${t.accent}88` : 'transparent'}`,
                       color: active ? t.accent : 'rgba(255,255,255,0.55)',
                       cursor: 'pointer', transition: 'all 0.18s',
+                      whiteSpace: 'nowrap',
                     }}>
                     <span>{t.label}</span>
                     {t.count !== null && t.count > 0 && (
                       <span className="font-karla font-700" style={{
                         fontSize: '0.62rem',
-                        background: active ? `${t.accent}33` : 'rgba(255,255,255,0.08)',
-                        color: active ? t.accent : 'rgba(255,255,255,0.45)',
-                        padding: '0.08rem 0.42rem', borderRadius: 999, lineHeight: 1.3,
-                        border: `1px solid ${active ? `${t.accent}55` : 'rgba(255,255,255,0.08)'}`,
-                      }}>{t.count}</span>
+                        color: active ? `${t.accent}cc` : 'rgba(255,255,255,0.4)',
+                        opacity: 0.9,
+                      }}>· {t.count}</span>
                     )}
                   </button>
                 )
@@ -1015,11 +1018,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 ]
                 return (
                   <div role="tablist" className="flex items-center" style={{
-                    gap: 4, padding: 3, borderRadius: 8,
+                    gap: 3, padding: 3, borderRadius: 8,
                     background: 'rgba(0,0,0,0.22)',
                     border: '1px solid rgba(255,255,255,0.06)',
                     marginBottom: '0.7rem',
-                    flexWrap: 'wrap',
+                    flexWrap: 'nowrap',
+                    overflowX: 'auto',
                   }}>
                     {filters.map(f => {
                       const active = rosterFilter === f.id
@@ -1031,22 +1035,23 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           onClick={() => setRosterFilter(f.id)}
                           className="font-cinzel font-700 uppercase"
                           style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 5,
-                            padding: '0.36rem 0.75rem', borderRadius: 6,
-                            fontSize: '0.66rem', letterSpacing: '0.09em',
+                            flex: '1 1 0',
+                            minWidth: 0,
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                            padding: '0.34rem 0.32rem', borderRadius: 6,
+                            fontSize: '0.6rem', letterSpacing: '0.06em',
                             background: active ? `${f.accent}26` : 'transparent',
                             border: `1px solid ${active ? `${f.accent}88` : 'transparent'}`,
                             color: active ? f.accent : 'rgba(255,255,255,0.5)',
                             cursor: 'pointer', transition: 'all 0.18s',
+                            whiteSpace: 'nowrap',
                           }}>
                           <span>{f.label}</span>
                           <span style={{
                             fontSize: '0.56rem',
-                            color: active ? f.accent : 'rgba(255,255,255,0.4)',
-                            background: active ? `${f.accent}26` : 'rgba(255,255,255,0.06)',
-                            padding: '0.05rem 0.34rem', borderRadius: 999, lineHeight: 1.3,
-                            border: `1px solid ${active ? `${f.accent}55` : 'rgba(255,255,255,0.08)'}`,
-                          }}>{counts[f.id]}</span>
+                            color: active ? `${f.accent}cc` : 'rgba(255,255,255,0.4)',
+                            opacity: 0.9,
+                          }}>· {counts[f.id]}</span>
                         </button>
                       )
                     })}
