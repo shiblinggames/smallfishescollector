@@ -1307,9 +1307,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           Active · once per raid
                         </p>
                       </div>
-                      <p className="font-karla italic" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem', lineHeight: 1.35 }}>
-                        {def.blurb}
-                      </p>
+                      {/* Class blurb intentionally removed — the current-tier
+                          unlock description below is already concrete about
+                          what the ability does ("Heal 15% max HP", "Next
+                          shot crit zone +50% wider"), so a general intro
+                          line on top was just restating the role in
+                          fuzzier language and eating space. */}
                       {cur ? (
                         <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#ecdcbd', lineHeight: 1.35 }}>
                           <span style={{ color: accent, marginRight: 6 }}>Lv {cur.unlockLevel}:</span>
