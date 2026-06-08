@@ -157,7 +157,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, dimmed, hint, frameAccent = '#b08d4f',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, locked = false, dimmed, hint, frameAccent = '#b08d4f',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -170,9 +170,13 @@ function CrewPanel({
    *  the BoardReveal placeholder cards still compile; passing '' falls back
    *  to the Neutral chip. */
   slug?: string
-  /** Where this crew is currently assigned. Drives the small status chip
-   *  under the rarity line. Omit on board recruits (they're pre-assignment). */
+  /** Where this crew is currently assigned. Drives the prominent banner
+   *  overlay across the top of the portrait. Omit on board recruits
+   *  (they're pre-assignment). */
   assignment?: 'voyage' | 'raid' | 'bench'
+  /** True when this crew is at sea on an in-progress voyage and can't be
+   *  reassigned. Greys the card out and disables the toggle buttons. */
+  locked?: boolean
   dimmed?: boolean
   hint?: boolean
   frameAccent?: string
@@ -202,8 +206,8 @@ function CrewPanel({
   return (
     <motion.div
       onClick={onClick}
-      whileTap={onClick ? { scale: 0.965 } : undefined}
-      whileHover={onClick ? { y: -2 } : undefined}
+      whileTap={onClick && !locked ? { scale: 0.965 } : undefined}
+      whileHover={onClick && !locked ? { y: -2 } : undefined}
       transition={{ type: 'spring', stiffness: 460, damping: 26 }}
       style={{
         position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
@@ -211,8 +215,9 @@ function CrewPanel({
         background: rarityBg,
         border: `1px solid ${rarityBorder}`,
         boxShadow: cardShadow,
-        opacity: dimmed ? 0.5 : 1,
+        opacity: dimmed ? 0.5 : locked ? 0.55 : 1,
         cursor: onClick ? 'pointer' : 'default',
+        filter: locked ? 'grayscale(0.65) brightness(0.85)' : undefined,
       }}>
       {/* "Has traits — tap to view" glow; cleared once the card's been opened */}
       {hint && (
@@ -242,6 +247,47 @@ function CrewPanel({
         }} />
         {/* inner frame line */}
         <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
+
+        {/* Assignment banner — overlays the TOP of the arched portrait, so
+            roster crew shout their status before any other detail. Voyage
+            and raid carry the track color; benched crew get no banner so
+            the absence reads as "available". Locked-at-sea crew get an
+            additional lock chip below the banner. */}
+        {assignment && assignment !== 'bench' && (() => {
+          const accent = assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
+          const icon   = assignment === 'voyage' ? '⚓' : '⚔'
+          const label  = assignment === 'voyage' ? 'On Voyage' : 'On Raid'
+          return (
+            <div className="font-karla font-700" style={{
+              position: 'absolute', top: 0, left: 0, right: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              padding: '0.18rem 0.4rem',
+              fontSize: '0.52rem', letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: '#0a0a0a',
+              background: `linear-gradient(180deg, ${accent}f5 0%, ${accent}cc 100%)`,
+              borderBottom: `1px solid ${accent}`,
+              boxShadow: `0 1px 6px ${accent}55`,
+              pointerEvents: 'none',
+            }}>
+              <span aria-hidden style={{ fontSize: '0.65rem', lineHeight: 1 }}>{icon}</span>
+              <span>{label}</span>
+            </div>
+          )
+        })()}
+        {locked && (
+          <div className="font-karla font-700" style={{
+            position: 'absolute', top: assignment && assignment !== 'bench' ? 21 : 5, left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: 3,
+            padding: '0.12rem 0.4rem',
+            fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: '#ffd8a3', background: 'rgba(7,5,3,0.92)',
+            border: '1px solid rgba(255,180,90,0.5)',
+            borderRadius: 3, pointerEvents: 'none',
+          }}>
+            <span aria-hidden>🔒</span><span>At Sea</span>
+          </div>
+        )}
         {/* Class nameplate — replaces the old trait teaser. Class is now the
             bigger identity decision (species-locked, drives the raid Special
             ability), so the portrait reads as the role at a glance: "Mender",
@@ -302,33 +348,6 @@ function CrewPanel({
               </span>
             )}
           </p>
-          {/* Assignment chip — small status pill so the player can scan their
-              roster and see who's where without reading the toggle buttons.
-              Voyage/Raid get colored chips; benched crew get a faint outline
-              so the absence of a chip doesn't look like missing data. */}
-          {assignment && (() => {
-            const accent =
-              assignment === 'voyage' ? ASSIGN_VOYAGE :
-              assignment === 'raid'   ? ASSIGN_RAID   :
-                                         ASSIGN_BENCH
-            const icon  = assignment === 'voyage' ? '⚓' : assignment === 'raid' ? '⚔' : '—'
-            const label = assignment === 'voyage' ? 'On Voyage' : assignment === 'raid' ? 'On Raid' : 'Benched'
-            return (
-              <span className="font-karla font-700" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                marginTop: 4,
-                fontSize: '0.56rem', letterSpacing: '0.09em', textTransform: 'uppercase',
-                color: accent,
-                background: `${accent}1a`,
-                border: `1px solid ${accent}66`,
-                borderRadius: 3,
-                padding: '0.1rem 0.42rem',
-                lineHeight: 1.1,
-              }}>
-                <span aria-hidden style={{ fontSize: '0.7rem' }}>{icon}</span>{label}
-              </span>
-            )
-          })()}
         </div>
 
         {/* Engraved stats — three stat blocks left-aligned. */}
@@ -518,10 +537,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
   const [viewed, setViewed] = useState<Set<string>>(new Set())
-  // Crew Hall sub-tab — live roster vs the graveyard of fallen crew. The
-  // graveyard fetch is lazy (first time the tab is opened) so the page-load
-  // cost stays the same for players who never click it.
-  const [activeTab, setActiveTab] = useState<'roster' | 'graveyard'>('roster')
+  // Crew Management top-level tabs — Roster is the main focus and default;
+  // Recruit Board moves behind its own tab so it doesn't dominate the page
+  // for players who are mostly managing their existing crew; Graveyard
+  // stays as the memorial tab. The graveyard fetch is lazy (first time the
+  // tab is opened) so the page-load cost stays the same for players who
+  // never click it.
+  const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard'>('roster')
   const [graveyard, setGraveyard] = useState<FallenCrew[] | null>(null)
   const [graveyardLoading, setGraveyardLoading] = useState(false)
   const reveal = useReveal()
@@ -654,32 +676,34 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       // Dismiss moved into the detail modal so the card's primary affordance
       // is "where does this crew sail?" not "are they fired?".
       // Picking voyage/raid finds the lowest empty slot on that track and
-      // assigns; tapping the currently-active option no-ops.
+      // assigns; tapping the currently-active option no-ops. Crew currently
+      // at sea (in a pending voyage) are locked — toggle disabled.
       const assignment = crewAssignment(m)
+      const isLocked = state.lockedCrewIds.includes(m.id)
       const onPickVoyage = (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (assignment === 'voyage') return
+        if (assignment === 'voyage' || isLocked) return
         const slot = nextOpenSlot('voyage')
-        if (slot === null) return  // ship full — but allowed to push out current holder server-side
+        if (slot === null) return
         run(() => assignToVoyage(m.id, slot), m.id, onDone)
       }
       const onPickRaid = (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (assignment === 'raid') return
+        if (assignment === 'raid' || isLocked) return
         const slot = nextOpenSlot('raid')
         if (slot === null) return
         run(() => assignToRaid(m.id, slot), m.id, onDone)
       }
       const onPickBench = (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (assignment === 'bench') return
+        if (assignment === 'bench' || isLocked) return
         run(() => benchCrew(m.id), m.id, onDone)
       }
       return (
         <div className="flex" style={{ gap: 5 }}>
-          <AssignToggleBtn label="Voyage" emoji="⚓" active={assignment === 'voyage'} accent={ASSIGN_VOYAGE} disabled={pending} onClick={onPickVoyage} />
-          <AssignToggleBtn label="Raid"   emoji="⚔" active={assignment === 'raid'}   accent={ASSIGN_RAID}   disabled={pending} onClick={onPickRaid} />
-          <AssignToggleBtn label="Bench"  emoji="—" active={assignment === 'bench'}  accent={ASSIGN_BENCH}  disabled={pending} onClick={onPickBench} />
+          <AssignToggleBtn label="Voyage" emoji="⚓" active={assignment === 'voyage'} accent={ASSIGN_VOYAGE} disabled={pending || isLocked} onClick={onPickVoyage} />
+          <AssignToggleBtn label="Raid"   emoji="⚔" active={assignment === 'raid'}   accent={ASSIGN_RAID}   disabled={pending || isLocked} onClick={onPickRaid} />
+          <AssignToggleBtn label="Bench"  emoji="—" active={assignment === 'bench'}  accent={ASSIGN_BENCH}  disabled={pending || isLocked} onClick={onPickBench} />
         </div>
       )
     }
@@ -706,19 +730,17 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="flex items-start justify-between flex-wrap gap-3" style={{ marginBottom: '1.25rem' }}>
+        <div className="flex items-start justify-between flex-wrap gap-3" style={{ marginBottom: '1.1rem' }}>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Hall</h1>
-            </div>
+            <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Management</h1>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-              Recruit crew daily, reroll the board with gems, build your roster.
+              Build your roster, assign crew to voyages or raids, remember the fallen.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Stat label="Gems" value={<><TickingNumber value={state.gems} /> ◆</>} accent="#a78bfa" />
             <Stat label="Nav Level" value={String(state.navLevel)} />
-            <Stat label="Roster ↓" value={`${state.roster.length} / ${state.capacity}`} accent={rosterFull ? '#f08a8a' : '#5fd38a'} onClick={scrollToCrew} />
+            <Stat label="Roster" value={`${state.roster.length} / ${state.capacity}`} accent={rosterFull ? '#f08a8a' : '#5fd38a'} />
           </div>
         </div>
 
@@ -728,7 +750,61 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           </div>
         )}
 
+        {/* Top-level tabs — Roster is the default + primary focus. Recruit
+            Board sits behind its own tab so its reroll-heavy UI doesn't
+            crowd the page for players who are mostly looking at their
+            existing crew. */}
+        {(() => {
+          const tabs = [
+            { id: 'roster' as const,    label: 'Roster',        accent: SECTION_ROSTER,  count: state.roster.length },
+            { id: 'recruits' as const,  label: 'Recruit Board', accent: SECTION_RECRUIT, count: state.board.filter(c => !c.recruited).length },
+            { id: 'graveyard' as const, label: 'Graveyard',     accent: '#9c8055',       count: graveyard?.length ?? null },
+          ]
+          return (
+            <div role="tablist" className="flex items-center" style={{
+              gap: 4, marginBottom: '1.2rem',
+              background: 'rgba(0,0,0,0.25)', padding: 4, borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.08)',
+              flexWrap: 'wrap',
+            }}>
+              {tabs.map(t => {
+                const active = activeTab === t.id
+                return (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setActiveTab(t.id)}
+                    className="font-cinzel font-700 uppercase"
+                    style={{
+                      flex: '1 1 auto',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      padding: '0.55rem 0.9rem', borderRadius: 7,
+                      fontSize: '0.78rem', letterSpacing: '0.09em',
+                      background: active ? `${t.accent}26` : 'transparent',
+                      border: `1px solid ${active ? `${t.accent}88` : 'transparent'}`,
+                      color: active ? t.accent : 'rgba(255,255,255,0.55)',
+                      cursor: 'pointer', transition: 'all 0.18s',
+                    }}>
+                    <span>{t.label}</span>
+                    {t.count !== null && t.count > 0 && (
+                      <span className="font-karla font-700" style={{
+                        fontSize: '0.62rem',
+                        background: active ? `${t.accent}33` : 'rgba(255,255,255,0.08)',
+                        color: active ? t.accent : 'rgba(255,255,255,0.45)',
+                        padding: '0.08rem 0.42rem', borderRadius: 999, lineHeight: 1.3,
+                        border: `1px solid ${active ? `${t.accent}55` : 'rgba(255,255,255,0.08)'}`,
+                      }}>{t.count}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
+
         {/* Recruit board — warm gold "new arrivals" region */}
+        {activeTab === 'recruits' && (
         <div style={{ borderRadius: 12, border: `1px solid ${SECTION_RECRUIT}33`, background: `linear-gradient(180deg, ${SECTION_RECRUIT}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
           {/* Title with the free-refresh countdown riding inline beside it */}
           <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5" style={{ marginBottom: '0.9rem' }}>
@@ -812,46 +888,26 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             )}
           </div>
         </div>
+        )}
 
-        {/* Roster / Graveyard — cool steel "your manifest" region with a sub-tab
-            strip so fallen crew get a memorial space without crowding the live
-            roster. Tab color shifts to muted bronze for the graveyard so the
-            two states read visually distinct at a glance. */}
-        {(() => {
+        {/* Roster / Graveyard — cool steel "your manifest" region. The sub-
+            tab strip was promoted to top-level tabs (Roster / Recruit Board
+            / Graveyard); this section now renders only when one of the two
+            non-recruits tabs is active. */}
+        {(activeTab === 'roster' || activeTab === 'graveyard') && (() => {
           const isGraveyard = activeTab === 'graveyard'
           const sectionAccent = isGraveyard ? '#9c8055' : SECTION_ROSTER
           return (
         <div ref={crewSectionRef} style={{ borderRadius: 12, border: `1px solid ${sectionAccent}33`, background: `linear-gradient(180deg, ${sectionAccent}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70, transition: 'border-color 0.3s, background 0.3s' }}>
-          {/* Tab strip */}
+          {/* Section heading + count — sub-tabs are gone, top-level tabs
+              own that role now. Kept the count so players can scan total
+              roster size without doing the math. */}
           <div className="flex items-center justify-between flex-wrap gap-y-2" style={{ marginBottom: '0.9rem' }}>
             <div className="flex items-center gap-2.5">
               <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: sectionAccent, transition: 'background 0.3s' }} />
-              <div role="tablist" className="flex items-center" style={{ gap: 4, background: 'rgba(0,0,0,0.25)', padding: 3, borderRadius: 9, border: '1px solid rgba(255,255,255,0.08)' }}>
-                {([
-                  { id: 'roster' as const, label: 'Roster', accent: SECTION_ROSTER },
-                  { id: 'graveyard' as const, label: 'Graveyard', accent: '#9c8055' },
-                ]).map(t => {
-                  const active = activeTab === t.id
-                  return (
-                    <button
-                      key={t.id}
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setActiveTab(t.id)}
-                      className="font-cinzel font-700 uppercase"
-                      style={{
-                        padding: '0.42rem 0.95rem', borderRadius: 7,
-                        fontSize: '0.75rem', letterSpacing: '0.09em',
-                        background: active ? `${t.accent}22` : 'transparent',
-                        border: `1px solid ${active ? `${t.accent}88` : 'transparent'}`,
-                        color: active ? t.accent : 'rgba(255,255,255,0.55)',
-                        cursor: 'pointer', transition: 'all 0.18s',
-                      }}>
-                      {t.label}
-                    </button>
-                  )
-                })}
-              </div>
+              <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '0.92rem', letterSpacing: '0.1em', color: sectionAccent }}>
+                {isGraveyard ? 'In Memoriam' : 'Roster'}
+              </h2>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               {isGraveyard ? (
@@ -883,6 +939,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                       base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
                       assignment={crewAssignment(m)}
+                      locked={state.lockedCrewIds.includes(m.id)}
                       hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                       onClick={() => openDetail('roster', m)}>
                       {renderAction('roster', m, { round: true })}

@@ -74,6 +74,10 @@ export type CrewState = {
   /** Ship-tier crew-slot count. Used by the Crew Hall inline assignment
    *  toggle to pick the next-open slot on the chosen track. */
   shipCrewSlots: number
+  /** user_crew ids that are currently AT SEA (in a pending voyage). The
+   *  Crew Hall UI greys these cards out and disables the assignment
+   *  toggle — players can't pull a crew off an in-progress voyage. */
+  lockedCrewIds: number[]
 }
 
 export type CrewActionResult = { state: CrewState } | { error: string }
@@ -203,11 +207,22 @@ export async function getCrewState(): Promise<CrewState | null> {
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
 
+  // Pending voyage lock: any crew currently in a 'pending' daily_voyages
+  // crew_variant_ids list can't be reassigned until the voyage reveals.
+  // Surface those ids so the UI can grey out + disable the toggle.
+  const { data: pendingVoyage } = await admin
+    .from('daily_voyages')
+    .select('crew_variant_ids')
+    .eq('user_id', user.id)
+    .eq('status', 'pending')
+    .maybeSingle()
+  const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
+
   return {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
-    shipCrewSlots,
+    shipCrewSlots, lockedCrewIds,
   }
 }
 
