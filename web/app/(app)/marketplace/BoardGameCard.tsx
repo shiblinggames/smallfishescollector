@@ -11,7 +11,7 @@ export default function BoardGameCard() {
   return (
     <ScenicCard
       href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game"
-      title="Seas the Booty"
+      title="Board Game"
       gradient={['#2c1a4a', '#170e2c', '#0a0518']}
       accent="#a78bfa"
       external
