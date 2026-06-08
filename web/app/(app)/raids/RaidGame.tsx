@@ -335,8 +335,15 @@ function TimingBar({ indicatorRef, flashRef, zoneRef, hitHalfW, critHalfW }: {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 interface RaidCrewMember {
+  /** user_crew row id. Drives per-crew ability cooldown across RaidCombat
+   *  remounts (each fight is its own mount; the used set lives in RaidGame). */
+  id: number
+  /** Species slug for class resolution via lib/crewClasses. */
+  slug: string
   name: string
   imageUrl: string
+  /** Cumulative XP — drives the crew's current class-ability tier. */
+  xp: number
   power: number
   dodge: number
   fortune: number
@@ -469,6 +476,16 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // this on boss death, it gets a full "earned across the raid" snapshot
   // ("Doby Lv 12 → 14, +910 XP") rather than just the last-kill delta.
   const crewXPAccumRef = useRef<Map<number, { id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }>>(new Map())
+  // Per-raid crew ability cooldown. Crew abilities can fire once per raid
+  // (or twice if a Rest Stop fires at the halfway point). Set of user_crew
+  // ids that have already used their ability since the last reset.
+  const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
+  // Rest Stop interstitial — gates the advance into the second half of the
+  // raid (fight at index Math.floor(sequence.length / 2)). Clears
+  // usedAbilityIds on confirm.
+  const [restStopPending, setRestStopPending] = useState(false)
+  const restStopFiredRef = useRef(false)
+  const pendingRestAdvanceRef = useRef<(() => void) | null>(null)
   function mergeCrewXPGrants(grants: { id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }[]) {
     const m = crewXPAccumRef.current
     for (const g of grants) {
@@ -1250,6 +1267,26 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           return
         }
       }
+      // Rest Stop: if we just finished the LAST fight of the first half,
+      // gate the advance behind the Rest Stop interstitial. Crew abilities
+      // reset on the player's confirm. Fires once per raid.
+      // Halfway = Math.floor(sequence.length / 2). For Krust (8 sequence
+      // + boss): halfway = 4, so after fight 4 the rest stop appears,
+      // then fights 5-8 + boss happen with refreshed abilities.
+      if (
+        !restStopFiredRef.current &&
+        config.sequence.length >= 4 &&
+        nextRound === Math.floor(config.sequence.length / 2)
+      ) {
+        restStopFiredRef.current = true
+        pendingRestAdvanceRef.current = () => {
+          roundRef.current = nextRound
+          resetEnemyForRound(roundRef.current)
+          setRoundDisplay(roundRef.current + 1)
+        }
+        setRestStopPending(true)
+        return
+      }
       // If the next round is the boss AND the raid config has pre-fight
       // dialogue, gate the round advance on the dialogue modal. Real
       // round/enemy advance runs in the modal's onComplete callback.
@@ -1432,6 +1469,14 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 fleeNav={fleeNavRef.current}
                 raidMods={raidMods}
                 tideEffects={activeTideEffects}
+                crewMembers={crewMembers}
+                usedAbilityIds={usedAbilityIds}
+                onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
+                  if (prev.has(crewId)) return prev
+                  const next = new Set(prev)
+                  next.add(crewId)
+                  return next
+                })}
               />
             )
           })()}
@@ -1462,6 +1507,79 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             fn?.()
           }}
         />
+
+        {/* Rest Stop — halfway-through interstitial. Refreshes crew
+            abilities (clears usedAbilityIds set) and gates the advance
+            into the second-half fights, same shape as the boss-dialogue
+            gate but a calmer narrative beat. Fires exactly once per raid. */}
+        <AnimatePresence>
+          {restStopPending && (
+            <motion.div
+              key="rest-stop-bg"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 110,
+                background: 'rgba(4,8,14,0.92)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '1.5rem',
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 14 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97, y: 6 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  width: '100%', maxWidth: 360,
+                  background: 'linear-gradient(180deg, #1a1612 0%, #0b0807 100%)',
+                  border: '1px solid rgba(240,192,64,0.32)',
+                  borderRadius: 16,
+                  padding: '1.2rem 1.15rem 1.1rem',
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,225,170,0.06)',
+                  textAlign: 'center',
+                }}
+              >
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: '#c8aa6a', marginBottom: '0.55rem' }}>
+                  Rest Stop
+                </p>
+                <p className="font-pirata" style={{ fontSize: '1.6rem', color: '#ecdcbd', lineHeight: 1.1, marginBottom: '0.6rem' }}>
+                  The crew makes anchor.
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(236,220,189,0.7)', lineHeight: 1.55, marginBottom: '1rem' }}>
+                  Your crew rest, sharpen their tools, and prepare for the second leg.
+                </p>
+                <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0c040', marginBottom: '1.1rem' }}>
+                  ✚ All crew abilities recharged.
+                </p>
+                <motion.button
+                  onClick={() => {
+                    setUsedAbilityIds(new Set())
+                    setRestStopPending(false)
+                    const fn = pendingRestAdvanceRef.current
+                    pendingRestAdvanceRef.current = null
+                    fn?.()
+                  }}
+                  whileTap={{ scale: 0.96 }}
+                  className="font-cinzel font-700 uppercase"
+                  style={{
+                    width: '100%', padding: '0.78rem 0',
+                    fontSize: '0.86rem', letterSpacing: '0.08em',
+                    background: 'linear-gradient(180deg, #d9b563 0%, #a8842f 100%)',
+                    border: '1px solid rgba(240,214,150,0.85)',
+                    color: '#2a1c08', borderRadius: 10,
+                    boxShadow: '0 4px 16px rgba(201,162,74,0.42), inset 0 1px 0 rgba(255,240,200,0.5)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Continue
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Boss pre-fight dialogue — RPG-style modal that runs before the
             boss round mounts. The advanceToNext path stashes the round

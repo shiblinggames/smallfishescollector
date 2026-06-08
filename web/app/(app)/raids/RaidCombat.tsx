@@ -26,6 +26,8 @@ import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
 import { describeEffect, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
+import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
+import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass } from '@/lib/shipClasses'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -241,6 +243,15 @@ export interface RaidCombatProps {
    *  warm seascape — used by the practice skirmish and any legacy
    *  caller that doesn't set the field. */
   atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog'
+  /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
+   *  so RaidCombat can derive each crew's class + current milestone via
+   *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
+   *  RaidGame (clears at the rest stop). onAbilityFired signals back when
+   *  a crew's ability lands so RaidGame can mark it used.
+   *  All optional so practice raid (which uses no crew) still works. */
+  crewMembers?: import('./actions').RaidCrewMember[]
+  usedAbilityIds?: Set<number>
+  onAbilityFired?: (crewId: number) => void
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -263,6 +274,7 @@ export default function RaidCombat({
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
   atmosphere = 'dusk',
+  crewMembers = [], usedAbilityIds, onAbilityFired,
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
@@ -339,6 +351,34 @@ export default function RaidCombat({
   // player is at full HP (can't waste a heal accidentally).
   const repairKit = getRepairKit(equippedRepairKit)
   const [kitUsed, setKitUsed] = useState(false)
+
+  // ── Crew class abilities (in-fight state) ─────────────────────────────────
+  // Per-raid cooldown lives in RaidGame (usedAbilityIds prop). Per-turn lock
+  // lives here and resets whenever the player starts a new turn — the chooser
+  // greys out ALL crew ability cards (including the repair kit) once any one
+  // of them fires this turn, so the player can't burst all four in a row.
+  const [oneAbilityUsedThisTurn, setOneAbilityUsedThisTurn] = useState(false)
+  // Sharpshot — next N shots have a wider crit zone. Consumed by a shot
+  // landing (any of miss/graze/hit/critical — the buff applies *to* the roll).
+  const [sharpshotBuff, setSharpshotBuff] = useState<{ multiplier: number; shotsLeft: number } | null>(null)
+  // Snare — enemy can't dodge for N player turns. -1 = rest of fight.
+  // Decremented at the start of each player turn while > 0; rest-of-fight
+  // sticks until the encounter ends (component remounts next fight).
+  const [snareDodgeTurns, setSnareDodgeTurns] = useState<number>(0)
+  // Mirror into a ref so the pickEnemyAction callback (tight deps) reads
+  // the current value without listing it as a dep.
+  const snareDodgeTurnsRef = useRef(0)
+  useEffect(() => { snareDodgeTurnsRef.current = snareDodgeTurns }, [snareDodgeTurns])
+  // Per-turn ability lock + Snare countdown — the useEffect that reacts to
+  // turn changes is defined further down where the `turn` state is in
+  // scope (search for "ability per-turn reset effect").
+  // Anchor — next incoming hit's damage is reduced by this fraction (0-1).
+  // Read at hit-resolve time, then cleared.
+  const [anchorReductionPct, setAnchorReductionPct] = useState<number | null>(null)
+  // Cleanse Mender flag — Lv 100 Mender heals AND strips one enemy debuff
+  // from the player. There's no in-fight debuff system yet, so this is a
+  // hook for future expansion; for now it's tracked but does nothing.
+  const [, setCleanseDebuffPending] = useState(false)
   // The label shown in-fight + on the ledger popup. Defaults to the boat
   // name when the parent didn't pass a player-specific name through.
   const nameplate = playerLabel ?? shipName
@@ -493,6 +533,16 @@ export default function RaidCombat({
   const [turn, setTurn]    = useState(1)
   const critFreezeRef      = useRef(false)
   useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
+  // Ability per-turn reset effect — every new player turn clears the
+  // one-ability-per-turn lock and ticks Snare's finite duration down.
+  // -1 (rest_of_fight) sticks regardless. Skips the initial mount
+  // (turn=1 doesn't need a reset).
+  const turnInitRef = useRef(true)
+  useEffect(() => {
+    if (turnInitRef.current) { turnInitRef.current = false; return }
+    setOneAbilityUsedThisTurn(false)
+    setSnareDodgeTurns(prev => (prev > 0 ? prev - 1 : prev))
+  }, [turn])
 
   // Ship shake / recoil controls — match the existing real-time raid keyframes
   const enemyShakeCtrl  = useAnimation()
@@ -713,6 +763,12 @@ export default function RaidCombat({
     } else {
       enemyPatternIdxRef.current++
     }
+    // Snare ability — enemy can't dodge while the snare is active. Substitute
+    // dodge with their highest-value alternative (fire if charged, else
+    // reload) so they still have a turn but lose their defensive option.
+    if (action === 'dodge' && snareDodgeTurnsRef.current !== 0) {
+      action = enemyCharges >= 1 ? 'fire' : 'reload'
+    }
     return action
   }, [enemy.pattern, enemy.phase2, enemyCharges])
 
@@ -728,6 +784,72 @@ export default function RaidCombat({
   // ("Full") so the player understands why instead of fishing for a
   // missing button.
   const canReload = playerCharges < MAX_CHARGES
+
+  // Fire a crew class ability. Doesn't consume the player's turn — the
+  // chooser closes, the effect applies, and the action menu stays open so
+  // the player can still fire/reload/dodge. Per-turn lock + per-raid used
+  // set are bumped together; the parent gets the onAbilityFired callback
+  // so the cooldown survives the per-fight RaidCombat remount.
+  function fireCrewAbility(
+    crew: { id: number; name: string },
+    def: AnyClassDef,
+    m: AnyClassDef['milestones'][number] | null,
+  ): void {
+    if (!m) return
+    if (subPhase !== 'await_input') return
+    if (oneAbilityUsedThisTurn) return
+    if (usedAbilityIds?.has(crew.id)) return
+
+    // Dispatch on class id — TS narrows the milestone shape from the
+    // per-class table.
+    switch (def.id) {
+      case 'mender': {
+        const mm = m as import('@/lib/crewClasses').MenderMilestone
+        const heal = Math.round(playerHpMax * mm.pctMaxHp)
+        setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
+        playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
+        if (mm.cleanseDebuff) setCleanseDebuffPending(true)
+        break
+      }
+      case 'sharpshot': {
+        const sm = m as import('@/lib/crewClasses').SharpshotMilestone
+        setSharpshotBuff({ multiplier: sm.critZoneMultiplier, shotsLeft: sm.shotsBuffed })
+        break
+      }
+      case 'snare': {
+        const sn = m as import('@/lib/crewClasses').SnareMilestone
+        if (sn.disableDodgeTurns === 'rest_of_fight') {
+          setSnareDodgeTurns(-1)
+          snareDodgeTurnsRef.current = -1
+        } else {
+          setSnareDodgeTurns(sn.disableDodgeTurns)
+          snareDodgeTurnsRef.current = sn.disableDodgeTurns
+        }
+        break
+      }
+      case 'anchor': {
+        const an = m as import('@/lib/crewClasses').AnchorMilestone
+        setAnchorReductionPct(an.pctReduction)
+        // absorbsCrits handling is deferred — applies on the next hit
+        // resolve. Tracked in state for now; future polish wires it.
+        break
+      }
+      case 'navigator': {
+        const nm = m as import('@/lib/crewClasses').NavigatorMilestone
+        // Roll +2 first; if it lands, override the +1 roll.
+        const two  = nm.twoChargeChance > 0 && Math.random() < nm.twoChargeChance
+        const one  = !two && (nm.oneChargeChance >= 1 || Math.random() < nm.oneChargeChance)
+        const add  = two ? 2 : (one ? 1 : 0)
+        if (add > 0) {
+          setPlayerCharges(prev => Math.min(MAX_CHARGES, prev + add))
+        }
+        break
+      }
+    }
+
+    setOneAbilityUsedThisTurn(true)
+    onAbilityFired?.(crew.id)
+  }
 
   function selectAction(action: EnemyAction) {
     if (subPhase !== 'await_input') return
@@ -761,11 +883,12 @@ export default function RaidCombat({
 
   function lockShot() {
     if (subPhase !== 'aiming' || critFreeze) return
-    // Tide critZoneScale widens the gold critical band. We feed a
-    // tide-scaled CRIT_W into a local copy of getShotResult so the
-    // function constant doesn't have to change shape. tide.critZoneMult
-    // defaults to 1 (no scale) when no tide affects this run.
-    const tideCritW = CRIT_W * tide.critZoneMult
+    // Tide critZoneScale widens the gold critical band. Sharpshot ability
+    // also widens it for the next N shots. Both multiply onto CRIT_W; a
+    // wider zone = same aim, more crits. Sharpshot buff is consumed by the
+    // shot landing regardless of result (miss/graze/hit/critical all count).
+    const sharpshotMult = sharpshotBuff ? (1 + sharpshotBuff.multiplier) : 1
+    const tideCritW = CRIT_W * tide.critZoneMult * sharpshotMult
     const pos = firePosRef.current
     const zoneCenter = zonePosRef.current
     let res: ShotResult
@@ -773,6 +896,12 @@ export default function RaidCombat({
     else if (pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W) res = 'hit'
     else if (pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W) res = 'graze'
     else res = 'miss'
+
+    // Consume one Sharpshot buff "shot left" regardless of outcome.
+    if (sharpshotBuff) {
+      const remaining = sharpshotBuff.shotsLeft - 1
+      setSharpshotBuff(remaining > 0 ? { multiplier: sharpshotBuff.multiplier, shotsLeft: remaining } : null)
+    }
     // Keen Cutlass + tide critChanceBonus: a clean hit has a flat chance
     // to upgrade to a crit. Tide bonus stacks ADDITIVELY with crew crit.
     const critUpgradeChance = (mods.critPct / 100) + tide.critBonus
@@ -2372,28 +2501,65 @@ export default function RaidCombat({
             disabled={subPhase !== 'await_input'}
             highlightedAction={subPhase === 'await_input' ? null : playerAction}
             specialItems={(() => {
-              // Special chooser items. Today this is just the repair kit;
-              // future special abilities (potions, boat skills, etc.) drop
-              // in here without engine churn. Per-entry `disabled` keeps
-              // an item visible with its reason, so the player understands
-              // why the slot didn't fire instead of seeing it just grey out.
-              if (!repairKit) return []
-              const atFull = playerHp >= playerHpMax
-              const range = repairKitRange(repairKit, totalFortune)
-              return [{
-                id: 'repair',
-                label: repairKit.name,
-                sub: kitUsed
-                  ? 'Already used this battle.'
-                  : atFull
-                    ? 'Hull already at full HP.'
-                    : `Heals ${range.min}-${range.max} HP. Costs your turn.`,
-                color: '#4ade80',
-                emoji: repairKit.emoji,
-                image: repairKit.image,
-                disabled: kitUsed || atFull,
-                onClick: () => selectAction('repair'),
-              }]
+              // Special chooser items: repair kit + one card per deployed
+              // crew member's class ability. Per-entry `disabled` keeps an
+              // item visible with its reason so the player understands why
+              // the slot didn't fire ("Used this raid" / "Wait next turn"
+              // / "Unlocks at Lv 10").
+              const items: SpecialItem[] = []
+
+              // Repair kit (existing, turn-consuming).
+              if (repairKit) {
+                const atFull = playerHp >= playerHpMax
+                const range = repairKitRange(repairKit, totalFortune)
+                items.push({
+                  id: 'repair',
+                  label: repairKit.name,
+                  sub: kitUsed
+                    ? 'Already used this battle.'
+                    : atFull
+                      ? 'Hull already at full HP.'
+                      : `Heals ${range.min}-${range.max} HP. Costs your turn.`,
+                  color: '#4ade80',
+                  emoji: repairKit.emoji,
+                  image: repairKit.image,
+                  disabled: kitUsed || atFull,
+                  onClick: () => selectAction('repair'),
+                })
+              }
+
+              // Crew abilities — one card per deployed crew with a class.
+              // Cards always render so the player sees their roster even
+              // when abilities are locked (Lv < 10) or used. Doesn't
+              // consume a turn.
+              for (const crew of crewMembers) {
+                const cls = classForSlug(crew.slug)
+                if (!cls) continue
+                const def = CLASSES[cls]
+                const lv = crewLevelFromXP(crew.xp)
+                const m = currentMilestone(def, lv)
+                const usedRaid = usedAbilityIds?.has(crew.id) ?? false
+                const locked = !m
+                const disabled = locked || usedRaid || oneAbilityUsedThisTurn
+                const sub = locked
+                  ? `Unlocks at Lv 10.`
+                  : usedRaid
+                    ? 'Already used this raid.'
+                    : oneAbilityUsedThisTurn
+                      ? 'Wait until next turn.'
+                      : m.desc
+                items.push({
+                  id: `crew-${crew.id}`,
+                  label: `${crew.name} · ${def.name}`,
+                  sub,
+                  color: def.color,
+                  emoji: def.emoji,
+                  image: crew.imageUrl,
+                  disabled,
+                  onClick: () => fireCrewAbility(crew, def, m),
+                })
+              }
+              return items
             })()}
           />
         )}
