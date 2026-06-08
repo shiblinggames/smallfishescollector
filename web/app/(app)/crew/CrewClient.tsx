@@ -612,6 +612,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [statsGlossaryOpen, setStatsGlossaryOpen] = useState(false)
   // expandedTrait state used to exist for the old per-trait description
   // expander; the simplified one-row Trait section doesn't need it.
+
+  // Class section expander — collapsed by default the detail modal shows
+  // current-tier effect + next-tier preview; expanded it lists every
+  // milestone (Lv 10 / 25 / 40 / 75 / 100) so the player can see what
+  // they're working toward. Reset on modal close.
+  const [classExpanded, setClassExpanded] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
@@ -1220,7 +1226,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const dTrait = netTraitStats(it.effects)
           const dTraitLabel = traitLabel(dTrait)
           const dTraitKind = traitKind(dTrait)
-          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false) }
+          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false) }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -1291,44 +1297,107 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   const next = nextMilestone(def, lv)
                   const accent = def.color
                   return (
-                    <div style={{
-                      marginTop: '0.9rem',
-                      padding: '0.65rem 0.75rem 0.7rem',
-                      background: `${accent}0e`,
-                      border: `1px solid ${accent}44`,
-                      borderRadius: 9,
-                    }}>
+                    <button
+                      type="button"
+                      onClick={() => setClassExpanded(v => !v)}
+                      aria-expanded={classExpanded}
+                      aria-label={classExpanded ? 'Hide full ability progression' : 'Show full ability progression'}
+                      style={{
+                        marginTop: '0.9rem',
+                        padding: '0.65rem 0.75rem 0.7rem',
+                        background: `${accent}0e`,
+                        border: `1px solid ${accent}44`,
+                        borderRadius: 9,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%',
+                        display: 'block',
+                        transition: 'background 0.18s, border-color 0.18s',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                           <span aria-hidden style={{ color: accent, fontSize: '0.95rem', lineHeight: 1 }}>{def.emoji}</span>
                           <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.1em', color: accent, lineHeight: 1 }}>{def.name}</p>
                         </div>
-                        <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
-                          Active · once per raid
-                        </p>
+                        <div className="flex items-baseline" style={{ gap: 6 }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
+                            Active · once per raid
+                          </p>
+                          <span aria-hidden style={{
+                            fontSize: '0.5rem', color: `${accent}99`,
+                            transform: classExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s',
+                            display: 'inline-block',
+                          }}>▼</span>
+                        </div>
                       </div>
-                      {/* Class blurb intentionally removed — the current-tier
-                          unlock description below is already concrete about
-                          what the ability does ("Heal 15% max HP", "Next
-                          shot crit zone +50% wider"), so a general intro
-                          line on top was just restating the role in
-                          fuzzier language and eating space. */}
-                      {cur ? (
-                        <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#ecdcbd', lineHeight: 1.35 }}>
-                          <span style={{ color: accent, marginRight: 6 }}>Lv {cur.unlockLevel}:</span>
-                          {cur.desc}
-                        </p>
+                      {!classExpanded ? (
+                        <>
+                          {cur ? (
+                            <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#ecdcbd', lineHeight: 1.35 }}>
+                              <span style={{ color: accent, marginRight: 6 }}>Lv {cur.unlockLevel}:</span>
+                              {cur.desc}
+                            </p>
+                          ) : (
+                            <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.35 }}>
+                              Unlocks at Lv {CLASS_UNLOCK_LEVEL}.
+                            </p>
+                          )}
+                          {next && (
+                            <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.4)', marginTop: 5, lineHeight: 1.3 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.5)' }}>Next at Lv {next.unlockLevel}:</span> {next.desc}
+                            </p>
+                          )}
+                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: `${accent}99`, marginTop: 6 }}>
+                            Tap to see all milestones →
+                          </p>
+                        </>
                       ) : (
-                        <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.35 }}>
-                          Unlocks at Lv {CLASS_UNLOCK_LEVEL}.
-                        </p>
+                        <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {def.milestones.map(m => {
+                            const unlocked = lv >= m.unlockLevel
+                            const isCurrent = cur && cur.unlockLevel === m.unlockLevel
+                            return (
+                              <div key={m.unlockLevel} style={{
+                                display: 'flex', alignItems: 'baseline', gap: 8,
+                                padding: '0.4rem 0.5rem',
+                                background: isCurrent ? `${accent}1f` : 'transparent',
+                                border: isCurrent ? `1px solid ${accent}66` : '1px solid transparent',
+                                borderRadius: 6,
+                                opacity: unlocked ? 1 : 0.55,
+                              }}>
+                                <span className="font-cinzel font-700" style={{
+                                  flexShrink: 0,
+                                  fontSize: '0.6rem', letterSpacing: '0.08em',
+                                  color: unlocked ? accent : 'rgba(255,255,255,0.4)',
+                                  minWidth: 30,
+                                }}>
+                                  Lv {m.unlockLevel}
+                                </span>
+                                <span className="font-karla" style={{
+                                  fontSize: '0.72rem', lineHeight: 1.35,
+                                  color: unlocked ? '#ecdcbd' : 'rgba(255,255,255,0.45)',
+                                  fontWeight: isCurrent ? 700 : 400,
+                                }}>
+                                  {m.desc}
+                                </span>
+                                {isCurrent && (
+                                  <span aria-hidden className="font-karla font-700" style={{
+                                    flexShrink: 0,
+                                    fontSize: '0.46rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+                                    color: accent, marginLeft: 'auto',
+                                  }}>Now</span>
+                                )}
+                              </div>
+                            )
+                          })}
+                          <p className="font-karla font-600" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                            Tap to collapse ▲
+                          </p>
+                        </div>
                       )}
-                      {next && (
-                        <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.4)', marginTop: 5, lineHeight: 1.3 }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>Next at Lv {next.unlockLevel}:</span> {next.desc}
-                        </p>
-                      )}
-                    </div>
+                    </button>
                   )
                 })()}
 
