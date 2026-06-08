@@ -114,7 +114,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, dimmed, hint, frameAccent = '#b08d4f',
+  name, filename, rarity, base, effects, xp = 0, slug = '', dimmed, hint, frameAccent = '#b08d4f',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -123,6 +123,10 @@ function CrewPanel({
   base: { power: number; dodge: number; fortune: number }
   effects: string[]
   xp?: number
+  /** Species slug. Drives the class nameplate on the portrait. Optional so
+   *  the BoardReveal placeholder cards still compile; passing '' falls back
+   *  to the Neutral chip. */
+  slug?: string
   dimmed?: boolean
   hint?: boolean
   frameAccent?: string
@@ -192,21 +196,18 @@ function CrewPanel({
         }} />
         {/* inner frame line */}
         <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
-        {/* Trait teaser nameplate — replaces the old rarity label (which was
-            redundant with the "COMMON CREW" subtitle next to the name) so the
-            portrait surfaces the more interesting thing players should care
-            about. Headline = first trait; "+N" = how many more are stacked on
-            top, hinting "tap the card to see the rest." Buff/flaw color makes
-            the read instant. Trait-less crew now show a gray "Neutral" plate
-            so every card has the same silhouette — no more cards looking
-            visually shorter than their effect-having neighbors. */}
+        {/* Class nameplate — replaces the old trait teaser. Class is now the
+            bigger identity decision (species-locked, drives the raid Special
+            ability), so the portrait reads as the role at a glance: "Mender",
+            "Sharpshot", etc. Trait count is still shown on the rarity line
+            below as a small counter so trait info isn't lost. Falls back to
+            a muted "Crew" chip when the species hasn't been mapped to a
+            class yet. */}
         {(() => {
-          const head = effects.length > 0 ? CREW_EFFECTS[effects[0]] : null
-          const neutral = !head
-          const extra = neutral ? 0 : effects.length - 1
-          const buff = head?.kind === 'buff'
-          const tint = neutral ? 'rgba(150,150,150,0.85)' : buff ? 'rgba(80,200,130,0.95)' : 'rgba(220,90,90,0.95)'
-          const text = neutral ? '#c8c8c8' : buff ? '#cdf5dc' : '#f7c5c5'
+          const cls = classForSlug(slug)
+          const def = cls ? CLASSES[cls] : null
+          const tint = def?.color ?? 'rgba(150,150,150,0.85)'
+          const text = def?.color ?? '#c8c8c8'
           return (
             <div className="font-karla font-700" style={{
               position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
@@ -215,9 +216,10 @@ function CrewPanel({
               color: text, background: 'rgba(7,5,3,0.88)', border: `1px solid ${tint}`,
               padding: '0.12rem 0.42rem', borderRadius: 3, whiteSpace: 'nowrap',
               overflow: 'hidden', textOverflow: 'ellipsis',
+              display: 'flex', alignItems: 'center', gap: 4,
             }}>
-              {neutral ? 'Neutral' : head!.name}
-              {extra > 0 ? <span style={{ color: tint, marginLeft: 4 }}>+{extra}</span> : null}
+              {def && <span aria-hidden style={{ fontSize: '0.55rem', lineHeight: 1 }}>{def.emoji}</span>}
+              <span>{def?.name ?? 'Crew'}</span>
             </div>
           )
         })()}
@@ -248,6 +250,11 @@ function CrewPanel({
           </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
             {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'} Crew
+            {effects.length > 0 && (
+              <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 6, letterSpacing: '0.08em' }}>
+                · {effects.length} trait{effects.length === 1 ? '' : 's'}
+              </span>
+            )}
           </p>
         </div>
 
@@ -660,7 +667,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             {state.board.map((c: BoardCandidate) => {
               const panel = (
                 <CrewPanel name={c.name} filename={c.filename} rarity={c.rarity} frameAccent={SECTION_RECRUIT}
-                  base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} dimmed={c.recruited}
+                  base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} slug={c.slug} dimmed={c.recruited}
                   hint={c.effects.length > 0 && !c.recruited && !viewed.has(`board:${c.id}`)}
                   onClick={() => openDetail('board', c)}>
                   {renderAction('board', c, { round: true })}
@@ -761,7 +768,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   {state.roster.map((m: CrewMember) => (
                     <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
                       bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
-                      base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp}
+                      base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
                       hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                       onClick={() => openDetail('roster', m)}>
                       {renderAction('roster', m, { round: true })}
