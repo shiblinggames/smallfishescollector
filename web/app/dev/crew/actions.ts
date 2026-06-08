@@ -22,6 +22,9 @@ export type BoardCandidate = {
   cardId: number
   name: string
   filename: string
+  /** Species slug. Recruit modal reads this through classForSlug() to show
+   *  the would-be class to the player before they commit gems / a slot. */
+  slug: string
   rarity: number
   power: number
   dodge: number
@@ -35,6 +38,9 @@ export type CrewMember = {
   cardId: number
   name: string
   filename: string
+  /** Species slug (lower-cased card slug). Drives crew-class lookup via
+   *  CLASS_BY_SLUG — every species maps to exactly one class. */
+  slug: string
   rarity: number
   power: number
   dodge: number
@@ -111,7 +117,9 @@ function toCandidate(r: any, meta: Map<number, CardMeta>): BoardCandidate {
   const m = meta.get(r.card_id)
   return {
     id: r.id, slot: r.slot, source: r.source, cardId: r.card_id,
-    name: m ? crewDisplayName(m.slug, m.name) : 'Unknown', filename: m?.filename ?? '',
+    name: m ? crewDisplayName(m.slug, m.name) : 'Unknown',
+    filename: m?.filename ?? '',
+    slug: (m?.slug ?? '').toLowerCase(),
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[], recruited: r.recruited,
   }
@@ -121,7 +129,9 @@ function toMember(r: any, meta: Map<number, CardMeta>): CrewMember {
   const m = meta.get(r.card_id)
   return {
     id: r.id, cardId: r.card_id,
-    name: m ? crewDisplayName(m.slug, m.name) : 'Unknown', filename: m?.filename ?? '',
+    name: m ? crewDisplayName(m.slug, m.name) : 'Unknown',
+    filename: m?.filename ?? '',
+    slug: (m?.slug ?? '').toLowerCase(),
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[], assignedSlot: r.assigned_slot,
     xp: (r.xp as number | null) ?? 0,
@@ -358,6 +368,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
       id: r.id, cardId: r.card_id,
       name: m ? crewDisplayName(m.slug, m.name) : 'Unknown',
       filename: m?.filename ?? '',
+      slug: (m?.slug ?? '').toLowerCase(),
       rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
       effects: (r.effects ?? []) as string[], assignedSlot: null,
       xp: (r.xp as number | null) ?? 0,

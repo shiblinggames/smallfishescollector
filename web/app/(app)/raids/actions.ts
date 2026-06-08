@@ -14,8 +14,18 @@ const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v
 
 
 export interface RaidCrewMember {
+  /** user_crew row id. Drives the per-crew once-per-raid ability cooldown
+   *  state in RaidGame and lets the Special chooser key its cards. */
+  id: number
+  /** Lower-cased species slug. RaidGame derives the crew's class via
+   *  classForSlug(slug); null/empty = no class wired (older species not yet
+   *  in the class map). */
+  slug: string
   name: string
   imageUrl: string
+  /** Cumulative XP — drives the crew's current class-ability tier via
+   *  crewLevelFromXP() + currentMilestone(). */
+  xp: number
   power: number
   dodge: number
   fortune: number
@@ -81,8 +91,11 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     const row = party.find(p => p.id === pc.id)
     const mult = pc.slot === 0 ? 1 : 0.8
     return {
+      id:       pc.id,
+      slug:     row?.slug ?? '',
       name:     row?.name ?? 'Crew',
       imageUrl: CARD_IMG_BASE + (row?.filename ?? ''),
+      xp:       (row?.xp as number | undefined) ?? 0,
       power:    Math.floor(pc.power   * mult),
       dodge:    Math.floor(pc.dodge   * mult),
       fortune:  Math.floor(pc.fortune * mult),

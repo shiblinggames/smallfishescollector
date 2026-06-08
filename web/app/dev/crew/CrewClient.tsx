@@ -11,6 +11,7 @@ import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META, CREW_EFFEC
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
+import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef } from '@/lib/crewClasses'
 import TickingNumber from '@/components/TickingNumber'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -859,6 +860,59 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           transition: 'width 0.5s ease',
                         }} />
                       </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Class section — species-locked active ability surfaced
+                    in raid combat through the Special chooser. Always
+                    shown for crew with a class (recruits + roster +
+                    fallen). Sub-Lv-10 crew get a "Unlocks at Lv 10" hint
+                    instead of an effect line so players understand WHY
+                    they don't see an ability yet. */}
+                {(() => {
+                  const cls = classForSlug(it.slug)
+                  if (!cls) return null
+                  const def: AnyClassDef = CLASSES[cls]
+                  const lv = crewLevelFromXP(dXp)
+                  const cur = currentMilestone(def, lv)
+                  const next = nextMilestone(def, lv)
+                  const accent = def.color
+                  return (
+                    <div style={{
+                      marginTop: '0.9rem',
+                      padding: '0.65rem 0.75rem 0.7rem',
+                      background: `${accent}0e`,
+                      border: `1px solid ${accent}44`,
+                      borderRadius: 9,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span aria-hidden style={{ color: accent, fontSize: '0.95rem', lineHeight: 1 }}>{def.emoji}</span>
+                          <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.1em', color: accent, lineHeight: 1 }}>{def.name}</p>
+                        </div>
+                        <p className="font-karla font-700" style={{ fontSize: '0.56rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
+                          Active · once per raid
+                        </p>
+                      </div>
+                      <p className="font-karla italic" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem', lineHeight: 1.35 }}>
+                        {def.blurb}
+                      </p>
+                      {cur ? (
+                        <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#ecdcbd', lineHeight: 1.35 }}>
+                          <span style={{ color: accent, marginRight: 6 }}>Lv {cur.unlockLevel}:</span>
+                          {cur.desc}
+                        </p>
+                      ) : (
+                        <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.35 }}>
+                          Unlocks at Lv {CLASS_UNLOCK_LEVEL}.
+                        </p>
+                      )}
+                      {next && (
+                        <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.4)', marginTop: 5, lineHeight: 1.3 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>Next at Lv {next.unlockLevel}:</span> {next.desc}
+                        </p>
+                      )}
                     </div>
                   )
                 })()}

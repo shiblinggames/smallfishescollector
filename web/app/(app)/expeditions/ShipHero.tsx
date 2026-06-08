@@ -28,6 +28,7 @@ type RosterCrew = {
   cardId: number      // catalog card; only one of a given card may be aboard
   name: string
   filename: string
+  slug: string        // species slug, drives crew-class lookup for the raid Special chooser
   rarity: number      // 1-4 (fish group)
   power: number       // rolled base stats (level bonus applied at read time)
   dodge: number
@@ -545,7 +546,7 @@ export default function ShipHero({
   // the Nav-level captain bonus — see lib/expeditionLevel.navLevelBonuses.
   const navBonus     = navLevelBonuses(xpProgress.level)
   const deployedParty: DeployedCrew[] = slots
-    .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp } : null)
+    .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp, slug: c.slug } : null)
     .filter((c): c is DeployedCrew => c !== null)
   const resolvedParty = resolveDeployedCrew(deployedParty)
   const totalPower   = resolvedParty.totals.power
@@ -564,7 +565,7 @@ export default function ShipHero({
   // sees the effect (and the per-stat delta) before committing.
   const slotsToTotals = (arr: (RosterCrew | null)[]) => {
     const party: DeployedCrew[] = arr
-      .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp } : null)
+      .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp, slug: c.slug } : null)
       .filter((c): c is DeployedCrew => c !== null)
     return resolveDeployedCrew(party).totals
   }

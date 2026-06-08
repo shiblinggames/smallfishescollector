@@ -204,7 +204,7 @@ async function ExpeditionHub() {
     .filter(c => c.assignedSlot != null)
     .map(c => ({
       id: c.id, slot: c.assignedSlot as number, rarity: c.rarity,
-      power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp,
+      power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp, slug: c.slug,
     }))
   const resolved = resolveDeployedCrew(assignedParty)
   const xpProgress = getXPProgress(profile?.expedition_xp ?? 0)

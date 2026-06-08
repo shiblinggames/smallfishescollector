@@ -38,6 +38,7 @@ export async function loadDeployedParty(admin: Admin, userId: string, crewSlots:
       fortune: r.fortune as number,
       effects: (r.effects ?? []) as string[],
       xp: (r.xp as number | null) ?? 0,
+      slug: (r.cards?.slug as string | undefined)?.toLowerCase() ?? '',
       name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
       catalogName: (r.cards?.name ?? 'Crew') as string,
       filename: (r.cards?.filename ?? '') as string,

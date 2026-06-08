@@ -61,6 +61,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           .is('died_at', null)
           .not('assigned_slot', 'is', null)
           .order('assigned_slot', { ascending: true }),
+    // slug for showcase chip is already selected via cards(...) above; the
+    // mapper below extracts it.
 
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
@@ -97,6 +99,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     id: r.id,
     name: crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
     filename: r.cards?.filename ?? '',
+    slug: (r.cards?.slug as string | undefined)?.toLowerCase() ?? '',
     rarity: r.rarity,
     power: r.power,
     dodge: r.dodge,

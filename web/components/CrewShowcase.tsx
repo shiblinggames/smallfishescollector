@@ -26,6 +26,10 @@ export type ShowcaseCrew = {
   fortune: number
   effects: string[]
   xp?: number
+  /** Species slug (lower-cased). Drives the crew-class chip on the showcase
+   *  portrait — "Mender · Lv 47" reads as one identity. Optional for legacy
+   *  callers that don't have it yet (chip just doesn't render). */
+  slug?: string
 }
 
 /** One crew portrait tile (effective stats shown). */

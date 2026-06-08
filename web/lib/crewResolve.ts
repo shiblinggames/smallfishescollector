@@ -28,6 +28,12 @@ export interface DeployedCrew {
    *  before effects). Required — all loaders (`loadDeployedParty` + the client
    *  picker mappings) populate it from `user_crew.xp`. */
   xp: number
+  /** Species slug (lower-cased). Drives crew-class resolution via
+   *  `classForSlug()` for the raid Special chooser. Required — all
+   *  loaders (`loadDeployedParty` + every client picker mapping) populate
+   *  it from `cards.slug`. Empty string is acceptable for older callers
+   *  that don't have it; the class lookup returns null in that case. */
+  slug: string
 }
 
 export interface ResolvedCrew {
