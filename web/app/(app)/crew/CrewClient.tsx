@@ -203,7 +203,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, locked = false, dimmed, hint, frameAccent = '#5c5c63',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, locked = false, hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -223,6 +223,11 @@ function CrewPanel({
   /** True when this crew is at sea on an in-progress voyage and can't be
    *  reassigned. Greys the card out and disables the toggle buttons. */
   locked?: boolean
+  /** True when the crew has leveled up since the player last opened it.
+   *  Drives a filled Lv chip + small NEW dot so the player knows to tap
+   *  in and see what stat/ability tier they just unlocked. Tracked via
+   *  localStorage 'crewSeenLevels' in the parent. */
+  hasLevelUp?: boolean
   dimmed?: boolean
   hint?: boolean
   frameAccent?: string
@@ -387,15 +392,32 @@ function CrewPanel({
                 clearly as a veteran Lv 47. Gold tone matches the loot
                 economy. (CrewPanel is also used for board candidates where
                 xp is undefined → defaults to 0 → renders "Lv 1", which is
-                accurate since recruits join at Lv 1.) */}
+                accurate since recruits join at Lv 1.)
+                When `hasLevelUp` is true the chip filled-glows + grows a
+                small "NEW" dot so the player knows there's something to
+                check inside; tapping the card stamps the seen level and
+                the dot clears next render. */}
             <span className="font-cinzel font-700" style={{
+              position: 'relative',
               flexShrink: 0,
               fontSize: '0.62rem', letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: '#f0c040', background: 'rgba(240,192,64,0.12)',
-              border: '1px solid rgba(240,192,64,0.42)',
+              color: hasLevelUp ? '#1c1308' : '#f0c040',
+              background: hasLevelUp ? '#f0c040' : 'rgba(240,192,64,0.12)',
+              border: '1px solid rgba(240,192,64,0.55)',
               padding: '0.12rem 0.42rem', borderRadius: 4, lineHeight: 1.2,
+              boxShadow: hasLevelUp ? '0 0 8px rgba(240,192,64,0.55)' : undefined,
+              transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
             }}>
               Lv {crewLevelFromXP(xp)}
+              {hasLevelUp && (
+                <span aria-label="Unseen level-up" title="New level — tap to view" style={{
+                  position: 'absolute', top: -3, right: -3,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: '#fff5d0',
+                  border: '1.5px solid #1c1308',
+                  boxShadow: '0 0 6px rgba(255,245,200,0.85)',
+                }} />
+              )}
             </span>
           </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
@@ -595,6 +617,46 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
   const [viewed, setViewed] = useState<Set<string>>(new Set())
+
+  // Level-up indicator state — for each crew id, the level the player last
+  // saw when they opened the detail modal. If the crew's current level is
+  // higher, the card shows a small gold "NEW" dot on the Lv chip. Persisted
+  // to localStorage so the indicator stays put across navigations, and
+  // initialised lazily on first observation so existing crew aren't flagged
+  // as "new" on the first page load — only level-ups going forward surface.
+  const [seenLevels, setSeenLevels] = useState<Record<number, number>>({})
+  const [seenLevelsLoaded, setSeenLevelsLoaded] = useState(false)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('crewSeenLevels')
+      if (raw) setSeenLevels(JSON.parse(raw))
+    } catch {}
+    setSeenLevelsLoaded(true)
+  }, [])
+  useEffect(() => {
+    if (!seenLevelsLoaded) return
+    // Seed any unseen crew with their CURRENT level so first-load is calm;
+    // genuine level-ups (current level > seed level) light up afterwards.
+    let next: Record<number, number> | null = null
+    for (const c of state.roster) {
+      if (seenLevels[c.id] === undefined) {
+        if (!next) next = { ...seenLevels }
+        next[c.id] = crewLevelFromXP(c.xp)
+      }
+    }
+    if (next) {
+      setSeenLevels(next)
+      try { localStorage.setItem('crewSeenLevels', JSON.stringify(next)) } catch {}
+    }
+  }, [seenLevelsLoaded, state.roster, seenLevels])
+  function markCrewSeen(crewId: number, currentLevel: number) {
+    setSeenLevels(prev => {
+      if ((prev[crewId] ?? 0) >= currentLevel) return prev
+      const next = { ...prev, [crewId]: currentLevel }
+      try { localStorage.setItem('crewSeenLevels', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
   // Crew Management top-level tabs — Roster is the main focus and default;
   // Recruit Board moves behind its own tab so it doesn't dominate the page
   // for players who are mostly managing their existing crew; Graveyard
@@ -652,10 +714,17 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
   const scrollToCrew = () => crewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
-  // Open the detail modal: clear the card's hint glow + a light tactile tick.
+  // Open the detail modal: clear the card's hint glow + a light tactile
+  // tick. For roster crew, also stamp the seen level so the new-level
+  // dot on the Lv chip clears once the player has acknowledged the
+  // level-up by tapping in.
   function openDetail(kind: 'board' | 'roster', item: BoardCandidate | CrewMember) {
     const key = `${kind}:${item.id}`
     setViewed(prev => (prev.has(key) ? prev : new Set(prev).add(key)))
+    if (kind === 'roster') {
+      const m = item as CrewMember
+      markCrewSeen(m.id, crewLevelFromXP(m.xp))
+    }
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(8)
     setDetail({ kind, item })
   }
@@ -1100,6 +1169,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
                         assignment={crewAssignment(m)}
                         locked={state.lockedCrewIds.includes(m.id)}
+                        hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                         onClick={() => openDetail('roster', m)}>
                         {renderAction('roster', m, { round: true })}
