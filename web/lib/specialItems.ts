@@ -35,7 +35,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     name: 'Auto Caster',
     color: '#f0c040',
     image: '/autocaster.png',
-    description: 'Automatically casts again after each catch. Stops when your hold is full or you run out of bait.',
+    description: 'Snaps a new cast every half-second after each catch, and auto-opens & claims any crates along the way. Stops when your hold is full or you run out of bait.',
     effectLabel: 'Auto cast',
     shopCost: 5000,
   },

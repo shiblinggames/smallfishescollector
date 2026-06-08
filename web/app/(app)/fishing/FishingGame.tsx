@@ -311,7 +311,7 @@ const SPECIAL_ITEM_TIPS: { condition: (ctx: TipContext) => boolean; tip: string 
   },
   {
     condition: ctx => !ctx.hasAutoCaster,
-    tip: "Tip: the Auto Caster resets automatically after every catch — pick it up in the gear shop for 5,000 ⟡.",
+    tip: "Tip: the Auto Caster snaps a new cast right after each catch and pops crates open for you — pick it up in the gear shop for 5,000 ⟡.",
   },
 ]
 
@@ -4435,22 +4435,47 @@ export default function FishingGame({
     setHoldOpen(false)
   }
 
-  // Auto Caster: fire cast again ~1.5s after a result when equipped and conditions allow.
-  // Skips when the current catch is a golden — players were missing the trophy
-  // moment by muscle-memory tapping recast. Forcing a manual claim guarantees
-  // they actually see the rare catch they just landed.
+  // Auto Caster: handle the whole post-catch flow when equipped.
+  //   • Regular catch → recast 500ms after the result lands.
+  //   • Crate appears (closed) → auto-tap Open ~700ms in (player sees
+  //     the closed-chest beat first, then the spin plays naturally).
+  //   • Crate revealed → auto-claim 1200ms in (long enough to read
+  //     what dropped), then the next effect tick (crateResult=null)
+  //     schedules the regular 500ms recast.
+  //   • Golden catch → never auto-anything. The trophy moment needs
+  //     the player to consciously claim it; muscle-memory recast
+  //     would blow past it.
   useEffect(() => {
     if (equippedSpecial !== 'auto_caster' || !ownedAutoCaster) return
     if (phase !== 'result') return
     if (catchResult?.isShiny) return
-    if (crateResult && cratePhase !== 'revealed') return
+
+    // Crate flow — auto-step through the player's taps so they only
+    // have to enjoy the spin + reveal, not chase the buttons.
+    if (crateResult) {
+      if (cratePhase === 'closed') {
+        const t = setTimeout(() => handleOpenCrate(), 700)
+        return () => clearTimeout(t)
+      }
+      if (cratePhase === 'rolling') {
+        // Spin in progress — let it finish; the effect re-runs when
+        // cratePhase flips to 'revealed' below.
+        return
+      }
+      if (cratePhase === 'revealed') {
+        const t = setTimeout(() => { void handleClaimCrate() }, 1200)
+        return () => clearTimeout(t)
+      }
+    }
+
+    // Regular auto-cast — bait + hold check, then snappy recast.
     const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
     if (currentBaitQty <= 0 || currentHoldCount >= holdCapacity) return
-    const t = setTimeout(() => { handleCastAgain() }, 1500)
+    const t = setTimeout(() => { handleCastAgain() }, 500)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCaster, cratePhase, catchResult?.isShiny])
+  }, [phase, equippedSpecial, ownedAutoCaster, cratePhase, catchResult?.isShiny, crateResult])
 
   // Golden catches force a Sell-or-Mount decision via a modal. Both
   // resolve through this helper to clear the catch result back to the
