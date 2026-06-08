@@ -1379,7 +1379,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     )
                   }
                   return (
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginTop: '0.6rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, marginTop: '0.6rem' }}>
                       <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05 }}>{it.name}</p>
                       {canRename && (
                         <button
@@ -1387,15 +1387,27 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           onClick={() => startRename(it.name)}
                           aria-label="Rename this crew (one time only)"
                           title="Rename · once only"
+                          className="font-karla font-700 uppercase"
                           style={{
-                            background: 'transparent', border: 'none', padding: '0.2rem',
-                            color: 'rgba(255,255,255,0.45)', cursor: 'pointer', lineHeight: 1,
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '0.35rem 0.8rem',
+                            fontSize: '0.62rem', letterSpacing: '0.1em',
+                            color: '#f0c040',
+                            background: 'rgba(240,192,64,0.1)',
+                            border: '1px solid rgba(240,192,64,0.5)',
+                            borderRadius: 999, cursor: 'pointer',
+                            boxShadow: '0 0 10px rgba(240,192,64,0.18)',
+                            transition: 'background 0.15s, box-shadow 0.15s',
                           }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.18)'; e.currentTarget.style.boxShadow = '0 0 14px rgba(240,192,64,0.28)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.1)';  e.currentTarget.style.boxShadow = '0 0 10px rgba(240,192,64,0.18)' }}
                         >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                             <path d="M12 20h9" />
                             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
                           </svg>
+                          <span>Name them</span>
+                          <span style={{ color: 'rgba(240,192,64,0.55)', fontSize: '0.52rem', letterSpacing: '0.06em' }}>· 1×</span>
                         </button>
                       )}
                     </div>
