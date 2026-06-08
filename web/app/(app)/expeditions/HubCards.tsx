@@ -104,6 +104,12 @@ function HubCrewStrip({
     e.preventDefault()
     router.push(href)
   }
+  // Cap the visible portraits at 4 so the strip never crowds the card
+  // narrow side-by-side hub-card layout. Anything past 4 collapses into a
+  // '+N' chip that picks up the same track accent.
+  const MAX_VISIBLE = 4
+  const visible = crew.slice(0, MAX_VISIBLE)
+  const hidden  = Math.max(0, crew.length - MAX_VISIBLE)
   return (
     <div
       role="link"
@@ -112,12 +118,12 @@ function HubCrewStrip({
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e as unknown as React.MouseEvent) } }}
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        marginBottom: 6,
+        marginBottom: 6, minWidth: 0,
         cursor: 'pointer',
       }}
     >
       {crew.length === 0 ? (
-        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.2 }}>
+        <p className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           No {label} · <span style={{ color: accent }}>Assign →</span>
         </p>
       ) : (
@@ -125,8 +131,8 @@ function HubCrewStrip({
           {/* Overlapping avatars — −6px margin between each gives a tight
               stacked-portrait look that occupies the same vertical space
               as a single line of text. */}
-          <div style={{ display: 'flex', flex: 'none' }}>
-            {crew.map((c, i) => (
+          <div style={{ display: 'flex', flex: 'none', alignItems: 'center' }}>
+            {visible.map((c, i) => (
               <div
                 key={c.id}
                 title={c.name}
@@ -137,7 +143,7 @@ function HubCrewStrip({
                   boxShadow: `0 1px 3px rgba(0,0,0,0.6)`,
                   background: `radial-gradient(circle at 50% 35%, ${accent}33 0%, #050403 75%)`,
                   marginLeft: i === 0 ? 0 : -6,
-                  zIndex: crew.length - i,
+                  zIndex: visible.length - i,
                   flexShrink: 0,
                 }}
               >
@@ -149,8 +155,29 @@ function HubCrewStrip({
                 />
               </div>
             ))}
+            {hidden > 0 && (
+              <div className="font-karla font-700" style={{
+                position: 'relative', height: 22, marginLeft: -6, zIndex: 0,
+                padding: '0 6px', borderRadius: 999,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.52rem', color: accent,
+                background: `radial-gradient(circle at 50% 35%, ${accent}33 0%, #050403 75%)`,
+                border: `1.5px solid ${accent}cc`,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.6)',
+                whiteSpace: 'nowrap',
+              }}>
+                +{hidden}
+              </div>
+            )}
           </div>
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: accent, whiteSpace: 'nowrap' }}>Manage →</span>
+          {/* Chevron-only affordance — the row is already a tap target, and
+              'MANAGE →' text was overflowing the hub card on narrow phones
+              once 4-5 portraits were stacked. The arrow does the same job
+              in a fraction of the width. */}
+          <span aria-hidden style={{
+            marginLeft: 'auto', flexShrink: 0,
+            color: accent, fontSize: '0.7rem', lineHeight: 1, opacity: 0.85,
+          }}>›</span>
         </>
       )}
     </div>
