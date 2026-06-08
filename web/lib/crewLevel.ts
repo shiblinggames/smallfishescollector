@@ -1,21 +1,20 @@
-// Crew leveling — matches the player's per-level XP cost EARLY (BASE_GAP=60,
-// same as player) so a fresh recruit doesn't trivialize the first ten levels,
-// but uses a much gentler geometric growth (1.05 vs player's 1.086) so the
-// late game doesn't become an unscalable wall. Lv 100 takes ~149,044 XP — a
-// multi-month project at engaged pacing, but real, not a years-long grind.
+// Crew leveling — LINEAR curve. Flat XP_PER_LEVEL means every level costs the
+// same, so a player's mental model is dead simple: "one raid ≈ one level"
+// (Krust raid = 910 player XP, crew earn the same per-kill total, lands just
+// under one level). No exponential late-game wall, no compressed early ramp —
+// just steady, predictable progression. Lv 1 → Lv 100 = 99,000 XP = ~109
+// Krust raids, ~3-4 months for an engaged player who runs one raid a day.
 //
-// Pacing reality check (910 XP/Krust raid):
-//   - 1 raid:    Lv 12 from Lv 1   (player-feel: 910 player-XP also = Lv 12)
-//   - 5 raids:   ~Lv 25
-//   - 20 raids:  ~Lv 45
-//   - 100 raids: ~Lv 85
-//   - 163 raids: Lv 100
+// Pacing examples:
+//   - Krust raid (910 XP):           ~1 level per raid
+//   - Future Ch3 raid (~400 XP):     ~0.4 levels per raid
+//   - Triangle voyage (220 XP):      ~0.22 levels per voyage
+//   - Coastal voyage (30 XP):        ~0.03 levels per voyage
 //
-// First curve (BASE=6, growth=1.086) inherited the player's STEEP-LATE feel
-// but compressed the early ramp into nothing — 910 XP would put a Lv 1 crew
-// at Lv 33. Players reasonably read that as a bug. The corrected curve below
-// keeps Lv 1→11 around 60–93 XP per level (same shape as player) and tapers
-// the late compound so Lv 91→100 is meaningful but not a wall.
+// We tried two geometric shapes earlier and both broke in different ways
+// (BASE=6, growth=1.086 → free first 30 levels; BASE=60, growth=1.05 →
+// gentler but still uneven). Linear is the right shape for "one raid = one
+// thing the player can feel" — switched 2026-06-08.
 //
 // What grants stats vs what's just progress:
 //   - Lv 3, 6, 9, ..., 99 → +1 stat tick (33 milestones)
@@ -31,15 +30,12 @@
 // play (no "next tick: Power" preview); the graveyard memorial surfaces the
 // final lifetime distribution as a tribute.
 
-const BASE_GAP   = 60
-const GAP_GROWTH = 1.05
+const XP_PER_LEVEL = 1000
 
 function computeXPTable(): number[] {
   const table: number[] = [0]
-  let total = 0
   for (let lv = 1; lv <= 99; lv++) {
-    total += Math.floor(BASE_GAP * Math.pow(GAP_GROWTH, lv - 1))
-    table.push(total)
+    table.push(lv * XP_PER_LEVEL)
   }
   return table
 }
