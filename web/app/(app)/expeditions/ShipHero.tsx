@@ -821,53 +821,11 @@ export default function ShipHero({
                 </div>
               )}
 
-              {/* Scores — moved from the top of the ShipHero card into the
-                  Loadout drawer where they actually matter: the player is
-                  here to adjust crew + items, and these two numbers tell
-                  them whether the loadout is launch-ready. Tap a tile to
-                  open its breakdown sheet. Same 0-100 + nautical-title
-                  pattern as before. */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-                marginBottom: '1.25rem',
-              }}>
-                <button
-                  onClick={() => setBreakdownScore('voyage')}
-                  aria-label="Voyage Score breakdown"
-                  style={{
-                    background: 'rgba(125,160,216,0.07)',
-                    border: '1px solid rgba(125,160,216,0.28)',
-                    borderRadius: 12, padding: '0.7rem 0.85rem',
-                    cursor: 'pointer', textAlign: 'left',
-                  }}
-                >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#7da0d8', marginBottom: 4 }}>Voyage Score</p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1 }}>{voyageScore}</span>
-                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#5a6878' }}>/100</span>
-                    <span style={{ fontSize: '0.58rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
-                  </div>
-                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#9ab4dc', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(voyageScore)}</p>
-                </button>
-                <button
-                  onClick={() => setBreakdownScore('raid')}
-                  aria-label="Raid Score breakdown"
-                  style={{
-                    background: 'rgba(216,138,106,0.07)',
-                    border: '1px solid rgba(216,138,106,0.28)',
-                    borderRadius: 12, padding: '0.7rem 0.85rem',
-                    cursor: 'pointer', textAlign: 'left',
-                  }}
-                >
-                  <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#d88a6a', marginBottom: 4 }}>Raid Score</p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1 }}>{raidRating.score}</span>
-                    <span className="font-karla" style={{ fontSize: '0.62rem', color: '#785a4e' }}>/100</span>
-                    <span style={{ fontSize: '0.58rem', color: '#5a5856', marginLeft: 'auto' }}>ⓘ</span>
-                  </div>
-                  <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#dca494', marginTop: 3, fontStyle: 'italic' }}>{getRankTitle(raidRating.score)}</p>
-                </button>
-              </div>
+              {/* Voyage Score / Raid Score tiles used to live here. Removed:
+                  Manage Ship is for ship identity (name, skin, items), not
+                  party readiness. The two scores still live in the prep
+                  modals (Campaign / Voyages hub cards) where the decision
+                  to launch actually happens — that's where they belong. */}
 
               {/* Ship preview with skin + rename — large hero image fills
                   the upper area of the drawer. */}
