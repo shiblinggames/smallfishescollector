@@ -19,6 +19,8 @@
 // Effects are stored on a crew member as an array of ids, so retuning a value
 // here updates every crew that carries it.
 
+import { applyLevelBonuses } from './crewLevel'
+
 export type StatKey = 'power' | 'dodge' | 'fortune'
 export type CrewEffectKind = 'buff' | 'flaw'
 export type CrewEffectScope = 'always' | 'raid' | 'voyage' | 'conditional' | 'aura'
@@ -147,7 +149,12 @@ export function effectSummary(e: CrewEffect): string {
 export function applyCrewEffects(
   base: { power: number; dodge: number; fortune: number },
   ids: string[] | null | undefined,
+  xp = 0,
 ): { power: number; dodge: number; fortune: number } {
+  // Level bonuses fold into the base FIRST so percent effects amplify a
+  // leveled crew's stronger stats (a +25% Power crew at Lv 30 is meaningfully
+  // stronger than the same crew at Lv 1).
+  const leveled = xp > 0 ? applyLevelBonuses(base, xp) : base
   const flat = { power: 0, dodge: 0, fortune: 0 }
   const pct = { power: 0, dodge: 0, fortune: 0 }
   for (const e of resolveEffects(ids)) {
@@ -156,8 +163,8 @@ export function applyCrewEffects(
     if (e.pct) { pct.power += e.pct.power ?? 0; pct.dodge += e.pct.dodge ?? 0; pct.fortune += e.pct.fortune ?? 0 }
   }
   return {
-    power: Math.max(1, Math.round((base.power + flat.power) * (1 + pct.power / 100))),
-    dodge: Math.max(1, Math.round((base.dodge + flat.dodge) * (1 + pct.dodge / 100))),
-    fortune: Math.max(1, Math.round((base.fortune + flat.fortune) * (1 + pct.fortune / 100))),
+    power: Math.max(1, Math.round((leveled.power + flat.power) * (1 + pct.power / 100))),
+    dodge: Math.max(1, Math.round((leveled.dodge + flat.dodge) * (1 + pct.dodge / 100))),
+    fortune: Math.max(1, Math.round((leveled.fortune + flat.fortune) * (1 + pct.fortune / 100))),
   }
 }

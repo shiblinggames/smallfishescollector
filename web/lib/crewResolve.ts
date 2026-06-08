@@ -14,6 +14,7 @@
 // system, so balance is preserved.
 
 import { resolveEffects } from './crewEffects'
+import { applyLevelBonuses } from './crewLevel'
 
 export interface DeployedCrew {
   id: number
@@ -23,6 +24,10 @@ export interface DeployedCrew {
   dodge: number
   fortune: number
   effects: string[]
+  /** Crew XP. Drives level-derived stat bonuses (folded into the per-crew base
+   *  before effects). Required — all loaders (`loadDeployedParty` + the client
+   *  picker mappings) populate it from `user_crew.xp`. */
+  xp: number
 }
 
 export interface ResolvedCrew {
@@ -108,12 +113,18 @@ export function resolveDeployedCrew(party: DeployedCrew[]): ResolvedParty {
       }
     }
 
+    // Fold level bonuses into the base BEFORE effect math, so percent effects
+    // amplify a leveled crew's stronger stats.
+    const leveled = c.xp > 0
+      ? applyLevelBonuses({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.xp)
+      : { power: c.power, dodge: c.dodge, fortune: c.fortune }
+
     return {
       id: c.id,
       slot: c.slot,
-      power: clampStat((c.power + flat.power) * (1 + pct.power / 100)),
-      dodge: clampStat((c.dodge + flat.dodge) * (1 + pct.dodge / 100)),
-      fortune: clampStat((c.fortune + flat.fortune) * (1 + pct.fortune / 100)),
+      power: clampStat((leveled.power + flat.power) * (1 + pct.power / 100)),
+      dodge: clampStat((leveled.dodge + flat.dodge) * (1 + pct.dodge / 100)),
+      fortune: clampStat((leveled.fortune + flat.fortune) * (1 + pct.fortune / 100)),
     }
   })
 

@@ -112,7 +112,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, dimmed, hint, frameAccent = '#b08d4f',
+  name, filename, rarity, base, effects, xp = 0, dimmed, hint, frameAccent = '#b08d4f',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -120,6 +120,7 @@ function CrewPanel({
   rarity: number
   base: { power: number; dodge: number; fortune: number }
   effects: string[]
+  xp?: number
   dimmed?: boolean
   hint?: boolean
   frameAccent?: string
@@ -129,7 +130,7 @@ function CrewPanel({
   children?: ReactNode
 }) {
   const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
-  const eff = applyCrewEffects(base, effects)
+  const eff = applyCrewEffects(base, effects, xp)
 
   const corner = (pos: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: 9, height: 9, opacity: 0.6, pointerEvents: 'none', ...pos,
@@ -708,7 +709,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   {state.roster.map((m: CrewMember) => (
                     <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
                       bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
-                      base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}
+                      base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp}
                       hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                       onClick={() => openDetail('roster', m)}>
                       {renderAction('roster', m, { round: true })}
@@ -750,7 +751,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const it = detail.item
           const dColor = RARITY_COLORS[(it.rarity as CrewRarity)] ?? '#8a857c'
           const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
-          const dEff = applyCrewEffects(dBase, it.effects)
+          // Board candidates haven't been recruited yet so they're always
+          // pre-XP (effectively Lv 1). Roster members carry their xp.
+          const dXp  = 'xp' in it ? it.xp : 0
+          const dEff = applyCrewEffects(dBase, it.effects, dXp)
           const dResolved = resolveEffects(it.effects)
           const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false) }
           return (

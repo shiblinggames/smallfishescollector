@@ -24,12 +24,13 @@ export type ShowcaseCrew = {
   dodge: number
   fortune: number
   effects: string[]
+  xp?: number
 }
 
 /** One crew portrait tile (effective stats shown). */
 export function CrewPortrait({ crew, w = 100, dimmed }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
-  const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects)
+  const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects, crew.xp ?? 0)
   return (
     <div style={{
       width: w, flexShrink: 0, borderRadius: 10, overflow: 'hidden',

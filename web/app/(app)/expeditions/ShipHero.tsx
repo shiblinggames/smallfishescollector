@@ -29,11 +29,12 @@ type RosterCrew = {
   name: string
   filename: string
   rarity: number      // 1-4 (fish group)
-  power: number       // rolled base stats
+  power: number       // rolled base stats (level bonus applied at read time)
   dodge: number
   fortune: number
   effects: string[]
   assignedSlot: number | null
+  xp: number          // drives level + per-stat level bonus
 }
 
 const STAT_COLS = [
@@ -56,7 +57,7 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
 // taps to assign.
 function PickerCrewCard({ card, selected, current, onSelect }: { card: RosterCrew; selected: boolean; current: boolean; onSelect: () => void }) {
   const color = CREW_RARITY_COLORS[card.rarity as 1 | 2 | 3 | 4] ?? '#6a6764'
-  const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects)
+  const eff = applyCrewEffects({ power: card.power, dodge: card.dodge, fortune: card.fortune }, card.effects, card.xp)
   const traits = resolveEffects(card.effects)
   const rarityName = RARITY_NAMES[card.rarity as 1 | 2 | 3 | 4] ?? 'Common'
   // Tap a chip to expand its full description (mobile has no hover). Tapping the
@@ -544,7 +545,7 @@ export default function ShipHero({
   // the Nav-level captain bonus — see lib/expeditionLevel.navLevelBonuses.
   const navBonus     = navLevelBonuses(xpProgress.level)
   const deployedParty: DeployedCrew[] = slots
-    .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects } : null)
+    .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp } : null)
     .filter((c): c is DeployedCrew => c !== null)
   const resolvedParty = resolveDeployedCrew(deployedParty)
   const totalPower   = resolvedParty.totals.power
@@ -563,7 +564,7 @@ export default function ShipHero({
   // sees the effect (and the per-stat delta) before committing.
   const slotsToTotals = (arr: (RosterCrew | null)[]) => {
     const party: DeployedCrew[] = arr
-      .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects } : null)
+      .map((c, i) => c ? { id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp } : null)
       .filter((c): c is DeployedCrew => c !== null)
     return resolveDeployedCrew(party).totals
   }
@@ -580,7 +581,7 @@ export default function ShipHero({
 
   // Crew available to assign: any roster member not already in another slot
   // (the one already in this slot stays selectable). Sorted by effective stats.
-  const effStats = (c: RosterCrew) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects)
+  const effStats = (c: RosterCrew) => applyCrewEffects({ power: c.power, dodge: c.dodge, fortune: c.fortune }, c.effects, c.xp)
   const pickerCards: RosterCrew[] = (() => {
     if (pickerSlot === null) return []
     const inThisSlot = slots[pickerSlot]?.id

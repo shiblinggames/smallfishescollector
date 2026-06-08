@@ -259,7 +259,7 @@ export default function DailyVoyagePanel({
     .filter(Boolean) as CrewMember[]
 
   const resolvedDeployed = savedCrew.length > 0
-    ? resolveDeployedCrew(savedCrew.map((c, i): DeployedCrew => ({ id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects })))
+    ? resolveDeployedCrew(savedCrew.map((c, i): DeployedCrew => ({ id: c.id, slot: i, rarity: c.rarity, power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp })))
     : null
   // scorePct (Pathfinder / Shanty Singer / Flagship) lifts the displayed estimate,
   // matching how the voyage is rolled at send time.

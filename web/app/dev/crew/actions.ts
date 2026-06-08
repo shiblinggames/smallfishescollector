@@ -41,6 +41,8 @@ export type CrewMember = {
   fortune: number
   effects: string[]
   assignedSlot: number | null
+  /** Cumulative XP. Level + per-stat level bonus derived via lib/crewLevel. */
+  xp: number
 }
 
 export type CrewState = {
@@ -122,6 +124,7 @@ function toMember(r: any, meta: Map<number, CardMeta>): CrewMember {
     name: m ? crewDisplayName(m.slug, m.name) : 'Unknown', filename: m?.filename ?? '',
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[], assignedSlot: r.assigned_slot,
+    xp: (r.xp as number | null) ?? 0,
   }
 }
 
@@ -166,7 +169,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Crew Hall Graveyard tab, not the active roster.
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, xp')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -188,7 +191,7 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
   const { meta } = await loadCards(admin)
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, xp')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -342,7 +345,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
   const { meta } = await loadCards(admin)
   const { data: rows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, xp, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
     .eq('user_id', user.id)
     .not('died_at', 'is', null)
     .order('died_at', { ascending: false })
@@ -357,6 +360,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
       filename: m?.filename ?? '',
       rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
       effects: (r.effects ?? []) as string[], assignedSlot: null,
+      xp: (r.xp as number | null) ?? 0,
       diedAt: r.died_at as string,
       diedOnRoute: (voyage?.route as string | undefined) ?? null,
     }

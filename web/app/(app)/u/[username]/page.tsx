@@ -51,12 +51,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // their visit-by-anyone profile.
     showcaseCrewIds.length > 0
       ? admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, cards(name, filename, slug)')
+          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, xp, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .is('died_at', null)
           .in('id', showcaseCrewIds)
       : admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, cards(name, filename, slug)')
+          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, xp, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .is('died_at', null)
           .not('assigned_slot', 'is', null)
@@ -102,6 +102,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     dodge: r.dodge,
     fortune: r.fortune,
     effects: (r.effects ?? []) as string[],
+    xp: (r.xp as number | null) ?? 0,
   }))
 
   const rarestFish = ((rarestFishData.data ?? []) as any[])
