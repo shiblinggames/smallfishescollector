@@ -14,29 +14,45 @@ interface Props {
   /** Border + glow accent — should match the gradient family so the
    *  card's edge feels like part of the same scene. */
   accent: string
+  /** Card height in pixels. Defaults to 168 (the tavern hub size);
+   *  pass higher for hero placements like Fish Market in the
+   *  marketplace where the card sits alone in its row. */
+  height?: number
+  /** If true, the click navigates to an external URL via a plain
+   *  anchor instead of router.push (used for Shopify product links
+   *  from the marketplace). */
+  external?: boolean
   /** Bespoke scene art rendered absolute inside the card. ScenicCard
    *  owns the gradient bg, border, bottom scrim, title, and tap feel
    *  — scenes just supply the illustration + animation. */
   children: React.ReactNode
 }
 
-/** Shared chrome for the new "scenic" tavern cards. Same outer
- *  dimensions as the legacy compact GameCard (168px tall, fills its
- *  grid cell) so the hub grid stays uniform regardless of which
- *  treatment each card uses. */
-export default function ScenicCard({ href, title, gradient, accent, children }: Props) {
+/** Shared chrome for the new "scenic" cards used on the tavern hub +
+ *  marketplace. Same outer dimensions as the legacy compact GameCard
+ *  by default (168px tall, fills its grid cell). Pass `external` to
+ *  navigate via <a target="_blank"> instead of next/navigation
+ *  router.push — used by the marketplace's Shopify links. */
+export default function ScenicCard({ href, title, gradient, accent, height = 168, external, children }: Props) {
   const router = useRouter()
+  const handleActivate = () => {
+    if (external) {
+      window.open(href, '_blank', 'noopener,noreferrer')
+    } else {
+      router.push(href)
+    }
+  }
   return (
     <motion.div
       role="link"
       tabIndex={0}
-      onClick={() => router.push(href)}
-      onKeyDown={(e) => e.key === 'Enter' && router.push(href)}
+      onClick={handleActivate}
+      onKeyDown={(e) => e.key === 'Enter' && handleActivate()}
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 600, damping: 22 }}
       style={{
         position: 'relative',
-        height: 168,
+        height,
         borderRadius: 18,
         overflow: 'hidden',
         background: `linear-gradient(180deg, ${gradient[0]} 0%, ${gradient[1]} 55%, ${gradient[2]} 100%)`,
