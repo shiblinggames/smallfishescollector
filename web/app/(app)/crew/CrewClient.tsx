@@ -611,6 +611,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // each stat actually does in raids + voyages. Reset when the modal
   // closes so it starts collapsed for the next card.
   const [statsGlossaryOpen, setStatsGlossaryOpen] = useState(false)
+  // Which trait row is expanded inside the detail modal. Tap a row to
+  // open its description; tap again (or open another) to swap. Closed on
+  // modal close. Stays scoped to a single trait at a time so the modal
+  // doesn't balloon back into its old busy layout.
+  const [expandedTrait, setExpandedTrait] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
@@ -1215,7 +1220,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const dXp  = 'xp' in it ? it.xp : 0
           const dEff = applyCrewEffects(dBase, it.effects, dXp)
           const dResolved = resolveEffects(it.effects)
-          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false) }
+          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setExpandedTrait(null) }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -1421,30 +1426,57 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   )}
                 </AnimatePresence>
 
-                {/* Traits */}
-                <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', marginBottom: '0.45rem' }}>Traits</p>
-                {dResolved.length === 0 ? (
-                  <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.42)', marginBottom: '0.9rem' }}>No traits.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: '0.95rem' }}>
-                    {dResolved.map(e => {
-                      const buff = e.kind === 'buff'
-                      const scope = SCOPE_META[e.scope]
-                      const summary = effectSummary(e)
-                      return (
-                        <div key={e.id} style={{ background: buff ? 'rgba(60,180,110,0.1)' : 'rgba(200,70,70,0.1)', border: `1px solid ${buff ? 'rgba(80,200,130,0.3)' : 'rgba(220,90,90,0.3)'}`, borderRadius: 8, padding: '0.5rem 0.6rem' }}>
-                          <div className="flex items-center justify-between" style={{ gap: 6 }}>
-                            <div className="flex items-center" style={{ gap: 6, minWidth: 0 }}>
-                              <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: buff ? '#bfe8cf' : '#f0bcbc', fontStyle: 'italic', whiteSpace: 'nowrap' }}>{e.name}</span>
-                              <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: scope.color, border: `1px solid ${scope.color}66`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{scope.label}</span>
+                {/* Traits — compact list. Each entry is one line: name +
+                    summary, color-coded buff/flaw. Tap any row to expand
+                    its description; details stay collapsed by default so
+                    the modal leads with class + stats + level info (the
+                    things the player actually decides on) rather than
+                    burying them under big trait cards. */}
+                {dResolved.length > 0 && (
+                  <>
+                    <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)', marginBottom: '0.3rem' }}>Traits</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '0.6rem' }}>
+                      {dResolved.map((e, idx) => {
+                        const buff = e.kind === 'buff'
+                        const summary = effectSummary(e)
+                        const expanded = expandedTrait === e.id
+                        return (
+                          <button
+                            key={e.id}
+                            type="button"
+                            onClick={() => setExpandedTrait(expanded ? null : e.id)}
+                            style={{
+                              display: 'flex', flexDirection: 'column',
+                              gap: 2, width: '100%',
+                              padding: '0.4rem 0', textAlign: 'left',
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              borderTop: idx === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                              <span className="font-cinzel font-700" style={{
+                                fontSize: '0.78rem', fontStyle: 'italic',
+                                color: buff ? '#9fd9b1' : '#e09a9a',
+                              }}>
+                                {e.name}
+                              </span>
+                              {summary && (
+                                <span className="font-karla font-700" style={{
+                                  fontSize: '0.7rem', whiteSpace: 'nowrap',
+                                  color: buff ? '#7fdfa3' : '#f08a8a',
+                                }}>{summary}</span>
+                              )}
                             </div>
-                            {summary && <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: buff ? '#7fdfa3' : '#f08a8a', whiteSpace: 'nowrap', textAlign: 'right' }}>{summary}</span>}
-                          </div>
-                          <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{e.desc}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
+                            {expanded && (
+                              <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4, marginTop: 2 }}>
+                                {e.desc}
+                              </p>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
                 )}
 
                 {renderAction(detail.kind, it, { onDone: close })}
