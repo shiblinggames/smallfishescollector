@@ -387,56 +387,31 @@ function CrewPanel({
             <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {name}
             </p>
-            {/* Level badge — sized up to read as a primary stat on the
-                card rather than a tucked-away chip. Small "LV" label
-                stacks over a big number, jersey-/rank-insignia style, so
-                the player's eye lands on the level immediately when
-                scanning the roster. Gold tone matches the loot economy.
-                (CrewPanel is also used for board candidates where xp is
-                undefined → defaults to 0 → renders Lv 1, accurate since
-                recruits join at Lv 1.)
-                When `hasLevelUp` is true the badge fills solid gold +
-                grows a small cream NEW dot so the player knows there's
-                a stat or tier to check inside; tapping the card stamps
-                the seen level and the badge returns to outlined idle on
-                the next render. */}
-            <div style={{
+            {/* Level — plain text rather than a chip/badge, so it reads
+                as part of the same nameplate row as the crew's name.
+                Pirata font picks up the same calligraphic style as the
+                name; warm gold tint distinguishes it from the name's
+                cream while staying inside the same warm palette. Level-up
+                state brightens the color + adds a tiny NEW dot at the
+                top-right of the number, no background pill. */}
+            <span className="font-pirata" style={{
               position: 'relative', flexShrink: 0,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              minWidth: 38, padding: '0.18rem 0.4rem 0.22rem',
-              borderRadius: 6,
-              color: hasLevelUp ? '#1c1308' : '#f0c040',
-              background: hasLevelUp
-                ? 'linear-gradient(180deg, #f5cf6c 0%, #d9b563 100%)'
-                : 'rgba(240,192,64,0.1)',
-              border: `1.5px solid ${hasLevelUp ? '#f0c040' : 'rgba(240,192,64,0.55)'}`,
-              boxShadow: hasLevelUp
-                ? '0 2px 10px rgba(240,192,64,0.5), inset 0 1px 0 rgba(255,245,200,0.5)'
-                : 'inset 0 1px 0 rgba(255,255,255,0.04)',
-              transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
-              lineHeight: 1,
+              fontSize: '1.05rem', lineHeight: 1, letterSpacing: '0.02em',
+              color: hasLevelUp ? '#ffd96a' : '#d9b563',
+              textShadow: hasLevelUp ? '0 0 10px rgba(255,217,106,0.55)' : '0 1px 2px rgba(0,0,0,0.6)',
+              transition: 'color 0.18s, text-shadow 0.18s',
             }}>
-              <span className="font-karla font-700" style={{
-                fontSize: '0.42rem', letterSpacing: '0.18em', textTransform: 'uppercase',
-                opacity: 0.82,
-              }}>
-                Lv
-              </span>
-              <span className="font-cinzel font-700" style={{
-                fontSize: '1.05rem', lineHeight: 1, marginTop: 1,
-              }}>
-                {crewLevelFromXP(xp)}
-              </span>
+              Lv {crewLevelFromXP(xp)}
               {hasLevelUp && (
                 <span aria-label="Unseen level-up" title="New level — tap to view" style={{
-                  position: 'absolute', top: -4, right: -4,
-                  width: 9, height: 9, borderRadius: '50%',
+                  position: 'absolute', top: -2, right: -8,
+                  width: 7, height: 7, borderRadius: '50%',
                   background: '#fff5d0',
-                  border: '1.5px solid #1c1308',
+                  border: '1.5px solid rgba(0,0,0,0.65)',
                   boxShadow: '0 0 6px rgba(255,245,200,0.85)',
                 }} />
               )}
-            </div>
+            </span>
           </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
             {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}
