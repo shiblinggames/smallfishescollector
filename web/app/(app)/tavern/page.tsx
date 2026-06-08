@@ -19,35 +19,31 @@ import { SkeletonBox } from '@/components/Skeleton'
 
 // Same streaming pattern as /expeditions: shell + Nav paint as soon as
 // profile arrives, then each card-group section streams in via its own
-// Suspense boundary. The previous version of this file also computed
-// per-game "done today / cap reached" flags so cards could dim with a
-// ✓ Done badge; that treatment was removed (cards should all read the
-// same regardless of completion), and along with it went the Supabase
-// roundtrips that fed it (cachedFotdAttempt + cachedBlackjackDailyWagered
-// + cachedSlotsDailyWagered + the premium / last_*_claim profile reads).
-// Only chartState survives because hasChart still gates whether the
-// Chart the Course card mounts at all.
+// Suspense boundary. chartState gates whether the Charting card mounts
+// at all — it sits in its own bottom-row section now, not folded into
+// Daily, since it's a rare conditional surface and the player's eye
+// shouldn't have to learn 'Daily has 3 cards sometimes / 2 cards
+// other times'.
 const cachedChartState = cache(() => getChartState())
 
 // ── Sections ────────────────────────────────────────────────────────────────
 
-async function DailySection() {
-  const chartState = await cachedChartState()
-
-  // Chart the Course folded into Daily on 2026-05-26 — used to live in
-  // its own "Contest" section. The daily-grant model (1 move per day,
-  // no stacking) makes it a daily login ritual like the others, not a
-  // sprint race. The card only mounts when the player actually has a
-  // chart in progress; outside that window it's just two cards.
-  const hasChart = chartState && !('error' in chartState)
-
+function DailySection() {
   return (
     <div className="grid grid-cols-2 gap-3">
       <DailyBonusCard />
       <FishOfTheDayCard />
-      {hasChart && <ChartTheCourseCard />}
     </div>
   )
+}
+
+async function ChartingSection() {
+  const chartState = await cachedChartState()
+  const hasChart = chartState && !('error' in chartState)
+  if (!hasChart) return null
+  // Single full-width hero card on its own row — no section heading
+  // since the card's own 'Charting' title carries the label.
+  return <ChartTheCourseCard />
 }
 
 // Top-of-page features grid: Recruit Crew + Tide Run sit alongside each
@@ -114,6 +110,16 @@ export default async function TavernPage() {
             <FeaturesSection />
           </div>
 
+          {/* Arcade — anytime-play, hiscore-driven games. Moved up
+              above Daily on 2026-06-07 so the high-engagement
+              minigames are nearer the top of the surface. */}
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
+            <Suspense fallback={<ArcadeCardsSkeleton />}>
+              <ArcadeSection />
+            </Suspense>
+          </div>
+
           {/* Daily — true daily rituals only (login claims). */}
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
@@ -122,13 +128,13 @@ export default async function TavernPage() {
             </Suspense>
           </div>
 
-          {/* Arcade — anytime-play, hiscore-driven games. */}
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
-            <Suspense fallback={<ArcadeCardsSkeleton />}>
-              <ArcadeSection />
-            </Suspense>
-          </div>
+          {/* Charting — single full-width hero card, only renders when
+              the player has an active chart in progress. Sits at the
+              bottom of the hub (above the footer) because it's a rare
+              conditional and shouldn't crowd the primary rows above. */}
+          <Suspense fallback={null}>
+            <ChartingSection />
+          </Suspense>
 
           <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
@@ -154,9 +160,8 @@ export default async function TavernPage() {
 // ── Skeletons matching each section's card grid shape ──────────────────────
 
 function DailyCardsSkeleton() {
-  // 2 cards minimum (Daily Bonus, FotD); Chart the Course shows as a
-  // third card when an active chart exists. Reserve 2 cells so the
-  // shell doesn't jump on warm renders.
+  // Always 2 cards (Daily Bonus + Fish of the Day). Charting moved
+  // to its own bottom-row section on 2026-06-07.
   return (
     <div className="grid grid-cols-2 gap-3">
       {[0, 1].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
