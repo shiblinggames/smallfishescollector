@@ -17,10 +17,13 @@ export type DeployedCrewRow = DeployedCrew & { name: string; catalogName: string
  *  the ship's crew-slot count. Carries name/portrait for the UI and feeds
  *  resolveDeployedCrew() directly (extra fields are ignored by the resolver). */
 export async function loadDeployedParty(admin: Admin, userId: string, crewSlots: number): Promise<DeployedCrewRow[]> {
+  // Live-roster only — fallen crew (died_at IS NOT NULL) are kept on
+  // the row for the Crew Hall Graveyard tab but never deployed.
   const { data } = await admin
     .from('user_crew')
     .select('id, assigned_slot, rarity, power, dodge, fortune, effects, cards(name, filename, slug)')
     .eq('user_id', userId)
+    .is('died_at', null)
     .not('assigned_slot', 'is', null)
     .order('assigned_slot')
   /* eslint-disable @typescript-eslint/no-explicit-any */

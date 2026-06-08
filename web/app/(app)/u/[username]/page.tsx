@@ -46,14 +46,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // Featured crew first; if the player hasn't picked anyone, fall
     // back to whoever's currently on the ship so the section is
     // informative by default instead of just hiding.
+    // Public profile shows the LIVE roster only — fallen crew are
+    // memorialized privately in the player's own Crew Hall, not on
+    // their visit-by-anyone profile.
     showcaseCrewIds.length > 0
       ? admin.from('user_crew')
           .select('id, rarity, power, dodge, fortune, effects, assigned_slot, cards(name, filename, slug)')
           .eq('user_id', profile.id)
+          .is('died_at', null)
           .in('id', showcaseCrewIds)
       : admin.from('user_crew')
           .select('id, rarity, power, dodge, fortune, effects, assigned_slot, cards(name, filename, slug)')
           .eq('user_id', profile.id)
+          .is('died_at', null)
           .not('assigned_slot', 'is', null)
           .order('assigned_slot', { ascending: true }),
 

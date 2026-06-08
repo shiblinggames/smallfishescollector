@@ -162,10 +162,13 @@ export async function getCrewState(): Promise<CrewState | null> {
     .select('id, slot, source, card_id, rarity, power, dodge, fortune, effects, recruited')
     .eq('user_id', user.id)
     .order('slot')
+  // Live roster only — fallen crew (died_at IS NOT NULL) live in the
+  // Crew Hall Graveyard tab, not the active roster.
   const { data: rosterRows } = await admin
     .from('user_crew')
     .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot')
     .eq('user_id', user.id)
+    .is('died_at', null)
     .order('recruited_at', { ascending: false })
 
   return {
@@ -175,7 +178,8 @@ export async function getCrewState(): Promise<CrewState | null> {
   }
 }
 
-/** Just the owned roster (no recruit board), for the expeditions crew screen. */
+/** Just the owned LIVE roster (no recruit board, no graveyard), for the
+ *  expeditions crew screen. */
 export async function getCrewRoster(): Promise<CrewMember[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -186,6 +190,7 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
     .from('user_crew')
     .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot')
     .eq('user_id', user.id)
+    .is('died_at', null)
     .order('recruited_at', { ascending: false })
   return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta))
 }
@@ -233,10 +238,13 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
 
   const { data: prof } = await admin.from('profiles').select('expedition_xp').eq('id', user.id).single()
   const capacity = crewCapacity(getLevelFromXP((prof as any)?.expedition_xp ?? 0))
+  // Capacity check counts LIVE roster only — fallen crew don't take
+  // up a roster slot (graveyard is unlimited memorial space).
   const { count } = await admin
     .from('user_crew')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .is('died_at', null)
   if ((count ?? 0) >= capacity) return { error: 'Roster full' }
 
   const { data: rec } = await admin
@@ -274,7 +282,9 @@ export async function dismissCrew(crewId: number): Promise<CrewActionResult> {
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  await admin.from('user_crew').delete().eq('id', crewId).eq('user_id', user.id)
+  // Dismiss only applies to live crew. Fallen crew live in the
+  // graveyard permanently — no "dismiss" affordance there.
+  await admin.from('user_crew').delete().eq('id', crewId).eq('user_id', user.id).is('died_at', null)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
@@ -288,8 +298,8 @@ export async function assignCrew(crewId: number, slot: number | null): Promise<C
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  // Ownership check.
-  const { data: crew } = await admin.from('user_crew').select('id, card_id').eq('id', crewId).eq('user_id', user.id).single()
+  // Ownership check — fallen crew can't be assigned to a slot.
+  const { data: crew } = await admin.from('user_crew').select('id, card_id').eq('id', crewId).eq('user_id', user.id).is('died_at', null).single()
   if (!crew) return { error: 'Crew not found' }
 
   if (slot === null) {
@@ -310,4 +320,45 @@ export async function assignCrew(crewId: number, slot: number | null): Promise<C
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
+}
+
+// ── Graveyard: fallen crew with the voyage they died on ──────────────────────
+
+export type FallenCrew = CrewMember & {
+  diedAt: string                              // ISO timestamp
+  diedOnRoute: string | null                  // voyage route slug (coastal/open/deep), null if voyage row missing
+}
+
+/** Memorial roll-call. Returns every crew member who died, most recent
+ *  first, with the voyage route they fell on so the UI can render a
+ *  "Fell on the Howling Deep · Mar 7" caption. Pre-graveyard losses
+ *  (the player's user_crew row was hard-deleted) won't appear here —
+ *  the graveyard starts populating from the migration forward. */
+export async function getCrewGraveyard(): Promise<FallenCrew[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const admin = createAdminClient()
+  const { meta } = await loadCards(admin)
+  const { data: rows } = await admin
+    .from('user_crew')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
+    .eq('user_id', user.id)
+    .not('died_at', 'is', null)
+    .order('died_at', { ascending: false })
+  return ((rows ?? []) as any[]).map(r => {
+    const m = meta.get(r.card_id)
+    // voyage is a single object via the explicit FK join, but PostgREST
+    // typings sometimes default it to an array — handle both shapes.
+    const voyage = Array.isArray(r.voyage) ? r.voyage[0] : r.voyage
+    return {
+      id: r.id, cardId: r.card_id,
+      name: m ? crewDisplayName(m.slug, m.name) : 'Unknown',
+      filename: m?.filename ?? '',
+      rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
+      effects: (r.effects ?? []) as string[], assignedSlot: null,
+      diedAt: r.died_at as string,
+      diedOnRoute: (voyage?.route as string | undefined) ?? null,
+    }
+  })
 }

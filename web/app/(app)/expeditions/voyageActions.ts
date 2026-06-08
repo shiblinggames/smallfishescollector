@@ -284,8 +284,17 @@ export async function revealVoyageResults(voyageId: number): Promise<
   await Promise.all([
     admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from('daily_voyages').update({ status: 'revealed' }).eq('id', voyageId),
+    // Soft-delete: lost crew get died_at + died_on_voyage_id stamped
+    // instead of being deleted, so the Crew Hall Graveyard tab can
+    // memorialize them with full portrait / name / rarity / traits.
+    // Every live-roster read (recruit, voyage assign, raid loadout,
+    // public profile) filters `WHERE died_at IS NULL` to keep fallen
+    // crew out of active UI.
     ...(voyage.crew_lost.length > 0
-      ? [admin.from('user_crew').delete().eq('user_id', user.id).in('id', voyage.crew_lost)]
+      ? [admin.from('user_crew')
+          .update({ died_at: new Date().toISOString(), died_on_voyage_id: voyageId, assigned_slot: null })
+          .eq('user_id', user.id)
+          .in('id', voyage.crew_lost)]
       : []),
     ...(voyage.total_doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: voyage.total_doubloons, reason: 'Daily crew voyage' })]

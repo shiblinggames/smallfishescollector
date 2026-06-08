@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef, useTransition, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  rerollBoard, recruitCrew, dismissCrew,
-  type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult,
+  rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
+  type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { resolveEffects, applyCrewEffects, effectSummary, SCOPE_META, CREW_EFFECTS } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
+import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import TickingNumber from '@/components/TickingNumber'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -257,6 +258,119 @@ function CrewPanel({
   )
 }
 
+// ── In Memoriam panel ────────────────────────────────────────────────────────
+// Compact sepia-toned memorial card for fallen crew. No actions — these are
+// gone. Portrait is desaturated, palette is weathered parchment, name sits
+// above a "fell on [route] · [date]" line and trait initials below.
+
+const GRAVE_BG = 'linear-gradient(157deg, #2a221b 0%, #150f0a 100%)'
+const GRAVE_BORDER = '#4a3b2a'
+
+const ROUTE_LABEL: Record<string, string> = Object.fromEntries(
+  (Object.keys(ROUTE_CONFIGS) as VoyageRoute[]).map(k => [k, ROUTE_CONFIGS[k].name])
+)
+
+function formatFallDate(iso: string): string {
+  const now = new Date()
+  const then = new Date(iso)
+  const ms = now.getTime() - then.getTime()
+  const day = 86_400_000
+  const days = Math.floor(ms / day)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 30) return `${days} days ago`
+  return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function SkullIcon({ size = 12, color = '#8a7758' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a8 8 0 0 0-8 8v3l-1 3 1 1v3h3v-2h2v2h6v-2h2v2h3v-3l1-1-1-3v-3a8 8 0 0 0-8-8z" />
+      <circle cx="9" cy="12" r="1.4" fill={color} />
+      <circle cx="15" cy="12" r="1.4" fill={color} />
+    </svg>
+  )
+}
+
+function FallenPanel({ crew }: { crew: FallenCrew }) {
+  const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
+  // Mute the rarity color toward sepia so even Legendary cards read as
+  // "remembered" rather than triumphant. Mix with parchment tone.
+  const routeName = crew.diedOnRoute ? (ROUTE_LABEL[crew.diedOnRoute] ?? crew.diedOnRoute) : 'an unknown voyage'
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      style={{
+        position: 'relative', display: 'flex', gap: '0.65rem', padding: '0.65rem 0.7rem',
+        borderRadius: 7,
+        background: GRAVE_BG,
+        border: `1px solid ${GRAVE_BORDER}`,
+        boxShadow: 'inset 0 1px 0 rgba(255,225,170,0.04), 0 6px 16px rgba(0,0,0,0.55)',
+      }}>
+      {/* Portrait — desaturated sepia */}
+      <div style={{
+        position: 'relative', width: 86, flexShrink: 0, alignSelf: 'flex-start', height: 96,
+        borderRadius: '40px 40px 4px 4px', overflow: 'hidden',
+        border: `1.5px solid ${color}88`,
+        boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.7), 0 0 8px ${color}22`,
+        background: `radial-gradient(ellipse at 50% 30%, ${color}1c 0%, #050403 74%)`,
+        filter: 'sepia(0.45) saturate(0.7)',
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={artSrc(crew.filename)} alt={crew.name} style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
+          opacity: 0.82,
+        }} />
+        <div style={{ position: 'absolute', inset: 3, borderRadius: '38px 38px 3px 3px', border: '1px solid rgba(255,225,170,0.12)', pointerEvents: 'none' }} />
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        <div>
+          <p className="font-pirata" style={{ fontSize: '1.05rem', color: '#d6c4a3', lineHeight: 1, letterSpacing: '0.02em' }}>
+            {crew.name}
+          </p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: `${color}cc`, marginTop: 3 }}>
+            {RARITY_NAMES[(crew.rarity as CrewRarity)] ?? 'Common'} Crew
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <SkullIcon />
+          <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(214,196,163,0.78)', lineHeight: 1.3 }}>
+            Fell on <span style={{ color: '#e6d2a8' }}>{routeName}</span>
+            <span style={{ color: 'rgba(214,196,163,0.5)' }}> · {formatFallDate(crew.diedAt)}</span>
+          </p>
+        </div>
+
+        {crew.effects.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
+            {crew.effects.slice(0, 4).map(eid => {
+              const e = CREW_EFFECTS[eid]
+              if (!e) return null
+              const buff = e.kind === 'buff'
+              return (
+                <span key={eid} className="font-karla font-700" style={{
+                  fontSize: '0.5rem', letterSpacing: '0.06em', textTransform: 'uppercase',
+                  color: buff ? '#9cc7a8' : '#c79c9c',
+                  background: buff ? 'rgba(60,120,80,0.18)' : 'rgba(140,60,60,0.18)',
+                  border: `1px solid ${buff ? 'rgba(120,180,140,0.4)' : 'rgba(180,110,110,0.4)'}`,
+                  borderRadius: 3, padding: '0.12rem 0.4rem',
+                }}>{e.name}</span>
+              )
+            })}
+            {crew.effects.length > 4 && (
+              <span className="font-karla font-700" style={{ fontSize: '0.5rem', color: 'rgba(214,196,163,0.5)', padding: '0.12rem 0.2rem' }}>+{crew.effects.length - 4}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function CrewClient({ initial }: { initial: CrewState }) {
   const [state, setState] = useState<CrewState>(initial)
@@ -271,8 +385,22 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
   const [viewed, setViewed] = useState<Set<string>>(new Set())
+  // Crew Hall sub-tab — live roster vs the graveyard of fallen crew. The
+  // graveyard fetch is lazy (first time the tab is opened) so the page-load
+  // cost stays the same for players who never click it.
+  const [activeTab, setActiveTab] = useState<'roster' | 'graveyard'>('roster')
+  const [graveyard, setGraveyard] = useState<FallenCrew[] | null>(null)
+  const [graveyardLoading, setGraveyardLoading] = useState(false)
   const reveal = useReveal()
   const crewSectionRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (activeTab !== 'graveyard' || graveyard !== null || graveyardLoading) return
+    setGraveyardLoading(true)
+    getCrewGraveyard()
+      .then(rows => setGraveyard(rows))
+      .finally(() => setGraveyardLoading(false))
+  }, [activeTab, graveyard, graveyardLoading])
 
   const rosterFull = state.roster.length >= state.capacity
 
@@ -512,40 +640,104 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           </div>
         </div>
 
-        {/* Roster — cool steel "your manifest" region */}
-        <div ref={crewSectionRef} style={{ borderRadius: 12, border: `1px solid ${SECTION_ROSTER}33`, background: `linear-gradient(180deg, ${SECTION_ROSTER}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70 }}>
-          <div className="flex items-center justify-between" style={{ marginBottom: '0.85rem' }}>
+        {/* Roster / Graveyard — cool steel "your manifest" region with a sub-tab
+            strip so fallen crew get a memorial space without crowding the live
+            roster. Tab color shifts to muted bronze for the graveyard so the
+            two states read visually distinct at a glance. */}
+        {(() => {
+          const isGraveyard = activeTab === 'graveyard'
+          const sectionAccent = isGraveyard ? '#9c8055' : SECTION_ROSTER
+          return (
+        <div ref={crewSectionRef} style={{ borderRadius: 12, border: `1px solid ${sectionAccent}33`, background: `linear-gradient(180deg, ${sectionAccent}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70, transition: 'border-color 0.3s, background 0.3s' }}>
+          {/* Tab strip */}
+          <div className="flex items-center justify-between flex-wrap gap-y-2" style={{ marginBottom: '0.9rem' }}>
             <div className="flex items-center gap-2.5">
-              <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: SECTION_ROSTER }} />
-              <div>
-                <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_ROSTER }}>Your Crew</h2>
-                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.58)', marginTop: 1 }}>You unlock a new slot every 10 Nav levels</p>
+              <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: sectionAccent, transition: 'background 0.3s' }} />
+              <div role="tablist" className="flex items-center" style={{ gap: 4, background: 'rgba(0,0,0,0.25)', padding: 3, borderRadius: 9, border: '1px solid rgba(255,255,255,0.08)' }}>
+                {([
+                  { id: 'roster' as const, label: 'Roster', accent: SECTION_ROSTER },
+                  { id: 'graveyard' as const, label: 'Graveyard', accent: '#9c8055' },
+                ]).map(t => {
+                  const active = activeTab === t.id
+                  return (
+                    <button
+                      key={t.id}
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setActiveTab(t.id)}
+                      className="font-cinzel font-700 uppercase"
+                      style={{
+                        padding: '0.42rem 0.95rem', borderRadius: 7,
+                        fontSize: '0.75rem', letterSpacing: '0.09em',
+                        background: active ? `${t.accent}22` : 'transparent',
+                        border: `1px solid ${active ? `${t.accent}88` : 'transparent'}`,
+                        color: active ? t.accent : 'rgba(255,255,255,0.55)',
+                        cursor: 'pointer', transition: 'all 0.18s',
+                      }}>
+                      {t.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.05, color: rosterFull ? '#f08a8a' : '#dfe9e3' }}>{state.roster.length} / {state.capacity}</p>
-              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.5)', marginTop: 1 }}>{rosterFull ? 'Crew full' : 'Crew slots'}</p>
+              {isGraveyard ? (
+                <>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.05, color: '#d6c4a3' }}>{graveyard?.length ?? '—'}</p>
+                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: 'rgba(214,196,163,0.6)', marginTop: 1 }}>Lost at sea</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.05, color: rosterFull ? '#f08a8a' : '#dfe9e3' }}>{state.roster.length} / {state.capacity}</p>
+                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.5)', marginTop: 1 }}>{rosterFull ? 'Crew full' : 'Crew slots'}</p>
+                </>
+              )}
             </div>
           </div>
 
-          {state.roster.length === 0 ? (
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>
-              No crew yet. Recruit from the board above.
-            </p>
+          {/* Active panel */}
+          {!isGraveyard ? (
+            <>
+              <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.7rem' }}>You unlock a new slot every 10 Nav levels.</p>
+              {state.roster.length === 0 ? (
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>
+                  No crew yet. Recruit from the board above.
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
+                  {state.roster.map((m: CrewMember) => (
+                    <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
+                      bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
+                      base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}
+                      hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
+                      onClick={() => openDetail('roster', m)}>
+                      {renderAction('roster', m, { round: true })}
+                    </CrewPanel>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
-              {state.roster.map((m: CrewMember) => (
-                <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
-                  bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
-                  base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects}
-                  hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
-                  onClick={() => openDetail('roster', m)}>
-                  {renderAction('roster', m, { round: true })}
-                </CrewPanel>
-              ))}
-            </div>
+            <>
+              <p className="font-karla italic" style={{ fontSize: '0.74rem', color: 'rgba(214,196,163,0.6)', marginBottom: '0.7rem' }}>
+                In memory of those who sailed and never returned.
+              </p>
+              {graveyardLoading && graveyard === null ? (
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>Reading the register…</p>
+              ) : (graveyard?.length ?? 0) === 0 ? (
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(214,196,163,0.45)', padding: '1rem 0' }}>
+                  No fallen crew. Sail the riskier routes and your manifest will fill.
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.7rem' }}>
+                  {graveyard!.map(g => <FallenPanel key={g.id} crew={g} />)}
+                </div>
+              )}
+            </>
           )}
         </div>
+          )
+        })()}
       </div>
 
       {/* Reroll reveal — the board's own cards flip open in place */}

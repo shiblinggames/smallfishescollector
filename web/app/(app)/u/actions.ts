@@ -48,10 +48,13 @@ export async function updateShowcaseCrew(crewIds: number[]): Promise<{ error?: s
   const ids = Array.from(new Set(crewIds)).slice(0, 5)
 
   if (ids.length > 0) {
+    // Showcase only LIVE crew — fallen crew can't be set as a
+    // featured profile pick.
     const { data: owned } = await admin
       .from('user_crew')
       .select('id')
       .eq('user_id', user.id)
+      .is('died_at', null)
       .in('id', ids)
     const ownedIds = new Set((owned ?? []).map((r: any) => r.id))
     const clean = ids.filter(id => ownedIds.has(id))
