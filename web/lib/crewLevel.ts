@@ -1,8 +1,21 @@
-// Crew leveling — mirrors the player's nav-level curve in shape (same 1.086
-// geometric growth) but 1/10 the magnitude, so Lv 100 takes ~245,810 XP vs
-// the player's ~2.46M. The intent: maxing a single crew is a multi-month
-// project that scales naturally with future higher-XP raids, not a flat
-// requires-X-grinds checklist.
+// Crew leveling — matches the player's per-level XP cost EARLY (BASE_GAP=60,
+// same as player) so a fresh recruit doesn't trivialize the first ten levels,
+// but uses a much gentler geometric growth (1.05 vs player's 1.086) so the
+// late game doesn't become an unscalable wall. Lv 100 takes ~149,044 XP — a
+// multi-month project at engaged pacing, but real, not a years-long grind.
+//
+// Pacing reality check (910 XP/Krust raid):
+//   - 1 raid:    Lv 12 from Lv 1   (player-feel: 910 player-XP also = Lv 12)
+//   - 5 raids:   ~Lv 25
+//   - 20 raids:  ~Lv 45
+//   - 100 raids: ~Lv 85
+//   - 163 raids: Lv 100
+//
+// First curve (BASE=6, growth=1.086) inherited the player's STEEP-LATE feel
+// but compressed the early ramp into nothing — 910 XP would put a Lv 1 crew
+// at Lv 33. Players reasonably read that as a bug. The corrected curve below
+// keeps Lv 1→11 around 60–93 XP per level (same shape as player) and tapers
+// the late compound so Lv 91→100 is meaningful but not a wall.
 //
 // What grants stats vs what's just progress:
 //   - Lv 3, 6, 9, ..., 99 → +1 stat tick (33 milestones)
@@ -18,8 +31,8 @@
 // play (no "next tick: Power" preview); the graveyard memorial surfaces the
 // final lifetime distribution as a tribute.
 
-const BASE_GAP   = 6
-const GAP_GROWTH = 1.086
+const BASE_GAP   = 60
+const GAP_GROWTH = 1.05
 
 function computeXPTable(): number[] {
   const table: number[] = [0]
