@@ -81,8 +81,10 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const shipTier = profile?.ship_tier ?? 0
   const ship = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
-  // New crew system: deployed party from user_crew, resolved with effects.
-  const party = await loadDeployedParty(admin, userId, ship.crewSlots)
+  // New crew system: deployed party from user_crew (raid track), resolved
+  // with effects. Voyage and raid each have an independent assignment slot
+  // now — see migrate_split_crew_assignment.
+  const party = await loadDeployedParty(admin, userId, ship.crewSlots, 'raid')
   const resolved = resolveDeployedCrew(party)
   const totalPower = resolved.totals.power
   const totalDodge = resolved.totals.dodge

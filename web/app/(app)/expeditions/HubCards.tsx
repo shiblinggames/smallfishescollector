@@ -655,8 +655,8 @@ function CrewSlotRow({ roster, shipCrewSlots, onPick }: {
 }) {
   const slots: (CrewMember | null)[] = Array(shipCrewSlots).fill(null)
   for (const c of roster) {
-    if (c.assignedSlot != null && c.assignedSlot >= 0 && c.assignedSlot < shipCrewSlots) {
-      slots[c.assignedSlot] = c
+    if (c.voyageSlot != null && c.voyageSlot >= 0 && c.voyageSlot < shipCrewSlots) {
+      slots[c.voyageSlot] = c
     }
   }
   const CAPTAIN_SIZE = 48

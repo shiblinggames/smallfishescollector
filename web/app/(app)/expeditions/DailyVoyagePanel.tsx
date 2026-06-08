@@ -203,8 +203,8 @@ export default function DailyVoyagePanel({
   const [claimedSkinId, setClaimedSkinId] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(() =>
     roster
-      .filter(c => c.assignedSlot != null)
-      .sort((a, b) => (a.assignedSlot ?? 0) - (b.assignedSlot ?? 0))
+      .filter(c => c.voyageSlot != null)
+      .sort((a, b) => (a.voyageSlot ?? 0) - (b.voyageSlot ?? 0))
       .map(c => c.id)
   )
   // Remember every crew we've seen so lost (deleted) crew can still be named

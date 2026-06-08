@@ -269,18 +269,18 @@ export default function ProfileClient({
   const equippedSpecial = equippedSpecialId ? SPECIAL_ITEMS.find(s => s.id === equippedSpecialId) ?? null : null
 
   // Showcase honours the player's explicit pick first; if they haven't
-  // featured anyone yet, fall back to whoever's actually on the ship
-  // (assignedSlot non-null, sorted captain → crew). Means the section
-  // is informative on day one instead of just begging the player to
-  // configure it.
+  // featured anyone yet, fall back to whoever's actually on the voyage
+  // track (the public-facing roster, sorted captain → crew). Means the
+  // section is informative on day one instead of just begging the player
+  // to configure it.
   const featuredCrew = selectedShowcase
     .map(id => crewRoster.find(c => c.id === id))
     .filter((c): c is CrewMember => !!c)
   const showcaseCrew = featuredCrew.length > 0
     ? featuredCrew
     : crewRoster
-        .filter(c => c.assignedSlot != null)
-        .sort((a, b) => (a.assignedSlot as number) - (b.assignedSlot as number))
+        .filter(c => c.voyageSlot != null)
+        .sort((a, b) => (a.voyageSlot as number) - (b.voyageSlot as number))
 
   function handleSaveUsername(e: React.FormEvent) {
     e.preventDefault()

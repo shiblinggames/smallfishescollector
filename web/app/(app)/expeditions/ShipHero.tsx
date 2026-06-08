@@ -13,7 +13,7 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import { equipShipSkin, saveEquippedRaidItems } from './actions'
 import PopupShell from '@/components/PopupShell'
-import { assignCrew } from '@/app/dev/crew/actions'
+import { assignToVoyage, benchCrew } from '@/app/dev/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
@@ -34,7 +34,8 @@ type RosterCrew = {
   dodge: number
   fortune: number
   effects: string[]
-  assignedSlot: number | null
+  voyageSlot: number | null  // voyage party slot, or null if benched / on raid track
+  raidSlot:   number | null  // raid loadout slot, or null if benched / on voyage track
   xp: number          // drives level + per-stat level bonus
 }
 
@@ -259,8 +260,8 @@ export default function ShipHero({
   const [slots, setSlots] = useState<(RosterCrew | null)[]>(() => {
     const arr: (RosterCrew | null)[] = Array(shipStats.crewSlots).fill(null)
     for (const c of roster) {
-      if (c.assignedSlot != null && c.assignedSlot >= 0 && c.assignedSlot < shipStats.crewSlots) {
-        arr[c.assignedSlot] = c
+      if (c.voyageSlot != null && c.voyageSlot >= 0 && c.voyageSlot < shipStats.crewSlots) {
+        arr[c.voyageSlot] = c
       }
     }
     return arr
@@ -293,8 +294,8 @@ export default function ShipHero({
   useEffect(() => {
     const arr: (RosterCrew | null)[] = Array(shipStats.crewSlots).fill(null)
     for (const c of roster) {
-      if (c.assignedSlot != null && c.assignedSlot >= 0 && c.assignedSlot < shipStats.crewSlots) {
-        arr[c.assignedSlot] = c
+      if (c.voyageSlot != null && c.voyageSlot >= 0 && c.voyageSlot < shipStats.crewSlots) {
+        arr[c.voyageSlot] = c
       }
     }
     setSlots(arr)
@@ -436,7 +437,7 @@ export default function ShipHero({
     // router.refresh() so the HubCards prep modal (which reads roster
     // assignments from the page's server-fetched props) sees the new
     // assignment too — otherwise the two surfaces would drift.
-    startTransition(async () => { await assignCrew(card.id, slot); router.refresh() })
+    startTransition(async () => { await assignToVoyage(card.id, slot); router.refresh() })
   }
 
   function removeFromSlot(i: number, e: React.MouseEvent) {
@@ -444,7 +445,7 @@ export default function ShipHero({
     const crew = slots[i]
     const next = [...slots]; next[i] = null
     setSlots(next); notifyCrewChanged(next)
-    if (crew) startTransition(async () => { await assignCrew(crew.id, null); router.refresh() })
+    if (crew) startTransition(async () => { await benchCrew(crew.id); router.refresh() })
   }
 
   // One round "on-deck" slot (filled portrait or empty dashed circle).

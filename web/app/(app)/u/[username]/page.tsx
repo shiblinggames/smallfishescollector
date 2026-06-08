@@ -51,18 +51,18 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // their visit-by-anyone profile.
     showcaseCrewIds.length > 0
       ? admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, xp, cards(name, filename, slug)')
+          .select('id, rarity, power, dodge, fortune, effects, xp, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .is('died_at', null)
           .in('id', showcaseCrewIds)
       : admin.from('user_crew')
-          .select('id, rarity, power, dodge, fortune, effects, assigned_slot, xp, cards(name, filename, slug)')
+          .select('id, rarity, power, dodge, fortune, effects, xp, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .is('died_at', null)
-          .not('assigned_slot', 'is', null)
-          .order('assigned_slot', { ascending: true }),
-    // slug for showcase chip is already selected via cards(...) above; the
-    // mapper below extracts it.
+          // Public showcase fallback = the voyage track (player's public-
+          // facing roster); raid loadout stays private to the captain.
+          .not('voyage_slot', 'is', null)
+          .order('voyage_slot', { ascending: true }),
 
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
@@ -90,7 +90,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   // Build the crew showcase. Player's explicit pick preserves their
   // saved order; the fallback (assigned crew) is already ordered by
-  // assigned_slot ASC from the query.
+  // voyage_slot ASC from the query.
   const rawCrew = (showcaseData.data ?? []) as any[]
   const orderedCrew = showcaseCrewIds.length > 0
     ? showcaseCrewIds.map(id => rawCrew.find(r => r.id === id)).filter(Boolean)

@@ -46,9 +46,21 @@ export type CrewMember = {
   dodge: number
   fortune: number
   effects: string[]
-  assignedSlot: number | null
+  /** Voyage party slot (0..N) or null if not on the voyage track. Mutually
+   *  exclusive with raidSlot via the DB CHECK constraint. */
+  voyageSlot: number | null
+  /** Raid loadout slot (0..N) or null if not on the raid track. */
+  raidSlot: number | null
   /** Cumulative XP. Level + per-stat level bonus derived via lib/crewLevel. */
   xp: number
+}
+
+/** Derived helper: where is this crew assigned right now? */
+export type CrewAssignment = 'voyage' | 'raid' | 'bench'
+export function crewAssignment(c: { voyageSlot: number | null; raidSlot: number | null }): CrewAssignment {
+  if (c.voyageSlot !== null) return 'voyage'
+  if (c.raidSlot !== null) return 'raid'
+  return 'bench'
 }
 
 export type CrewState = {
@@ -59,6 +71,9 @@ export type CrewState = {
   gems: number
   isPremium: boolean
   rerollCost: number
+  /** Ship-tier crew-slot count. Used by the Crew Hall inline assignment
+   *  toggle to pick the next-open slot on the chosen track. */
+  shipCrewSlots: number
 }
 
 export type CrewActionResult = { state: CrewState } | { error: string }
@@ -133,7 +148,9 @@ function toMember(r: any, meta: Map<number, CardMeta>): CrewMember {
     filename: m?.filename ?? '',
     slug: (m?.slug ?? '').toLowerCase(),
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
-    effects: (r.effects ?? []) as string[], assignedSlot: r.assigned_slot,
+    effects: (r.effects ?? []) as string[],
+    voyageSlot: (r.voyage_slot as number | null) ?? null,
+    raidSlot:   (r.raid_slot as number | null) ?? null,
     xp: (r.xp as number | null) ?? 0,
   }
 }
@@ -148,7 +165,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -157,6 +174,8 @@ export async function getCrewState(): Promise<CrewState | null> {
   const navLevel = getLevelFromXP((prof as any).expedition_xp ?? 0)
   const capacity = crewCapacity(navLevel)
   const gems = (prof as any).gems ?? 0
+  const shipTier = (prof as any).ship_tier ?? 0
+  const shipCrewSlots = EXPEDITION_SHIP_STATS[shipTier]?.crewSlots ?? 1
 
   const { byGroup, meta } = await loadCards(admin)
   const today = utcDate()
@@ -179,7 +198,7 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Crew Hall Graveyard tab, not the active roster.
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, xp')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -188,6 +207,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
+    shipCrewSlots,
   }
 }
 
@@ -201,7 +221,7 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
   const { meta } = await loadCards(admin)
   const { data: rosterRows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, xp')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
@@ -277,7 +297,8 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
     dodge: (rec as any).dodge,
     fortune: (rec as any).fortune,
     effects: (rec as any).effects,
-    assigned_slot: null,
+    voyage_slot: null,
+    raid_slot: null,
   })
   await admin.from('daily_recruits').update({ recruited: true }).eq('id', recruitId).eq('user_id', user.id)
   // Lifetime recruit counter (cumulative; user_crew only holds the live roster).
@@ -303,36 +324,114 @@ export async function dismissCrew(crewId: number): Promise<CrewActionResult> {
   return state ? { state } : { error: 'Failed to load crew' }
 }
 
-// ── Assign a crew member to a ship slot (0 = captain), or null to bench ───────
+// ── Assignment: voyage / raid / bench ────────────────────────────────────────
+// Each crew can live on EXACTLY ONE track at a time — the DB CHECK constraint
+// `user_crew_one_track_only` enforces this so concurrent server-action races
+// can't double-book a crew. The track-aware actions below also handle:
+//   - in-progress voyage lock (a crew currently at sea can't be reassigned)
+//   - one-card-per-track (you can't deploy two copies of the same fish on
+//     the same voyage/raid simultaneously)
+//   - slot collision (assigning to a taken slot benches the previous holder)
 
-export async function assignCrew(crewId: number, slot: number | null): Promise<CrewActionResult> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not signed in' }
-  const admin = createAdminClient()
+type AssignTrack = 'voyage' | 'raid'
 
-  // Ownership check — fallen crew can't be assigned to a slot.
-  const { data: crew } = await admin.from('user_crew').select('id, card_id').eq('id', crewId).eq('user_id', user.id).is('died_at', null).single()
+/** Common assignment guard: ownership, not-fallen, no in-progress voyage.
+ *  Returns the crew row (id + card_id) or an error envelope to forward up. */
+async function assertCanReassign(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  crewId: number,
+): Promise<{ ok: true; crew: { id: number; card_id: number; voyage_slot: number | null } } | { error: string }> {
+  const { data: crew } = await admin
+    .from('user_crew')
+    .select('id, card_id, voyage_slot')
+    .eq('id', crewId).eq('user_id', userId).is('died_at', null)
+    .single()
   if (!crew) return { error: 'Crew not found' }
 
-  if (slot === null) {
-    await admin.from('user_crew').update({ assigned_slot: null }).eq('id', crewId).eq('user_id', user.id)
+  // In-progress voyage lock — if this crew is in a pending voyage's
+  // crew_variant_ids, they're at sea right now and can't be reassigned
+  // until the voyage reveals.
+  if ((crew as any).voyage_slot != null) {
+    const { data: pending } = await admin
+      .from('daily_voyages')
+      .select('crew_variant_ids')
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .maybeSingle()
+    const onActive = pending && Array.isArray((pending as any).crew_variant_ids) && (pending as any).crew_variant_ids.includes(crewId)
+    if (onActive) return { error: 'This crew is at sea right now. Wait for their voyage to return.' }
+  }
+
+  return { ok: true, crew: crew as any }
+}
+
+async function applyAssignment(
+  userId: string,
+  crewId: number,
+  target: AssignTrack | null,
+  slot: number | null,
+): Promise<CrewActionResult> {
+  const admin = createAdminClient()
+  const guard = await assertCanReassign(admin, userId, crewId)
+  if ('error' in guard) return { error: guard.error }
+  const { crew } = guard
+
+  if (target === null || slot === null) {
+    // Bench — clear both columns.
+    await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null })
+      .eq('id', crewId).eq('user_id', userId)
   } else {
-    // Validate the slot against the ship's crew-slot count.
-    const { data: prof } = await admin.from('profiles').select('ship_tier').eq('id', user.id).single()
+    const { data: prof } = await admin.from('profiles').select('ship_tier').eq('id', userId).single()
     const tier = (prof as any)?.ship_tier ?? 0
     const crewSlots = EXPEDITION_SHIP_STATS[tier]?.crewSlots ?? 1
     if (slot < 0 || slot >= crewSlots) return { error: 'Invalid slot' }
-    // One crew per slot: bench whoever currently holds it.
-    await admin.from('user_crew').update({ assigned_slot: null }).eq('user_id', user.id).eq('assigned_slot', slot)
-    // Only one of a given card may sail at once: bench any other copy already aboard.
-    await admin.from('user_crew').update({ assigned_slot: null })
-      .eq('user_id', user.id).eq('card_id', (crew as any).card_id).neq('id', crewId)
-    await admin.from('user_crew').update({ assigned_slot: slot }).eq('id', crewId).eq('user_id', user.id)
+
+    const slotCol  = target === 'voyage' ? 'voyage_slot' : 'raid_slot'
+    const otherCol = target === 'voyage' ? 'raid_slot'   : 'voyage_slot'
+
+    // 1) Bench whoever currently holds this exact target slot.
+    await admin.from('user_crew').update({ [slotCol]: null })
+      .eq('user_id', userId).eq(slotCol, slot)
+    // 2) Bench any other copy of the same card already on the same track
+    //    (one of each fish per track to stop "stack three swordfish for ult").
+    await admin.from('user_crew').update({ [slotCol]: null })
+      .eq('user_id', userId).eq('card_id', crew.card_id).neq('id', crewId)
+    // 3) Clear THIS crew's other-track slot first — CHECK constraint requires
+    //    one of {voyage_slot, raid_slot} to be null before writing.
+    await admin.from('user_crew').update({ [otherCol]: null })
+      .eq('id', crewId).eq('user_id', userId)
+    // 4) Finally place them on the target slot.
+    await admin.from('user_crew').update({ [slotCol]: slot })
+      .eq('id', crewId).eq('user_id', userId)
   }
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
+}
+
+/** Assign a crew to a voyage slot. Pass `null` to bench the crew. */
+export async function assignToVoyage(crewId: number, slot: number | null): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  return applyAssignment(user.id, crewId, slot === null ? null : 'voyage', slot)
+}
+
+/** Assign a crew to a raid loadout slot. Pass `null` to bench the crew. */
+export async function assignToRaid(crewId: number, slot: number | null): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  return applyAssignment(user.id, crewId, slot === null ? null : 'raid', slot)
+}
+
+/** Bench a crew (clear both voyage_slot and raid_slot). */
+export async function benchCrew(crewId: number): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  return applyAssignment(user.id, crewId, null, null)
 }
 
 // ── Graveyard: fallen crew with the voyage they died on ──────────────────────
@@ -355,7 +454,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
   const { meta } = await loadCards(admin)
   const { data: rows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, assigned_slot, xp, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, xp, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
     .eq('user_id', user.id)
     .not('died_at', 'is', null)
     .order('died_at', { ascending: false })
@@ -370,7 +469,8 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
       filename: m?.filename ?? '',
       slug: (m?.slug ?? '').toLowerCase(),
       rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
-      effects: (r.effects ?? []) as string[], assignedSlot: null,
+      effects: (r.effects ?? []) as string[],
+      voyageSlot: null, raidSlot: null,
       xp: (r.xp as number | null) ?? 0,
       diedAt: r.died_at as string,
       diedOnRoute: (voyage?.route as string | undefined) ?? null,

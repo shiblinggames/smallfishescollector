@@ -196,30 +196,35 @@ async function ExpeditionHub() {
   )
 
 
-  // Live voyage + raid scores derived from the currently assigned crew —
-  // mirrors ShipHero's loadout math so the modal numbers match what the
-  // player sees on the ship card. Nav-level bonuses apply to raid (the
+  // Live voyage + raid scores derived from each track's INDEPENDENT roster.
+  // Voyage and raid have separate assignment slots now (voyage_slot /
+  // raid_slot, mutually exclusive); the previews compute one score per
+  // track from the right party. Nav-level bonuses apply to raid (the
   // captain bonus) but not voyage scores, per current convention.
-  const assignedParty: DeployedCrew[] = roster
-    .filter(c => c.assignedSlot != null)
+  const toDeployed = (track: 'voyage' | 'raid'): DeployedCrew[] => roster
+    .filter(c => (track === 'voyage' ? c.voyageSlot : c.raidSlot) !== null)
     .map(c => ({
-      id: c.id, slot: c.assignedSlot as number, rarity: c.rarity,
-      power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects, xp: c.xp, slug: c.slug,
+      id: c.id,
+      slot: (track === 'voyage' ? c.voyageSlot : c.raidSlot) as number,
+      rarity: c.rarity,
+      power: c.power, dodge: c.dodge, fortune: c.fortune,
+      effects: c.effects, xp: c.xp, slug: c.slug,
     }))
-  const resolved = resolveDeployedCrew(assignedParty)
+  const resolvedVoyage = resolveDeployedCrew(toDeployed('voyage'))
+  const resolvedRaid   = resolveDeployedCrew(toDeployed('raid'))
   const xpProgress = getXPProgress(profile?.expedition_xp ?? 0)
   const navBonus = navLevelBonuses(xpProgress.level)
   const voyageScore = Math.min(100, Math.round(
-    computeVoyageScore(resolved.totals.power, resolved.totals.dodge, resolved.totals.fortune)
-      * (1 + resolved.voyage.scorePct / 100)
+    computeVoyageScore(resolvedVoyage.totals.power, resolvedVoyage.totals.dodge, resolvedVoyage.totals.fortune)
+      * (1 + resolvedVoyage.voyage.scorePct / 100)
   ))
   const raidRating = computeCombatRating(
-    resolved.totals.power + navBonus.power,
-    resolved.totals.dodge + navBonus.navigation,
-    resolved.totals.fortune + navBonus.fortune,
+    resolvedRaid.totals.power + navBonus.power,
+    resolvedRaid.totals.dodge + navBonus.navigation,
+    resolvedRaid.totals.fortune + navBonus.fortune,
     shipStats.durability + navBonus.hp,
     shipStats.minDamage,
-    resolved.raid,
+    resolvedRaid.raid,
   )
 
   return (

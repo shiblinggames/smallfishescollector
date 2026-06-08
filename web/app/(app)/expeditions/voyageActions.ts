@@ -129,8 +129,9 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   }
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
 
-  // Deployed party from the new crew roster, resolved with effects.
-  const party = await loadDeployedParty(admin, user.id, shipStats.crewSlots)
+  // Deployed party from the new crew roster (voyage track), resolved with
+  // effects. Voyage and raid each have an independent slot column now.
+  const party = await loadDeployedParty(admin, user.id, shipStats.crewSlots, 'voyage')
   // The Inner Sea (coastal) is the safe intro route — any boat can sail it with
   // a single crew member aboard. Deeper routes still need a party of two.
   const minCrew = route === 'coastal' ? 1 : 2
@@ -301,7 +302,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     // crew out of active UI.
     voyage.crew_lost.length > 0
       ? admin.from('user_crew')
-          .update({ died_at: new Date().toISOString(), died_on_voyage_id: voyageId, assigned_slot: null })
+          .update({ died_at: new Date().toISOString(), died_on_voyage_id: voyageId, voyage_slot: null, raid_slot: null })
           .eq('user_id', user.id)
           .in('id', voyage.crew_lost)
       : Promise.resolve(null),

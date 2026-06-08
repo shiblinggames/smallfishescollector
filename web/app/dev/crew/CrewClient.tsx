@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useTransition, type ReactNode } from 'reac
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
+  assignToVoyage, assignToRaid, benchCrew, crewAssignment,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
@@ -82,6 +83,48 @@ const ROUND_DISMISS: React.CSSProperties = { ...ROUND_BTN, background: 'linear-g
 const ROUND_CONFIRM: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'linear-gradient(180deg, rgba(74,200,130,0.46), rgba(46,140,92,0.28))', border: '1px solid rgba(122,226,162,0.72)', color: '#dcf8e7' }
 const ROUND_CANCEL: React.CSSProperties = { ...ROUND_BTN, width: 30, height: 30, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.7)' }
 
+// Assignment toggle palette — Voyage = teal anchor, Raid = crimson swords,
+// Bench = muted slate. Active state fills; inactive is a thin outline so the
+// 3-button row reads as a segmented control at a glance.
+const ASSIGN_VOYAGE = '#5fa8c9'
+const ASSIGN_RAID   = '#e07c7c'
+const ASSIGN_BENCH  = '#7a7a7a'
+
+function AssignToggleBtn({
+  label, emoji, active, accent, disabled, onClick,
+}: {
+  label: string
+  emoji: string
+  active: boolean
+  accent: string
+  disabled: boolean
+  onClick: (e: React.MouseEvent) => void
+}) {
+  return (
+    <button
+      title={active ? `${label} (current)` : `Assign to ${label}`}
+      onClick={onClick}
+      disabled={disabled || active}
+      style={{
+        width: 34, height: 34, borderRadius: '50%', flexShrink: 0, padding: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: active ? 'default' : 'pointer',
+        fontSize: '0.95rem', lineHeight: 1,
+        color: active ? '#0a0a0a' : accent,
+        background: active ? accent : 'rgba(255,255,255,0.04)',
+        border: `1.5px solid ${accent}${active ? '' : '88'}`,
+        boxShadow: active
+          ? `0 2px 8px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.25)`
+          : 'inset 0 1px 0 rgba(255,255,255,0.05)',
+        transition: 'all 0.18s',
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <span aria-hidden>{emoji}</span>
+    </button>
+  )
+}
+
 // ── Countdown to the next UTC midnight (free board refresh) ──────────────────
 function FreeRollCountdown() {
   const [label, setLabel] = useState('')
@@ -114,7 +157,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', dimmed, hint, frameAccent = '#b08d4f',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, dimmed, hint, frameAccent = '#b08d4f',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -127,6 +170,9 @@ function CrewPanel({
    *  the BoardReveal placeholder cards still compile; passing '' falls back
    *  to the Neutral chip. */
   slug?: string
+  /** Where this crew is currently assigned. Drives the small status chip
+   *  under the rarity line. Omit on board recruits (they're pre-assignment). */
+  assignment?: 'voyage' | 'raid' | 'bench'
   dimmed?: boolean
   hint?: boolean
   frameAccent?: string
@@ -256,6 +302,33 @@ function CrewPanel({
               </span>
             )}
           </p>
+          {/* Assignment chip — small status pill so the player can scan their
+              roster and see who's where without reading the toggle buttons.
+              Voyage/Raid get colored chips; benched crew get a faint outline
+              so the absence of a chip doesn't look like missing data. */}
+          {assignment && (() => {
+            const accent =
+              assignment === 'voyage' ? ASSIGN_VOYAGE :
+              assignment === 'raid'   ? ASSIGN_RAID   :
+                                         ASSIGN_BENCH
+            const icon  = assignment === 'voyage' ? '⚓' : assignment === 'raid' ? '⚔' : '—'
+            const label = assignment === 'voyage' ? 'On Voyage' : assignment === 'raid' ? 'On Raid' : 'Benched'
+            return (
+              <span className="font-karla font-700" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                marginTop: 4,
+                fontSize: '0.56rem', letterSpacing: '0.09em', textTransform: 'uppercase',
+                color: accent,
+                background: `${accent}1a`,
+                border: `1px solid ${accent}66`,
+                borderRadius: 3,
+                padding: '0.1rem 0.42rem',
+                lineHeight: 1.1,
+              }}>
+                <span aria-hidden style={{ fontSize: '0.7rem' }}>{icon}</span>{label}
+              </span>
+            )
+          })()}
         </div>
 
         {/* Engraved stats — three stat blocks left-aligned. */}
@@ -464,6 +537,21 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
   const rosterFull = state.roster.length >= state.capacity
 
+  /** Pick the lowest empty slot on the target track. Returns 0 (captain
+   *  slot — server will bench the previous occupant) if all slots are
+   *  already filled, so the toggle never blocks on a full party. */
+  function nextOpenSlot(track: 'voyage' | 'raid'): number {
+    const taken = new Set<number>()
+    for (const c of state.roster) {
+      const s = track === 'voyage' ? c.voyageSlot : c.raidSlot
+      if (s !== null) taken.add(s)
+    }
+    for (let i = 0; i < state.shipCrewSlots; i++) {
+      if (!taken.has(i)) return i
+    }
+    return 0
+  }
+
   const scrollToCrew = () => crewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   // Open the detail modal: clear the card's hint glow + a light tactile tick.
@@ -562,17 +650,42 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     const armed = confirmDismiss === m.id
 
     if (round) {
-      if (armed) {
-        return (
-          <div className="flex" style={{ gap: 5 }}>
-            <button title="Confirm dismiss" onClick={confirm} disabled={pending} style={ROUND_CONFIRM}><CheckIcon /></button>
-            <button title="Cancel" onClick={cancel} disabled={pending} style={ROUND_CANCEL}><XIcon /></button>
-          </div>
-        )
+      // Roster card inline action — 3-way Voyage / Raid / Bench toggle.
+      // Dismiss moved into the detail modal so the card's primary affordance
+      // is "where does this crew sail?" not "are they fired?".
+      // Picking voyage/raid finds the lowest empty slot on that track and
+      // assigns; tapping the currently-active option no-ops.
+      const assignment = crewAssignment(m)
+      const onPickVoyage = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (assignment === 'voyage') return
+        const slot = nextOpenSlot('voyage')
+        if (slot === null) return  // ship full — but allowed to push out current holder server-side
+        run(() => assignToVoyage(m.id, slot), m.id, onDone)
       }
-      return <button title="Dismiss" onClick={arm} disabled={pending} style={ROUND_DISMISS}><XIcon /></button>
+      const onPickRaid = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (assignment === 'raid') return
+        const slot = nextOpenSlot('raid')
+        if (slot === null) return
+        run(() => assignToRaid(m.id, slot), m.id, onDone)
+      }
+      const onPickBench = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (assignment === 'bench') return
+        run(() => benchCrew(m.id), m.id, onDone)
+      }
+      return (
+        <div className="flex" style={{ gap: 5 }}>
+          <AssignToggleBtn label="Voyage" emoji="⚓" active={assignment === 'voyage'} accent={ASSIGN_VOYAGE} disabled={pending} onClick={onPickVoyage} />
+          <AssignToggleBtn label="Raid"   emoji="⚔" active={assignment === 'raid'}   accent={ASSIGN_RAID}   disabled={pending} onClick={onPickRaid} />
+          <AssignToggleBtn label="Bench"  emoji="—" active={assignment === 'bench'}  accent={ASSIGN_BENCH}  disabled={pending} onClick={onPickBench} />
+        </div>
+      )
     }
 
+    // Detail-modal action (round=false) — Dismiss stays here as the primary
+    // destructive action. Assignment lives on the card itself.
     if (armed) {
       return (
         <div className="flex gap-1.5">
@@ -769,6 +882,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity} frameAccent={SECTION_ROSTER}
                       bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                       base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
+                      assignment={crewAssignment(m)}
                       hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                       onClick={() => openDetail('roster', m)}>
                       {renderAction('roster', m, { round: true })}
