@@ -12,7 +12,7 @@ import PopupShell from '@/components/PopupShell'
 import { RAID_ITEMS } from '@/lib/raidItems'
 import { saveEquippedRaidItems } from './actions'
 import { repairShip } from '@/app/(app)/raids/actions'
-import type { CrewMember } from '@/app/dev/crew/actions'
+import type { CrewMember } from '@/app/(app)/crew/actions'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import DailyVoyagePanel from './DailyVoyagePanel'
 
@@ -98,7 +98,7 @@ function HubCrewStrip({
   label: string
 }) {
   const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const href = `/dev/crew?tab=roster&filter=${track}`
+  const href = `/crew?tab=roster&filter=${track}`
   const open = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()

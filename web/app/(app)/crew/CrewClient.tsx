@@ -592,7 +592,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // stays as the memorial tab. The graveyard fetch is lazy (first time the
   // tab is opened) so the page-load cost stays the same for players who
   // never click it.
-  // Deep-link support — Expedition hub cards link to /dev/crew?tab=roster
+  // Deep-link support — Expedition hub cards link to /crew?tab=roster
   // &filter=raid|voyage so tapping a crew portrait there lands the player
   // on the right view. Read once on mount; any value not in the allow-set
   // falls back to the default.

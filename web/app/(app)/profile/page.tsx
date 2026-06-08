@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import ProfileClient from './ProfileClient'
-import { getCrewRoster } from '@/app/dev/crew/actions'
+import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getShip } from '@/lib/ships'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as getExpeditionLevel } from '@/lib/expeditionLevel'

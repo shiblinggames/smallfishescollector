@@ -1,6 +1,6 @@
 // Pure helper for resolving a crew's current assignment track. Lives in
 // /lib so both server-side server-action callers and client components can
-// import it — `'use server'` files (web/app/dev/crew/actions.ts) silently
+// import it — `'use server'` files (web/app/(app)/crew/actions.ts) silently
 // strip any non-async export, which would drop this helper at build time
 // if it lived there.
 

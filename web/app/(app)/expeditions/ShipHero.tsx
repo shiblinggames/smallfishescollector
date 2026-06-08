@@ -13,7 +13,7 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import { equipShipSkin, saveEquippedRaidItems } from './actions'
 import PopupShell from '@/components/PopupShell'
-import { assignToVoyage, benchCrew } from '@/app/dev/crew/actions'
+import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
@@ -700,11 +700,11 @@ export default function ShipHero({
                 with the per-track party views. */}
           </div>
 
-          {/* Actions — Manage Crew (deep-link to /dev/crew) on the left,
+          {/* Actions — Manage Crew (deep-link to /crew) on the left,
               Manage Ship on the right. Matched pill styling so the pair
               reads as one row of management entries. */}
           <div style={{ position: 'relative', display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: '0.85rem' }}>
-            <Link href="/dev/crew" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+            <Link href="/crew" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
               color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
             }}>

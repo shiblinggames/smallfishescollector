@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import CrewClient from '@/app/dev/crew/CrewClient'
-import { getCrewState } from '@/app/dev/crew/actions'
+import CrewClient from '@/app/(app)/crew/CrewClient'
+import { getCrewState } from '@/app/(app)/crew/actions'
 
 // The Crew Hall — recruit board + roster. Replaces the old pack opener; the
 // recruit/reroll loop is the gem sink that used to be packs.
