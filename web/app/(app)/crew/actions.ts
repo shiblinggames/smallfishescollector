@@ -446,6 +446,58 @@ export async function benchCrew(crewId: number): Promise<CrewActionResult> {
   return applyAssignment(user.id, crewId, null, null)
 }
 
+/** Promote an already-assigned crew to captain (slot 0) on whichever track
+ *  they're on. Swaps slot indices with the current slot-0 holder if one
+ *  exists; if slot 0 is empty, the crew just moves to it. No-op if the
+ *  crew is benched or already the captain. */
+export async function promoteToCaptain(crewId: number): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+  const guard = await assertCanReassign(admin, user.id, crewId)
+  if ('error' in guard) return { error: guard.error }
+
+  const { data: target } = await admin
+    .from('user_crew')
+    .select('id, voyage_slot, raid_slot')
+    .eq('id', crewId).eq('user_id', user.id).is('died_at', null)
+    .single()
+  if (!target) return { error: 'Crew not found' }
+
+  const t = target as any
+  const track: 'voyage' | 'raid' | null =
+    t.voyage_slot !== null ? 'voyage' :
+    t.raid_slot   !== null ? 'raid'   :
+                              null
+  if (!track) return { error: 'Bench a crew first to deploy them on a track before promoting.' }
+
+  const slotCol = track === 'voyage' ? 'voyage_slot' : 'raid_slot'
+  const targetOldSlot: number = t[slotCol]
+  if (targetOldSlot === 0) return { state: (await getCrewState())! }  // already captain
+
+  // Find current captain on the same track (slot 0) — null if no one's there.
+  const { data: captain } = await admin
+    .from('user_crew')
+    .select('id')
+    .eq('user_id', user.id).is('died_at', null)
+    .eq(slotCol, 0)
+    .maybeSingle()
+
+  if (captain) {
+    // Swap. There's no unique-slot constraint, so a brief "both at slot 0"
+    // intermediate state is technically allowed by the DB; doing it in two
+    // sequential UPDATEs anyway for clarity.
+    await admin.from('user_crew').update({ [slotCol]: targetOldSlot })
+      .eq('id', (captain as any).id).eq('user_id', user.id)
+  }
+  await admin.from('user_crew').update({ [slotCol]: 0 })
+    .eq('id', crewId).eq('user_id', user.id)
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
+}
+
 // ── Graveyard: fallen crew with the voyage they died on ──────────────────────
 
 export type FallenCrew = CrewMember & {

@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
-  assignToVoyage, assignToRaid, benchCrew,
+  assignToVoyage, assignToRaid, benchCrew, promoteToCaptain,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
 import { crewAssignment } from '@/lib/crewAssignment'
@@ -203,7 +203,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, locked = false, hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -220,6 +220,10 @@ function CrewPanel({
    *  overlay across the top of the portrait. Omit on board recruits
    *  (they're pre-assignment). */
   assignment?: 'voyage' | 'raid' | 'bench'
+  /** True when the crew sits at slot 0 of their assigned track. Renders
+   *  a small crown above the assignment pip so the captain is obvious at
+   *  a glance. No-op for benched crew. */
+  isCaptain?: boolean
   /** True when this crew is at sea on an in-progress voyage and can't be
    *  reassigned. Greys the card out and disables the toggle buttons. */
   locked?: boolean
@@ -337,25 +341,46 @@ function CrewPanel({
             border so they read as decals attached to the portrait. */}
         {assignment && assignment !== 'bench' && (() => {
           const accent  = assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
-          const label   = assignment === 'voyage' ? 'On Voyage' : 'On Raid'
+          const label   = (isCaptain ? 'Captain · ' : '') + (assignment === 'voyage' ? 'On Voyage' : 'On Raid')
           const Icon    = assignment === 'voyage' ? AnchorIconSvg : CrossedSwordsIconSvg
           return (
-            <div
-              title={label}
-              aria-label={label}
-              style={{
-                position: 'absolute', top: -6, right: -6,
-                width: 26, height: 26, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: `radial-gradient(circle at 35% 30%, ${accent}ff 0%, ${accent}d0 70%)`,
-                border: `1.5px solid ${accent}`,
-                boxShadow: `0 2px 7px rgba(0,0,0,0.6), 0 0 12px ${accent}66, inset 0 1px 0 rgba(255,255,255,0.3)`,
-                pointerEvents: 'none',
-                zIndex: 2,
-              }}
-            >
-              <Icon size={14} color="#0a0a0a" />
-            </div>
+            <>
+              <div
+                title={label}
+                aria-label={label}
+                style={{
+                  position: 'absolute', top: -6, right: -6,
+                  width: 26, height: 26, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: `radial-gradient(circle at 35% 30%, ${accent}ff 0%, ${accent}d0 70%)`,
+                  border: `1.5px solid ${accent}`,
+                  boxShadow: `0 2px 7px rgba(0,0,0,0.6), 0 0 12px ${accent}66, inset 0 1px 0 rgba(255,255,255,0.3)`,
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                }}
+              >
+                <Icon size={14} color="#0a0a0a" />
+              </div>
+              {/* Captain crown sits above the assignment pip — tiny gold
+                  silhouette so the player can tell at a glance who's
+                  going to anchor the slot-0 captain seat on this track. */}
+              {isCaptain && (
+                <div
+                  aria-hidden
+                  style={{
+                    position: 'absolute', top: -19, right: -2,
+                    width: 18, height: 14,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 3,
+                  }}
+                >
+                  <svg width="18" height="14" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.3" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.75))' }}>
+                    <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
+                  </svg>
+                </div>
+              )}
+            </>
           )
         })()}
         {locked && (
@@ -1173,6 +1198,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
                         base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
                         assignment={crewAssignment(m)}
+                        isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
                         locked={state.lockedCrewIds.includes(m.id)}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
@@ -1532,6 +1558,49 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     </div>
                   </>
                 )}
+
+                {/* Make Captain — only for roster crew that are on a track
+                    but not already at slot 0. The track they're on doesn't
+                    need to be picked separately; promoteToCaptain figures
+                    it out from voyage_slot / raid_slot on the row. Sits
+                    just above Dismiss so the destructive action stays at
+                    the bottom of the modal. */}
+                {detail.kind === 'roster' && (() => {
+                  const m = it as CrewMember
+                  const onVoyage = m.voyageSlot !== null
+                  const onRaid   = m.raidSlot   !== null
+                  const isCap    = m.voyageSlot === 0 || m.raidSlot === 0
+                  if (isCap) return null
+                  if (!onVoyage && !onRaid) return null  // benched — nothing to promote within
+                  const trackLabel = onVoyage ? 'Voyage' : 'Raid'
+                  const accent = onVoyage ? ASSIGN_VOYAGE : ASSIGN_RAID
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => run(() => promoteToCaptain(m.id), m.id, close)}
+                      disabled={pending}
+                      className="font-karla font-700"
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        width: '100%', padding: '0.55rem',
+                        borderRadius: 9, marginBottom: 8,
+                        fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase',
+                        background: `linear-gradient(180deg, ${accent}28 0%, ${accent}10 100%)`,
+                        border: `1px solid ${accent}88`,
+                        color: '#1a1206',
+                        cursor: pending ? 'not-allowed' : 'pointer',
+                        opacity: pending ? 0.6 : 1,
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round">
+                        <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
+                      </svg>
+                      <span style={{ color: accent, textShadow: '0 1px 1px rgba(0,0,0,0.4)' }}>
+                        Make Captain ({trackLabel})
+                      </span>
+                    </button>
+                  )
+                })()}
 
                 {renderAction(detail.kind, it, { onDone: close })}
               </motion.div>
