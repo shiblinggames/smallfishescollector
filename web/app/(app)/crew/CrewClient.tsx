@@ -262,17 +262,12 @@ function CrewPanel({
         cursor: onClick ? 'pointer' : 'default',
         filter: locked ? 'grayscale(0.65) brightness(0.85)' : undefined,
       }}>
-      {/* "Has traits — tap to view" glow. Uses a neutral gold instead of
-          the rarity color so a Rare crew (whose rarity is bright blue)
-          doesn't get a blue halo around its whole card. The gold reads as
-          "there's something to discover here" — a treasure cue rather
-          than a tier signal. Cleared once the card's been opened. */}
-      {hint && (
-        <div className="crew-trait-hint" aria-hidden style={{
-          position: 'absolute', inset: -1, borderRadius: 8, pointerEvents: 'none',
-          boxShadow: '0 0 10px 1px rgba(240,192,64,0.55)',
-        }} />
-      )}
+      {/* The "has traits — tap to view" halo glow was removed entirely.
+          Players asked for a quieter card silhouette with no glow around
+          the whole card. Trait count is still readable on the rarity
+          line ('Epic · 2 traits') and the full list surfaces when the
+          card opens, so the discovery cue is preserved without coloring
+          the card's perimeter. `hint` prop kept for API stability — no-op. */}
       {/* Carved corner brackets */}
       <span style={corner({ top: 4, left: 4, borderTop: b, borderLeft: b })} />
       <span style={corner({ top: 4, right: 4, borderTop: b, borderRight: b })} />
