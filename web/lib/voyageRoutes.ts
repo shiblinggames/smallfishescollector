@@ -2,6 +2,11 @@ export type VoyageEventType = 'discovery' | 'encounter' | 'danger' | 'weather' |
 export type VoyageEventOutcome = 'success' | 'failure' | 'neutral'
 export type VoyageRoute = 'coastal' | 'open' | 'deep' | 'triangle' | 'shroud'
 
+// Routes that are designed but not yet finished (no exclusive loot, balance
+// still WIP, etc). They render on the map as locked with a "Coming soon"
+// label and can't be launched. Drop the entry once the route ships.
+export const COMING_SOON_ROUTES: Set<VoyageRoute> = new Set(['shroud'])
+
 export interface RouteConfig {
   name: string
   tagline: string

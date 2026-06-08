@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { generateVoyageEvents, type VoyageEvent, type VoyageRoute } from '@/lib/voyageEvents'
-import { ROUTE_CONFIGS } from '@/lib/voyageRoutes'
+import { ROUTE_CONFIGS, COMING_SOON_ROUTES } from '@/lib/voyageRoutes'
 import { generateAndSaveVoyageLog, type VoyageCrewMember } from '@/lib/captains-log'
 import type { CrewCard } from '@/lib/expeditions'
 import { voyageXP, getLevelFromXP } from '@/lib/expeditionLevel'
@@ -120,6 +120,9 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   // the deeper routes do, and need at least a Sloop. See lib/voyageRoutes.
   const routeCfg = ROUTE_CONFIGS[route]
   if (!routeCfg) return { error: 'Unknown route' }
+  if (COMING_SOON_ROUTES.has(route)) {
+    return { error: 'This route isn\'t ready to sail yet — coming soon.' }
+  }
   if (shipTier < routeCfg.minShipTier) {
     return { error: 'Requires a Sloop or better for this route' }
   }

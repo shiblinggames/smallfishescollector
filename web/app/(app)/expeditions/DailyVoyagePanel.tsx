@@ -8,7 +8,7 @@ import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/dev/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
-import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
+import { ROUTE_CONFIGS, COMING_SOON_ROUTES, type VoyageRoute } from '@/lib/voyageRoutes'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
@@ -94,7 +94,7 @@ const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
   triangle: { x: 45, y: 59 },
   // Far edge of the chart — sits past the Triangle to read as
   // "beyond the maps". Adjust if it collides with another node visually.
-  shroud:   { x: 78, y: 75 },
+  shroud:   { x: 68, y: 75 },
 }
 
 type DropEntry =
@@ -421,7 +421,8 @@ export default function DailyVoyagePanel({
                     const minLevel = ROUTE_MIN_LEVELS[routeKey]
                     const levelLocked = expeditionLevel < minLevel
                     const shipLocked  = shipTier < rco.minShipTier
-                    const locked      = levelLocked || shipLocked
+                    const comingSoon  = COMING_SOON_ROUTES.has(routeKey)
+                    const locked      = levelLocked || shipLocked || comingSoon
                     return (
                       <button
                         key={routeKey}
@@ -472,7 +473,7 @@ export default function DailyVoyagePanel({
                             {rco.name}
                           </span>
                           <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: locked ? '#c8a060' : isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1, fontWeight: locked ? 700 : undefined }}>
-                            {shipLocked ? 'Requires a Sloop' : levelLocked ? `Unlock at Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
+                            {comingSoon ? 'Coming soon' : shipLocked ? 'Requires a Sloop' : levelLocked ? `Unlock at Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
                           </span>
                         </span>
                       </button>
@@ -487,7 +488,8 @@ export default function DailyVoyagePanel({
                   const rco = ROUTE_CONFIGS[selectedRoute]
                   const levelLockedRoute = expeditionLevel < minLevel
                   const shipLockedRoute  = shipTier < rco.minShipTier
-                  const routeLocked = levelLockedRoute || shipLockedRoute
+                  const comingSoonRoute  = COMING_SOON_ROUTES.has(selectedRoute)
+                  const routeLocked = levelLockedRoute || shipLockedRoute || comingSoonRoute
                   const est = stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute) : null
                   return (
                     <div style={{
@@ -647,7 +649,7 @@ export default function DailyVoyagePanel({
                             padding: '0.45rem 1rem', textAlign: 'center',
                           }}>
                             <span className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.78rem', color: '#a08858' }}>
-                              {shipLockedRoute ? '🔒 Requires a Sloop or better' : `🔒 Unlocks at Expedition Lv ${minLevel}`}
+                              {comingSoonRoute ? '🔒 Coming soon' : shipLockedRoute ? '🔒 Requires a Sloop or better' : `🔒 Unlocks at Expedition Lv ${minLevel}`}
                             </span>
                           </div>
                         ) : (
