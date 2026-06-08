@@ -93,15 +93,16 @@ const ASSIGN_RAID   = '#e07c7c'
 const ASSIGN_BENCH  = '#7a7a7a'
 
 function AssignToggleBtn({
-  label, emoji, active, accent, disabled, onClick,
+  label, Icon, active, accent, disabled, onClick,
 }: {
   label: string
-  emoji: string
+  Icon: React.FC<{ size?: number; color?: string }>
   active: boolean
   accent: string
   disabled: boolean
   onClick: (e: React.MouseEvent) => void
 }) {
+  const fg = active ? '#0a0a0a' : accent
   return (
     <button
       title={active ? `${label} (current)` : `Assign to ${label}`}
@@ -111,8 +112,6 @@ function AssignToggleBtn({
         width: 34, height: 34, borderRadius: '50%', flexShrink: 0, padding: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: active ? 'default' : 'pointer',
-        fontSize: '0.95rem', lineHeight: 1,
-        color: active ? '#0a0a0a' : accent,
         background: active ? accent : 'rgba(255,255,255,0.04)',
         border: `1.5px solid ${accent}${active ? '' : '88'}`,
         boxShadow: active
@@ -122,8 +121,43 @@ function AssignToggleBtn({
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <span aria-hidden>{emoji}</span>
+      <Icon size={15} color={fg} />
     </button>
+  )
+}
+
+// ── Assignment icons — simple inline SVGs so the badges look like part of
+// the UI rather than emoji. Sized to fit the 22-26px corner pips. Anchor
+// for Voyage, crossed swords for Raid, horizontal line for Bench.
+function AnchorIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="5" r="2.2" />
+      <line x1="12" y1="22" x2="12" y2="7.2" />
+      <path d="M5 12H3a9 9 0 0 0 18 0h-2" />
+      <line x1="8" y1="9.5" x2="16" y2="9.5" />
+    </svg>
+  )
+}
+function CrossedSwordsIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14.5 17.5 3 6V3h3l11.5 11.5" />
+      <path d="m13 19 6-6" />
+      <path d="m16 16 4 4" />
+      <path d="m19 21 2-2" />
+      <path d="M9.5 17.5 21 6V3h-3L6.5 14.5" />
+      <path d="m11 19-6-6" />
+      <path d="m8 16-4 4" />
+      <path d="m5 21-2-2" />
+    </svg>
+  )
+}
+function BenchIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
   )
 }
 
@@ -195,15 +229,12 @@ function CrewPanel({
   })
   const b = `1.5px solid ${frameAccent}`
 
-  // Rarity-escalating card treatment so Rare / Epic / Legendary read distinctly
-  // at a glance: a rarity-tinted wash + tinted border + outer glow that grows
-  // with tier. Common keeps the plain section styling.
-  const TINT: Record<number, string> = { 2: '12', 3: '1c', 4: '2b' }       // bg wash alpha
-  const GLOW: Record<number, string> = { 2: `0 0 13px ${color}26`, 3: `0 0 18px ${color}40`, 4: `0 0 24px ${color}5c` }
-  const rarityBg = TINT[rarity] ? `linear-gradient(157deg, ${color}${TINT[rarity]} 0%, transparent 60%), ${bg}` : bg
-  const rarityBorder = rarity >= 2 ? `${color}99` : border
-  const baseShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
-  const cardShadow = GLOW[rarity] ? `${baseShadow}, ${GLOW[rarity]}` : baseShadow
+  // Rarity color now lives ONLY on the portrait niche border so the roster
+  // grid reads as calm and uniform; the card root keeps its plain section
+  // styling regardless of tier. (Previously the whole card carried a
+  // tinted wash + tinted border + outer glow that grew with tier, which
+  // made the roster look visually loud once five rarities were on screen.)
+  const cardShadow = `inset 0 0 0 1px ${frameAccent}22, inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.55)`
 
   return (
     <motion.div
@@ -214,8 +245,8 @@ function CrewPanel({
       style={{
         position: 'relative', display: 'flex', gap: '0.7rem', padding: '0.7rem',
         borderRadius: 7,
-        background: rarityBg,
-        border: `1px solid ${rarityBorder}`,
+        background: bg,
+        border: `1px solid ${border}`,
         boxShadow: cardShadow,
         opacity: dimmed ? 0.5 : locked ? 0.55 : 1,
         cursor: onClick ? 'pointer' : 'default',
@@ -291,9 +322,9 @@ function CrewPanel({
             niche's arch + overflow:hidden. Tucked just outside the niche
             border so they read as decals attached to the portrait. */}
         {assignment && assignment !== 'bench' && (() => {
-          const accent = assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
-          const icon   = assignment === 'voyage' ? '⚓' : '⚔'
-          const label  = assignment === 'voyage' ? 'On Voyage' : 'On Raid'
+          const accent  = assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
+          const label   = assignment === 'voyage' ? 'On Voyage' : 'On Raid'
+          const Icon    = assignment === 'voyage' ? AnchorIconSvg : CrossedSwordsIconSvg
           return (
             <div
               title={label}
@@ -305,13 +336,11 @@ function CrewPanel({
                 background: `radial-gradient(circle at 35% 30%, ${accent}ff 0%, ${accent}d0 70%)`,
                 border: `1.5px solid ${accent}`,
                 boxShadow: `0 2px 7px rgba(0,0,0,0.6), 0 0 12px ${accent}66, inset 0 1px 0 rgba(255,255,255,0.3)`,
-                color: '#0a0a0a',
-                fontSize: '0.85rem', lineHeight: 1,
                 pointerEvents: 'none',
                 zIndex: 2,
               }}
             >
-              <span aria-hidden>{icon}</span>
+              <Icon size={14} color="#0a0a0a" />
             </div>
           )
         })()}
@@ -325,13 +354,14 @@ function CrewPanel({
               background: 'rgba(7,5,3,0.94)',
               border: '1.5px solid rgba(255,180,90,0.7)',
               boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(255,180,90,0.4)',
-              color: '#ffd8a3',
-              fontSize: '0.85rem', lineHeight: 1,
               pointerEvents: 'none',
               zIndex: 2,
             }}
           >
-            <span aria-hidden>🔒</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffd8a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" />
+              <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
+            </svg>
           </div>
         )}
       </div>{/* end portrait wrapper */}
@@ -360,7 +390,7 @@ function CrewPanel({
             </span>
           </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
-            {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'} Crew
+            {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'}
             {effects.length > 0 && (
               <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 6, letterSpacing: '0.08em' }}>
                 · {effects.length} trait{effects.length === 1 ? '' : 's'}
@@ -491,7 +521,7 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
             )}
           </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: `${color}cc`, marginTop: 3 }}>
-            {RARITY_NAMES[(crew.rarity as CrewRarity)] ?? 'Common'} Crew
+            {RARITY_NAMES[(crew.rarity as CrewRarity)] ?? 'Common'}
           </p>
         </div>
 
@@ -573,13 +603,14 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   })() as 'roster' | 'recruits' | 'graveyard'
   const initialFilter = (() => {
     const f = searchParams?.get('filter')
-    return f === 'raid' || f === 'voyage' || f === 'all' ? f : 'all'
-  })() as 'all' | 'raid' | 'voyage'
+    return f === 'raid' || f === 'voyage' || f === 'bench' || f === 'all' ? f : 'all'
+  })() as 'all' | 'raid' | 'voyage' | 'bench'
   const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard'>(initialTab)
   // Roster sub-filter — Full shows everything, Raid shows just the raid
-  // party, Voyage shows just the voyage party. Raid first because raids
-  // take precedence over voyages in the player's loadout decisions.
-  const [rosterFilter, setRosterFilter] = useState<'all' | 'raid' | 'voyage'>(initialFilter)
+  // party, Voyage shows just the voyage party, Bench shows unassigned
+  // crew (neither track). Raid leads because raids take precedence over
+  // voyages in the player's loadout decisions.
+  const [rosterFilter, setRosterFilter] = useState<'all' | 'raid' | 'voyage' | 'bench'>(initialFilter)
   const [graveyard, setGraveyard] = useState<FallenCrew[] | null>(null)
   const [graveyardLoading, setGraveyardLoading] = useState(false)
   const reveal = useReveal()
@@ -737,12 +768,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       }
       // Order: Raid → Voyage → Bench. Raid leads because raids take
       // precedence over voyages in the player's loadout decisions, and
-      // the order mirrors the Full / Raid / Voyage sub-filter above.
+      // the order mirrors the Full / Raid / Voyage / Bench sub-filter above.
       return (
         <div className="flex" style={{ gap: 5 }}>
-          <AssignToggleBtn label="Raid"   emoji="⚔" active={assignment === 'raid'}   accent={ASSIGN_RAID}   disabled={pending || isLocked} onClick={onPickRaid} />
-          <AssignToggleBtn label="Voyage" emoji="⚓" active={assignment === 'voyage'} accent={ASSIGN_VOYAGE} disabled={pending || isLocked} onClick={onPickVoyage} />
-          <AssignToggleBtn label="Bench"  emoji="—" active={assignment === 'bench'}  accent={ASSIGN_BENCH}  disabled={pending || isLocked} onClick={onPickBench} />
+          <AssignToggleBtn label="Raid"   Icon={CrossedSwordsIconSvg} active={assignment === 'raid'}   accent={ASSIGN_RAID}   disabled={pending || isLocked} onClick={onPickRaid} />
+          <AssignToggleBtn label="Voyage" Icon={AnchorIconSvg}        active={assignment === 'voyage'} accent={ASSIGN_VOYAGE} disabled={pending || isLocked} onClick={onPickVoyage} />
+          <AssignToggleBtn label="Bench"  Icon={BenchIconSvg}         active={assignment === 'bench'}  accent={ASSIGN_BENCH}  disabled={pending || isLocked} onClick={onPickBench} />
         </div>
       )
     }
@@ -974,11 +1005,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   all:    state.roster.length,
                   raid:   state.roster.filter(c => c.raidSlot   !== null).length,
                   voyage: state.roster.filter(c => c.voyageSlot !== null).length,
+                  bench:  state.roster.filter(c => c.raidSlot === null && c.voyageSlot === null).length,
                 }
                 const filters = [
                   { id: 'all'    as const, label: 'Full',    accent: SECTION_ROSTER },
                   { id: 'raid'   as const, label: 'Raid',    accent: ASSIGN_RAID    },
                   { id: 'voyage' as const, label: 'Voyage',  accent: ASSIGN_VOYAGE  },
+                  { id: 'bench'  as const, label: 'Bench',   accent: ASSIGN_BENCH   },
                 ]
                 return (
                   <div role="tablist" className="flex items-center" style={{
@@ -1029,13 +1062,19 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 const visibleRoster = state.roster.filter(c =>
                   rosterFilter === 'all'    ? true :
                   rosterFilter === 'raid'   ? c.raidSlot   !== null :
-                                              c.voyageSlot !== null
+                  rosterFilter === 'voyage' ? c.voyageSlot !== null :
+                                              c.raidSlot === null && c.voyageSlot === null
                 )
                 if (visibleRoster.length === 0) {
-                  const label = rosterFilter === 'raid' ? 'raid loadout' : 'voyage party'
+                  const label =
+                    rosterFilter === 'raid'   ? 'raid loadout' :
+                    rosterFilter === 'voyage' ? 'voyage party' :
+                                                'bench'
                   return (
                     <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>
-                      No crew in your {label}. Use the toggle on a card to assign them.
+                      {rosterFilter === 'bench'
+                        ? 'No unassigned crew — everyone\'s out there earning their keep.'
+                        : `No crew in your ${label}. Use the toggle on a card to assign them.`}
                     </p>
                   )
                 }
@@ -1117,7 +1156,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <img src={artSrc(it.filename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
                 </div>
                 <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05, marginTop: '0.6rem' }}>{it.name}</p>
-                <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'} Crew</p>
+                <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'}</p>
 
                 {/* Level + XP bar — only shown for roster crew (board recruits
                     are pre-XP so the bar would be meaningless). Hidden when
