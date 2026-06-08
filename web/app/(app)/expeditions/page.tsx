@@ -34,7 +34,7 @@ const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
   const admin = createAdminClient()
   const { data } = await admin
     .from('daily_voyages')
-    .select('id, route, total_doubloons, total_gems, crew_lost, created_at, captains_log')
+    .select('id, route, total_doubloons, total_gems, crew_lost, created_at, captains_log, events, tide_turner_drop, phantom_hook_drop')
     .eq('user_id', user.id)
     .eq('status', 'revealed')
     .order('created_at', { ascending: false })
