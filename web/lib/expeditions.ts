@@ -51,13 +51,19 @@ export interface RunBuff {
 // Galleon) are the headline endgame jumps. Early game (Rowboat → Schooner)
 // is unchanged.
 const EXPEDITION_COMBAT_STATS: Record<number, Omit<ShipStats, 'name' | 'image'>> = {
-  0: { durability:  20, speed: 2,  crewSlots: 1, minDamage: 1  },
-  1: { durability:  27, speed: 3,  crewSlots: 1, minDamage: 2  },
-  2: { durability:  35, speed: 4,  crewSlots: 2, minDamage: 3  },
-  3: { durability:  45, speed: 5,  crewSlots: 2, minDamage: 4  },
-  4: { durability:  60, speed: 6,  crewSlots: 3, minDamage: 6  },
-  5: { durability:  85, speed: 8,  crewSlots: 4, minDamage: 8  },
-  6: { durability: 125, speed: 11, crewSlots: 5, minDamage: 11 },
+  // crewSlots bumped +1 across the board (2026-06-08) now that voyage and
+  // raid have independent parties — without this, a tier-0 player had only
+  // 1 slot per track (1 voyage, 1 raid) and couldn't field a real party on
+  // either. New floor of 2 means every ship can deploy at least a captain
+  // + one crewmate per track, scaling up smoothly to a 6-slot endgame Man-
+  // o-War. Roster capacity (lib/crewCapacity) is unchanged.
+  0: { durability:  20, speed: 2,  crewSlots: 2, minDamage: 1  },
+  1: { durability:  27, speed: 3,  crewSlots: 2, minDamage: 2  },
+  2: { durability:  35, speed: 4,  crewSlots: 3, minDamage: 3  },
+  3: { durability:  45, speed: 5,  crewSlots: 3, minDamage: 4  },
+  4: { durability:  60, speed: 6,  crewSlots: 4, minDamage: 6  },
+  5: { durability:  85, speed: 8,  crewSlots: 5, minDamage: 8  },
+  6: { durability: 125, speed: 11, crewSlots: 6, minDamage: 11 },
 }
 
 export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntries(
