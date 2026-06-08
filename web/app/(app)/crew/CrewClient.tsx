@@ -262,11 +262,15 @@ function CrewPanel({
         cursor: onClick ? 'pointer' : 'default',
         filter: locked ? 'grayscale(0.65) brightness(0.85)' : undefined,
       }}>
-      {/* "Has traits — tap to view" glow; cleared once the card's been opened */}
+      {/* "Has traits — tap to view" glow. Uses a neutral gold instead of
+          the rarity color so a Rare crew (whose rarity is bright blue)
+          doesn't get a blue halo around its whole card. The gold reads as
+          "there's something to discover here" — a treasure cue rather
+          than a tier signal. Cleared once the card's been opened. */}
       {hint && (
         <div className="crew-trait-hint" aria-hidden style={{
           position: 'absolute', inset: -1, borderRadius: 8, pointerEvents: 'none',
-          boxShadow: `0 0 10px 1px ${color}`,
+          boxShadow: '0 0 10px 1px rgba(240,192,64,0.55)',
         }} />
       )}
       {/* Carved corner brackets */}
@@ -981,7 +985,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const isGraveyard = activeTab === 'graveyard'
           const sectionAccent = isGraveyard ? '#9c8055' : SECTION_ROSTER
           return (
-        <div ref={crewSectionRef} style={{ borderRadius: 12, border: `1px solid ${sectionAccent}33`, background: `linear-gradient(180deg, ${sectionAccent}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70, transition: 'border-color 0.3s, background 0.3s' }}>
+        <div ref={crewSectionRef} style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.015)', padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70 }}>
           {/* Section heading + count — sub-tabs are gone, top-level tabs
               own that role now. Kept the count so players can scan total
               roster size without doing the math. */}
