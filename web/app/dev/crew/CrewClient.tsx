@@ -229,23 +229,21 @@ function CrewPanel({
             <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {name}
             </p>
-            {/* Level chip — only shown for roster crew (xp > 0 means they've
-                been recruited; board candidates always read as fresh, no chip).
-                Gold tone matches the loot/reward economy. */}
-            {xp > 0 && (() => {
-              const lv = crewLevelFromXP(xp)
-              return (
-                <span className="font-cinzel font-700" style={{
-                  flexShrink: 0,
-                  fontSize: '0.62rem', letterSpacing: '0.08em', textTransform: 'uppercase',
-                  color: '#f0c040', background: 'rgba(240,192,64,0.12)',
-                  border: '1px solid rgba(240,192,64,0.42)',
-                  padding: '0.12rem 0.42rem', borderRadius: 4, lineHeight: 1.2,
-                }}>
-                  Lv {lv}
-                </span>
-              )
-            })()}
+            {/* Level chip. Always shown so players can scan their roster by
+                progression at a glance — a fresh Lv 1 recruit reads as
+                clearly as a veteran Lv 47. Gold tone matches the loot
+                economy. (CrewPanel is also used for board candidates where
+                xp is undefined → defaults to 0 → renders "Lv 1", which is
+                accurate since recruits join at Lv 1.) */}
+            <span className="font-cinzel font-700" style={{
+              flexShrink: 0,
+              fontSize: '0.62rem', letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: '#f0c040', background: 'rgba(240,192,64,0.12)',
+              border: '1px solid rgba(240,192,64,0.42)',
+              padding: '0.12rem 0.42rem', borderRadius: 4, lineHeight: 1.2,
+            }}>
+              Lv {crewLevelFromXP(xp)}
+            </span>
           </div>
           <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color, marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
             {RARITY_NAMES[(rarity as CrewRarity)] ?? 'Common'} Crew
@@ -888,7 +886,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 </div>
 
                 {/* Stats */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: '0.9rem' }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: '0.6rem' }}>
                   {(['power', 'dodge', 'fortune'] as const).map(k => {
                     const ch = dEff[k] - dBase[k]
                     return (
@@ -900,6 +898,32 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     )
                   })}
                 </div>
+
+                {/* Trained-from-levels breakdown — shown only when there's
+                    something to show (the crew has crossed at least one stat
+                    milestone). Players can see exactly which stats their
+                    leveling has invested in, mirroring the graveyard
+                    eulogy format so the same shape appears in life + death. */}
+                {(() => {
+                  if (!('xp' in it) || dXp <= 0) return null
+                  const bonus = levelStatBonuses(crewLevelFromXP(dXp), dBase)
+                  const total = bonus.power + bonus.dodge + bonus.fortune
+                  if (total <= 0) return null
+                  return (
+                    <p className="font-karla italic" style={{
+                      fontSize: '0.7rem', color: 'rgba(240,192,64,0.78)',
+                      background: 'rgba(240,192,64,0.05)',
+                      border: '1px solid rgba(240,192,64,0.2)',
+                      borderRadius: 7, padding: '0.42rem 0.6rem',
+                      marginBottom: '0.9rem', lineHeight: 1.4,
+                    }}>
+                      <span style={{ color: 'rgba(255,255,255,0.45)', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.56rem', marginRight: 8 }}>Trained</span>
+                      <span style={{ color: STAT_COLOR.power }}>+{bonus.power} PWR</span>
+                      {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{bonus.dodge} AGI</span>
+                      {' · '}<span style={{ color: STAT_COLOR.fortune }}>+{bonus.fortune} FTN</span>
+                    </p>
+                  )
+                })()}
 
                 {/* Inline glossary — collapsed by default. One sentence
                     per stat covering raid + voyage usage. Colors match

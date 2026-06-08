@@ -43,20 +43,19 @@ export function CrewPortrait({ crew, w = 100, dimmed }: { crew: ShowcaseCrew; w?
       <div style={{ position: 'relative', width: '100%', height: w, background: `radial-gradient(ellipse at 50% 32%, ${color}26 0%, #070504 74%)` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={artSrc(crew.filename)} alt={crew.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} />
-        {/* Lv chip — top-right corner of the portrait, only shown when the
-            crew has actually leveled. Bragging surface on visit-by-anyone
-            profiles ("oh damn this player has a Lv 47 Doby"). */}
-        {level > 1 && (
-          <span className="font-cinzel font-700" style={{
-            position: 'absolute', top: 4, right: 4,
-            fontSize: '0.52rem', letterSpacing: '0.06em',
-            color: '#f0c040', background: 'rgba(7,5,4,0.85)',
-            border: '1px solid rgba(240,192,64,0.5)',
-            padding: '0.1rem 0.32rem', borderRadius: 3, lineHeight: 1,
-          }}>
-            Lv {level}
-          </span>
-        )}
+        {/* Lv chip — always shown, top-right corner of the portrait. Reads
+            as bragging surface on visit-by-anyone profiles ("oh damn this
+            player has a Lv 47 Doby"); also clarifies for Lv 1 that the
+            system is universal, not "only veterans have levels". */}
+        <span className="font-cinzel font-700" style={{
+          position: 'absolute', top: 4, right: 4,
+          fontSize: '0.52rem', letterSpacing: '0.06em',
+          color: '#f0c040', background: 'rgba(7,5,4,0.85)',
+          border: '1px solid rgba(240,192,64,0.5)',
+          padding: '0.1rem 0.32rem', borderRadius: 3, lineHeight: 1,
+        }}>
+          Lv {level}
+        </span>
       </div>
       <div style={{ padding: '0.3rem 0.4rem 0.42rem' }}>
         <p className="font-pirata" style={{ fontSize: '0.92rem', color: '#ecdcbd', lineHeight: 1, textAlign: 'center' }}>{crew.name}</p>
