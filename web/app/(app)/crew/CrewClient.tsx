@@ -387,21 +387,26 @@ function CrewPanel({
             <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {name}
             </p>
-            {/* Level — plain text rather than a chip/badge, so it reads
-                as part of the same nameplate row as the crew's name.
-                Pirata font picks up the same calligraphic style as the
-                name; warm gold tint distinguishes it from the name's
-                cream while staying inside the same warm palette. Level-up
-                state brightens the color + adds a tiny NEW dot at the
-                top-right of the number, no background pill. */}
-            <span className="font-pirata" style={{
+            {/* Level — plain text alongside the name. Cinzel font (matches
+                the stats/rarity treatment elsewhere) reads cleanly at small
+                sizes; pirata had the right vibe but its calligraphic 'L'
+                + 'v' kerned into something that read as 'lvl' or 'lwl'.
+                Small uppercase 'LV' separator with a slightly larger
+                number after, both in the same warm gold so the whole
+                token reads as one unit. */}
+            <span style={{
               position: 'relative', flexShrink: 0,
-              fontSize: '1.05rem', lineHeight: 1, letterSpacing: '0.02em',
+              display: 'inline-flex', alignItems: 'baseline', gap: 4,
               color: hasLevelUp ? '#ffd96a' : '#d9b563',
               textShadow: hasLevelUp ? '0 0 10px rgba(255,217,106,0.55)' : '0 1px 2px rgba(0,0,0,0.6)',
               transition: 'color 0.18s, text-shadow 0.18s',
             }}>
-              Lv {crewLevelFromXP(xp)}
+              <span className="font-cinzel font-700" style={{
+                fontSize: '0.6rem', letterSpacing: '0.15em', opacity: 0.85,
+              }}>LV</span>
+              <span className="font-cinzel font-700" style={{
+                fontSize: '1.05rem', lineHeight: 1,
+              }}>{crewLevelFromXP(xp)}</span>
               {hasLevelUp && (
                 <span aria-label="Unseen level-up" title="New level — tap to view" style={{
                   position: 'absolute', top: -2, right: -8,
