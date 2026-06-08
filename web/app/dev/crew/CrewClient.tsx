@@ -263,6 +263,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [pending, startTransition] = useTransition()
   const [busyId, setBusyId] = useState<number | 'reroll' | null>(null)
   const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
+  // Inline glossary toggle on the crew detail modal — explains what
+  // each stat actually does in raids + voyages. Reset when the modal
+  // closes so it starts collapsed for the next card.
+  const [statsGlossaryOpen, setStatsGlossaryOpen] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
   // Cards with traits glow until the player opens them once (a "look here" nudge).
@@ -556,7 +560,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
           const dEff = applyCrewEffects(dBase, it.effects)
           const dResolved = resolveEffects(it.effects)
-          const close = () => { setConfirmDismiss(null); setDetail(null) }
+          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false) }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -581,8 +585,30 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 <p className="font-pirata" style={{ textAlign: 'center', fontSize: '1.7rem', color: '#ecdcbd', lineHeight: 1.05, marginTop: '0.6rem' }}>{it.name}</p>
                 <p className="font-cinzel font-700" style={{ textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: dColor }}>{RARITY_NAMES[(it.rarity as CrewRarity)] ?? 'Common'} Crew</p>
 
+                {/* Stats header + ? toggle. Inline glossary below
+                    explains what each stat actually does in raids +
+                    voyages — match the Traits header styling above. */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.9rem', marginBottom: 6 }}>
+                  <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>Stats</p>
+                  <button
+                    type="button"
+                    onClick={() => setStatsGlossaryOpen(v => !v)}
+                    aria-label={statsGlossaryOpen ? 'Hide stat glossary' : 'What do these mean?'}
+                    aria-expanded={statsGlossaryOpen}
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: statsGlossaryOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.16)',
+                      color: 'rgba(255,255,255,0.65)',
+                      fontFamily: 'serif', fontSize: '0.8rem', lineHeight: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', padding: 0,
+                    }}
+                  >?</button>
+                </div>
+
                 {/* Stats */}
-                <div style={{ display: 'flex', gap: 8, margin: '0.9rem 0' }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: '0.9rem' }}>
                   {(['power', 'dodge', 'fortune'] as const).map(k => {
                     const ch = dEff[k] - dBase[k]
                     return (
@@ -594,6 +620,41 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     )
                   })}
                 </div>
+
+                {/* Inline glossary — collapsed by default. One sentence
+                    per stat covering raid + voyage usage. Colors match
+                    the stat-tile icons above so the eye links them. */}
+                <AnimatePresence initial={false}>
+                  {statsGlossaryOpen && (
+                    <motion.div
+                      key="stats-glossary"
+                      initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginBottom: '0.9rem' }}
+                      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                      transition={{ duration: 0.22, ease: 'easeOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div style={{
+                        padding: '0.6rem 0.7rem',
+                        background: 'rgba(255,255,255,0.025)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 9,
+                        display: 'flex', flexDirection: 'column', gap: 6,
+                      }}>
+                        {([
+                          { k: 'power' as const,   text: 'Damage your shots deal in raids. Drives encounter events on voyages.' },
+                          { k: 'dodge' as const,   text: 'Dodge chance against enemy hits in raids. Slips past danger events on voyages.' },
+                          { k: 'fortune' as const, text: 'Better loot and repair-kit rolls in raids. Drives discovery payouts on voyages.' },
+                        ]).map(({ k, text }) => (
+                          <p key={k} className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                            <span className="font-cinzel font-700" style={{ color: STAT_COLOR[k], letterSpacing: '0.06em', marginRight: 6 }}>{STAT_LABEL[k]}</span>
+                            {text}
+                          </p>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Traits */}
                 <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', marginBottom: '0.45rem' }}>Traits</p>
