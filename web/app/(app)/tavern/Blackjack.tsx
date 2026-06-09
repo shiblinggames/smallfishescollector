@@ -91,6 +91,19 @@ function useAnimatedNumber(value: number, duration = 900): number {
   return display
 }
 
+/** Hand-total ticker. Animates smoothly from the previously-displayed
+ *  value to the new value (not from zero). Used for the player + dealer
+ *  hand totals — CountUp's reset-to-zero behavior reads as the old digit
+ *  ghosting back into view on the way up (e.g., 12 → flash to 0 → tick
+ *  through 12 again on the climb to 18), which players perceive as the
+ *  old total "overlapping" with the new one when they hit on a split
+ *  hand. useAnimatedNumber handles the previous-to-new interpolation
+ *  cleanly, so the digit just morphs from one value to the next. */
+function TickingTotal({ value, duration = 350 }: { value: number; duration?: number }) {
+  const animated = useAnimatedNumber(value, duration)
+  return <>{animated}</>
+}
+
 /** Tiny haptic on supported devices. Web Vibration API: iOS Safari
  *  silently no-ops, Android Chrome buzzes for real. Patterns chosen so
  *  blackjack feels noticeably stronger than a regular win. */
@@ -1292,7 +1305,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: totalColor, lineHeight: 1 }}>
                     {cardsForTotal.length === 0
                       ? '?'
-                      : <><CountUp value={computedTotal} duration={350} />{(fullyRevealed && !dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>(soft)</span> : ''}{showNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
+                      : <><TickingTotal value={computedTotal} />{(fullyRevealed && !dealing && h.soft && h.total !== 21) ? <span style={{ fontSize: '0.7rem', marginLeft: 4 }}>(soft)</span> : ''}{showNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}</>}
                   </p>
                 </div>
               </div>
@@ -1400,7 +1413,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: dealerTotalColor, lineHeight: 1 }}>
                 {dealerTotalVisible === null
                   ? '?'
-                  : <CountUp value={dealerTotalVisible} duration={350} />}
+                  : <TickingTotal value={dealerTotalVisible} />}
                 {outcomeShown && r.dealerNatural ? <span style={{ fontSize: '0.75rem', marginLeft: 4 }}>· BJ</span> : ''}
               </p>
             </div>
