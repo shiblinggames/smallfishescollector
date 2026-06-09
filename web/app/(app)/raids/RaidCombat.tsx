@@ -375,6 +375,12 @@ export default function RaidCombat({
   // Anchor — next incoming hit's damage is reduced by this fraction (0-1).
   // Read at hit-resolve time, then cleared.
   const [anchorReductionPct, setAnchorReductionPct] = useState<number | null>(null)
+  // Abyssal Tide (Catfish-only legendary) — damage-absorbing shield buffer
+  // granted on top of HP. Drains BEFORE HP on the next incoming hit; carry
+  // over until consumed or the encounter ends. Anchor-style next-hit
+  // resolution wiring is pending, so for now this is staged but only
+  // visible via the chooser/log.
+  const [, setAbyssalShieldHp] = useState(0)
   // Cleanse Mender flag — Lv 100 Mender heals AND strips one enemy debuff
   // from the player. There's no in-fight debuff system yet, so this is a
   // hook for future expansion; for now it's tracked but does nothing.
@@ -845,10 +851,78 @@ export default function RaidCombat({
         }
         break
       }
+      // ── Legendary signature abilities ────────────────────────────────
+      case 'abyssal_tide': {
+        const at = m as import('@/lib/crewClasses').AbyssalTideMilestone
+        const heal = Math.round(playerHpMax * at.pctMaxHp)
+        setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
+        playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
+        // Shield buffer — staged for the next incoming hit. Matches the
+        // anchor pattern (state set here, resolver consumes later).
+        const shield = Math.round(playerHpMax * at.shieldPctMaxHp)
+        setAbyssalShieldHp(shield)
+        if (at.cleanseDebuff) setCleanseDebuffPending(true)
+        setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
+        break
+      }
+      case 'leviathan': {
+        const lv = m as import('@/lib/crewClasses').LeviathanMilestone
+        const dmg = Math.max(1, Math.round(totalPower * lv.crewPowerMult))
+        applyAbilityDamage(dmg, `${crew.name} slams the ${enemy.name} for ${dmg}!`, 'crit')
+        break
+      }
+      case 'blitz': {
+        const bz = m as import('@/lib/crewClasses').BlitzMilestone
+        // Each extra shot rolls through the shared damage profile so the
+        // current Sharpshot crit-zone buff (if any) and damagePct mods
+        // compound naturally. Lv 100 forces every shot to crit.
+        const shotResult: ShotResult = bz.autoCrit ? 'critical' : 'hit'
+        let total = 0
+        for (let i = 0; i < bz.extraShots; i++) {
+          total += Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.dmgMult)
+        }
+        total = Math.max(1, total)
+        applyAbilityDamage(total, `${crew.name} unloads ${bz.extraShots} extra shots for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
+        break
+      }
     }
 
     setOneAbilityUsedThisTurn(true)
     onAbilityFired?.(crew.id)
+  }
+
+  // Shared damage applicator for legendary direct-damage abilities
+  // (Leviathan, Blitz). Handles the hitsplat + shake + log line + victory
+  // detection / sink animation / onEnemyDefeated dispatch, mirroring the
+  // step-playback path inside resolveTurn so kills landed via an ability
+  // run the same outro as kills landed via cannon fire.
+  function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit') {
+    const newHp = Math.max(0, enemyHpRef.current - rawDmg)
+    setEnemyHp(newHp)
+    enemyHpRef.current = newHp
+    setEHitsplat({ key: Date.now(), text: String(rawDmg), color: hitKind === 'crit' ? '#fbbf24' : '#f87171', big: hitKind === 'crit' })
+    setEnemyShakeKind(hitKind === 'crit' ? 'crit' : 'hit')
+    setEnemyShakeKey(k => k + 1)
+    setTimeout(() => setEHitsplat(null), 480)
+    setResolveLog(prev => [...prev, logLine])
+    if (newHp <= 0) {
+      // Victory beat — mirrors the eHp<=0 branch in resolveTurn so loot /
+      // XP messages and the kill callback fire on the same schedule the
+      // cannon-fire path uses.
+      setSubPhase('done')
+      setEnemySinking(true)
+      setTimeout(() => setResolveLog(prev => [...prev, `You sank the ${enemy.name}!`]), 200)
+      let cbDelay = 1000
+      if (killReward?.gold) {
+        setTimeout(() => setResolveLog(prev => [...prev, `Plunder: +${killReward.gold} ⟡`]), 500)
+        cbDelay = 1300
+      }
+      if (killReward?.xp) {
+        setTimeout(() => setResolveLog(prev => [...prev, `Nav XP: +${killReward.xp}`]), 800)
+        cbDelay = 1600
+      }
+      setTimeout(() => onEnemyDefeated(playerHpRef.current), cbDelay)
+    }
   }
 
   function selectAction(action: EnemyAction) {

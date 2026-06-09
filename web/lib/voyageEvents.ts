@@ -174,6 +174,11 @@ export const CREW_TRAITS: Record<string, CrewTrait> = {
     rare: "Captained a Gilded Net flagship for six years before walking away. Never said why. The ship's still waiting in port.",
     legendary: "The Gilded Net, the Brotherhood, and the Deepwatch all have open recruitment offers for her. She's turned down all three. Currently on your ship. Make of that what you will.",
   },
+  Mako: {
+    common: "Eats faster than she thinks. Hasn't been wrong yet.",
+    rare: "Three Gilded Net merchants tried to outrun her in clear water in '11. None made it to port. She made it to two of theirs.",
+    legendary: "The Saltwater Brotherhood maintains a standing order: do not engage a vessel she is aboard. The order is older than half their captains.",
+  },
 }
 
 function getCrewTrait(card: CrewCard): string | null {

@@ -19,7 +19,16 @@
 // classes have one-shot effects, so there's no "stacking" failure mode —
 // the once-per-raid + once-per-turn rules naturally cap burst.
 
-export type CrewClass = 'mender' | 'sharpshot' | 'snare' | 'navigator' | 'anchor'
+export type CrewClass =
+  | 'mender' | 'sharpshot' | 'snare' | 'navigator' | 'anchor'
+  // ── Legendary signature classes ─────────────────────────────────────
+  // One-species-only classes that replace the generic class for that
+  // legendary crew. Each is a deliberately unique ability shape, not a
+  // stronger version of an existing class — Catfish doesn't share the
+  // Mender pool anymore, Doby doesn't share Anchor, Mako is new.
+  | 'abyssal_tide'  // Catfish only — heal + shield combo
+  | 'leviathan'     // Doby Mick only — flat damage scaling with crew Power
+  | 'blitz'         // Mako only — extra cannon shots this turn
 
 // ── Species → class map ────────────────────────────────────────────────────
 // Keyed by lower-cased cards.slug so callers can do `CLASS_BY_SLUG[slug.toLowerCase()]`.
@@ -28,7 +37,6 @@ export type CrewClass = 'mender' | 'sharpshot' | 'snare' | 'navigator' | 'anchor
 // Snare, Oarfish = Navigator, Doby Mick = Anchor.
 export const CLASS_BY_SLUG: Record<string, CrewClass> = {
   // ── Mender (Healer) — gentle, supportive, restorative ──
-  catfish:       'mender',
   clownfish:     'mender',
   koi:           'mender',
   blobfish:      'mender',
@@ -68,10 +76,18 @@ export const CLASS_BY_SLUG: Record<string, CrewClass> = {
   humpback_whale: 'anchor',
   blue_whale:     'anchor',
   whale_shark:    'anchor',
-  doby_mick:      'anchor',
   nurse_shark:    'anchor',
   bass:           'anchor',
   red_snapper:    'anchor',
+
+  // ── Legendary signature classes — species-locked, one-of-one ──
+  // These three are the only tier-3 legendary species; each gets its own
+  // unique ability (not a stronger version of a base class). They used
+  // to share Mender / Anchor with non-legendaries; the move out of those
+  // pools is the design intent — legendaries should feel singular.
+  catfish:       'abyssal_tide',
+  doby_mick:     'leviathan',
+  mako:          'blitz',
 }
 
 /** Resolve a species slug to its class. Slugs in cards.slug are Title_Case;
@@ -136,6 +152,44 @@ export interface NavigatorMilestone {
   /** Probability of granting +2 charges instead of +1 (rolled separately).
    *  If both rolls succeed, the +2 wins. */
   twoChargeChance: number
+  desc: string
+}
+
+// ── Legendary milestone shapes ──────────────────────────────────────────────
+
+export interface AbyssalTideMilestone {
+  unlockLevel: ClassMilestoneLevel
+  /** Fraction of max HP healed, 0–1. */
+  pctMaxHp: number
+  /** Damage-absorbing shield granted to the ship, expressed as fraction of
+   *  max HP. The shield buffer takes hits before HP does and persists
+   *  until consumed or the encounter ends. */
+  shieldPctMaxHp: number
+  /** Lv 100: also strips one enemy-applied debuff currently on the player. */
+  cleanseDebuff?: boolean
+  desc: string
+}
+
+export interface LeviathanMilestone {
+  unlockLevel: ClassMilestoneLevel
+  /** Multiplier on the player's total crew Power for the direct-damage
+   *  payload. 1.0 = damage equals crew Power; 2.0 = damage equals 2×
+   *  crew Power. Ignores enemy armor; dodge handled per-tier. */
+  crewPowerMult: number
+  /** Lv 100: this hit cannot be dodged. */
+  ignoresDodge?: boolean
+  desc: string
+}
+
+export interface BlitzMilestone {
+  unlockLevel: ClassMilestoneLevel
+  /** Number of extra cannon shots fired this turn after the normal one. */
+  extraShots: number
+  /** Damage multiplier on each extra shot, relative to a normal shot's
+   *  damage profile. 1.0 = full damage. */
+  dmgMult: number
+  /** Lv 100: every extra shot lands as a guaranteed crit. */
+  autoCrit?: boolean
   desc: string
 }
 
@@ -227,6 +281,51 @@ export const NAVIGATOR: ClassDef<NavigatorMilestone> = {
   ],
 }
 
+// ── Legendary signature classes ─────────────────────────────────────────────
+// Tuning context: legendary classes do NOT obsolete the base 5. They're
+// flavored alternates with bigger numbers in their slot — Abyssal Tide
+// = Mender that also shields, Leviathan = a brand-new offensive burst
+// shaped around crew Power, Blitz = brand-new multi-shot.
+
+export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
+  id: 'abyssal_tide', name: 'Abyssal Tide', shortLabel: 'Tide',
+  blurb: 'Heals the ship and grants a temporary damage shield. Heal now, brace for what\'s coming.',
+  color: '#5eead4', emoji: '🌊',
+  milestones: [
+    { unlockLevel: 10,  pctMaxHp: 0.20, shieldPctMaxHp: 0.10, desc: 'Heal 20% max HP and grant a 10% max HP shield.' },
+    { unlockLevel: 25,  pctMaxHp: 0.30, shieldPctMaxHp: 0.15, desc: 'Heal 30% max HP and grant a 15% max HP shield.' },
+    { unlockLevel: 40,  pctMaxHp: 0.40, shieldPctMaxHp: 0.20, desc: 'Heal 40% max HP and grant a 20% max HP shield.' },
+    { unlockLevel: 75,  pctMaxHp: 0.50, shieldPctMaxHp: 0.25, desc: 'Heal 50% max HP and grant a 25% max HP shield.' },
+    { unlockLevel: 100, pctMaxHp: 0.60, shieldPctMaxHp: 0.30, cleanseDebuff: true, desc: 'Heal 60% max HP, grant a 30% max HP shield, and cleanse one enemy debuff.' },
+  ],
+}
+
+export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
+  id: 'leviathan', name: 'Leviathan', shortLabel: 'Crash',
+  blurb: 'Slams the enemy for damage equal to your total crew Power. The bigger the war party, the bigger the hit.',
+  color: '#a3b1c6', emoji: '🐋',
+  milestones: [
+    { unlockLevel: 10,  crewPowerMult: 0.50, desc: 'Deal damage equal to 50% of your total crew Power.' },
+    { unlockLevel: 25,  crewPowerMult: 0.75, desc: 'Deal damage equal to 75% of your total crew Power.' },
+    { unlockLevel: 40,  crewPowerMult: 1.00, desc: 'Deal damage equal to your total crew Power.' },
+    { unlockLevel: 75,  crewPowerMult: 1.50, desc: 'Deal damage equal to 1.5× your total crew Power.' },
+    { unlockLevel: 100, crewPowerMult: 2.00, ignoresDodge: true, desc: 'Deal damage equal to 2× your total crew Power. Cannot be dodged.' },
+  ],
+}
+
+export const BLITZ: ClassDef<BlitzMilestone> = {
+  id: 'blitz', name: 'Blitz', shortLabel: 'Burst',
+  blurb: 'Fires extra cannon shots this turn. Stacks with the Sharpshot crit-zone buff.',
+  color: '#f87171', emoji: '⚡',
+  milestones: [
+    { unlockLevel: 10,  extraShots: 1, dmgMult: 0.50, desc: 'Fire 1 extra cannon shot this turn at 50% damage.' },
+    { unlockLevel: 25,  extraShots: 1, dmgMult: 0.75, desc: 'Fire 1 extra cannon shot this turn at 75% damage.' },
+    { unlockLevel: 40,  extraShots: 1, dmgMult: 1.00, desc: 'Fire 1 extra cannon shot this turn at full damage.' },
+    { unlockLevel: 75,  extraShots: 2, dmgMult: 1.00, desc: 'Fire 2 extra cannon shots this turn at full damage.' },
+    { unlockLevel: 100, extraShots: 3, dmgMult: 1.00, autoCrit: true, desc: 'Fire 3 extra cannon shots this turn at full damage; all crit.' },
+  ],
+}
+
 // ── Registry lookup ─────────────────────────────────────────────────────────
 // Union the class defs through a discriminated wrapper so callers can switch
 // on `.id` and TypeScript narrows the milestones to the right shape.
@@ -237,13 +336,19 @@ export type AnyClassDef =
   | (ClassDef<SnareMilestone>      & { id: 'snare' })
   | (ClassDef<AnchorMilestone>     & { id: 'anchor' })
   | (ClassDef<NavigatorMilestone>  & { id: 'navigator' })
+  | (ClassDef<AbyssalTideMilestone> & { id: 'abyssal_tide' })
+  | (ClassDef<LeviathanMilestone>   & { id: 'leviathan' })
+  | (ClassDef<BlitzMilestone>       & { id: 'blitz' })
 
 export const CLASSES: Record<CrewClass, AnyClassDef> = {
-  mender:     MENDER     as AnyClassDef,
-  sharpshot:  SHARPSHOT  as AnyClassDef,
-  snare:      SNARE      as AnyClassDef,
-  anchor:     ANCHOR     as AnyClassDef,
-  navigator:  NAVIGATOR  as AnyClassDef,
+  mender:       MENDER       as AnyClassDef,
+  sharpshot:    SHARPSHOT    as AnyClassDef,
+  snare:        SNARE        as AnyClassDef,
+  anchor:       ANCHOR       as AnyClassDef,
+  navigator:    NAVIGATOR    as AnyClassDef,
+  abyssal_tide: ABYSSAL_TIDE as AnyClassDef,
+  leviathan:    LEVIATHAN    as AnyClassDef,
+  blitz:        BLITZ        as AnyClassDef,
 }
 
 /** Highest-tier milestone unlocked by a crew at this level. Returns null if
