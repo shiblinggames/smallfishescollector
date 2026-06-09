@@ -383,12 +383,12 @@ export async function reelIn(
     if (aStreak >= 10) await unlockBadge('unbroken')
     // Perfected Sigil pays out on ancient perfects too — same gate
     // (equipped + perfect) as the regular catch path, same streak-scaling
-    // formula (+10 ⟡ × min(streak, 30)). See sigilBonus below for the
+    // formula (+10 ⟡ × min(streak, 3)). See sigilBonus below for the
     // rationale on equipped-vs-owned.
     const ancientSigilBonus = result === 'perfect'
       && profile.has_perfected_sigil
       && profile.equipped_special === 'perfected_sigil'
-      ? Math.min(aStreak, 30) * 10
+      ? Math.min(aStreak, 3) * 10
       : 0
     const ancientNewDoubloons = (profile.doubloons ?? 0) + ancientSigilBonus
     if (ancientSigilBonus > 0) updates.doubloons = ancientNewDoubloons
@@ -520,16 +520,16 @@ export async function reelIn(
 
   // Perfected Sigil — equipped Shrouded Reach drop pays a streak-scaling
   // bonus on every Perfect catch, credited immediately. +10 ⟡ × current
-  // streak, capped at streak 30 (so streak 1 = +10, streak 15 = +150,
-  // streak 30+ = +300). The 30-streak ceiling matches the upper band of
-  // what dedicated streak players actually hit, so the cap rewards the
-  // playstyle without becoming runaway. Gated on EQUIPPED (not just
-  // owned) so the player actively chooses this perk over Tide Turner /
-  // Auto Caster.
+  // streak, capped at streak 3 (so streak 1 = +10, streak 2 = +20,
+  // streak 3+ = +30 flat). The streak-3 ceiling keeps the ramp-up moment
+  // (every streak feels like it's growing) but locks the bonus to a
+  // predictable floor once they're in the groove, so it never runs away.
+  // Gated on EQUIPPED (not just owned) so the player actively chooses
+  // this perk over Tide Turner / Auto Caster.
   const sigilEquipped = profile.has_perfected_sigil
     && profile.equipped_special === 'perfected_sigil'
   const sigilBonus = result === 'perfect' && sigilEquipped
-    ? Math.min(newPerfectStreak, 30) * 10
+    ? Math.min(newPerfectStreak, 3) * 10
     : 0
   const newDoubloons = (profile.doubloons ?? 0) + sigilBonus
 

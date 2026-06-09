@@ -3004,12 +3004,14 @@ export default function FishingGame({
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
   // Perfected Sigil payout — gold coins arc from the catch result area
   // up to the Nav's doubloon pill (tagged data-doubloon-pill) so the
-  // player sees the +10 ⟡ × streak bonus actually landing. Pure cosmetic:
-  // the doubloons are already credited server-side by the time these
-  // spawn. Coin count scales with the streak so a big streak feels like
-  // a heavier payout (capped at 10).
+  // player sees the bonus actually landing. A floating "+N ⟡" caption
+  // spawns at the same origin and drifts up so the player can READ how
+  // much they got, not just see vague coin movement. Pure cosmetic: the
+  // doubloons are already credited server-side by the time these spawn.
   const [flyingSigilCoins, setFlyingSigilCoins] = useState<{ id: number; fromX: number; fromY: number; toX: number; toY: number; delay: number }[]>([])
+  const [sigilLabels, setSigilLabels] = useState<{ id: number; x: number; y: number; amount: number }[]>([])
   const sigilCoinIdRef = useRef(1)
+  const sigilLabelIdRef = useRef(1)
   const spawnSigilCoins = useCallback((bonus: number) => {
     if (bonus <= 0 || typeof window === 'undefined') return
     // Both desktop + mobile Nav render their own [data-doubloon-pill],
@@ -3030,25 +3032,35 @@ export default function FishingGame({
     // peel off the fish.
     const fromX = window.innerWidth / 2
     const fromY = window.innerHeight / 2
-    // Coin count: 1 per 10 ⟡ up to a 15-coin cap. At max streak (+300)
-    // we'd spawn 30 coins which makes the stagger take >2s and overlap
-    // the next cast — 15 still reads as "shower" and finishes on time.
-    const count = Math.min(15, Math.max(1, Math.round(bonus / 20)))
+    // Coin count: 1 per 10 ⟡, capped at 3 (the cap matches the +30
+    // payout ceiling — streak 1 = 1 coin, streak 2 = 2 coins,
+    // streak 3+ = 3 coins). Tight cluster so the "+N ⟡" caption
+    // stays the dominant signal.
+    const count = Math.min(3, Math.max(1, Math.round(bonus / 10)))
     setFlyingSigilCoins(prev => {
       const next = [...prev]
       for (let i = 0; i < count; i++) {
-        const jitterX = (Math.random() - 0.5) * 80
-        const jitterY = (Math.random() - 0.5) * 40
+        const jitterX = (Math.random() - 0.5) * 60
+        const jitterY = (Math.random() - 0.5) * 30
         next.push({
           id: sigilCoinIdRef.current++,
           fromX: fromX + jitterX,
           fromY: fromY + jitterY,
           toX, toY,
-          delay: i * 0.05,
+          delay: i * 0.06,
         })
       }
       return next
     })
+    // Floating caption — the legible "how much" signal. Spawns above the
+    // coin cluster, drifts up + fades out so it doesn't clutter the
+    // result card.
+    setSigilLabels(prev => [...prev, {
+      id: sigilLabelIdRef.current++,
+      x: fromX,
+      y: fromY - 40,
+      amount: bonus,
+    }])
   }, [])
   // Dismiss-on-open tracking. Reading localStorage in a lazy initializer keeps
   // the values stable across re-renders without a useEffect roundtrip.
@@ -8864,14 +8876,42 @@ export default function FishingGame({
         )}
       </AnimatePresence>
 
-      {/* Perfected Sigil coin flight — fixed-position viewport layer so
-          coordinates from getBoundingClientRect line up regardless of
-          parent transforms / overflow:hidden. Each coin arcs from a
-          jittered point near screen center up to the Nav's doubloon
-          pill, then despawns. Pure cosmetic — the doubloons already
+      {/* Perfected Sigil coin flight + amount caption — fixed-position
+          viewport layer so coordinates from getBoundingClientRect line
+          up regardless of parent transforms / overflow:hidden. Each
+          coin arcs from a jittered point near screen center up to the
+          Nav's doubloon pill, then despawns. A floating "+N ⟡" caption
+          spawns above the coin origin and drifts up so the player can
+          READ the bonus amount. Pure cosmetic — the doubloons already
           credited server-side. */}
       <div aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 220 }}>
         <AnimatePresence>
+          {sigilLabels.map(label => (
+            <motion.div
+              key={`label-${label.id}`}
+              initial={{ x: label.x, y: label.y, scale: 0.7, opacity: 0 }}
+              animate={{
+                x: label.x,
+                y: label.y - 56,
+                scale: [0.7, 1.15, 1],
+                opacity: [0, 1, 1, 0],
+              }}
+              transition={{ duration: 1.1, times: [0, 0.15, 0.55, 1], ease: 'easeOut' }}
+              onAnimationComplete={() => setSigilLabels(prev => prev.filter(l => l.id !== label.id))}
+              className="font-cinzel font-700"
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                transform: 'translate(-50%, -50%)',
+                fontSize: '1.35rem',
+                color: '#f0c040',
+                textShadow: '0 0 14px rgba(240,192,64,0.85), 0 0 28px rgba(240,192,64,0.5), 0 2px 0 rgba(0,0,0,0.6)',
+                letterSpacing: '0.05em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              +{label.amount} ⟡
+            </motion.div>
+          ))}
           {flyingSigilCoins.map(coin => (
             <motion.div
               key={coin.id}
