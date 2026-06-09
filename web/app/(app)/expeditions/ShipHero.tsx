@@ -704,25 +704,34 @@ export default function ShipHero({
           {/* Two-column row — left links to /crew, right opens the
               Manage Ship drawer. Each column IS the tap target now:
               clicking anywhere on the image OR the label fires the
-              navigation. The wrapper boxes share one HEIGHT (150px,
-              no forced aspect ratio) so both images render at the
-              same vertical real estate even though the ship is
-              naturally wide and the crew portrait is naturally tall —
-              objectFit:contain inside a width:100% + height:150px
-              wrapper gives each image its natural shape but a matched
-              visual presence between columns. */}
-          <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: '0.9rem' }}>
+              navigation. Wrapper height tuned to the SHIP's natural
+              rendered size at column width — ship art is 600×335
+              (~1.79:1), so inside a column ~157px wide the ship
+              contains at ~88px tall. Using height:95 leaves a few px
+              of breathing room without floating the ship in vertical
+              empty space. Crew shrinks to the same wrapper height
+              (height-limited inside 95px, so its width drops to match
+              its portrait aspect), giving both columns equal
+              wrapper-height visual presence even though the natural
+              rendered shapes differ. Grid alignItems:end keeps the
+              labels flush at the bottom. */}
+          <div style={{
+            position: 'relative',
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            alignItems: 'end',
+            gap: 14, marginTop: '0.9rem',
+          }}>
             {/* Left col — random roster crew member portrait. Whole
                 tile is the link target; label below reads as a caption,
                 not a separate pill. */}
             <Link href="/crew" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               textDecoration: 'none',
               cursor: 'pointer',
             }}>
               <div style={{
-                width: '100%', height: 150,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '100%', height: 95,
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
                 position: 'relative',
               }}>
                 {featuredCrew ? (
@@ -731,7 +740,8 @@ export default function ShipHero({
                     src={IMG_BASE + featuredCrew.filename}
                     alt={featuredCrew.name}
                     style={{
-                      width: '100%', height: '100%',
+                      width: 'auto', height: '100%',
+                      maxWidth: '100%',
                       objectFit: 'contain',
                       objectPosition: 'center 22%',
                       filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.55))',
@@ -742,13 +752,13 @@ export default function ShipHero({
                   // reads as 'no crew yet, go recruit' instead of a
                   // gap next to the ship.
                   <div style={{
-                    width: '60%', height: '90%',
+                    width: 65, height: '92%',
                     borderRadius: '12% 12% 30% 30%',
                     background: 'radial-gradient(ellipse at 50% 28%, rgba(110,140,180,0.18) 0%, rgba(20,28,42,0) 70%)',
                     border: '1.5px dashed rgba(125,160,216,0.35)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="rgba(125,160,216,0.55)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(125,160,216,0.55)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="8" r="4" />
                       <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2" />
                     </svg>
@@ -767,14 +777,14 @@ export default function ShipHero({
             <button
               onClick={() => setLoadoutOpen(true)}
               style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 background: 'transparent', border: 'none', padding: 0,
                 cursor: 'pointer',
               }}
             >
               <div style={{
-                width: '100%', height: 150,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '100%', height: 95,
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -782,7 +792,7 @@ export default function ShipHero({
                   alt={shipName ?? shipStats.name}
                   style={{
                     width: '100%', height: '100%',
-                    objectFit: 'contain',
+                    objectFit: 'contain', objectPosition: 'center bottom',
                     filter: skinFilter,
                     transition: 'filter 0.3s ease',
                   }}
