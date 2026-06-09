@@ -207,13 +207,18 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-// Per-event chance (per lure type) for a discovery/encounter to drop a
-// lure. Tuned so the voyage-aggregate hits the player-facing rate cards
-// for EACH lure type independently:
+// Per-event chance for a discovery/encounter to drop SOME lure
+// (luminous or golden — single combined roll, then a 70/30 split decides
+// which type). Tuned so each route's per-voyage any-lure probability
+// hits the player-facing rate card:
 //   coastal ~10% / open ~20% / deep ~30% / triangle ~40% / shroud ~50%
-// across the route's combined discovery + encounter events. 50/50 split
-// between luminous and golden when a drop fires — each lure type ends up
-// at the target marginal probability per voyage.
+// across the route's combined discovery + encounter events. With the
+// 70/30 split the per-lure marginals come out roughly:
+//   coastal: lum ~7% / gold ~3%
+//   open:    lum ~14% / gold ~6%
+//   deep:    lum ~22% / gold ~10%
+//   triangle: lum ~29% / gold ~14%
+//   shroud:  lum ~38% / gold ~18%
 const LURE_RATE_PER_EVENT: Record<VoyageRoute, number> = {
   coastal:  0.051,  // 2 events  → 1 - (1-p)^2 ≈ 10%
   open:     0.054,  // 4 events  → 1 - (1-p)^4 ≈ 20%
@@ -222,10 +227,14 @@ const LURE_RATE_PER_EVENT: Record<VoyageRoute, number> = {
   shroud:   0.094,  // 7 events  → 1 - (1-p)^7 ≈ 50%
 }
 
+// Golden is the rare side of the split — 70% luminous, 30% golden when a
+// drop fires. Tune here if the gold/lum balance ever needs shifting.
+const GOLDEN_SHARE = 0.30
+
 function rollLureDrop(route: VoyageRoute): 'luminous' | 'golden' | null {
   const p = LURE_RATE_PER_EVENT[route]
-  if (Math.random() >= 2 * p) return null
-  return Math.random() < 0.5 ? 'luminous' : 'golden'
+  if (Math.random() >= p) return null
+  return Math.random() < GOLDEN_SHARE ? 'golden' : 'luminous'
 }
 
 export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open'): VoyageResult {

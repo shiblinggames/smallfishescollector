@@ -101,31 +101,37 @@ type DropEntry =
   | { kind: 'bait';    type: string;   rate: string }
   | { kind: 'special'; id: 'tide_turner' | 'phantom_hook'; rate: string }
 
+// Rate labels are the per-voyage marginal odds of seeing at least one of
+// that lure. Coastal ~10% / open ~20% / deep ~30% / triangle ~40% /
+// shroud ~50% are the COMBINED odds of getting either lure on the
+// voyage — the per-lure splits below sum to slightly more than the
+// combined (independent events) but are close enough for the rate card.
+// See LURE_RATE_PER_EVENT in lib/voyageEvents.ts for the math.
 const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
   coastal: [
-    { kind: 'bait', type: 'luminous',        rate: '~10%' },
-    { kind: 'bait', type: 'golden',          rate: '~10%' },
+    { kind: 'bait', type: 'luminous',        rate: '~7%' },
+    { kind: 'bait', type: 'golden',          rate: '~3%' },
   ],
   open: [
-    { kind: 'bait', type: 'luminous',        rate: '~20%' },
-    { kind: 'bait', type: 'golden',          rate: '~20%' },
+    { kind: 'bait', type: 'luminous',        rate: '~14%' },
+    { kind: 'bait', type: 'golden',          rate: '~6%' },
   ],
   deep: [
-    { kind: 'bait',    type: 'luminous',     rate: '~30%' },
-    { kind: 'bait',    type: 'golden',       rate: '~30%' },
+    { kind: 'bait',    type: 'luminous',     rate: '~22%' },
+    { kind: 'bait',    type: 'golden',       rate: '~10%' },
     { kind: 'special', id: 'tide_turner',    rate: '~2%' },
   ],
   triangle: [
-    { kind: 'bait',    type: 'luminous',     rate: '~40%' },
-    { kind: 'bait',    type: 'golden',       rate: '~40%' },
+    { kind: 'bait',    type: 'luminous',     rate: '~29%' },
+    { kind: 'bait',    type: 'golden',       rate: '~14%' },
     { kind: 'special', id: 'phantom_hook',   rate: '~2%' },
   ],
   // Shrouded Reach — fishing-only loot. Voyages are the passive perk
   // loop for players who skip raids, so this route's drops shouldn't
   // pull from raid pools.
   shroud: [
-    { kind: 'bait', type: 'luminous',        rate: '~50%' },
-    { kind: 'bait', type: 'golden',          rate: '~50%' },
+    { kind: 'bait', type: 'luminous',        rate: '~38%' },
+    { kind: 'bait', type: 'golden',          rate: '~18%' },
   ],
 }
 
