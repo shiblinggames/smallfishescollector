@@ -757,7 +757,13 @@ export default function ShipHero({
               </Link>
             </div>
 
-            {/* Right col — ship image + Manage Ship. */}
+            {/* Right col — ship image + Manage Ship. height:100% + the
+                wrapper's aspectRatio:1 match the crew column's sizing
+                approach exactly; objectFit:contain letterboxes the
+                ship's natural wide aspect inside the 1:1 box so the
+                two columns read as equal visual weight. (Previously
+                used height:auto, which sized the ship to its intrinsic
+                aspect ratio and made it look half the crew's size.) */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: '100%', maxWidth: 150, aspectRatio: '1',
@@ -768,7 +774,7 @@ export default function ShipHero({
                   src={shipImgSrc}
                   alt={shipName ?? shipStats.name}
                   style={{
-                    width: '100%', height: 'auto',
+                    width: '100%', height: '100%',
                     objectFit: 'contain',
                     filter: skinFilter,
                     transition: 'filter 0.3s ease',
