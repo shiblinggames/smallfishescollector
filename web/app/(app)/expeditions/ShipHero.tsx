@@ -701,14 +701,27 @@ export default function ShipHero({
             </button>
           </div>
 
-          {/* Two-column row — crew portrait + Manage Crew on the left,
-              ship + Manage Ship on the right. Matched column widths via
-              grid 1fr 1fr so the two pills land flush at the bottom. */}
+          {/* Two-column row — left links to /crew, right opens the
+              Manage Ship drawer. Each column IS the tap target now:
+              clicking anywhere on the image OR the label fires the
+              navigation. The wrapper boxes share one HEIGHT (150px,
+              no forced aspect ratio) so both images render at the
+              same vertical real estate even though the ship is
+              naturally wide and the crew portrait is naturally tall —
+              objectFit:contain inside a width:100% + height:150px
+              wrapper gives each image its natural shape but a matched
+              visual presence between columns. */}
           <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: '0.9rem' }}>
-            {/* Left col — random roster crew member portrait. */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            {/* Left col — random roster crew member portrait. Whole
+                tile is the link target; label below reads as a caption,
+                not a separate pill. */}
+            <Link href="/crew" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+              textDecoration: 'none',
+              cursor: 'pointer',
+            }}>
               <div style={{
-                width: '100%', maxWidth: 150, aspectRatio: '1',
+                width: '100%', height: 150,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 position: 'relative',
               }}>
@@ -729,7 +742,7 @@ export default function ShipHero({
                   // reads as 'no crew yet, go recruit' instead of a
                   // gap next to the ship.
                   <div style={{
-                    width: '74%', height: '74%',
+                    width: '60%', height: '90%',
                     borderRadius: '12% 12% 30% 30%',
                     background: 'radial-gradient(ellipse at 50% 28%, rgba(110,140,180,0.18) 0%, rgba(20,28,42,0) 70%)',
                     border: '1.5px dashed rgba(125,160,216,0.35)',
@@ -742,31 +755,25 @@ export default function ShipHero({
                   </div>
                 )}
               </div>
-              <Link href="/crew" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
-                color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                fontSize: '0.7rem', color: '#9ec6ff',
               }}>
-                {/* Small crew icon — two stacked portrait silhouettes */}
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
                 Manage Crew
-              </Link>
-            </div>
+              </p>
+            </Link>
 
-            {/* Right col — ship image + Manage Ship. height:100% + the
-                wrapper's aspectRatio:1 match the crew column's sizing
-                approach exactly; objectFit:contain letterboxes the
-                ship's natural wide aspect inside the 1:1 box so the
-                two columns read as equal visual weight. (Previously
-                used height:auto, which sized the ship to its intrinsic
-                aspect ratio and made it look half the crew's size.) */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            {/* Right col — ship image + Manage Ship label. Whole
+                column is a button that opens the loadout drawer. */}
+            <button
+              onClick={() => setLoadoutOpen(true)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                background: 'transparent', border: 'none', padding: 0,
+                cursor: 'pointer',
+              }}
+            >
               <div style={{
-                width: '100%', maxWidth: 150, aspectRatio: '1',
+                width: '100%', height: 150,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -781,14 +788,12 @@ export default function ShipHero({
                   }}
                 />
               </div>
-              <button onClick={() => setLoadoutOpen(true)} className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
-                color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
+              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                fontSize: '0.7rem', color: '#9ec6ff',
               }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/><line x1="4" y1="13" x2="20" y2="13"/><circle cx="15" cy="13" r="2"/><line x1="4" y1="19" x2="20" y2="19"/><circle cx="9" cy="19" r="2"/></svg>
                 Manage Ship
-              </button>
-            </div>
+              </p>
+            </button>
           </div>
         </div>
 
