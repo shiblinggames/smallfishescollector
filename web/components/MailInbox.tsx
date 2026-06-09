@@ -180,13 +180,18 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
         )}
       </button>
 
-      {/* Dropdown panel — anchored under the envelope icon. position:
-          absolute (NOT fixed) means it's relative to this wrapper div,
-          which sits inside Nav. Nav's translateZ(0) is the containing
-          block for ANY position:fixed descendant — but absolute resolves
-          against the nearest positioned ancestor instead, which is this
-          wrapper. So we get correct icon-relative anchoring without
-          fighting the transform. (See [[feedback_transform_breaks_fixed_positioning]].) */}
+      {/* Dropdown panel — anchored to the VIEWPORT's right edge, not
+          the icon's right edge. Earlier revision used position:absolute
+          right:0 which anchors to the 36×36 button — on narrow phones a
+          380px panel extending leftward from a button sitting mid-nav
+          would spill off the left side of the screen. Switching to
+          position:fixed pins the panel inside Nav's containing block
+          (Nav has translateZ(0), so fixed descendants anchor to Nav, not
+          the viewport directly — see [[feedback_transform_breaks_fixed_positioning]]).
+          Since Nav spans the full viewport width at top:0, anchoring
+          right:8px and top:100% lands the panel 8px from the screen's
+          right edge and just below the nav, regardless of where the
+          icon itself sits. */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -198,19 +203,17 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
             role="dialog"
             aria-label="Mailbox"
             style={{
-              position: 'absolute',
+              position: 'fixed',
+              // top:100% resolves against Nav's height (the containing
+              // block courtesy of translateZ), so this slides correctly
+              // below the 64px desktop nav AND the 44px mobile strip with
+              // no breakpoint juggling.
               top: 'calc(100% + 8px)',
-              right: 0,
+              right: 8,
               // Cap width to ~380px on desktop; on narrow phones clamp to
-              // viewport minus a little side breathing room so the panel
-              // never extends past the screen edge. Right-anchored to the
-              // button means the calc lands the LEFT edge at most at 8px
-              // from the viewport's left side on a 320px-wide screen.
+              // viewport minus side breathing room so the panel always
+              // sits comfortably on screen.
               width: 'min(380px, calc(100vw - 16px))',
-              // Right-edge alignment to the icon would put the panel
-              // hanging on the right edge of the button. Shift it right a
-              // hair so it visually clears the avatar/hamburger sitting
-              // next to it without going off-screen.
               transformOrigin: 'top right',
               background: 'linear-gradient(180deg, #1a1408 0%, #0a0807 100%)',
               border: `1px solid ${ACCENT}55`,
@@ -220,11 +223,14 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
               zIndex: 60,           // above Nav (z 50) but below modals (z 111+)
             }}
           >
-            {/* Little tick pointing up at the icon — purely decorative,
-                helps the panel read as "from this icon" not "floating". */}
+            {/* Decorative upward tick on the right end of the panel —
+                roughly points at the icon cluster (mail icon sits a bit
+                left of avatar/hamburger which sit ~16-30px from screen
+                edge), so a tick at right:22px reads as "from up there"
+                even though we're not pixel-anchored to the icon. */}
             <span aria-hidden style={{
               position: 'absolute',
-              top: -6, right: 14,
+              top: -6, right: 22,
               width: 11, height: 11,
               background: '#1a1408',
               border: `1px solid ${ACCENT}55`,
