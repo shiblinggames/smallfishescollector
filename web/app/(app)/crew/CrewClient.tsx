@@ -945,12 +945,31 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     <div style={{ minHeight: '100vh', background: '#07060a', color: '#f0ede8', padding: '1.25rem 1rem 4rem' }}>
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
-        {/* Header — title only. Gems + Nav level live in the Nav bar
-            already, and the roster count repeats in the Roster tab + the
-            section header below; dropping those stats here cuts the
-            visual weight of the top of the page in half. */}
-        <div style={{ marginBottom: '1.1rem' }}>
+        {/* Header — title + roster count chip. Gems + Nav level live in
+            the Nav bar already, so the roster fill is the one fact worth
+            surfacing here ("N / cap") — it's the cap the rest of the page
+            keeps butting up against (Recruit gates, Roster Full pills).
+            Goes red when full so the player notices the wall before they
+            try to claim another recruit and get bounced. */}
+        <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'baseline', gap: '0.7rem', flexWrap: 'wrap' }}>
           <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Management</h1>
+          {(() => {
+            const filled = state.roster.length
+            const cap = state.capacity
+            const isFull = filled >= cap
+            return (
+              <span className="font-karla font-700" style={{
+                fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: isFull ? '#f2b0b0' : '#c8b890',
+                background: isFull ? 'rgba(220,90,90,0.10)' : 'rgba(200,170,100,0.08)',
+                border: `1px solid ${isFull ? 'rgba(220,90,90,0.32)' : 'rgba(200,170,100,0.24)'}`,
+                padding: '0.18rem 0.5rem', borderRadius: 5, lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+              }}>
+                {filled} / {cap} Crew
+              </span>
+            )
+          })()}
         </div>
 
         {err && (
