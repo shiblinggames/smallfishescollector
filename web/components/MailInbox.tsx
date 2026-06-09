@@ -10,6 +10,7 @@
 // service-role-side; the inbox just renders + claims.
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from './PopupShell'
 import {
@@ -45,6 +46,16 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [claimingId, setClaimingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // MailInbox lives INSIDE Nav, which has transform: translateZ(0) for
+  // hardware acceleration. That transform creates a new containing block
+  // for descendant position:fixed elements — meaning PopupShell's
+  // position:fixed wasn't pinning to the viewport, it was pinning to the
+  // 64px nav header, so the modal opened "inside the header" and was
+  // clipped. Portaling the modal to document.body escapes Nav's
+  // transformed parent so the fixed positioning lands relative to the
+  // viewport again.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   // Keep the pip in sync with whatever the Nav poll feeds us. Without this,
   // a fresh fetchBadge() pull in Nav wouldn't reach our local state.
@@ -157,7 +168,8 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
         )}
       </button>
 
-      <PopupShell open={open} onClose={() => setOpen(false)}>
+      {mounted && createPortal(
+        <PopupShell open={open} onClose={() => setOpen(false)}>
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -166,12 +178,12 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
           style={{
             // margin: auto centers the card in PopupShell's flex scroll
             // wrapper. NO maxHeight / no flex column on the card itself —
-            // last revision made the card always fill 88vh which pinned it
-            // to the top + bottom of the viewport with empty space inside
-            // when the inbox had only a few mails. The card now sizes to
-            // its content; the inner message list owns its own maxHeight
-            // so a long expanded body or a packed inbox scrolls without
-            // dragging the whole card to the safe-area edge.
+            // earlier revision made the card always fill 88vh which pinned
+            // it to the top + bottom of the viewport with empty space
+            // inside when the inbox had only a few mails. The card now
+            // sizes to its content; the inner message list owns its own
+            // maxHeight so a long expanded body or a packed inbox scrolls
+            // without dragging the whole card to the safe-area edge.
             margin: 'auto', width: '100%', maxWidth: 440,
             background: 'linear-gradient(180deg, #1a1408 0%, #0a0807 100%)',
             border: `1px solid ${ACCENT}55`,
@@ -407,7 +419,9 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
             </div>
           </div>
         </motion.div>
-      </PopupShell>
+      </PopupShell>,
+        document.body,
+      )}
     </>
   )
 }
