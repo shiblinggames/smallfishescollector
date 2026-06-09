@@ -995,6 +995,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     setDealRevealCount(0)
     setHandFlipCounts({})
     setDealerTotalCardCount(0)
+    // Pre-seed the pot to the current wager so the PotPill doesn't
+    // visually drop to 0 in the moment between the wager screen
+    // unmounting (value=wager) and the play screen taking over
+    // (value=animatedPot). With this set, animatedPot is already at
+    // the wager amount when phase flips to 'play' and the
+    // active.totalWagered effect runs.
+    setPotAmount(wager)
     pendingFreshDealRef.current = true   // read by applyActionResult on response
     fireAction(() => dealBlackjack(wager))
   }
@@ -1125,13 +1132,44 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   }
 
   function renderWagerScreen() {
+    // Wager screen mirrors the play screen's vertical structure so the
+    // PotPill sits at the SAME on-screen position throughout — chips
+    // fly into the pot here, Deal commits, the dealer/player blocks
+    // fill in around the unchanged pot. No layout jump, no second pot.
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {/* Same PotPill used during play. Chip taps fly into this exact
-            element (via wagerPotRef → WagerCircle.flyToRef), so the bet
-            visually accumulates in the canonical pot — no duplicate
-            'wager circle' alongside it. */}
-        <PotPill value={wager} ref={wagerPotRef} label="Wager" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+        {/* Dealer slot — dim placeholder. Same vertical real estate as
+            the real dealer block so the pot below lands in the same
+            spot on play. */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#5a5550' }}>Dealer</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#5a5550', lineHeight: 1 }}>—</p>
+          </div>
+          <div style={{ minHeight: CARD_DIMS.h, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p className="font-karla" style={{ fontSize: '0.62rem', color: '#4a4845', letterSpacing: '0.08em' }}>
+              Place your bet to deal
+            </p>
+          </div>
+        </div>
+
+        {/* THE pot — same component, same position, same ref attached
+            below for chip flights. Reads `wager` directly so the value
+            ticks up the moment a chip lands in it. */}
+        <PotPill value={wager} ref={wagerPotRef} />
+
+        {/* Player slot — dim placeholder mirroring the dealer slot. */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#5a5550' }}>You</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#5a5550', lineHeight: 1 }}>—</p>
+          </div>
+          <div style={{ minHeight: CARD_DIMS.h - 14 }} />
+        </div>
+
+        {/* Chip rack + Deal — replaces the action buttons row from the
+            play screen. Same horizontal slot at the bottom of the
+            modal so the eye lands in the right place. */}
         <WagerCircle
           wager={wager}
           presets={BJ_BET_PRESETS}
@@ -1190,8 +1228,10 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
         </div>
 
         {/* Pot — fixed slot between dealer and player. Counts up from
-            chips as bets land, drains to chips on settle outcome. */}
-        <PotPill value={animatedPot} />
+            chips as bets land, drains to chips on settle outcome. Same
+            ref as the wager screen's pot so a future return to wager
+            phase would fly chips into the same on-screen position. */}
+        <PotPill value={animatedPot} ref={wagerPotRef} />
 
         {/* Player hands — same visual structure as the dealer block
             above (label + total on right, cards below). No
@@ -1450,8 +1490,12 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
         {/* Pot — holds the wager visible through the dealer reveal,
             drains to 0 when outcomeShown fires (mirrored by the chips
             animation in the header ticking up on win / staying flat
-            on loss). */}
-        <PotPill value={animatedPot} />
+            on loss). After outcomeShown, the SAME pot becomes the
+            wager-target for the next hand: chip taps from the Deal
+            Next Hand panel below fly into THIS pill, and its value
+            switches to reflect the new wager being built. No second
+            pot appears anywhere on the settle screen. */}
+        <PotPill value={outcomeShown ? wager : animatedPot} ref={wagerPotRef} />
 
         {/* Player hands — same visual structure as the dealer block
             (label + colored total + cards). No background card, no
@@ -1571,32 +1615,30 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               transition={{ duration: 0.3 }}
             >
               {chips >= BJ_MIN_BET ? (
-                // Same flow as the main wager screen — PotPill on top
-                // (chip-flight target), WagerCircle below for the chip
-                // rack + Deal. startDeal already clears active hand
-                // state. Wager persists across settle so one-tap re-
-                // deal works at the same stake (or tap more chips to
-                // bump it).
+                // No PotPill rendered here — the canonical one is
+                // already on the settle screen above (between dealer
+                // and player), with wagerPotRef attached. Chip taps
+                // from this panel fly UP into it; once outcomeShown
+                // is true, its value reflects `wager` so the new bet
+                // visibly accumulates in the same pill. Just the chip
+                // rack + Deal button live in this slot.
                 <>
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
                     Deal Next Hand
                   </p>
-                  <PotPill value={wager} ref={wagerPotRef} label="Wager" />
-                  <div style={{ marginTop: 10 }}>
-                    <WagerCircle
-                      wager={wager}
-                      presets={BJ_BET_PRESETS}
-                      chipsLeft={chips - wager}
-                      maxBet={Math.min(BJ_MAX_BET, chips)}
-                      minBet={BJ_MIN_BET}
-                      onAdd={(d) => setWager(w => w + d)}
-                      onClear={() => setWager(0)}
-                      onDeal={startDeal}
-                      dealLabel={isPending ? 'Dealing…' : undefined}
-                      dealDisabled={!canDeal || isPending}
-                      flyToRef={wagerPotRef}
-                    />
-                  </div>
+                  <WagerCircle
+                    wager={wager}
+                    presets={BJ_BET_PRESETS}
+                    chipsLeft={chips - wager}
+                    maxBet={Math.min(BJ_MAX_BET, chips)}
+                    minBet={BJ_MIN_BET}
+                    onAdd={(d) => setWager(w => w + d)}
+                    onClear={() => setWager(0)}
+                    onDeal={startDeal}
+                    dealLabel={isPending ? 'Dealing…' : undefined}
+                    dealDisabled={!canDeal || isPending}
+                    flyToRef={wagerPotRef}
+                  />
                 </>
               ) : (
                 <button
