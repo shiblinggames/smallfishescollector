@@ -2803,7 +2803,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
-  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster,
+  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasPerfectedSigil,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
@@ -2853,6 +2853,7 @@ export default function FishingGame({
   initialEquippedSpecial: string | null
   hasPhantomHook: boolean
   hasAutoCaster: boolean
+  hasPerfectedSigil: boolean
   initialPrestigeLevels: Record<string, number>
   initialTrophyCatches: number[]
   characterColor: string
@@ -4252,6 +4253,13 @@ export default function FishingGame({
             }
             return newDailyP
           })
+        }
+        // Perfected Sigil — server already credited the +10 ⟡ on a perfect
+        // catch when the sigil is equipped. Mirror the new doubloons total
+        // locally + dispatch the change so Nav / sticky pills update.
+        if (res.newDoubloons != null) {
+          setDoubloons(res.newDoubloons)
+          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
         }
         // Reconcile the streak from the server (authoritative). reelIn already
         // persisted current_perfect_streak, the highest-streak record, and the
@@ -7538,6 +7546,7 @@ export default function FishingGame({
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}
               hasPhantomHook={hasPhantomHook}
               hasAutoCaster={ownedAutoCaster}
+              hasPerfectedSigil={hasPerfectedSigil}
               fishingLevel={fishingLevel}
               equippedSpecial={equippedSpecial}
               onEquipSpecial={async (itemId) => {

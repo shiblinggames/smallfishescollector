@@ -197,6 +197,7 @@ export interface VoyageResult {
   baitDrops: { type: string; qty: number }[]
   tideTurnerDrop: boolean
   phantomHookDrop: boolean
+  perfectedSigilDrop: boolean
 }
 
 function rand(min: number, max: number): number {
@@ -465,7 +466,8 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   const baitDrops = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
   const tideTurnerDrop = route === 'deep' && Math.random() < 0.02
   const phantomHookDrop = route === 'triangle' && Math.random() < 0.02
-  return { events, totalDoubloons, totalGems, crewLost, baitDrops, tideTurnerDrop, phantomHookDrop }
+  const perfectedSigilDrop = route === 'shroud' && Math.random() < 0.02
+  return { events, totalDoubloons, totalGems, crewLost, baitDrops, tideTurnerDrop, phantomHookDrop, perfectedSigilDrop }
 }
 
 // ── Event text pools ──────────────────────────────────────────────────────────

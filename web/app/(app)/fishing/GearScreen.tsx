@@ -644,7 +644,7 @@ export default function GearScreen({
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
   equippedPet, unlockedPets, onEquipPet,
-  hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster,
+  hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasPerfectedSigil,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
   fishingLevel,
   showWaitTimer,
@@ -693,6 +693,7 @@ export default function GearScreen({
   tideTurnerSkipsLeft: number
   hasPhantomHook: boolean
   hasAutoCaster: boolean
+  hasPerfectedSigil: boolean
   equippedSpecial: string | null
   onEquipSpecial: (itemId: string | null) => void
   onBuySpecialItem: (itemId: string) => Promise<void>
@@ -1802,6 +1803,7 @@ export default function GearScreen({
                       const owned = item.id === 'tide_turner' ? hasTideTurner
                         : item.id === 'phantom_hook' ? hasPhantomHook
                         : item.id === 'auto_caster' ? hasAutoCaster
+                        : item.id === 'perfected_sigil' ? hasPerfectedSigil
                         : false
                       const isEquipped = equippedSpecial === item.id
                       return (

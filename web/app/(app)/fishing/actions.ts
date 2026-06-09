@@ -310,6 +310,11 @@ export async function reelIn(
        *  Logbook — the Mount option in the choice modal is disabled
        *  in that case (each species can only be mounted once). */
       alreadyMounted?: boolean
+      /** Perfected Sigil bonus (currently 10 ⟡) credited immediately
+       *  when the sigil is equipped and this catch was a Perfect. 0
+       *  otherwise. The new running doubloons total is in newDoubloons. */
+      sigilBonus?: number
+      newDoubloons?: number
     }
   | { caught: false }
   | { error: string }
@@ -350,7 +355,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -376,6 +381,15 @@ export async function reelIn(
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
     if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
     if (aStreak >= 10) await unlockBadge('unbroken')
+    // Perfected Sigil pays out on ancient perfects too — same gate
+    // (equipped + perfect) as the regular catch path. See sigilBonus
+    // below for the rationale on equipped-vs-owned.
+    const ancientSigilBonus = result === 'perfect'
+      && profile.has_perfected_sigil
+      && profile.equipped_special === 'perfected_sigil'
+      ? 10 : 0
+    const ancientNewDoubloons = (profile.doubloons ?? 0) + ancientSigilBonus
+    if (ancientSigilBonus > 0) updates.doubloons = ancientNewDoubloons
     await admin.from('profiles').update(updates).eq('id', user.id)
     // Ancients have one canonical size each (length_min_in === length_max_in
     // per the migration). No PB chase since each ancient is a one-time catch
@@ -397,6 +411,8 @@ export async function reelIn(
       previousBest: null,
       // Ancients can never roll shiny (habitat-blocked in lib/shiny rollShiny).
       isShiny: false,
+      sigilBonus: ancientSigilBonus,
+      newDoubloons: ancientSigilBonus > 0 ? ancientNewDoubloons : undefined,
     }
   }
 
@@ -500,8 +516,19 @@ export async function reelIn(
   const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
+  // Perfected Sigil — equipped Shrouded Reach drop pays +10 ⟡ on every
+  // Perfect catch, credited immediately. Gated on EQUIPPED (not just
+  // owned) so the player has to actively choose this perk over the
+  // other equippable specials (Tide Turner / Auto Caster).
+  const sigilBonus = result === 'perfect'
+    && profile.has_perfected_sigil
+    && profile.equipped_special === 'perfected_sigil'
+    ? 10 : 0
+  const newDoubloons = (profile.doubloons ?? 0) + sigilBonus
+
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
   const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false }
+  if (sigilBonus > 0) profileUpdates.doubloons = newDoubloons
   if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
   if (newPerfectStreak > (profile.highest_perfect_streak ?? 0)) {
     profileUpdates.highest_perfect_streak = newPerfectStreak
@@ -689,6 +716,8 @@ export async function reelIn(
     isShiny,
     shinyId,
     alreadyMounted,
+    sigilBonus,
+    newDoubloons: sigilBonus > 0 ? newDoubloons : undefined,
   }
 }
 

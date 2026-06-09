@@ -25,7 +25,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage')
+      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, has_perfected_sigil, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage')
       .ilike('username', username)
       .single(),
   ])
@@ -151,6 +151,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           ownedSpecialIds={[
             ...(profile.has_tide_turner ? ['tide_turner'] : []),
             ...(profile.has_phantom_hook ? ['phantom_hook'] : []),
+            ...(profile.has_perfected_sigil ? ['perfected_sigil'] : []),
           ]}
           equippedShipSkin={(profile.equipped_ship_skin as string | null) ?? null}
           raidItemIds={(profile.raid_items as string[] | null) ?? []}

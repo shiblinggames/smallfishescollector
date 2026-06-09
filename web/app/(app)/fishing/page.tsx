@@ -112,6 +112,7 @@ export default async function FishingPage() {
   const tideTurnerSkipsLeft = hasTideTurner ? Math.max(0, 3 - usedToday) : 0
   const hasPhantomHook = profile?.has_phantom_hook ?? false
   const hasAutoCaster = profile?.has_auto_caster ?? false
+  const hasPerfectedSigil = profile?.has_perfected_sigil ?? false
   const characterColor = profile?.character_color ?? 'default'
 
   // Preload the player's active character sprites + equipped cosmetics so
@@ -190,6 +191,7 @@ export default async function FishingPage() {
           initialEquippedSpecial={(profile?.equipped_special as string | null) ?? null}
           hasPhantomHook={hasPhantomHook}
           hasAutoCaster={hasAutoCaster}
+          hasPerfectedSigil={hasPerfectedSigil}
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
           trophyCatches={(profile?.trophy_catches as number[] | null) ?? []}
           characterColor={characterColor}

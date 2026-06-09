@@ -45,6 +45,7 @@ export interface DailyVoyage {
   xp_bonus_pct?: number | null
   tide_turner_drop?: boolean
   phantom_hook_drop?: boolean
+  perfected_sigil_drop?: boolean
 }
 
 export async function getDailyVoyageState(): Promise<{
@@ -188,6 +189,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
       xp_bonus_pct: resolved.voyage.xpPct,
       tide_turner_drop: result.tideTurnerDrop,
       phantom_hook_drop: result.phantomHookDrop,
+      perfected_sigil_drop: result.perfectedSigilDrop,
     })
     .select('*')
     .single()
@@ -197,7 +199,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<
-  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; earnedBait: { type: string; qty: number }[]; xpEarned: number; newExpeditionXP: number; oldExpeditionLevel: number; newExpeditionLevel: number; newTideTurner: boolean; newPhantomHook: boolean; unlockedSkinId?: string; crewXP: CrewXPGrant[] } | { error: string }
+  { ok: true; earnedDoubloons: number; newDoubloonTotal: number; earnedGems: number; newGemTotal: number; crewLost: number[]; earnedBait: { type: string; qty: number }[]; xpEarned: number; newExpeditionXP: number; oldExpeditionLevel: number; newExpeditionLevel: number; newTideTurner: boolean; newPhantomHook: boolean; newPerfectedSigil: boolean; unlockedSkinId?: string; crewXP: CrewXPGrant[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -222,7 +224,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, unlocked_character_colors')
+    .select('doubloons, gems, expedition_xp, has_tide_turner, has_phantom_hook, has_perfected_sigil, unlocked_character_colors')
     .eq('id', user.id)
     .single()
 
@@ -264,9 +266,11 @@ export async function revealVoyageResults(voyageId: number): Promise<
 
   const newTideTurner = !!(voyage.tide_turner_drop && !profile.has_tide_turner)
   const newPhantomHook = !!(voyage.phantom_hook_drop && !profile.has_phantom_hook)
+  const newPerfectedSigil = !!(voyage.perfected_sigil_drop && !profile.has_perfected_sigil)
   const profileUpdate: Record<string, unknown> = { doubloons: newDoubloons, gems: newGems, expedition_xp: newExpeditionXP }
   if (newTideTurner) profileUpdate.has_tide_turner = true
   if (newPhantomHook) profileUpdate.has_phantom_hook = true
+  if (newPerfectedSigil) profileUpdate.has_perfected_sigil = true
 
   // Sky skin + Navigator badge: unlock at navigation level 50
   let unlockedSkinId: string | undefined
@@ -335,7 +339,7 @@ export async function revealVoyageResults(voyageId: number): Promise<
     })
   })
 
-  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, earnedBait, xpEarned, newExpeditionXP, oldExpeditionLevel, newExpeditionLevel, newTideTurner, newPhantomHook, unlockedSkinId, crewXP }
+  return { ok: true, earnedDoubloons: voyage.total_doubloons, newDoubloonTotal: newDoubloons, earnedGems: voyage.total_gems, newGemTotal: newGems, crewLost: voyage.crew_lost, earnedBait, xpEarned, newExpeditionXP, oldExpeditionLevel, newExpeditionLevel, newTideTurner, newPhantomHook, newPerfectedSigil, unlockedSkinId, crewXP }
 }
 
 export async function fetchVoyageCaptainsLog(voyageId: number): Promise<{ log: string | null } | { error: string }> {

@@ -84,7 +84,7 @@ const ROUTE_NODES: Record<VoyageRoute, { x: number; y: number }> = {
 
 type DropEntry =
   | { kind: 'bait';    type: string;   rate: string }
-  | { kind: 'special'; id: 'tide_turner' | 'phantom_hook'; rate: string }
+  | { kind: 'special'; id: 'tide_turner' | 'phantom_hook' | 'perfected_sigil'; rate: string }
 
 // Rate labels are the per-voyage marginal odds of seeing at least one of
 // that lure. Coastal ~10% / open ~20% / deep ~30% / triangle ~40% /
@@ -115,8 +115,9 @@ const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
   // loop for players who skip raids, so this route's drops shouldn't
   // pull from raid pools.
   shroud: [
-    { kind: 'bait', type: 'luminous',        rate: '~38%' },
-    { kind: 'bait', type: 'golden',          rate: '~18%' },
+    { kind: 'bait',    type: 'luminous',         rate: '~38%' },
+    { kind: 'bait',    type: 'golden',           rate: '~18%' },
+    { kind: 'special', id: 'perfected_sigil',    rate: '~2%' },
   ],
 }
 
@@ -194,6 +195,7 @@ export default function DailyVoyagePanel({
   const [crewXP, setCrewXP] = useState<{ id: number; name: string; oldXP: number; newXP: number; oldLevel: number; newLevel: number }[]>([])
   const [claimedTideTurner, setClaimedTideTurner] = useState(false)
   const [claimedPhantomHook, setClaimedPhantomHook] = useState(false)
+  const [claimedPerfectedSigil, setClaimedPerfectedSigil] = useState(false)
   const [claimedSkinId, setClaimedSkinId] = useState<string | null>(null)
   const [liveCrewIds, setLiveCrewIds] = useState<number[]>(() =>
     roster
@@ -289,6 +291,7 @@ export default function DailyVoyagePanel({
       setCrewXP(res.crewXP)
       if (res.newTideTurner) setClaimedTideTurner(true)
       if (res.newPhantomHook) setClaimedPhantomHook(true)
+      if (res.newPerfectedSigil) setClaimedPerfectedSigil(true)
       if (res.unlockedSkinId) setClaimedSkinId(res.unlockedSkinId)
       setXpEarned(res.xpEarned)
       if (res.newExpeditionLevel > res.oldExpeditionLevel) {
@@ -1084,6 +1087,80 @@ export default function DailyVoyagePanel({
                     style={{ marginTop: 6 }}
                   >
                     <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#0d9488', background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.28)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
+                      Permanent · Equip from gear
+                    </span>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {claimedPerfectedSigil && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.88, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
+              style={{
+                position: 'relative', overflow: 'hidden',
+                background: 'linear-gradient(135deg, rgba(71,85,105,0.30) 0%, rgba(148,163,184,0.12) 60%, rgba(30,41,59,0.22) 100%)',
+                border: '1px solid rgba(148,163,184,0.45)',
+                borderRadius: 16,
+                padding: '1.1rem 1.1rem 1rem',
+                boxShadow: '0 0 32px rgba(148,163,184,0.22), inset 0 1px 0 rgba(255,255,255,0.07)',
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: -30, right: -20,
+                width: 120, height: 120, borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(148,163,184,0.30) 0%, transparent 70%)',
+                pointerEvents: 'none',
+              }} />
+
+              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#cbd5e1', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
+                ✦ Rare find ✦
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {/* Colored swatch fallback — drop in /public/perfectedsigil.png
+                    and swap to <motion.img src="/perfectedsigil.png" .../>
+                    once the art ships. */}
+                <motion.div
+                  initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
+                  style={{
+                    width: 64, height: 64, borderRadius: 16, flexShrink: 0,
+                    background: 'radial-gradient(circle at 35% 30%, #cbd5e1 0%, #94a3b8 55%, #475569 100%)',
+                    boxShadow: '0 0 16px rgba(148,163,184,0.8), 0 0 32px rgba(100,116,139,0.5), inset 0 1px 0 rgba(255,255,255,0.30)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.6rem', color: '#1e293b',
+                  }}
+                >
+                  ✦
+                </motion.div>
+                <div style={{ flex: 1 }}>
+                  <motion.p
+                    className="font-cinzel font-700"
+                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    style={{ fontSize: '1.05rem', color: '#e2e8f0', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(148,163,184,0.5)' }}
+                  >
+                    Perfected Sigil
+                  </motion.p>
+                  <motion.p
+                    className="font-karla font-300"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ delay: 0.55 }}
+                    style={{ fontSize: '0.7rem', color: '#cbd5e1', lineHeight: 1.45 }}
+                  >
+                    Each Perfect catch pays you a bonus 10 ⟡, credited the moment you reel it in.
+                  </motion.p>
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    style={{ marginTop: 6 }}
+                  >
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#475569', background: 'rgba(148,163,184,0.14)', border: '1px solid rgba(148,163,184,0.30)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
                       Permanent · Equip from gear
                     </span>
                   </motion.div>
