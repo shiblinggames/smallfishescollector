@@ -315,12 +315,18 @@ export const BLITZ: ClassDef<BlitzMilestone> = {
   id: 'blitz', name: 'Frenzy', shortLabel: 'Frenzy',
   blurb: 'Fires a cannon shot, then rolls to chain into another, and another. Stops when the roll fails.',
   color: '#f87171', emoji: '⚡',
+  // Tuned to land slightly under Doby's Heavy Salvo at the relevant
+  // tiers — at Lv 100, expected damage ≈ 46 vs Doby's flat ~50, with the
+  // 1-shot floor meaning Mako still beats Doby's Lv 10/25 from the
+  // guaranteed first hit alone. Damage estimates: expected shots =
+  // 1/(1-chainChance), × ~12 hit damage (or × ~25 at the auto-crit
+  // capstone). See class-balance discussion in commit history.
   milestones: [
-    { unlockLevel: 10,  chainChance: 0.25, desc: 'Fire a cannon shot. 25% chance to chain into another (repeats).' },
-    { unlockLevel: 25,  chainChance: 0.40, desc: 'Fire a cannon shot. 40% chance to chain into another (repeats).' },
-    { unlockLevel: 40,  chainChance: 0.55, desc: 'Fire a cannon shot. 55% chance to chain into another (repeats).' },
-    { unlockLevel: 75,  chainChance: 0.70, desc: 'Fire a cannon shot. 70% chance to chain into another (repeats).' },
-    { unlockLevel: 100, chainChance: 0.80, autoCrit: true, desc: 'Fire a cannon shot. 80% chance to chain into another (repeats). Every shot crits.' },
+    { unlockLevel: 10,  chainChance: 0.15, desc: 'Fire a cannon shot. 15% chance to chain into another (repeats).' },
+    { unlockLevel: 25,  chainChance: 0.25, desc: 'Fire a cannon shot. 25% chance to chain into another (repeats).' },
+    { unlockLevel: 40,  chainChance: 0.30, desc: 'Fire a cannon shot. 30% chance to chain into another (repeats).' },
+    { unlockLevel: 75,  chainChance: 0.40, desc: 'Fire a cannon shot. 40% chance to chain into another (repeats).' },
+    { unlockLevel: 100, chainChance: 0.45, autoCrit: true, desc: 'Fire a cannon shot. 45% chance to chain into another (repeats). Every shot crits.' },
   ],
 }
 
