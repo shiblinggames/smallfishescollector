@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
@@ -3002,6 +3002,51 @@ export default function FishingGame({
   const [baitInventory, setBaitInventory] = useState<BaitItem[]>(initialBait)
   const [inventory, setInventory]   = useState<InventoryItem[]>(initialInventory)
   const [doubloons, setDoubloons]   = useState(initialDoubloons)
+  // Perfected Sigil payout — gold coins arc from the catch result area
+  // up to the Nav's doubloon pill (tagged data-doubloon-pill) so the
+  // player sees the +10 ⟡ × streak bonus actually landing. Pure cosmetic:
+  // the doubloons are already credited server-side by the time these
+  // spawn. Coin count scales with the streak so a big streak feels like
+  // a heavier payout (capped at 10).
+  const [flyingSigilCoins, setFlyingSigilCoins] = useState<{ id: number; fromX: number; fromY: number; toX: number; toY: number; delay: number }[]>([])
+  const sigilCoinIdRef = useRef(1)
+  const spawnSigilCoins = useCallback((bonus: number) => {
+    if (bonus <= 0 || typeof window === 'undefined') return
+    // Both desktop + mobile Nav render their own [data-doubloon-pill],
+    // one hidden via responsive CSS at any given breakpoint. Pick the
+    // first one with a non-zero rect — display:none yields all-zero
+    // bounds so the visible pill always wins.
+    const candidates = Array.from(document.querySelectorAll('[data-doubloon-pill]'))
+    const target = candidates.find(el => {
+      const r = (el as HTMLElement).getBoundingClientRect()
+      return r.width > 0 && r.height > 0
+    }) as HTMLElement | undefined
+    if (!target) return
+    const tr = target.getBoundingClientRect()
+    const toX = tr.left + tr.width / 2
+    const toY = tr.top + tr.height / 2
+    // Origin: roughly center-screen, mid-viewport. Catch result card
+    // lives there during the post-reel beat, so coins look like they
+    // peel off the fish.
+    const fromX = window.innerWidth / 2
+    const fromY = window.innerHeight / 2
+    const count = Math.min(10, Math.max(1, Math.round(bonus / 10)))
+    setFlyingSigilCoins(prev => {
+      const next = [...prev]
+      for (let i = 0; i < count; i++) {
+        const jitterX = (Math.random() - 0.5) * 80
+        const jitterY = (Math.random() - 0.5) * 40
+        next.push({
+          id: sigilCoinIdRef.current++,
+          fromX: fromX + jitterX,
+          fromY: fromY + jitterY,
+          toX, toY,
+          delay: i * 0.05,
+        })
+      }
+      return next
+    })
+  }, [])
   // Dismiss-on-open tracking. Reading localStorage in a lazy initializer keeps
   // the values stable across re-renders without a useEffect roundtrip.
   const [seenRodTiers, setSeenRodTiers] = useState<number[]>(() => {
@@ -4254,12 +4299,20 @@ export default function FishingGame({
             return newDailyP
           })
         }
-        // Perfected Sigil — server already credited the +10 ⟡ on a perfect
-        // catch when the sigil is equipped. Mirror the new doubloons total
-        // locally + dispatch the change so Nav / sticky pills update.
+        // Perfected Sigil — server already credited the streak-scaled
+        // bonus on a perfect catch when the sigil is equipped. Mirror
+        // the new doubloons total locally + dispatch the change so Nav /
+        // sticky pills update. Also spawn the coin-flight cosmetic so
+        // the player sees the bonus actually landing on the Nav pill.
         if (res.newDoubloons != null) {
           setDoubloons(res.newDoubloons)
           window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+          // Give the Nav pill a render tick to mount with the new value
+          // — querying for [data-doubloon-pill] in the same frame as the
+          // setDoubloons can land before Nav re-renders, which is fine
+          // (the rect is already laid out) but the value update lands
+          // visually right as the coins arrive.
+          spawnSigilCoins(res.sigilBonus ?? 0)
         }
         // Reconcile the streak from the server (authoritative). reelIn already
         // persisted current_perfect_streak, the highest-streak record, and the
@@ -8807,6 +8860,52 @@ export default function FishingGame({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Perfected Sigil coin flight — fixed-position viewport layer so
+          coordinates from getBoundingClientRect line up regardless of
+          parent transforms / overflow:hidden. Each coin arcs from a
+          jittered point near screen center up to the Nav's doubloon
+          pill, then despawns. Pure cosmetic — the doubloons already
+          credited server-side. */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 220 }}>
+        <AnimatePresence>
+          {flyingSigilCoins.map(coin => (
+            <motion.div
+              key={coin.id}
+              initial={{ x: coin.fromX - 14, y: coin.fromY - 14, scale: 1, opacity: 0 }}
+              animate={{
+                x: coin.toX - 14,
+                y: coin.toY - 14,
+                scale: 0.55,
+                opacity: [0, 1, 1, 0.9],
+                rotate: 540,
+              }}
+              transition={{
+                duration: 0.7,
+                delay: coin.delay,
+                ease: [0.4, 0, 0.2, 1],
+                opacity: { duration: 0.7, times: [0, 0.15, 0.85, 1] },
+              }}
+              onAnimationComplete={() => setFlyingSigilCoins(prev => prev.filter(c => c.id !== coin.id))}
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'radial-gradient(circle at 35% 30%, #fde68a 0%, #f0c040 55%, #b8860b 100%)',
+                border: '1.5px solid rgba(255,232,150,0.85)',
+                color: '#5a3d00',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                lineHeight: 1,
+                boxShadow: '0 0 14px rgba(240,192,64,0.65), 0 4px 10px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35)',
+                textShadow: '0 1px 0 rgba(255,255,255,0.3)',
+              }}
+            >
+              ⟡
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
     </div>
   )

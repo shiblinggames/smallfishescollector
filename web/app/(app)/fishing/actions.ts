@@ -382,12 +382,14 @@ export async function reelIn(
     if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
     if (aStreak >= 10) await unlockBadge('unbroken')
     // Perfected Sigil pays out on ancient perfects too — same gate
-    // (equipped + perfect) as the regular catch path. See sigilBonus
-    // below for the rationale on equipped-vs-owned.
+    // (equipped + perfect) as the regular catch path, same streak-scaling
+    // formula (+10 ⟡ × min(streak, 10)). See sigilBonus below for the
+    // rationale on equipped-vs-owned.
     const ancientSigilBonus = result === 'perfect'
       && profile.has_perfected_sigil
       && profile.equipped_special === 'perfected_sigil'
-      ? 10 : 0
+      ? Math.min(aStreak, 10) * 10
+      : 0
     const ancientNewDoubloons = (profile.doubloons ?? 0) + ancientSigilBonus
     if (ancientSigilBonus > 0) updates.doubloons = ancientNewDoubloons
     await admin.from('profiles').update(updates).eq('id', user.id)
@@ -516,14 +518,17 @@ export async function reelIn(
   const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
-  // Perfected Sigil — equipped Shrouded Reach drop pays +10 ⟡ on every
-  // Perfect catch, credited immediately. Gated on EQUIPPED (not just
-  // owned) so the player has to actively choose this perk over the
-  // other equippable specials (Tide Turner / Auto Caster).
-  const sigilBonus = result === 'perfect'
-    && profile.has_perfected_sigil
+  // Perfected Sigil — equipped Shrouded Reach drop pays a streak-scaling
+  // bonus on every Perfect catch, credited immediately. +10 ⟡ × current
+  // streak, capped at streak 10 (so streak 1 = +10, streak 5 = +50,
+  // streak 10+ = +100). Caps at 10 so it can't run away on long streaks.
+  // Gated on EQUIPPED (not just owned) so the player actively chooses
+  // this perk over Tide Turner / Auto Caster.
+  const sigilEquipped = profile.has_perfected_sigil
     && profile.equipped_special === 'perfected_sigil'
-    ? 10 : 0
+  const sigilBonus = result === 'perfect' && sigilEquipped
+    ? Math.min(newPerfectStreak, 10) * 10
+    : 0
   const newDoubloons = (profile.doubloons ?? 0) + sigilBonus
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75

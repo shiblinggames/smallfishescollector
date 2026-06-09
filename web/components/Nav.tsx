@@ -430,7 +430,11 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
             </span>
           )}
           {displayDoubloons !== undefined && (
-            <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.875rem' }}>
+            <span
+              data-doubloon-pill
+              className="font-cinzel font-700 text-[#f0c040]"
+              style={{ fontSize: '0.875rem' }}
+            >
               <TickingNumber value={displayDoubloons} /> ⟡
             </span>
           )}
@@ -476,7 +480,11 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
             </span>
           )}
           {displayDoubloons !== undefined && (
-            <span className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '0.8rem' }}>
+            <span
+              data-doubloon-pill
+              className="font-cinzel font-700 text-[#f0c040]"
+              style={{ fontSize: '0.8rem' }}
+            >
               <TickingNumber value={displayDoubloons} /> ⟡
             </span>
           )}
