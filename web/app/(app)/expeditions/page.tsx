@@ -1,7 +1,7 @@
 import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, computeVoyageScore, computeCombatRating } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, computeCombatRating } from '@/lib/expeditions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { getXPProgress, navLevelBonuses } from '@/lib/expeditionLevel'
 import RaidsSection from './RaidsSection'
@@ -210,14 +210,9 @@ async function ExpeditionHub() {
       power: c.power, dodge: c.dodge, fortune: c.fortune,
       effects: c.effects, xp: c.xp, slug: c.slug,
     }))
-  const resolvedVoyage = resolveDeployedCrew(toDeployed('voyage'))
   const resolvedRaid   = resolveDeployedCrew(toDeployed('raid'))
   const xpProgress = getXPProgress(profile?.expedition_xp ?? 0)
   const navBonus = navLevelBonuses(xpProgress.level)
-  const voyageScore = Math.min(100, Math.round(
-    computeVoyageScore(resolvedVoyage.totals.power, resolvedVoyage.totals.dodge, resolvedVoyage.totals.fortune)
-      * (1 + resolvedVoyage.voyage.scorePct / 100)
-  ))
   const raidRating = computeCombatRating(
     resolvedRaid.totals.power + navBonus.power,
     resolvedRaid.totals.dodge + navBonus.navigation,
@@ -238,7 +233,6 @@ async function ExpeditionHub() {
       roster={roster}
       shipCrewSlots={shipStats.crewSlots}
       shipStats={shipStats}
-      voyageScore={voyageScore}
       raidScore={raidRating.score}
       // Full DailyVoyagePanel-needed props — voyage panel was promoted
       // into the Voyages hub modal so it's no longer rendered inline.

@@ -103,25 +103,30 @@ type DropEntry =
 
 const ROUTE_DROPS: Record<VoyageRoute, DropEntry[]> = {
   coastal: [
-    { kind: 'bait', type: 'luminous',        rate: '~5%' },
+    { kind: 'bait', type: 'luminous',        rate: '~10%' },
+    { kind: 'bait', type: 'golden',          rate: '~10%' },
   ],
   open: [
-    { kind: 'bait', type: 'luminous',        rate: '~10%' },
-    { kind: 'bait', type: 'golden',          rate: '~5%' },
+    { kind: 'bait', type: 'luminous',        rate: '~20%' },
+    { kind: 'bait', type: 'golden',          rate: '~20%' },
   ],
   deep: [
+    { kind: 'bait',    type: 'luminous',     rate: '~30%' },
+    { kind: 'bait',    type: 'golden',       rate: '~30%' },
     { kind: 'special', id: 'tide_turner',    rate: '~2%' },
-    { kind: 'bait',    type: 'golden',       rate: '~8%' },
   ],
   triangle: [
-    { kind: 'bait',    type: 'luminous',       rate: '~20%' },
-    { kind: 'special', id: 'phantom_hook',     rate: '~2%' },
+    { kind: 'bait',    type: 'luminous',     rate: '~40%' },
+    { kind: 'bait',    type: 'golden',       rate: '~40%' },
+    { kind: 'special', id: 'phantom_hook',   rate: '~2%' },
   ],
-  // Shrouded Reach — loot table TBD. Will include a new exclusive
-  // fishing-aid item (designed separately). Keep entries here as
-  // fishing-only — voyages are the passive perk loop for players who
-  // skip raids, so this route's drops shouldn't pull from raid pools.
-  shroud: [],
+  // Shrouded Reach — fishing-only loot. Voyages are the passive perk
+  // loop for players who skip raids, so this route's drops shouldn't
+  // pull from raid pools.
+  shroud: [
+    { kind: 'bait', type: 'luminous',        rate: '~50%' },
+    { kind: 'bait', type: 'golden',          rate: '~50%' },
+  ],
 }
 
 function computeRouteEstimate(
@@ -213,7 +218,6 @@ export default function DailyVoyagePanel({
   for (const c of roster) knownCrew.current.set(c.id, c)
   const [expandedDropKey, setExpandedDropKey] = useState<string | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
-  const [mapOpen, setMapOpen] = useState(false)
   const [logExpanded, setLogExpanded] = useState(false)
   const [xpEarned, setXpEarned] = useState(0)
   const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null)
@@ -340,29 +344,6 @@ export default function DailyVoyagePanel({
                   aria-label="How voyages work"
                 >?</button>
               </div>
-
-              {/* ── Choose Voyage toggle ── */}
-              <button
-                onClick={() => setMapOpen(v => !v)}
-                style={{
-                  width: '100%',
-                  background: mapOpen ? 'rgba(240,192,64,0.07)' : 'rgba(255,255,255,0.025)',
-                  border: `1px solid ${mapOpen ? 'rgba(240,192,64,0.25)' : 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: 8, padding: '0.52rem 0.85rem',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  cursor: 'pointer', transition: 'all 0.15s',
-                  marginBottom: mapOpen ? '0.75rem' : 0,
-                }}
-              >
-                <span className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: mapOpen ? '#c8a060' : '#8a7050' }}>
-                  Choose Voyage
-                </span>
-                <span style={{ fontSize: '0.52rem', color: '#6a5040', transform: mapOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▼</span>
-              </button>
-
-              {/* ── Expanded map section ── */}
-              {mapOpen && (
-              <>
 
               {/* Info modal */}
               {infoOpen && (
@@ -680,8 +661,6 @@ export default function DailyVoyagePanel({
                   )
                 })()}
               </div>
-              </>
-              )}
             </>
           )}
           <VoyageHistory voyages={voyages} />

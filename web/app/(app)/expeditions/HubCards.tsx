@@ -56,7 +56,6 @@ interface Props {
   // inside the prep modals so the player sees what they're committing
   // with before tapping Begin / Set Sail.
   shipStats: ShipStats
-  voyageScore: number
   raidScore: number
   // DailyVoyagePanel-required props. The panel used to render inline
   // below the hub; now lives inside the Voyages modal so the data
@@ -179,7 +178,7 @@ export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
-  shipStats, voyageScore, raidScore,
+  shipStats, raidScore,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
 }: Props) {
   const router = useRouter()
@@ -549,12 +548,6 @@ export default function HubCards({
               longer sticky (it scrolls with the body) — acceptable
               tradeoff for actually-reachable content. */}
           <div style={{ padding: '0.9rem 1rem 1.2rem' }}>
-            <StatsBlock
-              score={voyageScore}
-              scoreLabel="Voyage Score"
-              scoreColor="#9ab4dc"
-              shipStats={shipStats}
-            />
             <DailyVoyagePanel
               roster={roster}
               shipTier={shipTier}

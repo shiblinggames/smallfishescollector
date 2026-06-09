@@ -207,6 +207,27 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
+// Per-event chance (per lure type) for a discovery/encounter to drop a
+// lure. Tuned so the voyage-aggregate hits the player-facing rate cards
+// for EACH lure type independently:
+//   coastal ~10% / open ~20% / deep ~30% / triangle ~40% / shroud ~50%
+// across the route's combined discovery + encounter events. 50/50 split
+// between luminous and golden when a drop fires — each lure type ends up
+// at the target marginal probability per voyage.
+const LURE_RATE_PER_EVENT: Record<VoyageRoute, number> = {
+  coastal:  0.051,  // 2 events  → 1 - (1-p)^2 ≈ 10%
+  open:     0.054,  // 4 events  → 1 - (1-p)^4 ≈ 20%
+  deep:     0.069,  // 5 events  → 1 - (1-p)^5 ≈ 30%
+  triangle: 0.082,  // 6 events  → 1 - (1-p)^6 ≈ 40%
+  shroud:   0.094,  // 7 events  → 1 - (1-p)^7 ≈ 50%
+}
+
+function rollLureDrop(route: VoyageRoute): 'luminous' | 'golden' | null {
+  const p = LURE_RATE_PER_EVENT[route]
+  if (Math.random() >= 2 * p) return null
+  return Math.random() < 0.5 ? 'luminous' : 'golden'
+}
+
 export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open'): VoyageResult {
   const rc = ROUTE_CONFIGS[route]
   const stats = computeTotalCrewStats(crew)
@@ -260,10 +281,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
       case 'discovery': {
         const success = rollFortune()
         const gemDrop = success && Math.random() * 55 < fortune ? Math.round(rand(1, 3) * rc.gemScale) : 0
-        const baitDrop = !success ? null
-          : route === 'coastal' && Math.random() < 0.07 ? 'luminous'
-          : route === 'deep'    && Math.random() < 0.04 ? 'luminous'
-          : null
+        const baitDrop = rollLureDrop(route)
         const template = pick(success ? DISCOVERY_SUCCESS : DISCOVERY_FAIL)
         const discoveryNarrative = fill(template.narrative)
         const captainDiscoveryTrait = success && Math.random() < 0.60 ? getCrewTrait(captain) : null
@@ -286,14 +304,7 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
           const gemDrop = crush
             ? Math.round(rand(2, 5) * rc.gemScale)
             : (Math.random() * 55 < power ? Math.round(rand(1, 3) * rc.gemScale) : 0)
-          const baitDrop = crush
-            ? (route === 'deep' && Math.random() < 0.12 ? 'golden'
-              : route === 'open' && Math.random() < 0.10 ? 'golden'
-              : route !== 'coastal' && Math.random() < 0.12 ? 'luminous'
-              : null)
-            : (route === 'deep' && Math.random() < 0.04 ? 'golden'
-              : route !== 'coastal' && Math.random() < 0.07 ? 'luminous'
-              : null)
+          const baitDrop = rollLureDrop(route)
           const template = pick(crush ? ENCOUNTER_CRUSH : ENCOUNTER_WIN)
           const encounterNarrative = fill(template.narrative)
           const captainEncounterTrait = crush
@@ -329,7 +340,12 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             event = {
               type, outcome: 'failure',
               title: template.title, narrative: fill(template.narrative),
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
+              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
+              // Salvage from the retreat — keeps per-voyage lure rates
+              // predictable across stat tiers (only crew-loss branch
+              // suppresses the drop, since a positive side-find there
+              // reads as tone-deaf).
+              baitDrop: rollLureDrop(route),
             }
           }
         }
@@ -409,10 +425,6 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   for (const e of events) {
     if (e.baitDrop) baitDropMap.set(e.baitDrop, (baitDropMap.get(e.baitDrop) ?? 0) + 1)
   }
-
-  // Triangle voyage-level bonus drops
-  if (route === 'triangle' && Math.random() < 0.20)
-    baitDropMap.set('luminous', (baitDropMap.get('luminous') ?? 0) + 1)
 
   const baitDrops = Array.from(baitDropMap.entries()).map(([type, qty]) => ({ type, qty }))
   const tideTurnerDrop = route === 'deep' && Math.random() < 0.02
