@@ -15,7 +15,8 @@ import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef } from '@/lib/crewClasses'
-import TickingNumber from '@/components/TickingNumber'
+// TickingNumber + the local Stat helper were used by the removed
+// gems/nav/roster pill row in the header. Dropped along with them.
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
@@ -944,19 +945,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     <div style={{ minHeight: '100vh', background: '#07060a', color: '#f0ede8', padding: '1.25rem 1rem 4rem' }}>
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
-        {/* Header */}
-        <div className="flex items-start justify-between flex-wrap gap-3" style={{ marginBottom: '1.1rem' }}>
-          <div>
-            <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Management</h1>
-            <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-              Build your roster, assign crew to voyages or raids, remember the fallen.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Stat label="Gems" value={<><TickingNumber value={state.gems} /> ◆</>} accent="#a78bfa" />
-            <Stat label="Nav Level" value={String(state.navLevel)} />
-            <Stat label="Roster" value={`${state.roster.length} / ${state.capacity}`} accent={rosterFull ? '#f08a8a' : '#5fd38a'} />
-          </div>
+        {/* Header — title only. Gems + Nav level live in the Nav bar
+            already, and the roster count repeats in the Roster tab + the
+            section header below; dropping those stats here cuts the
+            visual weight of the top of the page in half. */}
+        <div style={{ marginBottom: '1.1rem' }}>
+          <h1 className="font-pirata" style={{ fontSize: '1.7rem', letterSpacing: '0.03em' }}>Crew Management</h1>
         </div>
 
         {err && (
@@ -1750,21 +1744,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   )
 }
 
-function Stat({ label, value, accent, onClick }: { label: string; value: ReactNode; accent?: string; onClick?: () => void }) {
-  return (
-    <div
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
-      style={{
-        background: 'rgba(255,255,255,0.05)', borderRadius: 9, padding: '0.45rem 0.8rem', textAlign: 'center',
-        border: `1px solid ${onClick ? 'rgba(95,211,138,0.3)' : 'rgba(255,255,255,0.1)'}`,
-        cursor: onClick ? 'pointer' : 'default',
-      }}
-    >
-      <p className="font-cinzel font-700" style={{ fontSize: '1rem', lineHeight: 1.1, color: accent ?? '#f0ede8' }}>{value}</p>
-      <p className="font-karla font-600 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>{label}</p>
-    </div>
-  )
-}
+// Local Stat pill component was used by the gems/nav/roster header
+// strip. That strip was dropped to declutter the top of the page
+// (gems + nav level live in the Nav, roster count repeats in the tab
+// label + the section header). Component removed.
