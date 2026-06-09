@@ -59,10 +59,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           .select('id, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)')
           .eq('user_id', profile.id)
           .is('died_at', null)
-          // Public showcase fallback = the voyage track (player's public-
-          // facing roster); raid loadout stays private to the captain.
-          .not('voyage_slot', 'is', null)
-          .order('voyage_slot', { ascending: true }),
+          // Public showcase fallback when the player hasn't picked one:
+          // top 3 live crew sorted by XP (≈ level) desc, then rarity
+          // desc as tiebreaker. Reads as "their best three" — a far
+          // better bragging surface than whoever happens to be on the
+          // voyage track right now.
+          .order('xp', { ascending: false })
+          .order('rarity', { ascending: false })
+          .limit(3),
 
     admin.from('fish_collection').select('fish_id', { count: 'exact', head: true }).eq('user_id', profile.id),
 
