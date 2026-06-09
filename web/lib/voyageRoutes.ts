@@ -13,7 +13,12 @@ export interface RouteConfig {
   riskLabel: string
   color: string
   payoutScale: number
-  crewLossScale: number
+  /** Flat per-voyage crew-loss probability for this route (BEFORE crew
+   *  fortune mitigation). 0 means crew loss is impossible on this
+   *  route. The deeper routes carry real permadeath risk; the early
+   *  routes are safe. Fortune mitigation lives in voyageEvents.ts —
+   *  stats can reduce but never fully remove crew loss. */
+  baseCrewLossChance: number
   gemScale: number
   baseDoubloons: number
   /** Minimum ship tier required to set sail on this route. Coastal is open
@@ -30,7 +35,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     riskLabel: 'Safe',
     color: '#4ade80',
     payoutScale: 0.70,
-    crewLossScale: 0,
+    baseCrewLossChance: 0,
     gemScale: 0.5,
     baseDoubloons: 50,
     minShipTier: 0,
@@ -42,9 +47,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     color: '#f0c040',
     // payoutScale tuned 2026-05-20: 1.0 → 0.55 (target avg ~500 ⟡/voyage).
     payoutScale: 0.55,
-    // crew-loss softened 2026-05-23 (0.25 → 0.10): these 4 routes are the
-    // early/mid band; real permadeath risk lives on future high-nav routes.
-    crewLossScale: 0.10,
+    baseCrewLossChance: 0,
     gemScale: 1.0,
     baseDoubloons: 120,
     minShipTier: 2,
@@ -56,7 +59,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     color: '#c084fc',
     // payoutScale tuned 2026-05-20: 1.5 → 0.65 (target avg ~800 ⟡/voyage).
     payoutScale: 0.65,
-    crewLossScale: 0.20, // softened 2026-05-23 (0.5 → 0.20)
+    baseCrewLossChance: 0.10,
     gemScale: 1.5,
     baseDoubloons: 200,
     minShipTier: 2,
@@ -69,7 +72,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     // payoutScale tuned 2026-05-20: 2.2 → 1.0 (target avg ~1500 ⟡/voyage).
     // Real-data anchor showed ~2985 avg at the old 2.2× scale.
     payoutScale: 1.0,
-    crewLossScale: 0.40, // softened 2026-05-23 (1.0 → 0.40)
+    baseCrewLossChance: 0.15,
     gemScale: 2.2,
     baseDoubloons: 380,
     minShipTier: 2,
@@ -86,11 +89,24 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     riskLabel: 'Treacherous',
     color: '#7c8aa8',
     payoutScale: 1.40,
-    crewLossScale: 0.55,
+    baseCrewLossChance: 0.20,
     gemScale: 3.0,
     baseDoubloons: 600,
     minShipTier: 2,
   },
+}
+
+// Fortune mitigation: each point of total crew fortune reduces the
+// per-voyage crew-loss chance by 0.1 percentage points (0.001), with a
+// hard floor at 50% of the route's base. So a fortune-25 crew on a
+// Howling Deep voyage (10% base) faces 7.5%; a fortune-60 crew faces
+// the 5% floor. "Stats can mitigate but never fully remove crew loss."
+export const CREW_LOSS_FORTUNE_SLOPE = 0.001
+export const CREW_LOSS_FLOOR_FRACTION = 0.5
+
+export function effectiveCrewLossChance(base: number, fortune: number): number {
+  if (base === 0) return 0
+  return Math.max(base * CREW_LOSS_FLOOR_FRACTION, base - fortune * CREW_LOSS_FORTUNE_SLOPE)
 }
 
 export interface VoyageEvent {

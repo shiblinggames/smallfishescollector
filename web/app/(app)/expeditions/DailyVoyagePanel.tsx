@@ -3,12 +3,12 @@
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { EXPEDITION_SHIP_STATS, computeVoyageScore } from '@/lib/expeditions'
+import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
-import { ROUTE_CONFIGS, COMING_SOON_ROUTES, type VoyageRoute } from '@/lib/voyageRoutes'
+import { ROUTE_CONFIGS, COMING_SOON_ROUTES, effectiveCrewLossChance, type VoyageRoute } from '@/lib/voyageRoutes'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
@@ -20,21 +20,6 @@ type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
 const BASE_VOYAGE_MS = 6 * 60 * 60 * 1000
 
-// Recommended voyage scores per route. Anchored to the 0-100 normalized
-// VoyageScore (see computeVoyageScore in lib/expeditions). Recommendations
-// were retuned 2026-05-27 against the normalized scale: deep-water routes
-// previously asked for too much score relative to how early they unlock
-// (Howling Deep opens at nav 15 but used to want 50/100, which a typical
-// nav-15 crew can't reach). The Bertuna Triangle is the top tier and still
-// only asks for ~35; the recommendation is a "you're ready" signal, not a
-// hard gate. Per-route min level lives in ROUTE_MIN_LEVELS below.
-const REC_SCORES: Record<VoyageRoute, number> = {
-  coastal:  12,
-  open:     20,
-  deep:     25,
-  triangle: 35,
-  shroud:   50,
-}
 const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = {
   coastal:  1,
   open:     5,
@@ -145,7 +130,6 @@ function computeRouteEstimate(
   const powerScale   = 1 + stats.power   / 60
   const pDiscovery   = Math.min(1, stats.fortune / 45)
   const pWin         = Math.min(1, stats.power   / 30)
-  const pDodge       = Math.min(1, stats.dodge   / 28)
 
   const enc = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? (crewCount >= 2 ? 5 : 4) : route === 'open' ? 2 : 0
   const dng = route === 'shroud' ? 4 : route === 'triangle' ? 3 : route === 'deep' ? 2 : route === 'open' ? (crewCount >= 2 ? 2 : 1) : 0
@@ -159,12 +143,11 @@ function computeRouteEstimate(
   const lootMin = Math.round(rc.baseDoubloons + expected * 0.4)
   const lootMax = Math.round(rc.baseDoubloons + expected * 1.9)
 
-  let crewRiskPct = 0
-  if (crewCount >= 2) {
-    const encRisk = enc * (1 - pWin) * Math.min(1, Math.max(0.10, 0.5 - stats.power / 60) * rc.crewLossScale)
-    const dngRisk = dng * (1 - pDodge) * Math.min(1, 0.18 * rc.crewLossScale)
-    crewRiskPct = Math.round(Math.min(95, (encRisk + dngRisk) * 100))
-  }
+  // Flat per-voyage crew-loss chance, mitigated slightly by total crew
+  // fortune (see effectiveCrewLossChance in lib/voyageRoutes).
+  const crewRiskPct = crewCount >= 2
+    ? Math.round(effectiveCrewLossChance(rc.baseCrewLossChance, stats.fortune) * 100)
+    : 0
 
   // XP estimate — same event counts, best/worst case outcomes
   const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90, triangle: 140, shroud: 220 }
@@ -462,7 +445,7 @@ export default function DailyVoyagePanel({
                             {rco.name}
                           </span>
                           <span className="font-karla uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: locked ? '#c8a060' : isSelected ? `${rco.color}bb` : '#6a5a40', display: 'block', textAlign: 'center', marginTop: 1, fontWeight: locked ? 700 : undefined }}>
-                            {comingSoon ? 'Coming soon' : shipLocked ? 'Requires a Sloop' : levelLocked ? `Unlock at Lv ${minLevel}` : `${REC_SCORES[routeKey]}+ score`}
+                            {comingSoon ? 'Coming soon' : shipLocked ? 'Requires a Sloop' : levelLocked ? `Unlock at Lv ${minLevel}` : rco.riskLabel}
                           </span>
                         </span>
                       </button>
@@ -515,25 +498,12 @@ export default function DailyVoyagePanel({
 
                       {/* Stats row */}
                       {stats && (() => {
-                        const rec = REC_SCORES[selectedRoute] ?? 0
-                        const crewScore = computeVoyageScore(stats.power, stats.dodge, stats.fortune)
-                        const met = crewScore >= rec
-                        const close = !met && crewScore >= rec * 0.75
-                        const scoreColor = met ? '#4ade80' : close ? '#f0c040' : '#f87171'
                         const expLevel = getLevelFromXP(expeditionXP)
                         const estMs = computeVoyageDurationMs(expLevel, stats.dodge)
-                        const riskColor = est && est.crewRiskPct >= 50 ? '#f87171' : est && est.crewRiskPct > 20 ? '#f0c040' : '#6a8a6a'
+                        const riskPct = est?.crewRiskPct ?? 0
+                        const riskColor = riskPct >= 15 ? '#f87171' : riskPct >= 8 ? '#f0c040' : '#6a8a6a'
                         return (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.6rem' }}>
-                            {/* Score */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              <span style={{ fontSize: '0.8rem', lineHeight: 1, color: scoreColor }}>{met ? '✓' : '⚠'}</span>
-                              <span className="font-karla font-600" style={{ fontSize: '0.76rem', color: scoreColor }}>
-                                {met
-                                  ? `Score ${crewScore} — you're ready`
-                                  : `Score ${crewScore} of ${rec}+ recommended`}
-                              </span>
-                            </div>
                             {/* Payout + time */}
                             {est && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -555,9 +525,9 @@ export default function DailyVoyagePanel({
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#c87a4a' }}>
                                 {minCrew === 1 ? '⚠ Need at least 1 crew to set sail' : `⚠ Need at least ${minCrew} crew to set sail`}
                               </span>
-                            ) : est && est.crewRiskPct > 0 ? (
+                            ) : riskPct > 0 ? (
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: riskColor }}>
-                                {est.crewRiskPct >= 50 ? '☠' : '⚠'} {est.crewRiskPct}% chance crew is lost permanently
+                                {riskPct >= 15 ? '☠' : '⚠'} {riskPct}% chance crew is lost permanently
                               </span>
                             ) : (
                               <span className="font-karla" style={{ fontSize: '0.74rem', color: '#5a7a5a' }}>No crew risk</span>

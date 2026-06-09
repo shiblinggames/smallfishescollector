@@ -185,9 +185,9 @@ function getCrewTrait(card: CrewCard): string | null {
 }
 
 export type { VoyageEventType, VoyageEventOutcome, VoyageRoute, RouteConfig, VoyageEvent } from './voyageRoutes'
-export { ROUTE_CONFIGS } from './voyageRoutes'
+export { ROUTE_CONFIGS, effectiveCrewLossChance } from './voyageRoutes'
 import type { VoyageRoute, VoyageEvent, VoyageEventType } from './voyageRoutes'
-import { ROUTE_CONFIGS } from './voyageRoutes'
+import { ROUTE_CONFIGS, effectiveCrewLossChance } from './voyageRoutes'
 
 export interface VoyageResult {
   events: VoyageEvent[]
@@ -263,6 +263,21 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   const events: VoyageEvent[] = []
   const crewLost: number[] = []
 
+  // ── Crew loss is now a single flat per-voyage roll, not per-event ──
+  // Pre-roll whether the voyage takes a casualty (route base, reduced
+  // slightly by total crew fortune, floored so stats can never fully
+  // remove the risk). If the roll succeeds, pick a victim from the
+  // available non-captain crew; the casualty narrative attaches to the
+  // first failing encounter or danger event we generate. If the voyage
+  // is clean enough that no fail event ever fires, we append a forced
+  // casualty event at the end so the planned loss still lands.
+  const lossEligibleCrew = crew.slice(1)
+  const lossChance = effectiveCrewLossChance(rc.baseCrewLossChance, fortune)
+  const lossVictim = lossEligibleCrew.length > 0 && Math.random() < lossChance
+    ? pick(lossEligibleCrew)
+    : null
+  let lossApplied = false
+
   // Route-specific event sequence
   const sequence: VoyageEventType[] =
     route === 'coastal'
@@ -328,34 +343,32 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             crewVariantLost: null,
             baitDrop,
           }
+        } else if (lossVictim && !lossApplied) {
+          // Pre-rolled voyage casualty attaches to the first failing
+          // encounter we hit. Single-pass: mark applied so later fail
+          // events fall through to the standard no-casualty narrative.
+          const template = pick(ENCOUNTER_CREW_LOSS)
+          const baseNarrative = fill(template.narrative, { name: lossVictim.name })
+          const victimTrait = getCrewTrait(lossVictim)
+          const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
+          crewLost.push(lossVictim.variantId)
+          lossApplied = true
+          event = {
+            type, outcome: 'failure',
+            title: template.title, narrative,
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: lossVictim.variantId, baitDrop: null,
+          }
         } else {
-          const availableEncounter = crew.slice(1).filter(c => !crewLost.includes(c.variantId))
-          const crewLossChance = availableEncounter.length > 0 ? Math.max(0.10, 0.5 - power / 60) * rc.crewLossScale : 0
-          const loseCrew = crewLossChance > 0 && Math.random() < crewLossChance
-          if (loseCrew) {
-            const victim = pick(availableEncounter)
-            const template = pick(ENCOUNTER_CREW_LOSS)
-            const baseNarrative = fill(template.narrative, { name: victim.name })
-            const victimTrait = getCrewTrait(victim)
-            const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
-            crewLost.push(victim.variantId)
-            event = {
-              type, outcome: 'failure',
-              title: template.title, narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, baitDrop: null,
-            }
-          } else {
-            const template = pick(ENCOUNTER_LOSS)
-            event = {
-              type, outcome: 'failure',
-              title: template.title, narrative: fill(template.narrative),
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
-              // Salvage from the retreat — keeps per-voyage lure rates
-              // predictable across stat tiers (only crew-loss branch
-              // suppresses the drop, since a positive side-find there
-              // reads as tone-deaf).
-              baitDrop: rollLureDrop(route),
-            }
+          const template = pick(ENCOUNTER_LOSS)
+          event = {
+            type, outcome: 'failure',
+            title: template.title, narrative: fill(template.narrative),
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null,
+            // Salvage from the retreat — keeps per-voyage lure rates
+            // predictable across stat tiers (only crew-loss branch
+            // suppresses the drop, since a positive side-find there
+            // reads as tone-deaf).
+            baitDrop: rollLureDrop(route),
           }
         }
         break
@@ -370,28 +383,24 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
             title: template.title, narrative: template.narrative,
             doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
           }
+        } else if (lossVictim && !lossApplied) {
+          const template = pick(DANGER_CREW_LOSS)
+          const baseNarrative = fill(template.narrative, { name: lossVictim.name })
+          const victimTrait = getCrewTrait(lossVictim)
+          const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
+          crewLost.push(lossVictim.variantId)
+          lossApplied = true
+          event = {
+            type, outcome: 'failure',
+            title: template.title, narrative,
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: lossVictim.variantId, baitDrop: null,
+          }
         } else {
-          const availableDanger = crew.slice(1).filter(c => !crewLost.includes(c.variantId))
-          const loseCrew = availableDanger.length > 0 && Math.random() < 0.18 * rc.crewLossScale
-          if (loseCrew) {
-            const victim = pick(availableDanger)
-            const template = pick(DANGER_CREW_LOSS)
-            const baseNarrative = fill(template.narrative, { name: victim.name })
-            const victimTrait = getCrewTrait(victim)
-            const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
-            crewLost.push(victim.variantId)
-            event = {
-              type, outcome: 'failure',
-              title: template.title, narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: victim.variantId, baitDrop: null,
-            }
-          } else {
-            const template = pick(DANGER_SETBACK)
-            event = {
-              type, outcome: 'failure',
-              title: template.title, narrative: template.narrative,
-              doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
-            }
+          const template = pick(DANGER_SETBACK)
+          event = {
+            type, outcome: 'failure',
+            title: template.title, narrative: template.narrative,
+            doubloonDelta: 0, gemDelta: 0, crewVariantLost: null, baitDrop: null,
           }
         }
         break
@@ -426,6 +435,24 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
     }
 
     events.push(event)
+  }
+
+  // Forced casualty: if the voyage pre-rolled a loss but no failing
+  // encounter / danger event ever fired (high-stat crews can dodge or
+  // win every roll), append a final danger-style casualty event so the
+  // planned loss still lands — "stats can mitigate but never fully
+  // remove crew loss".
+  if (lossVictim && !lossApplied) {
+    const template = pick(DANGER_CREW_LOSS)
+    const baseNarrative = fill(template.narrative, { name: lossVictim.name })
+    const victimTrait = getCrewTrait(lossVictim)
+    const narrative = victimTrait ? `${baseNarrative}\n\n${victimTrait}` : baseNarrative
+    crewLost.push(lossVictim.variantId)
+    events.push({
+      type: 'danger', outcome: 'failure',
+      title: template.title, narrative,
+      doubloonDelta: 0, gemDelta: 0, crewVariantLost: lossVictim.variantId, baitDrop: null,
+    })
   }
 
   const totalDoubloons = rc.baseDoubloons + events.reduce((sum, e) => sum + e.doubloonDelta, 0)
