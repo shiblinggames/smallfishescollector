@@ -110,25 +110,50 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
           color: unread > 0 ? ACCENT : '#a0a09a',
         }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        {/* Idle envelope breathes gently when there's unread mail — slow
+            scale loop with a paired soft gold halo behind. Subtle enough
+            to stay polite next to the currency widgets but lively enough
+            that a returning player notices it before opening the menu. */}
+        <motion.div
+          aria-hidden
+          animate={unread > 0 ? { opacity: [0.35, 0.7, 0.35], scale: [0.85, 1.1, 0.85] } : { opacity: 0 }}
+          transition={unread > 0 ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
+          style={{
+            position: 'absolute', inset: 0,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${ACCENT}55 0%, transparent 65%)`,
+            pointerEvents: 'none',
+          }}
+        />
+        <motion.svg
+          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
+          animate={unread > 0 ? { scale: [1, 1.12, 1], y: [0, -1, 0] } : { scale: 1, y: 0 }}
+          transition={unread > 0 ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
+          style={{ position: 'relative', zIndex: 1 }}
+        >
           <rect x="3" y="5" width="18" height="14" rx="2"/>
           <path d="M3 7l9 6 9-6"/>
-        </svg>
+        </motion.svg>
         {unread > 0 && (
-          <span style={{
-            position: 'absolute', top: 4, right: 4,
-            minWidth: 14, height: 14, padding: '0 4px',
-            borderRadius: 999,
-            background: UNREAD_PIP,
-            color: '#1a0606',
-            fontSize: '0.55rem',
-            fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            lineHeight: 1,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.55)',
-          }}>
+          <motion.span
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              position: 'absolute', top: 2, right: 2,
+              minWidth: 15, height: 15, padding: '0 4px',
+              borderRadius: 999,
+              background: UNREAD_PIP,
+              color: '#1a0606',
+              fontSize: '0.55rem',
+              fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1,
+              boxShadow: `0 0 6px ${UNREAD_PIP}88, 0 1px 3px rgba(0,0,0,0.55)`,
+              zIndex: 2,
+            }}
+          >
             {unread > 9 ? '9+' : unread}
-          </span>
+          </motion.span>
         )}
       </button>
 
