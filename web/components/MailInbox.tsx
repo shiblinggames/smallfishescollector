@@ -169,11 +169,18 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
             border: `1px solid ${ACCENT}55`,
             borderRadius: 18,
             boxShadow: `0 20px 60px rgba(0,0,0,0.7), 0 0 24px ${ACCENT}22`,
+            // Cap to viewport so a long mail body forces the inner list to
+            // scroll instead of pushing the card past the PopupShell's
+            // safe-area padding. PopupShell already pads ~76px top + ~80px
+            // bottom so maxHeight: 88vh leaves headroom for both ends.
+            maxHeight: '88vh',
+            display: 'flex', flexDirection: 'column',
             padding: '1rem 1rem 1.1rem',
           }}
         >
-          {/* Header */}
+          {/* Header — pinned. Doesn't shrink. */}
           <div style={{
+            flexShrink: 0,
             display: 'flex', alignItems: 'center', gap: '0.6rem',
             paddingBottom: '0.75rem',
             borderBottom: `1px solid ${ACCENT}22`,
@@ -216,8 +223,21 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
             </button>
           </div>
 
-          {/* Body */}
-          <div style={{ marginTop: '0.6rem' }}>
+          {/* Body — flex: 1 + minHeight: 0 is mandatory for the inner
+              overflowY: auto to actually kick in. Without minHeight: 0 the
+              flex child refuses to shrink below its content's intrinsic
+              size, grows past the maxHeight cap, the parent clips it, and
+              the auto-scroll never activates. Same trap the voyages prep
+              modal hit. */}
+          <div style={{
+            flex: 1, minHeight: 0,
+            marginTop: '0.6rem',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            // Tiny right pad so the scrollbar doesn't sit on top of the
+            // attachment chip outlines.
+            paddingRight: 2,
+          }}>
             {loading && !inbox && (
               <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '1.5rem 0' }}>
                 Loading…
