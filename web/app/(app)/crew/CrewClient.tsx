@@ -968,7 +968,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         {(() => {
           const tabs = [
             { id: 'roster' as const,    label: 'Roster',   accent: SECTION_ROSTER,  count: state.roster.length },
-            { id: 'recruits' as const,  label: 'Recruits', accent: SECTION_RECRUIT, count: state.board.filter(c => !c.recruited).length },
+            { id: 'recruits' as const,  label: 'Recruit',  accent: SECTION_RECRUIT, count: state.board.filter(c => !c.recruited).length },
             { id: 'graveyard' as const, label: 'Graves',   accent: '#9c8055',       count: graveyard?.length ?? null },
           ]
           return (
@@ -1015,28 +1015,19 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           )
         })()}
 
-        {/* Recruit board — warm gold "new arrivals" region */}
+        {/* Recruit board — warm gold "new arrivals" region. Section
+            heading + accent bar dropped; the top-level Recruit tab
+            already names this region. Reroll CTA + free-refresh
+            countdown carry the panel on their own. */}
         {activeTab === 'recruits' && (
         <div style={{ borderRadius: 12, border: `1px solid ${SECTION_RECRUIT}33`, background: `linear-gradient(180deg, ${SECTION_RECRUIT}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
-          {/* Title with the free-refresh countdown riding inline beside it */}
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5" style={{ marginBottom: '0.9rem' }}>
-            <span style={{ width: 4, height: 22, borderRadius: 2, background: SECTION_RECRUIT, flexShrink: 0 }} />
-            <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.08em', color: SECTION_RECRUIT }}>Recruit Board</h2>
-            <span className="font-karla font-600" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-              fontSize: '0.7rem', color: 'rgba(255,255,255,0.62)',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 999, padding: '0.2rem 0.62rem',
-            }}>
-              <ClockIcon /> Free reroll in <FreeRollCountdown />
-            </span>
-          </div>
-
-          {/* Centered reroll CTA */}
+          {/* Reroll CTA — countdown folded into a thin caption directly
+              under the button so the timer still shows but doesn't get
+              its own header pill. */}
           {(() => {
             const cannot = pending || reveal.revealing || state.gems < state.rerollCost
             return (
-              <div className="flex justify-center" style={{ marginBottom: '1.1rem' }}>
+              <div className="flex flex-col items-center" style={{ gap: 6, marginBottom: '1.1rem' }}>
                 <motion.button
                   onClick={handleReroll}
                   disabled={cannot}
@@ -1060,6 +1051,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <span>{busyId === 'reroll' || reveal.revealing ? 'Rerolling…' : 'Reroll'}</span>
                   <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontSize: '0.82rem', letterSpacing: 0 }}>{state.rerollCost}<span style={{ color: cannot ? 'rgba(90,63,184,0.45)' : '#4f2fb0' }}>◆</span></span>
                 </motion.button>
+                <span className="font-karla" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)',
+                }}>
+                  <ClockIcon /> Free reroll in <FreeRollCountdown />
+                </span>
               </div>
             )
           })()}
@@ -1108,33 +1105,16 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             non-recruits tabs is active. */}
         {(activeTab === 'roster' || activeTab === 'graveyard') && (() => {
           const isGraveyard = activeTab === 'graveyard'
-          const sectionAccent = isGraveyard ? '#9c8055' : SECTION_ROSTER
+          // sectionAccent used to color the heading bar + h2; both went
+          // away with the heading cleanup so this constant did too.
           return (
         <div ref={crewSectionRef} style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.015)', padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70 }}>
-          {/* Section heading + count — sub-tabs are gone, top-level tabs
-              own that role now. Kept the count so players can scan total
-              roster size without doing the math. */}
-          <div className="flex items-center justify-between flex-wrap gap-y-2" style={{ marginBottom: '0.9rem' }}>
-            <div className="flex items-center gap-2.5">
-              <span style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 2, background: sectionAccent, transition: 'background 0.3s' }} />
-              <h2 className="font-cinzel font-700 uppercase" style={{ fontSize: '0.92rem', letterSpacing: '0.1em', color: sectionAccent }}>
-                {isGraveyard ? 'In Memoriam' : 'Roster'}
-              </h2>
-            </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              {isGraveyard ? (
-                <>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.05, color: '#d6c4a3' }}>{graveyard?.length ?? '—'}</p>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: 'rgba(214,196,163,0.6)', marginTop: 1 }}>Lost at sea</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', lineHeight: 1.05, color: rosterFull ? '#f08a8a' : '#dfe9e3' }}>{state.roster.length} / {state.capacity}</p>
-                  <p className="font-karla font-600 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.08em', color: rosterFull ? '#f08a8a' : 'rgba(255,255,255,0.5)', marginTop: 1 }}>{rosterFull ? 'Crew full' : 'Crew slots'}</p>
-                </>
-              )}
-            </div>
-          </div>
+          {/* Section heading + right-side count pill BOTH dropped — the
+              top-level tabs ('Roster · 8' / 'Graves · 2') already carry
+              both pieces of information and an accent bar + h2 + right
+              pill below them was just visual noise. The roster grid is
+              the focus now; sub-filter sits directly under the panel
+              border. */}
 
           {/* Active panel */}
           {!isGraveyard ? (
@@ -1150,7 +1130,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   bench:  state.roster.filter(c => c.raidSlot === null && c.voyageSlot === null).length,
                 }
                 const filters = [
-                  { id: 'all'    as const, label: 'Full',    accent: SECTION_ROSTER },
+                  { id: 'all'    as const, label: 'All',     accent: SECTION_ROSTER },
                   { id: 'raid'   as const, label: 'Raid',    accent: ASSIGN_RAID    },
                   { id: 'voyage' as const, label: 'Voyage',  accent: ASSIGN_VOYAGE  },
                   { id: 'bench'  as const, label: 'Bench',   accent: ASSIGN_BENCH   },
@@ -1197,7 +1177,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   </div>
                 )
               })()}
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.7rem' }}>You unlock a new slot every 10 Nav levels.</p>
+              {/* Slot-unlock cadence tip ('every 10 Nav levels') was here
+                  but added a line of muted text new players had to read
+                  before reaching the actual roster grid. Dropped — players
+                  see the bump organically when they level up. */}
               {state.roster.length === 0 ? (
                 <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>
                   No crew yet. Recruit from the board.
