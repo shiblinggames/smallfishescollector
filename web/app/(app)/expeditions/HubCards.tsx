@@ -407,12 +407,17 @@ export default function HubCards({
               {/* Items display — read-only confirmation of equipped
                   raid items. The prep modal is no longer an editor;
                   items are still managed via the Loadout drawer
-                  (ShipHero's Manage Ship button). */}
+                  (ShipHero's Manage Ship button). 'Manage ›' closes this
+                  modal first so the drawer doesn't open behind it. */}
               <PrepItemsView
                 equippedRaidItems={equippedRaidItems}
                 raidItemSlots={raidItemSlots}
                 ownedCount={ownedRaidItems.length}
                 accent={campaignAccent}
+                onManage={() => {
+                  setModal(null)
+                  window.dispatchEvent(new CustomEvent('expedition:open-loadout'))
+                }}
               />
               {campaign.nextNodeLocked && (
                 <PrepRow
@@ -694,11 +699,11 @@ function PrepPartyView({ roster, shipCrewSlots, track, accent }: {
           <div key={idx + 1}>{circle(c, idx + 1, CREW_SIZE)}</div>
         ))}
       </div>
-      {/* Manage hint — single 'Manage ›' link that navigates to /crew so
-          the player has a clear path to the editing surface without the
-          prep modal pretending to be one. Keeps the modal confirmation-
-          only while still answering the obvious 'how do I change this?'. */}
-      <a href="/crew" onClick={e => e.stopPropagation()}
+      {/* Manage hint — navigates to /crew with the matching track filter
+          pre-selected on the Roster tab. /crew reads ?tab=roster&filter=
+          (CrewClient.tsx:733-744), so 'raid' from the campaign prep lands
+          directly on the raid sub-filter instead of the full roster. */}
+      <a href={`/crew?tab=roster&filter=${track}`} onClick={e => e.stopPropagation()}
         className="font-karla font-700 uppercase"
         style={{
           flexShrink: 0,
@@ -717,11 +722,16 @@ function PrepPartyView({ roster, shipCrewSlots, track, accent }: {
 // currently equipped as a compact icon row + slot count. Editing happens
 // in the Loadout drawer (ShipHero's Manage Ship button) — there's no
 // tap-to-equip here; the prep modal is confirmation, not configuration.
-function PrepItemsView({ equippedRaidItems, raidItemSlots, ownedCount, accent }: {
+function PrepItemsView({ equippedRaidItems, raidItemSlots, ownedCount, accent, onManage }: {
   equippedRaidItems: string[]
   raidItemSlots: number
   ownedCount: number
   accent: string
+  /** Called when the player taps 'Manage ›'. Parent should close the
+   *  prep modal BEFORE the Loadout drawer opens, otherwise the drawer
+   *  mounts behind the open PopupShell and the player just sees the
+   *  same prep modal with no visible feedback. */
+  onManage: () => void
 }) {
   const equippedDefs = equippedRaidItems
     .map(id => RAID_ITEMS.find(i => i.id === id))
@@ -789,11 +799,14 @@ function PrepItemsView({ equippedRaidItems, raidItemSlots, ownedCount, accent }:
           )
         })}
       </div>
-      {/* Manage hint — fires the existing 'expedition:open-loadout'
-          event, opening ShipHero's Loadout drawer at the items tab.
-          That drawer is the canonical editor; this row stays read-only. */}
+      {/* Manage hint — closes the prep modal first (via onManage) then
+          fires 'expedition:open-loadout' so ShipHero's Loadout drawer
+          mounts on a clear stage. Dispatching the event without closing
+          this modal leaves the drawer rendering BEHIND the PopupShell
+          (PopupShell uses z-index 111+; the Loadout drawer sits lower),
+          which read as 'nothing happened' to the player. */}
       <button type="button"
-        onClick={() => window.dispatchEvent(new CustomEvent('expedition:open-loadout'))}
+        onClick={onManage}
         className="font-karla font-700 uppercase"
         style={{
           flexShrink: 0,
