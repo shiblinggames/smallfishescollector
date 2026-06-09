@@ -1213,19 +1213,48 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       : (state.dealerTotal !== null ? state.dealerTotal : '?')
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-        {/* Dealer */}
-        <div>
+        {/* Dealer — wrapper element type intentionally matches
+            renderSettleScreen's <motion.div> wrapper at the same
+            sibling index, so when phase flips play→settled React
+            reconciles the dealer block instead of unmount+remount
+            (which was the cause of the hole-card flicker on
+            stand/bust). The animate={{ x: 0 }} is a no-op, just here
+            for type alignment. */}
+        <motion.div animate={{ x: 0 }} transition={{ duration: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>Dealer</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#f0e8d0', lineHeight: 1 }}>{dealerTotalDisplay}</p>
           </div>
           <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
             <FeltRule text="Dealer hits soft 17" />
-            {visibleDealerCards.map((c, i) => (
-              <DealtCard key={i} card={c} fishArt={getFish(-1, i, c)} />
-            ))}
+            {visibleDealerCards.map((c, i) => {
+              if (i === 1) {
+                // Hole card uses the SAME motion.div + FlipCard wrapper
+                // as renderSettleScreen so React reconciles the inner
+                // 3D context across the phase transition (instead of
+                // unmounting the DealtCard tree and mounting a fresh
+                // FlipCard tree, which flashes a 1-frame cardback gap).
+                // During play card=null + flipped=false → renders
+                // cardback; once we cross to settle the real card is
+                // passed and holeFlipped controls the reveal flip.
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: -22, scale: 0.85 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                    whileTap={{ scale: 0.96 }}
+                    transition={{ duration: 0.36, ease: 'easeOut' }}
+                    style={{ flexShrink: 0, cursor: 'pointer' }}
+                  >
+                    <FlipCard flipped={false} card={null} fishArt={null} duration={820} />
+                  </motion.div>
+                )
+              }
+              return <DealtCard key={i} card={c} fishArt={getFish(-1, i, c)} />
+            })}
           </div>
-        </div>
+        </motion.div>
 
         {/* Pot — fixed slot between dealer and player. Counts up from
             chips as bets land, drains to chips on settle outcome. Same
@@ -1779,8 +1808,21 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
 
       {phase === 'buyIn' && renderBuyInScreen()}
       {phase === 'wager' && renderWagerScreen()}
-      {phase === 'play' && active && renderGameScreen(active)}
-      {phase === 'settled' && result && renderSettleScreen(result)}
+      {/* Collapse play+settle into ONE JSX position. React reconciles
+          based on what's at each position; the previous code put play
+          and settle at SIBLING positions under separate conditionals,
+          so the entire tree (including the dealer's hole card) was torn
+          down and rebuilt on every phase transition — that was the
+          source of the hole-card flicker the moment it became the
+          dealer's turn. With a single ternary, the outer <div> from
+          each render function reconciles, and inner children reconcile
+          by index + type (provided the structures match, which the two
+          renderers now do for the dealer block + hole card). */}
+      {phase === 'play' && active
+        ? renderGameScreen(active)
+        : phase === 'settled' && result
+          ? renderSettleScreen(result)
+          : null}
 
       {/* Settle celebration — absolute overlay over the modal interior.
           Mounts when outcomeShown flips true (after the reveal beats
