@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import AnnouncementBanner from './AnnouncementBanner'
 import CharacterAvatar from './CharacterAvatar'
+import MailInbox from './MailInbox'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -102,15 +103,25 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   const [avatarBg, setAvatarBg]             = useState<string | null>(() => readNavCache('avatar_bg'))
   const [avatarBorder, setAvatarBorder]     = useState<string | null>(() => readNavCache('avatar_border'))
   const [isAdmin, setIsAdmin]               = useState<boolean>(() => readNavCache('is_admin') === 'true')
+  const [mailUnread, setMailUnread]         = useState<number>(() => Number(readNavCache('mail_unread')) || 0)
+  // Only render the mail icon once we know the user is signed in (same
+  // gate the currency widgets use). isSignedIn flips true the first time
+  // fetchBadge resolves a user.
+  const [isSignedIn, setIsSignedIn]         = useState<boolean>(false)
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      setIsSignedIn(true)
+      const nowIso = new Date().toISOString()
       Promise.all([
         supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin').eq('id', user.id).single(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
-      ]).then(([{ data: profile }, { data: voyages }]) => {
+        // Active mail messages — RLS lets every signed-in player SELECT.
+        supabase.from('mail_messages').select('id').or(`expires_at.is.null,expires_at.gt.${nowIso}`),
+        supabase.from('mail_reads').select('message_id').eq('user_id', user.id),
+      ]).then(([{ data: profile }, { data: voyages }, { data: mailMsgs }, { data: mailReads }]) => {
         const cc = (profile?.character_color as string | null) ?? null
         const hat = (profile?.equipped_hat as string | null) ?? null
         const bg = (profile?.avatar_bg_color as string | null) ?? null
@@ -133,6 +144,10 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
             new Date(r.created_at).getTime() + (r.duration_ms ?? 7200000) <= now
         )
         setVoyageBadge(hasReadyVoyage)
+        const readSet = new Set(((mailReads ?? []) as { message_id: string }[]).map(r => r.message_id))
+        const unread = ((mailMsgs ?? []) as { id: string }[]).reduce((n, m) => n + (readSet.has(m.id) ? 0 : 1), 0)
+        setMailUnread(unread)
+        writeNavCache('mail_unread', unread > 0 ? String(unread) : null)
       }).catch(() => {})
     })
   }, [])
@@ -419,6 +434,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
               <TickingNumber value={displayDoubloons} /> ⟡
             </span>
           )}
+          {isSignedIn && <MailInbox initialUnreadCount={mailUnread} />}
           <Link
             href="/profile"
             className="flex items-center justify-center rounded-full transition-all duration-200"
@@ -464,6 +480,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
               <TickingNumber value={displayDoubloons} /> ⟡
             </span>
           )}
+          {isSignedIn && <MailInbox initialUnreadCount={mailUnread} />}
           {/* Hamburger — animates into an X when open. */}
           <button
             onClick={() => setMenuOpen(o => !o)}
