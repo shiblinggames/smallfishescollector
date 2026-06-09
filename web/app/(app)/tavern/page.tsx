@@ -10,6 +10,7 @@ import ChartTheCourseCard from './ChartTheCourseCard'
 import RecruitCrewCard from './RecruitCrewCard'
 import BlackjackHubCard from './BlackjackHubCard'
 import FishSlotsCard from './FishSlotsCard'
+import RouletteHubCard from './RouletteHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
@@ -59,7 +60,20 @@ function FeaturesSection() {
   )
 }
 
-function ArcadeSection() {
+function ArcadeSection({ isAdmin }: { isAdmin: boolean }) {
+  // Fish Roulette is admin-only for now — the game is functional but we
+  // want a final balance pass + tap-test on the smallest split tap zones
+  // before it goes live to all players. Non-admins see the original
+  // 2-card row (Blackjack + Slots) so the section looks intentional.
+  if (isAdmin) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <BlackjackHubCard />
+        <FishSlotsCard />
+        <RouletteHubCard />
+      </div>
+    )
+  }
   return (
     <div className="grid grid-cols-2 gap-3">
       <BlackjackHubCard />
@@ -118,11 +132,13 @@ export default async function TavernPage() {
             </Suspense>
           </div>
 
-          {/* Arcade — anytime-play, hiscore-driven games. */}
+          {/* Arcade — anytime-play, hiscore-driven games. ArcadeSection
+              receives is_admin so Fish Roulette only shows up to admins
+              while it's being tap-tested in prod. */}
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
             <Suspense fallback={<ArcadeCardsSkeleton />}>
-              <ArcadeSection />
+              <ArcadeSection isAdmin={!!profile?.is_admin} />
             </Suspense>
           </div>
 

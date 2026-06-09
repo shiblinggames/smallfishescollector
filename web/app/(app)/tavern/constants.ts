@@ -57,3 +57,17 @@ export const BJ_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
 export const BJ_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
 export const BJ_BUY_IN_MIN = 10
 export const BJ_BUY_IN_MAX = BJ_DAILY_CAP
+
+// ─── Fish Roulette ──────────────────────────────────────────────────────────
+// European single-zero wheel — house edge 1/37 ≈ 2.703% across all bets.
+// Same wager band as the rest of the tavern so the lineup reads
+// coherently; daily cap caps doubloons committed to the table per day,
+// not chip-level wagers (chips can churn freely between buy-ins).
+export const RL_MIN_BET   = 10                              // per-bet floor
+export const RL_MAX_STRAIGHT_BET = 500                      // 35:1 single number
+export const RL_MAX_OUTSIDE_BET  = 2500                     // 1:1 / 2:1 outside bets — bigger ceiling, smaller payout
+export const RL_DAILY_CAP = 5000                            // doubloons committed to table per day
+export const RL_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
+export const RL_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
+export const RL_BUY_IN_MIN = 10
+export const RL_BUY_IN_MAX = RL_DAILY_CAP
