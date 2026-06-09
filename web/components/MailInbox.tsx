@@ -164,23 +164,24 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
           exit={{ opacity: 0, scale: 0.96, y: 4 }}
           transition={{ duration: 0.18 }}
           style={{
+            // margin: auto centers the card in PopupShell's flex scroll
+            // wrapper. NO maxHeight / no flex column on the card itself —
+            // last revision made the card always fill 88vh which pinned it
+            // to the top + bottom of the viewport with empty space inside
+            // when the inbox had only a few mails. The card now sizes to
+            // its content; the inner message list owns its own maxHeight
+            // so a long expanded body or a packed inbox scrolls without
+            // dragging the whole card to the safe-area edge.
             margin: 'auto', width: '100%', maxWidth: 440,
             background: 'linear-gradient(180deg, #1a1408 0%, #0a0807 100%)',
             border: `1px solid ${ACCENT}55`,
             borderRadius: 18,
             boxShadow: `0 20px 60px rgba(0,0,0,0.7), 0 0 24px ${ACCENT}22`,
-            // Cap to viewport so a long mail body forces the inner list to
-            // scroll instead of pushing the card past the PopupShell's
-            // safe-area padding. PopupShell already pads ~76px top + ~80px
-            // bottom so maxHeight: 88vh leaves headroom for both ends.
-            maxHeight: '88vh',
-            display: 'flex', flexDirection: 'column',
             padding: '1rem 1rem 1.1rem',
           }}
         >
-          {/* Header — pinned. Doesn't shrink. */}
+          {/* Header */}
           <div style={{
-            flexShrink: 0,
             display: 'flex', alignItems: 'center', gap: '0.6rem',
             paddingBottom: '0.75rem',
             borderBottom: `1px solid ${ACCENT}22`,
@@ -223,19 +224,15 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
             </button>
           </div>
 
-          {/* Body — flex: 1 + minHeight: 0 is mandatory for the inner
-              overflowY: auto to actually kick in. Without minHeight: 0 the
-              flex child refuses to shrink below its content's intrinsic
-              size, grows past the maxHeight cap, the parent clips it, and
-              the auto-scroll never activates. Same trap the voyages prep
-              modal hit. */}
+          {/* Body — owns its own scroll. maxHeight is calc'd from the
+              viewport so a long mail body or a packed inbox scrolls inside
+              the list, while the card itself stays content-sized and
+              vertically centered by PopupShell. */}
           <div style={{
-            flex: 1, minHeight: 0,
             marginTop: '0.6rem',
+            maxHeight: 'min(60vh, 520px)',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
-            // Tiny right pad so the scrollbar doesn't sit on top of the
-            // attachment chip outlines.
             paddingRight: 2,
           }}>
             {loading && !inbox && (
