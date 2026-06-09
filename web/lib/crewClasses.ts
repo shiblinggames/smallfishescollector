@@ -286,7 +286,7 @@ export const NAVIGATOR: ClassDef<NavigatorMilestone> = {
 // shaped around crew Power, Blitz = brand-new multi-shot.
 
 export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
-  id: 'abyssal_tide', name: 'Abyssal Tide', shortLabel: 'Tide',
+  id: 'abyssal_tide', name: 'Tidecaller', shortLabel: 'Tide',
   blurb: 'Heals the ship and grants a temporary damage shield. Heal now, brace for what\'s coming.',
   color: '#5eead4', emoji: '🌊',
   milestones: [
@@ -299,7 +299,7 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 }
 
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
-  id: 'leviathan', name: 'Heavy Salvo', shortLabel: 'Salvo',
+  id: 'leviathan', name: 'Leviathan', shortLabel: 'Salvo',
   blurb: 'Fires one massive extra cannon shot. Damage scales hard with rank — at the capstone, a single shell hits 2.5× as hard as a normal one.',
   color: '#a3b1c6', emoji: '🐋',
   milestones: [
@@ -312,7 +312,7 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
 }
 
 export const BLITZ: ClassDef<BlitzMilestone> = {
-  id: 'blitz', name: 'Frenzy', shortLabel: 'Frenzy',
+  id: 'blitz', name: 'Apex', shortLabel: 'Frenzy',
   blurb: 'Fires a cannon shot, then rolls to chain into another, and another. Stops when the roll fails.',
   color: '#f87171', emoji: '⚡',
   // Tuned to land slightly under Doby's Heavy Salvo at the relevant
