@@ -1121,23 +1121,17 @@ export default function DailyVoyagePanel({
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                {/* Colored swatch fallback — drop in /public/perfectedsigil.png
-                    and swap to <motion.img src="/perfectedsigil.png" .../>
-                    once the art ships. */}
-                <motion.div
+                <motion.img
+                  src="/perfectedsigil.png"
+                  alt="Perfected Sigil"
                   initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
                   style={{
-                    width: 64, height: 64, borderRadius: 16, flexShrink: 0,
-                    background: 'radial-gradient(circle at 35% 30%, #cbd5e1 0%, #94a3b8 55%, #475569 100%)',
-                    boxShadow: '0 0 16px rgba(148,163,184,0.8), 0 0 32px rgba(100,116,139,0.5), inset 0 1px 0 rgba(255,255,255,0.30)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.6rem', color: '#1e293b',
+                    width: 64, height: 64, objectFit: 'contain', flexShrink: 0,
+                    filter: 'drop-shadow(0 0 16px rgba(148,163,184,0.8)) drop-shadow(0 0 32px rgba(100,116,139,0.5))',
                   }}
-                >
-                  ✦
-                </motion.div>
+                />
                 <div style={{ flex: 1 }}>
                   <motion.p
                     className="font-cinzel font-700"
