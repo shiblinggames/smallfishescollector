@@ -86,6 +86,10 @@ export default async function DevStatsPage() {
         { label: 'Fish caught',        value: s.fishing?.caught ?? 0 },
         { label: 'Species discovered', value: s.fishing?.species ?? 0 },
         { label: 'Crates opened',      value: s.fishing?.crates ?? 0 },
+        // Personal-best rows = engagement signal; each row is the
+        // first time a player landed a tier-Trophy / -Large / etc.
+        // catch of that species and got their length recorded.
+        { label: 'Personal bests',     value: s.fishing?.personalBests ?? 0 },
       ],
     },
     {
@@ -131,7 +135,12 @@ export default async function DevStatsPage() {
       ],
     },
     {
-      title: 'Recruits', accent: '#7fd0a0',
+      // Crew Hall — recruit + deployment + sentiment signals. Fallen
+      // / Nicknamed counts surface from user_crew so the section
+      // covers the full lifecycle (Lifetime → Roster → Deployed →
+      // Fallen) plus the lighter "are people bonding with their
+      // crew" signal (nickname adoption + highest-XP captain).
+      title: 'Crew Hall', accent: '#7fd0a0',
       stats: [
         { label: 'Lifetime recruited', value: s.recruits?.lifetime ?? 0 },
         { label: 'Crew on rosters',    value: s.recruits?.total ?? 0 },
@@ -140,17 +149,81 @@ export default async function DevStatsPage() {
         { label: 'Rare crew',      value: s.recruits?.rare ?? 0 },
         { label: 'Common crew',    value: s.recruits?.common ?? 0 },
         { label: 'Crew deployed',  value: s.recruits?.deployed ?? 0 },
+        { label: 'Lost at sea',    value: s.recruits?.fallen ?? 0 },
+        { label: 'Nicknamed',      value: s.recruits?.nicknamed ?? 0 },
+        {
+          label: 'Top crew XP',
+          value: s.recruits?.topXP ?? 0,
+          by:    byIf(s.recruits?.topXP ?? 0, s.recruits?.topXPBy),
+        },
       ],
     },
     {
+      // Tavern — Slots is the long-runner; Crown & Anchor was retired
+      // 2026-06-06 when Blackjack took over the wager game slot so its
+      // rolls/wins lines were dropped from this section (the table is
+      // still on disk if we ever want the historical totals back).
       title: 'Tavern', accent: '#fb923c',
       stats: [
         { label: 'Slot spins',       value: s.tavern?.slotSpins ?? 0 },
         { label: 'Slot wins',        value: s.tavern?.slotWins ?? 0 },
         { label: 'Biggest slot win', value: `${fmt(s.tavern?.slotBiggest ?? 0)} ⟡` },
-        { label: 'C&A rolls',        value: s.tavern?.caRolls ?? 0 },
-        { label: 'C&A wins',         value: s.tavern?.caWins ?? 0 },
-        { label: 'Biggest C&A win',  value: `${fmt(s.tavern?.caBiggest ?? 0)} ⟡` },
+      ],
+    },
+    {
+      // Blackjack — the main wager game. Net delta is positive on a
+      // hand the player won (counting only their payout - wager), and
+      // negative on a loss. We surface the largest single-hand swing
+      // in either direction so the admin can spot variance outliers.
+      title: 'Blackjack', accent: '#dca494',
+      stats: [
+        { label: 'Hands played',       value: s.blackjack?.hands ?? 0 },
+        { label: 'Total wagered',      value: `${fmt(s.blackjack?.totalWagered ?? 0)} ⟡` },
+        {
+          label: 'Biggest single win',
+          value: `${fmt(s.blackjack?.biggestWin ?? 0)} ⟡`,
+          by:    byIf(s.blackjack?.biggestWin ?? 0, s.blackjack?.biggestWinBy),
+        },
+        {
+          label: 'Biggest single loss',
+          value: `${fmt(s.blackjack?.biggestLoss ?? 0)} ⟡`,
+          by:    byIf(s.blackjack?.biggestLoss ?? 0, s.blackjack?.biggestLossBy),
+        },
+      ],
+    },
+    {
+      // Fish Roulette — admin-gated for now, so volume is intentionally
+      // small. Keeping the section live so it auto-populates once the
+      // admin gate drops and players hit it.
+      title: 'Fish Roulette', accent: '#0a7a3a',
+      stats: [
+        { label: 'Spins',         value: s.roulette?.spins ?? 0 },
+        { label: 'Total wagered', value: `${fmt(s.roulette?.totalWagered ?? 0)} ⟡` },
+        { label: 'Biggest win',   value: `${fmt(s.roulette?.biggestWin ?? 0)} ⟡` },
+      ],
+    },
+    {
+      // Captain's Mail — broadcast-only for now, so 'messages' is the
+      // total notes sent, 'reads' is total per-player open events
+      // (one row per player per message tapped), and 'claims' is how
+      // many attachment claims fired. Healthy claim rate vs reads ≈
+      // attachments are valued; low rate ≈ players ignore them.
+      title: 'Mail', accent: '#c4a96a',
+      stats: [
+        { label: 'Messages sent',      value: s.mail?.messages ?? 0 },
+        { label: 'Opens (per-player)', value: s.mail?.reads ?? 0 },
+        { label: 'Attachments claimed', value: s.mail?.claims ?? 0 },
+      ],
+    },
+    {
+      // Daily Challenges — each /tavern/daily-bonus daily picks 3
+      // tasks; claimed_1/2/3 booleans track completion. Total
+      // completions = sum across rows; active days = distinct (player,
+      // date) pairs that have ANY of the three picks attempted.
+      title: 'Daily Challenges', accent: '#a78bfa',
+      stats: [
+        { label: 'Picks completed', value: s.dailyChallenges?.completed ?? 0 },
+        { label: 'Active days',     value: s.dailyChallenges?.activeDays ?? 0 },
       ],
     },
     {
