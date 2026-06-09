@@ -300,14 +300,14 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   id: 'leviathan', name: 'Heavy Salvo', shortLabel: 'Salvo',
-  blurb: 'Fires one massive extra cannon shot. Damage scales hard with rank — at the capstone, a single shell hits twice as hard as a normal one.',
+  blurb: 'Fires one massive extra cannon shot. Damage scales hard with rank — at the capstone, a single shell hits 2.5× as hard as a normal one.',
   color: '#a3b1c6', emoji: '🐋',
   milestones: [
-    { unlockLevel: 10,  dmgMult: 0.50, desc: 'Fire 1 extra cannon shot at 50% damage.' },
-    { unlockLevel: 25,  dmgMult: 0.75, desc: 'Fire 1 extra cannon shot at 75% damage.' },
-    { unlockLevel: 40,  dmgMult: 1.00, desc: 'Fire 1 extra cannon shot at full damage.' },
-    { unlockLevel: 75,  dmgMult: 1.50, desc: 'Fire 1 extra cannon shot at 150% damage.' },
-    { unlockLevel: 100, dmgMult: 2.00, autoCrit: true, desc: 'Fire 1 extra cannon shot at 200% damage; guaranteed crit.' },
+    { unlockLevel: 10,  dmgMult: 0.85, desc: 'Fire 1 extra cannon shot at 85% damage.' },
+    { unlockLevel: 25,  dmgMult: 1.10, desc: 'Fire 1 extra cannon shot at 110% damage.' },
+    { unlockLevel: 40,  dmgMult: 1.40, desc: 'Fire 1 extra cannon shot at 140% damage.' },
+    { unlockLevel: 75,  dmgMult: 1.90, desc: 'Fire 1 extra cannon shot at 190% damage.' },
+    { unlockLevel: 100, dmgMult: 2.50, autoCrit: true, desc: 'Fire 1 extra cannon shot at 250% damage; guaranteed crit.' },
   ],
 }
 
