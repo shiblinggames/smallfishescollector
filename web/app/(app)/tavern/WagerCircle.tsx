@@ -1,17 +1,19 @@
 'use client'
 
-// Wager-circle UI used on blackjack's wager-and-deal screens. Mirrors a
-// casino felt: a circular bet area in the middle, the chip rack at the
-// bottom. Tap a chip in the rack and a clone "flies" from the rack into
-// the circle; the circle's wager total updates simultaneously. Clear
-// resets the wager to zero and the chip pile disappears.
+// Chip-betting bar used on blackjack's wager-and-deal screens. Renders
+// the chip rack + Clear/Deal button + a fixed-position flying-chip
+// overlay. The wager indicator itself (the pot) lives in the parent —
+// during play it's the existing PotPill between the dealer and player
+// rows; on the wager screen it's the same PotPill at the top. The
+// parent passes its ref as `flyToRef` so taps on chip discs fly into
+// the canonical pot, not a duplicate.
 //
 // The flight animation uses live DOM rects (getBoundingClientRect)
-// because the rack and circle live in different parts of the layout
+// because the rack and the pot live in different parts of the layout
 // tree — we can't share a coordinate space via framer's `layoutId`
 // across siblings reliably across phase transitions.
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, type RefObject } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ChipDisc, { CHIP_COLORS, pickChipColor } from './ChipDisc'
 
@@ -43,100 +45,72 @@ export interface WagerCircleProps {
   /** Optional label override for the deal button (e.g., 'Dealing…'). */
   dealLabel?: string
   dealDisabled?: boolean
+  /** REQUIRED. The parent's pot-indicator ref. Tapped chips fly into
+   *  its center on screen. This used to be a self-contained bet circle
+   *  inside this component, which duplicated blackjack's existing
+   *  PotPill — now there's one canonical target rendered by the parent. */
+  flyToRef: RefObject<HTMLElement | null>
 }
 
 export default function WagerCircle({
   wager, presets, chipsLeft, maxBet, minBet,
   onAdd, onClear, onDeal, dealLabel, dealDisabled,
+  flyToRef,
 }: WagerCircleProps) {
-  const circleRef = useRef<HTMLDivElement | null>(null)
   const [flyingChips, setFlyingChips] = useState<FlyingChip[]>([])
   const nextIdRef = useRef(1)
 
-  // Source the flight from the chip button's center, target the bet
-  // circle's center. Both rects are read at click time so any scroll
+  // Source from the chip button's center, target the parent-supplied
+  // pot ref's center. Both rects are read at click time so any scroll
   // since the last layout pass is accounted for.
   const handleChipTap = useCallback((denom: number, button: HTMLButtonElement) => {
     if (denom > chipsLeft) return
     if (wager + denom > maxBet) return
     const buttonRect = button.getBoundingClientRect()
-    const circleRect = circleRef.current?.getBoundingClientRect()
-    if (circleRect) {
+    const targetRect = flyToRef.current?.getBoundingClientRect()
+    if (targetRect) {
       const id = nextIdRef.current++
       setFlyingChips(prev => [...prev, {
         id, denom,
         fromX: buttonRect.left + buttonRect.width / 2,
         fromY: buttonRect.top + buttonRect.height / 2,
-        toX: circleRect.left + circleRect.width / 2,
-        toY: circleRect.top + circleRect.height / 2,
+        toX: targetRect.left + targetRect.width / 2,
+        toY: targetRect.top + targetRect.height / 2,
       }])
     }
     onAdd(denom)
-  }, [chipsLeft, wager, maxBet, onAdd])
-
-  // Stacked-disc visualization inside the circle. Same logic as the
-  // roulette ChipBadge: more discs at higher wager so a 500-chip stake
-  // visibly looks like a pile.
-  const stackCount = wager >= 1000 ? 5 : wager >= 500 ? 4 : wager >= 100 ? 3 : wager >= 25 ? 2 : wager > 0 ? 1 : 0
+  }, [chipsLeft, wager, maxBet, onAdd, flyToRef])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
-      {/* Bet circle — the felt target where chips land. */}
-      <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
-        <motion.div
-          ref={circleRef}
-          animate={{
-            scale: wager > 0 ? 1 : 0.96,
-            boxShadow: wager > 0
-              ? `0 0 24px ${ACCENT}33, inset 0 0 18px rgba(0,0,0,0.45)`
-              : 'inset 0 0 16px rgba(0,0,0,0.55)',
-          }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          style={{
-            width: 132, height: 132, borderRadius: '50%',
-            background: 'radial-gradient(circle at 50% 35%, rgba(60,42,16,0.55) 0%, rgba(8,4,2,0.85) 80%)',
-            border: `2px dashed ${wager > 0 ? `${ACCENT}aa` : `${ACCENT}55`}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative',
-          }}
-        >
-          {/* Stacked chip discs underneath the wager label — pure visual
-              flair so the bet circle reads as 'chips in the middle of
-              the felt'. */}
-          {Array.from({ length: stackCount }, (_, i) => (
-            <span key={i} aria-hidden style={{
-              position: 'absolute',
-              width: 50, height: 36,
-              borderRadius: 999,
-              background: `radial-gradient(circle at 50% 30%, ${pickChipColor(wager, stackCount - 1 - i)} 0%, ${pickChipColor(wager, stackCount - 1 - i)}99 80%)`,
-              border: '1.5px solid #1a1a1a',
-              top: 56 - i * 4,
-              left: 41,
-              boxShadow: '0 2px 3px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.2)',
-              opacity: 0.94,
-            }} />
-          ))}
-          <div style={{ position: 'relative', textAlign: 'center', zIndex: 2 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>
-              {wager > 0 ? 'Wager' : 'Place bet'}
-            </p>
-            <motion.p
-              key={wager}
-              initial={wager > 0 ? { scale: 0.7, opacity: 0 } : false}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 480, damping: 20 }}
-              className="font-cinzel font-700"
-              style={{
-                fontSize: wager > 999 ? '1.3rem' : '1.55rem',
-                color: wager > 0 ? ACCENT : '#5a5550',
-                lineHeight: 1, marginTop: 4,
-              }}>
-              {wager > 0 ? `${wager.toLocaleString()} ⟡` : '—'}
-            </motion.p>
-          </div>
-        </motion.div>
-        {/* Clear button — small floating × on the top-right of the
-            circle. Only renders when there's something to clear. */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', position: 'relative' }}>
+      {/* Chip rack + inline Clear. The bet visual lives in the parent
+          (PotPill); Clear sits as a small × on the right of the rack
+          since there's no longer a bet circle to anchor it to. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{
+          flex: 1,
+          display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center',
+          background: 'rgba(0,0,0,0.35)',
+          border: '1px solid rgba(196,169,106,0.2)',
+          borderRadius: 12,
+          padding: '0.55rem 0.6rem',
+        }}>
+          {presets.map(denom => {
+            const disabledByChips = denom > chipsLeft
+            const disabledByCap   = wager + denom > maxBet
+            const disabled = disabledByChips || disabledByCap
+            return (
+              <ChipDisc
+                key={denom}
+                denom={denom}
+                size={42}
+                disabled={disabled}
+                onTap={handleChipTap}
+                title={disabledByCap ? `Per-hand max ${maxBet.toLocaleString()} ⟡` : disabledByChips ? 'Not enough chips' : `Add ${denom} ⟡`}
+              />
+            )
+          })}
+        </div>
         <AnimatePresence>
           {wager > 0 && (
             <motion.button
@@ -149,46 +123,20 @@ export default function WagerCircle({
               onClick={onClear}
               aria-label="Clear wager"
               style={{
-                position: 'absolute', top: 0, right: 'calc(50% - 78px)',
-                width: 26, height: 26, borderRadius: '50%',
-                background: 'rgba(248,113,113,0.18)',
-                border: '1px solid rgba(248,113,113,0.55)',
+                width: 38, height: 38, borderRadius: '50%',
+                flexShrink: 0,
+                background: 'rgba(248,113,113,0.14)',
+                border: '1px solid rgba(248,113,113,0.45)',
                 color: '#f08a8a',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
-                fontSize: '0.8rem',
-                padding: 0,
-                lineHeight: 1,
+                fontSize: '1rem',
+                padding: 0, lineHeight: 1,
               }}>
               ×
             </motion.button>
           )}
         </AnimatePresence>
-      </div>
-
-      {/* Chip rack — same denominations across the tavern. */}
-      <div style={{
-        display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center',
-        background: 'rgba(0,0,0,0.35)',
-        border: '1px solid rgba(196,169,106,0.2)',
-        borderRadius: 12,
-        padding: '0.55rem 0.6rem',
-      }}>
-        {presets.map(denom => {
-          const disabledByChips = denom > chipsLeft
-          const disabledByCap   = wager + denom > maxBet
-          const disabled = disabledByChips || disabledByCap
-          return (
-            <ChipDisc
-              key={denom}
-              denom={denom}
-              size={42}
-              disabled={disabled}
-              onTap={handleChipTap}
-              title={disabledByCap ? `Per-hand max ${maxBet.toLocaleString()} ⟡` : disabledByChips ? 'Not enough chips' : `Add ${denom} ⟡`}
-            />
-          )
-        })}
       </div>
 
       {/* Deal button — locks in the wager and signals the parent. */}
@@ -215,10 +163,9 @@ export default function WagerCircle({
         {dealLabel ?? (wager >= minBet ? `Deal · ${wager.toLocaleString()} ⟡` : `Min ${minBet} ⟡ to deal`)}
       </motion.button>
 
-      {/* Flying chips — rendered in a fixed-position layer so the
-          coordinates from getBoundingClientRect line up regardless of
-          parent transforms. AnimatePresence clears each chip when its
-          animation completes. */}
+      {/* Flying chips — fixed-position layer so the coordinates from
+          getBoundingClientRect line up regardless of parent transforms.
+          AnimatePresence clears each chip when its animation completes. */}
       <FlyingChipLayer chips={flyingChips} onLand={(id) => setFlyingChips(prev => prev.filter(c => c.id !== id))} />
     </div>
   )

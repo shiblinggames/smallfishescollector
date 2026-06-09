@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { forwardRef, useEffect, useRef, useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BJ_BET_PRESETS, BJ_BUY_IN_PRESETS, BJ_BUY_IN_MAX, BJ_BUY_IN_MIN, BJ_DAILY_CAP, BJ_MAX_BET, BJ_MIN_BET } from './constants'
 import {
@@ -507,17 +507,20 @@ function FeltRule({ text }: { text: string | readonly string[] }) {
   )
 }
 
-/** Visual pot indicator. Lives in a fixed slot between the dealer and
- *  player rows so the player can watch their stake build (initial
- *  wager, doubles, splits, insurance) and drain on settle. The number
- *  itself comes from useAnimatedNumber upstream — this just renders
- *  the pill and dims it when empty so the slot doesn't appear blank
- *  between hands. */
-function PotPill({ value }: { value: number }) {
+/** Visual pot indicator. Single source of truth for the player's stake
+ *  — used between the dealer + player rows during play AND on the wager
+ *  / Deal-Next-Hand screens as the flight target for chip taps. forwarded
+ *  ref lets WagerCircle compute the screen-space position to fly chips
+ *  into. The number comes from useAnimatedNumber upstream so doubles,
+ *  splits, and insurance tick up smoothly during play. */
+const PotPill = forwardRef<HTMLDivElement, { value: number; label?: string }>(function PotPill(
+  { value, label = 'Pot' }, ref
+) {
   const empty = value <= 0
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 42 }}>
       <motion.div
+        ref={ref}
         animate={{
           scale: empty ? 0.86 : 1,
           opacity: empty ? 0.32 : 1,
@@ -532,14 +535,14 @@ function PotPill({ value }: { value: number }) {
           boxShadow: empty ? 'none' : '0 0 22px rgba(240,192,64,0.20), 0 4px 14px rgba(0,0,0,0.45)',
         }}
       >
-        <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Pot</span>
+        <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>{label}</span>
         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1 }}>
           {value.toLocaleString()} ⟡
         </p>
       </motion.div>
     </div>
   )
-}
+})
 
 function BlackjackCard({
   card,
@@ -704,6 +707,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   // until outcomeShown fires, then drain.
   const [potAmount, setPotAmount] = useState(0)
   const animatedPot = useAnimatedNumber(potAmount, 850)
+  // One ref shared between the wager screen's PotPill and the post-
+  // settle 'Deal Next Hand' PotPill — both renders use this ref as the
+  // chip-flight target. Wager phase and post-settle phase never render
+  // at the same time, so a single ref serves both.
+  const wagerPotRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     if (phase === 'play' && active) setPotAmount(active.totalWagered)
     else if (phase === 'wager' || phase === 'buyIn') setPotAmount(0)
@@ -1119,9 +1127,11 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   function renderWagerScreen() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {/* Casino felt: bet circle on top, chip rack below, Deal at the
-            bottom. Each chip tap accumulates into the wager and visually
-            'flies' from the rack into the circle. Clear resets to 0. */}
+        {/* Same PotPill used during play. Chip taps fly into this exact
+            element (via wagerPotRef → WagerCircle.flyToRef), so the bet
+            visually accumulates in the canonical pot — no duplicate
+            'wager circle' alongside it. */}
+        <PotPill value={wager} ref={wagerPotRef} label="Wager" />
         <WagerCircle
           wager={wager}
           presets={BJ_BET_PRESETS}
@@ -1133,6 +1143,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           onDeal={startDeal}
           dealLabel={isPending ? 'Dealing…' : undefined}
           dealDisabled={!canDeal || isPending}
+          flyToRef={wagerPotRef}
         />
         {error && (
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center' }}>{error}</p>
@@ -1560,29 +1571,32 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               transition={{ duration: 0.3 }}
             >
               {chips >= BJ_MIN_BET ? (
-                // Same chip rack + bet circle as the main wager screen
-                // so the post-settle re-deal flow reads identically.
-                // startDeal already clears active hand state — see
-                // setActive(null) inside startDeal — so no extra reset
-                // wiring is needed here (used to live inline). Wager
-                // doesn't auto-reset after settle so the player can keep
-                // tapping Deal at the same stake without re-stacking.
+                // Same flow as the main wager screen — PotPill on top
+                // (chip-flight target), WagerCircle below for the chip
+                // rack + Deal. startDeal already clears active hand
+                // state. Wager persists across settle so one-tap re-
+                // deal works at the same stake (or tap more chips to
+                // bump it).
                 <>
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
                     Deal Next Hand
                   </p>
-                  <WagerCircle
-                    wager={wager}
-                    presets={BJ_BET_PRESETS}
-                    chipsLeft={chips - wager}
-                    maxBet={Math.min(BJ_MAX_BET, chips)}
-                    minBet={BJ_MIN_BET}
-                    onAdd={(d) => setWager(w => w + d)}
-                    onClear={() => setWager(0)}
-                    onDeal={startDeal}
-                    dealLabel={isPending ? 'Dealing…' : undefined}
-                    dealDisabled={!canDeal || isPending}
-                  />
+                  <PotPill value={wager} ref={wagerPotRef} label="Wager" />
+                  <div style={{ marginTop: 10 }}>
+                    <WagerCircle
+                      wager={wager}
+                      presets={BJ_BET_PRESETS}
+                      chipsLeft={chips - wager}
+                      maxBet={Math.min(BJ_MAX_BET, chips)}
+                      minBet={BJ_MIN_BET}
+                      onAdd={(d) => setWager(w => w + d)}
+                      onClear={() => setWager(0)}
+                      onDeal={startDeal}
+                      dealLabel={isPending ? 'Dealing…' : undefined}
+                      dealDisabled={!canDeal || isPending}
+                      flyToRef={wagerPotRef}
+                    />
+                  </div>
                 </>
               ) : (
                 <button
