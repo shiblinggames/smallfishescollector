@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect, Fragment } from 'react'
+import { useState, useTransition, useEffect, useMemo, Fragment } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { repairShip } from '@/app/(app)/raids/actions'
@@ -241,6 +241,21 @@ export default function ShipHero({
 }: Props) {
   const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
+
+  // Featured crew on the left side of the hero. Picked randomly from
+  // the roster, recomputed only when the roster identity changes (length
+  // + first/last ids as a cheap proxy) so the face stays stable across
+  // unrelated re-renders. New players see a silhouette placeholder.
+  const featuredCrew = useMemo(() => {
+    if (roster.length === 0) return null
+    const idx = Math.floor(Math.random() * roster.length)
+    return roster[idx]
+    // Deps include roster identity, not the array reference — pinning
+    // on length + boundary ids lets us reshuffle when the player
+    // actually recruits/loses crew but stay still during voyage/raid
+    // state churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roster.length, roster[0]?.id, roster[roster.length - 1]?.id])
 
   const [repairing, startRepair] = useTransition()
   const [repairErr, setRepairErr] = useState<string | null>(null)
@@ -649,16 +664,19 @@ export default function ShipHero({
           </div>
         )}
 
-        {/* Ship hero — big centered ship with the crew standing on deck */}
+        {/* Ship hero — Lv pill on top, then a two-column row: a random
+            crew member on the left above Manage Crew, the ship on the
+            right above Manage Ship. The ship's NAME no longer sits at
+            the top — it now lives only inside the Manage Ship drawer
+            (which is where the player edits it). Splitting the hero
+            this way also gives the crew side an actual visual presence
+            (a face) instead of a button floating on its own. */}
         <div style={{ position: 'relative', padding: '1.1rem 1rem 1rem' }}>
           {/* Soft sea-glow backdrop for cohesion */}
           <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 75% 60% at 50% 42%, rgba(60,110,180,0.16) 0%, rgba(10,16,28,0) 70%)' }} />
 
-          {/* Name + level */}
+          {/* Level pill — centered above the two-column row. */}
           <div style={{ position: 'relative', textAlign: 'center' }}>
-            <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.5rem', color: '#f0ede8', lineHeight: 1.1 }}>
-              {shipName ?? shipStats.name}
-            </p>
             <button
               type="button"
               onClick={() => setNavInfoOpen(true)}
@@ -666,7 +684,7 @@ export default function ShipHero({
               className="font-karla font-600"
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                marginTop: 5, padding: '0.18rem 0.55rem', borderRadius: 7,
+                padding: '0.18rem 0.55rem', borderRadius: 7,
                 background: 'transparent', border: '1px solid transparent',
                 color: 'inherit', cursor: 'pointer',
                 transition: 'background 0.15s, border-color 0.15s',
@@ -683,47 +701,88 @@ export default function ShipHero({
             </button>
           </div>
 
-          {/* Ship + crew-on-deck overlay */}
-          <div style={{ position: 'relative', width: '100%', maxWidth: 300, margin: '1.1rem auto 0' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={shipImgSrc}
-              alt={shipName ?? shipStats.name}
-              style={{ width: '100%', display: 'block', objectFit: 'contain', filter: skinFilter, transition: 'filter 0.3s ease' }}
-            />
+          {/* Two-column row — crew portrait + Manage Crew on the left,
+              ship + Manage Ship on the right. Matched column widths via
+              grid 1fr 1fr so the two pills land flush at the bottom. */}
+          <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: '0.9rem' }}>
+            {/* Left col — random roster crew member portrait. */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: '100%', maxWidth: 150, aspectRatio: '1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'relative',
+              }}>
+                {featuredCrew ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={IMG_BASE + featuredCrew.filename}
+                    alt={featuredCrew.name}
+                    style={{
+                      width: '100%', height: '100%',
+                      objectFit: 'contain',
+                      objectPosition: 'center 22%',
+                      filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.55))',
+                    }}
+                  />
+                ) : (
+                  // Empty roster — silhouette placeholder so the slot
+                  // reads as 'no crew yet, go recruit' instead of a
+                  // gap next to the ship.
+                  <div style={{
+                    width: '74%', height: '74%',
+                    borderRadius: '12% 12% 30% 30%',
+                    background: 'radial-gradient(ellipse at 50% 28%, rgba(110,140,180,0.18) 0%, rgba(20,28,42,0) 70%)',
+                    border: '1.5px dashed rgba(125,160,216,0.35)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="rgba(125,160,216,0.55)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <Link href="/crew" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
+                color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                {/* Small crew icon — two stacked portrait silhouettes */}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Manage Crew
+              </Link>
+            </div>
 
-            {/* Crew-on-deck overlay was here. Crew assignment lives in
-                Crew Management now (track-split: voyage party vs raid
-                party), and the hub cards below surface each track's crew
-                in-context. The ship hero stays focused on ship identity
-                (name + level + image + Manage Ship) without competing
-                with the per-track party views. */}
-          </div>
-
-          {/* Actions — Manage Crew (deep-link to /crew) on the left,
-              Manage Ship on the right. Matched pill styling so the pair
-              reads as one row of management entries. */}
-          <div style={{ position: 'relative', display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: '0.85rem' }}>
-            <Link href="/crew" className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
-              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-            }}>
-              {/* Small crew icon — two stacked portrait silhouettes */}
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              Manage Crew
-            </Link>
-            <button onClick={() => setLoadoutOpen(true)} className="font-karla font-700 uppercase tracking-[0.06em]" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
-              color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
-            }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/><line x1="4" y1="13" x2="20" y2="13"/><circle cx="15" cy="13" r="2"/><line x1="4" y1="19" x2="20" y2="19"/><circle cx="9" cy="19" r="2"/></svg>
-              Manage Ship
-            </button>
+            {/* Right col — ship image + Manage Ship. */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: '100%', maxWidth: 150, aspectRatio: '1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shipImgSrc}
+                  alt={shipName ?? shipStats.name}
+                  style={{
+                    width: '100%', height: 'auto',
+                    objectFit: 'contain',
+                    filter: skinFilter,
+                    transition: 'filter 0.3s ease',
+                  }}
+                />
+              </div>
+              <button onClick={() => setLoadoutOpen(true)} className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.42rem 0.9rem', fontSize: '0.66rem',
+                color: '#9ec6ff', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.38)', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/><line x1="4" y1="13" x2="20" y2="13"/><circle cx="15" cy="13" r="2"/><line x1="4" y1="19" x2="20" y2="19"/><circle cx="9" cy="19" r="2"/></svg>
+                Manage Ship
+              </button>
+            </div>
           </div>
         </div>
 
