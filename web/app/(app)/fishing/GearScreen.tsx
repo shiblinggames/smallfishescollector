@@ -1092,10 +1092,13 @@ export default function GearScreen({
                     {rodTab === 'owned' && (
                       <>
                         {/* Equipped rod recap — image + name + compact
-                            bullet stats. Description dropped: the
-                            bullets already say what the rod does, and
-                            the player picked this rod so they don't
-                            need the marketing copy in the recap. */}
+                            bullet stats + a Sell pill on the right of
+                            the name row when the rod is sellable. Sell
+                            here auto-equips Bamboo (server side); the
+                            client's onSellRod handler patches state
+                            with the returned rodTier so the next render
+                            shows Bamboo as the new equipped rod with
+                            no jump or re-fetch. */}
                         <div style={{
                           background: `linear-gradient(180deg, ${rod.color}10 0%, rgba(4,10,18,0.85) 100%)`,
                           border: `1px solid ${rod.color}55`,
@@ -1124,6 +1127,59 @@ export default function GearScreen({
                                 {rod.name}
                               </p>
                             </div>
+                            {rod.cost > 0 && !rod.earnedOnly && (() => {
+                              const refund = Math.floor(rod.cost * 0.65)
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPendingPurchase({
+                                      name: rod.name,
+                                      color: '#c4a96a',
+                                      cost: refund,
+                                      kind: 'sell',
+                                      details: (
+                                        <div style={{ textAlign: 'center' }}>
+                                          <p className="font-karla font-700 uppercase" style={{
+                                            fontSize: '0.55rem', letterSpacing: '0.14em',
+                                            color: '#c4a96aaa', marginBottom: 4,
+                                          }}>
+                                            Quick-sell
+                                          </p>
+                                          <p className="font-cinzel font-700" style={{
+                                            fontSize: '1.05rem', color: '#f0d695', marginBottom: 4,
+                                          }}>
+                                            Sell {rod.name}?
+                                          </p>
+                                          <p className="font-karla" style={{
+                                            fontSize: '0.7rem', color: 'rgba(240,222,168,0.65)', lineHeight: 1.4,
+                                          }}>
+                                            Refunds {refund.toLocaleString()} ⟡ (65% of {rod.cost.toLocaleString()}). Your Bamboo Rod will be re-equipped automatically.
+                                          </p>
+                                        </div>
+                                      ),
+                                      onConfirm: async () => { await onSellRod(rod.tier) },
+                                    })
+                                  }}
+                                  aria-label={`Sell ${rod.name} for ${refund} doubloons`}
+                                  title={`Sell for ${refund.toLocaleString()} ⟡`}
+                                  className="font-karla font-700 uppercase"
+                                  style={{
+                                    flexShrink: 0,
+                                    padding: '0.4rem 0.7rem',
+                                    borderRadius: 8,
+                                    background: 'rgba(196,169,106,0.16)',
+                                    border: '1px solid rgba(196,169,106,0.55)',
+                                    color: '#f0d695',
+                                    fontSize: '0.6rem', letterSpacing: '0.1em',
+                                    lineHeight: 1.1,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Sell · {refund.toLocaleString()} ⟡
+                                </button>
+                              )
+                            })()}
                           </div>
                           <ul style={{ display: 'flex', flexDirection: 'column', gap: 5, listStyle: 'none', padding: 0, margin: 0 }}>
                             {rodLines.map(l => (

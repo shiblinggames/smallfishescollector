@@ -113,7 +113,7 @@ const ROD_SELL_RATE = 0.65
 
 export async function sellRod(
   rodTier: number,
-): Promise<{ doubloons: number; ownedRods: number[]; refund: number } | { error: string }> {
+): Promise<{ doubloons: number; ownedRods: number[]; refund: number; rodTier: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -134,17 +134,23 @@ export async function sellRod(
 
   if (!profile) return { error: 'Profile not found' }
   if (!owned)   return { error: "You don't own this rod" }
-  // Equipped rod is locked from sale — forces the player to swap to
-  // another rod first, which removes any "I sold the rod I was using
-  // and now I have nothing equipped" recovery path.
-  if (profile.rod_tier === rodTier) return { error: 'Unequip this rod first' }
+
+  // Selling the EQUIPPED rod is allowed — we auto-equip the Bamboo
+  // (tier 0, free starter) so the player is never left without a rod.
+  // Players were tripping over the previous 'unequip first' gate; with
+  // a guaranteed fallback the equipped-rod case has no recovery hole.
+  const wasEquipped = profile.rod_tier === rodTier
+  const newRodTier  = wasEquipped ? 0 : (profile.rod_tier as number)
 
   const refund = Math.floor(rod.cost * ROD_SELL_RATE)
   const newDoubloons = (profile.doubloons as number) + refund
 
+  const profileUpdate: { doubloons: number; rod_tier?: number } = { doubloons: newDoubloons }
+  if (wasEquipped) profileUpdate.rod_tier = 0
+
   await Promise.all([
     admin.from('rod_inventory').delete().eq('user_id', user.id).eq('rod_tier', rodTier),
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: refund,
@@ -156,7 +162,7 @@ export async function sellRod(
   const ownedRods = (rows ?? []).map(r => r.rod_tier)
 
   revalidatePath('/marketplace/tackle-shop')
-  return { doubloons: newDoubloons, ownedRods, refund }
+  return { doubloons: newDoubloons, ownedRods, refund, rodTier: newRodTier }
 }
 
 export async function claimCompletionistRod(): Promise<{ ownedRods: number[] } | { error: string }> {

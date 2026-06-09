@@ -7422,15 +7422,16 @@ export default function FishingGame({
                 await handleEquipRod(tier)
               }}
               onSellRod={async (tier) => {
-                // 65% quick-sell. Server enforces 'not equipped' so we
-                // don't have to mirror that guard client-side. On
-                // success patch the local owned list + doubloons + Nav
-                // currency widget; on error (already equipped, already
-                // sold, etc.) just bail — the modal already closed.
+                // 65% quick-sell. Server allows selling the equipped
+                // rod too — when it does, it auto-equips Bamboo
+                // (tier 0) and returns the new rodTier so the client
+                // can mirror the swap. For a non-equipped sell, the
+                // returned rodTier just matches the current one.
                 const res = await sellRod(tier)
                 if ('error' in res) return
                 setOwnedRods(res.ownedRods)
                 setDoubloons(res.doubloons)
+                setEquippedRodTier(res.rodTier)
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
               }}
               reelTier={reelTier}
