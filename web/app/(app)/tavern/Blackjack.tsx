@@ -11,6 +11,7 @@ import {
 import { buyInChips, cashOutChips } from './blackjack/actions'
 import { handValue, type Card, type Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
+import WagerCircle from './WagerCircle'
 
 interface Props {
   doubloons: number
@@ -634,7 +635,10 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   const [phase, setPhase] = useState<'buyIn' | 'wager' | 'play' | 'settled'>(
     resumed ? 'play' : (initialChips > 0 ? 'wager' : 'buyIn')
   )
-  const [wager, setWager] = useState<number>(BJ_BET_PRESETS[0])
+  // Wager now ACCUMULATES — each chip tap adds to it, clear resets it,
+  // and Deal commits whatever's on the table. Default 0 so the wager
+  // circle reads as 'empty' on the wager screen.
+  const [wager, setWager] = useState<number>(0)
   const [buyInAmount, setBuyInAmount] = useState<number>(500)
   const [active, setActive] = useState<ClientState | null>(resumed)
   const [result, setResult] = useState<SettleResult | null>(null)
@@ -976,6 +980,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     fishCacheRef.current.clear()
     setResult(null)
     setPendingSettle(null)
+    setActive(null)                       // clear last hand's table state — no-op on the wager screen, mandatory on post-settle re-deal
     setHoleFlipped(false)
     setRevealedDealerCount(0)
     setOutcomeShown(false)
@@ -1113,57 +1118,22 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
 
   function renderWagerScreen() {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-        <div>
-          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 10 }}>
-            Wager
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {BJ_BET_PRESETS.map(amt => {
-              const disabled = amt > Math.min(BJ_MAX_BET, chips)
-              const selected = wager === amt
-              return (
-                <button
-                  key={amt}
-                  type="button"
-                  disabled={disabled || isPending}
-                  onClick={() => setWager(amt)}
-                  className="font-karla font-700"
-                  style={{
-                    padding: '0.7rem 0', borderRadius: 10,
-                    background: selected ? 'rgba(240,192,64,0.12)' : 'rgba(4,10,20,0.5)',
-                    border: `1px solid ${selected ? '#f0c040' : 'rgba(255,255,255,0.12)'}`,
-                    color: disabled ? '#3a3835' : selected ? '#f0c040' : '#9a9488',
-                    fontSize: '0.85rem',
-                    cursor: disabled || isPending ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {amt} ⟡
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <motion.button
-          type="button"
-          disabled={!canDeal}
-          onClick={startDeal}
-          whileTap={canDeal ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
-          transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-          className="font-cinzel font-700 uppercase tracking-[0.1em]"
-          style={{
-            padding: '0.95rem 0', borderRadius: 14,
-            background: canDeal ? 'linear-gradient(180deg, rgba(240,192,64,0.35) 0%, rgba(196,169,106,0.18) 100%)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${canDeal ? '#f0c040' : 'rgba(255,255,255,0.1)'}`,
-            color: canDeal ? '#f0d695' : '#5a5550',
-            fontSize: '0.95rem', letterSpacing: '0.08em',
-            cursor: canDeal ? 'pointer' : 'not-allowed',
-          }}
-        >
-          {isPending ? 'Dealing…' : `Deal · ${wager.toLocaleString()} ⟡`}
-        </motion.button>
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Casino felt: bet circle on top, chip rack below, Deal at the
+            bottom. Each chip tap accumulates into the wager and visually
+            'flies' from the rack into the circle. Clear resets to 0. */}
+        <WagerCircle
+          wager={wager}
+          presets={BJ_BET_PRESETS}
+          chipsLeft={chips - wager}
+          maxBet={Math.min(BJ_MAX_BET, chips)}
+          minBet={BJ_MIN_BET}
+          onAdd={(d) => setWager(w => w + d)}
+          onClear={() => setWager(0)}
+          onDeal={startDeal}
+          dealLabel={isPending ? 'Dealing…' : undefined}
+          dealDisabled={!canDeal || isPending}
+        />
         {error && (
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center' }}>{error}</p>
         )}
@@ -1590,63 +1560,29 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               transition={{ duration: 0.3 }}
             >
               {chips >= BJ_MIN_BET ? (
+                // Same chip rack + bet circle as the main wager screen
+                // so the post-settle re-deal flow reads identically.
+                // startDeal already clears active hand state — see
+                // setActive(null) inside startDeal — so no extra reset
+                // wiring is needed here (used to live inline). Wager
+                // doesn't auto-reset after settle so the player can keep
+                // tapping Deal at the same stake without re-stacking.
                 <>
                   <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
                     Deal Next Hand
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {BJ_BET_PRESETS.map(amt => {
-                      const disabled = amt > Math.min(BJ_MAX_BET, chips) || isPending
-                      return (
-                        <motion.button
-                          key={amt}
-                          type="button"
-                          disabled={disabled}
-                          whileTap={!disabled ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
-                          transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                          onClick={() => {
-                            setWager(amt)
-                            // Bypass the wager screen — go straight to
-                            // dealing, but match startDeal's full reset
-                            // so the deal-reveal animation fires. Prior
-                            // version skipped setDealRevealCount(0) +
-                            // pendingFreshDealRef.current = true, which
-                            // meant the next response got classified as
-                            // mid-hand (isFreshDeal=false) and the cards
-                            // landed all at once instead of one at a time.
-                            clearRevealTimers()
-                            setResult(null)
-                            setPendingSettle(null)
-                            setActive(null)
-                            setHoleFlipped(false)
-                            setRevealedDealerCount(0)
-                            setOutcomeShown(false)
-                            setDealRevealCount(0)
-                            setHandFlipCounts({})
-                            setDealerTotalCardCount(0)
-                            pendingFreshDealRef.current = true
-                            fishCacheRef.current.clear()
-                            fireAction(() => dealBlackjack(amt))
-                          }}
-                          className="font-cinzel font-700 uppercase tracking-[0.1em]"
-                          style={{
-                            padding: '0.85rem 0', borderRadius: 10,
-                            background: disabled
-                              ? 'rgba(255,255,255,0.04)'
-                              : 'linear-gradient(180deg, rgba(240,192,64,0.35) 0%, rgba(196,169,106,0.16) 100%)',
-                            border: `1px solid ${disabled ? 'rgba(255,255,255,0.1)' : '#f0c040'}`,
-                            color: disabled ? '#5a5550' : '#f0d695',
-                            fontSize: '0.88rem',
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            boxShadow: disabled ? 'none' : 'inset 0 1px 0 rgba(240,214,149,0.25), 0 2px 6px rgba(0,0,0,0.4)',
-                            textShadow: disabled ? 'none' : '0 1px 0 rgba(0,0,0,0.45)',
-                          }}
-                        >
-                          {amt} ⟡
-                        </motion.button>
-                      )
-                    })}
-                  </div>
+                  <WagerCircle
+                    wager={wager}
+                    presets={BJ_BET_PRESETS}
+                    chipsLeft={chips - wager}
+                    maxBet={Math.min(BJ_MAX_BET, chips)}
+                    minBet={BJ_MIN_BET}
+                    onAdd={(d) => setWager(w => w + d)}
+                    onClear={() => setWager(0)}
+                    onDeal={startDeal}
+                    dealLabel={isPending ? 'Dealing…' : undefined}
+                    dealDisabled={!canDeal || isPending}
+                  />
                 </>
               ) : (
                 <button
@@ -1673,15 +1609,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   }
 
   // Re-sync wager state if it no longer fits the player's chip stack
-  // (lost a hand and dropped below the previously-selected wager) or
-  // exceeds the per-hand cap. Compares against CHIPS, not doubloons —
-  // the chip table is the player's spendable pool, and gating on
-  // doubloons here was a pre-buy-in-flow leftover that clamped
-  // wagers to whatever doubloons the player had after their buy-in
-  // (e.g., bought in 1000 chips with 50 doubloons left → max wager
-  // silently capped at 50 even with 1000 on the table).
+  // (lost a hand and dropped below the previously-set wager) or exceeds
+  // the per-hand cap. Compares against CHIPS, not doubloons — the chip
+  // table is the player's spendable pool. With accumulation semantics
+  // we just clamp the wager down to whatever fits instead of reverting
+  // to a preset; the player can keep tapping chips if they want more.
   useEffect(() => {
-    if (wager > Math.min(BJ_MAX_BET, chips)) setWager(BJ_BET_PRESETS[0])
+    const cap = Math.min(BJ_MAX_BET, chips)
+    if (wager > cap) setWager(Math.max(0, cap))
   }, [chips, wager])
 
   return (

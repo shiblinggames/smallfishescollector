@@ -23,6 +23,7 @@ import { buyInRoulette, cashOutRoulette, placeBetsAndSpin } from './roulette/act
 import type { RouletteState, SpinResult } from './roulette/types'
 import RouletteWheel, { type WheelPhase } from './RouletteWheel'
 import CoinShower from './CoinShower'
+import { CHIP_COLORS, pickChipColor as pickChipColorShared } from './ChipDisc'
 
 // betKey helper used to live here but the placement code inlines the
 // "type:target" string directly, so the helper was unused. Keep the
@@ -40,15 +41,11 @@ function pocketColor(n: number): string {
   return colorOf(n) === 'red' ? RED_POCKET : BLACK_POCKET
 }
 
-// ─── Chip rack denominations + their visual colors ────────────────────
-const CHIP_COLORS: Record<number, string> = {
-  10: '#e07c7c',
-  25: '#5fa8c9',
-  50: '#7a7a7a',
-  100: '#4ade80',
-  250: '#a78bfa',
-  500: '#f0c040',
-}
+// Chip palette + helper are now shared across the tavern via
+// ./ChipDisc — same denominations + colors used by Blackjack's wager
+// circle. Re-export the local pickChipColor name so existing call sites
+// don't have to be touched.
+const pickChipColor = pickChipColorShared
 
 // ─── Bet-zone tap targets ────────────────────────────────────────────
 // All possible bet zones the player can click. Server validates again on
@@ -990,16 +987,9 @@ function ChipBadge({ value, small }: { value: number; small?: boolean }) {
  *  bucket to choose: 0 = highest applicable preset (label disc),
  *  1/2 = one/two tiers below (stack discs). Lets the stack discs
  *  show a mix of chip colors instead of monochrome blob. */
-function pickChipColor(value: number, tier = 0): string {
-  const presets = Object.keys(CHIP_COLORS).map(Number).sort((a, b) => b - a)
-  let found = -1
-  for (let i = 0; i < presets.length; i++) {
-    if (value >= presets[i]) { found = i; break }
-  }
-  if (found < 0) return CHIP_COLORS[10]
-  const idx = Math.min(presets.length - 1, found + tier)
-  return CHIP_COLORS[presets[idx]]
-}
+// pickChipColor is now imported from ./ChipDisc via the
+// pickChipColorShared alias near the top of this file. Removed the
+// duplicated local definition that used to live here.
 
 // ─── Chip rack ───────────────────────────────────────────────────────
 function ChipRack({ presets, selectedDenom, onSelect, chipsLeft }: {
