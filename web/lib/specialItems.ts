@@ -44,8 +44,8 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     name: 'Perfected Sigil',
     color: '#94a3b8',
     image: '/perfectedsigil.png',
-    description: 'Each Perfect catch pays a bonus 10 ⟡ × your current streak (capped at +100), credited the moment you reel it in.',
-    effectLabel: '+10 ⟡ × streak (max +100)',
+    description: 'Each Perfect catch pays a bonus 10 ⟡ × your current streak (capped at +300), credited the moment you reel it in.',
+    effectLabel: '+10 ⟡ × streak (max +300)',
     obtainedFrom: 'The Shrouded Reach voyage',
   },
 ]

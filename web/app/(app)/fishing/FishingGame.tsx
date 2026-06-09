@@ -3030,7 +3030,10 @@ export default function FishingGame({
     // peel off the fish.
     const fromX = window.innerWidth / 2
     const fromY = window.innerHeight / 2
-    const count = Math.min(10, Math.max(1, Math.round(bonus / 10)))
+    // Coin count: 1 per 10 ⟡ up to a 15-coin cap. At max streak (+300)
+    // we'd spawn 30 coins which makes the stagger take >2s and overlap
+    // the next cast — 15 still reads as "shower" and finishes on time.
+    const count = Math.min(15, Math.max(1, Math.round(bonus / 20)))
     setFlyingSigilCoins(prev => {
       const next = [...prev]
       for (let i = 0; i < count; i++) {
