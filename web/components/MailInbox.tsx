@@ -1,18 +1,20 @@
 'use client'
 
 // Player mailbox. Renders the envelope icon (with unread pip) AND the
-// inbox modal it opens. Single self-contained component so Nav.tsx only
-// has to pass in the latest unread count it already polls — open state,
-// fetch on open, mark-read on expand, and claim all live here.
+// dropdown panel it opens — anchored under the icon, GitHub-style. The
+// centered-modal version felt heavy for "let me peek at what's new":
+// mail isn't an interrupt, it's a tray, so the panel slides down from
+// the nav and outside-click dismisses. Single self-contained component
+// so Nav.tsx only has to pass in the latest unread count it already
+// polls — open state, fetch on open, mark-read on expand, and claim all
+// live here.
 //
 // Mail is broadcast-only for v1 (every active row in mail_messages is
 // visible to every authenticated player). Admin compose happens
 // service-role-side; the inbox just renders + claims.
 
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import PopupShell from './PopupShell'
 import {
   getInbox,
   markMailRead,
@@ -46,20 +48,31 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [claimingId, setClaimingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  // MailInbox lives INSIDE Nav, which has transform: translateZ(0) for
-  // hardware acceleration. That transform creates a new containing block
-  // for descendant position:fixed elements — meaning PopupShell's
-  // position:fixed wasn't pinning to the viewport, it was pinning to the
-  // 64px nav header, so the modal opened "inside the header" and was
-  // clipped. Portaling the modal to document.body escapes Nav's
-  // transformed parent so the fixed positioning lands relative to the
-  // viewport again.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+  const wrapRef = useRef<HTMLDivElement | null>(null)
 
   // Keep the pip in sync with whatever the Nav poll feeds us. Without this,
   // a fresh fetchBadge() pull in Nav wouldn't reach our local state.
   useEffect(() => { setUnread(initialUnreadCount) }, [initialUnreadCount])
+
+  // Outside-click dismiss + Escape key. Same pattern Nav's own hamburger
+  // menu uses (see Nav.tsx line ~189).
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open])
 
   async function openInbox() {
     setOpen(true)
@@ -75,7 +88,7 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
     setExpandedId(willOpen ? msg.id : null)
     // Mark read on first open of a previously-unread row. Optimistic local
     // patch + fire-and-forget server upsert; mailbox refresh on next open
-    // would corrects any drift if the upsert failed.
+    // would correct any drift if the upsert failed.
     if (willOpen && !msg.readAt) {
       setInbox(prev => prev?.map(m =>
         m.id === msg.id ? { ...m, readAt: new Date().toISOString() } : m
@@ -109,10 +122,11 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
   }
 
   return (
-    <>
+    <div ref={wrapRef} style={{ position: 'relative' }}>
       <button
-        onClick={openInbox}
+        onClick={() => open ? setOpen(false) : openInbox()}
         aria-label={unread > 0 ? `Mail — ${unread} unread` : 'Mail'}
+        aria-expanded={open}
         className="relative flex items-center justify-center rounded-full transition-colors"
         style={{
           width: 36, height: 36, padding: 0,
@@ -122,13 +136,11 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
         }}
       >
         {/* Idle envelope breathes gently when there's unread mail — slow
-            scale loop with a paired soft gold halo behind. Subtle enough
-            to stay polite next to the currency widgets but lively enough
-            that a returning player notices it before opening the menu. */}
+            scale loop with a paired soft gold halo behind. */}
         <motion.div
           aria-hidden
-          animate={unread > 0 ? { opacity: [0.35, 0.7, 0.35], scale: [0.85, 1.1, 0.85] } : { opacity: 0 }}
-          transition={unread > 0 ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
+          animate={unread > 0 && !open ? { opacity: [0.35, 0.7, 0.35], scale: [0.85, 1.1, 0.85] } : { opacity: 0 }}
+          transition={unread > 0 && !open ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
           style={{
             position: 'absolute', inset: 0,
             borderRadius: '50%',
@@ -138,8 +150,8 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
         />
         <motion.svg
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
-          animate={unread > 0 ? { scale: [1, 1.12, 1], y: [0, -1, 0] } : { scale: 1, y: 0 }}
-          transition={unread > 0 ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
+          animate={unread > 0 && !open ? { scale: [1, 1.12, 1], y: [0, -1, 0] } : { scale: 1, y: 0 }}
+          transition={unread > 0 && !open ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
           style={{ position: 'relative', zIndex: 1 }}
         >
           <rect x="3" y="5" width="18" height="14" rx="2"/>
@@ -147,8 +159,8 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
         </motion.svg>
         {unread > 0 && (
           <motion.span
-            animate={{ scale: [1, 1.08, 1] }}
-            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            animate={!open ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+            transition={!open ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
             style={{
               position: 'absolute', top: 2, right: 2,
               minWidth: 15, height: 15, padding: '0 4px',
@@ -168,260 +180,271 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
         )}
       </button>
 
-      {mounted && createPortal(
-        <PopupShell open={open} onClose={() => setOpen(false)}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 4 }}
-          transition={{ duration: 0.18 }}
-          style={{
-            // margin: auto centers the card in PopupShell's flex scroll
-            // wrapper. NO maxHeight / no flex column on the card itself —
-            // earlier revision made the card always fill 88vh which pinned
-            // it to the top + bottom of the viewport with empty space
-            // inside when the inbox had only a few mails. The card now
-            // sizes to its content; the inner message list owns its own
-            // maxHeight so a long expanded body or a packed inbox scrolls
-            // without dragging the whole card to the safe-area edge.
-            margin: 'auto', width: '100%', maxWidth: 440,
-            background: 'linear-gradient(180deg, #1a1408 0%, #0a0807 100%)',
-            border: `1px solid ${ACCENT}55`,
-            borderRadius: 18,
-            boxShadow: `0 20px 60px rgba(0,0,0,0.7), 0 0 24px ${ACCENT}22`,
-            padding: '1rem 1rem 1.1rem',
-          }}
-        >
-          {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '0.6rem',
-            paddingBottom: '0.75rem',
-            borderBottom: `1px solid ${ACCENT}22`,
-          }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `${ACCENT}1a`,
+      {/* Dropdown panel — anchored under the envelope icon. position:
+          absolute (NOT fixed) means it's relative to this wrapper div,
+          which sits inside Nav. Nav's translateZ(0) is the containing
+          block for ANY position:fixed descendant — but absolute resolves
+          against the nearest positioned ancestor instead, which is this
+          wrapper. So we get correct icon-relative anchoring without
+          fighting the transform. (See [[feedback_transform_breaks_fixed_positioning]].) */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="mail-panel"
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: [0.4, 0, 0.2, 1] }}
+            role="dialog"
+            aria-label="Mailbox"
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              // Cap width to ~380px on desktop; on narrow phones clamp to
+              // viewport minus a little side breathing room so the panel
+              // never extends past the screen edge. Right-anchored to the
+              // button means the calc lands the LEFT edge at most at 8px
+              // from the viewport's left side on a 320px-wide screen.
+              width: 'min(380px, calc(100vw - 16px))',
+              // Right-edge alignment to the icon would put the panel
+              // hanging on the right edge of the button. Shift it right a
+              // hair so it visually clears the avatar/hamburger sitting
+              // next to it without going off-screen.
+              transformOrigin: 'top right',
+              background: 'linear-gradient(180deg, #1a1408 0%, #0a0807 100%)',
               border: `1px solid ${ACCENT}55`,
-              color: ACCENT,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="5" width="18" height="14" rx="2"/>
-                <path d="M3 7l9 6 9-6"/>
-              </svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.18em', color: `${ACCENT_DIM}cc` }}>
-                Captain&apos;s
-              </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0e8d0', lineHeight: 1.1, marginTop: 1 }}>
-                Mailbox
-              </p>
-            </div>
-            <button
-              onClick={handleMarkAllRead}
-              disabled={unread === 0}
-              className="font-karla font-700 uppercase"
-              style={{
-                fontSize: '0.55rem', letterSpacing: '0.1em',
-                color: unread === 0 ? 'rgba(255,255,255,0.25)' : ACCENT,
-                background: 'transparent',
-                border: `1px solid ${unread === 0 ? 'rgba(255,255,255,0.1)' : ACCENT + '55'}`,
-                borderRadius: 8,
-                padding: '0.32rem 0.55rem',
-                cursor: unread === 0 ? 'default' : 'pointer',
-              }}
-            >
-              Mark all read
-            </button>
-          </div>
+              borderRadius: 14,
+              boxShadow: `0 16px 44px rgba(0,0,0,0.7), 0 0 24px ${ACCENT}22`,
+              padding: '0.85rem 0.85rem 0.95rem',
+              zIndex: 60,           // above Nav (z 50) but below modals (z 111+)
+            }}
+          >
+            {/* Little tick pointing up at the icon — purely decorative,
+                helps the panel read as "from this icon" not "floating". */}
+            <span aria-hidden style={{
+              position: 'absolute',
+              top: -6, right: 14,
+              width: 11, height: 11,
+              background: '#1a1408',
+              border: `1px solid ${ACCENT}55`,
+              borderRight: 'none', borderBottom: 'none',
+              transform: 'rotate(45deg)',
+            }} />
 
-          {/* Body — owns its own scroll. maxHeight is calc'd from the
-              viewport so a long mail body or a packed inbox scrolls inside
-              the list, while the card itself stays content-sized and
-              vertically centered by PopupShell. */}
-          <div style={{
-            marginTop: '0.6rem',
-            maxHeight: 'min(60vh, 520px)',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            paddingRight: 2,
-          }}>
-            {loading && !inbox && (
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '1.5rem 0' }}>
-                Loading…
-              </p>
-            )}
-            {inbox && inbox.length === 0 && (
-              <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', padding: '1.5rem 0', lineHeight: 1.5 }}>
-                No mail. The captain&apos;s desk is empty.
-              </p>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {inbox?.map(msg => {
-                const expanded = expandedId === msg.id
-                const isUnread = !msg.readAt
-                const hasAttach = msg.attachmentGems > 0 || msg.attachmentDoubloons > 0
-                const canClaim = hasAttach && !msg.claimedAt
-                return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      background: isUnread ? 'rgba(240,192,64,0.06)' : 'rgba(255,255,255,0.025)',
-                      border: `1px solid ${isUnread ? ACCENT + '33' : 'rgba(255,255,255,0.08)'}`,
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {/* Row header — tap to expand */}
-                    <button
-                      onClick={() => handleExpand(msg)}
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '0.55rem',
+              paddingBottom: '0.6rem',
+              borderBottom: `1px solid ${ACCENT}22`,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.18em', color: `${ACCENT_DIM}cc` }}>
+                  Captain&apos;s
+                </p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0e8d0', lineHeight: 1.1, marginTop: 1 }}>
+                  Mailbox
+                </p>
+              </div>
+              <button
+                onClick={handleMarkAllRead}
+                disabled={unread === 0}
+                className="font-karla font-700 uppercase"
+                style={{
+                  fontSize: '0.52rem', letterSpacing: '0.1em',
+                  color: unread === 0 ? 'rgba(255,255,255,0.25)' : ACCENT,
+                  background: 'transparent',
+                  border: `1px solid ${unread === 0 ? 'rgba(255,255,255,0.1)' : ACCENT + '55'}`,
+                  borderRadius: 7,
+                  padding: '0.28rem 0.5rem',
+                  cursor: unread === 0 ? 'default' : 'pointer',
+                }}
+              >
+                Mark all read
+              </button>
+            </div>
+
+            {/* Body — owns its own scroll so a long body or packed inbox
+                stays inside the dropdown. Keeps the panel from ever
+                ballooning off the bottom of the viewport. */}
+            <div style={{
+              marginTop: '0.55rem',
+              maxHeight: 'min(60vh, 460px)',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              paddingRight: 2,
+            }}>
+              {loading && !inbox && (
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '1.5rem 0' }}>
+                  Loading…
+                </p>
+              )}
+              {inbox && inbox.length === 0 && (
+                <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', padding: '1.5rem 0', lineHeight: 1.5 }}>
+                  No mail. The captain&apos;s desk is empty.
+                </p>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {inbox?.map(msg => {
+                  const expanded = expandedId === msg.id
+                  const isUnread = !msg.readAt
+                  const hasAttach = msg.attachmentGems > 0 || msg.attachmentDoubloons > 0
+                  const canClaim = hasAttach && !msg.claimedAt
+                  return (
+                    <div
+                      key={msg.id}
                       style={{
-                        width: '100%',
-                        display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-                        padding: '0.6rem 0.7rem',
-                        background: 'transparent', border: 'none',
-                        textAlign: 'left', cursor: 'pointer',
+                        background: isUnread ? 'rgba(240,192,64,0.06)' : 'rgba(255,255,255,0.025)',
+                        border: `1px solid ${isUnread ? ACCENT + '33' : 'rgba(255,255,255,0.08)'}`,
+                        borderRadius: 9,
+                        overflow: 'hidden',
                       }}
                     >
-                      {/* Unread dot rail */}
-                      <span style={{
-                        flexShrink: 0, width: 7, height: 7, borderRadius: '50%',
-                        marginTop: 6,
-                        background: isUnread ? ACCENT : 'transparent',
-                        boxShadow: isUnread ? `0 0 5px ${ACCENT}88` : 'none',
-                      }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-                          <p className="font-karla font-700 uppercase" style={{
-                            flex: 1, minWidth: 0,
-                            fontSize: '0.5rem', letterSpacing: '0.14em',
-                            color: ACCENT_DIM,
+                      <button
+                        onClick={() => handleExpand(msg)}
+                        style={{
+                          width: '100%',
+                          display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                          padding: '0.55rem 0.65rem',
+                          background: 'transparent', border: 'none',
+                          textAlign: 'left', cursor: 'pointer',
+                        }}
+                      >
+                        <span style={{
+                          flexShrink: 0, width: 7, height: 7, borderRadius: '50%',
+                          marginTop: 6,
+                          background: isUnread ? ACCENT : 'transparent',
+                          boxShadow: isUnread ? `0 0 5px ${ACCENT}88` : 'none',
+                        }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+                            <p className="font-karla font-700 uppercase" style={{
+                              flex: 1, minWidth: 0,
+                              fontSize: '0.5rem', letterSpacing: '0.14em',
+                              color: ACCENT_DIM,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {msg.senderLabel}
+                            </p>
+                            <span className="font-karla" style={{
+                              flexShrink: 0,
+                              fontSize: '0.58rem',
+                              color: 'rgba(255,255,255,0.4)',
+                            }}>
+                              {relativeTime(msg.createdAt)}
+                            </span>
+                          </div>
+                          <p className="font-cinzel font-700" style={{
+                            fontSize: '0.82rem',
+                            color: isUnread ? '#f0e8d0' : 'rgba(240,232,208,0.78)',
+                            lineHeight: 1.25, marginTop: 2,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>
-                            {msg.senderLabel}
+                            {msg.subject}
                           </p>
-                          <span className="font-karla" style={{
-                            flexShrink: 0,
-                            fontSize: '0.58rem',
-                            color: 'rgba(255,255,255,0.4)',
-                          }}>
-                            {relativeTime(msg.createdAt)}
-                          </span>
+                          {hasAttach && (
+                            <div style={{ display: 'flex', gap: '0.35rem', marginTop: 5 }}>
+                              {msg.attachmentGems > 0 && (
+                                <span className="font-karla font-700" style={{
+                                  fontSize: '0.6rem',
+                                  color: msg.claimedAt ? 'rgba(167,139,250,0.45)' : '#a78bfa',
+                                  background: msg.claimedAt ? 'rgba(167,139,250,0.06)' : 'rgba(167,139,250,0.14)',
+                                  border: `1px solid ${msg.claimedAt ? 'rgba(167,139,250,0.18)' : 'rgba(167,139,250,0.4)'}`,
+                                  borderRadius: 999,
+                                  padding: '0.1rem 0.45rem',
+                                  textDecoration: msg.claimedAt ? 'line-through' : 'none',
+                                }}>
+                                  {msg.attachmentGems.toLocaleString()} ◆
+                                </span>
+                              )}
+                              {msg.attachmentDoubloons > 0 && (
+                                <span className="font-karla font-700" style={{
+                                  fontSize: '0.6rem',
+                                  color: msg.claimedAt ? 'rgba(240,192,64,0.45)' : ACCENT,
+                                  background: msg.claimedAt ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.14)',
+                                  border: `1px solid ${msg.claimedAt ? 'rgba(240,192,64,0.18)' : ACCENT + '66'}`,
+                                  borderRadius: 999,
+                                  padding: '0.1rem 0.45rem',
+                                  textDecoration: msg.claimedAt ? 'line-through' : 'none',
+                                }}>
+                                  {msg.attachmentDoubloons.toLocaleString()} ⟡
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <p className="font-cinzel font-700" style={{
-                          fontSize: '0.85rem',
-                          color: isUnread ? '#f0e8d0' : 'rgba(240,232,208,0.78)',
-                          lineHeight: 1.25, marginTop: 2,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{
+                          flexShrink: 0, marginTop: 5,
+                          transition: 'transform 0.18s',
+                          transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
                         }}>
-                          {msg.subject}
-                        </p>
-                        {hasAttach && (
-                          <div style={{ display: 'flex', gap: '0.35rem', marginTop: 5 }}>
-                            {msg.attachmentGems > 0 && (
-                              <span className="font-karla font-700" style={{
-                                fontSize: '0.6rem',
-                                color: msg.claimedAt ? 'rgba(167,139,250,0.45)' : '#a78bfa',
-                                background: msg.claimedAt ? 'rgba(167,139,250,0.06)' : 'rgba(167,139,250,0.14)',
-                                border: `1px solid ${msg.claimedAt ? 'rgba(167,139,250,0.18)' : 'rgba(167,139,250,0.4)'}`,
-                                borderRadius: 999,
-                                padding: '0.1rem 0.45rem',
-                                textDecoration: msg.claimedAt ? 'line-through' : 'none',
-                              }}>
-                                {msg.attachmentGems.toLocaleString()} ◆
-                              </span>
-                            )}
-                            {msg.attachmentDoubloons > 0 && (
-                              <span className="font-karla font-700" style={{
-                                fontSize: '0.6rem',
-                                color: msg.claimedAt ? 'rgba(240,192,64,0.45)' : ACCENT,
-                                background: msg.claimedAt ? 'rgba(240,192,64,0.06)' : 'rgba(240,192,64,0.14)',
-                                border: `1px solid ${msg.claimedAt ? 'rgba(240,192,64,0.18)' : ACCENT + '66'}`,
-                                borderRadius: 999,
-                                padding: '0.1rem 0.45rem',
-                                textDecoration: msg.claimedAt ? 'line-through' : 'none',
-                              }}>
-                                {msg.attachmentDoubloons.toLocaleString()} ⟡
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{
-                        flexShrink: 0, marginTop: 5,
-                        transition: 'transform 0.18s',
-                        transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                      }}>
-                        <path d="M9 18l6-6-6-6"/>
-                      </svg>
-                    </button>
+                          <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                      </button>
 
-                    {/* Expanded body */}
-                    <AnimatePresence initial={false}>
-                      {expanded && (
-                        <motion.div
-                          key="expand"
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.18 }}
-                          style={{ overflow: 'hidden' }}
-                        >
-                          <div style={{
-                            padding: '0 0.85rem 0.85rem 1.1rem',
-                            borderTop: '1px solid rgba(255,255,255,0.05)',
-                          }}>
-                            <p className="font-karla" style={{
-                              fontSize: '0.82rem',
-                              color: '#e0dccc',
-                              lineHeight: 1.55,
-                              marginTop: '0.65rem',
-                              whiteSpace: 'pre-wrap',
+                      <AnimatePresence initial={false}>
+                        {expanded && (
+                          <motion.div
+                            key="expand"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18 }}
+                            style={{ overflow: 'hidden' }}
+                          >
+                            <div style={{
+                              padding: '0 0.85rem 0.8rem 1.05rem',
+                              borderTop: '1px solid rgba(255,255,255,0.05)',
                             }}>
-                              {msg.body}
-                            </p>
-                            {hasAttach && (
-                              <button
-                                onClick={() => handleClaim(msg)}
-                                disabled={!canClaim || claimingId === msg.id}
-                                className="font-cinzel font-700 uppercase"
-                                style={{
-                                  marginTop: '0.85rem',
-                                  width: '100%',
-                                  padding: '0.55rem 0.9rem',
-                                  borderRadius: 10,
-                                  fontSize: '0.78rem',
-                                  letterSpacing: '0.1em',
-                                  background: canClaim
-                                    ? `linear-gradient(180deg, ${ACCENT}33 0%, ${ACCENT}18 100%)`
-                                    : 'rgba(255,255,255,0.04)',
-                                  border: `1px solid ${canClaim ? ACCENT + '88' : 'rgba(255,255,255,0.1)'}`,
-                                  color: canClaim ? ACCENT : 'rgba(255,255,255,0.35)',
-                                  cursor: canClaim ? 'pointer' : 'default',
-                                  boxShadow: canClaim ? `0 2px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)` : 'none',
-                                }}
-                              >
-                                {claimingId === msg.id
-                                  ? 'Claiming…'
-                                  : msg.claimedAt
-                                    ? 'Claimed'
-                                    : 'Claim Reward'}
-                              </button>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )
-              })}
+                              <p className="font-karla" style={{
+                                fontSize: '0.8rem',
+                                color: '#e0dccc',
+                                lineHeight: 1.55,
+                                marginTop: '0.6rem',
+                                whiteSpace: 'pre-wrap',
+                              }}>
+                                {msg.body}
+                              </p>
+                              {hasAttach && (
+                                <button
+                                  onClick={() => handleClaim(msg)}
+                                  disabled={!canClaim || claimingId === msg.id}
+                                  className="font-cinzel font-700 uppercase"
+                                  style={{
+                                    marginTop: '0.75rem',
+                                    width: '100%',
+                                    padding: '0.5rem 0.85rem',
+                                    borderRadius: 9,
+                                    fontSize: '0.74rem',
+                                    letterSpacing: '0.1em',
+                                    background: canClaim
+                                      ? `linear-gradient(180deg, ${ACCENT}33 0%, ${ACCENT}18 100%)`
+                                      : 'rgba(255,255,255,0.04)',
+                                    border: `1px solid ${canClaim ? ACCENT + '88' : 'rgba(255,255,255,0.1)'}`,
+                                    color: canClaim ? ACCENT : 'rgba(255,255,255,0.35)',
+                                    cursor: canClaim ? 'pointer' : 'default',
+                                    boxShadow: canClaim ? `0 2px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)` : 'none',
+                                  }}
+                                >
+                                  {claimingId === msg.id
+                                    ? 'Claiming…'
+                                    : msg.claimedAt
+                                      ? 'Claimed'
+                                      : 'Claim Reward'}
+                                </button>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        </motion.div>
-      </PopupShell>,
-        document.body,
-      )}
-    </>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
