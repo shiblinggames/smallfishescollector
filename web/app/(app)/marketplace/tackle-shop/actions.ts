@@ -105,6 +105,60 @@ export async function purchaseRod(
   return { doubloons: newDoubloons, ownedRods }
 }
 
+// Quick-sell rate for owned rods. Matches the 65% fish quick-sell lane
+// — same casual-recovery mental model across the game ("you get 65% of
+// what you paid back, immediately"). See [[feedback_market_two_lanes]]
+// for why we never go full price-of-purchase on player-initiated sells.
+const ROD_SELL_RATE = 0.65
+
+export async function sellRod(
+  rodTier: number,
+): Promise<{ doubloons: number; ownedRods: number[]; refund: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const rod = RODS.find(r => r.tier === rodTier)
+  if (!rod) return { error: 'Invalid rod' }
+  // Free starter + event/completionist rods cost zero doubloons to
+  // obtain, so there's nothing to refund — block the sale rather than
+  // let them be deleted for 0.
+  if (rod.cost === 0 || rod.earnedOnly) return { error: 'This rod cannot be sold' }
+
+  const admin = createAdminClient()
+
+  const [{ data: profile }, { data: owned }] = await Promise.all([
+    admin.from('profiles').select('doubloons, rod_tier').eq('id', user.id).single(),
+    admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', rodTier).maybeSingle(),
+  ])
+
+  if (!profile) return { error: 'Profile not found' }
+  if (!owned)   return { error: "You don't own this rod" }
+  // Equipped rod is locked from sale — forces the player to swap to
+  // another rod first, which removes any "I sold the rod I was using
+  // and now I have nothing equipped" recovery path.
+  if (profile.rod_tier === rodTier) return { error: 'Unequip this rod first' }
+
+  const refund = Math.floor(rod.cost * ROD_SELL_RATE)
+  const newDoubloons = (profile.doubloons as number) + refund
+
+  await Promise.all([
+    admin.from('rod_inventory').delete().eq('user_id', user.id).eq('rod_tier', rodTier),
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: refund,
+      reason: `Sold ${rod.name}`,
+    }),
+  ])
+
+  const { data: rows } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id)
+  const ownedRods = (rows ?? []).map(r => r.rod_tier)
+
+  revalidatePath('/marketplace/tackle-shop')
+  return { doubloons: newDoubloons, ownedRods, refund }
+}
+
 export async function claimCompletionistRod(): Promise<{ ownedRods: number[] } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

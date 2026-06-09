@@ -45,7 +45,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import PopupShell from '@/components/PopupShell'
 import { finishSession, type ActiveSession } from '@/app/(app)/social/challengeActions'
-import { equipRod, purchaseRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
+import { equipRod, purchaseRod, sellRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
@@ -7420,6 +7420,18 @@ export default function FishingGame({
                 setDoubloons(res.doubloons)
                 window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
                 await handleEquipRod(tier)
+              }}
+              onSellRod={async (tier) => {
+                // 65% quick-sell. Server enforces 'not equipped' so we
+                // don't have to mirror that guard client-side. On
+                // success patch the local owned list + doubloons + Nav
+                // currency widget; on error (already equipped, already
+                // sold, etc.) just bail — the modal already closed.
+                const res = await sellRod(tier)
+                if ('error' in res) return
+                setOwnedRods(res.ownedRods)
+                setDoubloons(res.doubloons)
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
               }}
               reelTier={reelTier}
               onBuyReel={async () => {

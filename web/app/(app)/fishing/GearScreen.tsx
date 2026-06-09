@@ -637,7 +637,7 @@ function AppearanceSlot({
 
 export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
-  equippedRodTier, ownedRods, onEquipRod, onBuyRod,
+  equippedRodTier, ownedRods, onEquipRod, onBuyRod, onSellRod,
   reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
   rodHasAffordable, reelHasAffordable, hookHasAffordable,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
@@ -658,6 +658,10 @@ export default function GearScreen({
   ownedRods: number[]
   onEquipRod: (tier: number) => void
   onBuyRod: (tier: number) => Promise<void>
+  /** Quick-sell an owned, non-equipped rod for 65% of its purchase
+   *  cost. Server returns the new doubloon total + the updated owned
+   *  list so the parent can patch state in one call. */
+  onSellRod: (tier: number) => Promise<void>
   reelTier: number
   hookTier: number
   lineTier: number
@@ -742,9 +746,15 @@ export default function GearScreen({
   // stat panel here so the player sees what the rod actually does before
   // spending. Non-rod purchases leave it undefined and fall back to the
   // simple "Buy [Name]?" title-only layout.
+  // pendingPurchase now drives both buy and sell confirm dialogs. The
+  // `kind` field swaps the copy ('Buy…' / 'Sell…') and the CTA tone
+  // (blue purchase / amber refund). For sells, `cost` is the player's
+  // refund (positive, displayed as '+N ⟡'). Existing buy callsites
+  // default to kind='buy' so they don't need touching.
   const [pendingPurchase, setPendingPurchase] = useState<{
     name: string; color: string; cost: number; onConfirm: () => void | Promise<void>
     details?: React.ReactNode
+    kind?: 'buy' | 'sell'
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -1132,43 +1142,109 @@ export default function GearScreen({
                               {ownedRodDefs.map(r => {
                                 const isEquipped = r.tier === equippedRodTier
                                 const tagline = rodTagline(r)
+                                // Sellable: real-cost rods (not starter, not earned-only) that
+                                // aren't currently equipped. 65% return matches the fish
+                                // quick-sell rate. Equipped rod is unsellable here — the
+                                // player must swap to another rod first, which sidesteps
+                                // the "I sold the rod I'm using" recovery path entirely.
+                                const sellable = !isEquipped && r.cost > 0 && !r.earnedOnly
+                                const refund = sellable ? Math.floor(r.cost * 0.65) : 0
                                 return (
-                                  <button
-                                    key={r.tier}
-                                    onClick={() => { if (!isEquipped) onEquipRod(r.tier) }}
-                                    disabled={isEquipped}
-                                    className="font-karla font-700"
-                                    style={{
-                                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                                      padding: '0.6rem 0.4rem 0.5rem',
-                                      borderRadius: 10,
-                                      background: isEquipped ? `${r.color}1f` : 'rgba(4,10,18,0.72)',
-                                      border: `1px solid ${isEquipped ? r.color + '90' : 'rgba(255,255,255,0.09)'}`,
-                                      boxShadow: isEquipped ? `0 0 14px ${r.color}33` : 'none',
-                                      cursor: isEquipped ? 'default' : 'pointer',
-                                      position: 'relative',
-                                    }}
-                                  >
-                                    <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img
-                                        src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
-                                        alt=""
-                                        className={rodGlowClass(r)}
+                                  <div key={r.tier} style={{ position: 'relative' }}>
+                                    <button
+                                      onClick={() => { if (!isEquipped) onEquipRod(r.tier) }}
+                                      disabled={isEquipped}
+                                      className="font-karla font-700"
+                                      style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                                        padding: '0.6rem 0.4rem 0.5rem',
+                                        width: '100%',
+                                        borderRadius: 10,
+                                        background: isEquipped ? `${r.color}1f` : 'rgba(4,10,18,0.72)',
+                                        border: `1px solid ${isEquipped ? r.color + '90' : 'rgba(255,255,255,0.09)'}`,
+                                        boxShadow: isEquipped ? `0 0 14px ${r.color}33` : 'none',
+                                        cursor: isEquipped ? 'default' : 'pointer',
+                                        position: 'relative',
+                                      }}
+                                    >
+                                      <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
+                                          alt=""
+                                          className={rodGlowClass(r)}
+                                          style={{
+                                            width: 44, height: 44, objectFit: 'contain',
+                                            ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
+                                          } as React.CSSProperties}
+                                        />
+                                      </div>
+                                      <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>
+                                        {r.name}
+                                      </p>
+                                      {isEquipped
+                                        ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: r.color }}>✓ Equipped</span>
+                                        : <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center' }}>{tagline}</span>
+                                      }
+                                    </button>
+                                    {sellable && (
+                                      // Sell pill — separate tap target sitting in the
+                                      // top-right corner so a thumb on the main tile
+                                      // (equip) doesn't collide with sell. Muted amber
+                                      // tone so it reads as a tertiary action against
+                                      // the rod's primary color.
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setPendingPurchase({
+                                            name: r.name,
+                                            color: '#c4a96a',
+                                            cost: refund,
+                                            kind: 'sell',
+                                            details: (
+                                              <div style={{ textAlign: 'center' }}>
+                                                <p className="font-karla font-700 uppercase" style={{
+                                                  fontSize: '0.55rem', letterSpacing: '0.14em',
+                                                  color: '#c4a96aaa', marginBottom: 4,
+                                                }}>
+                                                  Quick-sell
+                                                </p>
+                                                <p className="font-cinzel font-700" style={{
+                                                  fontSize: '1.05rem', color: '#f0d695', marginBottom: 4,
+                                                }}>
+                                                  Sell {r.name}?
+                                                </p>
+                                                <p className="font-karla" style={{
+                                                  fontSize: '0.7rem', color: 'rgba(240,222,168,0.65)', lineHeight: 1.4,
+                                                }}>
+                                                  Refunds {refund.toLocaleString()} ⟡ (65% of {r.cost.toLocaleString()}). You can re-buy it later for full price.
+                                                </p>
+                                              </div>
+                                            ),
+                                            onConfirm: async () => { await onSellRod(r.tier) },
+                                          })
+                                        }}
+                                        aria-label={`Sell ${r.name} for ${refund} doubloons`}
+                                        title={`Sell for ${refund.toLocaleString()} ⟡`}
+                                        className="font-karla font-700 uppercase"
                                         style={{
-                                          width: 44, height: 44, objectFit: 'contain',
-                                          ...(r.glow ? { ['--rod-glow-color' as string]: r.color } : { filter: `drop-shadow(0 1px 6px ${r.color}66)` }),
-                                        } as React.CSSProperties}
-                                      />
-                                    </div>
-                                    <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>
-                                      {r.name}
-                                    </p>
-                                    {isEquipped
-                                      ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: r.color }}>✓ Equipped</span>
-                                      : <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: r.color, lineHeight: 1.2, textAlign: 'center' }}>{tagline}</span>
-                                    }
-                                  </button>
+                                          position: 'absolute', top: 4, right: 4,
+                                          padding: '2px 6px',
+                                          borderRadius: 6,
+                                          background: 'rgba(196,169,106,0.14)',
+                                          border: '1px solid rgba(196,169,106,0.45)',
+                                          color: '#d4b87a',
+                                          fontSize: '0.5rem', letterSpacing: '0.08em',
+                                          lineHeight: 1.1,
+                                          cursor: 'pointer',
+                                          zIndex: 2,
+                                        }}
+                                      >
+                                        Sell
+                                      </button>
+                                    )}
+                                  </div>
                                 )
                               })}
                             </div>
@@ -2304,55 +2380,69 @@ export default function GearScreen({
                 boxShadow: '0 18px 60px rgba(0,0,0,0.6)',
               }}
             >
-              {pendingPurchase.details ? (
-                <div style={{ marginBottom: 14 }}>
-                  {pendingPurchase.details}
-                </div>
-              ) : (
-                <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: pendingPurchase.color, marginBottom: 14 }}>
-                  Buy {pendingPurchase.name}?
-                </p>
-              )}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  disabled={confirming}
-                  onClick={() => setPendingPurchase(null)}
-                  className="font-karla font-700 uppercase tracking-[0.08em]"
-                  style={{
-                    flex: 1, padding: '0.7rem 0',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    color: 'rgba(240,237,232,0.65)',
-                    borderRadius: 12, fontSize: '0.72rem',
-                    cursor: confirming ? 'default' : 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={confirming}
-                  onClick={async () => {
-                    setConfirming(true)
-                    await pendingPurchase.onConfirm()
-                    setConfirming(false)
-                    setPendingPurchase(null)
-                  }}
-                  className="font-karla font-700 uppercase tracking-[0.08em]"
-                  style={{
-                    flex: 2, padding: '0.7rem 0',
-                    background: 'rgba(96,165,250,0.16)',
-                    border: '1px solid rgba(96,165,250,0.55)',
-                    color: '#cfe2ff',
-                    borderRadius: 12, fontSize: '0.72rem',
-                    cursor: confirming ? 'default' : 'pointer',
-                    opacity: confirming ? 0.65 : 1,
-                  }}
-                >
-                  {confirming ? 'Buying…' : `Buy for ${pendingPurchase.cost.toLocaleString()} ⟡`}
-                </button>
-              </div>
+              {(() => {
+                const isSell = pendingPurchase.kind === 'sell'
+                const ctaBg     = isSell ? 'rgba(196,169,106,0.18)' : 'rgba(96,165,250,0.16)'
+                const ctaBorder = isSell ? 'rgba(196,169,106,0.6)'  : 'rgba(96,165,250,0.55)'
+                const ctaColor  = isSell ? '#f0d695'                : '#cfe2ff'
+                const verbing   = isSell ? 'Selling…' : 'Buying…'
+                const verbLabel = isSell
+                  ? `Sell for +${pendingPurchase.cost.toLocaleString()} ⟡`
+                  : `Buy for ${pendingPurchase.cost.toLocaleString()} ⟡`
+                return (
+                  <>
+                    {pendingPurchase.details ? (
+                      <div style={{ marginBottom: 14 }}>
+                        {pendingPurchase.details}
+                      </div>
+                    ) : (
+                      <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: pendingPurchase.color, marginBottom: 14 }}>
+                        {isSell ? `Sell ${pendingPurchase.name}?` : `Buy ${pendingPurchase.name}?`}
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        disabled={confirming}
+                        onClick={() => setPendingPurchase(null)}
+                        className="font-karla font-700 uppercase tracking-[0.08em]"
+                        style={{
+                          flex: 1, padding: '0.7rem 0',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          color: 'rgba(240,237,232,0.65)',
+                          borderRadius: 12, fontSize: '0.72rem',
+                          cursor: confirming ? 'default' : 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={confirming}
+                        onClick={async () => {
+                          setConfirming(true)
+                          await pendingPurchase.onConfirm()
+                          setConfirming(false)
+                          setPendingPurchase(null)
+                        }}
+                        className="font-karla font-700 uppercase tracking-[0.08em]"
+                        style={{
+                          flex: 2, padding: '0.7rem 0',
+                          background: ctaBg,
+                          border: `1px solid ${ctaBorder}`,
+                          color: ctaColor,
+                          borderRadius: 12, fontSize: '0.72rem',
+                          cursor: confirming ? 'default' : 'pointer',
+                          opacity: confirming ? 0.65 : 1,
+                        }}
+                      >
+                        {confirming ? verbing : verbLabel}
+                      </button>
+                    </div>
+                  </>
+                )
+              })()}
             </motion.div>
           </motion.div>
         )}
