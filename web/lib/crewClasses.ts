@@ -172,23 +172,21 @@ export interface AbyssalTideMilestone {
 
 export interface LeviathanMilestone {
   unlockLevel: ClassMilestoneLevel
-  /** Multiplier on the player's total crew Power for the direct-damage
-   *  payload. 1.0 = damage equals crew Power; 2.0 = damage equals 2×
-   *  crew Power. Ignores enemy armor; dodge handled per-tier. */
-  crewPowerMult: number
-  /** Lv 100: this hit cannot be dodged. */
-  ignoresDodge?: boolean
+  /** Damage multiplier on the single extra cannon shot, relative to a
+   *  normal hit's damage profile. 0.5 = half damage; 2.0 = double. */
+  dmgMult: number
+  /** Lv 100: the extra shot lands as a guaranteed crit. */
+  autoCrit?: boolean
   desc: string
 }
 
 export interface BlitzMilestone {
   unlockLevel: ClassMilestoneLevel
-  /** Number of extra cannon shots fired this turn after the normal one. */
-  extraShots: number
-  /** Damage multiplier on each extra shot, relative to a normal shot's
-   *  damage profile. 1.0 = full damage. */
-  dmgMult: number
-  /** Lv 100: every extra shot lands as a guaranteed crit. */
+  /** Probability (0–1) that each landed shot will chain into another.
+   *  First shot is guaranteed; the chain ends on the first failed roll
+   *  (or a 10-shot hard cap, to keep pathological streaks bounded). */
+  chainChance: number
+  /** Lv 100: every shot in the chain lands as a guaranteed crit. */
   autoCrit?: boolean
   desc: string
 }
@@ -301,28 +299,28 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 }
 
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
-  id: 'leviathan', name: 'Leviathan', shortLabel: 'Crash',
-  blurb: 'Slams the enemy for damage equal to your total crew Power. The bigger the war party, the bigger the hit.',
+  id: 'leviathan', name: 'Heavy Salvo', shortLabel: 'Salvo',
+  blurb: 'Fires one massive extra cannon shot. Damage scales hard with rank — at the capstone, a single shell hits twice as hard as a normal one.',
   color: '#a3b1c6', emoji: '🐋',
   milestones: [
-    { unlockLevel: 10,  crewPowerMult: 0.50, desc: 'Deal damage equal to 50% of your total crew Power.' },
-    { unlockLevel: 25,  crewPowerMult: 0.75, desc: 'Deal damage equal to 75% of your total crew Power.' },
-    { unlockLevel: 40,  crewPowerMult: 1.00, desc: 'Deal damage equal to your total crew Power.' },
-    { unlockLevel: 75,  crewPowerMult: 1.50, desc: 'Deal damage equal to 1.5× your total crew Power.' },
-    { unlockLevel: 100, crewPowerMult: 2.00, ignoresDodge: true, desc: 'Deal damage equal to 2× your total crew Power. Cannot be dodged.' },
+    { unlockLevel: 10,  dmgMult: 0.50, desc: 'Fire 1 extra cannon shot at 50% damage.' },
+    { unlockLevel: 25,  dmgMult: 0.75, desc: 'Fire 1 extra cannon shot at 75% damage.' },
+    { unlockLevel: 40,  dmgMult: 1.00, desc: 'Fire 1 extra cannon shot at full damage.' },
+    { unlockLevel: 75,  dmgMult: 1.50, desc: 'Fire 1 extra cannon shot at 150% damage.' },
+    { unlockLevel: 100, dmgMult: 2.00, autoCrit: true, desc: 'Fire 1 extra cannon shot at 200% damage; guaranteed crit.' },
   ],
 }
 
 export const BLITZ: ClassDef<BlitzMilestone> = {
-  id: 'blitz', name: 'Blitz', shortLabel: 'Burst',
-  blurb: 'Fires extra cannon shots this turn. Stacks with the Sharpshot crit-zone buff.',
+  id: 'blitz', name: 'Frenzy', shortLabel: 'Frenzy',
+  blurb: 'Fires a cannon shot, then rolls to chain into another, and another. Stops when the roll fails.',
   color: '#f87171', emoji: '⚡',
   milestones: [
-    { unlockLevel: 10,  extraShots: 1, dmgMult: 0.50, desc: 'Fire 1 extra cannon shot this turn at 50% damage.' },
-    { unlockLevel: 25,  extraShots: 1, dmgMult: 0.75, desc: 'Fire 1 extra cannon shot this turn at 75% damage.' },
-    { unlockLevel: 40,  extraShots: 1, dmgMult: 1.00, desc: 'Fire 1 extra cannon shot this turn at full damage.' },
-    { unlockLevel: 75,  extraShots: 2, dmgMult: 1.00, desc: 'Fire 2 extra cannon shots this turn at full damage.' },
-    { unlockLevel: 100, extraShots: 3, dmgMult: 1.00, autoCrit: true, desc: 'Fire 3 extra cannon shots this turn at full damage; all crit.' },
+    { unlockLevel: 10,  chainChance: 0.25, desc: 'Fire a cannon shot. 25% chance to chain into another (repeats).' },
+    { unlockLevel: 25,  chainChance: 0.40, desc: 'Fire a cannon shot. 40% chance to chain into another (repeats).' },
+    { unlockLevel: 40,  chainChance: 0.55, desc: 'Fire a cannon shot. 55% chance to chain into another (repeats).' },
+    { unlockLevel: 75,  chainChance: 0.70, desc: 'Fire a cannon shot. 70% chance to chain into another (repeats).' },
+    { unlockLevel: 100, chainChance: 0.80, autoCrit: true, desc: 'Fire a cannon shot. 80% chance to chain into another (repeats). Every shot crits.' },
   ],
 }
 

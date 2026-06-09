@@ -867,22 +867,33 @@ export default function RaidCombat({
       }
       case 'leviathan': {
         const lv = m as import('@/lib/crewClasses').LeviathanMilestone
-        const dmg = Math.max(1, Math.round(totalPower * lv.crewPowerMult))
-        applyAbilityDamage(dmg, `${crew.name} slams the ${enemy.name} for ${dmg}!`, 'crit')
+        // Single heavy extra shot. Rolls through the standard damage
+        // profile so Sharpshot crit-zone buffs / damagePct mods all
+        // compound naturally, then multiplied by the milestone's dmgMult.
+        // Lv 100 forces the shot to crit.
+        const shotResult: ShotResult = lv.autoCrit ? 'critical' : 'hit'
+        const dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * lv.dmgMult))
+        applyAbilityDamage(dmg, `${crew.name} fires a heavy salvo for ${dmg}!`, lv.autoCrit ? 'crit' : 'hit')
         break
       }
       case 'blitz': {
         const bz = m as import('@/lib/crewClasses').BlitzMilestone
-        // Each extra shot rolls through the shared damage profile so the
-        // current Sharpshot crit-zone buff (if any) and damagePct mods
-        // compound naturally. Lv 100 forces every shot to crit.
+        // Frenzy chain — first shot is guaranteed, then roll chainChance
+        // after each hit to continue. Hard-cap at 10 shots so an 80%
+        // chain can't tail off to 30+ shots in a degenerate run. Each
+        // shot rolls through the shared damage profile so Sharpshot /
+        // damagePct mods stack normally; Lv 100 forces every shot to crit.
         const shotResult: ShotResult = bz.autoCrit ? 'critical' : 'hit'
         let total = 0
-        for (let i = 0; i < bz.extraShots; i++) {
-          total += Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.dmgMult)
+        let shots = 0
+        const CHAIN_CAP = 10
+        while (shots < CHAIN_CAP) {
+          total += Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower))
+          shots++
+          if (Math.random() >= bz.chainChance) break
         }
         total = Math.max(1, total)
-        applyAbilityDamage(total, `${crew.name} unloads ${bz.extraShots} extra shots for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
+        applyAbilityDamage(total, `${crew.name} chains ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
         break
       }
     }
