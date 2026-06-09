@@ -135,32 +135,62 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
           color: unread > 0 ? ACCENT : '#a0a09a',
         }}
       >
-        {/* Idle envelope breathes gently when there's unread mail — slow
-            scale loop with a paired soft gold halo behind. */}
+        {/* Unread mail demands attention in two stacked passes:
+            1. Continuous gold halo + scale breathe so the icon is never
+               'asleep' — same idea as before.
+            2. Every ~3.6s, a quick bell-shake (rotate left/right twice in
+               under half a second) — that's the actual eye-catcher.
+               Sleepy breath alone reads as decoration; the shake reads as
+               'something is ringing for you'. Keyframe arrays use
+               compressed times so the wiggle bursts and then rests, vs.
+               wiggling continuously which would feel anxious.
+            Both stop the moment the panel opens so the icon isn't
+            still ringing under a mail tray that's already on screen. */}
         <motion.div
           aria-hidden
-          animate={unread > 0 && !open ? { opacity: [0.35, 0.7, 0.35], scale: [0.85, 1.1, 0.85] } : { opacity: 0 }}
-          transition={unread > 0 && !open ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
+          animate={unread > 0 && !open
+            ? { opacity: [0.35, 0.85, 0.45, 0.85, 0.35], scale: [0.85, 1.18, 1.0, 1.18, 0.85] }
+            : { opacity: 0 }}
+          transition={unread > 0 && !open
+            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+            : { duration: 0.25 }}
           style={{
             position: 'absolute', inset: 0,
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${ACCENT}55 0%, transparent 65%)`,
+            background: `radial-gradient(circle, ${ACCENT}66 0%, transparent 65%)`,
             pointerEvents: 'none',
           }}
         />
         <motion.svg
           width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
-          animate={unread > 0 && !open ? { scale: [1, 1.12, 1], y: [0, -1, 0] } : { scale: 1, y: 0 }}
-          transition={unread > 0 && !open ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
-          style={{ position: 'relative', zIndex: 1 }}
+          // Bell-shake keyframe burst at 0–14% of the cycle, then idle for
+          // the remaining 86% so the rest of the loop is a calm breathe.
+          // 3.6s total period keeps it noticeable without crossing into
+          // 'jittery'.
+          animate={unread > 0 && !open
+            ? {
+                rotate: [0, -14, 12, -10, 8, -5, 0, 0, 0, 0, 0],
+                scale:  [1, 1.05, 1.05, 1.05, 1.05, 1.0, 1, 1.08, 1, 1.08, 1],
+                y:      [0,  -1,  -1,  -1,  -1,    0, 0,  -1,  0,  -1, 0],
+              }
+            : { rotate: 0, scale: 1, y: 0 }}
+          transition={unread > 0 && !open
+            ? { duration: 3.6, repeat: Infinity, ease: 'easeInOut', times: [0, 0.04, 0.08, 0.11, 0.14, 0.18, 0.25, 0.45, 0.6, 0.8, 1] }
+            : { duration: 0.25 }}
+          style={{ position: 'relative', zIndex: 1, transformOrigin: '50% 30%' }}
         >
           <rect x="3" y="5" width="18" height="14" rx="2"/>
           <path d="M3 7l9 6 9-6"/>
         </motion.svg>
         {unread > 0 && (
           <motion.span
-            animate={!open ? { scale: [1, 1.08, 1] } : { scale: 1 }}
-            transition={!open ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
+            // Pip throbs harder during the shake window, then settles.
+            animate={!open
+              ? { scale: [1, 1.25, 1.1, 1.25, 1, 1.08, 1, 1.08, 1] }
+              : { scale: 1 }}
+            transition={!open
+              ? { duration: 3.6, repeat: Infinity, ease: 'easeInOut', times: [0, 0.04, 0.08, 0.12, 0.18, 0.45, 0.6, 0.8, 1] }
+              : { duration: 0.25 }}
             style={{
               position: 'absolute', top: 2, right: 2,
               minWidth: 15, height: 15, padding: '0 4px',
@@ -171,7 +201,7 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
               fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               lineHeight: 1,
-              boxShadow: `0 0 6px ${UNREAD_PIP}88, 0 1px 3px rgba(0,0,0,0.55)`,
+              boxShadow: `0 0 10px ${UNREAD_PIP}cc, 0 1px 3px rgba(0,0,0,0.55)`,
               zIndex: 2,
             }}
           >
