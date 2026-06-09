@@ -723,14 +723,19 @@ export default function ShipHero({
           }}>
             {/* Left col — random roster crew member portrait. Whole
                 tile is the link target; label below reads as a caption,
-                not a separate pill. */}
+                not a separate pill. Crew art is naturally landscape
+                (1152×928 ≈ 1.24:1), so giving it a fixed 85px height +
+                auto width makes it render at ~105×85 — same vertical
+                size as the ship below, just narrower. Both columns
+                end up with matched image heights instead of mismatched
+                rendered geometry. */}
             <Link href="/crew" style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               textDecoration: 'none',
               cursor: 'pointer',
             }}>
               <div style={{
-                width: '100%', height: 95,
+                height: 85,
                 display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
                 position: 'relative',
               }}>
@@ -740,10 +745,8 @@ export default function ShipHero({
                     src={IMG_BASE + featuredCrew.filename}
                     alt={featuredCrew.name}
                     style={{
-                      width: 'auto', height: '100%',
-                      maxWidth: '100%',
+                      height: 85, width: 'auto', maxWidth: '100%',
                       objectFit: 'contain',
-                      objectPosition: 'center 22%',
                       filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.55))',
                     }}
                   />
@@ -752,7 +755,7 @@ export default function ShipHero({
                   // reads as 'no crew yet, go recruit' instead of a
                   // gap next to the ship.
                   <div style={{
-                    width: 65, height: '92%',
+                    width: 60, height: 80,
                     borderRadius: '12% 12% 30% 30%',
                     background: 'radial-gradient(ellipse at 50% 28%, rgba(110,140,180,0.18) 0%, rgba(20,28,42,0) 70%)',
                     border: '1.5px dashed rgba(125,160,216,0.35)',
@@ -773,7 +776,12 @@ export default function ShipHero({
             </Link>
 
             {/* Right col — ship image + Manage Ship label. Whole
-                column is a button that opens the loadout drawer. */}
+                column is a button that opens the loadout drawer.
+                Ship gets the same 85px fixed height (auto width) so
+                its rendered size matches the crew column to the pixel
+                vertically — the natural widths differ (ship is 1.79:1
+                vs crew 1.24:1, so ship is wider) but height is
+                identical so they read as the same visual scale. */}
             <button
               onClick={() => setLoadoutOpen(true)}
               style={{
@@ -783,7 +791,7 @@ export default function ShipHero({
               }}
             >
               <div style={{
-                width: '100%', height: 95,
+                height: 85,
                 display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -791,8 +799,8 @@ export default function ShipHero({
                   src={shipImgSrc}
                   alt={shipName ?? shipStats.name}
                   style={{
-                    width: '100%', height: '100%',
-                    objectFit: 'contain', objectPosition: 'center bottom',
+                    height: 85, width: 'auto', maxWidth: '100%',
+                    objectFit: 'contain',
                     filter: skinFilter,
                     transition: 'filter 0.3s ease',
                   }}
