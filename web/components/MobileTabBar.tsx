@@ -59,7 +59,11 @@ export default function MobileTabBar() {
     fetchedOnceRef.current = true
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string } | null } }) => {
+    // getSession() = local cache read, no auth-server roundtrip (the id
+    // only scopes an RLS-guarded SELECT) — getUser() was adding ~100ms
+    // before the voyage badge could even start its query.
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string } } | null } }) => {
+      const user = session?.user
       if (!user) return
       supabase
         .from('daily_voyages')

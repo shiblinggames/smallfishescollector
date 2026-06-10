@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { isPremiumActive } from '@/lib/premium'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import MarketCard from './MarketCard'
 import TackleShopCard from './TackleShopCard'
 import ShipyardCard from './ShipyardCard'
@@ -9,20 +9,13 @@ import MembershipCard from './MembershipCard'
 import BoardGameCard from './BoardGameCard'
 
 export default async function MarketplacePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  // Only the premium-status flag is needed in the page now — the
-  // previous version also fetched market_state.mood for an eyebrow
-  // mood indicator on the Fish Market card. Eyebrows are gone, so the
-  // fetch and admin-client import are gone with them.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_premium, premium_expires_at')
-    .eq('id', user.id)
-    .single()
-
+  // Request-scoped cached loader (lib/userData.ts) like every other tab —
+  // this page used to hand-roll its own auth + profile queries, the last
+  // holdout from before the loader existed. Only the premium flag is read.
+  const profile = await getCurrentProfile()
   const isPremium = isPremiumActive(profile)
 
   const marlinUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Blue_Marlin.png`

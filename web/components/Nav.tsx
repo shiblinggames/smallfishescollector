@@ -111,7 +111,12 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
 
   const fetchBadge = useCallback(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    // getSession() reads the locally-cached session — no auth-server
+    // roundtrip like getUser(). The id here only scopes SELECTs that RLS
+    // enforces anyway, so the unverified read is safe and shaves
+    // ~100-150ms off how long the avatar/badges sit ghosted on mount.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const user = session?.user
       if (!user) return
       setIsSignedIn(true)
       const nowIso = new Date().toISOString()
