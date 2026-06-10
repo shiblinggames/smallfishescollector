@@ -1052,11 +1052,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <span className="font-karla font-700" style={{ fontSize: '0.62rem', opacity: 0.85 }}>· {state.roster.length}</span>
                 )}
               </button>
-              {/* Recruit — always gold so it reads as THE action, not just
-                  another view. Active state is a stronger gold TINT (same
-                  family as the other tabs' active treatment) — the earlier
-                  full gradient fill read as a pressed candy button and
-                  clashed with the hall panel below it. */}
+              {/* Recruit — neutral at rest (matches Roster), gold tint only
+                  when active. Earlier always-gold treatments (gradient fill,
+                  then permanent gold outline) both proved too loud. */}
               <button
                 role="tab"
                 aria-selected={recruitsActive}
@@ -1067,9 +1065,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                   padding: '0.55rem 0.45rem', borderRadius: 9,
                   fontSize: '0.7rem', letterSpacing: '0.06em',
-                  background: recruitsActive ? 'rgba(201,162,74,0.24)' : 'rgba(201,162,74,0.1)',
-                  border: `1px solid ${recruitsActive ? 'rgba(240,214,150,0.8)' : 'rgba(201,162,74,0.5)'}`,
-                  color: recruitsActive ? '#f0d696' : '#e8c87a',
+                  background: recruitsActive ? 'rgba(201,162,74,0.24)' : 'rgba(0,0,0,0.25)',
+                  border: `1px solid ${recruitsActive ? 'rgba(240,214,150,0.8)' : 'rgba(255,255,255,0.1)'}`,
+                  color: recruitsActive ? '#f0d696' : 'rgba(255,255,255,0.55)',
                   cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
                 }}>
                 <span>Recruit</span>
