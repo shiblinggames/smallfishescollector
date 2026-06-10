@@ -1414,13 +1414,13 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minHeight: 60 }}>
           {!dealing && state.hands.some(h => !h.busted && !h.stood) && (
             <>
-              <ActionButton iconKind="hit"    label="Hit"    onClick={() => fireAction(hit)}        disabled={!state.canHit || isPending} />
-              <ActionButton iconKind="stand"  label="Stand"  onClick={() => fireAction(stand)}      disabled={!state.canStand || isPending} />
+              <ActionButton label="Hit"   onClick={() => fireAction(hit)}        disabled={!state.canHit || isPending} />
+              <ActionButton label="Stand" onClick={() => fireAction(stand)}      disabled={!state.canStand || isPending} />
               {state.canDouble && (
-                <ActionButton iconKind="double" label="Double" chip={`${activeHand?.wager} ⟡`} onClick={() => fireAction(doubleDown)} disabled={isPending} />
+                <ActionButton label="Double" chip={`${activeHand?.wager} ⟡`} onClick={() => fireAction(doubleDown)} disabled={isPending} />
               )}
               {state.canSplit && (
-                <ActionButton iconKind="split"  label="Split"  chip={`${state.hands[0].wager} ⟡`} onClick={() => fireAction(split)} disabled={isPending} />
+                <ActionButton label="Split"  chip={`${state.hands[0].wager} ⟡`} onClick={() => fireAction(split)} disabled={isPending} />
               )}
             </>
           )}
@@ -2007,92 +2007,32 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   )
 }
 
-/** Per-action carved glyphs. Same gold-on-dark palette as the button
- *  face so they read as engraved into the wood, not as colored icons.
- *  - hit:    two fanned cards (drawing another)
- *  - stand:  wax-seal circle with crosshair (sealed / committed)
- *  - double: two stacked coins (paying double the stake)
- *  - split:  two cards side by side (splitting the hand)
- *  Rendered tiny at top-left for identity, and re-used at scale ~3.2x
- *  as the press "stamp ghost" (see ActionButton). */
-const ACTION_GLYPHS = {
-  hit: (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2" y="2.5" width="5.5" height="9" rx="0.6" transform="rotate(-10 4.75 7)" />
-      <rect x="6.5" y="2.5" width="5.5" height="9" rx="0.6" transform="rotate(10 9.25 7)" />
-    </svg>
-  ),
-  stand: (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="7" cy="7" r="4.5" />
-      <path d="M7 4 L8 7 L7 10 L6 7 Z" fill="currentColor" stroke="none" />
-      <path d="M4 7 L7 6 L10 7 L7 8 Z" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  double: (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
-      <circle cx="5.5" cy="8.5" r="3" />
-      <circle cx="8.5" cy="5.5" r="3" />
-    </svg>
-  ),
-  split: (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="1.5" y="2.5" width="4.5" height="9" rx="0.5" />
-      <rect x="8" y="2.5" width="4.5" height="9" rx="0.5" />
-    </svg>
-  ),
-} as const
-
-type ActionIconKind = keyof typeof ACTION_GLYPHS
-
 /** Action button — restrained tavern-style stamp. Dark wood-grain body
  *  with a thin parchment-gold border + bold Cinzel uppercase label.
- *  Three layers of "feel" stacked on top of the basic spring press:
- *    1. Subtle vertical wood-grain (repeating-linear-gradient) plus a
- *       warm top wash so the body looks carved instead of flat-vector.
- *    2. A small carved glyph at top-left so Hit / Stand / Double /
- *       Split each have their own silhouette, not just a different
- *       word.
- *    3. On press, a large dark imprint of that glyph stamps into the
- *       face center and fades over ~420ms — like the action just
- *       left its mark in the wood. `pressTick` re-keys the motion
- *       element so each click fires a fresh animation even if the
- *       player mashes Hit-Hit-Hit.
- *
- *  No per-button accent color (was reading chaotic with four hues in
- *  one row). `accent` retained on the signature for legacy callers
- *  but unused. */
-function ActionButton({ label, chip, onClick, disabled, iconKind }: {
+ *  Body uses a subtle vertical repeating-linear-gradient (~4% alpha
+ *  gold stripes every ~6px) layered with a warm top wash, so the face
+ *  reads as carved wood rather than flat-vector glass. No per-button
+ *  accent color (chaotic with four hues in one row). `accent` retained
+ *  on the signature for legacy callers but unused. */
+function ActionButton({ label, chip, onClick, disabled }: {
   label: string
   chip?: string             // optional cost suffix, e.g. "50 ⟡"
   onClick: () => void
   disabled: boolean
   accent?: string           // retained for caller compatibility, unused
   icon?: never              // icons retired — pure typography now
-  iconKind?: ActionIconKind // carved silhouette + press-stamp glyph
 }) {
-  const [pressTick, setPressTick] = useState(0)
-  const glyph = iconKind ? ACTION_GLYPHS[iconKind] : null
-
-  function handleClick() {
-    if (disabled) return
-    setPressTick(t => t + 1)
-    onClick()
-  }
-
   return (
     <motion.button
       type="button"
       disabled={disabled}
-      onClick={handleClick}
+      onClick={onClick}
       whileHover={!disabled ? { y: -1.5 } : undefined}
       whileTap={!disabled ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
       transition={{ type: 'spring', stiffness: 600, damping: 22 }}
       className="font-cinzel font-700 uppercase"
       style={{
         flex: 1, minWidth: 72,
-        position: 'relative',
-        overflow: 'hidden',
         padding: '0.7rem 0.55rem',
         borderRadius: 4,
         background: disabled
@@ -2120,46 +2060,7 @@ function ActionButton({ label, chip, onClick, disabled, iconKind }: {
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.borderColor = 'rgba(240,214,149,0.85)' }}
       onMouseLeave={e => { if (!disabled) e.currentTarget.style.borderColor = 'rgba(196,169,106,0.5)' }}
     >
-      {/* Top-left carved glyph — per-action identity at small scale. */}
-      {glyph && (
-        <span aria-hidden style={{
-          position: 'absolute',
-          top: 7, left: 8,
-          opacity: disabled ? 0.18 : 0.5,
-          lineHeight: 0,
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}>
-          {glyph}
-        </span>
-      )}
-
-      {/* Press stamp ghost — large dark imprint of the same glyph
-          blooming from the center of the button. Re-keyed on pressTick
-          so each click fires a fresh animation (mashing Hit-Hit-Hit
-          gives 3 distinct stamps, not 1 stalled one). */}
-      {iconKind && pressTick > 0 && (
-        <motion.span
-          key={`stamp-${pressTick}`}
-          aria-hidden
-          initial={{ opacity: 0.55, scale: 0.6 }}
-          animate={{ opacity: 0, scale: 1.6 }}
-          transition={{ duration: 0.42, ease: 'easeOut' }}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'rgba(0,0,0,0.78)',
-            pointerEvents: 'none',
-            zIndex: 1,
-          }}>
-          <span style={{ transform: 'scale(3.2)', display: 'inline-flex', lineHeight: 0 }}>
-            {glyph}
-          </span>
-        </motion.span>
-      )}
-
-      <span style={{ lineHeight: 1, position: 'relative', zIndex: 2 }}>{label}</span>
+      <span style={{ lineHeight: 1 }}>{label}</span>
       {chip && (
         <span style={{
           color: disabled ? '#4a4540' : '#f0c040',
@@ -2167,8 +2068,6 @@ function ActionButton({ label, chip, onClick, disabled, iconKind }: {
           letterSpacing: '0.06em',
           fontSize: '0.7rem',
           lineHeight: 1,
-          position: 'relative',
-          zIndex: 2,
         }}>
           {chip}
         </span>
