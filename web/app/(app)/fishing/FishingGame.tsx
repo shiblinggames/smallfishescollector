@@ -6187,25 +6187,7 @@ export default function FishingGame({
                   </p>
                 </motion.div>
               )}
-              {/* Ancient Deep requires Luminous or Golden Lure. Swap the
-                  Cast button for a "switch bait" hint when the player has
-                  the wrong bait selected here — server enforces the same
-                  gate, but blocking client-side gives a clearer prompt
-                  than waiting for the cast to fail. */}
-              {phase === 'idle' && !allAncientCaught && selectedZone === 'ancient_deep' && hasBait && selectedBaitQty > 0 && selectedBait !== 'luminous' && selectedBait !== 'golden' && (
-                <motion.div key="needs-lure"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="text-center"
-                  style={{ maxWidth: 260 }}>
-                  <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#cbd5e1', marginBottom: 6, lineHeight: 1.3 }}>
-                    Needs a Luminous or Golden Lure
-                  </p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: 'rgba(203,213,225,0.55)', marginBottom: 14, lineHeight: 1.4 }}>
-                    The Ancient Deep doesn&apos;t bite on regular bait. Lures drop from Shrouded Reach voyages.
-                  </p>
-                </motion.div>
-              )}
-              {phase === 'idle' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (selectedZone !== 'ancient_deep' || selectedBait === 'luminous' || selectedBait === 'golden') && (
+              {phase === 'idle' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
                 <motion.button key="cast"
                   // pointerdown rather than onClick — fires on tap-start
                   // (~50–100 ms earlier than click on touch devices), so

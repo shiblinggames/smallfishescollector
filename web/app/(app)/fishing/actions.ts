@@ -185,14 +185,6 @@ export async function castLine(baitType: string, habitat: string): Promise<
     return { error: `Reach Fishing Level ${minLevel} to fish here` }
   }
 
-  // Ancient Deep requires a Luminous or Golden Lure — the trophy
-  // species there don't bite on regular bait. Both lures drop from
-  // Shrouded Reach voyages so the gate is "you've earned voyage drops
-  // before you can chase trophies", not a hard paywall.
-  if (habitat === 'ancient_deep' && baitType !== 'luminous' && baitType !== 'golden') {
-    return { error: 'The Ancient Deep needs a Luminous or Golden Lure.' }
-  }
-
   // Derive event effects server-side — never trust client flags
   const activeEvent = getActiveEvent(profile.active_event)
   const noBait = activeEvent?.type === 'bloom'
@@ -203,7 +195,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   const [{ data: holdRows }, { data: baitRow }, { data: candidates }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
     admin.from('bait_inventory').select('quantity').eq('user_id', user.id).eq('bait_type', baitType).single(),
-    admin.from('fish_species').select('id, catch_difficulty, catch_score, bite_rarity').eq('habitat', habitat),
+    admin.from('fish_species').select('id, catch_difficulty, catch_score, bite_rarity, sell_value').eq('habitat', habitat),
   ])
 
   const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
@@ -215,12 +207,23 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   if (!candidates || candidates.length === 0) return { error: 'No fish found in this zone' }
 
-  // Ancient Deep: filter out already-caught trophies
+  // Ancient Deep pool filter:
+  //   1. Already-caught trophies always filter out (one-and-done).
+  //   2. With regular bait, ALL trophies filter out — the 12 regulars
+  //      bite on worms etc., but the 6 prehistoric trophies will only
+  //      surface for a Luminous or Golden Lure. Sell_value === 0 is
+  //      the trophy discriminator (matches the trophy/inventory split
+  //      in the catch handler below).
   let pool = candidates
   if (habitat === 'ancient_deep') {
     const caught = new Set<number>((profile.trophy_catches as number[] | null) ?? [])
-    pool = candidates.filter(f => !caught.has(f.id))
-    if (pool.length === 0) return { error: 'You have caught all Ancient Deep trophies!' }
+    const isLure = baitType === 'luminous' || baitType === 'golden'
+    pool = candidates.filter(f => {
+      if (caught.has(f.id)) return false
+      if (!isLure && (f.sell_value ?? 0) === 0) return false
+      return true
+    })
+    if (pool.length === 0) return { error: 'You have caught every Ancient Deep species available with this bait!' }
   }
 
   const rod = getRod(profile.rod_tier ?? 0)
