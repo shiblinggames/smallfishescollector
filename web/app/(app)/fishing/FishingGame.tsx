@@ -563,7 +563,9 @@ function DialSVG({
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
 <g ref={zonesGroupRef} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
-            <path key={i} d={zonePaths[i]} fill={zone.color}
+            // data-zone-arc lets the parent's rAF tick repaint
+            // fill-opacity imperatively on zone crossings (no re-render).
+            <path key={i} data-zone-arc={i} d={zonePaths[i]} fill={zone.color}
               fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
           ))}
           {perfectZone && (() => {
@@ -3519,12 +3521,22 @@ export default function FishingGame({
   // through setZoneRotation. Eliminates the 33×/sec render thrash
   // during drift fish (Plesiosaurus / Chambered Nautilus / Tripod Fish).
   const zonesGroupRef    = useRef<SVGGElement | null>(null)
+  // Imperative targets for the zone-crossing paint (needle colour, arc
+  // highlight, live zone label). Crossings used to call setAngle(...),
+  // re-rendering this entire component ~6-10×/revolution; on a cold
+  // first revolution those renders blew the frame budget and the needle
+  // visibly hitched until React's render path warmed up. Now the tick
+  // paints all three tells directly, same pattern as the needle
+  // transform + drift rotation above.
+  const zoneLabelRef     = useRef<HTMLParagraphElement | null>(null)
+  const retryFlashRef    = useRef(false)
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
   const hookedFishRef   = useRef<{ fishId: number; catchDifficulty: number; crateTier?: 'wooden' | 'metal' | 'gold' | 'diamond' } | null>(null)
   const selectedBaitRef = useRef(selectedBait)
   useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { retryFlashRef.current = retryFlash }, [retryFlash])
 
   // When the gear drawer opens, mark currently-affordable upgrades as seen so
   // the green pulse dots stop nagging. Re-pulses once a NEW tier crosses into
@@ -3747,12 +3759,39 @@ export default function FishingGame({
       // Move the needle imperatively (no React re-render) for a smooth 60fps.
       const ng = needleGroupRef.current
       if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
-      // Re-render the parent ONLY when the needle crosses into a new zone, so
-      // the needle colour / zone highlight / label tells stay accurate.
+      // Zone-crossing paint — also imperative. This used to call
+      // setAngle(...) so React could refresh the colour/label tells, but
+      // that re-rendered the entire component at every crossing; on a
+      // cold first revolution those renders overran the frame budget and
+      // the needle visibly hitched/skipped until the render path warmed
+      // up. Now the three tells (needle paint, arc highlight, zone
+      // label) are written directly and React stays out of the spin.
       const zNow = getZone(catchingZonesRef.current, angleRef.current, zoneRotationRef.current)
       if (zNow.from !== lastZoneFromRef.current) {
         lastZoneFromRef.current = zNow.from
-        setAngle(angleRef.current)
+        if (ng) {
+          ng.querySelectorAll('line').forEach(l => l.setAttribute('stroke', zNow.color))
+          ng.querySelector('circle')?.setAttribute('fill', zNow.color)
+        }
+        // Arc highlight — mirrors zoneOpacity()'s catching branch exactly.
+        const zg = zonesGroupRef.current
+        if (zg) {
+          const arcs = zg.querySelectorAll<SVGPathElement>('path[data-zone-arc]')
+          const zonesNow = catchingZonesRef.current
+          arcs.forEach((p, i) => {
+            const z = zonesNow[i]
+            if (!z) return
+            const op = z.from === zNow.from ? 1.0 : z.type === 'perfect' ? 0.50 : z.type === 'penalty' ? 0.45 : 0.28
+            p.setAttribute('fill-opacity', String(op))
+          })
+        }
+        // Live zone label — skip while the Second Wind flash owns it.
+        const lbl = zoneLabelRef.current
+        if (lbl && !retryFlashRef.current) {
+          lbl.textContent = zNow.label ?? ''
+          lbl.style.color = zNow.color
+          lbl.style.textShadow = `0 0 10px ${zNow.color}60`
+        }
       }
       animRef.current = requestAnimationFrame(tick)
     }
@@ -5024,7 +5063,12 @@ export default function FishingGame({
   // is kept in sync with state at one-shot transitions instead (see
   // the inline `zoneRotationRef.current = …` writes at every
   // setZoneRotation callsite below).
-  const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
+  // Live ref reads, not state — the rAF tick no longer syncs angle into
+  // React state on zone crossings (the crossing paint is imperative), so
+  // state would be stale here. Reading the refs means any unrelated
+  // re-render (blackout, streak, retry flash) paints the CURRENT zone
+  // and never clobbers the imperative tells with an old one.
+  const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angleRef.current, zoneRotationRef.current) : null
 
   function needleColor(): string {
     if ((phase === 'catching' || phase === 'reeling') && currentZone) return currentZone.color
@@ -5806,7 +5850,7 @@ export default function FishingGame({
                       render without clipping at the bottom. */}
                   <div style={{ minHeight: '1.05rem' }}>
                     {(phase === 'reeling' || currentZone) && (
-                      <p className="font-cinzel font-700 uppercase tracking-[0.14em]"
+                      <p ref={zoneLabelRef} className="font-cinzel font-700 uppercase tracking-[0.14em]"
                         style={{
                           fontSize: '0.7rem',
                           color: retryFlash ? '#fb923c' : (currentZone?.color ?? '#e8e4de'),
