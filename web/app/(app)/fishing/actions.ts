@@ -185,6 +185,14 @@ export async function castLine(baitType: string, habitat: string): Promise<
     return { error: `Reach Fishing Level ${minLevel} to fish here` }
   }
 
+  // Ancient Deep requires a Luminous or Golden Lure — the trophy
+  // species there don't bite on regular bait. Both lures drop from
+  // Shrouded Reach voyages so the gate is "you've earned voyage drops
+  // before you can chase trophies", not a hard paywall.
+  if (habitat === 'ancient_deep' && baitType !== 'luminous' && baitType !== 'golden') {
+    return { error: 'The Ancient Deep needs a Luminous or Golden Lure.' }
+  }
+
   // Derive event effects server-side — never trust client flags
   const activeEvent = getActiveEvent(profile.active_event)
   const noBait = activeEvent?.type === 'bloom'
