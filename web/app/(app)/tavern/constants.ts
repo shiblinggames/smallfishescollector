@@ -10,9 +10,14 @@
 //
 // Base-game RTP at these numbers ≈ 92%; the ~5% jackpot feed plus the
 // seeded pot brings the total to ≈ 97% — slightly under the old table
-// in base pay but with real variance: 1-in-10 spins hit a sardine
-// triple (3×), catfish PAIRS pay 25× about 1-in-217, and the natural
-// catfish triple (1-in-15,625) takes the pot.
+// in base pay but with real variance: 1-in-11 spins hit a sardine
+// triple (3×), catfish PAIRS pay 15× about 1-in-99, and the natural
+// catfish triple (1-in-4,630) takes the pot.
+//
+// 2026-06-10 retune: catfish weight 4 → 6 (jackpot was 1-in-15,625 and
+// never popped at current population; now hits 3.4× more often, pots
+// pop smaller but regularly). Pair payout 25× → 15× to compensate —
+// the more-common pair would have added ~14pp of RTP otherwise.
 
 export type SlotSymbolId = 'common' | 'rare' | 'legendary' | 'catfish' | 'anchor'
 
@@ -23,11 +28,11 @@ export const SLOT_SYMBOLS_LIST: {
   weight: number
   label: string
 }[] = [
-  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 46, label: 'Sardine' },
+  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 45, label: 'Sardine' },
   { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 20, label: 'Blue Marlin' },
   { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 9, label: 'Blue Whale' },
-  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 4,  label: 'Catfish' },
-  { id: 'anchor',                                   color: '#34d399', weight: 21, label: 'Hook' },
+  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 6,  label: 'Catfish' },
+  { id: 'anchor',                                   color: '#34d399', weight: 20, label: 'Hook' },
 ]
 
 // 3-of-a-kind. Catfish is 0 here because a natural catfish triple pays
@@ -46,7 +51,7 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
 export const SLOT_PAIR_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
   rare:      1.5,
   legendary: 5,
-  catfish:   25,
+  catfish:   15,
 }
 
 export const SLOTS_MIN_BET   = 10
