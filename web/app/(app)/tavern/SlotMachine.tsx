@@ -479,10 +479,6 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
           72%       { transform: translateX(4px); }
           88%       { transform: translateX(-2px); }
         }
-        @keyframes pot-shimmer {
-          0%   { transform: translateX(-130%) skewX(-18deg); }
-          100% { transform: translateX(330%) skewX(-18deg); }
-        }
         @keyframes pot-tease {
           0%, 100% { box-shadow: 0 0 14px rgba(240,192,64,0.25), inset 0 0 18px rgba(240,192,64,0.08); }
           50%      { box-shadow: 0 0 34px rgba(240,192,64,0.65), inset 0 0 26px rgba(240,192,64,0.20); }
@@ -538,17 +534,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 animation: potTease ? 'pot-tease 0.9s ease-in-out infinite' : potWon ? 'pot-won-pulse 0.7s ease-in-out infinite' : 'none',
               }}
             >
-              {/* Slow shimmer sweep across the marquee */}
-              <div
-                aria-hidden
-                style={{
-                  position: 'absolute', top: 0, bottom: 0, width: '34%',
-                  background: 'linear-gradient(90deg, transparent, rgba(240,214,150,0.10), transparent)',
-                  animation: 'pot-shimmer 4.5s ease-in-out infinite',
-                  pointerEvents: 'none',
-                }}
-              />
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.22em', color: BRASS }}>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: '#e0c684' }}>
                 Catfish Jackpot
               </p>
               <p
@@ -563,7 +549,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               >
                 <PotTicker value={pot} /> ⟡
               </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9a8a64', marginTop: 2 }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#c4b690', marginTop: 2 }}>
                 {lastWinner.name && lastWinner.amount
                   ? `Last hooked by ${lastWinner.name} for ${lastWinner.amount.toLocaleString()} ⟡`
                   : 'Every spin feeds the pot. Three catfish takes it.'}
@@ -654,7 +640,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                     <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.5rem', color: '#ffe9a8' }}>
                       +{(lastResult.jackpotWin ?? 0).toLocaleString()} ⟡
                     </p>
-                    <p className="font-karla font-400 text-xs mt-1" style={{ color: '#9a8a64' }}>
+                    <p className="font-karla font-400 text-xs mt-1" style={{ color: '#c4b690' }}>
                       Claimed from the Catfish Jackpot
                     </p>
                   </div>
@@ -676,7 +662,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                     <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: '#f0ede8' }}>
                       +{lastResult.net.toLocaleString()} ⟡
                     </p>
-                    <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">
+                    <p className="font-karla font-400 text-[#b3ada2] text-xs mt-1">
                       {SLOT_PAYOUTS[winSym]}× your bet
                     </p>
                   </div>
@@ -702,7 +688,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                       <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: '#f0ede8' }}>
                         +{lastResult!.net.toLocaleString()} ⟡
                       </p>
-                      <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">{mult}× your bet</p>
+                      <p className="font-karla font-400 text-[#b3ada2] text-xs mt-1">{mult}× your bet</p>
                     </div>
                   )
                 })() : showResult && lastResult?.outcome === 'near_miss' ? (
@@ -717,9 +703,9 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 ) : showResult && lastResult?.outcome === 'bonus' && lastResult.net === 0 ? (
                   <p className="font-karla font-400 text-sm" style={{ color: '#34d399' }}>Bonus spin, no extra catch this time</p>
                 ) : showResult && lastResult ? (
-                  <p className="font-karla font-400 text-[#6a6764] text-sm">{lastResult.net.toLocaleString()} ⟡</p>
+                  <p className="font-karla font-400 text-[#8d8880] text-sm">{lastResult.net.toLocaleString()} ⟡</p>
                 ) : (
-                  <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#5a544c' }}>
+                  <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#a89e8c' }}>
                     Your bet of {wager} ⟡ would claim {potShare.toLocaleString()} ⟡ of the pot
                   </p>
                 )}
@@ -737,7 +723,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               {/* Balance + daily limit */}
               <div className="flex items-baseline justify-between" style={{ marginBottom: '0.7rem' }}>
                 <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.05rem' }}>{doubloons.toLocaleString()} ⟡</p>
-                <p className="font-karla font-300 text-[#8a857c]" style={{ fontSize: '0.62rem' }}>
+                <p className="font-karla font-400 text-[#a89e8c]" style={{ fontSize: '0.66rem' }}>
                   {dailyRemaining > 0
                     ? `${dailyRemaining.toLocaleString()} ⟡ daily limit left`
                     : 'Daily limit reached, back tomorrow'}
@@ -804,25 +790,25 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
           {/* Stats */}
           {stats.spins > 0 && (
             <div className="w-full rounded-xl overflow-hidden" style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#6a6764] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.12em] text-[#8d8880] px-4 pt-3 pb-2" style={{ fontSize: '0.6rem' }}>
                 Your Stats
               </p>
               <div className="grid grid-cols-3" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
                 <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.12)' }}>
                   <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1rem' }}>{stats.spins.toLocaleString()}</p>
-                  <p className="font-karla text-[#6a6764] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Spins</p>
+                  <p className="font-karla text-[#8d8880] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Spins</p>
                 </div>
                 <div className="flex flex-col items-center py-3 px-2" style={{ borderRight: '1px solid rgba(255,255,255,0.12)' }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: stats.net >= 0 ? '#4ade80' : '#f87171' }}>
                     {stats.net >= 0 ? '+' : ''}{stats.net.toLocaleString()}
                   </p>
-                  <p className="font-karla text-[#6a6764] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Net ⟡</p>
+                  <p className="font-karla text-[#8d8880] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Net ⟡</p>
                 </div>
                 <div className="flex flex-col items-center py-3 px-2">
                   <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1rem' }}>
                     {stats.biggestWin > 0 ? `+${stats.biggestWin.toLocaleString()}` : '—'}
                   </p>
-                  <p className="font-karla text-[#6a6764] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Best Win</p>
+                  <p className="font-karla text-[#8d8880] mt-0.5" style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Best Win</p>
                 </div>
               </div>
             </div>
@@ -886,7 +872,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
             </div>
             {/* Jackpot rules */}
             <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.12)', background: 'rgba(240,192,64,0.05)' }}>
-              <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#9a8a64', lineHeight: 1.5 }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#bfb392', lineHeight: 1.5 }}>
                 Every spin feeds the Catfish Jackpot. Land three catfish to claim a share matching your bet: a full {SLOTS_MAX_BET} ⟡ bet takes the whole pot.
               </p>
             </div>
