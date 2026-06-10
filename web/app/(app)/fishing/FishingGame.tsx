@@ -3769,7 +3769,12 @@ export default function FishingGame({
       angleRef.current = ((angleRef.current + dirRef.current * speedRef.current * delta / 1000) % 360 + 360) % 360
 
       if (elapsedMsRef.current >= nextChgMsRef.current) {
-        speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
+        // NO speed re-roll here. The needle keeps the one speed rolled at
+        // cast start for the whole spin — a mid-spin jump (e.g. 130→210°/s
+        // in Shallows) read as a stutter/skip, and the first boundary
+        // almost always landed inside the first revolution. This boundary
+        // now only drives the discrete zone mechanics below (reversals,
+        // blackouts), which are telegraphed effects rather than wobble.
         if (Math.random() < effectiveReverseChance) {
           // Only reverse near the catch zone — not while drifting through dead space
           const catchCenter = (CATCH_CENTER + capturedZoneRotation) % 360
