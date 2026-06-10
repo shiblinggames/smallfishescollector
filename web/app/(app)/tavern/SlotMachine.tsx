@@ -549,7 +549,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 }}
               />
               <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.22em', color: BRASS }}>
-                ☠ Catfish Jackpot ☠
+                Catfish Jackpot
               </p>
               <p
                 className="font-cinzel font-700"
