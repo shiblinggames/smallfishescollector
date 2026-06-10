@@ -214,8 +214,9 @@ const PETE_CHALLENGE_LOOT: typeof CORSAIRS_RECKONING['loot'] = (() => {
     w('gems_25',               10),  // 10%
     w('pack',                   5),  //  5%
     w('finndicate_hull',        6),  //  6% chapter-1 trophy skin (2× the
-                                       //  3% Pete normal rate; Krust challenge
-                                       //  doubles to 14% as the realistic source)
+                                       //  3% Pete normal rate; Krust drops
+                                       //  it at the same locked 3% / 6%
+                                       //  normal / challenge cadence)
     w('corsair_cannon',        43),  // 43% normal item (was 40, +3 absorbed)
     w('corsair_prime_cannon',  10),  // 10% legendary (2× normal)
   ]
@@ -229,10 +230,13 @@ const KRUST_CHALLENGE_LOOT: typeof CAPTAIN_KRUST['loot'] = (() => {
     w('doubloons_1200',        10),
     w('gems_50',               10),
     w('pack_2',                 5),
-    w('finndicate_hull',       14),  // 14% chapter-1 trophy skin (2× the
-                                       //  7% Krust normal rate; the realistic
-                                       //  chase source for the chapter's skin)
-    w('krusts_carapace',       36),  // 36% normal item (was 40, -4 to fund the skin bump)
+    w('finndicate_hull',        6),  //  6% chapter-1 trophy skin (2× the
+                                       //  3% Krust normal rate; same locked
+                                       //  3% / 6% cadence as Pete)
+    w('krusts_carapace',       44),  // 44% normal item — absorbed the 8 weight
+                                       //  freed when Krust's hull rate dropped
+                                       //  from 14 to 6, keeping the 30% special-
+                                       //  drop / 70% currency split intact
     w('captains_carapace',     10),
   ]
 })()

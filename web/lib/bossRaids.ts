@@ -366,11 +366,13 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     { id: 'doubloons_1200',    label: '+1,200 ⟡',              image: '/dailybonus.png',         emoji: '💰',       rarity: 'uncommon',  weight: 20 },
     { id: 'gems_50',           label: '50 Gems',                image: null,                      emoji: GEM_GLYPH,  rarity: 'rare',      weight: 15 },
     { id: 'pack_2',            label: '200 Gems',               image: null,                      emoji: GEM_GLYPH,  rarity: 'epic',      weight: 5  },
-    // 30% special drops. Finndicate Hull is the shared chapter-1 trophy
-    // skin (Pete drops it at weight 3; Krust drops at the slightly
-    // higher 7 so this raid is the realistic source).
-    { id: 'finndicate_hull',   label: 'Finndicate Hull',        image: null,                      emoji: '🚢',       rarity: 'epic',      weight: 7,  shipSkinId: 'finndicate_hull' },
-    { id: 'krusts_carapace',   label: "Krust's Carapace",       image: '/captainshull.png',       emoji: '🛡️',      rarity: 'epic',      weight: 20 },
+    // 30% special drops. Finndicate Hull is the shared chapter-1
+    // trophy skin and stays at the same 3% as Pete drops it; the
+    // 4 weight points freed up move into Krust's Carapace, which keeps
+    // the 70/30 currency/special split intact. Challenge variant
+    // doubles the hull rate to 6% in raidChallenge.ts.
+    { id: 'finndicate_hull',   label: 'Finndicate Hull',        image: null,                      emoji: '🚢',       rarity: 'epic',      weight: 3,  shipSkinId: 'finndicate_hull' },
+    { id: 'krusts_carapace',   label: "Krust's Carapace",       image: '/captainshull.png',       emoji: '🛡️',      rarity: 'epic',      weight: 24 },
     { id: 'captains_carapace', label: "Captain's Carapace",     image: '/captainscarapace.png',   emoji: '🛡️',      rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
