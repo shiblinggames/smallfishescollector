@@ -83,57 +83,63 @@ export default function WagerCircle({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', position: 'relative' }}>
-      {/* Chip rack + inline Clear. The bet visual lives in the parent
-          (PotPill); Clear sits as a small × on the right of the rack
-          since there's no longer a bet circle to anchor it to. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{
-          flex: 1,
-          display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center',
-          background: 'rgba(0,0,0,0.35)',
-          border: '1px solid rgba(196,169,106,0.2)',
-          borderRadius: 12,
-          padding: '0.55rem 0.6rem',
-        }}>
-          {presets.map(denom => {
-            const disabledByChips = denom > chipsLeft
-            const disabledByCap   = wager + denom > maxBet
-            const disabled = disabledByChips || disabledByCap
-            return (
-              <ChipDisc
-                key={denom}
-                denom={denom}
-                size={42}
-                disabled={disabled}
-                onTap={handleChipTap}
-                title={disabledByCap ? `Per-hand max ${maxBet.toLocaleString()} ⟡` : disabledByChips ? 'Not enough chips' : `Add ${denom} ⟡`}
-              />
-            )
-          })}
-        </div>
+      {/* Chip rack — full width, always. The Clear control used to sit
+          as a sibling × that shrank the rack when it appeared/disappeared
+          and pushed the rightmost chip off-screen on narrow phones. Now
+          it lives in its own reserved row underneath so chip positions
+          stay rock-solid no matter what the wager state is. */}
+      <div style={{
+        display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center',
+        background: 'rgba(0,0,0,0.35)',
+        border: '1px solid rgba(196,169,106,0.2)',
+        borderRadius: 12,
+        padding: '0.55rem 0.6rem',
+      }}>
+        {presets.map(denom => {
+          const disabledByChips = denom > chipsLeft
+          const disabledByCap   = wager + denom > maxBet
+          const disabled = disabledByChips || disabledByCap
+          return (
+            <ChipDisc
+              key={denom}
+              denom={denom}
+              size={42}
+              disabled={disabled}
+              onTap={handleChipTap}
+              title={disabledByCap ? `Per-hand max ${maxBet.toLocaleString()} ⟡` : disabledByChips ? 'Not enough chips' : `Add ${denom} ⟡`}
+            />
+          )
+        })}
+      </div>
+      {/* Reserved 24px row for the Clear control. Always renders so the
+          Deal button sits in the same spot whether or not the player has
+          a bet built. AnimatePresence fades the pill in/out within the
+          reserved space — no layout shift, no Deal-button jump. */}
+      <div style={{ height: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '-0.4rem' }}>
         <AnimatePresence>
           {wager > 0 && (
             <motion.button
               key="clear"
               type="button"
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
+              initial={{ opacity: 0, y: -3 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -3 }}
               transition={{ duration: 0.18 }}
               onClick={onClear}
               aria-label="Clear wager"
+              className="font-karla font-700 uppercase tracking-[0.14em]"
               style={{
-                width: 38, height: 38, borderRadius: '50%',
-                flexShrink: 0,
-                background: 'rgba(248,113,113,0.14)',
+                background: 'rgba(248,113,113,0.12)',
                 border: '1px solid rgba(248,113,113,0.45)',
                 color: '#f08a8a',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: 999,
+                padding: '0.25rem 0.75rem',
+                fontSize: '0.6rem',
                 cursor: 'pointer',
-                fontSize: '1rem',
-                padding: 0, lineHeight: 1,
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
               }}>
-              ×
+              × Clear bet
             </motion.button>
           )}
         </AnimatePresence>
