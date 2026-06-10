@@ -131,6 +131,10 @@ html, body {
   cursor: pointer;
 }
 .btn-gold:hover  { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 22px rgba(240,192,64,0.32); }
+/* Pressed state — on touch, :hover never fires, so without this the
+   button gives zero visual acknowledgment of the tap. Sits AFTER :hover
+   so the press wins while both match. Short transition keeps it crisp. */
+.btn-gold:active { transform: translateY(1px) scale(0.985); box-shadow: 0 1px 4px rgba(0,0,0,0.35), 0 0 10px rgba(240,192,64,0.14); transition-duration: 0.06s; }
 .btn-gold:disabled, .btn-gold[disabled] { opacity: 0.45; pointer-events: none; }
 
 .btn-ghost {
@@ -151,6 +155,7 @@ html, body {
   cursor: pointer;
 }
 .btn-ghost:hover { border-color: #f0ede8; transform: translateY(-2px); }
+.btn-ghost:active { border-color: #f0ede8; transform: scale(0.97); opacity: 0.85; transition-duration: 0.06s; }
 .btn-ghost:disabled { opacity: 0.45; pointer-events: none; }
 
 /* ── Surfaces & inputs ── */

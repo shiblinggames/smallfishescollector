@@ -100,7 +100,7 @@ export default function LeaderboardModal({
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className="font-karla font-700"
+                  className="font-karla font-700 active:scale-95 transition-transform duration-75"
                   style={{
                     padding: '0.5rem 0.5rem',
                     borderRadius: 9,

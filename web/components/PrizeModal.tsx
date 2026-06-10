@@ -36,7 +36,7 @@ export default function PrizeModal({ cardName, variantName, prizeCode, onClose }
             {prizeCode}
           </p>
           <button onClick={copyCode}
-                  className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] transition-colors">
+                  className="font-karla font-600 text-[0.65rem] uppercase tracking-[0.12em] text-[#a0a09a] hover:text-[#f0ede8] active:text-[#f0ede8] active:scale-95 transition-colors">
             Copy Code
           </button>
         </div>

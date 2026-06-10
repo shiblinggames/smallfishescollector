@@ -589,7 +589,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                     key={amt}
                     onClick={() => !disabled && setWager(amt)}
                     disabled={disabled}
-                    className="font-karla font-600 text-xs uppercase tracking-[0.10em] px-3 py-2 rounded-lg transition-all"
+                    className="font-karla font-600 text-xs uppercase tracking-[0.10em] px-3 py-2 rounded-lg transition-all active:scale-95"
                     style={{
                       background: wager === amt ? 'rgba(240,192,64,0.18)' : 'rgba(8,8,6,0.72)',
                       border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.18)'}`,

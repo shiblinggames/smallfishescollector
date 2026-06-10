@@ -50,6 +50,8 @@ export default function TideModal({ tide, onPicked }: Props) {
           boxShadow: '0 0 48px rgba(125,211,252,0.14), 0 0 120px rgba(125,211,252,0.06)',
           maxHeight: '88vh',
           overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
         }}
       >
         {/* Eyebrow */}
@@ -81,8 +83,9 @@ export default function TideModal({ tide, onPicked }: Props) {
             so naming stays consistent across the run. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {tide.choices.map(c => (
-            <button
+            <motion.button
               key={c.id}
+              whileTap={{ scale: 0.97 }}
               onClick={() => onPicked(c)}
               className="font-karla"
               style={{
@@ -133,7 +136,7 @@ export default function TideModal({ tide, onPicked }: Props) {
                   </div>
                 )
               })()}
-            </button>
+            </motion.button>
           ))}
         </div>
       </motion.div>
