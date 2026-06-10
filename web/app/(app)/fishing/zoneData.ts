@@ -3,7 +3,14 @@ export const ZONE_RARITY_RATES: Record<string, Record<number, number>> = {
   open_waters: { 1: 53, 2: 26, 3: 14, 4: 6, 5: 1 },
   deep:        { 1: 50, 2: 28, 3: 15, 4: 6, 5: 1 },
   abyss:       { 1: 46, 2: 26, 3: 18, 4: 8, 5: 2 },
-  ancient_deep: { 5: 100 },
+  // Ancient Deep — three tiers split across boss-fish (trophies, tier 5)
+  // and the 12 regulars added 2026-06-09 (tier 3 + tier 4). The lower
+  // tiers dominate the bite pool so the zone reads as "regular catches
+  // most of the time, trophies are the rare prize chase" instead of
+  // every cast being a coin-flip on a boss. Once trophies are caught
+  // they filter out of the tier-5 pool, leaving the rates to renormalise
+  // automatically across the remaining tiers.
+  ancient_deep: { 3: 50, 4: 40, 5: 10 },
 }
 
 // Minimum fishing level required to access each zone
