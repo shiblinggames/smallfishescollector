@@ -315,6 +315,11 @@ export async function reelIn(
        *  otherwise. The new running doubloons total is in newDoubloons. */
       sigilBonus?: number
       newDoubloons?: number
+      /** True if THIS catch claimed the global "first Ancient Deep catch"
+       *  contest. Only the first player to land an ancient_deep fish
+       *  ever sees this — everyone else gets undefined/false. Triggers
+       *  the win celebration overlay client-side. */
+      firstAncientCatch?: boolean
     }
   | { caught: false }
   | { error: string }
@@ -393,6 +398,31 @@ export async function reelIn(
     const ancientNewDoubloons = (profile.doubloons ?? 0) + ancientSigilBonus
     if (ancientSigilBonus > 0) updates.doubloons = ancientNewDoubloons
     await admin.from('profiles').update(updates).eq('id', user.id)
+
+    // ── First-ever Ancient Deep catch contest ───────────────────────────
+    // Atomic claim via the contests table's PK constraint: whichever
+    // INSERT lands first wins; everyone else's INSERT silently no-ops
+    // via ON CONFLICT DO NOTHING. Whoever pulled it off gets a targeted
+    // mail with claim instructions for the custom-boat prize.
+    let firstAncientCatch = false
+    {
+      const { data: claimed } = await admin
+        .from('contests')
+        .insert({ contest_id: 'first_ancient_catch', winner_user_id: user.id, prize_code: 'ANCIENT-FIRST' })
+        .select('contest_id')
+        .maybeSingle()
+      if (claimed) {
+        firstAncientCatch = true
+        // Targeted mail — the prize details + claim instructions. Only
+        // the winner sees it in their inbox (target_user_id filter).
+        await admin.from('mail_messages').insert({
+          subject: '🏆 First Ancient Deep Catch — Custom Boat Prize',
+          body: "You did it. You're the first captain ever to land a fish in the Ancient Deep.\n\nAs promised, you've won a custom boat designed for you. Reply to this email to claim it:\n\nhello@shiblinggames.com\n\nInclude your prize code: ANCIENT-FIRST\n\nWe'll work with you on the design. Welcome to the deep.\n\n— Cap'n Shibling",
+          sender_label: "Cap'n Shibling",
+          target_user_id: user.id,
+        })
+      }
+    }
     // Ancients have one canonical size each (length_min_in === length_max_in
     // per the migration). No PB chase since each ancient is a one-time catch
     // stored in trophy_catches. Display the size for flavor; skip tier chrome
@@ -415,6 +445,7 @@ export async function reelIn(
       isShiny: false,
       sigilBonus: ancientSigilBonus,
       newDoubloons: ancientSigilBonus > 0 ? ancientNewDoubloons : undefined,
+      firstAncientCatch,
     }
   }
 

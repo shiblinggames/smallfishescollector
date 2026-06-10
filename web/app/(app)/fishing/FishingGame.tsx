@@ -3213,6 +3213,11 @@ export default function FishingGame({
   // tab mid-celebration.
   const [firstCatchCeleb, setFirstCatchCeleb] = useState(false)
   const firstCatchArmedRef = useRef(!hasSeenFirstCatchCelebration)
+  // First-Ancient-Deep-Catch contest. Server-side atomic claim — only
+  // the global winner ever sees this fire, everyone else's flag is
+  // false. The prize is a custom boat redeemed via the in-game mail
+  // sent at the same moment.
+  const [firstAncientCeleb, setFirstAncientCeleb] = useState(false)
   const [catchResult, setCatchResult] = useState<{
     fish: FishSpecies
     baitSaved: boolean
@@ -4328,6 +4333,17 @@ export default function FishingGame({
           // (the rect is already laid out) but the value update lands
           // visually right as the coins arrive.
           spawnSigilCoins(res.sigilBonus ?? 0)
+        }
+        // First Ancient Deep Catch contest — server-side atomic claim
+        // already happened. If THIS catch claimed it, fire the prize
+        // overlay after a beat so the player reads the catch result
+        // first, then the win announcement lands on top. The prize
+        // mail is already in their inbox (sent server-side in the same
+        // beat as the contest claim); the celebration tells them to
+        // check it. Nav's mail pip catches up on next route change /
+        // refresh, which is fine for a one-shot lifetime event.
+        if ((res as { firstAncientCatch?: boolean }).firstAncientCatch) {
+          setTimeout(() => setFirstAncientCeleb(true), 1500)
         }
         // Reconcile the streak from the server (authoritative). reelIn already
         // persisted current_perfect_streak, the highest-streak record, and the
@@ -8109,6 +8125,94 @@ export default function FishingGame({
                 }}
               >
                 Set Sail →
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── First Ancient Deep Catch contest winner overlay ──
+          Server-atomic claim, so this only ever renders for the single
+          global winner. Gold/legendary treatment to set it apart from
+          the everyday first-catch celebration; foregrounds the prize
+          code + points at the mail inbox for full claim instructions. */}
+      <AnimatePresence>
+        {firstAncientCeleb && (
+          <motion.div
+            key="first-ancient-celeb"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={() => setFirstAncientCeleb(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9000,
+              background: 'radial-gradient(ellipse at center, rgba(240,192,64,0.42) 0%, rgba(20,12,4,0.92) 60%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', padding: '1.5rem',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.4, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 240, damping: 14 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: 380, width: '100%',
+                background: 'linear-gradient(180deg, #1a1408 0%, #0a0703 100%)',
+                border: '1px solid rgba(240,192,64,0.65)',
+                borderRadius: 22,
+                padding: '1.8rem 1.4rem 1.4rem',
+                textAlign: 'center',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 48px rgba(240,192,64,0.45)',
+              }}
+            >
+              <p className="font-karla font-700 uppercase tracking-[0.22em]"
+                style={{ fontSize: '0.6rem', color: 'rgba(240,214,149,0.85)', marginBottom: 10 }}>
+                ✦ Contest Winner ✦
+              </p>
+              <p className="font-cinzel font-700"
+                style={{ fontSize: '1.9rem', color: '#f0d695', lineHeight: 1.1, marginBottom: 10, textShadow: '0 0 28px rgba(240,192,64,0.7)' }}>
+                First in the Abyss.
+              </p>
+              <p className="font-karla font-400"
+                style={{ fontSize: '0.85rem', color: 'rgba(232,220,188,0.82)', lineHeight: 1.55, marginBottom: 18 }}>
+                You&apos;re the first captain ever to land a fish in the Ancient Deep. You&apos;ve won a <strong style={{ color: '#f0d695' }}>custom boat</strong> designed for you.
+              </p>
+              <div style={{
+                background: 'rgba(240,192,64,0.10)',
+                border: '1px dashed rgba(240,192,64,0.55)',
+                borderRadius: 10,
+                padding: '0.75rem 1rem',
+                marginBottom: 14,
+              }}>
+                <p className="font-karla font-700 uppercase tracking-[0.18em]"
+                  style={{ fontSize: '0.52rem', color: 'rgba(240,214,149,0.65)', marginBottom: 4 }}>
+                  Prize Code
+                </p>
+                <p className="font-cinzel font-700"
+                  style={{ fontSize: '1.25rem', color: '#f0d695', letterSpacing: '0.12em' }}>
+                  ANCIENT-FIRST
+                </p>
+              </div>
+              <p className="font-karla font-400"
+                style={{ fontSize: '0.74rem', color: 'rgba(200,184,144,0.7)', lineHeight: 1.5, marginBottom: 18 }}>
+                Check your inbox for claim instructions. The code + the mail confirm you as the winner.
+              </p>
+              <button
+                type="button"
+                onClick={() => setFirstAncientCeleb(false)}
+                className="font-karla font-700 uppercase tracking-[0.12em]"
+                style={{
+                  width: '100%', padding: '0.85rem 0',
+                  background: 'rgba(240,192,64,0.20)',
+                  border: '1px solid rgba(240,192,64,0.7)',
+                  color: '#f0d695',
+                  borderRadius: 12, fontSize: '0.78rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Claim Your Prize
               </button>
             </motion.div>
           </motion.div>

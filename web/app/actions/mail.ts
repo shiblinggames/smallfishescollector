@@ -31,6 +31,10 @@ export async function getInbox(): Promise<InboxResult> {
     admin.from('mail_messages')
       .select('id, subject, body, sender_label, attachment_doubloons, attachment_gems, created_at, expires_at')
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      // Broadcasts have target_user_id IS NULL; targeted mail only
+      // shows to its recipient. Service-role bypasses RLS so the filter
+      // has to be explicit here.
+      .or(`target_user_id.is.null,target_user_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
       .limit(100),
     admin.from('mail_reads')
@@ -75,7 +79,8 @@ export async function getMailUnreadCount(): Promise<number> {
   const [{ data: msgs }, { data: reads }] = await Promise.all([
     admin.from('mail_messages')
       .select('id')
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`),
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .or(`target_user_id.is.null,target_user_id.eq.${user.id}`),
     admin.from('mail_reads')
       .select('message_id')
       .eq('user_id', user.id),
@@ -117,7 +122,8 @@ export async function markAllMailRead(): Promise<{ ok: boolean; count: number }>
   const [{ data: msgs }, { data: reads }] = await Promise.all([
     admin.from('mail_messages')
       .select('id')
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`),
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .or(`target_user_id.is.null,target_user_id.eq.${user.id}`),
     admin.from('mail_reads')
       .select('message_id')
       .eq('user_id', user.id),
