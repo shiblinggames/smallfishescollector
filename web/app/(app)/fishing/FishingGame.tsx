@@ -180,6 +180,12 @@ const BOSS_CONFIG: Record<string, BossConfig> = {
   'Snipe Eel':          { mechanic: 'shrink',     phases: 2 },
   'Yeti Crab':          { mechanic: 'accelerate', phases: 2 },
   'Sea Lamprey':        { mechanic: 'shrink',     phases: 2, wildcard: true },
+  'Pacific Hagfish':    { mechanic: 'split',      phases: 2 },
+  'Tripod Fish':        { mechanic: 'drift',      phases: 2 },
+  'Sea Pig':            { mechanic: 'accelerate', phases: 2 },
+  'Bigfin Squid':       { mechanic: 'randomize',  phases: 2 },
+  'Vent Octopus':       { mechanic: 'shrink',     phases: 2 },
+  'Black Dragonfish':   { mechanic: 'shrink',     phases: 2, wildcard: true },
 }
 const SHASTASAURUS_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split']
 
