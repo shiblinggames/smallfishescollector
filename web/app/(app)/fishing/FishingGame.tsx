@@ -495,7 +495,12 @@ function DialSVG({
   fireLevel?: 0 | 1 | 2
   snapKey?: number
   perfectBurstKey?: number
-  needleRef?: React.Ref<SVGGElement>
+  /** Ref on the needle OVERLAY DIV (not an SVG group). The needle lives
+   *  outside the main dial SVG in its own tiny composited layer so the
+   *  parent can spin it with a Web Animations API rotation that runs on
+   *  the compositor thread — main-thread jank (first-mount raster, GC,
+   *  entrance animations) can no longer make the needle skip. */
+  needleRef?: React.Ref<HTMLDivElement>
   /** Ref on the SVG zones group, so the parent can imperatively
    *  rotate the arcs during the drift mechanic without forcing a
    *  React re-render every frame. */
@@ -622,27 +627,6 @@ function DialSVG({
             transition={{ duration: 0.7, ease: 'easeOut' }}
           />
         )}
-        {/* Needle — the parent drives `transform` imperatively via needleRef
-            every frame (no per-frame React re-render); the `angle` prop is a
-            live angleRef read so any real re-render lands jump-free.
-            IMPORTANT: no `style` (filter/transition) in the normal case.
-            The transform attribute changes every frame; a standing CSS
-            transition/filter declaration on the same element forces it
-            off the raster-cache fast path and causes per-frame stutter
-            (worst on mobile). The perfect-flash filter is applied only
-            during the brief flash window, where the extra cost is fine. */}
-        <g ref={needleRef} transform={`rotate(${angle}, ${CX}, ${CY})`}
-           style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
-          <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
-          <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
-        </g>
-        <motion.circle cx={CX} cy={CY} r="8"
-          fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
-          animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
-          transition={{ duration: 0.32, ease: 'easeOut' }}
-          style={{ transformOrigin: `${CX}px ${CY}px` }}
-        />
         {/* Perfect zone burst — arc flash + expanding ring on tap */}
         {perfectBurstKey > 0 && perfectZone && (
           <g key={perfectBurstKey} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
@@ -680,6 +664,41 @@ function DialSVG({
           />
         )}
       </svg>
+      {/* Needle overlay — its own tiny composited layer ABOVE the dial SVG.
+          The parent spins this div with a compositor-thread WAAPI rotation
+          (see startNeedleSpin); React's inline `transform` here only matters
+          when no animation is running (mount frame + frozen lock-in), since
+          a running animation overrides inline style. The div spans the same
+          box as the SVG, so rotating about its center === the old
+          rotate(angle, CX, CY). `angle` is a live angleRef read, so any
+          unrelated re-render paints the current position, not a stale one.
+          With the needle out of the main SVG, the dial repaints NOTHING
+          between zone crossings (it used to re-raster every frame). */}
+      <div ref={needleRef} style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        willChange: 'transform',
+        transform: `rotate(${angle}deg)`,
+      }}>
+        <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
+          <g style={perfectFlash ? { filter: 'drop-shadow(0 0 6px #fde68a)' } : undefined}>
+            <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={perfectFlash ? 12 : 10} strokeOpacity={perfectFlash ? 0.28 : 0.12} strokeLinecap="round" />
+            <line x1={CX} y1={CY} x2={CX} y2={needleTipY} stroke={liveNeedleColor} strokeWidth={liveNeedleStroke} strokeLinecap="round" />
+            <circle cx={CX} cy={needleTipY} r={liveTipRadius} fill={liveNeedleColor} />
+          </g>
+        </svg>
+      </div>
+      {/* Hub overlay — above the needle overlay so the center joint stays
+          covered (it sat after the needle in the old single-SVG paint order). */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block' }}>
+          <motion.circle cx={CX} cy={CY} r="8"
+            fill="rgba(10,10,10,0.9)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
+            animate={snapAnim ? { scale: [1, 1.8, 0.7, 1.15, 1] } : { scale: 1 }}
+            transition={{ duration: 0.32, ease: 'easeOut' }}
+            style={{ transformOrigin: `${CX}px ${CY}px` }}
+          />
+        </svg>
+      </div>
     </div>
   )
 }
@@ -3542,11 +3561,73 @@ export default function FishingGame({
   const lastTimeRef     = useRef(0)
   const elapsedMsRef    = useRef(0)
   const nextChgMsRef    = useRef(0)
-  // Perf: the needle is driven imperatively (DOM transform) each frame so the
-  // huge parent doesn't re-render 60×/sec during the dial. These mirror the
-  // latest zones/rotation for in-loop zone-crossing detection (the only thing
-  // that needs a real re-render — to refresh the colour/label tells).
-  const needleGroupRef   = useRef<SVGGElement | null>(null)
+  // Compositor-driven needle. The needle used to be an SVG <g> rotated via
+  // setAttribute('transform') from the rAF tick — but SVG attribute
+  // transforms are NOT compositor-accelerated, so every frame the main
+  // thread had to repaint the dial. At steady state that's cheap; in the
+  // first ~0.5s after the dial mounts the main thread is busy with one-time
+  // work (phase-flip render, first SVG rasterization, entrance animation,
+  // layer-tree rebuild from visibility/class flips, GC from the cast server
+  // action) and any overrun made the main-thread-driven needle visibly skip
+  // — the unkillable "stutters near the start of the first revolution".
+  // Now the needle lives in its own tiny overlay layer (HTML div) and spins
+  // via a Web Animations API rotation that runs on the COMPOSITOR thread:
+  // the main thread can block entirely and the needle still glides. The
+  // angle is deterministic — a0 + dir × speed × elapsed — so the rAF tick
+  // derives angleRef from the clock (for zone tells + lock-in resolution)
+  // instead of integrating per-frame deltas. Reversals restart the
+  // animation at the flip point (a deliberate discontinuity). If
+  // element.animate is unavailable/fails, spinAnimRef stays null and the
+  // tick falls back to the old imperative per-frame transform write.
+  const needleGroupRef   = useRef<HTMLDivElement | null>(null)
+  const spinAnimRef      = useRef<Animation | null>(null)
+  const spinA0Ref        = useRef(0)         // angle at animation start (deg)
+  const spinStartRef     = useRef<number | null>(null) // timeline time at start (ms)
+  /** Exact needle angle right now, derived from the animation clock. */
+  const spinAngleNow = () => {
+    if (spinAnimRef.current && spinStartRef.current !== null) {
+      const t = performance.now()
+      const a = spinA0Ref.current + dirRef.current * speedRef.current * (t - spinStartRef.current) / 1000
+      return ((a % 360) + 360) % 360
+    }
+    return angleRef.current
+  }
+  /** (Re)start the compositor rotation from angle a0 in dirRef's direction. */
+  const startNeedleSpin = (a0: number) => {
+    const el = needleGroupRef.current
+    spinAnimRef.current?.cancel()
+    spinAnimRef.current = null
+    spinStartRef.current = null
+    spinA0Ref.current = a0
+    if (!el || typeof el.animate !== 'function' || speedRef.current <= 0) return
+    try {
+      const anim = el.animate(
+        [
+          { transform: `rotate(${a0}deg)` },
+          { transform: `rotate(${a0 + dirRef.current * 360}deg)` },
+        ],
+        { duration: 360_000 / speedRef.current, iterations: Infinity },
+      )
+      // Pin the start time synchronously so the visual position and the
+      // deterministic angle math share the exact same t0 (otherwise the
+      // animation starts "when ready", up to a frame later than now).
+      const t0 = document.timeline?.currentTime
+      if (typeof t0 === 'number') anim.startTime = t0
+      spinAnimRef.current = anim
+      spinStartRef.current = typeof t0 === 'number' ? t0 : performance.now()
+    } catch {
+      spinAnimRef.current = null
+      spinStartRef.current = null
+    }
+  }
+  /** Stop the compositor spin and freeze the needle at exactly `a` deg. */
+  const freezeNeedleAt = (a: number) => {
+    const el = needleGroupRef.current
+    if (el) el.style.transform = `rotate(${a}deg)`
+    spinAnimRef.current?.cancel()
+    spinAnimRef.current = null
+    spinStartRef.current = null
+  }
   // Imperative target for the drift mechanic. Same pattern as the
   // needle: rotate the SVG zones group via setAttribute('transform')
   // every interval tick instead of triggering a parent re-render
@@ -3759,6 +3840,12 @@ export default function FishingGame({
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
     lastZoneFromRef.current = NaN // force a zone sync on the first frame
 
+    // Hand the rotation to the compositor (see needleGroupRef block above).
+    // The rAF tick below no longer MOVES the needle — it derives the angle
+    // from the same clock the animation runs on, and only paints the
+    // zone-crossing tells + runs the boundary mechanics.
+    startNeedleSpin(angleRef.current)
+
     const tick = (timestamp: number) => {
       if (phaseRef.current !== 'catching') return
       if (lastTimeRef.current === 0) lastTimeRef.current = timestamp
@@ -3766,7 +3853,9 @@ export default function FishingGame({
       lastTimeRef.current = timestamp
       elapsedMsRef.current += delta
 
-      angleRef.current = ((angleRef.current + dirRef.current * speedRef.current * delta / 1000) % 360 + 360) % 360
+      angleRef.current = spinAnimRef.current
+        ? spinAngleNow()
+        : ((angleRef.current + dirRef.current * speedRef.current * delta / 1000) % 360 + 360) % 360
 
       if (elapsedMsRef.current >= nextChgMsRef.current) {
         // NO speed re-roll here. The needle keeps the one speed rolled at
@@ -3780,7 +3869,11 @@ export default function FishingGame({
           const catchCenter = (CATCH_CENTER + capturedZoneRotation) % 360
           const needle = angleRef.current
           const dist = Math.min(Math.abs(catchCenter - needle), 360 - Math.abs(catchCenter - needle))
-          if (dist <= 55) dirRef.current *= -1
+          if (dist <= 55) {
+            dirRef.current *= -1
+            // Restart the compositor animation from the flip point.
+            startNeedleSpin(angleRef.current)
+          }
         }
         const scaledBlackout = zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
         if (Math.random() < scaledBlackout && blackoutTimerRef.current === null) {
@@ -3793,9 +3886,10 @@ export default function FishingGame({
         }
         nextChgMsRef.current = elapsedMsRef.current + (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
       }
-      // Move the needle imperatively (no React re-render) for a smooth 60fps.
+      // Fallback only — when the WAAPI spin couldn't start, drive the
+      // needle imperatively per frame like the pre-compositor build did.
       const ng = needleGroupRef.current
-      if (ng) ng.setAttribute('transform', `rotate(${angleRef.current}, ${CX}, ${CY})`)
+      if (ng && !spinAnimRef.current) ng.style.transform = `rotate(${angleRef.current}deg)`
       // Zone-crossing paint — also imperative. This used to call
       // setAngle(...) so React could refresh the colour/label tells, but
       // that re-rendered the entire component at every crossing; on a
@@ -3837,6 +3931,10 @@ export default function FishingGame({
       if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
       if (blackoutTimerRef.current) { clearTimeout(blackoutTimerRef.current); blackoutTimerRef.current = null }
       paintBlackout(0)
+      // Stop the compositor spin on any exit path (lock-in already froze it
+      // at the exact tap angle; this covers Tide Turner skips / leaving).
+      angleRef.current = spinAngleNow()
+      freezeNeedleAt(angleRef.current)
     }
   // retryKey increments on Second Wind retry to restart animation with fresh randomization
   }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
@@ -4336,7 +4434,13 @@ export default function FishingGame({
     // Reading angleRef.current after cancelAnimationFrame captures the
     // exact frame the player tapped on.
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
-    const lockedAngle = angleRef.current
+    // Compositor-spin era: derive the angle from the animation clock AT THE
+    // TAP itself (sub-frame precision) instead of the last rAF sample,
+    // then freeze the visual needle at exactly that angle so what the
+    // player sees and what the resolution math uses are provably the same.
+    const lockedAngle = spinAngleNow()
+    angleRef.current = lockedAngle
+    freezeNeedleAt(lockedAngle)
     setAngle(lockedAngle)
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
@@ -5887,7 +5991,11 @@ export default function FishingGame({
               {/* ── CATCHING / REELING ── */}
               {(phase === 'catching' || phase === 'reeling') && hookedFish && (
                 <motion.div key="catching"
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  // Opacity-only entrance — the old y: 8→0 slide had framer
+                  // writing a transform on the dial's ancestor every frame
+                  // for the first 180ms of the spin, forcing re-raster of
+                  // the moving SVG at exactly the most jank-prone moment.
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', paddingBottom: '0.25rem' }}>
 
