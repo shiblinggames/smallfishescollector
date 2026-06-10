@@ -362,19 +362,22 @@ function DailyCapBar({ wagered, cap }: { wagered: number; cap: number }) {
 // (4 × 78 + gaps ≈ 330px); five-card hands wrap to a second row.
 const CARD_DIMS = { w: 78, h: 112, rankFont: '1.25rem', suitFont: '1.2rem', cornerPad: 6 }
 
-// Card row layout — instead of flex-wrapping to a second row when the
-// hand grows past 3-4 cards (which shoves the rest of the UI down),
-// cards beyond 3 start overlapping each other so they fan out like
-// physical cards on a felt. The leftmost ~40px of each card stays
-// visible (rank + suit corner) so the player can still read every card
-// at a glance. Tuned for the ~325px-wide play area at our typical phone
-// modal size — even 7 cards fit on one row.
+// Card row layout — cards always fan with overlap, even at 2 cards, so
+// every hand reads like a physical hand of cards on a felt. The earlier
+// version kept 1-3 cards perfectly flat with a 6px gap and only started
+// overlapping at 4+ cards (which got the rest of the UI off a second
+// row), but the "fan" never showed up in practice because most hands
+// resolve at 2-3 cards. New tuning fans starting at 2 cards so the
+// table looks intentional at every count, while keeping the rank + suit
+// corner of each card (top-left ~20-25px) fully visible at every depth
+// — even -38px overlap on a 78px card still shows 40px of each card.
 function cardOverlapMargin(count: number): number {
-  if (count <= 3) return 6   // normal flex gap, no overlap
-  if (count === 4) return -8
-  if (count === 5) return -22
-  if (count === 6) return -32
-  return -38                  // 7+, ~40px of each card visible
+  if (count <= 1) return 0    // single card, nothing to fan
+  if (count === 2) return -15 // gentle "dealt to you" fan
+  if (count === 3) return -20 // clearly fanning, plenty of card visible
+  if (count === 4) return -26
+  if (count === 5) return -32
+  return -38                   // 6+, ~40px of each card visible
 }
 
 // 3D flip wrapper — used for the dealer's hole card. Renders the
