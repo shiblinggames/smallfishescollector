@@ -96,6 +96,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 130, marginBottom: 4 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={activeShip.imageUrl} alt={activeShip.name}
+            loading="lazy" decoding="async"
             style={{ maxHeight: '100%', maxWidth: '85%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px ${activeShip.color}66)` }}
           />
         </div>
@@ -164,6 +165,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={ship.imageUrl} alt={ship.name}
+                  loading="lazy" decoding="async"
                   style={{
                     maxWidth: '88%', maxHeight: '92%', objectFit: 'contain',
                     filter: owned

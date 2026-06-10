@@ -559,7 +559,7 @@ export default function ProfileClient({
                   {[0, 1, 2].map(slot => {
                     const badge = BADGE_MAP[equippedBadges[slot] ?? '']
                     return badge ? (
-                      <img key={slot} src={badge.imageUrl} alt={badge.name} style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 4 }} />
+                      <img key={slot} src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 4 }} />
                     ) : (
                       <div key={slot} style={{ width: 26, height: 26, borderRadius: 4, border: '1px dashed rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.03)' }} />
                     )
@@ -606,7 +606,7 @@ export default function ProfileClient({
                           }}
                         >
                           {badge ? (
-                            <img src={badge.imageUrl} alt={badge.name} style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                            <img src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                           ) : (
                             <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)' }}>Empty</span>
                           )}
@@ -639,7 +639,7 @@ export default function ProfileClient({
                               border: isEquipped ? '2px solid #f0c040' : '2px solid rgba(255,255,255,0.1)',
                               boxShadow: isEquipped ? '0 0 10px rgba(240,192,64,0.35)' : 'none',
                             }}>
-                              <img src={b.imageUrl} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                              <img src={b.imageUrl} alt={b.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
                               {!isUnlocked && (
                                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)' }}>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
@@ -666,13 +666,13 @@ export default function ProfileClient({
               filter: 'drop-shadow(0 8px 14px rgba(0,15,35,0.6))',
             }}>
               <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '72%', maxWidth: 260 }}>
-                <img src={charSprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+                <img src={charSprites.rest} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
                 {(() => {
                   const hd = getHat(equippedHat)
                   if (!hd) return null
                   const hp = hd.positions.rest
                   return (
-                    <img src={hd.restImageUrl} alt="" style={{
+                    <img src={hd.restImageUrl} alt="" loading="lazy" decoding="async" style={{
                       position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
                       width: `${hp.width}%`,
                       transform: `rotate(${hp.rotate}deg)`,
@@ -694,7 +694,7 @@ export default function ProfileClient({
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                     }}>
-                      <img src={bd.restImageUrl} alt="" className={boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
+                      <img src={bd.restImageUrl} alt="" loading="lazy" decoding="async" className={boatGlowClass(bd)} style={{ width: '100%', display: 'block' }} />
                     </div>
                   )
                 })()}
@@ -704,7 +704,7 @@ export default function ProfileClient({
                     overrides Tailwind preflight which would otherwise cap the
                     rod at 100% of the avatar container. */}
                 {rod.slug ? (
-                  <img src={`/${rod.slug}_rest.png`} alt="" className={rodGlowClass(rod)} style={{
+                  <img src={`/${rod.slug}_rest.png`} alt="" loading="lazy" decoding="async" className={rodGlowClass(rod)} style={{
                     position: 'absolute', top: '37%', left: '-12%', width: '107.5%',
                     transformOrigin: 'center center',
                     pointerEvents: 'none',
@@ -712,7 +712,7 @@ export default function ProfileClient({
                     ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
                 ) : rod.imageUrl && (
-                  <img src={rod.imageUrl} alt="" className={rodGlowClass(rod)} style={{
+                  <img src={rod.imageUrl} alt="" loading="lazy" decoding="async" className={rodGlowClass(rod)} style={{
                     position: 'absolute', top: '33%', left: '12%', width: '51%',
                     transform: 'rotate(-1deg)', transformOrigin: 'bottom right',
                     pointerEvents: 'none',
@@ -721,7 +721,7 @@ export default function ProfileClient({
                 )}
                 {/* Reel — mirrors CHAR_REEL_OVERLAY.rest from FishingGame. */}
                 {reel.imageUrl && (
-                  <img src={reel.imageUrl} alt="" style={{
+                  <img src={reel.imageUrl} alt="" loading="lazy" decoding="async" style={{
                     position: 'absolute', top: '15%', left: '-10.3%', width: '222%',
                     transform: 'rotate(-18deg)', transformOrigin: 'center center',
                     pointerEvents: 'none',
@@ -731,7 +731,7 @@ export default function ProfileClient({
                 {/* Hook — mirrors CHAR_HOOK_OVERLAY.rest from FishingGame
                     so the profile silhouette matches the live game. */}
                 {hook.imageUrl && (
-                  <img src={hook.imageUrl} alt="" className={hookGlowClass(hook)} style={{
+                  <img src={hook.imageUrl} alt="" loading="lazy" decoding="async" className={hookGlowClass(hook)} style={{
                     position: 'absolute', top: '39.5%', left: '-10.5%', width: '204.5%',
                     transformOrigin: 'center center',
                     pointerEvents: 'none',
@@ -745,7 +745,7 @@ export default function ProfileClient({
                   const bp = BADGE_SLOT_POSITIONS[slot]?.['rest' as BadgeFrame]
                   if (!badge || !bp) return null
                   return (
-                    <img key={slot} src={badge.imageUrl} alt={badge.name} style={{
+                    <img key={slot} src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{
                       position: 'absolute', top: `${bp.top}%`, left: `${bp.left}%`,
                       width: `${bp.width}%`, transform: `rotate(${bp.rotate}deg)`,
                       transformOrigin: 'center center', pointerEvents: 'none',
@@ -761,7 +761,7 @@ export default function ProfileClient({
                   if (!pet) return null
                   const pp = getPetOverlay(pet.species, 'rest')
                   return (
-                    <img src={pet.restImageUrl} alt="" style={{
+                    <img src={pet.restImageUrl} alt="" loading="lazy" decoding="async" style={{
                       position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
                       width: `${pp.width}%`,
                       transform: `rotate(${pp.rotate}deg)`,
@@ -799,7 +799,7 @@ export default function ProfileClient({
               background: `${equippedSpecial.color}10`, border: `1px solid ${equippedSpecial.color}30`,
             }}>
               {equippedSpecial.image
-                ? <img src={equippedSpecial.image} alt={equippedSpecial.name} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 6px ${equippedSpecial.color}66)` }} />
+                ? <img src={equippedSpecial.image} alt={equippedSpecial.name} loading="lazy" decoding="async" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 6px ${equippedSpecial.color}66)` }} />
                 : <div style={{ width: 26, height: 26, borderRadius: 6, background: equippedSpecial.color + '22', flexShrink: 0 }} />
               }
               <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: equippedSpecial.color }}>{equippedSpecial.name}</span>
@@ -876,6 +876,8 @@ export default function ProfileClient({
                         <img
                           src={fishImageUrl(t.name)}
                           alt={t.name}
+                          loading="lazy"
+                          decoding="async"
                           style={{
                             position: 'relative',
                             maxWidth: 68, maxHeight: 68, objectFit: 'contain',
@@ -929,6 +931,8 @@ export default function ProfileClient({
                         <img
                           src={fishImageUrl(fish.name)}
                           alt={fish.name}
+                          loading="lazy"
+                          decoding="async"
                           style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                         />
@@ -974,6 +978,8 @@ export default function ProfileClient({
             <img
               src={shipSkinDef?.imageByTier?.[shipTier] ?? ship.imageUrl}
               alt={ship.name}
+              loading="lazy"
+              decoding="async"
               style={{
                 width: 200, height: 155, objectFit: 'contain',
                 filter: shipSkinDef ? shipSkinDef.filter : `drop-shadow(0 4px 28px ${ship.color}60)`,
@@ -1523,6 +1529,8 @@ export default function ProfileClient({
                     <img
                       src={bg.src}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block',
                         filter: locked ? 'grayscale(0.6) brightness(0.45)' : undefined,

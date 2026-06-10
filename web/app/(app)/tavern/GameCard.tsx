@@ -73,6 +73,8 @@ export default function GameCard({ href, eyebrow, title, statusText, streak, var
             <img
               src={art}
               alt=""
+              loading="lazy"
+              decoding="async"
               style={{
                 width: '100%',
                 height: artMaxHeight,
@@ -163,6 +165,8 @@ export default function GameCard({ href, eyebrow, title, statusText, streak, var
           <img
             src={art}
             alt=""
+            loading="lazy"
+            decoding="async"
             style={{
               width: '100%',
               height: 110,

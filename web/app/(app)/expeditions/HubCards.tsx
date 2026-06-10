@@ -141,6 +141,8 @@ function HubCrewStrip({
                 <img
                   src={`${SUPA}/storage/v1/object/public/card-arts/${c.filename}`}
                   alt={c.name}
+                  loading="lazy"
+                  decoding="async"
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 22%' }}
                 />
               </div>
@@ -261,6 +263,7 @@ export default function HubCards({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 60, marginBottom: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={campaign.nextNodeImage ?? '/raidlog.png'} alt=""
+              loading="lazy" decoding="async"
               style={{ width: '100%', height: 58, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${campaignAccent}40)` }} />
           </div>
           <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 6 }}>Campaign</p>
@@ -312,6 +315,7 @@ export default function HubCards({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 60, marginBottom: 8 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/voyagemap.png" alt=""
+              loading="lazy" decoding="async"
               className={voyages.status === 'sailing' ? 'voyage-card-bob' : undefined}
               style={{ width: '100%', height: 58, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${vAcc.fg}${voyages.status === 'sailing' ? '90' : '50'})` }} />
           </div>
@@ -654,7 +658,7 @@ function PrepPartyView({ roster, shipCrewSlots, track, accent }: {
         <div title={card.name} aria-label={isCaptain ? `Captain: ${card.name}` : `Crew: ${card.name}`}
           style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${ring}`, background: 'rgba(6,9,16,0.85)', boxShadow: '0 2px 6px rgba(0,0,0,0.55)' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={CREW_IMG_BASE + card.filename} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
+          <img src={CREW_IMG_BASE + card.filename} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }} />
         </div>
       )
     }
@@ -784,7 +788,7 @@ function PrepItemsView({ equippedRaidItems, raidItemSlots, ownedCount, accent, o
               }}>
               {def.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={def.image} alt="" style={{ width: '88%', height: '88%', objectFit: 'contain' }} />
+                <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: '88%', height: '88%', objectFit: 'contain' }} />
               ) : (
                 <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>{def.emoji}</span>
               )}

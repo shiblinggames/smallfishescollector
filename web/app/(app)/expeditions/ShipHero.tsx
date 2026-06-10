@@ -776,6 +776,8 @@ export default function ShipHero({
                       <img
                         src={IMG_BASE + featuredCrewTrio[1].filename}
                         alt={featuredCrewTrio[1].name}
+                        loading="lazy"
+                        decoding="async"
                         style={{
                           position: 'absolute', left: '8%', bottom: 0,
                           height: 38, width: 'auto', maxWidth: '45%',
@@ -793,6 +795,8 @@ export default function ShipHero({
                       <img
                         src={IMG_BASE + featuredCrewTrio[2].filename}
                         alt={featuredCrewTrio[2].name}
+                        loading="lazy"
+                        decoding="async"
                         style={{
                           position: 'absolute', right: '8%', bottom: 0,
                           height: 38, width: 'auto', maxWidth: '45%',
@@ -809,6 +813,8 @@ export default function ShipHero({
                     <img
                       src={IMG_BASE + featuredCrewTrio[0].filename}
                       alt={featuredCrewTrio[0].name}
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         position: 'absolute', left: '50%', bottom: 0,
                         transform: 'translateX(-50%)',
@@ -856,6 +862,8 @@ export default function ShipHero({
                 <img
                   src={shipImgSrc}
                   alt={shipName ?? shipStats.name}
+                  loading="lazy"
+                  decoding="async"
                   style={{
                     height: 85, width: 'auto', maxWidth: '100%',
                     objectFit: 'contain',
@@ -993,6 +1001,8 @@ export default function ShipHero({
                 <img
                   src={shipImgSrc}
                   alt={shipName ?? shipStats.name}
+                  loading="lazy"
+                  decoding="async"
                   style={{
                     width: '100%', maxWidth: 220, height: 'auto',
                     objectFit: 'contain', display: 'block', margin: '0 auto 0.85rem',
@@ -1131,7 +1141,7 @@ export default function ShipHero({
                     >
                       <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={shipStats.image} alt="" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+                        <img src={shipStats.image} alt="" loading="lazy" decoding="async" style={{ width: 44, height: 44, objectFit: 'contain' }} />
                       </div>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>Default</p>
                       {isEquipped
@@ -1166,6 +1176,8 @@ export default function ShipHero({
                         <img
                           src={shipStats.image}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           style={{
                             width: 44, height: 44, objectFit: 'contain',
                             filter: owned ? skin.filter : 'brightness(0.25) saturate(0)',
@@ -1216,7 +1228,7 @@ export default function ShipHero({
                       }}>
                         {kit.image
                           // eslint-disable-next-line @next/next/no-img-element
-                          ? <img src={kit.image} alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                          ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain' }} />
                           : <span>{kit.emoji}</span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1447,7 +1459,7 @@ export default function ShipHero({
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, maxWidth: '100%', padding: '0.22rem 0.55rem 0.22rem 0.28rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                           <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${currentColor}` }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={IMG_BASE + currentInSlot.filename} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+                            <img src={IMG_BASE + currentInSlot.filename} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
                           </div>
                           <span className="font-karla truncate" style={{ fontSize: '0.66rem', color: '#9aa0a6', minWidth: 0 }}>
                             Currently <span className="font-700" style={{ color: '#dfe9e3' }}>{currentInSlot.name}</span>
@@ -1541,7 +1553,7 @@ export default function ShipHero({
                       }}>
                         <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: `1.5px solid ${pendColor}`, background: `radial-gradient(ellipse at 50% 32%, ${pendColor}26 0%, #070504 78%)` }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={IMG_BASE + pendingCard.filename} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+                          <img src={IMG_BASE + pendingCard.filename} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#857f77', marginBottom: 2 }}>
@@ -1613,7 +1625,7 @@ export default function ShipHero({
                       <div style={{ width: 22, height: 22, borderRadius: 6, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${currentColor}`, background: `${currentColor}11`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {currentDef.image ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={currentDef.image} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                          <img src={currentDef.image} alt="" loading="lazy" decoding="async" style={{ width: 16, height: 16, objectFit: 'contain' }} />
                         ) : (
                           <span style={{ fontSize: '0.9rem', lineHeight: 1 }}>{currentDef.emoji}</span>
                         )}
@@ -1687,7 +1699,7 @@ export default function ShipHero({
                         >
                           {def.image ? (
                             /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={def.image} alt="" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+                            <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
                           ) : (
                             <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
                           )}
@@ -1918,7 +1930,7 @@ function UpgradeShipPanel({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, marginBottom: '0.6rem' }}>
             {nextShip.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={nextShip.imageUrl} alt={nextShip.name} style={{ maxHeight: 110, maxWidth: '75%', objectFit: 'contain', filter: `drop-shadow(0 6px 14px ${nextShip.color}55)` }} />
+              <img src={nextShip.imageUrl} alt={nextShip.name} loading="lazy" decoding="async" style={{ maxHeight: 110, maxWidth: '75%', objectFit: 'contain', filter: `drop-shadow(0 6px 14px ${nextShip.color}55)` }} />
             )}
           </div>
 

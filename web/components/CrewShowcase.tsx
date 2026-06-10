@@ -46,7 +46,7 @@ export function CrewPortrait({ crew, w = 100, dimmed }: { crew: ShowcaseCrew; w?
     }}>
       <div style={{ position: 'relative', width: '100%', height: w, background: `radial-gradient(ellipse at 50% 32%, ${color}26 0%, #070504 74%)` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={artSrc(crew.filename)} alt={crew.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} />
+        <img src={artSrc(crew.filename)} alt={crew.name} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} />
         {/* Lv chip — always shown, top-right corner of the portrait. Reads
             as bragging surface on visit-by-anyone profiles ("oh damn this
             player has a Lv 47 Doby"); also clarifies for Lv 1 that the

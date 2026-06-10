@@ -82,6 +82,8 @@ export default function AchievementsClient({ groups }: Props) {
                       {g.badgeImage ? (
                         <img
                           src={g.badgeImage} alt=""
+                          loading="lazy"
+                          decoding="async"
                           style={{
                             width: 32, height: 32, objectFit: 'contain',
                             filter: g.done ? 'none' : 'grayscale(1)',

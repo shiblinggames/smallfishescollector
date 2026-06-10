@@ -84,7 +84,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
       <div className="relative overflow-hidden" style={{ width: W, height: H, borderRadius: R, background: artBg[artEffect] ?? '#c8a870', containerType: 'inline-size' }}>
         {/* Cardfront base */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/cardfront2.webp" alt="" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
+        <img src="/cardfront2.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }} />
 
         {/* Fish art — top 60% only */}
         <div className="absolute overflow-hidden" style={{ inset: '4% 5% 40% 5%', zIndex: 2 }}>

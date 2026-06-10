@@ -206,6 +206,8 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
                   src={PETE_PORTRAIT}
                   alt=""
                   aria-hidden
+                  loading="lazy"
+                  decoding="async"
                   style={{
                     position: 'absolute', inset: 0,
                     width: '100%', height: '100%', objectFit: 'cover',

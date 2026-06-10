@@ -258,6 +258,8 @@ export default function ChartBoard({
                           <img
                             src={ship.imageUrl}
                             alt={ship.name}
+                            loading="lazy"
+                            decoding="async"
                             style={{ width: '68%', height: '68%', objectFit: 'contain', position: 'relative', zIndex: 2 }}
                           />
                         )}

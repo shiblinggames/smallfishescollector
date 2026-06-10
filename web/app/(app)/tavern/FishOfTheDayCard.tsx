@@ -53,6 +53,8 @@ export default function FishOfTheDayCard() {
           src="/fish/largemouth-bass.png"
           alt=""
           aria-hidden
+          loading="lazy"
+          decoding="async"
           style={{
             maxWidth: '70%',
             maxHeight: 88,

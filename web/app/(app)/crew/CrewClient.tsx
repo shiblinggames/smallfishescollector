@@ -301,7 +301,7 @@ function CrewPanel({
           background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={artSrc(filename)} alt={name} style={{
+          <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async" style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
           }} />
@@ -549,7 +549,7 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
         filter: 'sepia(0.45) saturate(0.7)',
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={artSrc(crew.filename)} alt={crew.name} style={{
+        <img src={artSrc(crew.filename)} alt={crew.name} loading="lazy" decoding="async" style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
           objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
           opacity: 0.82,

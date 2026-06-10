@@ -202,6 +202,8 @@ export default function TackleShopClient({
                   <img
                     src={imageUrl}
                     alt={label}
+                    loading="lazy"
+                    decoding="async"
                     style={{
                       maxWidth: '100%',
                       maxHeight: 110,
@@ -266,7 +268,7 @@ export default function TackleShopClient({
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {bait.imageUrl
-                      ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 26, height: 26, objectFit: 'contain' }} />
+                      ? <img src={bait.imageUrl} alt={bait.name} loading="lazy" decoding="async" style={{ width: 26, height: 26, objectFit: 'contain' }} />
                       : <div style={{ width: 12, height: 12, borderRadius: 4, background: bait.color }} />
                     }
                   </div>
@@ -487,7 +489,7 @@ export default function TackleShopClient({
                   {(compRod.slug || compRod.imageUrl) && (
                     <div style={{ background: `${c}0a`, border: `1px solid ${c}25`, borderRadius: 12, padding: '1rem', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={compRod.slug ? `/${compRod.slug}_thumb.png` : compRod.imageUrl} alt={compRod.name} style={{ height: 140, objectFit: 'contain' }} />
+                      <img src={compRod.slug ? `/${compRod.slug}_thumb.png` : compRod.imageUrl} alt={compRod.name} loading="lazy" decoding="async" style={{ height: 140, objectFit: 'contain' }} />
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1.5 mb-4">
@@ -548,7 +550,7 @@ export default function TackleShopClient({
                       {(rod.slug || rod.imageUrl)
                         ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} className={owned ? rodGlowClass(rod) : undefined} style={{
+                          <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} loading="lazy" decoding="async" className={owned ? rodGlowClass(rod) : undefined} style={{
                             height: '100%', maxWidth: '100%', objectFit: 'contain',
                             ...(owned && rod.glow
                               ? { ['--rod-glow-color' as string]: rod.color }
@@ -943,6 +945,8 @@ function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier:
       {imageUrl ? (
         <img
           src={imageUrl} alt=""
+          loading="lazy"
+          decoding="async"
           className={owned ? glowClass : undefined}
           style={{
             width: '100%', height: '100%', objectFit: 'contain',
@@ -969,7 +973,7 @@ function LineIcon({ color, owned, isActive, imageUrl }: { color: string; owned: 
       style={{ borderRadius: 10, background: bg, border: `1px solid ${border}`, boxShadow: isActive ? `0 0 10px ${color}25` : 'none' }}
     >
       {imageUrl
-        ? <img src={imageUrl} alt="" style={{ width: 28, height: 28, objectFit: 'contain', opacity: op, filter: `drop-shadow(0 1px 4px ${color}55)` }} />
+        ? <img src={imageUrl} alt="" loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain', opacity: op, filter: `drop-shadow(0 1px 4px ${color}55)` }} />
         : (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={owned ? color : '#4a4845'} strokeWidth="1.6" strokeLinecap="round">
             <path d="M3 7 Q7 4 12 7 Q17 10 21 7" />
@@ -993,7 +997,7 @@ function ReelIcon({ color, owned, isActive, imageUrl }: { color: string; owned: 
       style={{ borderRadius: 10, background: bg, border: `1px solid ${border}`, boxShadow: isActive ? `0 0 10px ${color}25` : 'none' }}
     >
       {imageUrl
-        ? <img src={imageUrl} alt="" style={{ width: 28, height: 28, objectFit: 'contain', opacity: op, filter: `drop-shadow(0 1px 4px ${color}55)` }} />
+        ? <img src={imageUrl} alt="" loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain', opacity: op, filter: `drop-shadow(0 1px 4px ${color}55)` }} />
         : (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <circle cx="10" cy="12" r="7.5" stroke={sc} strokeWidth="1.3" opacity={op * 0.9} />

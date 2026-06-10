@@ -65,12 +65,12 @@ export default function CharacterAvatar({
       pointerEvents: 'none',
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={sprites.rest} alt="" style={{ width: '100%', display: 'block' }} />
+      <img src={sprites.rest} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
       {hat && (() => {
         const hp = hat.positions.rest
         return (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={hat.restImageUrl} alt="" style={{
+          <img src={hat.restImageUrl} alt="" loading="lazy" decoding="async" style={{
             position: 'absolute',
             top: `${hp.top}%`,
             left: `${hp.left}%`,

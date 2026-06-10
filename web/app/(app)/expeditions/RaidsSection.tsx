@@ -472,7 +472,7 @@ function RaidMap({
                     : undefined,
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={img} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </span>
               ) : locked ? <LockGlyph size={glyph} /> : <NodeGlyph type={node.type} color={accent} size={glyph} />}
 
@@ -860,7 +860,7 @@ function NodeDetailSheet({
             }}>
               {img ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
+                <img src={img} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: locked ? 'grayscale(1) brightness(0.6)' : undefined }} />
               ) : locked ? <LockGlyph size={20} /> : <NodeGlyph type={node.type} color={accent} size={22} />}
             </div>
             <div style={{ minWidth: 0 }}>
@@ -990,7 +990,7 @@ function NodeDetailSheet({
                       <div style={{ width: 30, height: 30, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${rc}1a`, fontSize: '1rem', overflow: 'hidden' }}>
                         {item.image
                           // eslint-disable-next-line @next/next/no-img-element
-                          ? <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          ? <img src={item.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           : <span>{item.emoji}</span>}
                       </div>
                       <span className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', color: '#f0ede8' }}>{item.name}</span>
@@ -1348,7 +1348,7 @@ function NodeDetailSheet({
                                   ? <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: 4, background: d.swatch, filter: d.swatchFilter }} />
                                   : d.image
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
+                                    ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
                                     : <span>{d.emoji}</span>}
                               </span>
                               <span className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#e8e2d8', whiteSpace: 'nowrap' }}>{d.label}</span>
@@ -1389,7 +1389,7 @@ function NodeDetailSheet({
                           ? <div style={{ width: '100%', height: '100%', background: d.swatch, filter: d.swatchFilter }} />
                           : d.image
                             // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={d.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
+                            ? <img src={d.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: d.imageFilter }} />
                             : <span className={d.emoji === GEM_GLYPH ? 'font-cinzel' : undefined} style={d.emoji === GEM_GLYPH ? { color: GEM_COLOR } : undefined}>{d.emoji}</span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1533,7 +1533,7 @@ function DropDetailModal({ drop, onClose }: { drop: RaidNodeDrop; onClose: () =>
               ? <span style={{ display: 'block', width: '100%', height: '100%', background: drop.swatch, filter: drop.swatchFilter }} />
               : drop.image
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={drop.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: 4 }} />
+                ? <img src={drop.image} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: drop.imageFilter, padding: 4 }} />
                 : <span style={{ fontSize: '2rem' }}>{drop.emoji}</span>}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>

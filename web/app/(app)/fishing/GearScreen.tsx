@@ -324,6 +324,8 @@ function SpecialItemRow({
             <img
               src={item.image}
               alt={item.name}
+              loading="lazy"
+              decoding="async"
               style={{
                 width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
                 filter: owned
@@ -471,6 +473,8 @@ function GearSlot({
           ? <img
               src={image}
               alt={label}
+              loading="lazy"
+              decoding="async"
               className={glowClass}
               style={{
                 width: 36, height: 36, objectFit: 'contain',
@@ -559,14 +563,14 @@ function AppearanceSlot({
           transform: 'translateY(-50%)',
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={charSrc.rest} alt="" style={{ width: '100%', display: 'block' }} />
+          <img src={charSrc.rest} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
           {/* Hat — uses the live hat def's rest-frame position so it
               lands exactly where it does in-game. */}
           {activeHat && (() => {
             const hp = activeHat.positions.rest
             return (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={activeHat.restImageUrl} alt="" style={{
+              <img src={activeHat.restImageUrl} alt="" loading="lazy" decoding="async" style={{
                 position: 'absolute', top: `${hp.top}%`, left: `${hp.left}%`,
                 width: `${hp.width}%`,
                 transform: `rotate(${hp.rotate}deg)`,
@@ -578,7 +582,7 @@ function AppearanceSlot({
           {/* Default hat sprite as fallback when no hat equipped */}
           {!activeHat && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/defaulthat_rest.png" alt="" style={{
+            <img src="/defaulthat_rest.png" alt="" loading="lazy" decoding="async" style={{
               position: 'absolute', top: '53%', left: '57.1%', width: '21.8%',
               pointerEvents: 'none',
             }} />
@@ -600,6 +604,8 @@ function AppearanceSlot({
                 <img
                   src={boat.restImageUrl}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className={boatGlowClass(boat)}
                   style={{
                     width: '100%', display: 'block',
@@ -615,7 +621,7 @@ function AppearanceSlot({
             const pp = getPetOverlay(activePet.species, 'rest')
             return (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={activePet.restImageUrl} alt="" style={{
+              <img src={activePet.restImageUrl} alt="" loading="lazy" decoding="async" style={{
                 position: 'absolute', top: `${pp.top}%`, left: `${pp.left}%`,
                 width: `${pp.width}%`,
                 transform: `rotate(${pp.rotate}deg)`,
@@ -866,7 +872,7 @@ export default function GearScreen({
                       {equipped.slice(0, 3).map((id, i) => {
                         const badge = BADGE_MAP[id!]
                         return badge ? (
-                          <img key={i} src={badge.imageUrl} alt={badge.name} style={{ width: 11, height: 11, objectFit: 'contain' }} />
+                          <img key={i} src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 11, height: 11, objectFit: 'contain' }} />
                         ) : null
                       })}
                     </div>
@@ -1112,6 +1118,8 @@ export default function GearScreen({
                             <img
                               src={rod.slug ? `/${rod.slug}_thumb.png` : (rod.imageUrl ?? '/rod_bamboo_thumb.png')}
                               alt={rod.name}
+                              loading="lazy"
+                              decoding="async"
                               className={rodGlowClass(rod)}
                               style={{
                                 width: 48, height: 48, objectFit: 'contain', flexShrink: 0,
@@ -1229,6 +1237,8 @@ export default function GearScreen({
                                         <img
                                           src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                           alt=""
+                                          loading="lazy"
+                                          decoding="async"
                                           className={rodGlowClass(r)}
                                           style={{
                                             width: 44, height: 44, objectFit: 'contain',
@@ -1350,6 +1360,8 @@ export default function GearScreen({
                                         <img
                                           src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                           alt={r.name}
+                                          loading="lazy"
+                                          decoding="async"
                                           className={rodGlowClass(r)}
                                           style={{
                                             width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
@@ -1426,6 +1438,8 @@ export default function GearScreen({
                                     <img
                                       src={r.slug ? `/${r.slug}_thumb.png` : (r.imageUrl ?? '/rod_bamboo_thumb.png')}
                                       alt=""
+                                      loading="lazy"
+                                      decoding="async"
                                       className={rodGlowClass(r)}
                                       style={{
                                         width: 48, height: 48, objectFit: 'contain', flexShrink: 0,
@@ -1574,6 +1588,8 @@ export default function GearScreen({
                           <img
                             src={nextReel.imageUrl.replace(/\.png$/, '_thumb.png')}
                             alt={nextReel.name}
+                            loading="lazy"
+                            decoding="async"
                             style={{
                               width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
                               filter: `drop-shadow(0 1px 6px ${nextReel.color}66)`,
@@ -1660,6 +1676,8 @@ export default function GearScreen({
                           <img
                             src={hook.imageUrl.replace(/\.png$/, '_thumb.png')}
                             alt={hook.name}
+                            loading="lazy"
+                            decoding="async"
                             className={hookGlowClass(hook)}
                             style={{
                               width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
@@ -1718,6 +1736,8 @@ export default function GearScreen({
                           <img
                             src={nextHook.imageUrl.replace(/\.png$/, '_thumb.png')}
                             alt={nextHook.name}
+                            loading="lazy"
+                            decoding="async"
                             className={hookGlowClass(nextHook)}
                             style={{
                               width: 44, height: 44, objectFit: 'contain', flexShrink: 0,
@@ -1981,7 +2001,7 @@ export default function GearScreen({
                             width: 48, height: 48, overflow: 'hidden',
                           }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/boat_default_rest.png" alt="" style={{
+                            <img src="/boat_default_rest.png" alt="" loading="lazy" decoding="async" style={{
                               width: '170%', height: 'auto', display: 'block',
                               position: 'absolute', top: '50%', left: '50%',
                               transform: 'translate(-50%, -50%)',
@@ -2042,6 +2062,8 @@ export default function GearScreen({
                               <img
                                 src={b.restImageUrl}
                                 alt=""
+                                loading="lazy"
+                                decoding="async"
                                 style={{
                                   width: '170%', height: 'auto', display: 'block',
                                   position: 'absolute', top: '50%', left: '50%',
@@ -2102,6 +2124,8 @@ export default function GearScreen({
                             <img
                               src="/defaulthat_rest.png"
                               alt="Default"
+                              loading="lazy"
+                              decoding="async"
                               style={{ width: 38, height: 38, objectFit: 'contain' }}
                             />
                           </div>
@@ -2152,6 +2176,8 @@ export default function GearScreen({
                             <img
                               src={h.restImageUrl}
                               alt={h.name}
+                              loading="lazy"
+                              decoding="async"
                               style={{ width: 38, height: 38, objectFit: 'contain' }}
                             />
                           </div>
@@ -2291,6 +2317,8 @@ export default function GearScreen({
                                 <img
                                   src={p.restImageUrl}
                                   alt={p.name}
+                                  loading="lazy"
+                                  decoding="async"
                                   style={{
                                     width: 42, height: 42, objectFit: 'contain',
                                     filter: owned
@@ -2347,7 +2375,7 @@ export default function GearScreen({
                           }}
                         >
                           {badge ? (
-                            <img src={badge.imageUrl} alt={badge.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                            <img src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain' }} />
                           ) : (
                             <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>Empty</span>
                           )}
@@ -2377,7 +2405,7 @@ export default function GearScreen({
                               cursor: 'pointer',
                             }}
                           >
-                            <img src={badge.imageUrl} alt={badge.name} style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                            <img src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain' }} />
                             <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: isEquipped ? '#f0c040' : '#a0a09a', textAlign: 'center', lineHeight: 1.2 }}>{badge.name}</p>
                             {isEquipped && (
                               <span className="font-karla font-700" style={{ fontSize: '0.48rem', color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>On</span>

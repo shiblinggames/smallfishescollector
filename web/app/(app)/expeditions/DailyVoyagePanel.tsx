@@ -384,7 +384,7 @@ export default function DailyVoyagePanel({
               {/* ── Voyage map ── */}
               <div style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden', marginBottom: '0.75rem' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/voyagemap.png" alt="Voyage map" style={{ width: '100%', display: 'block' }} />
+                <img src="/voyagemap.png" alt="Voyage map" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
 
                 {/* Clickable route nodes */}
                 {(() => {
@@ -572,7 +572,7 @@ export default function DailyVoyagePanel({
                                     style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
                                   >
                                     {image
-                                      ? <img src={image} alt={name} style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 1px 4px ${color}66)` }} />
+                                      ? <img src={image} alt={name} loading="lazy" decoding="async" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 1px 4px ${color}66)` }} />
                                       : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: drop.kind === 'bait' ? '2px' : '50%', background: color, flexShrink: 0, boxShadow: `0 0 4px ${color}88` }} />
                                     }
                                     <span className="font-karla font-700" style={{ fontSize: '0.80rem', color, flex: 1 }}>{name}</span>

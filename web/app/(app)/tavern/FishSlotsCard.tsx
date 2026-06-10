@@ -43,6 +43,8 @@ export default function FishSlotsCard() {
           src="/fishslots.png"
           alt=""
           aria-hidden
+          loading="lazy"
+          decoding="async"
           style={{
             height: 104,
             objectFit: 'contain',
