@@ -11,6 +11,7 @@ import {
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, hallStartXP, type CrewHallTierNum } from '@/lib/crewHall'
+import { crewLevelFromXP } from '@/lib/crewLevel'
 
 const REROLL_COST = 100
 
@@ -162,6 +163,18 @@ function toCandidate(r: any, meta: Map<number, CardMeta>): BoardCandidate {
   }
 }
 
+/** Roster display order: level desc, then rarity desc, then raw XP desc
+ *  (finer tiebreak within a level), with the DB's recruited_at-desc order
+ *  as the final stable fallback. Used by both the Crew Hall roster and the
+ *  expeditions crew screen so the manifest reads the same everywhere. */
+function rosterSort(a: CrewMember, b: CrewMember): number {
+  return (
+    crewLevelFromXP(b.xp) - crewLevelFromXP(a.xp) ||
+    b.rarity - a.rarity ||
+    b.xp - a.xp
+  )
+}
+
 function toMember(r: any, meta: Map<number, CardMeta>): CrewMember {
   const m = meta.get(r.card_id)
   const nickname = (r.nickname as string | null) ?? null
@@ -240,7 +253,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   return {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
-    roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)),
+    roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
     shipCrewSlots, lockedCrewIds,
     hallTier: clampHallTier((prof as any).crew_hall_tier),
@@ -262,7 +275,7 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
-  return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta))
+  return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)).sort(rosterSort)
 }
 
 // ── Reroll the board for 100 gems (always 3 new, boosted odds) ──────────────
