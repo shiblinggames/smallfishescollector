@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
@@ -3024,6 +3025,16 @@ export default function FishingGame({
     try { window.localStorage.setItem('fishingAudioMuted', String(audioMuted)) } catch {}
   }, [audioMuted])
 
+  const router = useRouter()
+
+  // Leave-confirm modal — popups when the player tries to navigate away
+  // mid-cast (link tap / Back button). Mirrors the raid flee-guard
+  // pattern in lib/RaidGame.tsx (search 'Mid-battle exit guard'). The
+  // pending nav callback fires on confirm so the player ends up where
+  // they were trying to go; cancel just closes the dialog.
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
+  const pendingLeaveNavRef = useRef<(() => void) | null>(null)
+
   // Game state
   const [phase, setPhase]           = useState<Phase>('idle')
   const selectedZone = initialZone
@@ -3776,6 +3787,50 @@ export default function FishingGame({
     }, 30)
     return () => clearInterval(id)
   }, [phase, activeBossMechanic])
+
+  // ── Mid-cast exit guard ─────────────────────────────────────────────
+  // Once castLine fires, the server has already deducted the bait — a
+  // hard exit (Back button, in-app nav, tab close) doesn't refund it.
+  // Intercept those nav attempts during the in-flight phases and route
+  // them through a confirm modal so the player doesn't lose worms (or
+  // worse, a Golden Lure) by accident. Mirrors the raid flee-guard in
+  // RaidGame.tsx. Active during casting/hooked/catching/reeling — every
+  // phase where bait has been spent but the result hasn't landed.
+  useEffect(() => {
+    const inFlight = phase === 'casting' || phase === 'hooked' || phase === 'catching' || phase === 'reeling'
+    if (!inFlight) return
+    window.history.pushState(null, '', window.location.href) // Back sentinel
+    const signal = (nav: () => void) => {
+      pendingLeaveNavRef.current = nav
+      setLeaveConfirmOpen(true)
+    }
+    const onClickCapture = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as HTMLElement | null)?.closest('a')
+      if (!a) return
+      const tgt = a.getAttribute('target')
+      if (tgt && tgt !== '_self') return
+      const href = a.getAttribute('href')
+      if (!href || !href.startsWith('/')) return                  // same-app routes only
+      if (href.split(/[?#]/)[0] === window.location.pathname) return // same page
+      e.preventDefault()
+      e.stopPropagation()
+      signal(() => router.push(href))
+    }
+    const onPop = () => {
+      window.history.pushState(null, '', window.location.href)    // re-arm; stay put
+      signal(() => router.push('/fishing'))
+    }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    document.addEventListener('click', onClickCapture, true)
+    window.addEventListener('popstate', onPop)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      document.removeEventListener('click', onClickCapture, true)
+      window.removeEventListener('popstate', onPop)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [phase, router])
 
   function deductBait(type: string, qty = 1) {
     setBaitInventory(prev => prev.map(b =>
@@ -8357,6 +8412,59 @@ export default function FishingGame({
               >
                 Claim Your Prize
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Leave-while-casting confirm ──
+            Fires when the mid-cast exit guard above intercepts a nav
+            attempt (link tap / Back button) while bait is in-flight. The
+            server already deducted the bait at castLine time; leaving
+            doesn't refund it (and breaks the perfect streak on the next
+            cast, since castLine clears current_perfect_streak whenever
+            catch_pending is still set). The dialog frames the trade
+            plainly so the player can make the call. */}
+      <AnimatePresence>
+        {leaveConfirmOpen && (
+          <motion.div
+            key="fish-leave-confirm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(3,7,12,0.82)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
+          >
+            <motion.div
+              initial={{ y: 8, scale: 0.96 }} animate={{ y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+              style={{ width: '100%', maxWidth: 320, background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}
+            >
+              <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', marginBottom: 6 }}>Leave mid-cast?</p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
+                Your bait is already in the water. Walk away now and it&apos;s gone, and your perfect streak breaks on your next cast.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => { setLeaveConfirmOpen(false); pendingLeaveNavRef.current = null }}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.06)', color: '#cfcabf', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Keep Fishing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nav = pendingLeaveNavRef.current
+                    pendingLeaveNavRef.current = null
+                    setLeaveConfirmOpen(false)
+                    nav?.()
+                  }}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(228,114,114,0.55)', background: 'rgba(212,84,84,0.22)', color: '#f8d2d2', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Leave Anyway
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
