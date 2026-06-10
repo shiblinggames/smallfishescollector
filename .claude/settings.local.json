@@ -60,7 +60,8 @@
       "PowerShell(npx --yes typescript@latest tsc --noEmit 2>&1)",
       "PowerShell(if \\(Test-Path node_modules/typescript\\) { Write-Output \"TS installed: $\\(Get-Content node_modules/typescript/package.json | ConvertFrom-Json | Select-Object -ExpandProperty version\\)\" } else { Write-Output \"TS not installed\" }; npx --no-install tsc --version 2>&1 | Select-Object -First 5)",
       "PowerShell($pwd.Path; Test-Path \"package.json\"; Test-Path \"tsconfig.json\"; Test-Path \"node_modules\\\\.bin\\\\tsc.cmd\"; Test-Path \"node_modules\\\\.bin\\\\next.cmd\")",
-      "PowerShell(.\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit 2>&1)"
+      "PowerShell(.\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit 2>&1)",
+      "PowerShell(.\\\\web\\\\node_modules\\\\.bin\\\\tsc.cmd -p .\\\\web\\\\tsconfig.json --noEmit 2>&1)"
     ]
   }
 }

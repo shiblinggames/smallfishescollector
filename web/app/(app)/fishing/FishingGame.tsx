@@ -7508,11 +7508,6 @@ export default function FishingGame({
                         )
                       })()}
                     </div>
-                    {!isLocked && (
-                      <p className="font-karla font-500" style={{ fontSize: '0.65rem', color: `${zoneColor}88`, letterSpacing: '0.06em' }}>
-                        Ancient trophies
-                      </p>
-                    )}
                   </button>
                   {isExpanded && !isLocked && (
                     <motion.div
@@ -7625,44 +7620,115 @@ export default function FishingGame({
                         })}
                       </div>
 
-                      {/* Trophies sub-heading + 6 ceremonial trophy rows */}
-                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: `${zoneColor}b8`, marginTop: '0.65rem', marginBottom: '0.35rem', letterSpacing: '0.14em' }}>
-                        ✦ Trophies ({trophiesCaught}/{trophies.length})
+                      {/* The Ancients — 6 ceremonial relic-monolith cards.
+                          Caught: stone-tablet card with warm amber relic
+                          glow at the top, full silhouette art, Cinzel
+                          name + scientific italic, ✦ corner glyph, taps
+                          open the existing detail modal. Slumbering: dim
+                          dashed-border tablet with a barely-visible
+                          silhouette and a "Slumbering" caption — same
+                          species shape so the player can read what's
+                          waiting for them. */}
+                      <p className="font-cinzel font-700 uppercase" style={{
+                        fontSize: '0.62rem',
+                        color: zoneColor,
+                        marginTop: '0.95rem',
+                        marginBottom: '0.55rem',
+                        textAlign: 'center',
+                        textShadow: `0 0 14px ${zoneColor}88`,
+                        letterSpacing: '0.28em',
+                      }}>
+                        ✦ The Ancients · {trophiesCaught} of {trophies.length} awakened
                       </p>
                       {trophies.map(f => {
                         const caught = trophyCatches.has(f.id)
-                        const rowVariants = {
-                          hidden:  { opacity: 0, x: -8 },
-                          visible: { opacity: 1, x: 0, transition: { duration: 0.28, ease: [0.2, 0.7, 0.3, 1] as [number, number, number, number] } },
+                        const monoVariants = {
+                          hidden:  { opacity: 0, y: 6, scale: 0.98 },
+                          visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.2, 0.7, 0.3, 1] as [number, number, number, number] } },
+                        }
+                        if (!caught) {
+                          return (
+                            <motion.div key={f.id} variants={monoVariants} style={{
+                              position: 'relative',
+                              background: 'linear-gradient(180deg, rgba(8,12,22,0.92) 0%, rgba(4,8,16,0.96) 100%)',
+                              border: '1px dashed rgba(255,255,255,0.08)',
+                              borderRadius: 14,
+                              padding: '1rem 1rem 0.85rem',
+                              marginBottom: '0.5rem',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                            }}>
+                              <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FishImg name={f.name} style={{ maxWidth: '68%', maxHeight: 50, objectFit: 'contain', filter: 'brightness(0) opacity(0.12)' }} />
+                              </div>
+                              <p className="font-cinzel font-700 uppercase" style={{
+                                fontSize: '0.56rem',
+                                color: 'rgba(255,255,255,0.25)',
+                                letterSpacing: '0.28em',
+                                marginTop: 2,
+                              }}>Slumbering</p>
+                            </motion.div>
+                          )
                         }
                         return (
-                          <motion.div key={f.id} variants={rowVariants} style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            padding: '0.45rem 0.5rem', borderRadius: 8, marginBottom: 2,
-                            background: caught ? `${zoneColor}14` : 'rgba(255,255,255,0.02)',
-                          }}>
-                            <div style={{
-                              width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-                              background: caught ? `${zoneColor}30` : 'rgba(255,255,255,0.04)',
-                              border: `1px solid ${caught ? zoneColor + '60' : 'rgba(255,255,255,0.08)'}`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem',
-                            }}>
-                              {caught ? '🏆' : <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.15)' }}>—</span>}
+                          <motion.button
+                            key={f.id}
+                            type="button"
+                            variants={monoVariants}
+                            onClick={() => setTappedFishId(f.id)}
+                            className="text-left w-full"
+                            style={{
+                              position: 'relative',
+                              background: `
+                                radial-gradient(120% 60% at 50% 0%, ${zoneColor}42 0%, transparent 55%),
+                                linear-gradient(180deg, rgba(28,18,10,0.85) 0%, rgba(10,8,16,0.95) 70%, rgba(6,6,14,0.97) 100%)
+                              `,
+                              border: `1px solid ${zoneColor}66`,
+                              boxShadow: `inset 0 0 0 1px ${zoneColor}18, inset 0 32px 64px -22px ${zoneColor}30, 0 6px 22px rgba(0,0,0,0.55), 0 0 18px ${zoneColor}22`,
+                              borderRadius: 14,
+                              padding: '1rem 1rem 0.95rem',
+                              marginBottom: '0.5rem',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                              cursor: 'pointer',
+                              touchAction: 'manipulation',
+                              overflow: 'hidden',
+                              width: '100%',
+                            }}
+                          >
+                            <span aria-hidden style={{
+                              position: 'absolute', top: 8, right: 10,
+                              fontSize: '0.78rem', color: zoneColor,
+                              textShadow: `0 0 10px ${zoneColor}cc`,
+                              lineHeight: 1,
+                            }}>✦</span>
+                            <p className="font-karla font-700 uppercase" style={{
+                              fontSize: '0.5rem',
+                              color: `${zoneColor}b0`,
+                              letterSpacing: '0.36em',
+                              marginBottom: 4,
+                            }}>ANCIENT</p>
+                            <div style={{ width: '100%', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
+                              <FishImg name={f.name} style={{
+                                maxWidth: '78%', maxHeight: 64, objectFit: 'contain',
+                                filter: `sepia(0.3) saturate(1.1) brightness(1.05) drop-shadow(0 4px 14px ${zoneColor}55)`,
+                              }} />
                             </div>
-                            <div>
-                              <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: caught ? '#f0ede8' : 'rgba(255,255,255,0.2)', lineHeight: 1.2 }}>
-                                {caught ? f.name : '??? Undiscovered'}
-                              </p>
-                              {caught && <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: `${zoneColor}99`, fontStyle: 'italic' }}>{f.scientific_name}</p>}
-                            </div>
-                            {caught && (
-                              <div style={{ marginLeft: 'auto' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill={zoneColor} style={{ filter: `drop-shadow(0 0 4px ${zoneColor})` }}>
-                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                </svg>
-                              </div>
-                            )}
-                          </motion.div>
+                            <p className="font-cinzel font-700 uppercase" style={{
+                              fontSize: '0.95rem',
+                              color: '#fbe9c2',
+                              letterSpacing: '0.16em',
+                              textShadow: `0 0 14px ${zoneColor}aa, 0 1px 0 rgba(0,0,0,0.5)`,
+                              lineHeight: 1.1,
+                              textAlign: 'center',
+                              marginTop: 2,
+                            }}>{f.name}</p>
+                            <p className="font-karla font-400" style={{
+                              fontSize: '0.62rem',
+                              color: `${zoneColor}cc`,
+                              fontStyle: 'italic',
+                              marginTop: 2,
+                              textAlign: 'center',
+                            }}>{f.scientific_name}</p>
+                          </motion.button>
                         )
                       })}
                     </motion.div>
