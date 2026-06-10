@@ -4185,6 +4185,21 @@ export default function FishingGame({
         const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
         const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
         if (stage < cfg.phases) {
+          // Mid-stage perfect feedback: the catch-result perfect SFX +
+          // needle flash + burst + haptic normally fire below at the
+          // 'wasPerfect' block, but we return early from this branch on
+          // a stage clear and never reach it. Fire them here so a perfect
+          // landing on stage 1 of a 2-phase fish (precision Snipe Eel
+          // especially — every catch HAS to be a perfect) lands with
+          // the same recognition as a perfect on the final stage. Only
+          // fire when the stage clear came from an actual perfect zone
+          // — a regular 'catch' clear skips the feedback as before.
+          if (zone.type === 'perfect') {
+            playPerfectSfx()
+            setPerfectBurstKey(k => k + 1)
+            setPerfectFlash(true)
+            if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
+          }
           // Stage cleared — show feedback, then advance
           setBossStageCleared(true)
           phaseRef.current = 'reeling'
