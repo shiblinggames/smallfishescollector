@@ -1129,7 +1129,14 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
    *  so the entire result moment reads as premium. */
   isShiny?: boolean
 }) {
-  const isAncient = fish.habitat === 'ancient_deep'
+  // 'Ancient' card treatment is the red boss palette + heavy
+  // burst / ominous chrome reserved for the 6 trophies. The 12 new
+  // ancient_deep regulars added 2026-06-10 are still ancient-zone catches
+  // but read as "regular high-value fish", not boss reveals, so they
+  // fall back to the standard bite_rarity treatment (rare blue / epic
+  // purple / legendary gold). Discriminator: sell_value 0 = trophy,
+  // matches the trophy/inventory routing split server-side.
+  const isAncient = fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0
   const rarity = fish.bite_rarity ?? 1
   const baseR = RARITY[rarity] ?? RARITY[1]
 
