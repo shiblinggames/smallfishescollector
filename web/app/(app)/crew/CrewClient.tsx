@@ -1053,8 +1053,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 )}
               </button>
               {/* Recruit — always gold so it reads as THE action, not just
-                  another view. Full gold gradient when active, gold-tinted
-                  outline when resting. */}
+                  another view. Active state is a stronger gold TINT (same
+                  family as the other tabs' active treatment) — the earlier
+                  full gradient fill read as a pressed candy button and
+                  clashed with the hall panel below it. */}
               <button
                 role="tab"
                 aria-selected={recruitsActive}
@@ -1065,13 +1067,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                   padding: '0.55rem 0.45rem', borderRadius: 9,
                   fontSize: '0.7rem', letterSpacing: '0.06em',
-                  background: recruitsActive
-                    ? 'linear-gradient(180deg, #d9b563 0%, #a8842f 100%)'
-                    : 'rgba(201,162,74,0.1)',
-                  border: `1px solid ${recruitsActive ? 'rgba(240,214,150,0.85)' : 'rgba(201,162,74,0.5)'}`,
-                  color: recruitsActive ? '#2a1c08' : '#e8c87a',
-                  boxShadow: recruitsActive ? '0 3px 12px rgba(201,162,74,0.35), inset 0 1px 0 rgba(255,240,200,0.5)' : 'none',
-                  textShadow: recruitsActive ? '0 1px 1px rgba(255,238,200,0.4)' : 'none',
+                  background: recruitsActive ? 'rgba(201,162,74,0.24)' : 'rgba(201,162,74,0.1)',
+                  border: `1px solid ${recruitsActive ? 'rgba(240,214,150,0.8)' : 'rgba(201,162,74,0.5)'}`,
+                  color: recruitsActive ? '#f0d696' : '#e8c87a',
                   cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
                 }}>
                 <span>Recruit</span>
@@ -1165,39 +1163,37 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               {hall.flavor}
             </p>
           </div>
-          {/* Reroll row — the button used to float centered in its own row
-              (a pill with dead space either side); now it fills the left of
-              a single row and the free-roll countdown sits in the space to
-              its right as a compact two-line block. Squarer corners so it
-              reads as part of the hall panel, not a floating CTA. */}
+          {/* Reroll row — fills the left of a single row, free-roll
+              countdown in the space to its right. Styled to MATCH the hall
+              header's Upgrade pill (blue tint, karla uppercase, pill
+              radius) so the panel's two actions read as one family — the
+              old gold-gradient version clashed with everything around it. */}
           {(() => {
             const cannot = pending || reveal.revealing || state.gems < state.rerollCost
             return (
               <div className="flex items-center" style={{ gap: 12, marginBottom: '1.1rem' }}>
-                <motion.button
+                <button
                   onClick={handleReroll}
                   disabled={cannot}
                   title="Spend gems for 3 brand-new recruits"
-                  whileTap={cannot ? undefined : { scale: 0.96 }}
-                  transition={{ type: 'spring', stiffness: 520, damping: 18 }}
-                  className="font-cinzel font-700 uppercase"
+                  className="font-karla font-700 uppercase active:scale-95"
                   style={{
                     flex: '1 1 auto', minWidth: 0,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                    padding: '0.62rem 1rem', borderRadius: 10,
-                    fontSize: '0.82rem', letterSpacing: '0.07em',
-                    background: cannot ? 'linear-gradient(180deg, #2a2114 0%, #19120a 100%)' : 'linear-gradient(180deg, #d9b563 0%, #a8842f 100%)',
-                    border: `1px solid ${cannot ? 'rgba(201,162,74,0.28)' : 'rgba(240,214,150,0.85)'}`,
-                    color: cannot ? 'rgba(240,220,168,0.45)' : '#2a1c08',
-                    boxShadow: cannot ? 'none' : '0 4px 16px rgba(201,162,74,0.42), inset 0 1px 0 rgba(255,240,200,0.5)',
-                    textShadow: cannot ? 'none' : '0 1px 1px rgba(255,238,200,0.4)',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                    padding: '0.55rem 1rem', borderRadius: 999,
+                    fontSize: '0.7rem', letterSpacing: '0.08em',
+                    background: 'rgba(96,165,250,0.14)',
+                    border: '1px solid rgba(96,165,250,0.45)',
+                    color: '#cfe2ff',
+                    opacity: cannot ? 0.45 : 1,
                     cursor: cannot ? 'not-allowed' : 'pointer',
+                    transition: 'transform 0.08s, opacity 0.18s',
                   }}
                 >
                   <RefreshIcon />
                   <span>{busyId === 'reroll' || reveal.revealing ? 'Rerolling…' : 'Reroll'}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontSize: '0.8rem', letterSpacing: 0 }}>{state.rerollCost}<span style={{ color: cannot ? 'rgba(90,63,184,0.45)' : '#4f2fb0' }}>◆</span></span>
-                </motion.button>
+                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, letterSpacing: 0 }}>{state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span></span>
+                </button>
                 <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                   <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)' }}>
                     Free reroll
