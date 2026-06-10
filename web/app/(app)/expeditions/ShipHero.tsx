@@ -242,18 +242,24 @@ export default function ShipHero({
   const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
 
-  // Featured crew on the left side of the hero. Picked randomly from
-  // the roster, recomputed only when the roster identity changes (length
-  // + first/last ids as a cheap proxy) so the face stays stable across
-  // unrelated re-renders. New players see a silhouette placeholder.
-  const featuredCrew = useMemo(() => {
-    if (roster.length === 0) return null
-    const idx = Math.floor(Math.random() * roster.length)
-    return roster[idx]
-    // Deps include roster identity, not the array reference — pinning
-    // on length + boundary ids lets us reshuffle when the player
-    // actually recruits/loses crew but stay still during voyage/raid
-    // state churn.
+  // Featured crew on the left side of the hero. Up to 3 distinct
+  // members picked at random for a triangle composition: trio[0]
+  // anchors front-center, trio[1] peeks from back-left, trio[2] from
+  // back-right. Smaller rosters fall back gracefully (2 → front +
+  // back-left, 1 → front only, 0 → silhouette placeholder). Deps pin
+  // on roster identity so the lineup stays stable across unrelated
+  // re-renders and only reshuffles when the player actually recruits
+  // or loses crew.
+  const featuredCrewTrio = useMemo(() => {
+    if (roster.length === 0) return [] as RosterCrew[]
+    const idxs = roster.map((_, i) => i)
+    const picked: RosterCrew[] = []
+    while (idxs.length > 0 && picked.length < 3) {
+      const j = Math.floor(Math.random() * idxs.length)
+      picked.push(roster[idxs[j]])
+      idxs.splice(j, 1)
+    }
+    return picked
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roster.length, roster[0]?.id, roster[roster.length - 1]?.id])
 
@@ -721,42 +727,32 @@ export default function ShipHero({
             alignItems: 'end',
             gap: 14, marginTop: '0.9rem',
           }}>
-            {/* Left col — random roster crew member portrait. Crew
-                art has NO transparent margin, while the ship PNG bakes
-                in ~20% top/bottom + ~31% L/R of transparent padding
-                around its content. To compensate, the crew is rendered
-                shorter than the wrapper so it ends up the same VISIBLE
-                size as the ship's visible content area, with matching
-                fake padding around it. Wrapper at 85 tall, crew img
-                at ~50 tall centered → looks the same vertical scale
-                as the ship's ~49px-tall visible content. */}
+            {/* Left col — crew lineup. Up to 3 roster members posed
+                in a V: front[0] anchors bottom-center, back[1] peeks
+                from upper-left, back[2] from upper-right. Back members
+                render smaller + dimmer + slightly blurred so they read
+                as "behind" the front one without an actual 3D camera.
+                Empty roster falls back to a silhouette placeholder.
+                Wrapper height a touch taller than the single-portrait
+                version (90 vs 85) so the back row's tops don't clip
+                against the Lv pill above — grid alignItems:end keeps
+                the bottom flush with the ship column. */}
             <Link href="/crew" style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               textDecoration: 'none',
               cursor: 'pointer',
             }}>
               <div style={{
-                height: 85,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                height: 90, width: '100%',
                 position: 'relative',
               }}>
-                {featuredCrew ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={IMG_BASE + featuredCrew.filename}
-                    alt={featuredCrew.name}
-                    style={{
-                      height: 50, width: 'auto', maxWidth: '100%',
-                      objectFit: 'contain',
-                      filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.55))',
-                    }}
-                  />
-                ) : (
-                  // Empty roster — silhouette placeholder so the slot
-                  // reads as 'no crew yet, go recruit' instead of a
-                  // gap next to the ship. Sized to match the same
-                  // visual scale as the live crew portrait above.
+                {featuredCrewTrio.length === 0 ? (
+                  // Empty roster — silhouette placeholder centered in
+                  // the wrapper. Same shape as the old single-portrait
+                  // empty state.
                   <div style={{
+                    position: 'absolute', left: '50%', bottom: 0,
+                    transform: 'translateX(-50%)',
                     width: 42, height: 50,
                     borderRadius: '12% 12% 30% 30%',
                     background: 'radial-gradient(ellipse at 50% 28%, rgba(110,140,180,0.18) 0%, rgba(20,28,42,0) 70%)',
@@ -768,6 +764,57 @@ export default function ShipHero({
                       <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2" />
                     </svg>
                   </div>
+                ) : (
+                  <>
+                    {/* Back-left — only when there's a 2nd crew */}
+                    {featuredCrewTrio[1] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={IMG_BASE + featuredCrewTrio[1].filename}
+                        alt={featuredCrewTrio[1].name}
+                        style={{
+                          position: 'absolute', left: '10%', top: 2,
+                          height: 40, width: 'auto', maxWidth: '50%',
+                          objectFit: 'contain',
+                          opacity: 0.72,
+                          filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                          zIndex: 1,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )}
+                    {/* Back-right — only when there's a 3rd crew */}
+                    {featuredCrewTrio[2] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={IMG_BASE + featuredCrewTrio[2].filename}
+                        alt={featuredCrewTrio[2].name}
+                        style={{
+                          position: 'absolute', right: '10%', top: 2,
+                          height: 40, width: 'auto', maxWidth: '50%',
+                          objectFit: 'contain',
+                          opacity: 0.72,
+                          filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+                          zIndex: 1,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )}
+                    {/* Front-center — always present when roster > 0 */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={IMG_BASE + featuredCrewTrio[0].filename}
+                      alt={featuredCrewTrio[0].name}
+                      style={{
+                        position: 'absolute', left: '50%', bottom: 0,
+                        transform: 'translateX(-50%)',
+                        height: 54, width: 'auto', maxWidth: '70%',
+                        objectFit: 'contain',
+                        filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
+                        zIndex: 2,
+                      }}
+                    />
+                  </>
                 )}
               </div>
               <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{
