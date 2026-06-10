@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useEffect, useRef, useState, useTransition } from 'react'
+import { forwardRef, useEffect, useRef, useState, useTransition, type CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BJ_BET_PRESETS, BJ_BUY_IN_PRESETS, BJ_BUY_IN_MAX, BJ_BUY_IN_MIN, BJ_DAILY_CAP, BJ_MAX_BET, BJ_MIN_BET } from './constants'
 import {
@@ -362,6 +362,21 @@ function DailyCapBar({ wagered, cap }: { wagered: number; cap: number }) {
 // (4 × 78 + gaps ≈ 330px); five-card hands wrap to a second row.
 const CARD_DIMS = { w: 78, h: 112, rankFont: '1.25rem', suitFont: '1.2rem', cornerPad: 6 }
 
+// Card row layout — instead of flex-wrapping to a second row when the
+// hand grows past 3-4 cards (which shoves the rest of the UI down),
+// cards beyond 3 start overlapping each other so they fan out like
+// physical cards on a felt. The leftmost ~40px of each card stays
+// visible (rank + suit corner) so the player can still read every card
+// at a glance. Tuned for the ~325px-wide play area at our typical phone
+// modal size — even 7 cards fit on one row.
+function cardOverlapMargin(count: number): number {
+  if (count <= 3) return 6   // normal flex gap, no overlap
+  if (count === 4) return -8
+  if (count === 5) return -22
+  if (count === 6) return -32
+  return -38                  // 7+, ~40px of each card visible
+}
+
 // 3D flip wrapper — used for the dealer's hole card. Renders the
 // cardback on the front face and the real card on the back face; a
 // 180° rotateY transition flips between them. backfaceVisibility:
@@ -414,7 +429,7 @@ function FlipCard({ flipped, card, fishArt, duration = 820 }: { flipped: boolean
  *  immediately for revealed/hidden cards) so the parent can defer
  *  the hand total update until the card has visually settled face-up.
  */
-function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing' }: { card: Card | 'X'; fishArt: string | null; onFlipComplete?: () => void; mode?: 'dealing' | 'revealed' }) {
+function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing', style }: { card: Card | 'X'; fishArt: string | null; onFlipComplete?: () => void; mode?: 'dealing' | 'revealed'; style?: CSSProperties }) {
   const isHidden = card === 'X'
   const [flipped, setFlipped] = useState(mode === 'revealed' && !isHidden)
   // Ref-mirror the callback so re-rendering the parent with a fresh
@@ -446,7 +461,7 @@ function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing' }: { card: 
       whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
       whileTap={{ scale: 0.96 }}
       transition={mode === 'revealed' ? { duration: 0 } : { duration: 0.36, ease: 'easeOut' }}
-      style={{ flexShrink: 0, cursor: 'pointer' }}
+      style={{ flexShrink: 0, cursor: 'pointer', ...style }}
     >
       {/* Always FlipCard (even for hidden) so the 3D context stays
           consistent across phase transitions. Hidden case passes
@@ -1225,35 +1240,41 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#a68a4a' }}>Dealer</p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#f0e8d0', lineHeight: 1 }}>{dealerTotalDisplay}</p>
           </div>
-          <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
-            <FeltRule text="Dealer hits soft 17" />
-            {visibleDealerCards.map((c, i) => {
-              if (i === 1) {
-                // Hole card uses the SAME motion.div + FlipCard wrapper
-                // as renderSettleScreen so React reconciles the inner
-                // 3D context across the phase transition (instead of
-                // unmounting the DealtCard tree and mounting a fresh
-                // FlipCard tree, which flashes a 1-frame cardback gap).
-                // During play card=null + flipped=false → renders
-                // cardback; once we cross to settle the real card is
-                // passed and holeFlipped controls the reveal flip.
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: -22, scale: 0.85 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
-                    whileTap={{ scale: 0.96 }}
-                    transition={{ duration: 0.36, ease: 'easeOut' }}
-                    style={{ flexShrink: 0, cursor: 'pointer' }}
-                  >
-                    <FlipCard flipped={false} card={null} fishArt={null} duration={820} />
-                  </motion.div>
-                )
-              }
-              return <DealtCard key={i} card={c} fishArt={getFish(-1, i, c)} />
-            })}
-          </div>
+          {(() => {
+            const margin = cardOverlapMargin(visibleDealerCards.length)
+            return (
+              <div style={{ position: 'relative', display: 'flex', gap: 0, flexWrap: 'nowrap', minHeight: CARD_DIMS.h }}>
+                <FeltRule text="Dealer hits soft 17" />
+                {visibleDealerCards.map((c, i) => {
+                  const cardStyle: CSSProperties = { marginLeft: i === 0 ? 0 : margin, zIndex: i + 1 }
+                  if (i === 1) {
+                    // Hole card uses the SAME motion.div + FlipCard wrapper
+                    // as renderSettleScreen so React reconciles the inner
+                    // 3D context across the phase transition (instead of
+                    // unmounting the DealtCard tree and mounting a fresh
+                    // FlipCard tree, which flashes a 1-frame cardback gap).
+                    // During play card=null + flipped=false → renders
+                    // cardback; once we cross to settle the real card is
+                    // passed and holeFlipped controls the reveal flip.
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: -22, scale: 0.85 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={{ duration: 0.36, ease: 'easeOut' }}
+                        style={{ flexShrink: 0, cursor: 'pointer', ...cardStyle }}
+                      >
+                        <FlipCard flipped={false} card={null} fishArt={null} duration={820} />
+                      </motion.div>
+                    )
+                  }
+                  return <DealtCard key={i} card={c} fishArt={getFish(-1, i, c)} style={cardStyle} />
+                })}
+              </div>
+            )
+          })()}
         </motion.div>
 
         {/* Pot — fixed slot between dealer and player. Counts up from
@@ -1359,17 +1380,23 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                   </p>
                 </div>
               </div>
-              <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
-                {hi === 0 && <FeltRule text={['Blackjack pays 3 to 2', 'Insurance pays 2 to 1']} />}
-                {visibleHandCards.map((c, ci) => (
-                  <DealtCard
-                    key={ci}
-                    card={c}
-                    fishArt={getFish(hi, ci, c)}
-                    onFlipComplete={() => setHandFlipCounts(prev => ({ ...prev, [hi]: Math.max(prev[hi] ?? 0, ci + 1) }))}
-                  />
-                ))}
-              </div>
+              {(() => {
+                const margin = cardOverlapMargin(visibleHandCards.length)
+                return (
+                  <div style={{ position: 'relative', display: 'flex', gap: 0, flexWrap: 'nowrap', minHeight: CARD_DIMS.h }}>
+                    {hi === 0 && <FeltRule text={['Blackjack pays 3 to 2', 'Insurance pays 2 to 1']} />}
+                    {visibleHandCards.map((c, ci) => (
+                      <DealtCard
+                        key={ci}
+                        card={c}
+                        fishArt={getFish(hi, ci, c)}
+                        onFlipComplete={() => setHandFlipCounts(prev => ({ ...prev, [hi]: Math.max(prev[hi] ?? 0, ci + 1) }))}
+                        style={{ marginLeft: ci === 0 ? 0 : margin, zIndex: ci + 1 }}
+                      />
+                    ))}
+                  </div>
+                )
+              })()}
             </div>
           )
         })}
@@ -1468,52 +1495,60 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
               </p>
             </div>
           </div>
-          <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: CARD_DIMS.h }}>
-            <FeltRule text="Dealer hits soft 17" />
-            {r.dealerCards.map((c, i) => {
-              if (i >= revealedDealerCount) return null
-              const fish = getFish(-1, i, c)
-              if (i === 1) {
-                // Hole card — wrapped in the same motion.div as
-                // DealtCard so the cross-phase DOM stays identical
-                // (play used DealtCard with card='X', settle uses
-                // FlipCard with the real card; same outer wrap means
-                // no 3D-layer teardown/rebuild on transition). The
-                // 820ms duration here is the dramatic dealer reveal.
-                return (
-                  <motion.div
-                    key={i}
-                    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
-                    whileTap={{ scale: 0.96 }}
-                    style={{ flexShrink: 0, cursor: 'pointer' }}
-                  >
-                    <FlipCard flipped={holeFlipped} card={c} fishArt={fish} duration={820} />
-                  </motion.div>
-                )
-              }
-              if (i === 0) {
-                // Up card — already face-up from play. Use DealtCard
-                // in 'revealed' mode so the wrapping motion.div +
-                // FlipCard structure matches what the play screen
-                // renders, eliminating the brief stutter from a
-                // structural swap at phase transition.
-                return <DealtCard key={i} card={c} fishArt={fish} mode="revealed" />
-              }
-              // Extra dealer draws (i >= 2). Use DealtCard so they slide
-              // in face-down and flip to face-up, matching how every
-              // other card in the game gets dealt. onFlipComplete bumps
-              // dealerTotalCardCount so the dealer total tick waits for
-              // the face to commit before counting this card.
-              return (
-                <DealtCard
-                  key={i}
-                  card={c}
-                  fishArt={fish}
-                  onFlipComplete={() => setDealerTotalCardCount(prev => Math.max(prev, i + 1))}
-                />
-              )
-            })}
-          </div>
+          {(() => {
+            const visibleCount = Math.min(r.dealerCards.length, revealedDealerCount)
+            const margin = cardOverlapMargin(visibleCount)
+            return (
+              <div style={{ position: 'relative', display: 'flex', gap: 0, flexWrap: 'nowrap', minHeight: CARD_DIMS.h }}>
+                <FeltRule text="Dealer hits soft 17" />
+                {r.dealerCards.map((c, i) => {
+                  if (i >= revealedDealerCount) return null
+                  const fish = getFish(-1, i, c)
+                  const cardStyle: CSSProperties = { marginLeft: i === 0 ? 0 : margin, zIndex: i + 1 }
+                  if (i === 1) {
+                    // Hole card — wrapped in the same motion.div as
+                    // DealtCard so the cross-phase DOM stays identical
+                    // (play used DealtCard with card='X', settle uses
+                    // FlipCard with the real card; same outer wrap means
+                    // no 3D-layer teardown/rebuild on transition). The
+                    // 820ms duration here is the dramatic dealer reveal.
+                    return (
+                      <motion.div
+                        key={i}
+                        whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
+                        whileTap={{ scale: 0.96 }}
+                        style={{ flexShrink: 0, cursor: 'pointer', ...cardStyle }}
+                      >
+                        <FlipCard flipped={holeFlipped} card={c} fishArt={fish} duration={820} />
+                      </motion.div>
+                    )
+                  }
+                  if (i === 0) {
+                    // Up card — already face-up from play. Use DealtCard
+                    // in 'revealed' mode so the wrapping motion.div +
+                    // FlipCard structure matches what the play screen
+                    // renders, eliminating the brief stutter from a
+                    // structural swap at phase transition.
+                    return <DealtCard key={i} card={c} fishArt={fish} mode="revealed" style={cardStyle} />
+                  }
+                  // Extra dealer draws (i >= 2). Use DealtCard so they slide
+                  // in face-down and flip to face-up, matching how every
+                  // other card in the game gets dealt. onFlipComplete bumps
+                  // dealerTotalCardCount so the dealer total tick waits for
+                  // the face to commit before counting this card.
+                  return (
+                    <DealtCard
+                      key={i}
+                      card={c}
+                      fishArt={fish}
+                      onFlipComplete={() => setDealerTotalCardCount(prev => Math.max(prev, i + 1))}
+                      style={cardStyle}
+                    />
+                  )
+                })}
+              </div>
+            )
+          })()}
         </motion.div>
 
         {/* Pot — holds the wager visible through the dealer reveal,
@@ -1591,16 +1626,21 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                     </p>
                   </div>
                 </div>
-                <div style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {hi === 0 && <FeltRule text={['Blackjack pays 3 to 2', 'Insurance pays 2 to 1']} />}
-                  {h.cards.map((card, ci) => (
-                    // mode='revealed' so the structure matches what the
-                    // play screen rendered for these same cards (DealtCard
-                    // motion.div + FlipCard), eliminating the brief 3D
-                    // layer teardown/rebuild stutter at phase transition.
-                    <DealtCard key={ci} card={card} fishArt={getFish(hi, ci, card)} mode="revealed" />
-                  ))}
-                </div>
+                {(() => {
+                  const margin = cardOverlapMargin(h.cards.length)
+                  return (
+                    <div style={{ position: 'relative', display: 'flex', gap: 0, flexWrap: 'nowrap' }}>
+                      {hi === 0 && <FeltRule text={['Blackjack pays 3 to 2', 'Insurance pays 2 to 1']} />}
+                      {h.cards.map((card, ci) => (
+                        // mode='revealed' so the structure matches what the
+                        // play screen rendered for these same cards (DealtCard
+                        // motion.div + FlipCard), eliminating the brief 3D
+                        // layer teardown/rebuild stutter at phase transition.
+                        <DealtCard key={ci} card={card} fishArt={getFish(hi, ci, card)} mode="revealed" style={{ marginLeft: ci === 0 ? 0 : margin, zIndex: ci + 1 }} />
+                      ))}
+                    </div>
+                  )
+                })()}
               </motion.div>
             )
           })}
