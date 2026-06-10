@@ -374,8 +374,15 @@ export async function reelIn(
 
   if (!fish || !profile) return { error: 'Data not found' }
 
-  // Trophy path: ancient_deep fish go straight to trophy_catches, skip hold/collection/bounty
-  if (fish.habitat === 'ancient_deep') {
+  // Trophy path: ancient_deep fish WITH sell_value 0 are the original 6
+  // prehistoric trophies — they go straight to trophy_catches, skip
+  // hold/collection/bounty. Sellable ancient_deep fish (sell_value > 0)
+  // are the new 6 regulars added 2026-06-10; they fall through to the
+  // normal catch path below so they stack in fish_inventory like every
+  // other zone's catches. The multi-phase boss reel UI on the client
+  // applies to ALL ancient_deep fish regardless — that's a client-only
+  // catch-mechanic concern, not a server routing one.
+  if (fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0) {
     const existing = ((profile.trophy_catches as number[] | null) ?? [])
     const isNewTrophy = !existing.includes(fishId)
     const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3)

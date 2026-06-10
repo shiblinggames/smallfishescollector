@@ -159,13 +159,27 @@ const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as co
 type ZoneKey = typeof ZONES[number]
 
 type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split'
-const BOSS_CONFIG: Record<string, BossMechanic> = {
-  'Megalodon':    'shrink',
-  'Plesiosaurus': 'drift',
-  'Dunkleosteus': 'accelerate',
-  'Mosasaurus':   'randomize',
-  'Basilosaurus': 'split',
-  'Shastasaurus': 'shrink', // gets random mechanic per stage via handlePrestige logic
+// Ancient Deep multi-phase reel config. Trophies (the original 6) run 3
+// stages with one fixed mechanic per fish; new sellable regulars run a
+// shorter 2 stages with their own mechanic each. The wildcard flag means
+// the mechanic rerolls each stage (Shastasaurus does this; Sea Lamprey
+// inherits the same "primitive, unpredictable" feel at the lower tier).
+interface BossConfig { mechanic: BossMechanic; phases: number; wildcard?: boolean }
+const BOSS_CONFIG: Record<string, BossConfig> = {
+  // ── Trophies (sell_value 0, route to trophy_catches) ──
+  'Megalodon':         { mechanic: 'shrink',     phases: 3 },
+  'Plesiosaurus':      { mechanic: 'drift',      phases: 3 },
+  'Dunkleosteus':      { mechanic: 'accelerate', phases: 3 },
+  'Mosasaurus':        { mechanic: 'randomize',  phases: 3 },
+  'Basilosaurus':      { mechanic: 'split',      phases: 3 },
+  'Shastasaurus':      { mechanic: 'shrink',     phases: 3, wildcard: true },
+  // ── New sellable regulars (sell_value > 0, route to inventory) ──
+  'Chambered Nautilus': { mechanic: 'drift',      phases: 2 },
+  'Ghost Shark':        { mechanic: 'randomize',  phases: 2 },
+  'Spookfish':          { mechanic: 'split',      phases: 2 },
+  'Snipe Eel':          { mechanic: 'shrink',     phases: 2 },
+  'Yeti Crab':          { mechanic: 'accelerate', phases: 2 },
+  'Sea Lamprey':        { mechanic: 'shrink',     phases: 2, wildcard: true },
 }
 const SHASTASAURUS_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split']
 
@@ -3804,13 +3818,17 @@ export default function FishingGame({
 
       setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier })
 
-      // Initialise boss fight state for ancient_deep
+      // Initialise boss-fight state for ancient_deep. ALL ancient_deep
+      // fish run a multi-phase reel; trophies are 3-phase with a fixed
+      // mechanic, new sellable regulars are 2-phase with their own
+      // mechanic each. Wildcard fish (Shastasaurus, Sea Lamprey) reroll
+      // the mechanic per stage.
       if (selectedZone === 'ancient_deep') {
         const bossName = allFishSpecies.find(f => f.id === res.fishId)?.name ?? ''
-        const isShastasaurus = bossName === 'Shastasaurus'
-        const mechanic = isShastasaurus
+        const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
+        const mechanic = cfg.wildcard
           ? SHASTASAURUS_MECHANICS[Math.floor(Math.random() * SHASTASAURUS_MECHANICS.length)]
-          : (BOSS_CONFIG[bossName] ?? 'shrink')
+          : cfg.mechanic
         activeBossMechanicRef.current = mechanic
         setActiveBossMechanic(mechanic)
         bossStageRef.current = 1
@@ -4128,7 +4146,8 @@ export default function FishingGame({
 
     const isCatch = effectiveZoneType === 'catch' || effectiveZoneType === 'perfect'
 
-    // Ancient Deep: 3-stage boss mechanic
+    // Ancient Deep: multi-phase reel. Trophies = 3 stages, new sellable
+    // regulars = 2 stages, both keyed off BOSS_CONFIG[name].phases.
     if (selectedZone === 'ancient_deep') {
       if (!isCatch) {
         // Miss resets the entire boss fight
@@ -4142,7 +4161,9 @@ export default function FishingGame({
         // Fall through to normal miss handling
       } else {
         const stage = bossStageRef.current
-        if (stage < 3) {
+        const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
+        const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
+        if (stage < cfg.phases) {
           // Stage cleared — show feedback, then advance
           setBossStageCleared(true)
           phaseRef.current = 'reeling'
@@ -4164,9 +4185,9 @@ export default function FishingGame({
             bossNeedleMultRef.current = Math.min(bossNeedleMultRef.current * 1.4, 4.0)
           }
 
-          // Shastasaurus: pick a new random mechanic each stage
-          const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
-          if (bossName === 'Shastasaurus') {
+          // Wildcard fish (Shastasaurus, Sea Lamprey) reroll mechanic
+          // each stage instead of escalating one fixed mechanic.
+          if (cfg.wildcard) {
             const next = SHASTASAURUS_MECHANICS[Math.floor(Math.random() * SHASTASAURUS_MECHANICS.length)]
             activeBossMechanicRef.current = next
             setActiveBossMechanic(next)
