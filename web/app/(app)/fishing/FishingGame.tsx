@@ -76,6 +76,14 @@ type InventoryItem = {
 function applyBossMods(zones: ZoneDef[], mechanic: BossMechanic | null, shrinkDeg: number): ZoneDef[] {
   if (!mechanic) return zones
   let result = [...zones]
+  if (mechanic === 'precision') {
+    // Perfect-only catch: the green catch ring becomes a miss zone, so
+    // only the gold perfect sliver lands the fish. Player sees red
+    // where there used to be green, the visual cue is unmistakable.
+    // No separate gameplay branch needed in the resolver — the zone
+    // resolver naturally returns 'miss' for what's now a miss zone.
+    result = result.map(z => z.type === 'catch' ? { ...z, type: 'miss' as ZoneType, label: 'Miss', color: '#f87171' } : z)
+  }
   if (mechanic === 'split') {
     const perfect = result.find(z => z.type === 'perfect')
     if (perfect) {
@@ -158,7 +166,7 @@ const ZONE_CLOUD_VARIANT: Record<string, CloudVariant> = {
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss', 'ancient_deep'] as const
 type ZoneKey = typeof ZONES[number]
 
-type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split'
+type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 'precision'
 // Ancient Deep multi-phase reel config. Trophies (the original 6) run 3
 // stages with one fixed mechanic per fish; new sellable regulars run a
 // shorter 2 stages with their own mechanic each. The wildcard flag means
@@ -177,7 +185,7 @@ const BOSS_CONFIG: Record<string, BossConfig> = {
   'Chambered Nautilus': { mechanic: 'drift',      phases: 2 },
   'Ghost Shark':        { mechanic: 'randomize',  phases: 2 },
   'Spookfish':          { mechanic: 'split',      phases: 2 },
-  'Snipe Eel':          { mechanic: 'shrink',     phases: 2 },
+  'Snipe Eel':          { mechanic: 'precision',  phases: 2 },
   'Yeti Crab':          { mechanic: 'accelerate', phases: 2 },
   'Sea Lamprey':        { mechanic: 'shrink',     phases: 2, wildcard: true },
   'Pacific Hagfish':    { mechanic: 'split',      phases: 2 },
@@ -187,7 +195,7 @@ const BOSS_CONFIG: Record<string, BossConfig> = {
   'Vent Octopus':       { mechanic: 'shrink',     phases: 2 },
   'Black Dragonfish':   { mechanic: 'shrink',     phases: 2, wildcard: true },
 }
-const SHASTASAURUS_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split']
+const SHASTASAURUS_MECHANICS: BossMechanic[] = ['shrink', 'drift', 'accelerate', 'randomize', 'split', 'precision']
 
 const RARITY: Record<number, { label: string; color: string; hookedText: string }> = {
   1: { label: 'Common',    color: '#94a3b8', hookedText: "Something's on the line…" },
