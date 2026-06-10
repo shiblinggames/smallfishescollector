@@ -32,6 +32,10 @@ export type BoardCandidate = {
   fortune: number
   effects: string[]
   recruited: boolean
+  /** Crew Hall XP seed stamped when this board was ROLLED. Recruiting uses
+   *  this (not the live hall tier), so upgrading the hall mid-board doesn't
+   *  retroactively level candidates — only the next roll benefits. */
+  startXp: number
 }
 
 export type CrewMember = {
@@ -111,7 +115,10 @@ async function loadCards(admin: ReturnType<typeof createAdminClient>) {
   return { byGroup, meta }
 }
 
-/** Roll N candidate rows ready for insert into daily_recruits. */
+/** Roll N candidate rows ready for insert into daily_recruits. startXp is
+ *  the Crew Hall seed STAMPED AT ROLL TIME — upgrading the hall mid-board
+ *  must not retroactively level candidates already on display, so the perk
+ *  lives on the row, not the profile read at recruit time. */
 function generateBoardRows(
   userId: string,
   size: number,
@@ -119,6 +126,7 @@ function generateBoardRows(
   weights: readonly [number, number, number, number],
   byGroup: Record<CrewRarity, number[]>,
   meta: Map<number, CardMeta>,
+  startXp: number,
 ) {
   const rows: any[] = []
   for (let slot = 0; slot < size; slot++) {
@@ -135,6 +143,7 @@ function generateBoardRows(
       user_id: userId, slot, source,
       card_id: c.cardId, rarity: c.rarity,
       power: c.power, dodge: c.dodge, fortune: c.fortune, effects: c.effects,
+      start_xp: startXp,
     })
   }
   return rows
@@ -149,6 +158,7 @@ function toCandidate(r: any, meta: Map<number, CardMeta>): BoardCandidate {
     slug: (m?.slug ?? '').toLowerCase(),
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[], recruited: r.recruited,
+    startXp: (r.start_xp as number | null) ?? 0,
   }
 }
 
@@ -198,14 +208,14 @@ export async function getCrewState(): Promise<CrewState | null> {
   // won't be clobbered by this.
   if ((prof as any).last_free_recruit_date !== today) {
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta)
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier))
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', user.id)
   }
 
   const { data: boardRows } = await admin
     .from('daily_recruits')
-    .select('id, slot, source, card_id, rarity, power, dodge, fortune, effects, recruited')
+    .select('id, slot, source, card_id, rarity, power, dodge, fortune, effects, recruited, start_xp')
     .eq('user_id', user.id)
     .order('slot')
   // Live roster only — fallen crew (died_at IS NOT NULL) live in the
@@ -263,7 +273,7 @@ export async function rerollBoard(): Promise<CrewActionResult> {
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('gems').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier').eq('id', user.id).single()
   const gems = (prof as any)?.gems ?? 0
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
 
@@ -281,7 +291,7 @@ export async function rerollBoard(): Promise<CrewActionResult> {
 
   const { byGroup, meta } = await loadCards(admin)
   await admin.from('daily_recruits').delete().eq('user_id', user.id)
-  const rows = generateBoardRows(user.id, 3, 'gem', GEM_WEIGHTS, byGroup, meta)
+  const rows = generateBoardRows(user.id, 3, 'gem', GEM_WEIGHTS, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier))
   if (rows.length) await admin.from('daily_recruits').insert(rows)
 
   const state = await getCrewState()
@@ -296,7 +306,7 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('expedition_xp, crew_hall_tier').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('expedition_xp').eq('id', user.id).single()
   const capacity = crewCapacity(getLevelFromXP((prof as any)?.expedition_xp ?? 0))
   // Capacity check counts LIVE roster only — fallen crew don't take
   // up a roster slot (graveyard is unlimited memorial space).
@@ -309,7 +319,7 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
 
   const { data: rec } = await admin
     .from('daily_recruits')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, recruited')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, recruited, start_xp')
     .eq('id', recruitId)
     .eq('user_id', user.id)
     .single()
@@ -326,10 +336,11 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
     effects: (rec as any).effects,
     voyage_slot: null,
     raid_slot: null,
-    // Crew Hall perk: recruits arrive at the hall tier's starting level.
-    // Level is derived from XP, so seeding the XP is the entire feature —
-    // stat ticks, ability unlock (Lv 10), chips and bars all follow.
-    xp: hallStartXP((prof as any)?.crew_hall_tier),
+    // Crew Hall perk: recruits arrive at the level stamped on the board
+    // row WHEN IT WAS ROLLED (not the live hall tier), so upgrading the
+    // hall mid-board only benefits the next roll. Level is derived from
+    // XP, so seeding it covers stat ticks, ability unlock, chips and bars.
+    xp: (rec as any).start_xp ?? 0,
   })
   await admin.from('daily_recruits').update({ recruited: true }).eq('id', recruitId).eq('user_id', user.id)
   // Lifetime recruit counter (cumulative; user_crew only holds the live roster).

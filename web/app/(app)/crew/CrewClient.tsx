@@ -9,7 +9,7 @@ import {
   upgradeCrewHall,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
-import { hallTierDef, nextHallTier, hallStartXP, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
+import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
@@ -1178,10 +1178,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               const panel = (
                 <CrewPanel name={c.name} filename={c.filename} rarity={c.rarity}
                   base={{ power: c.power, dodge: c.dodge, fortune: c.fortune }} effects={c.effects} slug={c.slug} dimmed={c.recruited}
-                  // Board candidates have no XP row yet — recruiting seeds
-                  // hallStartXP, so preview the level (and its stat bonuses)
-                  // they'll actually arrive at under the current hall.
-                  xp={hallStartXP(state.hallTier)}
+                  // Board candidates carry the hall XP seed stamped when
+                  // their board was ROLLED — preview the level (and stat
+                  // bonuses) they'll actually arrive at. Upgrading the hall
+                  // mid-board doesn't touch these; only the next roll does.
+                  xp={c.startXp}
                   hint={c.effects.length > 0 && !c.recruited && !viewed.has(`board:${c.id}`)}
                   onClick={() => openDetail('board', c)}>
                   {renderAction('board', c, { round: true })}
@@ -1531,10 +1532,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const dColor = RARITY_COLORS[(it.rarity as CrewRarity)] ?? '#8a857c'
           const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
           // Board candidates haven't been recruited yet (no xp field) —
-          // preview the XP they'll be seeded with by the current Crew Hall
-          // so the modal shows their true arrival level + stat bonuses.
-          // Roster members carry their real xp.
-          const dXp  = 'xp' in it ? it.xp : hallStartXP(state.hallTier)
+          // preview the hall XP seed stamped on their board row at roll
+          // time, so the modal shows their true arrival level + stat
+          // bonuses. Roster members carry their real xp.
+          const dXp  = 'xp' in it ? it.xp : it.startXp
           const dEff = applyCrewEffects(dBase, it.effects, dXp)
           // Net trait stats — simplified system has one trait per crew, a
           // stat triple in [-3,+3] per stat. label/kind drive the row.
