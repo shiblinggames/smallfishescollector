@@ -3644,6 +3644,26 @@ export default function FishingGame({
     spinAnimRef.current = null
     spinStartRef.current = null
   }
+  /** Imperative perfect-hit glow on the needle — the same visuals
+   *  DialSVG renders for perfectFlash, painted directly in the tap's JS
+   *  tick so the gold commits on the SAME frame as the needle freeze.
+   *  Going through React cost 2 renders of this whole component before
+   *  the glow reached the glass (~50–120ms late on mobile). React's
+   *  perfectFlash render follows with identical values, then resets
+   *  everything when the flash clears. */
+  const paintNeedleGlow = () => {
+    const ng = needleGroupRef.current
+    if (!ng) return
+    const g = ng.querySelector<SVGGElement>('g')
+    if (g) g.style.filter = 'drop-shadow(0 0 6px #fde68a)'
+    const lines = ng.querySelectorAll<SVGLineElement>('line')
+    lines.forEach(l => l.setAttribute('stroke', '#fde68a'))
+    lines[0]?.setAttribute('stroke-width', '12')
+    lines[0]?.setAttribute('stroke-opacity', '0.28')
+    lines[1]?.setAttribute('stroke-width', '3.6')
+    const c = ng.querySelector<SVGCircleElement>('circle')
+    if (c) { c.setAttribute('fill', '#fde68a'); c.setAttribute('r', '7') }
+  }
   // Imperative target for the drift mechanic. Same pattern as the
   // needle: rotate the SVG zones group via setAttribute('transform')
   // every interval tick instead of triggering a parent re-render
@@ -4461,31 +4481,24 @@ export default function FishingGame({
     // back-step. The catch resolves at that same frozen angle, so the
     // needle's rest position IS the resolved zone: what you see is what
     // you got, with no mismatch for the player to catch.
-    // The setTimeout(0) hop matters: a bare await-rAF resumes BEFORE
-    // that frame's style/paint, so the heavy resolution render below
-    // (zone math + phase flip of this 7.5k-line component) would delay
-    // the freeze commit 30–60ms and widen the prediction gap.
-    let resolveAngle = spinAngleNow()
-    await new Promise<void>(r => requestAnimationFrame(() => {
-      // Inside a rAF callback, timeline.currentTime IS this frame's
-      // timestamp; the freeze written here reaches the glass ~2 commits
-      // later, so project the spin that far forward.
-      if (spinAnimRef.current) {
-        const lookaheadMs = 2 * frameDurRef.current
-        const a = spinAngleNow() + dirRef.current * speedRef.current * lookaheadMs / 1000
-        resolveAngle = ((a % 360) + 360) % 360
-      } else {
-        resolveAngle = spinAngleNow() // imperative fallback: glass == angleRef
-      }
-      angleRef.current = resolveAngle
-      freezeNeedleAt(resolveAngle)
-      setTimeout(r, 0)
-    }))
-    reelLockPendingRef.current = false
-    setAngle(angleRef.current)
-    setSnapKey(k => k + 1)
-    setReelRippleKey(k => k + 1)
-    setTimeout(() => setReelRippleKey(0), 1800)
+    //
+    // Everything below up to the hop runs SYNCHRONOUSLY in the tap's own
+    // JS tick: the freeze write, the zone resolution (plain math), and —
+    // when the player nailed the perfect zone — the SFX + haptic + an
+    // imperative gold glow on the needle. The glow paints with the same
+    // commit as the freeze, so "needle stops" and "needle flashes gold"
+    // are literally the same frame. Routing the glow through React cost
+    // two renders of this component before it reached the glass.
+    let resolveAngle: number
+    if (spinAnimRef.current) {
+      const lookaheadMs = 2 * frameDurRef.current
+      const a = spinAngleNow() + dirRef.current * speedRef.current * lookaheadMs / 1000
+      resolveAngle = ((a % 360) + 360) % 360
+    } else {
+      resolveAngle = spinAngleNow() // imperative fallback: glass == angleRef
+    }
+    angleRef.current = resolveAngle
+    freezeNeedleAt(resolveAngle)
 
     const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
     const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
@@ -4501,6 +4514,29 @@ export default function FishingGame({
     // resolution are the same angle by construction, see the lock-in
     // protocol above.
     const zone  = getZone(zones, resolveAngle, zoneRotationRef.current)
+
+    // Instant perfect feedback — same JS tick as the input. Audio +
+    // haptic fire now; the glow paints imperatively and lands on the
+    // freeze frame. The React-side burst ring / arc flash / state follow
+    // after the hop (they're decorative chasers, not the tactile hit).
+    if (zone.type === 'perfect') {
+      playPerfectSfx()
+      if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
+      paintNeedleGlow()
+    }
+
+    // The hop matters: it lets the freeze + glow COMMIT before the heavy
+    // resolution render below (zone math + phase flip of this 7.5k-line
+    // component) blocks the main thread. Without it the compositor keeps
+    // spinning the needle 30–60ms past our written angle, then snaps.
+    // A bare await-rAF resumes BEFORE that frame's style/paint, hence
+    // the setTimeout(0) inside.
+    await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 0)))
+    reelLockPendingRef.current = false
+    setAngle(angleRef.current)
+    setSnapKey(k => k + 1)
+    setReelRippleKey(k => k + 1)
+    setTimeout(() => setReelRippleKey(0), 1800)
 
     // Snag immune: treat penalty as miss — no extra bait lost
     const effectiveZoneType = (zone.type === 'penalty' && rod.snagImmune) ? 'miss' : zone.type
@@ -4527,20 +4563,17 @@ export default function FishingGame({
         const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
         const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
         if (stage < cfg.phases) {
-          // Mid-stage perfect feedback: the catch-result perfect SFX +
-          // needle flash + burst + haptic normally fire below at the
-          // 'wasPerfect' block, but we return early from this branch on
-          // a stage clear and never reach it. Fire them here so a perfect
-          // landing on stage 1 of a 2-phase fish (precision Snipe Eel
-          // especially — every catch HAS to be a perfect) lands with
-          // the same recognition as a perfect on the final stage. Only
-          // fire when the stage clear came from an actual perfect zone
-          // — a regular 'catch' clear skips the feedback as before.
+          // Mid-stage perfect feedback: the SFX + haptic + needle glow
+          // already fired in the tap's JS tick (pre-hop, see the lock-in
+          // protocol above), so a perfect on stage 1 of a 2-phase fish
+          // (precision Snipe Eel especially — every catch HAS to be a
+          // perfect) gets the same instant hit as a final-stage perfect.
+          // We return early from this branch on a stage clear and never
+          // reach the 'wasPerfect' block below, so fire the React-side
+          // chasers (burst ring + flash state) here.
           if (zone.type === 'perfect') {
-            playPerfectSfx()
             setPerfectBurstKey(k => k + 1)
             setPerfectFlash(true)
-            if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
           }
           // Stage cleared — show feedback, then advance
           setBossStageCleared(true)
@@ -4640,9 +4673,9 @@ export default function FishingGame({
     // Catch/perfect: freeze needle, wait for server before showing result
     const wasPerfect = zone.type === 'perfect'
     if (wasPerfect) {
-      // Fire the SFX FIRST (before any setState) so the audio call hits
-      // the same JS tick as the input — no render cycle in between.
-      playPerfectSfx()
+      // SFX + haptic + needle glow already fired in the tap's JS tick
+      // (pre-hop, see the lock-in protocol above) — only the React-side
+      // chasers happen here.
       // Sync zoneRotation state ← ref so the perfect-burst arc, which
       // renders with `rotation` from state, lands on the actual current
       // zone position. During drift this state can be many degrees
@@ -4652,7 +4685,6 @@ export default function FishingGame({
       setZoneRotation(zoneRotationRef.current)
       setPerfectBurstKey(k => k + 1)
       setPerfectFlash(true)
-      if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
     }
 
     // Perfect streak is server-authoritative now (reelIn computes + returns it).
