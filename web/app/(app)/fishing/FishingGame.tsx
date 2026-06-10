@@ -4439,28 +4439,39 @@ export default function FishingGame({
     // Cut the dial sound immediately on tap.
     stopDialLoop()
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
-    // Lock-in protocol (compositor-spin era). Two timing seams to close:
-    // 1) WHICH instant to lock: spinAngleNow() reads the animation
-    //    timeline clock (document.timeline.currentTime) — the frame the
-    //    player is actually LOOKING at — not performance.now(), which
-    //    runs up to a frame ahead of the displayed frame.
-    // 2) WHEN the freeze reaches the screen: the WAAPI animation lives
-    //    on the compositor thread and keeps spinning until the style
-    //    write + cancel() are COMMITTED. The heavy resolution below
-    //    (zone math + phase re-render of this 7.5k-line component) used
-    //    to run synchronously, delaying that commit 30–60ms — the
-    //    needle visibly spun 2–4 extra frames past the tap and then
-    //    snapped BACK ("it skips, it's not accurate"). So: freeze
-    //    synchronously, then yield until AFTER the freeze frame commits
-    //    before doing anything expensive. rAF alone is NOT enough (the
-    //    microtask resumes before that frame's style/paint); rAF →
-    //    setTimeout(0) lands after the commit.
-    const lockedAngle = spinAngleNow()
-    angleRef.current = lockedAngle
-    freezeNeedleAt(lockedAngle)
-    await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 0)))
+    // Lock-in protocol (compositor-spin era) — two clocks ON PURPOSE:
+    // - RESOLUTION locks at the tap: spinAngleNow() against
+    //   document.timeline.currentTime (the frame the player reacted to,
+    //   not performance.now() which runs up to a frame ahead of the
+    //   glass).
+    // - The VISUAL freezes one frame later, inside the next rAF, at the
+    //   angle of the frame the freeze actually COMMITS on. The WAAPI
+    //   animation lives on the compositor thread and keeps spinning
+    //   until the style write + cancel() reach it at a commit; on
+    //   mobile, input latency means the compositor has already shown
+    //   1–2 frames PAST the tap by then, so freezing at the tap angle
+    //   yanked the needle visibly backwards. Freezing at the
+    //   commit-frame angle is seamless by construction — we write the
+    //   exact transform the animation would have produced for that
+    //   frame — while the catch still resolves at the tap angle, so the
+    //   ≤2-frame visual overshoot is in the player's favor, never
+    //   against them.
+    // The setTimeout(0) hop matters: a bare await-rAF resumes BEFORE
+    // that frame's style/paint, so the heavy resolution render below
+    // (zone math + phase flip of this 7.5k-line component) would delay
+    // the freeze commit 30–60ms and the needle would spin well past the
+    // tap, then snap back.
+    const resolveAngle = spinAngleNow()
+    await new Promise<void>(r => requestAnimationFrame(() => {
+      // Inside a rAF callback, timeline.currentTime IS this frame's
+      // timestamp — this samples the angle the compositor displays on
+      // the very commit the freeze lands in.
+      angleRef.current = spinAngleNow()
+      freezeNeedleAt(angleRef.current)
+      setTimeout(r, 0)
+    }))
     reelLockPendingRef.current = false
-    setAngle(lockedAngle)
+    setAngle(angleRef.current)
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
     setTimeout(() => setReelRippleKey(0), 1800)
@@ -4475,7 +4486,9 @@ export default function FishingGame({
     // Drift mechanic: read the live rotation from the ref, not stale
     // state. The ref is the source of truth during the spin; state only
     // resyncs at one-shot transitions (cast, stage clear, second wind).
-    const zone  = getZone(zones, angleRef.current, zoneRotationRef.current)
+    // resolveAngle (the tap-frame angle), NOT angleRef (the visual
+    // freeze angle, ≤2 frames later) — see the lock-in protocol above.
+    const zone  = getZone(zones, resolveAngle, zoneRotationRef.current)
 
     // Snag immune: treat penalty as miss — no extra bait lost
     const effectiveZoneType = (zone.type === 'penalty' && rod.snagImmune) ? 'miss' : zone.type
