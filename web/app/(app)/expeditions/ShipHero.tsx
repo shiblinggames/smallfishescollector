@@ -743,7 +743,7 @@ export default function ShipHero({
               cursor: 'pointer',
             }}>
               <div style={{
-                height: 90, width: '100%',
+                height: 85, width: '100%',
                 position: 'relative',
               }}>
                 {featuredCrewTrio.length === 0 ? (
@@ -766,15 +766,19 @@ export default function ShipHero({
                   </div>
                 ) : (
                   <>
-                    {/* Back-left — only when there's a 2nd crew */}
+                    {/* Back-left — smaller, dimmer, same baseline as
+                        the front so it reads as "standing behind and
+                        to the left" rather than floating in the upper
+                        corner. Inset to ~20% from the left so the
+                        right edge slips behind the front portrait. */}
                     {featuredCrewTrio[1] && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={IMG_BASE + featuredCrewTrio[1].filename}
                         alt={featuredCrewTrio[1].name}
                         style={{
-                          position: 'absolute', left: '10%', top: 2,
-                          height: 40, width: 'auto', maxWidth: '50%',
+                          position: 'absolute', left: '8%', bottom: 0,
+                          height: 38, width: 'auto', maxWidth: '45%',
                           objectFit: 'contain',
                           opacity: 0.72,
                           filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
@@ -783,15 +787,15 @@ export default function ShipHero({
                         }}
                       />
                     )}
-                    {/* Back-right — only when there's a 3rd crew */}
+                    {/* Back-right — mirror of back-left. */}
                     {featuredCrewTrio[2] && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={IMG_BASE + featuredCrewTrio[2].filename}
                         alt={featuredCrewTrio[2].name}
                         style={{
-                          position: 'absolute', right: '10%', top: 2,
-                          height: 40, width: 'auto', maxWidth: '50%',
+                          position: 'absolute', right: '8%', bottom: 0,
+                          height: 38, width: 'auto', maxWidth: '45%',
                           objectFit: 'contain',
                           opacity: 0.72,
                           filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
@@ -808,7 +812,7 @@ export default function ShipHero({
                       style={{
                         position: 'absolute', left: '50%', bottom: 0,
                         transform: 'translateX(-50%)',
-                        height: 54, width: 'auto', maxWidth: '70%',
+                        height: 54, width: 'auto', maxWidth: '60%',
                         objectFit: 'contain',
                         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
                         zIndex: 2,
