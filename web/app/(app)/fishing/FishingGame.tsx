@@ -7439,12 +7439,23 @@ export default function FishingGame({
               )
             })}
 
-            {/* Ancient Deep trophy zone */}
+            {/* Ancient Deep — split into regulars (grid w/ images, like
+                other zones) + trophies (existing row layout). The 12
+                regulars added 2026-06-09 stack in fish_collection like
+                normal catches, so they need the same image-card format.
+                Trophies stay in their distinct row format with the 🏆
+                icon since they're ceremonial unlocks tracked via
+                trophy_catches, not the regular fish_collection. */}
             {(() => {
               const zone = 'ancient_deep'
               const zoneColor = HABITAT_COLOR[zone]
-              const bossSpecies = allFishSpecies.filter(f => f.habitat === zone)
-              const caughtCount = bossSpecies.filter(f => trophyCatches.has(f.id)).length
+              const allAncient = allFishSpecies.filter(f => f.habitat === zone)
+              const regulars = allAncient.filter(f => (f.sell_value ?? 0) > 0)
+              const trophies = allAncient.filter(f => (f.sell_value ?? 0) === 0)
+              const regularsCaught = regulars.filter(f => caughtFishIds.has(f.id)).length
+              const trophiesCaught = trophies.filter(f => trophyCatches.has(f.id)).length
+              const caughtCount = regularsCaught + trophiesCaught
+              const bossSpecies = allAncient   // header sizing uses the combined total
               const isExpanded = expandedZone === zone
               const isLocked = getLevelFromXP(fishingXP) < 75
               return (
@@ -7501,22 +7512,120 @@ export default function FishingGame({
                   </button>
                   {isExpanded && !isLocked && (
                     <motion.div
-                      // Stagger entrance — same shape as the other zones.
-                      // Slightly slower per-row (35ms vs 28ms in the grid)
-                      // because Ancient rows feel more ceremonial; the
-                      // cascade reads as the trophy list "lighting up"
-                      // one entry at a time.
                       initial="hidden"
                       animate="visible"
                       variants={{
                         hidden:  {},
-                        visible: { transition: { staggerChildren: 0.035, delayChildren: 0.05 } },
+                        visible: { transition: { staggerChildren: 0.025, delayChildren: 0.05 } },
                       }}
                       style={{
                         background: `${zoneColor}08`, border: `1px solid ${zoneColor}22`,
-                        borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.5rem 0.6rem 0.6rem',
+                        borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '0.55rem 0.55rem 0.6rem',
                       }}>
-                      {bossSpecies.map(f => {
+                      {/* Regulars — 12 sellable Ancient Deep fish in the
+                          same 2-column image grid the other zones use.
+                          Same discovery / mounted / silhouette / NEW-stamp
+                          treatments. */}
+                      <div style={{
+                        display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.45rem',
+                      }}>
+                        {regulars.map(f => {
+                          const discovered = caughtFishIds.has(f.id)
+                          const rarityColor = RARITY[f.bite_rarity]?.color ?? '#888'
+                          const pb = personalBests[f.id]
+                          const isNew = uncheckedNewFishIds.has(f.id)
+                          const cardVariants = {
+                            hidden:  { opacity: 0, y: 10, scale: 0.96 },
+                            visible: { opacity: 1, y: 0,  scale: 1, transition: { duration: 0.26, ease: [0.2, 0.7, 0.3, 1] as [number, number, number, number] } },
+                          }
+                          if (!discovered) {
+                            return (
+                              <motion.div key={f.id}
+                                variants={cardVariants}
+                                style={{
+                                  position: 'relative',
+                                  background: 'rgba(4,10,18,0.45)',
+                                  border: `1px solid ${rarityColor}1c`,
+                                  borderRadius: 10,
+                                  padding: '0.55rem 0.5rem 0.5rem',
+                                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                  minHeight: 96,
+                                }}>
+                                <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <FishImg name={f.name} style={{ maxWidth: '88%', maxHeight: 48, objectFit: 'contain', filter: 'brightness(0) opacity(0.18)' }} />
+                                </div>
+                                <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.28)', marginTop: 4, letterSpacing: '0.06em' }}>???</p>
+                              </motion.div>
+                            )
+                          }
+                          const isMounted = mountedFishIds.has(f.id)
+                          return (
+                            <motion.button
+                              key={f.id}
+                              type="button"
+                              variants={cardVariants}
+                              onClick={() => {
+                                setTappedFishId(f.id)
+                                if (isNew) setUncheckedNewFishIds(prev => { const next = new Set(prev); next.delete(f.id); return next })
+                              }}
+                              className="text-left"
+                              style={{
+                                position: 'relative',
+                                background: isMounted
+                                  ? 'radial-gradient(circle at 50% 35%, rgba(253,230,138,0.28) 0%, rgba(120,68,16,0.55) 60%, rgba(40,18,4,0.85) 100%)'
+                                  : `linear-gradient(180deg, rgba(4,10,18,0.7) 0%, ${rarityColor}10 100%)`,
+                                border: isMounted
+                                  ? '1px solid rgba(228,188,108,0.75)'
+                                  : `1px solid ${rarityColor}55`,
+                                borderRadius: 10,
+                                padding: '0.55rem 0.5rem 0.55rem',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                                minHeight: 96,
+                                cursor: 'pointer',
+                                touchAction: 'manipulation',
+                                boxShadow: isMounted ? 'inset 0 0 18px rgba(200,140,40,0.18), 0 0 14px rgba(228,188,108,0.22)' : undefined,
+                              }}
+                            >
+                              <div style={{ width: '100%', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FishImg name={f.name} style={{
+                                  maxWidth: '88%', maxHeight: 50, objectFit: 'contain',
+                                  filter: isMounted ? SHINY_FISH_FILTER : `drop-shadow(0 1px 6px ${rarityColor}66)`,
+                                }} />
+                              </div>
+                              <p className="font-cinzel font-700" style={{
+                                fontSize: '0.72rem',
+                                color: isMounted ? '#fff5d0' : rarityColor,
+                                lineHeight: 1.15,
+                                textAlign: 'center',
+                                width: '100%',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                marginTop: 2,
+                                textShadow: isMounted ? '0 0 8px rgba(251,204,74,0.45)' : undefined,
+                              }}>{isMounted ? `Golden ${f.name}` : f.name}</p>
+                              {pb != null && (
+                                <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: isMounted ? 'rgba(251,204,74,0.85)' : 'rgba(230,220,200,0.7)', letterSpacing: '0.04em' }}>
+                                  {formatFishLength(pb)}
+                                </p>
+                              )}
+                              {isMounted && (
+                                <span aria-hidden style={{
+                                  position: 'absolute', top: 5, right: 5,
+                                  fontSize: '0.62rem', color: '#fbcc4a',
+                                  textShadow: '0 0 8px rgba(251,204,74,0.85)',
+                                  lineHeight: 1,
+                                }}>✦</span>
+                              )}
+                              {isNew && <DiscoveredStamp />}
+                            </motion.button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Trophies sub-heading + 6 ceremonial trophy rows */}
+                      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: `${zoneColor}b8`, marginTop: '0.65rem', marginBottom: '0.35rem', letterSpacing: '0.14em' }}>
+                        ✦ Trophies ({trophiesCaught}/{trophies.length})
+                      </p>
+                      {trophies.map(f => {
                         const caught = trophyCatches.has(f.id)
                         const rowVariants = {
                           hidden:  { opacity: 0, x: -8 },
