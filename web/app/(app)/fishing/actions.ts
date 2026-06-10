@@ -51,7 +51,13 @@ function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishi
   const base = zMin + frac * (zMax - zMin)
   const baitMult = getBait(baitType).waitMult
   const levelMult = 1 - ((fishingLevel - 1) / 99) * 0.33
-  return Math.max(3000, Math.min(60000, base * baitMult * levelMult))
+  // No upper cap — zone band + catch_score + bait multiplier all need
+  // to actually land where they land. The cap was a legacy sanity rail
+  // from before Ancient Deep's 45-120s band; it was squashing every
+  // worm-baited cast in that zone to a flat 60s and erasing the bait
+  // choice the player just made. 3s floor stays as a sanity check
+  // against negative-wait pathologies from stacked future buffs.
+  return Math.max(3000, Math.round(base * baitMult * levelMult))
 }
 
 // Two-stage fish selection:
