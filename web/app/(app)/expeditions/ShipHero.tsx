@@ -710,17 +710,16 @@ export default function ShipHero({
           {/* Two-column row — left links to /crew, right opens the
               Manage Ship drawer. Each column IS the tap target now:
               clicking anywhere on the image OR the label fires the
-              navigation. Wrapper height tuned to the SHIP's natural
-              rendered size at column width — ship art is 600×335
-              (~1.79:1), so inside a column ~157px wide the ship
-              contains at ~88px tall. Using height:95 leaves a few px
-              of breathing room without floating the ship in vertical
-              empty space. Crew shrinks to the same wrapper height
-              (height-limited inside 95px, so its width drops to match
-              its portrait aspect), giving both columns equal
-              wrapper-height visual presence even though the natural
-              rendered shapes differ. Grid alignItems:end keeps the
-              labels flush at the bottom. */}
+              navigation. Wrapper height (56) is sized to the VISIBLE
+              art, not the img boxes: the crew front portrait renders
+              54px tall and the ship PNG bakes in ~20% transparent
+              top/bottom padding, so its 85px img shows only ~51px of
+              hull. The previous 85px wrappers held that bottom-anchored
+              art under ~30px of invisible headroom, which read as a
+              dead band between the Lv pill and the images. Both imgs
+              keep their render sizes and overflow the tighter wrapper
+              with transparent pixels only. Grid alignItems:end keeps
+              the labels flush at the bottom. */}
           <div style={{
             position: 'relative',
             display: 'grid', gridTemplateColumns: '1fr 1fr',
@@ -733,17 +732,17 @@ export default function ShipHero({
                 render smaller + dimmer + slightly blurred so they read
                 as "behind" the front one without an actual 3D camera.
                 Empty roster falls back to a silhouette placeholder.
-                Wrapper height a touch taller than the single-portrait
-                version (90 vs 85) so the back row's tops don't clip
-                against the Lv pill above — grid alignItems:end keeps
-                the bottom flush with the ship column. */}
+                Wrapper 56 = front portrait (54) + 2px headroom; the
+                back row tops out at 38 so nothing clips — grid
+                alignItems:end keeps the bottom flush with the ship
+                column. */}
             <Link href="/crew" style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               textDecoration: 'none',
               cursor: 'pointer',
             }}>
               <div style={{
-                height: 85, width: '100%',
+                height: 56, width: '100%',
                 position: 'relative',
               }}>
                 {featuredCrewTrio.length === 0 ? (
@@ -837,15 +836,15 @@ export default function ShipHero({
             {/* Right col — ship image + Manage Ship label. Whole
                 column is a button that opens the loadout drawer.
                 Ship PNG bakes in ~20% top/bottom transparent padding;
-                at height 85 that's ~17px of empty space ABOVE and
-                BELOW the visible ship. Without compensation, the
-                bottom 17px sits between the ship and the 'Manage Ship'
-                label and reads as awkward dead space. translateY(17px)
-                shifts the img down so the visible ship's bottom kisses
-                the wrapper edge — matching how the crew column anchors
-                its front portrait at bottom:0. The transparent top
-                ends up hovering above the wrapper, which is invisible
-                and harmless. */}
+                at img height 85 that's ~17px of empty space ABOVE and
+                BELOW the visible ship (~51px of hull). The img keeps
+                its 85px render size but the wrapper is 56 with
+                flex-end alignment: the img's bottom edge sits on the
+                wrapper bottom and translateY(17px) drops it so the
+                VISIBLE ship's bottom kisses the wrapper edge —
+                matching how the crew column anchors its front portrait
+                at bottom:0. The transparent top/bottom overflow the
+                wrapper, which is invisible and harmless. */}
             <button
               onClick={() => setLoadoutOpen(true)}
               style={{
@@ -855,8 +854,8 @@ export default function ShipHero({
               }}
             >
               <div style={{
-                height: 85,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                height: 56, width: '100%',
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
               }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
