@@ -3639,6 +3639,37 @@ export default function FishingGame({
     spinAnimRef.current = null
     spinStartRef.current = null
   }
+  /** Stop the compositor spin with a short eased settle that lands the
+   *  needle exactly on `to` (the tap-resolution angle). An instantaneous
+   *  freeze can never be seamless here: cancel() + the style write reach
+   *  the compositor a commit late, and on mobile the spin has already
+   *  shown 1–2 frames PAST any angle the main thread samples — the result
+   *  was a visible backwards snap, and the needle still rested past where
+   *  the player tapped. Instead the needle now glides back to the tap
+   *  angle over ~110ms: the rebound reads as the reel catching, and the
+   *  rest position matches the resolved zone exactly. `from` should be
+   *  the best guess of the angle on glass — bias it a frame AHEAD so any
+   *  residual start discontinuity is forward (with the motion, invisible)
+   *  rather than backward. */
+  const settleNeedleTo = (from: number, to: number) => {
+    const el = needleGroupRef.current
+    spinAnimRef.current?.cancel()
+    spinAnimRef.current = null
+    spinStartRef.current = null
+    if (!el) return
+    el.style.transform = `rotate(${to}deg)` // base style = final rest
+    // Shortest-path unwrap: settle through the few degrees of overshoot,
+    // not the long way around the dial.
+    let delta = (((from - to) % 360) + 360) % 360
+    if (delta > 180) delta -= 360
+    if (typeof el.animate !== 'function' || Math.abs(delta) < 0.5) return
+    try {
+      el.animate(
+        [{ transform: `rotate(${to + delta}deg)` }, { transform: `rotate(${to}deg)` }],
+        { duration: 110, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      )
+    } catch {}
+  }
   // Imperative target for the drift mechanic. Same pattern as the
   // needle: rotate the SVG zones group via setAttribute('transform')
   // every interval tick instead of triggering a parent re-render
@@ -4439,35 +4470,34 @@ export default function FishingGame({
     // Cut the dial sound immediately on tap.
     stopDialLoop()
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
-    // Lock-in protocol (compositor-spin era) — two clocks ON PURPOSE:
+    // Lock-in protocol (compositor-spin era):
     // - RESOLUTION locks at the tap: spinAngleNow() against
     //   document.timeline.currentTime (the frame the player reacted to,
     //   not performance.now() which runs up to a frame ahead of the
     //   glass).
-    // - The VISUAL freezes one frame later, inside the next rAF, at the
-    //   angle of the frame the freeze actually COMMITS on. The WAAPI
-    //   animation lives on the compositor thread and keeps spinning
-    //   until the style write + cancel() reach it at a commit; on
-    //   mobile, input latency means the compositor has already shown
-    //   1–2 frames PAST the tap by then, so freezing at the tap angle
-    //   yanked the needle visibly backwards. Freezing at the
-    //   commit-frame angle is seamless by construction — we write the
-    //   exact transform the animation would have produced for that
-    //   frame — while the catch still resolves at the tap angle, so the
-    //   ≤2-frame visual overshoot is in the player's favor, never
-    //   against them.
+    // - The VISUAL settles back to that same tap angle via a short eased
+    //   rebound (settleNeedleTo). The WAAPI spin lives on the compositor
+    //   thread and keeps rendering until the cancel reaches it at a
+    //   commit; on mobile the glass is 1–2 frames past ANY angle the
+    //   main thread can sample, so every flavor of instantaneous freeze
+    //   produced a visible backwards snap — and freezing past the tap
+    //   left the needle resting somewhere the player didn't tap. The
+    //   settle absorbs the overshoot as deliberate motion and lands the
+    //   needle exactly where the catch resolved.
     // The setTimeout(0) hop matters: a bare await-rAF resumes BEFORE
     // that frame's style/paint, so the heavy resolution render below
     // (zone math + phase flip of this 7.5k-line component) would delay
-    // the freeze commit 30–60ms and the needle would spin well past the
-    // tap, then snap back.
+    // the settle's start 30–60ms and the needle would spin well past the
+    // tap first.
     const resolveAngle = spinAngleNow()
     await new Promise<void>(r => requestAnimationFrame(() => {
       // Inside a rAF callback, timeline.currentTime IS this frame's
-      // timestamp — this samples the angle the compositor displays on
-      // the very commit the freeze lands in.
-      angleRef.current = spinAngleNow()
-      freezeNeedleAt(angleRef.current)
+      // timestamp; the glass is typically one commit further along, so
+      // bias the settle's start a frame ahead of the sampled angle.
+      const frameAhead = dirRef.current * speedRef.current * 0.017
+      const visualAngle = spinAngleNow() + frameAhead
+      angleRef.current = resolveAngle
+      settleNeedleTo(visualAngle, resolveAngle)
       setTimeout(r, 0)
     }))
     reelLockPendingRef.current = false
@@ -4486,8 +4516,9 @@ export default function FishingGame({
     // Drift mechanic: read the live rotation from the ref, not stale
     // state. The ref is the source of truth during the spin; state only
     // resyncs at one-shot transitions (cast, stage clear, second wind).
-    // resolveAngle (the tap-frame angle), NOT angleRef (the visual
-    // freeze angle, ≤2 frames later) — see the lock-in protocol above.
+    // resolveAngle is the tap-frame angle; the visual settles onto the
+    // same angle, so what the player sees matches what resolved — see
+    // the lock-in protocol above.
     const zone  = getZone(zones, resolveAngle, zoneRotationRef.current)
 
     // Snag immune: treat penalty as miss — no extra bait lost
