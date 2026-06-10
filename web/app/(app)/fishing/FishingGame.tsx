@@ -5030,7 +5030,11 @@ export default function FishingGame({
   const selectedBaitDef  = BAITS.find(b => b.type === selectedBait)
   const holdTotalCount   = inventory.reduce((s, i) => s + i.quantity, 0)
   const ancientSpecies   = allFishSpecies.filter(f => f.habitat === 'ancient_deep')
-  const allAncientCaught = selectedZone === 'ancient_deep' && ancientSpecies.length > 0 && ancientSpecies.every(f => trophyCatches.has(f.id))
+  const allAncientCaught = selectedZone === 'ancient_deep'
+    && ancientSpecies.length > 0
+    && ancientSpecies.every(f => (f.sell_value ?? 0) === 0
+        ? trophyCatches.has(f.id)
+        : caughtFishIds.has(f.id))
   const isFullMoon = activeEvent?.type === 'fullmoon'
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.75)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
