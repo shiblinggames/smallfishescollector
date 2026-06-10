@@ -61,7 +61,8 @@
       "PowerShell(if \\(Test-Path node_modules/typescript\\) { Write-Output \"TS installed: $\\(Get-Content node_modules/typescript/package.json | ConvertFrom-Json | Select-Object -ExpandProperty version\\)\" } else { Write-Output \"TS not installed\" }; npx --no-install tsc --version 2>&1 | Select-Object -First 5)",
       "PowerShell($pwd.Path; Test-Path \"package.json\"; Test-Path \"tsconfig.json\"; Test-Path \"node_modules\\\\.bin\\\\tsc.cmd\"; Test-Path \"node_modules\\\\.bin\\\\next.cmd\")",
       "PowerShell(.\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit 2>&1)",
-      "PowerShell(.\\\\web\\\\node_modules\\\\.bin\\\\tsc.cmd -p .\\\\web\\\\tsconfig.json --noEmit 2>&1)"
+      "PowerShell(.\\\\web\\\\node_modules\\\\.bin\\\\tsc.cmd -p .\\\\web\\\\tsconfig.json --noEmit 2>&1)",
+      "PowerShell($h = @{\"Accept\"=\"application/vnd.github+json\"; \"User-Agent\"=\"diagnostic\"}; $deadline = \\(Get-Date\\).AddMinutes\\(5\\); do { Start-Sleep -Seconds 20; $s = Invoke-RestMethod -Uri \"https://api.github.com/repos/shiblinggames/smallfishescollector/commits/master/status\" -Headers $h; Write-Output \"$\\(\\(Get-Date\\).ToString\\('HH:mm:ss'\\)\\) state=$\\($s.state\\) sha=$\\($s.sha.Substring\\(0,8\\)\\)\" } while \\($s.state -eq 'pending' -and \\(Get-Date\\) -lt $deadline\\); \"FINAL: $\\($s.state\\) - $\\($s.statuses[0].description\\)\")"
     ]
   }
 }

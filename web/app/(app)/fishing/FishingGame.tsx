@@ -547,11 +547,30 @@ function DialSVG({
   return (
     <div style={{
       position: 'relative', width: '100%', maxWidth: 300, margin: '0 auto',
-      filter: fireLevel === 2 ? 'drop-shadow(0 0 14px rgba(251,146,60,0.7)) drop-shadow(0 0 32px rgba(239,68,68,0.35))'
-            : fireLevel === 1 ? 'drop-shadow(0 0 12px rgba(251,146,60,0.6)) drop-shadow(0 0 22px rgba(251,146,60,0.25))'
-            : 'none',
-      transition: 'filter 0.4s ease',
+      // NO filter here — this wrapper contains the per-frame-transformed
+      // needle, and a standing drop-shadow filter forced the browser to
+      // re-rasterize the whole filtered subtree every frame during fire
+      // streaks (worst on iOS PWA). The streak glow now lives on the two
+      // sibling halo divs below, which fade via opacity and never touch
+      // the needle's raster path.
     }}>
+      {/* Fire glow halos — box-shadow on a transparent circle matched to
+          the dial's outer ring (r = OUTER_R+6 → 92.7% of the viewBox,
+          inset 3.6%). Shadow radii/colors mirror the old drop-shadow
+          pair per fire level; two stacked divs crossfade on level change
+          the way the old filter transition did. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: '3.6%', borderRadius: '50%', pointerEvents: 'none',
+        boxShadow: '0 0 12px rgba(251,146,60,0.6), 0 0 22px rgba(251,146,60,0.25)',
+        opacity: fireLevel === 1 ? 1 : 0,
+        transition: 'opacity 0.4s ease',
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', inset: '3.6%', borderRadius: '50%', pointerEvents: 'none',
+        boxShadow: '0 0 14px rgba(251,146,60,0.7), 0 0 32px rgba(239,68,68,0.35)',
+        opacity: fireLevel === 2 ? 1 : 0,
+        transition: 'opacity 0.4s ease',
+      }} />
       <svg viewBox="0 0 220 220" width="100%" style={{ display: 'block', overflow: 'visible' }}>
         <defs>
           <radialGradient id="innerGrad" cx="50%" cy="45%" r="50%">
@@ -3500,7 +3519,20 @@ export default function FishingGame({
   const [angle, setAngle]           = useState(270)
   const [zoneRotation, setZoneRotation] = useState(0)
   const [retryKey, setRetryKey]     = useState(0)
-  const [blackoutOpacity, setBlackoutOpacity] = useState(0)
+  // Blackout overlay — imperative, NOT state. setBlackoutOpacity used to
+  // be the last remaining in-spin setState: it fires at random speed-change
+  // boundaries (often inside the first revolution on slower dials) and the
+  // resulting full-component render was the residual first-revolution
+  // needle hitch after the zone-crossing paint went imperative. The div
+  // stays mounted with opacity 0; show/hide writes style directly,
+  // preserving the asymmetric fade (0.25s in / 0.6s out).
+  const blackoutRef = useRef<HTMLDivElement | null>(null)
+  const paintBlackout = (o: number) => {
+    const el = blackoutRef.current
+    if (!el) return
+    el.style.transition = o > 0 ? 'opacity 0.25s ease-in' : 'opacity 0.6s ease-out'
+    el.style.opacity = String(o)
+  }
   const angleRef        = useRef(270)
   const speedRef        = useRef(0)
   const dirRef          = useRef(1)
@@ -3748,9 +3780,9 @@ export default function FishingGame({
         const scaledBlackout = zoneDiff.blackoutChance * (hookedFish.catchDifficulty / 5)
         if (Math.random() < scaledBlackout && blackoutTimerRef.current === null) {
           const duration = 500 + Math.random() * 600
-          setBlackoutOpacity(0.91)
+          paintBlackout(0.91)
           blackoutTimerRef.current = setTimeout(() => {
-            setBlackoutOpacity(0)
+            paintBlackout(0)
             blackoutTimerRef.current = null
           }, duration)
         }
@@ -3799,7 +3831,7 @@ export default function FishingGame({
     return () => {
       if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
       if (blackoutTimerRef.current) { clearTimeout(blackoutTimerRef.current); blackoutTimerRef.current = null }
-      setBlackoutOpacity(0)
+      paintBlackout(0)
     }
   // retryKey increments on Second Wind retry to restart animation with fresh randomization
   }, [phase, hookedFish, reel.needleSpeedMultiplier, retryKey])
@@ -3973,6 +4005,18 @@ export default function FishingGame({
       await new Promise(r => setTimeout(r, res.waitMs))
 
       setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier })
+
+      // Decode-ahead: fetch + decode the result card's fish art NOW, off
+      // the main thread, while the player is watching the hooked beat and
+      // spinning the dial. Without this the image loads when the result
+      // card mounts — a visible pop-in, and on slow connections a blank
+      // hero slot. Mirrors the cosmetic sprite preload pattern above.
+      const hookedName = allFishSpecies.find(f => f.id === res.fishId)?.name
+      if (hookedName) {
+        const pre = new Image()
+        pre.src = fishImageUrl(hookedName)
+        pre.decode().catch(() => {})
+      }
 
       // Initialise boss-fight state for ancient_deep. ALL ancient_deep
       // fish run a multi-phase reel; trophies are 3-phase with a fixed
@@ -5895,14 +5939,16 @@ export default function FishingGame({
                   </div>
 
                   <div style={{ position: 'relative' }}>
-                    <div style={{
+                    <div ref={blackoutRef} style={{
                       position: 'absolute', zIndex: 10, borderRadius: '50%',
                       width: '87.27%', aspectRatio: '1',
                       top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                       background: '#000',
-                      opacity: blackoutOpacity,
+                      // opacity + transition driven imperatively via
+                      // paintBlackout() — see blackoutRef declaration.
+                      opacity: 0,
                       pointerEvents: 'none',
-                      transition: blackoutOpacity > 0 ? 'opacity 0.25s ease-in' : 'opacity 0.6s ease-out',
+                      transition: 'opacity 0.6s ease-out',
                     }} />
                     {perfectStreak >= 3 && (
                       <motion.div
