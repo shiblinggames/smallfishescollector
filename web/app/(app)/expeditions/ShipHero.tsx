@@ -830,10 +830,16 @@ export default function ShipHero({
 
             {/* Right col — ship image + Manage Ship label. Whole
                 column is a button that opens the loadout drawer.
-                Ship fills the 85px wrapper height; its built-in
-                transparent margin centers the visible content within
-                that box at ~49px tall, which the crew column matches
-                by rendering its content at 50px (see comment above). */}
+                Ship PNG bakes in ~20% top/bottom transparent padding;
+                at height 85 that's ~17px of empty space ABOVE and
+                BELOW the visible ship. Without compensation, the
+                bottom 17px sits between the ship and the 'Manage Ship'
+                label and reads as awkward dead space. translateY(17px)
+                shifts the img down so the visible ship's bottom kisses
+                the wrapper edge — matching how the crew column anchors
+                its front portrait at bottom:0. The transparent top
+                ends up hovering above the wrapper, which is invisible
+                and harmless. */}
             <button
               onClick={() => setLoadoutOpen(true)}
               style={{
@@ -853,6 +859,7 @@ export default function ShipHero({
                   style={{
                     height: 85, width: 'auto', maxWidth: '100%',
                     objectFit: 'contain',
+                    transform: 'translateY(17px)',
                     filter: skinFilter,
                     transition: 'filter 0.3s ease',
                   }}
