@@ -58,7 +58,9 @@
       "PowerShell(git commit -m \"Raids: Krust Overseer speed 9 \\\\xe2\\\\x86\\\\x92 6 \\(no longer fastest in the run\\)\" -m \"Overseer was tuned as the elite cadence-pressure test with shipSpeed 9. After the turn-order rework \\(d20 \\\\xe2\\\\x86\\\\x92 d30, Compass 0.25 \\\\xe2\\\\x86\\\\x92 0.20\\) that lean is too sharp \\\\xe2\\\\x80\\\\x94 the Overseer was outpacing nearly every player build at the new die. Drops to 6 \\(parity with Pete\\) so the encounter still tests rotation management + Carapace soak, just without the first-strike denial layered on top.\" -m \"Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>\")",
       "PowerShell(npx tsc --noEmit 2>&1)",
       "PowerShell(npx --yes typescript@latest tsc --noEmit 2>&1)",
-      "PowerShell(if \\(Test-Path node_modules/typescript\\) { Write-Output \"TS installed: $\\(Get-Content node_modules/typescript/package.json | ConvertFrom-Json | Select-Object -ExpandProperty version\\)\" } else { Write-Output \"TS not installed\" }; npx --no-install tsc --version 2>&1 | Select-Object -First 5)"
+      "PowerShell(if \\(Test-Path node_modules/typescript\\) { Write-Output \"TS installed: $\\(Get-Content node_modules/typescript/package.json | ConvertFrom-Json | Select-Object -ExpandProperty version\\)\" } else { Write-Output \"TS not installed\" }; npx --no-install tsc --version 2>&1 | Select-Object -First 5)",
+      "PowerShell($pwd.Path; Test-Path \"package.json\"; Test-Path \"tsconfig.json\"; Test-Path \"node_modules\\\\.bin\\\\tsc.cmd\"; Test-Path \"node_modules\\\\.bin\\\\next.cmd\")",
+      "PowerShell(.\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit 2>&1)"
     ]
   }
 }

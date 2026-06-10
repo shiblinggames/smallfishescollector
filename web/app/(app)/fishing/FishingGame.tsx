@@ -7249,7 +7249,7 @@ export default function FishingGame({
                       </p>
                     </motion.button>
                   )}
-                  {isComplete && isClaimed && zone !== 'ancient_deep' && (
+                  {isComplete && isClaimed && (
                     <div style={{
                       background: `linear-gradient(to bottom, ${zoneColor}14, ${zoneColor}08)`,
                       border: `1px solid ${zoneColor}40`,
