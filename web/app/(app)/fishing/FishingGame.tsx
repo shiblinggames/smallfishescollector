@@ -3583,10 +3583,21 @@ export default function FishingGame({
   const spinAnimRef      = useRef<Animation | null>(null)
   const spinA0Ref        = useRef(0)         // angle at animation start (deg)
   const spinStartRef     = useRef<number | null>(null) // timeline time at start (ms)
-  /** Exact needle angle right now, derived from the animation clock. */
+  // True between the lock-in tap and the post-freeze yield in
+  // handleReelIn — guards against a double-tap re-running resolution
+  // while phase is still 'catching'. Reset defensively at spin start
+  // (covers Second Wind, where phase never leaves 'catching').
+  const reelLockPendingRef = useRef(false)
+  /** Exact needle angle right now, derived from the animation clock.
+   *  Uses document.timeline.currentTime (the time of the most recent
+   *  rendering update — i.e. the frame the player is actually LOOKING at)
+   *  rather than performance.now(), which runs up to a frame ahead of the
+   *  glass. For lock-in this is the difference between resolving at the
+   *  needle position the player reacted to vs. a few degrees past it. */
   const spinAngleNow = () => {
     if (spinAnimRef.current && spinStartRef.current !== null) {
-      const t = performance.now()
+      const tl = document.timeline?.currentTime
+      const t = typeof tl === 'number' ? tl : performance.now()
       const a = spinA0Ref.current + dirRef.current * speedRef.current * (t - spinStartRef.current) / 1000
       return ((a % 360) + 360) % 360
     }
@@ -3839,6 +3850,7 @@ export default function FishingGame({
     elapsedMsRef.current = 0
     nextChgMsRef.current = (zoneDiff.changeMin + Math.floor(Math.random() * (zoneDiff.changeMax - zoneDiff.changeMin))) * 50
     lastZoneFromRef.current = NaN // force a zone sync on the first frame
+    reelLockPendingRef.current = false // defensive: never start a spin locked
 
     // Hand the rotation to the compositor (see needleGroupRef block above).
     // The rAF tick below no longer MOVES the needle — it derives the angle
@@ -4419,28 +4431,35 @@ export default function FishingGame({
   // Phase 2 — reel in
   async function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
+    // Re-entrancy guard: phase stays 'catching' during the one-frame
+    // yield below, so a double-tap would otherwise run the resolution
+    // twice against the same hooked fish.
+    if (reelLockPendingRef.current) return
+    reelLockPendingRef.current = true
     // Cut the dial sound immediately on tap.
     stopDialLoop()
-    // Cancel the rAF and freeze the angle at exactly what the player
-    // saw. The needle is rendered imperatively via setAttribute on the
-    // group ref (rAF tick line ~3721), so the source of truth for the
-    // visible position is angleRef.current — NOT the `angle` state,
-    // which only updates on zone crossings via setAngle in the rAF
-    // tick. The old code locked to state which could lag the visible
-    // needle by several degrees mid-zone (between two crossings),
-    // causing the 'expected gold, got green' lag complaint: player sees
-    // the needle on gold, taps, resolution runs at the stale state
-    // angle which is still in the green ring a few degrees behind.
-    // Reading angleRef.current after cancelAnimationFrame captures the
-    // exact frame the player tapped on.
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
-    // Compositor-spin era: derive the angle from the animation clock AT THE
-    // TAP itself (sub-frame precision) instead of the last rAF sample,
-    // then freeze the visual needle at exactly that angle so what the
-    // player sees and what the resolution math uses are provably the same.
+    // Lock-in protocol (compositor-spin era). Two timing seams to close:
+    // 1) WHICH instant to lock: spinAngleNow() reads the animation
+    //    timeline clock (document.timeline.currentTime) — the frame the
+    //    player is actually LOOKING at — not performance.now(), which
+    //    runs up to a frame ahead of the displayed frame.
+    // 2) WHEN the freeze reaches the screen: the WAAPI animation lives
+    //    on the compositor thread and keeps spinning until the style
+    //    write + cancel() are COMMITTED. The heavy resolution below
+    //    (zone math + phase re-render of this 7.5k-line component) used
+    //    to run synchronously, delaying that commit 30–60ms — the
+    //    needle visibly spun 2–4 extra frames past the tap and then
+    //    snapped BACK ("it skips, it's not accurate"). So: freeze
+    //    synchronously, then yield until AFTER the freeze frame commits
+    //    before doing anything expensive. rAF alone is NOT enough (the
+    //    microtask resumes before that frame's style/paint); rAF →
+    //    setTimeout(0) lands after the commit.
     const lockedAngle = spinAngleNow()
     angleRef.current = lockedAngle
     freezeNeedleAt(lockedAngle)
+    await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 0)))
+    reelLockPendingRef.current = false
     setAngle(lockedAngle)
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
