@@ -69,14 +69,13 @@ function report(label, weights, pairs, triples = TRIPLES) {
   console.log(`  3-hook bonus: 1-in-${Math.round(1 / r.bonusProb)}`)
 }
 
-// LIVE config
-report('LIVE (catfish 4)', { common: 46, rare: 20, legendary: 9, catfish: 4, anchor: 21 }, { rare: 1.5, legendary: 5, catfish: 25 })
+// LIVE config (913c74bd retune)
+report('LIVE (catfish 6, pair 15x)', { common: 45, rare: 20, legendary: 9, catfish: 6, anchor: 20 }, { rare: 1.5, legendary: 5, catfish: 15 })
 
-// Option A: catfish 5 (from sardine), pair 18x
-report('A: catfish 5, pair 18x', { common: 45, rare: 20, legendary: 9, catfish: 5, anchor: 21 }, { rare: 1.5, legendary: 5, catfish: 18 })
-
-// Option B: catfish 6 (from sardine 45, hook 20), pair 12x
-report('B: catfish 6, pair 12x', { common: 45, rare: 20, legendary: 9, catfish: 6, anchor: 20 }, { rare: 1.5, legendary: 5, catfish: 12 })
-
-// Option B2: catfish 6, pair 15x
-report('B2: catfish 6, pair 15x', { common: 45, rare: 20, legendary: 9, catfish: 6, anchor: 20 }, { rare: 1.5, legendary: 5, catfish: 15 })
+// Small-population candidates — sardine triple bumped to 4x to give the
+// RTP back that the sardine weight cut takes away.
+const T4 = { common: 4, rare: 12, legendary: 60, anchor: 0 }
+report('E: catfish 10, pair 5x, sardine 4x', { common: 42, rare: 20, legendary: 9, catfish: 10, anchor: 19 }, { rare: 1.5, legendary: 5, catfish: 5 }, T4)
+report('F: catfish 14, pair 3x, sardine 4x', { common: 39, rare: 20, legendary: 9, catfish: 14, anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
+report('F2: catfish 14, pair 2.5x, sardine 4x', { common: 40, rare: 20, legendary: 9, catfish: 14, anchor: 17 }, { rare: 1.5, legendary: 5, catfish: 2.5 }, T4)
+report("F': catfish 14, pair 3x, sardine 4x, marlin pair 2x", { common: 39, rare: 20, legendary: 9, catfish: 14, anchor: 18 }, { rare: 2, legendary: 5, catfish: 3 }, T4)

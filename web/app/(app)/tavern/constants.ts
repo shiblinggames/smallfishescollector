@@ -8,16 +8,19 @@
 // than a clean miss), 3 catfish pays a share of the global pot instead
 // of a fixed multiplier, and a sardine pair is just a near-miss.
 //
-// Base-game RTP at these numbers ≈ 92%; the ~5% jackpot feed plus the
-// seeded pot brings the total to ≈ 97% — slightly under the old table
-// in base pay but with real variance: 1-in-11 spins hit a sardine
-// triple (3×), catfish PAIRS pay 15× about 1-in-99, and the natural
-// catfish triple (1-in-4,630) takes the pot.
+// Base-game RTP at these numbers ≈ 91.6%; the ~5% jackpot feed plus the
+// seeded pot brings the total to ≈ 96.6%. Verified with slots-rtp.mjs
+// (repo root) — rerun it before changing ANY weight or payout here.
 //
-// 2026-06-10 retune: catfish weight 4 → 6 (jackpot was 1-in-15,625 and
-// never popped at current population; now hits 3.4× more often, pots
-// pop smaller but regularly). Pair payout 25× → 15× to compensate —
-// the more-common pair would have added ~14pp of RTP otherwise.
+// 2026-06-10 small-population retune (second pass same day): with ~25
+// active players the slots see only ~40–120 spins/day, so even
+// 1-in-4,630 would take a month+ to pop. Catfish weight 6 → 14 puts the
+// natural triple at 1-in-364 — the pot pops every ~3–7 days at current
+// volume and is a community event instead of a myth. Compensation so
+// RTP stays put: catfish pair 15× → 3× (it lands 1-in-20 now, a small
+// frequent win rather than a mid-thrill), sardine triple 3× → 4× and
+// marlin pair 1.5× → 2× give back what the sardine/hook weight cuts
+// took. Pots pop modest (seed + a few thousand of feed) by design.
 
 export type SlotSymbolId = 'common' | 'rare' | 'legendary' | 'catfish' | 'anchor'
 
@@ -28,17 +31,17 @@ export const SLOT_SYMBOLS_LIST: {
   weight: number
   label: string
 }[] = [
-  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 45, label: 'Sardine' },
+  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 39, label: 'Sardine' },
   { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 20, label: 'Blue Marlin' },
   { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 9, label: 'Blue Whale' },
-  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 6,  label: 'Catfish' },
-  { id: 'anchor',                                   color: '#34d399', weight: 20, label: 'Hook' },
+  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 14, label: 'Catfish' },
+  { id: 'anchor',                                   color: '#34d399', weight: 18, label: 'Hook' },
 ]
 
 // 3-of-a-kind. Catfish is 0 here because a natural catfish triple pays
 // the global jackpot pot (proportional to wager), not a multiplier.
 export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
-  common:    3,
+  common:    4,
   rare:      12,
   legendary: 60,
   catfish:   0,
@@ -49,9 +52,9 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
 // hook included). Sardine pairs pay nothing — they read as a near-miss
 // instead of the old 0.5× fake win.
 export const SLOT_PAIR_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
-  rare:      1.5,
+  rare:      2,
   legendary: 5,
-  catfish:   15,
+  catfish:   3,
 }
 
 export const SLOTS_MIN_BET   = 10
