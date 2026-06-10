@@ -27,7 +27,6 @@ const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
 const STAT_LABEL = { power: 'PWR', dodge: 'AGI', fortune: 'FTN' }
 
 // Section accents so the two boards read as visually distinct regions.
-const SECTION_RECRUIT = '#c9a24a' // warm gold "new arrivals"
 const SECTION_ROSTER = '#6fa8c9'  // cool steel "your manifest"
 
 // Panel tones: warm brown wood for the board, cool slate for your own crew, so
@@ -86,6 +85,11 @@ function RefreshIcon() {
 }
 function ClockIcon() {
   return (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></svg>)
+}
+function GraveIcon() {
+  // Simple tombstone — the Graveyard entry point shrank from a full tab to
+  // this icon-only button, so the silhouette has to read at a glance.
+  return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 20V10a6 6 0 0 1 12 0v10" /><line x1="4" y1="20" x2="20" y2="20" /><line x1="12" y1="9" x2="12" y2="15" /><line x1="9.5" y1="11.5" x2="14.5" y2="11.5" /></svg>)
 }
 
 // Compact round action buttons (inline with the stats, no dedicated row).
@@ -1013,58 +1017,86 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           </div>
         )}
 
-        {/* Top-level tabs — Roster is the default + primary focus. Recruit
-            Board (shortened to "Recruits" so 3 tabs fit on one row at
-            narrow phone widths) sits behind its own tab so its reroll-
-            heavy UI doesn't crowd the page. Counts drop inline next to
-            the label as a dim "· N" suffix instead of a separate pill —
-            same information density, half the horizontal footprint. */}
+        {/* Top-level navigation — deliberately NOT three identical tabs.
+            Roster is the quiet "view your manifest" tab; Recruit always
+            wears the gold action treatment so new players immediately know
+            it's the way to get new crew; the Graveyard shrank to a small
+            tombstone icon button on the right (a memorial doesn't need a
+            full-width slot in the main nav). Counts stay as dim "· N"
+            suffixes on the two text tabs. */}
         {(() => {
-          const tabs = [
-            { id: 'roster' as const,    label: 'Roster',   accent: SECTION_ROSTER,  count: state.roster.length },
-            { id: 'recruits' as const,  label: 'Recruit',  accent: SECTION_RECRUIT, count: state.board.filter(c => !c.recruited).length },
-            { id: 'graveyard' as const, label: 'Graves',   accent: '#9c8055',       count: graveyard?.length ?? null },
-          ]
+          const boardCount = state.board.filter(c => !c.recruited).length
+          const rosterActive = activeTab === 'roster'
+          const recruitsActive = activeTab === 'recruits'
+          const gravesActive = activeTab === 'graveyard'
           return (
-            <div role="tablist" className="flex items-center" style={{
-              gap: 3, marginBottom: '1.2rem',
-              background: 'rgba(0,0,0,0.25)', padding: 3, borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.08)',
-              flexWrap: 'nowrap',
-              overflowX: 'auto',
-            }}>
-              {tabs.map(t => {
-                const active = activeTab === t.id
-                return (
-                  <button
-                    key={t.id}
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setActiveTab(t.id)}
-                    className="font-cinzel font-700 uppercase"
-                    style={{
-                      flex: '1 1 0',
-                      minWidth: 0,
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                      padding: '0.5rem 0.45rem', borderRadius: 7,
-                      fontSize: '0.7rem', letterSpacing: '0.06em',
-                      background: active ? `${t.accent}26` : 'transparent',
-                      border: `1px solid ${active ? `${t.accent}88` : 'transparent'}`,
-                      color: active ? t.accent : 'rgba(255,255,255,0.55)',
-                      cursor: 'pointer', transition: 'all 0.18s',
-                      whiteSpace: 'nowrap',
-                    }}>
-                    <span>{t.label}</span>
-                    {t.count !== null && t.count > 0 && (
-                      <span className="font-karla font-700" style={{
-                        fontSize: '0.62rem',
-                        color: active ? `${t.accent}cc` : 'rgba(255,255,255,0.4)',
-                        opacity: 0.9,
-                      }}>· {t.count}</span>
-                    )}
-                  </button>
-                )
-              })}
+            <div role="tablist" className="flex items-center" style={{ gap: 6, marginBottom: '1.2rem' }}>
+              {/* Roster — standard quiet tab */}
+              <button
+                role="tab"
+                aria-selected={rosterActive}
+                onClick={() => setActiveTab('roster')}
+                className="font-cinzel font-700 uppercase"
+                style={{
+                  flex: '1 1 0', minWidth: 0,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  padding: '0.55rem 0.45rem', borderRadius: 9,
+                  fontSize: '0.7rem', letterSpacing: '0.06em',
+                  background: rosterActive ? `${SECTION_ROSTER}26` : 'rgba(0,0,0,0.25)',
+                  border: `1px solid ${rosterActive ? `${SECTION_ROSTER}88` : 'rgba(255,255,255,0.1)'}`,
+                  color: rosterActive ? SECTION_ROSTER : 'rgba(255,255,255,0.55)',
+                  cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
+                }}>
+                <span>Roster</span>
+                {state.roster.length > 0 && (
+                  <span className="font-karla font-700" style={{ fontSize: '0.62rem', opacity: 0.85 }}>· {state.roster.length}</span>
+                )}
+              </button>
+              {/* Recruit — always gold so it reads as THE action, not just
+                  another view. Full gold gradient when active, gold-tinted
+                  outline when resting. */}
+              <button
+                role="tab"
+                aria-selected={recruitsActive}
+                onClick={() => setActiveTab('recruits')}
+                className="font-cinzel font-700 uppercase"
+                style={{
+                  flex: '1 1 0', minWidth: 0,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  padding: '0.55rem 0.45rem', borderRadius: 9,
+                  fontSize: '0.7rem', letterSpacing: '0.06em',
+                  background: recruitsActive
+                    ? 'linear-gradient(180deg, #d9b563 0%, #a8842f 100%)'
+                    : 'rgba(201,162,74,0.1)',
+                  border: `1px solid ${recruitsActive ? 'rgba(240,214,150,0.85)' : 'rgba(201,162,74,0.5)'}`,
+                  color: recruitsActive ? '#2a1c08' : '#e8c87a',
+                  boxShadow: recruitsActive ? '0 3px 12px rgba(201,162,74,0.35), inset 0 1px 0 rgba(255,240,200,0.5)' : 'none',
+                  textShadow: recruitsActive ? '0 1px 1px rgba(255,238,200,0.4)' : 'none',
+                  cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
+                }}>
+                <span>Recruit</span>
+                {boardCount > 0 && (
+                  <span className="font-karla font-700" style={{ fontSize: '0.62rem', opacity: 0.85 }}>· {boardCount}</span>
+                )}
+              </button>
+              {/* Graveyard — icon-only memorial entry */}
+              <button
+                role="tab"
+                aria-selected={gravesActive}
+                aria-label="Graveyard"
+                title="Graveyard"
+                onClick={() => setActiveTab('graveyard')}
+                style={{
+                  flexShrink: 0, width: 38, height: 38,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 9,
+                  background: gravesActive ? 'rgba(156,128,85,0.22)' : 'rgba(0,0,0,0.25)',
+                  border: `1px solid ${gravesActive ? 'rgba(156,128,85,0.7)' : 'rgba(255,255,255,0.1)'}`,
+                  color: gravesActive ? '#c8ab7d' : 'rgba(255,255,255,0.45)',
+                  cursor: 'pointer', transition: 'all 0.18s',
+                }}>
+                <GraveIcon />
+              </button>
             </div>
           )
         })()}
@@ -1133,24 +1165,27 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               {hall.flavor}
             </p>
           </div>
-          {/* Reroll CTA — countdown folded into a thin caption directly
-              under the button so the timer still shows but doesn't get
-              its own header pill. */}
+          {/* Reroll row — the button used to float centered in its own row
+              (a pill with dead space either side); now it fills the left of
+              a single row and the free-roll countdown sits in the space to
+              its right as a compact two-line block. Squarer corners so it
+              reads as part of the hall panel, not a floating CTA. */}
           {(() => {
             const cannot = pending || reveal.revealing || state.gems < state.rerollCost
             return (
-              <div className="flex flex-col items-center" style={{ gap: 6, marginBottom: '1.1rem' }}>
+              <div className="flex items-center" style={{ gap: 12, marginBottom: '1.1rem' }}>
                 <motion.button
                   onClick={handleReroll}
                   disabled={cannot}
                   title="Spend gems for 3 brand-new recruits"
-                  whileTap={cannot ? undefined : { scale: 0.94 }}
+                  whileTap={cannot ? undefined : { scale: 0.96 }}
                   transition={{ type: 'spring', stiffness: 520, damping: 18 }}
                   className="font-cinzel font-700 uppercase"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 9,
-                    padding: '0.66rem 1.6rem', borderRadius: 999,
-                    fontSize: '0.86rem', letterSpacing: '0.07em',
+                    flex: '1 1 auto', minWidth: 0,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                    padding: '0.62rem 1rem', borderRadius: 10,
+                    fontSize: '0.82rem', letterSpacing: '0.07em',
                     background: cannot ? 'linear-gradient(180deg, #2a2114 0%, #19120a 100%)' : 'linear-gradient(180deg, #d9b563 0%, #a8842f 100%)',
                     border: `1px solid ${cannot ? 'rgba(201,162,74,0.28)' : 'rgba(240,214,150,0.85)'}`,
                     color: cannot ? 'rgba(240,220,168,0.45)' : '#2a1c08',
@@ -1161,14 +1196,19 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 >
                   <RefreshIcon />
                   <span>{busyId === 'reroll' || reveal.revealing ? 'Rerolling…' : 'Reroll'}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontSize: '0.82rem', letterSpacing: 0 }}>{state.rerollCost}<span style={{ color: cannot ? 'rgba(90,63,184,0.45)' : '#4f2fb0' }}>◆</span></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontSize: '0.8rem', letterSpacing: 0 }}>{state.rerollCost}<span style={{ color: cannot ? 'rgba(90,63,184,0.45)' : '#4f2fb0' }}>◆</span></span>
                 </motion.button>
-                <span className="font-karla" style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)',
-                }}>
-                  <ClockIcon /> Free reroll in <FreeRollCountdown />
-                </span>
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)' }}>
+                    Free reroll
+                  </span>
+                  <span className="font-karla font-600" style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)',
+                  }}>
+                    <ClockIcon /> <FreeRollCountdown />
+                  </span>
+                </div>
               </div>
             )
           })()}
