@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 
 const PAGE_TINTS: [string, string][] = [
@@ -40,9 +40,23 @@ export default function MobileTabBar() {
   // Hooks must run unconditionally — the early-return below used to sit
   // ABOVE these, which meant the hook count changed between routes
   // (a Rules-of-Hooks violation). All hooks first, conditional return last.
-  const [voyageBadge, setVoyageBadge] = useState(false)
+  // Pending-voyage rows, cached. This used to refetch from Supabase on
+  // EVERY pathname change — a network roundtrip per tab tap just to
+  // re-run time math. Voyages only change on the /expeditions surfaces,
+  // so: network on first mount and around /expeditions visits, pure
+  // local recompute (created_at + duration_ms vs now) everywhere else.
+  // A voyage that ripens mid-session still lights up on the next tab
+  // tap because readiness is derived at render time from cached rows.
+  const [pendingVoyages, setPendingVoyages] = useState<{ created_at: string; duration_ms: number | null }[]>([])
+  const fetchedOnceRef   = useRef(false)
+  const wasExpeditionsRef = useRef(false)
 
   useEffect(() => {
+    const inExpeditions = pathname.startsWith('/expeditions')
+    const needFetch = !fetchedOnceRef.current || wasExpeditionsRef.current || inExpeditions
+    wasExpeditionsRef.current = inExpeditions
+    if (!needFetch) return
+    fetchedOnceRef.current = true
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string } | null } }) => {
@@ -53,14 +67,15 @@ export default function MobileTabBar() {
         .eq('user_id', user.id)
         .eq('status', 'pending')
         .then(({ data }: { data: { created_at: string; duration_ms: number | null }[] | null }) => {
-          const now = Date.now()
-          const hasReady = (data ?? []).some(
-            r => new Date(r.created_at).getTime() + (r.duration_ms ?? 7200000) <= now
-          )
-          setVoyageBadge(hasReady)
+          setPendingVoyages(data ?? [])
         })
     })
   }, [pathname])
+
+  const voyageNow = Date.now()
+  const voyageBadge = pendingVoyages.some(
+    r => new Date(r.created_at).getTime() + (r.duration_ms ?? 7200000) <= voyageNow
+  )
 
   if (pathname === '/' || pathname === '/login') return null
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]

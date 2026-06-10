@@ -502,8 +502,14 @@ function DialSVG({
   zonesGroupRef?: React.Ref<SVGGElement>
 }) {
   const needleTipY  = CY - (INNER_R - 8)
-  const perfectZone = zones.find(z => z.type === 'perfect')
-  const penaltyZones = zones.filter(z => z.type === 'penalty')
+  // Memoized on zones identity — DialSVG re-renders on every needle
+  // zone crossing (angle prop), and the arc paths are trig + string
+  // building per zone. With catchingZones memoized in the parent,
+  // zones identity is stable for the whole catch, so these compute
+  // once per hooked fish instead of once per crossing.
+  const perfectZone  = useMemo(() => zones.find(z => z.type === 'perfect'), [zones])
+  const penaltyZones = useMemo(() => zones.filter(z => z.type === 'penalty'), [zones])
+  const zonePaths    = useMemo(() => zones.map(z => arcPath(z.from, z.to)), [zones])
 
   // Perfect-hit flash on the needle — short gold burst with a thicker
   // stroke so the needle reads as the thing the player nailed. Tied to
@@ -557,7 +563,7 @@ function DialSVG({
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
 <g ref={zonesGroupRef} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
-            <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
+            <path key={i} d={zonePaths[i]} fill={zone.color}
               fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
           ))}
           {perfectZone && (() => {
@@ -4997,10 +5003,17 @@ export default function FishingGame({
   }
 
   // Zone display helpers
-  const catchingZones = hookedFish ? (() => {
+  // Memoized — this used to be an inline IIFE, so every parent render
+  // during the catch phase (zone-crossing setAngle, streak updates,
+  // timers) re-ran buildFishZones + applyBossMods from scratch. The
+  // memo also gives `catchingZones` a stable identity, which lets
+  // DialSVG's internal useMemos (arc paths, perfect/penalty lookups)
+  // actually hit.
+  const catchingZones = useMemo(() => {
+    if (!hookedFish) return [] as ZoneDef[]
     const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1)
     return selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
-  })() : []
+  }, [hookedFish, hookTier, line.penaltyMultiplier, selectedZone, levelBonus, selectedBait, rod.catchZoneBonus, rod.perfectZoneBonus, activeEvent?.type, activeBossMechanic, bossZoneShrink])
   // Mirror the latest zones so the needle rAF loop can detect zone
   // crossings without depending on per-frame React state.
   catchingZonesRef.current = catchingZones

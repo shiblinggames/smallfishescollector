@@ -526,6 +526,16 @@ export default function RaidCombat({
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
 
+  // Chain-driving timeouts from resolveTurn's playStep cascade. The
+  // recursion (`setTimeout(() => playStep(i + 1), gapMs)`) has no other
+  // owner, so without this an unmount mid-resolution (fight ends, flee,
+  // next enemy mounts) leaves the old chain firing into the void —
+  // queued work and Date.now()-keyed state pushes against a dead fight.
+  // Only the chain links register here; the cosmetic inner timeouts
+  // (splat clears, impact clears) die harmlessly once the chain stops.
+  const playStepChainRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => { playStepChainRef.current.forEach(clearTimeout) }, [])
+
   const enemyPatternIdxRef = useRef(0)
   // Boss phase tracking. The ref drives combat reads (pickEnemyAction,
   // damage rolls, mitigation checks) without re-renders; the state
@@ -1731,10 +1741,11 @@ export default function RaidCombat({
       // to read "PHASE 2", see the HP refill, and absorb that the fight
       // isn't over. Bumps the gap from the standard ~1s to ~1.6s.
       const gapMs = step.phaseTransition ? 1600 : STEP_GAP_MS
-      setTimeout(() => playStep(i + 1), gapMs)
+      playStepChainRef.current.push(setTimeout(() => playStep(i + 1), gapMs))
     }
 
-    setTimeout(() => playStep(0), SPEED_LINE_HOLD_MS)
+    playStepChainRef.current = []
+    playStepChainRef.current.push(setTimeout(() => playStep(0), SPEED_LINE_HOLD_MS))
   }
 
   // ─── Render — Pokemon-style battle stage ──────────────────────────────────
@@ -3978,7 +3989,11 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={onLock}
+            // pointerdown, not click — iOS synthesizes click ~100-200 ms
+            // after the finger lands, which on a precision timing tap
+            // reads as the aim bar "robbing" the player. Mirrors the
+            // fishing Reel In / Cast buttons.
+            onPointerDown={(e) => { e.preventDefault(); onLock() }}
             className="font-cinzel font-700 uppercase tracking-[0.14em]"
             style={{
               width: '100%', height: 58,
