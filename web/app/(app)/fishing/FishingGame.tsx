@@ -3691,6 +3691,17 @@ export default function FishingGame({
     const baseMin = diffSpeed.speedMin * reel.needleSpeedMultiplier * bossNeedleMultRef.current
     const baseMax = diffSpeed.speedMax * reel.needleSpeedMultiplier * bossNeedleMultRef.current
     const capturedZoneRotation = zoneRotation
+    // Trophy-only reversals in Ancient Deep — the 6 prehistoric trophies
+    // keep the 35% needle reverse near the catch zone, but the 12 new
+    // sellable regulars don't get it. Captured once per cast so the
+    // lookup doesn't run inside the rAF tick. Falls back to true for
+    // any zone that isn't Ancient Deep so other zones (Deep, Abyss)
+    // keep their existing reverseChance behavior unchanged. Same
+    // sell_value === 0 discriminator the catch routing + boss-warning
+    // panel + result-card chrome already use.
+    const fishSpecies = allFishSpecies.find(f => f.id === hookedFish.fishId)
+    const reverseEligible = selectedZone !== 'ancient_deep' || (fishSpecies?.sell_value ?? 0) === 0
+    const effectiveReverseChance = reverseEligible ? zoneDiff.reverseChance : 0
 
     speedRef.current   = baseMin + Math.random() * (baseMax - baseMin)
     lastTimeRef.current  = 0
@@ -3709,7 +3720,7 @@ export default function FishingGame({
 
       if (elapsedMsRef.current >= nextChgMsRef.current) {
         speedRef.current = baseMin + Math.random() * (baseMax - baseMin)
-        if (Math.random() < zoneDiff.reverseChance) {
+        if (Math.random() < effectiveReverseChance) {
           // Only reverse near the catch zone — not while drifting through dead space
           const catchCenter = (CATCH_CENTER + capturedZoneRotation) % 360
           const needle = angleRef.current
