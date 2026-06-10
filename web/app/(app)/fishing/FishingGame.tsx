@@ -4163,15 +4163,21 @@ export default function FishingGame({
     if (phase !== 'catching' || !hookedFishRef.current) return
     // Cut the dial sound immediately on tap.
     stopDialLoop()
-    // Cancel the rAF so no further ticks advance the needle, then freeze
-    // the displayed angle at exactly what the player saw (the committed
-    // `angle` state). Using `angle` for both the freeze and the zone
-    // calc below keeps the catch result consistent with the visible
-    // needle and avoids the one-frame "creep" after the tap.
+    // Cancel the rAF and freeze the angle at exactly what the player
+    // saw. The needle is rendered imperatively via setAttribute on the
+    // group ref (rAF tick line ~3721), so the source of truth for the
+    // visible position is angleRef.current — NOT the `angle` state,
+    // which only updates on zone crossings via setAngle in the rAF
+    // tick. The old code locked to state which could lag the visible
+    // needle by several degrees mid-zone (between two crossings),
+    // causing the 'expected gold, got green' lag complaint: player sees
+    // the needle on gold, taps, resolution runs at the stale state
+    // angle which is still in the green ring a few degrees behind.
+    // Reading angleRef.current after cancelAnimationFrame captures the
+    // exact frame the player tapped on.
     if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null }
-    const lockedAngle = angle
+    const lockedAngle = angleRef.current
     setAngle(lockedAngle)
-    angleRef.current = lockedAngle
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
     setTimeout(() => setReelRippleKey(0), 1800)
