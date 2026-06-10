@@ -5663,24 +5663,41 @@ export default function FishingGame({
                           textShadow: retryFlash ? '0 0 12px rgba(251,146,60,0.7)' : currentZone ? `0 0 10px ${currentZone.color}60` : 'none',
                           margin: 0,
                         }}>
-                        {retryFlash ? 'Second Wind!' : (phase === 'reeling' && bossStageCleared) ? `Stage ${bossStage - 1}/3` : phase === 'reeling' ? 'Reeling in…' : (currentZone?.label ?? '')}
+                        {(() => {
+                          if (retryFlash) return 'Second Wind!'
+                          if (phase === 'reeling' && bossStageCleared) {
+                            const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
+                            const maxStages = BOSS_CONFIG[name]?.phases ?? 2
+                            return `Stage ${bossStage - 1}/${maxStages}`
+                          }
+                          if (phase === 'reeling') return 'Reeling in…'
+                          return currentZone?.label ?? ''
+                        })()}
                       </p>
                     )}
-                    {/* Boss stage progress dots */}
-                    {selectedZone === 'ancient_deep' && phase === 'catching' && bossStage > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 4 }}>
-                        <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#c084fc99' }}>Stage</p>
-                        {[1,2,3].map(s => (
-                          <div key={s} style={{
-                            width: 8, height: 8, borderRadius: '50%',
-                            background: s < bossStage ? '#c084fc' : s === bossStage ? '#c084fc' : 'rgba(192,132,252,0.2)',
-                            boxShadow: s <= bossStage ? '0 0 6px #c084fcaa' : 'none',
-                            border: s === bossStage ? '1px solid #c084fc' : '1px solid rgba(192,132,252,0.3)',
-                          }} />
-                        ))}
-                        <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#c084fc99' }}>{bossStage}/3</p>
-                      </div>
-                    )}
+                    {/* Boss stage progress dots — count comes from
+                        BOSS_CONFIG[name].phases so a 2-phase regular
+                        renders 2 dots + 'X/2', a 3-phase trophy renders
+                        3 dots + 'X/3'. */}
+                    {selectedZone === 'ancient_deep' && phase === 'catching' && bossStage > 0 && (() => {
+                      const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
+                      const maxStages = BOSS_CONFIG[name]?.phases ?? 2
+                      const stages = Array.from({ length: maxStages }, (_, i) => i + 1)
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 4 }}>
+                          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#c084fc99' }}>Stage</p>
+                          {stages.map(s => (
+                            <div key={s} style={{
+                              width: 8, height: 8, borderRadius: '50%',
+                              background: s < bossStage ? '#c084fc' : s === bossStage ? '#c084fc' : 'rgba(192,132,252,0.2)',
+                              boxShadow: s <= bossStage ? '0 0 6px #c084fcaa' : 'none',
+                              border: s === bossStage ? '1px solid #c084fc' : '1px solid rgba(192,132,252,0.3)',
+                            }} />
+                          ))}
+                          <p className="font-karla font-600" style={{ fontSize: '0.58rem', color: '#c084fc99' }}>{bossStage}/{maxStages}</p>
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   <div style={{ position: 'relative' }}>
@@ -5982,8 +5999,17 @@ export default function FishingGame({
                 const isLegendary = hookedFish.biteRarity === 5
                 const isEpicPlus  = hookedFish.biteRarity >= 4
                 const isCrate = hookedFish.fishId === CRATE_FISH_ID
-                const isBoss = selectedZone === 'ancient_deep'
-                const bossName = isBoss ? (allFishSpecies.find(f => f.id === hookedFish.fishId)?.name ?? 'Ancient Creature') : null
+                // 'Boss' warning panel (red 'Ancient Encounter Detected'
+                // + ominous chrome + boss-name reveal + 3-dot stage warning)
+                // is reserved for the 6 prehistoric trophies. The 12 new
+                // sellable regulars hook as normal Rare/Epic fish — they
+                // still run a multi-phase reel but their hook moment uses
+                // the standard rarity banner.
+                const hookedSpecies = selectedZone === 'ancient_deep'
+                  ? allFishSpecies.find(f => f.id === hookedFish.fishId) ?? null
+                  : null
+                const isBoss = !!hookedSpecies && (hookedSpecies.sell_value ?? 0) === 0
+                const bossName = isBoss ? (hookedSpecies?.name ?? 'Ancient Creature') : null
 
                 if (isCrate) return (
                   <motion.div key={`hooked-${hookedFish.fishId}`}
