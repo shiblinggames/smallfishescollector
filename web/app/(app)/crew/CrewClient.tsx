@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
   assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
+  upgradeCrewHall,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
+import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
@@ -683,6 +685,39 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   }
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<{ kind: 'board' | 'roster'; item: BoardCandidate | CrewMember } | null>(null)
+  // Crew Hall upgrade flow — confirm modal + the one-shot celebration
+  // overlay that plays over the recruit board after a successful upgrade
+  // (the board's theme swaps underneath it, so the moment of change is
+  // an event rather than a silent restyle).
+  const [hallUpgradeOpen, setHallUpgradeOpen] = useState(false)
+  const [hallBusy, setHallBusy] = useState(false)
+  const [hallCelebrate, setHallCelebrate] = useState<{ name: string; startLevel: number; accent: string } | null>(null)
+  useEffect(() => {
+    if (!hallCelebrate) return
+    const id = setTimeout(() => setHallCelebrate(null), 3000)
+    return () => clearTimeout(id)
+  }, [hallCelebrate])
+  function handleHallUpgrade() {
+    if (hallBusy || pending) return
+    setErr(null)
+    setHallBusy(true)
+    startTransition(async () => {
+      const res = await upgradeCrewHall()
+      if ('error' in res) {
+        setErr(res.error)
+        setHallUpgradeOpen(false)
+      } else {
+        const def = hallTierDef(res.state.hallTier)
+        setState(res.state)
+        setHallUpgradeOpen(false)
+        // Keep the Nav-bar doubloon total in sync (same pattern as repair).
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate([18, 50, 26])
+        setHallCelebrate({ name: def.name, startLevel: def.startLevel, accent: def.accent })
+      }
+      setHallBusy(false)
+    })
+  }
   // Cards with traits glow until the player opens them once (a "look here" nudge).
   const [viewed, setViewed] = useState<Set<string>>(new Set())
 
@@ -1034,12 +1069,70 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           )
         })()}
 
-        {/* Recruit board — warm gold "new arrivals" region. Section
-            heading + accent bar dropped; the top-level Recruit tab
-            already names this region. Reroll CTA + free-refresh
-            countdown carry the panel on their own. */}
-        {activeTab === 'recruits' && (
-        <div style={{ borderRadius: 12, border: `1px solid ${SECTION_RECRUIT}33`, background: `linear-gradient(180deg, ${SECTION_RECRUIT}12 0%, rgba(0,0,0,0) 55%)`, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
+        {/* Recruit board — themed by the player's Crew Hall tier
+            (lib/crewHall.ts): the panel's accent, glow, and header all
+            upgrade with the building, so paying for a new hall visibly
+            changes the room the recruits stand in. Hall header carries
+            the name + tier pips + start-level perk + the Upgrade CTA. */}
+        {activeTab === 'recruits' && (() => {
+          const hall = hallTierDef(state.hallTier)
+          const nextTier = nextHallTier(state.hallTier)
+          return (
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, border: `1px solid ${hall.accent}44`, background: `linear-gradient(180deg, ${hall.accent}16 0%, rgba(0,0,0,0) 55%)`, boxShadow: hall.glow ? `0 0 26px ${hall.glow}` : undefined, padding: '0.85rem 0.85rem 1rem', marginBottom: '1.4rem' }}>
+          {/* Hall header — building identity row. Name + tier pips on
+              the left, Upgrade CTA (or MAX chip) on the right, perk +
+              flavor caption underneath. */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: hall.accent, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {hall.name}
+                </p>
+                <div style={{ display: 'flex', gap: 3, flexShrink: 0 }} aria-label={`Crew Hall tier ${state.hallTier} of ${CREW_HALL_MAX_TIER}`}>
+                  {Array.from({ length: CREW_HALL_MAX_TIER }, (_, i) => (
+                    <span key={i} aria-hidden style={{
+                      width: 6, height: 6, borderRadius: 6,
+                      background: i < state.hallTier ? hall.accent : 'rgba(255,255,255,0.14)',
+                      boxShadow: i < state.hallTier ? `0 0 5px ${hall.accent}88` : undefined,
+                    }} />
+                  ))}
+                </div>
+              </div>
+              {nextTier ? (
+                <button
+                  onClick={() => setHallUpgradeOpen(true)}
+                  className="font-karla font-700 uppercase active:scale-95"
+                  style={{
+                    flexShrink: 0,
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '0.34rem 0.7rem', borderRadius: 999,
+                    fontSize: '0.62rem', letterSpacing: '0.08em',
+                    background: 'rgba(96,165,250,0.14)',
+                    border: '1px solid rgba(96,165,250,0.45)',
+                    color: '#cfe2ff', cursor: 'pointer',
+                    transition: 'transform 0.08s',
+                  }}
+                >
+                  Upgrade
+                </button>
+              ) : (
+                <span className="font-karla font-700 uppercase" style={{
+                  flexShrink: 0, padding: '0.34rem 0.7rem', borderRadius: 999,
+                  fontSize: '0.62rem', letterSpacing: '0.08em',
+                  background: `${hall.accent}1a`, border: `1px solid ${hall.accent}55`,
+                  color: hall.accent,
+                }}>
+                  Max
+                </span>
+              )}
+            </div>
+            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.62)', marginTop: 4 }}>
+              Recruits start at <span style={{ color: hall.accent }}>Lv {hall.startLevel}</span>
+            </p>
+            <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: 2 }}>
+              {hall.flavor}
+            </p>
+          </div>
           {/* Reroll CTA — countdown folded into a thin caption directly
               under the button so the timer still shows but doesn't get
               its own header pill. */}
@@ -1115,8 +1208,165 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               <p className="font-karla" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>No recruits on the board.</p>
             )}
           </div>
+
+          {/* Upgrade celebration — fires once after a confirmed purchase.
+              Lives INSIDE the hall panel (position:relative + overflow:
+              hidden above) so the effect stays localized to the room that
+              changed, per juice-subtlety: an expanding accent ring + the
+              new hall's name over a brief dark veil. Tap or 3s timeout
+              dismisses (auto-dismiss effect lives next to the state). */}
+          <AnimatePresence>
+            {hallCelebrate && (
+              <motion.div
+                key="hall-celebrate"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                onClick={() => setHallCelebrate(null)}
+                style={{
+                  position: 'absolute', inset: 0, zIndex: 5,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, background: 'rgba(8,6,3,0.82)', borderRadius: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                {/* Expanding ring in the new tier's accent — the "something
+                    just leveled up" beat without any screen-wide flash. */}
+                <motion.span
+                  aria-hidden
+                  initial={{ scale: 0.2, opacity: 0.9 }}
+                  animate={{ scale: 3.4, opacity: 0 }}
+                  transition={{ duration: 1.1, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', width: 90, height: 90, borderRadius: 999,
+                    border: `2px solid ${hallCelebrate.accent}`,
+                    boxShadow: `0 0 24px ${hallCelebrate.accent}66`,
+                  }}
+                />
+                <motion.p
+                  className="font-karla font-700 uppercase"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.35 }}
+                  style={{ fontSize: '0.6rem', letterSpacing: '0.22em', color: 'rgba(255,255,255,0.55)' }}
+                >
+                  Hall Upgraded
+                </motion.p>
+                <motion.p
+                  className="font-cinzel font-700"
+                  initial={{ opacity: 0, scale: 0.82 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.25, type: 'spring', stiffness: 320, damping: 20 }}
+                  style={{
+                    fontSize: '1.25rem', color: hallCelebrate.accent, textAlign: 'center',
+                    textShadow: `0 0 18px ${hallCelebrate.accent}55`, padding: '0 1rem',
+                  }}
+                >
+                  {hallCelebrate.name}
+                </motion.p>
+                <motion.p
+                  className="font-karla font-600"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                  style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}
+                >
+                  Recruits now start at <span style={{ color: hallCelebrate.accent }}>Lv {hallCelebrate.startLevel}</span>
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        )}
+          )
+        })()}
+
+        {/* Hall upgrade confirm modal — fixed overlay (CrewClient mounts at
+            page level, not inside Nav, so no portal needed). Recomputes the
+            next tier from state so it always reflects the live tier even if
+            the panel's IIFE consts are stale. */}
+        {hallUpgradeOpen && (() => {
+          const next = nextHallTier(state.hallTier)
+          if (!next) return null
+          const canAfford = state.doubloons >= next.cost
+          return (
+            <div
+              onClick={() => { if (!hallBusy) setHallUpgradeOpen(false) }}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 80,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0,0,0,0.62)', padding: '1.2rem',
+              }}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 380,
+                  background: 'linear-gradient(180deg, #1c1610 0%, #120d08 100%)',
+                  border: `1px solid ${next.accent}55`,
+                  borderRadius: 14, padding: '1.2rem 1.1rem 1.05rem',
+                  boxShadow: `0 10px 40px rgba(0,0,0,0.6), 0 0 30px ${next.accent}22`,
+                }}
+              >
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>
+                  Upgrade Crew Hall
+                </p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: next.accent, marginBottom: 6 }}>
+                  {next.name}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 10, lineHeight: 1.45 }}>
+                  {next.flavor}
+                </p>
+                <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.78)', marginBottom: 14 }}>
+                  New recruits will start at <span style={{ color: next.accent }}>Lv {next.startLevel}</span>
+                </p>
+                <div className="flex items-center justify-between" style={{
+                  padding: '0.55rem 0.75rem', borderRadius: 9,
+                  background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
+                  marginBottom: 14,
+                }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>Cost</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: canAfford ? '#e8c87a' : '#f2b0b0' }}>
+                    {next.cost.toLocaleString()} <span style={{ color: '#e8c87a' }}>⟡</span>
+                  </span>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.64rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0', marginBottom: 12 }}>
+                  Your doubloons: {state.doubloons.toLocaleString()} ⟡
+                </p>
+                <div className="flex" style={{ gap: 8 }}>
+                  <button
+                    onClick={() => setHallUpgradeOpen(false)}
+                    disabled={hallBusy}
+                    className="font-karla font-700"
+                    style={{
+                      flex: 1, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)',
+                      color: 'rgba(255,255,255,0.7)', cursor: hallBusy ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleHallUpgrade}
+                    disabled={!canAfford || hallBusy}
+                    className="font-karla font-700 active:scale-95"
+                    style={{
+                      flex: 1.4, padding: '0.6rem', borderRadius: 9, fontSize: '0.78rem',
+                      background: 'rgba(96,165,250,0.16)',
+                      border: '1px solid rgba(96,165,250,0.5)',
+                      color: '#cfe2ff',
+                      opacity: (!canAfford || hallBusy) ? 0.45 : 1,
+                      cursor: (!canAfford || hallBusy) ? 'not-allowed' : 'pointer',
+                      transition: 'transform 0.08s',
+                    }}
+                  >
+                    {hallBusy ? 'Upgrading…' : `Upgrade · ${next.cost.toLocaleString()} ⟡`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Roster / Graveyard — cool steel "your manifest" region. The sub-
             tab strip was promoted to top-level tabs (Roster / Recruit Board

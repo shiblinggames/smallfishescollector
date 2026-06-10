@@ -10,6 +10,7 @@ import {
   groupForSlug, rollRarity, rollCrew, crewDisplayName,
   FREE_WEIGHTS, GEM_WEIGHTS, type CrewRarity,
 } from '@/lib/crewGen'
+import { clampHallTier, nextHallTier, hallStartXP, type CrewHallTierNum } from '@/lib/crewHall'
 
 const REROLL_COST = 100
 
@@ -80,6 +81,11 @@ export type CrewState = {
    *  Crew Hall UI greys these cards out and disables the assignment
    *  toggle — players can't pull a crew off an in-progress voyage. */
   lockedCrewIds: number[]
+  /** Crew Hall building tier (1..5). Drives the recruit board's visual
+   *  theme + the level fresh recruits start at (lib/crewHall.ts). */
+  hallTier: CrewHallTierNum
+  /** Doubloon balance — the hall upgrade currency. */
+  doubloons: number
 }
 
 export type CrewActionResult = { state: CrewState } | { error: string }
@@ -173,7 +179,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -227,6 +233,8 @@ export async function getCrewState(): Promise<CrewState | null> {
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
     shipCrewSlots, lockedCrewIds,
+    hallTier: clampHallTier((prof as any).crew_hall_tier),
+    doubloons: (prof as any).doubloons ?? 0,
   }
 }
 
@@ -288,7 +296,7 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('expedition_xp').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('expedition_xp, crew_hall_tier').eq('id', user.id).single()
   const capacity = crewCapacity(getLevelFromXP((prof as any)?.expedition_xp ?? 0))
   // Capacity check counts LIVE roster only — fallen crew don't take
   // up a roster slot (graveyard is unlimited memorial space).
@@ -318,10 +326,51 @@ export async function recruitCrew(recruitId: number): Promise<CrewActionResult> 
     effects: (rec as any).effects,
     voyage_slot: null,
     raid_slot: null,
+    // Crew Hall perk: recruits arrive at the hall tier's starting level.
+    // Level is derived from XP, so seeding the XP is the entire feature —
+    // stat ticks, ability unlock (Lv 10), chips and bars all follow.
+    xp: hallStartXP((prof as any)?.crew_hall_tier),
   })
   await admin.from('daily_recruits').update({ recruited: true }).eq('id', recruitId).eq('user_id', user.id)
   // Lifetime recruit counter (cumulative; user_crew only holds the live roster).
   await admin.rpc('bump_profile_stat', { uid: user.id, col: 'lifetime_recruits', n: 1 })
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
+}
+
+// ── Upgrade the Crew Hall (doubloon-guarded tier bump) ───────────────────────
+
+export async function upgradeCrewHall(): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+
+  const { data: prof } = await admin
+    .from('profiles')
+    .select('doubloons, crew_hall_tier')
+    .eq('id', user.id)
+    .single()
+  const current = clampHallTier((prof as any)?.crew_hall_tier)
+  const next = nextHallTier(current)
+  if (!next) return { error: 'Crew Hall is fully upgraded' }
+
+  const doubloons = (prof as any)?.doubloons ?? 0
+  if (doubloons < next.cost) return { error: 'Not enough doubloons' }
+
+  // Guarded update: gte() stops concurrent taps from overdrawing, and the
+  // eq() on the current tier stops a double-submit from buying two tiers
+  // for one confirmation.
+  const { data: updated } = await admin
+    .from('profiles')
+    .update({ doubloons: doubloons - next.cost, crew_hall_tier: next.tier })
+    .eq('id', user.id)
+    .eq('crew_hall_tier', current)
+    .gte('doubloons', next.cost)
+    .select('doubloons')
+    .single()
+  if (!updated) return { error: 'Not enough doubloons' }
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
