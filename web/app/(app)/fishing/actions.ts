@@ -508,9 +508,17 @@ export async function reelIn(
   // double-catch / jackpot multiplier on the same cast is consumed by
   // the rare moment. This keeps daily-challenge counters from crediting
   // ghost regular fish that never landed anywhere.
+  // Ancient Deep also clamps both multipliers to 1: zone is balanced
+  // around single-fish catches with high per-fish value, and YOLO /
+  // Twin-Strike multipliers would yield ~5-10× the intended hourly
+  // rate. Server-side enforcement so a manipulated client can't bypass
+  // the matching clamp in FishingGame.handleReelIn.
+  const noMultipliers = fish.habitat === 'ancient_deep'
+  const effectiveDoubleCatch = doubleCatch && !noMultipliers
+  const effectiveJackpotMult = noMultipliers ? 1 : jackpotMultiplier
   const holdCapacity = getFishHold(profile.fish_hold_tier ?? 0).capacity
   const currentHoldCount = (holdRows ?? []).reduce((s: number, r: { quantity: number }) => s + (r.quantity ?? 0), 0)
-  const desired = isShiny ? 1 : (doubleCatch ? 2 : jackpotMultiplier)
+  const desired = isShiny ? 1 : (effectiveDoubleCatch ? 2 : effectiveJackpotMult)
   const catchQty = isShiny ? 1 : Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
 
   const { data: invRow } = await admin
@@ -619,8 +627,8 @@ export async function reelIn(
   }
 
   // Lifetime event counters (admin stats) — only fire on the event.
-  if (doubleCatch)          await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
-  if (jackpotMultiplier > 1) await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_jackpots', n: 1 })
+  if (effectiveDoubleCatch)          await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_double_catches', n: 1 })
+  if (effectiveJackpotMult > 1)      await admin.rpc('bump_profile_stat', { uid: user.id, col: 'fishing_jackpots', n: 1 })
 
   // Record challenge score (fire and forget)
   recordChallengeScore(user.id, fish.sell_value * catchQty, result === 'perfect').catch(() => {})

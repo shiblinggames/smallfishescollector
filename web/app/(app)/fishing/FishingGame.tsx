@@ -4329,10 +4329,17 @@ export default function FishingGame({
       return
     }
 
-    // Twin-Strike rod: 25% chance to catch 2 fish
-    const doubleCatch = rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
-    // YOLO Rod: 10% chance to catch 100x fish
-    const jackpotHit = !doubleCatch && (rod.jackpotChance ?? 0) > 0 && Math.random() < rod.jackpotChance!
+    // Twin-Strike rod: 25% chance to catch 2 fish.
+    // YOLO Rod: 10% chance to catch 100x fish.
+    // BOTH disabled in the Ancient Deep — the zone is balanced around
+    // single-fish catches with high per-fish value (lure scarcity +
+    // multi-phase reels + precision gate them already). Any ×N or ×100
+    // multiplier on top of that yields ~5-10× the intended hourly rate.
+    // Server-side reelIn enforces the same clamp so a manipulated
+    // client can't bypass.
+    const noMultipliersHere = selectedZone === 'ancient_deep'
+    const doubleCatch = !noMultipliersHere && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
+    const jackpotHit = !noMultipliersHere && !doubleCatch && (rod.jackpotChance ?? 0) > 0 && Math.random() < rod.jackpotChance!
     const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
 
     startTransition(async () => {
