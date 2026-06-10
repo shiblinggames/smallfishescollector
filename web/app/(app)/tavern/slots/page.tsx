@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getSlotsDailyWagered, getSlotStats } from '../actions'
+import { getSlotsDailyWagered, getSlotStats, getSlotsJackpot } from '../actions'
 import SlotMachine from '../SlotMachine'
 
 export default async function SlotsPage() {
@@ -8,10 +8,11 @@ export default async function SlotsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, dailyWagered, stats] = await Promise.all([
+  const [{ data: profile }, dailyWagered, stats, jackpot] = await Promise.all([
     supabase.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     getSlotsDailyWagered(),
     getSlotStats(),
+    getSlotsJackpot(),
   ])
 
   return (
@@ -26,6 +27,7 @@ export default async function SlotsPage() {
             doubloons={profile?.doubloons ?? 0}
             dailyWagered={dailyWagered}
             initialStats={stats}
+            initialJackpot={jackpot}
           />
         </div>
       </main>

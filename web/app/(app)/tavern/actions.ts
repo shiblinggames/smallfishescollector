@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PARTIAL_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_DAILY_CAP } from './constants'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_DAILY_CAP, SLOTS_JACKPOT_FEED_PCT } from './constants'
 import type { SlotSymbolId } from './constants'
 
 // Crown & Anchor was retired 2026-06-06 — replaced by Blackjack
@@ -14,16 +14,43 @@ import type { SlotSymbolId } from './constants'
 
 export interface SlotSpinResult {
   reels: SlotSymbolId[]
-  outcome: 'win' | 'lose' | 'bonus' | 'refund' | 'near_miss' | 'partial_win' | 'wild_win'
+  outcome: 'win' | 'jackpot' | 'lose' | 'bonus' | 'refund' | 'near_miss' | 'pair_win'
   payout: number
   net: number
   newDoubloons: number
   dailyWagered: number
   matchedSymbol?: SlotSymbolId
+  /** Global jackpot pot AFTER this spin (post-feed, post-claim). */
+  pot: number
+  /** Doubloons taken from the pot when outcome (or bonus) hit the jackpot. */
+  jackpotWin?: number
   bonus?: {
     reels: SlotSymbolId[]
-    outcome: 'win' | 'lose'
+    outcome: 'win' | 'jackpot' | 'pair' | 'lose'
     payout: number
+    matchedSymbol?: SlotSymbolId
+  }
+}
+
+export interface SlotsJackpotState {
+  pot: number
+  lastWinnerName: string | null
+  lastWinAmount: number | null
+  lastWonAt: string | null
+}
+
+export async function getSlotsJackpot(): Promise<SlotsJackpotState> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('slots_jackpot')
+    .select('pot, last_winner_name, last_win_amount, last_won_at')
+    .eq('id', 1)
+    .single()
+  return {
+    pot: data?.pot ?? 5000,
+    lastWinnerName: data?.last_winner_name ?? null,
+    lastWinAmount: data?.last_win_amount ?? null,
+    lastWonAt: data?.last_won_at ?? null,
   }
 }
 
@@ -87,7 +114,7 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons')
+    .select('doubloons, username')
     .eq('id', user.id)
     .single()
   if (!profile || profile.doubloons < wager) return { error: 'Insufficient doubloons' }
@@ -105,58 +132,104 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const [a, b, c] = reels
   const allSame = a === b && b === c
   const hookCount = reels.filter(r => r === 'anchor').length
-  const fishReels = reels.filter(r => r !== 'anchor') as SlotSymbolId[]
+
+  // Every spin feeds the global pot before any claim — your own
+  // contribution is in the pot you might win this very spin.
+  const feed = Math.ceil(wager * SLOTS_JACKPOT_FEED_PCT)
+  const { data: fedPot } = await admin.rpc('slots_feed_jackpot', { p_amount: feed })
+  let pot = typeof fedPot === 'number' ? fedPot : 5000
+
+  const winnerName = (profile as { username?: string | null }).username ?? 'A sailor'
+  async function claimJackpot(): Promise<number> {
+    const { data } = await admin.rpc('slots_claim_jackpot', {
+      p_user_id: user!.id,
+      p_winner_name: winnerName,
+      p_wager: wager,
+      p_max_bet: SLOTS_MAX_BET,
+    })
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return 0
+    pot = row.new_pot as number
+    return row.share as number
+  }
+
+  // Finds an exactly-2 matching fish pair (third reel can be anything,
+  // including a single hook). Returns the paired symbol or null.
+  function pairSymbol(rs: SlotSymbolId[]): SlotSymbolId | null {
+    const [x, y, z] = rs
+    if (x === y && y === z) return null
+    if (x === y && x !== 'anchor') return x
+    if (x === z && x !== 'anchor') return x
+    if (y === z && y !== 'anchor') return y
+    return null
+  }
 
   let outcome: SlotSpinResult['outcome']
   let payout = 0
   let matchedSymbol: SlotSymbolId | undefined
   let bonus: SlotSpinResult['bonus'] | undefined
+  let jackpotWin: number | undefined
 
   if (allSame && a === 'anchor') {
-    // 3 hooks → bonus spin
+    // 3 hooks → free bonus spin. The bonus roll pays triples and pairs
+    // like a normal spin (no hook lines, no nested bonus) — and yes, a
+    // natural 3-catfish bonus roll takes the jackpot.
     outcome = 'bonus'
     const bonusReels = slotRollReels()
     const [ba, bb, bc] = bonusReels
     const bonusAllSame = ba === bb && bb === bc
-    if (bonusAllSame && ba !== 'anchor') {
-      const bonusPayout = wager * SLOT_PAYOUTS[ba]
-      bonus = { reels: bonusReels, outcome: 'win', payout: bonusPayout }
+    const bonusPair = pairSymbol(bonusReels)
+    if (bonusAllSame && ba === 'catfish') {
+      const share = await claimJackpot()
+      jackpotWin = share
+      bonus = { reels: bonusReels, outcome: 'jackpot', payout: share }
+    } else if (bonusAllSame && ba !== 'anchor') {
+      bonus = { reels: bonusReels, outcome: 'win', payout: wager * SLOT_PAYOUTS[ba] }
+    } else if (bonusPair && SLOT_PAIR_PAYOUTS[bonusPair]) {
+      bonus = { reels: bonusReels, outcome: 'pair', payout: Math.floor(wager * SLOT_PAIR_PAYOUTS[bonusPair]!), matchedSymbol: bonusPair }
     } else {
       bonus = { reels: bonusReels, outcome: 'lose', payout: 0 }
     }
     payout = wager + bonus.payout
-  } else if (hookCount === 2) {
-    // 2 hooks anywhere → refund
-    outcome = 'refund'
-    payout = wager
+  } else if (allSame && a === 'catfish') {
+    // Natural 3 catfish → global jackpot, share proportional to wager
+    outcome = 'jackpot'
+    const share = await claimJackpot()
+    jackpotWin = share
+    payout = share
   } else if (allSame) {
     // 3 of same fish → full win
     outcome = 'win'
     payout = wager * SLOT_PAYOUTS[a]
-  } else if (hookCount === 1 && fishReels[0] === fishReels[1]) {
-    // 1 hook + 2 matching fish → hook wild partial win
-    outcome = 'wild_win'
-    matchedSymbol = fishReels[0]
-    payout = Math.floor(wager * (SLOT_PARTIAL_PAYOUTS[matchedSymbol] ?? 1))
-  } else if (hookCount === 0 && (a === b || a === c || b === c)) {
-    // 2 matching fish, no hooks → partial win
-    outcome = 'partial_win'
-    matchedSymbol = a === b ? a : a === c ? a : b
-    payout = Math.floor(wager * (SLOT_PARTIAL_PAYOUTS[matchedSymbol] ?? 1))
+  } else if (hookCount === 2) {
+    // 2 hooks anywhere → refund
+    outcome = 'refund'
+    payout = wager
   } else {
-    outcome = 'lose'
-    payout = 0
+    const pair = pairSymbol(reels)
+    if (pair && SLOT_PAIR_PAYOUTS[pair]) {
+      // Pair of marlin / whale / catfish → real pair win (always ≥ 1.5×)
+      outcome = 'pair_win'
+      matchedSymbol = pair
+      payout = Math.floor(wager * SLOT_PAIR_PAYOUTS[pair]!)
+    } else if (pair === 'common') {
+      // Sardine pair pays nothing — surfaced as a near-miss, not a win
+      outcome = 'near_miss'
+      matchedSymbol = pair
+    } else {
+      outcome = 'lose'
+    }
   }
 
   const net = payout - wager
   const newDoubloons = profile.doubloons + net
 
   const outcomeLabel =
-    outcome === 'win'         ? `${SLOT_PAYOUTS[a]}× on ${a}` :
-    outcome === 'bonus'       ? `bonus spin (${bonus!.outcome})` :
-    outcome === 'refund'      ? '2 hooks — refund' :
-    outcome === 'wild_win'    ? `hook wild — 2× ${matchedSymbol}` :
-    outcome === 'partial_win' ? `2× ${matchedSymbol}` :
+    outcome === 'win'      ? `${SLOT_PAYOUTS[a]}× on ${a}` :
+    outcome === 'jackpot'  ? `JACKPOT — ${payout} from the pot` :
+    outcome === 'bonus'    ? `bonus spin (${bonus!.outcome})` :
+    outcome === 'refund'   ? '2 hooks — refund' :
+    outcome === 'pair_win' ? `pair of ${matchedSymbol}` :
     'no match'
 
   await Promise.all([
@@ -170,6 +243,6 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   ])
 
   revalidatePath('/tavern/slots')
-  return { reels, outcome, payout, net, newDoubloons, dailyWagered: totalWagered + wager, matchedSymbol, bonus }
+  return { reels, outcome, payout, net, newDoubloons, dailyWagered: totalWagered + wager, matchedSymbol, pot, jackpotWin, bonus }
 }
 

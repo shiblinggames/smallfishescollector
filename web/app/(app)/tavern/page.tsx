@@ -2,6 +2,7 @@ import { Suspense, cache } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getChartState } from '@/app/(app)/charting/chartActions'
+import { getSlotsJackpot } from './actions'
 import { isPremiumActive } from '@/lib/premium'
 import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
@@ -60,16 +61,18 @@ function FeaturesSection() {
   )
 }
 
-function ArcadeSection({ isAdmin }: { isAdmin: boolean }) {
+async function ArcadeSection({ isAdmin }: { isAdmin: boolean }) {
   // Fish Roulette is admin-only for now — the game is functional but we
   // want a final balance pass + tap-test on the smallest split tap zones
   // before it goes live to all players. Non-admins see the original
   // 2-card row (Blackjack + Slots) so the section looks intentional.
+  // The slots card shows the live Catfish Jackpot pot as a pull.
+  const jackpot = await getSlotsJackpot()
   if (isAdmin) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <BlackjackHubCard />
-        <FishSlotsCard />
+        <FishSlotsCard jackpotPot={jackpot.pot} />
         <RouletteHubCard />
       </div>
     )
@@ -77,7 +80,7 @@ function ArcadeSection({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <BlackjackHubCard />
-      <FishSlotsCard />
+      <FishSlotsCard jackpotPot={jackpot.pot} />
     </div>
   )
 }

@@ -4,8 +4,9 @@ import ScenicCard from './ScenicCard'
 
 /** Tavern hub card for Fish Slots. Deep-violet arcade scene with a
  *  shimmer sweeping across the slot art on a slow loop, like neon
- *  catching the front of the machine. */
-export default function FishSlotsCard() {
+ *  catching the front of the machine. Shows the live Catfish Jackpot
+ *  pot as a gold chip when provided — the number IS the pull. */
+export default function FishSlotsCard({ jackpotPot }: { jackpotPot?: number }) {
   return (
     <ScenicCard
       href="/tavern/slots"
@@ -13,6 +14,30 @@ export default function FishSlotsCard() {
       gradient={['#2c1a4a', '#170e2c', '#0a0518']}
       accent="#a78bfa"
     >
+      {jackpotPot !== undefined && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 2,
+            background: 'rgba(10,8,4,0.78)',
+            border: '1px solid rgba(240,192,64,0.5)',
+            borderRadius: 999,
+            padding: '3px 10px',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 0 14px rgba(240,192,64,0.25)',
+          }}
+        >
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.12em', color: '#c9a24a', marginRight: 5 }}>
+            Jackpot
+          </span>
+          <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
+            {jackpotPot.toLocaleString()} ⟡
+          </span>
+        </div>
+      )}
       {/* Violet halo behind the slot art — soft, steady (no pulse
           here; the shimmer below is the active element). */}
       <div

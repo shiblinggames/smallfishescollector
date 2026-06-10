@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { spinSlots } from './actions'
-import type { SlotSpinResult, SlotStats } from './actions'
-import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PARTIAL_PAYOUTS, SLOTS_DAILY_CAP, SLOTS_MIN_BET, SLOTS_MAX_BET } from './constants'
+import type { SlotSpinResult, SlotStats, SlotsJackpotState } from './actions'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_DAILY_CAP, SLOTS_MIN_BET, SLOTS_MAX_BET } from './constants'
 import type { SlotSymbolId } from './constants'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -17,9 +17,9 @@ function haptic(pattern: number | number[]) {
 }
 
 const WIN_LABEL: Record<SlotSymbolId, string> = {
-  common:    '2× Match',
-  rare:      'Rare Catch!',
-  legendary: 'Legendary!',
+  common:    'Full School!',
+  rare:      'Marlin Run!',
+  legendary: 'Whale of a Win!',
   catfish:   'JACKPOT!!',
   anchor:    'Bonus Spin!',
 }
@@ -76,8 +76,35 @@ function SlotSymbolDisplay({ id, size }: { id: SlotSymbolId; size?: number }) {
   )
 }
 
+/** Smoothly counts the displayed pot toward its target whenever the
+ *  target changes. Eased cubic so the last few digits settle slowly,
+ *  like a harbor tote board. Handles both directions (a jackpot claim
+ *  ticks the pot DOWN to its reseeded value). */
+function PotTicker({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value)
+  const fromRef = useRef(value)
+  useEffect(() => {
+    const from = fromRef.current
+    if (from === value) return
+    const start = performance.now()
+    const dur = Math.min(1400, 500 + Math.abs(value - from) * 1.5)
+    let raf: number
+    const step = (t: number) => {
+      const p = Math.min(1, (t - start) / dur)
+      const eased = 1 - Math.pow(1 - p, 3)
+      const next = Math.round(from + (value - from) * eased)
+      setDisplay(next)
+      if (p < 1) raf = requestAnimationFrame(step)
+      else fromRef.current = value
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [value])
+  return <>{display.toLocaleString()}</>
+}
+
 // Each reel stops independently — no delay prop needed
-function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMissOdd, matchColor, matchWild, onLand }: {
+function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMissOdd, matchColor, onLand }: {
   symbol: SlotSymbolId
   rolling: boolean
   won: boolean
@@ -87,8 +114,7 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
   winDelayMs?: number
   nearMiss?: boolean    // part of a near-miss (orange)
   nearMissOdd?: boolean // the reel that broke the near-miss
-  matchColor?: string   // partial/wild win — matching pair, tinted in fish color
-  matchWild?: boolean   // hook acting as wild (teal)
+  matchColor?: string   // pair win — matching pair, tinted in fish color
   /** Fires once when the rolling state flips false — used to thump a tiny
    *  haptic on each reel landing. Android only; iOS no-ops. */
   onLand?: () => void
@@ -123,35 +149,33 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
   const color = won && winColor ? winColor : sym.color
 
   const borderColor = won ? (winColor ?? color)
-    : matchWild ? '#34d399'
     : matchColor ? matchColor
     : nearMiss ? '#f97316'
     : nearMissOdd ? 'rgba(255,255,255,0.06)'
-    : (rolling ? 'rgba(255,255,255,0.10)' : color)
+    : (rolling ? 'rgba(255,255,255,0.10)' : `${color}90`)
   const bg = won ? `${winColor ?? color}40`
-    : matchWild ? 'rgba(52,211,153,0.25)'
     : matchColor ? `${matchColor}25`
     : nearMiss ? 'rgba(249,115,22,0.22)'
-    : 'rgba(10,9,8,0.88)'
+    : 'rgba(6,5,4,0.92)'
   const shadow = won
     ? `0 0 28px ${winColor ?? color}70, 0 0 56px ${winColor ?? color}30`
-    : matchWild ? '0 0 18px #34d39960'
     : matchColor ? `0 0 18px ${matchColor}60`
     : nearMiss ? '0 0 18px #f9731660'
-    : (rolling ? 'none' : `0 0 20px ${color}38`)
+    : (rolling ? 'inset 0 6px 14px rgba(0,0,0,0.55)' : `inset 0 6px 14px rgba(0,0,0,0.45), 0 0 14px ${color}28`)
   const anim = won
     ? `reel-pop 0.55s cubic-bezier(0.36,0.07,0.19,0.97) ${winDelayMs}ms forwards`
     : nearMissOdd ? 'near-miss-wobble 0.55s ease-out'
-    : (nearMiss || matchColor || matchWild) ? 'match-glow 1.6s ease-in-out infinite'
+    : (nearMiss || matchColor) ? 'match-glow 1.6s ease-in-out infinite'
     : 'none'
 
   return (
     <div
       className="w-24 h-24 sm:w-[130px] sm:h-[130px]"
       style={{
+        position: 'relative',
         background: bg,
-        border: `2.5px solid ${borderColor}`,
-        borderRadius: 18,
+        border: `2px solid ${borderColor}`,
+        borderRadius: 14,
         boxShadow: shadow,
         overflow: 'hidden',
         animation: anim,
@@ -159,6 +183,14 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
       }}
     >
       <SlotSymbolDisplay id={display} />
+      {/* Glass highlight across the top of the reel window */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 12,
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 22%, transparent 45%)',
+        }}
+      />
     </div>
   )
 }
@@ -184,13 +216,20 @@ function stopReels(
 
 const BET_PRESETS = [10, 25, 50, 100, 250, 500]
 
+// Brass / wood palette for the cabinet
+const BRASS       = '#c9a24a'
+const BRASS_DIM   = 'rgba(201,162,74,0.45)'
+const WOOD_DARK   = '#15100a'
+const WOOD_MID    = '#241a10'
+
 interface Props {
   doubloons: number
   dailyWagered: number
   initialStats: SlotStats
+  initialJackpot: SlotsJackpotState
 }
 
-export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered: initialWagered, initialStats }: Props) {
+export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered: initialWagered, initialStats, initialJackpot }: Props) {
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [dailyWagered, setDailyWagered] = useState(initialWagered)
   const [wager, setWager] = useState(25)
@@ -203,6 +242,15 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
   const [lastResult, setLastResult] = useState<SlotSpinResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showResult, setShowResult] = useState(false)
+
+  // Jackpot state
+  const [pot, setPot] = useState(initialJackpot.pot)
+  const [lastWinner, setLastWinner] = useState<{ name: string | null; amount: number | null }>({
+    name: initialJackpot.lastWinnerName,
+    amount: initialJackpot.lastWinAmount,
+  })
+  const [potTease, setPotTease] = useState(false)
+  const [potWon, setPotWon] = useState(false)
 
   // Celebration state
   const [wonMainReels, setWonMainReels] = useState(false)
@@ -222,6 +270,19 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
       net: prev.net + net,
       biggestWin: net > prev.biggestWin ? net : prev.biggestWin,
     }))
+  }
+
+  /** Common bookkeeping once a spin's outcome is revealed. */
+  function settle(result: SlotSpinResult) {
+    applyStats(result.net)
+    setDoubloons(result.newDoubloons)
+    setDailyWagered(result.dailyWagered)
+    setPot(result.pot)
+    setLastResult(result)
+    setShowResult(true)
+    setSpinning(false)
+    setPotTease(false)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
   }
 
   function triggerWin(sym: SlotSymbolId, isBonus: boolean) {
@@ -244,6 +305,14 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     } else {
       haptic(80)
     }
+  }
+
+  function triggerJackpot(isBonus: boolean, winnerName: string | null, amount: number) {
+    triggerWin('catfish', isBonus)
+    setPotWon(true)
+    setLastWinner({ name: winnerName, amount })
+    setTimeout(() => setPotWon(false), 3000)
+    haptic([80, 50, 80, 50, 80, 50, 200])
   }
 
   async function handleSpin() {
@@ -271,15 +340,22 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     setReels(result.reels)
 
     // Casino-style third-reel tension: whenever the first two reels are
-    // about to land matching, hold the third for an extra ~750ms so the
-    // player gets that "is it gonna land?" beat. Same hold for wins AND
-    // for near-misses — the suspense is identical until the symbol
-    // actually resolves on the third reel.
-    const tense = result.reels[0] === result.reels[1]
-    const lastMainStop = stopReels(setMainRolling, 1200, 300, tense ? 750 : 0)
+    // about to land matching, hold the third so the player gets that
+    // "is it gonna land?" beat. The hold scales with the stakes — a
+    // pair of catfish on deck means the POT is live, so the third reel
+    // spins agonizingly long while the jackpot marquee pulses.
+    const pairUp = result.reels[0] === result.reels[1]
+    const holdMs = !pairUp ? 0
+      : result.reels[0] === 'catfish' ? 1600
+      : result.reels[0] === 'legendary' ? 1100
+      : 750
+    if (pairUp && result.reels[0] === 'catfish') {
+      setTimeout(() => setPotTease(true), 1200 + 300)
+    }
+    const lastMainStop = stopReels(setMainRolling, 1200, 300, holdMs)
 
     if (result.bonus) {
-      // Flash teal when all anchors have landed
+      // Flash teal when all hooks have landed
       setTimeout(() => {
         setFlashColor('#34d399')
         setFlashKey((k) => k + 1)
@@ -295,72 +371,53 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
         const lastBonusStop = stopReels(setBonusRolling, 1000, 300)
 
         setTimeout(() => {
-          const bonusWin = result.bonus!.outcome === 'win'
-          if (bonusWin) triggerWin(result.bonus!.reels[0], true)
-          applyStats(result.net)
-          setDoubloons(result.newDoubloons)
-          setDailyWagered(result.dailyWagered)
-          setLastResult(result)
-          setShowResult(true)
-          setSpinning(false)
-          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+          const b = result.bonus!
+          if (b.outcome === 'jackpot') triggerJackpot(true, 'You', b.payout)
+          else if (b.outcome === 'win') triggerWin(b.reels[0], true)
+          else if (b.outcome === 'pair' && b.matchedSymbol) {
+            setFlashColor(symColor(b.matchedSymbol))
+            setFlashKey((k) => k + 1)
+          }
+          settle(result)
         }, lastBonusStop + 200)
 
       }, lastMainStop + 500)
 
+    } else if (result.outcome === 'jackpot') {
+      setTimeout(() => {
+        triggerJackpot(false, 'You', result.jackpotWin ?? result.payout)
+        settle(result)
+      }, lastMainStop + 150)
     } else if (result.outcome === 'win') {
       setTimeout(() => {
         triggerWin(result.reels[0], false)
-        applyStats(result.net)
-        setDoubloons(result.newDoubloons)
-        setDailyWagered(result.dailyWagered)
-        setLastResult(result)
-        setShowResult(true)
-        setSpinning(false)
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+        settle(result)
       }, lastMainStop + 150)
     } else if (result.outcome === 'refund') {
       setTimeout(() => {
         setFlashColor('#34d399')
         setFlashKey((k) => k + 1)
-        applyStats(result.net)
-        setDoubloons(result.newDoubloons)
-        setDailyWagered(result.dailyWagered)
-        setLastResult(result)
-        setShowResult(true)
-        setSpinning(false)
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+        settle(result)
       }, lastMainStop + 150)
-    } else if (result.outcome === 'partial_win' || result.outcome === 'wild_win') {
+    } else if (result.outcome === 'pair_win') {
       setTimeout(() => {
-        if (result.net > 0 && result.matchedSymbol) {
-          setFlashColor(result.outcome === 'wild_win' ? '#34d399' : symColor(result.matchedSymbol))
+        if (result.matchedSymbol) {
+          setFlashColor(symColor(result.matchedSymbol))
           setFlashKey((k) => k + 1)
+          haptic([30, 30, 50])
         }
-        applyStats(result.net)
-        setDoubloons(result.newDoubloons)
-        setDailyWagered(result.dailyWagered)
-        setLastResult(result)
-        setShowResult(true)
-        setSpinning(false)
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+        settle(result)
       }, lastMainStop + 150)
     } else {
       // near_miss or lose
       setTimeout(() => {
-        applyStats(result.net)
-        setDoubloons(result.newDoubloons)
-        setDailyWagered(result.dailyWagered)
-        setLastResult(result)
-        setShowResult(true)
-        setSpinning(false)
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
+        settle(result)
       }, lastMainStop + 150)
     }
   }
 
   const winColor = winSym ? symColor(winSym) : '#f0c040'
-  const isJackpot = winSym === 'catfish'
+  const isJackpot = lastResult?.outcome === 'jackpot' || lastResult?.bonus?.outcome === 'jackpot'
 
   // Near-miss: which 2 reels match, and which is the odd one out
   const isNearMiss = showResult && lastResult?.outcome === 'near_miss'
@@ -369,10 +426,13 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     : null
   // Refund: 2 hooks lit up teal
   const isRefund = showResult && lastResult?.outcome === 'refund'
-  // Partial / wild win: matched fish pair glows in fish color; hook glows teal for wild
-  const isPartialWin = showResult && (lastResult?.outcome === 'partial_win' || lastResult?.outcome === 'wild_win')
-  const partialMatchedSym = isPartialWin ? lastResult?.matchedSymbol : undefined
-  const partialMatchColor = partialMatchedSym ? symColor(partialMatchedSym) : undefined
+  // Pair win: matched fish pair glows in fish color
+  const isPairWin = showResult && lastResult?.outcome === 'pair_win'
+  const pairMatchedSym = isPairWin ? lastResult?.matchedSymbol : undefined
+  const pairMatchColor = pairMatchedSym ? symColor(pairMatchedSym) : undefined
+
+  // What this wager would claim from the pot right now
+  const potShare = Math.floor(pot * Math.min(wager, SLOTS_MAX_BET) / SLOTS_MAX_BET)
 
   return (
     <>
@@ -419,6 +479,18 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
           72%       { transform: translateX(4px); }
           88%       { transform: translateX(-2px); }
         }
+        @keyframes pot-shimmer {
+          0%   { transform: translateX(-130%) skewX(-18deg); }
+          100% { transform: translateX(330%) skewX(-18deg); }
+        }
+        @keyframes pot-tease {
+          0%, 100% { box-shadow: 0 0 14px rgba(240,192,64,0.25), inset 0 0 18px rgba(240,192,64,0.08); }
+          50%      { box-shadow: 0 0 34px rgba(240,192,64,0.65), inset 0 0 26px rgba(240,192,64,0.20); }
+        }
+        @keyframes pot-won-pulse {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.05); }
+        }
       `}</style>
 
       {/* Full-screen flash */}
@@ -436,184 +508,298 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
       {/* Two-column layout on desktop */}
       <div className="w-full sm:flex sm:gap-8 sm:items-start">
 
-        {/* ── Left: game area ── */}
+        {/* ── Left: the machine ── */}
         <div
-          className="flex flex-col items-center gap-6 flex-1 min-w-0"
+          className="flex flex-col items-center gap-5 flex-1 min-w-0"
           style={{ animation: jackpotShake ? 'jackpot-shake 0.65s ease-out' : 'none' }}
         >
-          {/* Balance */}
-          <div className="text-center">
-            <p className="font-cinzel font-700 text-[#f0c040] text-2xl">{doubloons.toLocaleString()} ⟡</p>
-            <p className="font-karla font-300 text-[#a0a09a] text-xs tracking-wide mt-1">
-              {dailyRemaining > 0
-                ? `${dailyRemaining.toLocaleString()} ⟡ wager limit remaining today`
-                : 'Daily limit reached — come back tomorrow'}
-            </p>
-          </div>
 
-          {/* Main reels */}
-          <div className="flex gap-3 sm:gap-4">
-            {reels.map((sym, i) => (
-              <Reel
-                key={i}
-                symbol={sym}
-                rolling={mainRolling[i]}
-                won={wonMainReels || (isRefund && sym === 'anchor')}
-                winColor={wonMainReels ? winColor : isRefund ? '#34d399' : undefined}
-                // Stagger the win pops 130ms apart so the row reads left
-                // to right — eye traces "match … match … match!" instead
-                // of three simultaneous bounces.
-                winDelayMs={i * 130}
-                nearMiss={!!(isNearMiss && nearMissSymbol && sym === nearMissSymbol)}
-                nearMissOdd={!!(isNearMiss && nearMissSymbol && sym !== nearMissSymbol)}
-                matchColor={isPartialWin && partialMatchedSym && sym === partialMatchedSym ? partialMatchColor : undefined}
-                matchWild={!!(isPartialWin && lastResult?.outcome === 'wild_win' && sym === 'anchor')}
-                // Tiny click on every reel landing. Android players get a
-                // real taptic pulse; iOS no-ops. Crisper than waiting for
-                // the win/lose resolve to fire one big buzz.
-                onLand={() => haptic(15)}
+          {/* ── Cabinet ── */}
+          <div
+            className="w-full"
+            style={{
+              background: `linear-gradient(180deg, ${WOOD_MID} 0%, ${WOOD_DARK} 55%, #0c0906 100%)`,
+              border: `2px solid ${BRASS_DIM}`,
+              borderRadius: 22,
+              boxShadow: '0 14px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
+              overflow: 'hidden',
+            }}
+          >
+
+            {/* Jackpot marquee */}
+            <div
+              style={{
+                position: 'relative',
+                background: 'linear-gradient(180deg, rgba(240,192,64,0.13) 0%, rgba(240,192,64,0.04) 100%)',
+                borderBottom: `1.5px solid ${BRASS_DIM}`,
+                padding: '0.85rem 1rem 0.8rem',
+                textAlign: 'center',
+                overflow: 'hidden',
+                animation: potTease ? 'pot-tease 0.9s ease-in-out infinite' : potWon ? 'pot-won-pulse 0.7s ease-in-out infinite' : 'none',
+              }}
+            >
+              {/* Slow shimmer sweep across the marquee */}
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute', top: 0, bottom: 0, width: '34%',
+                  background: 'linear-gradient(90deg, transparent, rgba(240,214,150,0.10), transparent)',
+                  animation: 'pot-shimmer 4.5s ease-in-out infinite',
+                  pointerEvents: 'none',
+                }}
               />
-            ))}
-          </div>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.22em', color: BRASS }}>
+                ☠ Catfish Jackpot ☠
+              </p>
+              <p
+                className="font-cinzel font-700"
+                style={{
+                  fontSize: '1.9rem',
+                  lineHeight: 1.15,
+                  color: potWon ? '#ffe9a8' : '#f0c040',
+                  textShadow: potTease || potWon ? '0 0 26px rgba(240,192,64,0.85)' : '0 0 14px rgba(240,192,64,0.4)',
+                  transition: 'text-shadow 0.3s, color 0.3s',
+                }}
+              >
+                <PotTicker value={pot} /> ⟡
+              </p>
+              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9a8a64', marginTop: 2 }}>
+                {lastWinner.name && lastWinner.amount
+                  ? `Last hooked by ${lastWinner.name} for ${lastWinner.amount.toLocaleString()} ⟡`
+                  : 'Every spin feeds the pot. Three catfish takes it.'}
+              </p>
+            </div>
 
-          {/* Bonus spin section */}
-          {showBonus && (
-            <div className="flex flex-col items-center gap-3 w-full">
-              <div style={{
-                background: 'rgba(52,211,153,0.12)',
-                border: '1px solid rgba(52,211,153,0.35)',
-                borderRadius: 10,
-                padding: '5px 18px',
-              }}>
-                <p className="font-cinzel font-700 tracking-wide" style={{ color: '#34d399', fontSize: '0.85rem' }}>
-                  ⚓ Bonus Spin!
-                </p>
-              </div>
-              <div className="flex gap-3 sm:gap-4">
-                {bonusReels.map((sym, i) => (
+            {/* Reel window */}
+            <div
+              style={{
+                padding: '1.15rem 0.9rem',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(240,192,64,0.05) 0%, transparent 55%)',
+              }}
+            >
+              <div className="flex gap-2.5 sm:gap-4 justify-center">
+                {reels.map((sym, i) => (
                   <Reel
                     key={i}
                     symbol={sym}
-                    rolling={bonusRolling[i]}
-                    won={wonBonusReels}
-                    winColor={wonBonusReels ? winColor : undefined}
+                    rolling={mainRolling[i]}
+                    won={wonMainReels || (isRefund && sym === 'anchor')}
+                    winColor={wonMainReels ? winColor : isRefund ? '#34d399' : undefined}
+                    // Stagger the win pops 130ms apart so the row reads left
+                    // to right — eye traces "match … match … match!" instead
+                    // of three simultaneous bounces.
                     winDelayMs={i * 130}
+                    nearMiss={!!(isNearMiss && nearMissSymbol && sym === nearMissSymbol)}
+                    nearMissOdd={!!(isNearMiss && nearMissSymbol && sym !== nearMissSymbol)}
+                    matchColor={isPairWin && pairMatchedSym && sym === pairMatchedSym ? pairMatchColor : undefined}
+                    // Tiny click on every reel landing. Android players get a
+                    // real taptic pulse; iOS no-ops. Crisper than waiting for
+                    // the win/lose resolve to fire one big buzz.
                     onLand={() => haptic(15)}
                   />
                 ))}
               </div>
-            </div>
-          )}
 
-          {/* Result */}
-          <div style={{ minHeight: 72, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            {showResult && lastResult && winSym ? (
-              <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
-                <p
-                  className="font-cinzel font-700 tracking-wide"
-                  style={{
-                    fontSize: isJackpot ? '1.7rem' : winSym === 'legendary' ? '1.35rem' : '1.1rem',
-                    color: winColor,
-                    textShadow: `0 0 24px ${winColor}70`,
-                    animation: 'glow-pulse 1.4s ease-in-out infinite',
-                    letterSpacing: isJackpot ? '0.08em' : '0.04em',
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {WIN_LABEL[winSym]}
-                </p>
-                <p className="font-cinzel font-700 mt-1" style={{ fontSize: isJackpot ? '1.5rem' : '1.25rem', color: '#f0ede8' }}>
-                  +{lastResult.net.toLocaleString()} ⟡
-                </p>
-                <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">
-                  {SLOT_PAYOUTS[winSym]}× your bet
-                </p>
-              </div>
-            ) : showResult && lastResult?.outcome === 'refund' ? (
-              <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
-                <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#34d399', textShadow: '0 0 24px #34d39960', letterSpacing: '0.04em', lineHeight: 1.1 }}>
-                  2 Hooks · Refund!
-                </p>
-                <p className="font-karla font-400 mt-1" style={{ fontSize: '0.85rem', color: '#34d399' }}>
-                  Wager returned
-                </p>
-              </div>
-            ) : showResult && (lastResult?.outcome === 'partial_win' || lastResult?.outcome === 'wild_win') ? (() => {
-              const sym = lastResult!.matchedSymbol
-              const label = sym ? SLOT_SYMBOLS_LIST.find(s => s.id === sym)?.label : ''
-              const color = sym ? symColor(sym) : '#f0c040'
-              const mult = sym ? SLOT_PARTIAL_PAYOUTS[sym] : 1
-              const isWild = lastResult!.outcome === 'wild_win'
-              return (
-                <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
-                  {isWild && (
-                    <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#34d399', marginBottom: 3 }}>
-                      Hook Wild!
+              {/* Bonus spin reels, inside the cabinet */}
+              {showBonus && (
+                <div className="flex flex-col items-center gap-3 w-full" style={{ marginTop: '1rem' }}>
+                  <div style={{
+                    background: 'rgba(52,211,153,0.12)',
+                    border: '1px solid rgba(52,211,153,0.35)',
+                    borderRadius: 10,
+                    padding: '4px 16px',
+                  }}>
+                    <p className="font-cinzel font-700 tracking-wide" style={{ color: '#34d399', fontSize: '0.85rem' }}>
+                      ⚓ Bonus Spin!
                     </p>
-                  )}
-                  <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.15rem', color, textShadow: `0 0 24px ${color}60`, letterSpacing: '0.04em', lineHeight: 1.1 }}>
-                    2× {label}
-                  </p>
-                  <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: lastResult!.net >= 0 ? '#f0ede8' : '#f87171' }}>
-                    {lastResult!.net === 0 ? 'Break even' : lastResult!.net > 0 ? `+${lastResult!.net.toLocaleString()} ⟡` : `${lastResult!.net.toLocaleString()} ⟡`}
-                  </p>
-                  <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">{mult}× your bet</p>
+                  </div>
+                  <div className="flex gap-2.5 sm:gap-4 justify-center">
+                    {bonusReels.map((sym, i) => (
+                      <Reel
+                        key={i}
+                        symbol={sym}
+                        rolling={bonusRolling[i]}
+                        won={wonBonusReels}
+                        winColor={wonBonusReels ? winColor : undefined}
+                        winDelayMs={i * 130}
+                        matchColor={
+                          showResult && lastResult?.bonus?.outcome === 'pair' && lastResult.bonus.matchedSymbol === sym
+                            ? symColor(sym)
+                            : undefined
+                        }
+                        onLand={() => haptic(15)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              )
-            })() : showResult && lastResult?.outcome === 'near_miss' ? (
-              <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
-                <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 24px #f9731660', letterSpacing: '0.04em', lineHeight: 1.1 }}>
-                  So Close!
-                </p>
-                <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
-                  {lastResult.net.toLocaleString()} ⟡
+              )}
+
+              {/* Result line */}
+              <div style={{ minHeight: 76, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '0.4rem' }}>
+                {showResult && lastResult && isJackpot ? (
+                  <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+                    <p
+                      className="font-cinzel font-700 tracking-wide"
+                      style={{
+                        fontSize: '1.7rem',
+                        color: '#f0c040',
+                        textShadow: '0 0 28px rgba(240,192,64,0.8)',
+                        animation: 'glow-pulse 1.4s ease-in-out infinite',
+                        letterSpacing: '0.08em',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      THE POT IS YOURS!
+                    </p>
+                    <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.5rem', color: '#ffe9a8' }}>
+                      +{(lastResult.jackpotWin ?? 0).toLocaleString()} ⟡
+                    </p>
+                    <p className="font-karla font-400 text-xs mt-1" style={{ color: '#9a8a64' }}>
+                      Claimed from the Catfish Jackpot
+                    </p>
+                  </div>
+                ) : showResult && lastResult && winSym ? (
+                  <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+                    <p
+                      className="font-cinzel font-700 tracking-wide"
+                      style={{
+                        fontSize: winSym === 'legendary' ? '1.35rem' : '1.1rem',
+                        color: winColor,
+                        textShadow: `0 0 24px ${winColor}70`,
+                        animation: 'glow-pulse 1.4s ease-in-out infinite',
+                        letterSpacing: '0.04em',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {WIN_LABEL[winSym]}
+                    </p>
+                    <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: '#f0ede8' }}>
+                      +{lastResult.net.toLocaleString()} ⟡
+                    </p>
+                    <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">
+                      {SLOT_PAYOUTS[winSym]}× your bet
+                    </p>
+                  </div>
+                ) : showResult && lastResult?.outcome === 'refund' ? (
+                  <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+                    <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#34d399', textShadow: '0 0 24px #34d39960', letterSpacing: '0.04em', lineHeight: 1.1 }}>
+                      2 Hooks · Refund!
+                    </p>
+                    <p className="font-karla font-400 mt-1" style={{ fontSize: '0.85rem', color: '#34d399' }}>
+                      Wager returned
+                    </p>
+                  </div>
+                ) : showResult && (lastResult?.outcome === 'pair_win' || (lastResult?.outcome === 'bonus' && lastResult.bonus?.outcome === 'pair')) ? (() => {
+                  const sym = lastResult!.outcome === 'pair_win' ? lastResult!.matchedSymbol : lastResult!.bonus?.matchedSymbol
+                  const label = sym ? SLOT_SYMBOLS_LIST.find(s => s.id === sym)?.label : ''
+                  const color = sym ? symColor(sym) : '#f0c040'
+                  const mult = sym ? SLOT_PAIR_PAYOUTS[sym] : 1
+                  return (
+                    <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+                      <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.15rem', color, textShadow: `0 0 24px ${color}60`, letterSpacing: '0.04em', lineHeight: 1.1 }}>
+                        {label} Pair!
+                      </p>
+                      <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: '#f0ede8' }}>
+                        +{lastResult!.net.toLocaleString()} ⟡
+                      </p>
+                      <p className="font-karla font-400 text-[#9a9488] text-xs mt-1">{mult}× your bet</p>
+                    </div>
+                  )
+                })() : showResult && lastResult?.outcome === 'near_miss' ? (
+                  <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>
+                    <p className="font-cinzel font-700 tracking-wide" style={{ fontSize: '1.1rem', color: '#f97316', textShadow: '0 0 24px #f9731660', letterSpacing: '0.04em', lineHeight: 1.1 }}>
+                      So Close!
+                    </p>
+                    <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.1rem', color: '#f0ede8' }}>
+                      {lastResult.net.toLocaleString()} ⟡
+                    </p>
+                  </div>
+                ) : showResult && lastResult?.outcome === 'bonus' && lastResult.net === 0 ? (
+                  <p className="font-karla font-400 text-sm" style={{ color: '#34d399' }}>Bonus spin, no extra catch this time</p>
+                ) : showResult && lastResult ? (
+                  <p className="font-karla font-400 text-[#6a6764] text-sm">{lastResult.net.toLocaleString()} ⟡</p>
+                ) : (
+                  <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#5a544c' }}>
+                    Your bet of {wager} ⟡ would claim {potShare.toLocaleString()} ⟡ of the pot
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Control deck */}
+            <div
+              style={{
+                borderTop: `1.5px solid ${BRASS_DIM}`,
+                background: 'rgba(0,0,0,0.35)',
+                padding: '0.9rem 0.9rem 1rem',
+              }}
+            >
+              {/* Balance + daily limit */}
+              <div className="flex items-baseline justify-between" style={{ marginBottom: '0.7rem' }}>
+                <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.05rem' }}>{doubloons.toLocaleString()} ⟡</p>
+                <p className="font-karla font-300 text-[#8a857c]" style={{ fontSize: '0.62rem' }}>
+                  {dailyRemaining > 0
+                    ? `${dailyRemaining.toLocaleString()} ⟡ daily limit left`
+                    : 'Daily limit reached, back tomorrow'}
                 </p>
               </div>
-            ) : showResult && lastResult && lastResult.net === 0 ? (
-              <p className="font-karla font-400 text-sm" style={{ color: '#34d399' }}>Bonus spin — no win this time</p>
-            ) : showResult && lastResult ? (
-              <p className="font-karla font-400 text-[#6a6764] text-sm">{lastResult.net.toLocaleString()} ⟡</p>
-            ) : null}
-          </div>
 
-          {error && <p className="font-karla font-400 text-[#f87171] text-sm text-center">{error}</p>}
+              {/* Bet chips */}
+              <div className="flex gap-1.5 justify-center flex-wrap" style={{ marginBottom: '0.8rem' }}>
+                {BET_PRESETS.map((amt) => {
+                  const disabled = amt > Math.min(doubloons, dailyRemaining)
+                  return (
+                    <button
+                      key={amt}
+                      onClick={() => !disabled && setWager(amt)}
+                      disabled={disabled}
+                      className="font-karla font-700 transition-all active:scale-95"
+                      style={{
+                        minWidth: 50,
+                        padding: '0.45rem 0.5rem',
+                        borderRadius: 999,
+                        fontSize: '0.68rem',
+                        letterSpacing: '0.05em',
+                        background: wager === amt ? 'rgba(240,192,64,0.18)' : 'rgba(8,8,6,0.72)',
+                        border: `1.5px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.14)'}`,
+                        color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
+                        cursor: disabled ? 'default' : 'pointer',
+                      }}
+                    >
+                      {amt}
+                    </button>
+                  )
+                })}
+              </div>
 
-          {/* Bet selector */}
-          <div className="flex flex-col items-center gap-3 w-full">
-            <p className="sg-eyebrow" style={{ color: '#9a9488' }}>Your Bet</p>
-            <div className="flex gap-2 flex-wrap justify-center">
-              {BET_PRESETS.map((amt) => {
-                const disabled = amt > Math.min(doubloons, dailyRemaining)
-                return (
-                  <button
-                    key={amt}
-                    onClick={() => !disabled && setWager(amt)}
-                    disabled={disabled}
-                    className="font-karla font-600 text-xs uppercase tracking-[0.10em] px-3 py-2 rounded-lg transition-all active:scale-95"
-                    style={{
-                      background: wager === amt ? 'rgba(240,192,64,0.18)' : 'rgba(8,8,6,0.72)',
-                      border: `1px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.18)'}`,
-                      color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
-                      cursor: disabled ? 'default' : 'pointer',
-                    }}
-                  >
-                    {amt} ⟡
-                  </button>
-                )
-              })}
+              {/* Spin button */}
+              <button
+                onClick={handleSpin}
+                disabled={!canSpin}
+                className="w-full font-cinzel font-700 uppercase active:scale-[0.98]"
+                style={{
+                  padding: '0.9rem 1rem',
+                  borderRadius: 14,
+                  fontSize: '1rem',
+                  letterSpacing: '0.12em',
+                  background: canSpin
+                    ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.10) 100%)'
+                    : 'rgba(255,255,255,0.04)',
+                  border: `2px solid ${canSpin ? BRASS : 'rgba(255,255,255,0.10)'}`,
+                  color: canSpin ? '#f0d696' : '#4a463f',
+                  boxShadow: canSpin ? '0 0 22px rgba(240,192,64,0.18), inset 0 1px 0 rgba(255,255,255,0.10)' : 'none',
+                  transition: 'transform 0.1s, box-shadow 0.3s',
+                  cursor: canSpin ? 'pointer' : 'default',
+                }}
+              >
+                {spinning
+                  ? (showBonus ? 'Bonus Spin…' : 'Spinning…')
+                  : `Spin · ${wager} ⟡`}
+              </button>
+
+              {error && <p className="font-karla font-400 text-[#f87171] text-sm text-center" style={{ marginTop: '0.6rem' }}>{error}</p>}
             </div>
           </div>
-
-          {/* Spin button */}
-          <button
-            onClick={handleSpin}
-            disabled={!canSpin}
-            className="btn-ghost w-full disabled:opacity-30"
-          >
-            {spinning
-              ? (showBonus ? 'Bonus Spin…' : 'Spinning…')
-              : `Spin · ${wager} ⟡`}
-          </button>
 
           {/* Stats */}
           {stats.spins > 0 && (
@@ -656,15 +842,19 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                   <SlotSymbolDisplay id={sym.id} />
                 </div>
                 <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color }}>{SLOT_PAYOUTS[sym.id]}×</span>
+                {sym.id === 'catfish' ? (
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0c040', textShadow: '0 0 12px rgba(240,192,64,0.5)' }}>THE POT</span>
+                ) : (
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color }}>{SLOT_PAYOUTS[sym.id]}×</span>
+                )}
               </div>
             ))}
-            {/* 2-of-a-kind */}
+            {/* Pairs */}
             <p className="font-karla font-700 uppercase tracking-[0.12em] px-4 pt-3 pb-2" style={{ fontSize: '0.68rem', color: '#b0ada8', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              2 of a Kind · Hook Wild
+              Any Pair
             </p>
             {SLOT_SYMBOLS_LIST.filter((s) => s.id !== 'anchor').map((sym) => {
-              const mult = SLOT_PARTIAL_PAYOUTS[sym.id]
+              const mult = SLOT_PAIR_PAYOUTS[sym.id]
               if (!mult) return null
               return (
                 <div key={sym.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
@@ -672,9 +862,7 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                     <SlotSymbolDisplay id={sym.id} />
                   </div>
                   <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>{sym.label}</span>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: mult >= 1 ? sym.color : '#9a9488' }}>
-                    {mult === 1 ? 'Even' : `${mult}×`}
-                  </span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: sym.color }}>{mult}×</span>
                 </div>
               )
             })}
@@ -695,6 +883,12 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
               </div>
               <span className="font-karla font-500 flex-1" style={{ fontSize: '0.88rem', color: '#d0cdc8' }}>3 Hooks</span>
               <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#34d399' }}>Free Spin</span>
+            </div>
+            {/* Jackpot rules */}
+            <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.12)', background: 'rgba(240,192,64,0.05)' }}>
+              <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#9a8a64', lineHeight: 1.5 }}>
+                Every spin feeds the Catfish Jackpot. Land three catfish to claim a share matching your bet: a full {SLOTS_MAX_BET} ⟡ bet takes the whole pot.
+              </p>
             </div>
           </div>
         </div>

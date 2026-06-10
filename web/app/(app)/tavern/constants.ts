@@ -3,6 +3,16 @@
 // Blackjack equivalents (BJ_*) are defined below.
 
 // ─── Fish Slots ───────────────────────────────────────────────────────────────
+// 2026-06 redesign: variance reshape + global progressive jackpot.
+// Design rules: no payout below 1× (a "win" that loses money is worse
+// than a clean miss), 3 catfish pays a share of the global pot instead
+// of a fixed multiplier, and a sardine pair is just a near-miss.
+//
+// Base-game RTP at these numbers ≈ 92%; the ~5% jackpot feed plus the
+// seeded pot brings the total to ≈ 97% — slightly under the old table
+// in base pay but with real variance: 1-in-10 spins hit a sardine
+// triple (3×), catfish PAIRS pay 25× about 1-in-217, and the natural
+// catfish triple (1-in-15,625) takes the pot.
 
 export type SlotSymbolId = 'common' | 'rare' | 'legendary' | 'catfish' | 'anchor'
 
@@ -13,32 +23,41 @@ export const SLOT_SYMBOLS_LIST: {
   weight: number
   label: string
 }[] = [
-  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 50, label: 'Sardine' },
-  { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 25, label: 'Blue Marlin' },
-  { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 10, label: 'Blue Whale' },
-  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 3,  label: 'Catfish' },
-  { id: 'anchor',                                   color: '#34d399', weight: 12, label: 'Hook' },
+  { id: 'common',    filename: 'Sardine_v2.png',  color: '#8a8880', weight: 46, label: 'Sardine' },
+  { id: 'rare',      filename: 'Blue_Marlin.png', color: '#60a5fa', weight: 20, label: 'Blue Marlin' },
+  { id: 'legendary', filename: 'Blue_Whale_v2.png', color: '#a78bfa', weight: 9, label: 'Blue Whale' },
+  { id: 'catfish',   filename: 'Catfish.png',      color: '#f0c040', weight: 4,  label: 'Catfish' },
+  { id: 'anchor',                                   color: '#34d399', weight: 21, label: 'Hook' },
 ]
 
+// 3-of-a-kind. Catfish is 0 here because a natural catfish triple pays
+// the global jackpot pot (proportional to wager), not a multiplier.
 export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
-  common:    2,
-  rare:      10,
-  legendary: 50,
-  catfish:   200,
+  common:    3,
+  rare:      12,
+  legendary: 60,
+  catfish:   0,
   anchor:    0,
 }
 
-// 2-of-3 partial payouts (also used for hook wild)
-export const SLOT_PARTIAL_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
-  common:    0.5,  // lose half — still feels like something
+// Pair payouts: exactly 2 matching fish, third reel anything (a single
+// hook included). Sardine pairs pay nothing — they read as a near-miss
+// instead of the old 0.5× fake win.
+export const SLOT_PAIR_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
   rare:      1.5,
-  legendary: 3,
-  catfish:   15,
+  legendary: 5,
+  catfish:   25,
 }
 
 export const SLOTS_MIN_BET   = 10
 export const SLOTS_MAX_BET   = 500
 export const SLOTS_DAILY_CAP = 5000
+
+// Global jackpot: every spin feeds the pot by this fraction of the
+// wager; a natural 3-catfish spin wins pot × (wager / SLOTS_MAX_BET).
+// Pot resets to its seed (5,000 ⟡, set in the slots_jackpot row) after
+// a claim, so it never looks empty.
+export const SLOTS_JACKPOT_FEED_PCT = 0.05
 
 // ─── Blackjack ───────────────────────────────────────────────────────────────
 // Same wager band as C&A + Fish Slots so the tavern reads coherently.
