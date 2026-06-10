@@ -1894,38 +1894,42 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
                 width: '100%', maxWidth: 340,
                 padding: '1.25rem 1.1rem 1.1rem',
                 borderRadius: 14,
-                background: 'linear-gradient(180deg, #1c2538 0%, #0d1320 100%)',
-                border: '1.5px solid rgba(125,160,216,0.55)',
-                boxShadow: '0 24px 48px rgba(0,0,0,0.7)',
+                // Warm tavern palette — was a cool blue card that read as
+                // if it belonged on a different table. Gold tones match
+                // the doubloon glyph + the FeltRule "Insurance pays 2 to
+                // 1" line + the rest of the Blackjack modal.
+                background: 'linear-gradient(180deg, #241a0c 0%, #0f0a04 100%)',
+                border: '1.5px solid rgba(200,170,100,0.5)',
+                boxShadow: '0 24px 48px rgba(0,0,0,0.75)',
                 pointerEvents: 'auto',
               }}
             >
-              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#7aa7e8', marginBottom: 5 }}>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#c8a060', marginBottom: 5 }}>
                 Side Bet
               </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#dde8f6', lineHeight: 1, marginBottom: 10 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0d695', lineHeight: 1, marginBottom: 10 }}>
                 Insurance?
               </p>
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9aa4b5', marginBottom: 14, lineHeight: 1.5 }}>
-                Dealer shows an Ace. For {Math.floor(active.hands[0].wager / 2)} ⟡ you can side-bet that the hole card is a 10-value. Pays 2:1 if dealer has natural Blackjack.
+              <p className="font-karla" style={{ fontSize: '0.8rem', color: '#a89878', marginBottom: 14, lineHeight: 1.5 }}>
+                The dealer&apos;s Ace could be hiding a Blackjack. For <span style={{ color: '#f0d695', fontWeight: 700 }}>{Math.floor(active.hands[0].wager / 2)} ⟡</span>, bet on it: <span style={{ color: '#86efac', fontWeight: 700 }}>win 2×</span> if they have it, <span style={{ color: '#f08a8a', fontWeight: 700 }}>lose it</span> if they don&apos;t.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <motion.button
                   type="button"
                   disabled={isPending || doubloons < Math.floor(active.hands[0].wager / 2)}
                   onClick={() => fireAction(acceptInsurance)}
-                  whileTap={!isPending ? { y: 3, scale: 0.94, borderColor: 'rgba(155,195,240,1)' } : undefined}
+                  whileTap={!isPending ? { y: 3, scale: 0.94, borderColor: 'rgba(240,214,149,1)' } : undefined}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   className="font-cinzel font-700 uppercase tracking-[0.06em]"
                   style={{
                     flex: 1, padding: '0.85rem 0', borderRadius: 11,
-                    background: 'linear-gradient(180deg, rgba(125,160,216,0.5) 0%, rgba(125,160,216,0.2) 100%)',
-                    border: '1.5px solid rgba(125,160,216,0.8)',
-                    color: '#eef4ff',
+                    background: 'linear-gradient(180deg, rgba(240,192,64,0.42) 0%, rgba(240,192,64,0.16) 100%)',
+                    border: '1.5px solid rgba(240,192,64,0.8)',
+                    color: '#fff4d6',
                     fontSize: '0.85rem',
                     cursor: isPending ? 'not-allowed' : 'pointer',
-                    boxShadow: 'inset 0 1px 0 rgba(125,160,216,0.5), inset 0 -2px 0 rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.45)',
-                    textShadow: '0 1px 0 rgba(0,0,0,0.45)',
+                    boxShadow: 'inset 0 1px 0 rgba(240,214,149,0.55), inset 0 -2px 0 rgba(0,0,0,0.28), 0 3px 8px rgba(0,0,0,0.45)',
+                    textShadow: '0 1px 0 rgba(0,0,0,0.5)',
                   }}
                 >
                   Take · {Math.floor(active.hands[0].wager / 2)} ⟡
