@@ -3525,38 +3525,59 @@ const ACTION_ICON: Record<'dodge' | 'special' | 'reload' | 'fire' | 'volley', Re
   volley: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="9" r="2.4"/><circle cx="16" cy="7" r="2.4"/><circle cx="13" cy="16" r="2.4"/></svg>,
 }
 
-function CircleBtn({ icon, label, color, enabled, highlighted, onClick }: {
+function CircleBtn({ icon, label, color, enabled, highlighted, onClick, readyPulse }: {
   icon: React.ReactNode
   label: string
   color: string
   enabled: boolean
   highlighted: boolean
   onClick: () => void
+  /** When true, render a pulsing colored dot in the top-right corner —
+   *  passive "something's ready to fire" indicator. Currently used only
+   *  by the Special slot to flag a crew ability is off cooldown. */
+  readyPulse?: boolean
 }) {
   const lit = enabled || highlighted
   const borderColor = highlighted ? color : enabled ? `${color}cc` : '#2a3548'
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
-      <motion.button
-        whileTap={enabled ? { scale: 0.84 } : {}}
-        transition={{ type: 'spring', stiffness: 600, damping: 18 }}
-        disabled={!enabled}
-        onClick={onClick}
-        aria-label={label}
-        style={{
-          width: 58, height: 58, borderRadius: '50%',
-          background: highlighted ? `${color}26` : enabled ? '#1c2540' : '#0c1422',
-          border: `2px solid ${borderColor}`,
-          color: lit ? color : '#3f4a5e',
-          cursor: enabled ? 'pointer' : 'not-allowed',
-          opacity: enabled ? 1 : highlighted ? 0.9 : 0.5,
-          boxShadow: highlighted ? `0 0 14px ${color}66, inset 0 0 10px ${color}33` : enabled ? `0 2px 8px rgba(0,0,0,0.4)` : 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          touchAction: 'manipulation',
-        }}
-      >
-        {icon}
-      </motion.button>
+      <div style={{ position: 'relative' }}>
+        <motion.button
+          whileTap={enabled ? { scale: 0.84 } : {}}
+          transition={{ type: 'spring', stiffness: 600, damping: 18 }}
+          disabled={!enabled}
+          onClick={onClick}
+          aria-label={label}
+          style={{
+            width: 58, height: 58, borderRadius: '50%',
+            background: highlighted ? `${color}26` : enabled ? '#1c2540' : '#0c1422',
+            border: `2px solid ${borderColor}`,
+            color: lit ? color : '#3f4a5e',
+            cursor: enabled ? 'pointer' : 'not-allowed',
+            opacity: enabled ? 1 : highlighted ? 0.9 : 0.5,
+            boxShadow: highlighted ? `0 0 14px ${color}66, inset 0 0 10px ${color}33` : enabled ? `0 2px 8px rgba(0,0,0,0.4)` : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            touchAction: 'manipulation',
+          }}
+        >
+          {icon}
+        </motion.button>
+        {readyPulse && enabled && (
+          <motion.div
+            aria-hidden
+            animate={{ scale: [1, 1.15, 1], opacity: [0.85, 1, 0.85] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              position: 'absolute', top: -3, right: -3,
+              width: 14, height: 14, borderRadius: '50%',
+              background: `radial-gradient(circle at 35% 30%, #fff, ${color} 65%, ${color}aa 100%)`,
+              border: '2px solid #0a1422',
+              boxShadow: `0 0 8px ${color}cc, 0 0 14px ${color}77`,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+      </div>
       <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{
         fontSize: '0.56rem', color: lit ? color : '#4a5468',
       }}>
@@ -3609,6 +3630,13 @@ function ActionMenu({ canFire, canVolley, canDodge, canReload, onSelect, disable
   const reloadHighlighted = highlightedAction === 'reload'
   const dodgeHighlighted = highlightedAction === 'dodge'
   const hasSpecial = specialItems.length > 0
+  // Crew-ability readiness pulse — only flags actual class abilities
+  // (id prefix 'crew-'), not the repair kit; the player's asking "is one
+  // of my crew's specials off cooldown right now?" not "do I have any
+  // special option at all?". Filter is permissive: any non-disabled
+  // crew item counts (covers the player's first turn before anything's
+  // been used, or post-rest-stop when usedAbilityIds clears).
+  const crewAbilityReady = specialItems.some(i => i.id.startsWith('crew-') && !i.disabled)
 
   function tapFire() {
     if (disabled || !canFire) return
@@ -3637,6 +3665,7 @@ function ActionMenu({ canFire, canVolley, canDodge, canReload, onSelect, disable
         <CircleBtn
           icon={ACTION_ICON.special} label="Special" color="#c084fc"
           enabled={hasSpecial && !disabled} highlighted={false}
+          readyPulse={crewAbilityReady}
           onClick={tapSpecial}
         />
         <CircleBtn
