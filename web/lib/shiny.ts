@@ -63,19 +63,25 @@ export const SHINY_THEME = {
   glow:     'rgba(251,204,74,0.55)',
 } as const
 
-/** Habitats that opt OUT of shiny rolls. Ancient Deep already has its
- *  own one-off trophy treatment; rolling shiny over the top would
- *  muddy that moment. */
-const SHINY_BLOCKED_HABITATS = new Set(['ancient_deep'])
+/** Ancient Deep TROPHIES (sell_value 0) skip shiny — they already have
+ *  the one-off prehistoric trophy treatment, rolling shiny on top
+ *  would muddy that moment. The 12 ancient_deep regulars (sell_value
+ *  > 0) DO roll shiny like every other zone's catches since they have
+ *  size ranges and a real PB chase. Caller passes sellValue so the
+ *  shiny module owns this rule without a hard zone block. */
 
 /** Server-side roll. Returns true when both gates pass (perfect + RNG).
- *  Habitat-gated so Ancient Deep catches never roll shiny. */
+ *  Trophies (sell_value 0) always skip — same as the catch-routing
+ *  discriminator everywhere else in the codebase. */
 export function rollShiny(opts: {
   isPerfect: boolean
   habitat: string
+  sellValue: number
 }): boolean {
   if (!opts.isPerfect) return false
-  if (SHINY_BLOCKED_HABITATS.has(opts.habitat)) return false
+  // Trophy fish skip shiny: they're already one-canonical-size mounts
+  // and the gold/red 'Ancient' card treatment is the prize there.
+  if (opts.sellValue === 0) return false
   return Math.floor(Math.random() * SHINY_ODDS) === 0
 }
 

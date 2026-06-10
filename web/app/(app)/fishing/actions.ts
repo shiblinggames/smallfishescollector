@@ -204,8 +204,18 @@ export async function castLine(baitType: string, habitat: string): Promise<
     admin.from('fish_species').select('id, catch_difficulty, catch_score, bite_rarity, sell_value').eq('habitat', habitat),
   ])
 
+  // Hold check applies to every zone now. Used to bypass for ancient_deep
+  // back when the only catches there were trophies (which skip inventory
+  // entirely, going to trophy_catches instead). The 12 sellable regulars
+  // added 2026-06-09 flow through fish_inventory like every other zone,
+  // so a full hold + ancient_deep cast was silently dropping the catch
+  // (catchQty clamped to 0 because no slots free). Restore the gate so
+  // the player gets a clean 'Hold full' error before burning a cast.
+  // Trophy-bias note: yes, this also blocks a lure-only cast that might
+  // have landed a trophy. Acceptable — the player can dump a single fish
+  // to make room and try again. Worth it to fix the silent-drop bug.
   const totalFish = (holdRows ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0)
-  if (habitat !== 'ancient_deep' && totalFish >= fishHold.capacity) {
+  if (totalFish >= fishHold.capacity) {
     return { error: `Fish hold full (${fishHold.capacity}/${fishHold.capacity}). Sell some fish to make room.` }
   }
 
@@ -490,7 +500,7 @@ export async function reelIn(
   const isPerfect = result === 'perfect'
   const forcedShinyOnce = !!profile.force_shiny_next_perfect && isPerfect
   const forcedShinyAlways = !!profile.force_shiny_always
-  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat })
+  const isShiny = forcedShinyOnce || forcedShinyAlways || rollShiny({ isPerfect, habitat: fish.habitat, sellValue: fish.sell_value ?? 0 })
 
   // Check if new species for bestiary
   const { data: existing } = await admin
@@ -1154,6 +1164,13 @@ export async function prestigeZone(zone: string): Promise<{ prestigeLevel: numbe
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
+
+  // Ancient Deep doesn't prestige. The 6 trophies are one-and-done so
+  // 'complete the collection again for another reward' doesn't apply;
+  // the 12 regulars + trophies together aren't the same kind of
+  // collection-clear arc the other zones are. Reject the call so a
+  // manipulated client can't trigger it past the hidden UI button.
+  if (zone === 'ancient_deep') return { error: 'Ancient Deep does not prestige' }
 
   const rewardCol = ZONE_REWARD_COL[zone]
   if (!rewardCol) return { error: 'Invalid zone' }
