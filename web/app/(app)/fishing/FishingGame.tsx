@@ -484,7 +484,7 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
-  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, needleRef,
+  zones, angle, rotation = 0, needleColor, zoneOpacityFn, fireLevel = 0, snapKey = 0, perfectBurstKey = 0, needleRef, zonesGroupRef,
 }: {
   zones: ZoneDef[]
   angle: number
@@ -495,6 +495,10 @@ function DialSVG({
   snapKey?: number
   perfectBurstKey?: number
   needleRef?: React.Ref<SVGGElement>
+  /** Ref on the SVG zones group, so the parent can imperatively
+   *  rotate the arcs during the drift mechanic without forcing a
+   *  React re-render every frame. */
+  zonesGroupRef?: React.Ref<SVGGElement>
 }) {
   const needleTipY  = CY - (INNER_R - 8)
   const perfectZone = zones.find(z => z.type === 'perfect')
@@ -550,7 +554,7 @@ function DialSVG({
           </radialGradient>
         </defs>
         <circle cx={CX} cy={CY} r={OUTER_R + 6} fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-<g transform={`rotate(${rotation}, ${CX}, ${CY})`}>
+<g ref={zonesGroupRef} transform={`rotate(${rotation}, ${CX}, ${CY})`}>
           {zones.map((zone, i) => (
             <path key={i} d={arcPath(zone.from, zone.to)} fill={zone.color}
               fillOpacity={zoneOpacityFn(zone)} style={{ transition: 'fill-opacity 0.08s' }} />
@@ -3492,6 +3496,12 @@ export default function FishingGame({
   // latest zones/rotation for in-loop zone-crossing detection (the only thing
   // that needs a real re-render — to refresh the colour/label tells).
   const needleGroupRef   = useRef<SVGGElement | null>(null)
+  // Imperative target for the drift mechanic. Same pattern as the
+  // needle: rotate the SVG zones group via setAttribute('transform')
+  // every interval tick instead of triggering a parent re-render
+  // through setZoneRotation. Eliminates the 33×/sec render thrash
+  // during drift fish (Plesiosaurus / Chambered Nautilus / Tripod Fish).
+  const zonesGroupRef    = useRef<SVGGElement | null>(null)
   const catchingZonesRef = useRef<ZoneDef[]>([])
   const zoneRotationRef  = useRef(0)
   const lastZoneFromRef  = useRef<number>(NaN)
@@ -3746,10 +3756,24 @@ export default function FishingGame({
     stopDialLoop()
   }, [phase, hookedFish])
 
-  // Drift mechanic: Plesiosaurus rotates the zone arc continuously while the needle spins
+  // Drift mechanic: zone arc rotates continuously while the needle
+  // spins. Updates the rotation ref + SVG group transform imperatively
+  // every 30ms instead of calling setZoneRotation, matching the needle
+  // pattern. The previous setState approach forced a parent re-render
+  // ~33×/sec — invisible on desktop, observable as input lag on lower-
+  // tier phones because each re-render rebuilds catchingZones and
+  // re-runs every dependent useMemo / inline calc downstream. The rAF
+  // tick already reads zoneRotationRef.current for zone-crossing
+  // detection so the catch math is unaffected; handleReelIn now reads
+  // from the same ref for resolution.
   useEffect(() => {
     if (phase !== 'catching' || activeBossMechanic !== 'drift') return
-    const id = setInterval(() => setZoneRotation(r => (r + 1) % 360), 30)
+    const id = setInterval(() => {
+      const next = (zoneRotationRef.current + 1) % 360
+      zoneRotationRef.current = next
+      const zg = zonesGroupRef.current
+      if (zg) zg.setAttribute('transform', `rotate(${next}, ${CX}, ${CY})`)
+    }, 30)
     return () => clearInterval(id)
   }, [phase, activeBossMechanic])
 
@@ -3873,6 +3897,7 @@ export default function FishingGame({
     setTimeout(() => {
       if (phaseRef.current !== 'hooked') return
       const rot = Math.floor(Math.random() * 360)
+      zoneRotationRef.current = rot
       setZoneRotation(rot)
       angleRef.current = Math.random() * 360
       dirRef.current = 1
@@ -4158,7 +4183,10 @@ export default function FishingGame({
     const zones = selectedZone === 'ancient_deep'
       ? applyBossMods(baseZones, activeBossMechanicRef.current, bossZoneShrinkRef.current)
       : baseZones
-    const zone  = getZone(zones, angleRef.current, zoneRotation)
+    // Drift mechanic: read the live rotation from the ref, not stale
+    // state. The ref is the source of truth during the spin; state only
+    // resyncs at one-shot transitions (cast, stage clear, second wind).
+    const zone  = getZone(zones, angleRef.current, zoneRotationRef.current)
 
     // Snag immune: treat penalty as miss — no extra bait lost
     const effectiveZoneType = (zone.type === 'penalty' && rod.snagImmune) ? 'miss' : zone.type
@@ -4232,7 +4260,11 @@ export default function FishingGame({
             bossNeedleMultRef.current = next === 'accelerate' ? 1.5 : 1.0
           }
 
-          setZoneRotation(Math.floor(Math.random() * 360))
+          {
+            const stageRot = Math.floor(Math.random() * 360)
+            zoneRotationRef.current = stageRot
+            setZoneRotation(stageRot)
+          }
           angleRef.current = 270
           dirRef.current = 1
           setAngle(270)
@@ -4264,6 +4296,7 @@ export default function FishingGame({
         setRetryFlash(true)
         setTimeout(() => setRetryFlash(false), 1200)
         const rot = Math.floor(Math.random() * 360)
+        zoneRotationRef.current = rot
         setZoneRotation(rot)
         angleRef.current = Math.random() * 360
         dirRef.current = 1
@@ -4296,6 +4329,13 @@ export default function FishingGame({
       // Fire the SFX FIRST (before any setState) so the audio call hits
       // the same JS tick as the input — no render cycle in between.
       playPerfectSfx()
+      // Sync zoneRotation state ← ref so the perfect-burst arc, which
+      // renders with `rotation` from state, lands on the actual current
+      // zone position. During drift this state can be many degrees
+      // behind the ref since we stopped per-frame setState; without
+      // this sync the burst would render at the rotation the state
+      // was last set to (cast init or stage clear).
+      setZoneRotation(zoneRotationRef.current)
       setPerfectBurstKey(k => k + 1)
       setPerfectFlash(true)
       if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
@@ -4889,10 +4929,16 @@ export default function FishingGame({
     const base = buildFishZones(hookedFish.catchDifficulty, hookTier, line.penaltyMultiplier, (ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows).catchMultiplier, levelBonus + getBait(selectedBait).catchZoneBonus + rod.catchZoneBonus + (activeEvent?.type === 'glassy' ? 12 : 0), rod.perfectZoneBonus + 1)
     return selectedZone === 'ancient_deep' ? applyBossMods(base, activeBossMechanic, bossZoneShrink) : base
   })() : []
-  // Mirror the latest zones + rotation so the needle rAF loop can detect
-  // zone crossings without depending on per-frame React state.
+  // Mirror the latest zones so the needle rAF loop can detect zone
+  // crossings without depending on per-frame React state.
   catchingZonesRef.current = catchingZones
-  zoneRotationRef.current = zoneRotation
+  // NOTE: zoneRotationRef is intentionally NOT synced from state here.
+  // The ref is now the source of truth during the drift spin (updated
+  // by the drift interval imperatively); syncing state → ref on every
+  // render would clobber the ref's live value mid-rotation. The ref
+  // is kept in sync with state at one-shot transitions instead (see
+  // the inline `zoneRotationRef.current = …` writes at every
+  // setZoneRotation callsite below).
   const currentZone   = (phase === 'catching' || phase === 'reeling') ? getZone(catchingZones, angle, zoneRotation) : null
 
   function needleColor(): string {
@@ -5741,6 +5787,7 @@ export default function FishingGame({
                     )}
                     <DialSVG zones={catchingZones} angle={angleRef.current} rotation={zoneRotation}
                       needleRef={needleGroupRef}
+                      zonesGroupRef={zonesGroupRef}
                       needleColor={needleColor()} zoneOpacityFn={zoneOpacity}
                       fireLevel={perfectStreak >= 3 ? 2 : perfectStreak === 2 ? 1 : 0}
                       snapKey={snapKey} perfectBurstKey={perfectBurstKey} />
