@@ -24,6 +24,7 @@ import type { RouletteState, SpinResult } from './roulette/types'
 import RouletteWheel, { type WheelPhase } from './RouletteWheel'
 import CoinShower from './CoinShower'
 import { CHIP_COLORS, pickChipColor as pickChipColorShared } from './ChipDisc'
+import { useAnimatedNumber } from './useAnimatedNumber'
 
 // betKey helper used to live here but the placement code inlines the
 // "type:target" string directly, so the helper was unused. Keep the
@@ -82,6 +83,13 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
     () => Object.values(placed).reduce((sum, n) => sum + n, 0),
     [placed]
   )
+
+  // Animated header counters — tick from the previous value to the new
+  // one on every win/loss (blackjack-style) instead of snapping. Sign +
+  // color of the session tally track the ANIMATED value so a swing
+  // through zero visibly counts through the red→grey→green shift.
+  const animatedChips = useAnimatedNumber(chips)
+  const animatedTally = useAnimatedNumber(chips - sessionBuyIns)
 
   // ── Buy-in handler ──
   function handleBuyIn(amount: number) {
@@ -240,19 +248,19 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       }}>
         <div>
           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#7a7672' }}>Chips</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: ACCENT, lineHeight: 1 }}>{chips.toLocaleString()}</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: ACCENT, lineHeight: 1 }}>{animatedChips.toLocaleString()}</p>
         </div>
         <div style={{ textAlign: 'center', flex: 1 }}>
           {sessionBuyIns > 0 ? (() => {
             // Session tally, blackjack-style: chips - buy-ins this
-            // session. Green when up, red when down, grey flat.
-            const tally = chips - sessionBuyIns
-            const color = tally === 0 ? '#8a8478' : tally > 0 ? '#7fd49a' : '#e07070'
+            // session. Green when up, red when down, grey flat —
+            // tracking the animated value so the color flips mid-tick.
+            const color = animatedTally === 0 ? '#8a8478' : animatedTally > 0 ? '#7fd49a' : '#e07070'
             return (
               <>
                 <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#7a7672' }}>Session</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>
-                  {tally > 0 ? '+' : ''}{tally.toLocaleString()} ⟡
+                  {animatedTally > 0 ? '+' : ''}{animatedTally.toLocaleString()} ⟡
                 </p>
               </>
             )

@@ -12,6 +12,7 @@ import { buyInChips, cashOutChips } from './blackjack/actions'
 import { handValue, type Card, type Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
 import WagerCircle from './WagerCircle'
+import { useAnimatedNumber } from './useAnimatedNumber'
 
 interface Props {
   doubloons: number
@@ -63,34 +64,9 @@ function CountUp({ value, duration = 750, prefix = '' }: { value: number; durati
   return <>{prefix}{display.toLocaleString()}</>
 }
 
-/** Animates a number from its PREVIOUS rendered value to its new
- *  value over `duration` ms. Unlike CountUp (which always starts from
- *  0 on mount), this is meant for live counters — chips, session
- *  tally — where the start point is whatever was on screen before
- *  the change. Cubic ease-out so big swings feel weighty. Returns the
- *  raw number so the consumer can format / colorize / sign it. */
-function useAnimatedNumber(value: number, duration = 900): number {
-  const [display, setDisplay] = useState(value)
-  const prevRef = useRef(value)
-  useEffect(() => {
-    const start = prevRef.current
-    if (start === value) { setDisplay(value); return }
-    const delta = value - start
-    let raf = 0
-    let startTime: number | null = null
-    const tick = (t: number) => {
-      if (startTime === null) startTime = t
-      const p = Math.min(1, (t - startTime) / duration)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setDisplay(Math.round(start + delta * eased))
-      if (p < 1) raf = requestAnimationFrame(tick)
-      else { prevRef.current = value; setDisplay(value) }
-    }
-    raf = requestAnimationFrame(tick)
-    return () => { cancelAnimationFrame(raf); prevRef.current = value }
-  }, [value, duration])
-  return display
-}
+// useAnimatedNumber (previous-value → new-value counter tick) moved to
+// ./useAnimatedNumber so Fish Roulette's header can share it — see the
+// import near the top of this file.
 
 /** Hand-total ticker. Animates smoothly from the previously-displayed
  *  value to the new value (not from zero). Used for the player + dealer
