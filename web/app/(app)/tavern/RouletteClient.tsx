@@ -484,12 +484,16 @@ function BuyInPanel({ presets, doubloons, dailyRemaining, disabled, onBuyIn }: {
 }
 
 // ─── Bet table ───────────────────────────────────────────────────────
-// Full real-table layout: 0 on the left, 3×12 number grid with thin
-// split / corner tap zones woven into the gaps (CSS Grid alternating
-// 1fr/10px columns and rows), then streets + lines as a strip below
-// the grid, then dozens, then 1-18/Even/Red/Black/Odd/19-36. Each
-// inside-bet zone uses the same "type:target" key shape as outside bets
-// so chip stacking + payout settlement reuse the same code paths.
+// Portrait-first layout: 0 banner on top, then the 3×12 number grid
+// rotated VERTICAL — 12 rows of 3 numbers reading 1-2-3 / 4-5-6 / …
+// down the screen, with finger-sized split / corner tap zones woven
+// into the gaps (CSS Grid alternating 1fr/14px columns and rows).
+// Streets + lines live in a narrow right rail beside their rows,
+// column bets sit under their columns, then dozens and the
+// 1-18/Even/Red/Black/Odd/19-36 rows. The whole table fits a phone
+// width with zero sideways scroll. Each inside-bet zone uses the same
+// "type:target" key shape as outside bets so chip stacking + payout
+// settlement reuse the same code paths.
 function BetTable({ placed, onPlace, lastWinner, phase }: {
   placed: PlacedMap
   onPlace: (zone: string, max: number) => void
@@ -523,7 +527,6 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
           color: '#fff',
           borderRadius: 5,
           padding: 0,
-          height: 38,
           cursor: interactive ? 'pointer' : 'default',
           overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -537,7 +540,7 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
         )}
         <span className="font-cinzel font-700" style={{
           position: 'relative',
-          fontSize: '0.82rem',
+          fontSize: '0.95rem',
           textShadow: '0 1px 2px rgba(0,0,0,0.7)',
         }}>
           {n}
@@ -615,8 +618,8 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
     )
   }
 
-  /** Street (3 in a column) — small pill in the row below the grid. */
-  function StreetZone({ idx, gridCol }: { idx: number; gridCol: number }) {
+  /** Street (3 in a row) — pill in the right rail beside its row. */
+  function StreetZone({ idx, gridRow, gridCol }: { idx: number; gridRow: number; gridCol: number }) {
     const key = `street:${idx}`
     const chips = placed[key] ?? 0
     return (
@@ -626,14 +629,14 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
         disabled={!interactive}
         title={`Street ${idx * 3 - 2}-${idx * 3} · 11:1`}
         style={{
-          gridRow: 6, gridColumn: gridCol,
+          gridRow, gridColumn: gridCol,
           position: 'relative',
-          padding: '0.3rem 0', height: 22,
+          padding: 0,
           background: chips > 0 ? `${ACCENT}22` : 'rgba(240,192,64,0.05)',
           border: `1px solid ${chips > 0 ? ACCENT : 'rgba(240,192,64,0.28)'}`,
           borderRadius: 5,
-          color: chips > 0 ? '#1a0a04' : '#7a6648',
-          fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em',
+          color: chips > 0 ? '#f0c040' : '#7a6648',
+          fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.04em',
           cursor: interactive ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
@@ -644,9 +647,9 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
     )
   }
 
-  /** Six-line (2 adjacent streets) — small pill in the gap between
-   *  street pills below the grid. */
-  function LineZone({ idx, gridCol }: { idx: number; gridCol: number }) {
+  /** Six-line (2 adjacent streets) — small pill in the right-rail gap
+   *  between street pills. */
+  function LineZone({ idx, gridRow, gridCol }: { idx: number; gridRow: number; gridCol: number }) {
     const key = `line:${idx}`
     const chips = placed[key] ?? 0
     return (
@@ -656,13 +659,13 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
         disabled={!interactive}
         title={`Line ${idx * 3 - 2}-${idx * 3 + 3} · 5:1`}
         style={{
-          gridRow: 6, gridColumn: gridCol,
+          gridRow, gridColumn: gridCol,
           position: 'relative',
-          padding: 0, height: 22,
+          padding: 0,
           background: chips > 0 ? `${ACCENT}22` : 'transparent',
           border: `1px dashed ${chips > 0 ? ACCENT : 'rgba(240,192,64,0.18)'}`,
           borderRadius: 4,
-          color: chips > 0 ? '#1a0a04' : '#7a6648',
+          color: chips > 0 ? '#f0c040' : '#7a6648',
           fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.06em',
           cursor: interactive ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -713,29 +716,30 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
   }
 
   // Numbers, splits, corners, streets, lines — all addressed by their
-  // (colIdx, rowIdx) where colIdx 0-11 = street column, rowIdx 0-2 (0 =
-  // bottom row {1,4,7..}, 2 = top row {3,6,9..}). Helper converts
-  // (col, row) → the canonical roulette number 1-36.
-  const numAt = (col: number, row: number) => 1 + row + col * 3
+  // (rowIdx, colIdx) where rowIdx 0-11 = street row (top = 1-2-3),
+  // colIdx 0-2 (0 = left column {1,4,7..}, 2 = right column {3,6,9..}).
+  // Helper converts (row, col) → the canonical roulette number 1-36.
+  const numAt = (row: number, col: number) => row * 3 + col + 1
 
-  // Inside-grid template:
-  //   12 number cols (1fr each) + 11 split cols (10px each) = 23 cols
-  //   3 number rows (38px each) + 2 split rows (10px each) = 5 rows
-  //   plus 1 street/line row at the bottom (22px)
+  // Portrait grid template:
+  //   cols: 3 number cols (1fr) + 2 split cols (14px) woven between
+  //         + 1 street/line rail (30px) on the right = 6 cols
+  //   rows: zero banner (44px) + 12 number rows (40px) with 11 split
+  //         rows (14px) woven between + 6px gap + column-bet row (36px)
   //
-  // CSS Grid 1-indexed columns: number col c → grid col c*2 + 1;
-  //                             horiz-split between c and c+1 → grid col c*2 + 2
-  // CSS Grid rows (top to bottom):
-  //   row 1 = top number row    (rowIdx 2 = numbers 3,6,9,..)
-  //   row 2 = upper split row   (between rowIdx 1 and 2)
-  //   row 3 = middle number row (rowIdx 1 = numbers 2,5,8,..)
-  //   row 4 = lower split row   (between rowIdx 0 and 1)
-  //   row 5 = bottom number row (rowIdx 0 = numbers 1,4,7,..)
-  //   row 6 = street + line strip
-  const numberGridRow = (row: number) => 5 - row * 2     // rowIdx 0 → 5; rowIdx 2 → 1
-  const splitGridRow  = (vIdx: number) => 4 - vIdx * 2   // vIdx 0 → 4; vIdx 1 → 2
+  // CSS Grid 1-indexed: number col c → grid col c*2 + 1;
+  //                     split between c and c+1 → grid col c*2 + 2;
+  //                     street rail → grid col 6.
+  const numberGridRow = (row: number) => row * 2 + 2      // rowIdx 0 → 2; rowIdx 11 → 24
+  const splitGridRow  = (rPair: number) => rPair * 2 + 3  // between rPair and rPair+1
   const numberGridCol = (col: number) => col * 2 + 1
   const splitGridCol  = (cPair: number) => cPair * 2 + 2
+  const STREET_COL = 6
+  const COLBET_ROW = 26
+  const gridTemplateRows =
+    '44px ' +
+    Array.from({ length: 12 }, (_, r) => (r < 11 ? '40px 14px' : '40px')).join(' ') +
+    ' 6px 36px'
 
   return (
     <div style={{
@@ -743,175 +747,163 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
       border: `2px solid ${FELT_RIM}`,
       borderRadius: 12,
       padding: '0.6rem',
-      overflowX: 'auto',
+      maxWidth: 440,
+      width: '100%',
+      margin: '0 auto',
     }}>
-      {/* Zero + inside grid + column outside-bets, all one row */}
-      <div style={{ display: 'flex', gap: 4, minWidth: 600, alignItems: 'stretch' }}>
-        {/* Zero pocket — spans full height of the number grid (3 rows). */}
+      {/* Zero + numbers + splits + corners + street rail + column bets,
+          all one vertical CSS grid. */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 14px 1fr 14px 1fr 30px',
+        gridTemplateRows,
+        gap: 3,
+      }}>
+        {/* Zero — full-width banner across the top. */}
         <button
           type="button"
           onClick={() => interactive && onPlace('straight:0', RL_MAX_STRAIGHT_BET)}
           disabled={!interactive}
           title="The Abyss"
           style={{
+            gridRow: 1, gridColumn: '1 / 7',
             position: 'relative',
             background: GREEN_POCKET,
             border: lastWinner === 0 ? `2px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.1)',
             boxShadow: lastWinner === 0 ? `0 0 10px ${ACCENT}aa` : 'none',
             color: '#fff', borderRadius: 5, padding: 0,
-            minWidth: 32,
             cursor: interactive ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            alignSelf: 'stretch',
           }}>
           <span className="font-cinzel font-700" style={{ fontSize: '1.1rem', textShadow: '0 1px 2px rgba(0,0,0,0.7)' }}>0</span>
           {(placed['straight:0'] ?? 0) > 0 && <ChipBadge value={placed['straight:0']} small />}
         </button>
 
-        {/* Inside grid — numbers + splits + corners + streets/lines. */}
-        <div style={{
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(11, 1fr 10px) 1fr',  // 12 numbers + 11 splits = 23 cols
-          gridTemplateRows: '38px 10px 38px 10px 38px 22px',  // 3 numbers + 2 splits + street row
-          gap: 2,
-        }}>
-          {/* Numbers (36 cells) */}
-          {Array.from({ length: 12 }, (_, col) =>
-            [0, 1, 2].map(row => {
-              const n = numAt(col, row)
-              return (
-                <NumberPocket
-                  key={`num-${n}`}
-                  n={n}
-                  gridRow={numberGridRow(row)}
-                  gridCol={numberGridCol(col)}
-                />
-              )
-            })
-          ).flat()}
-
-          {/* Vertical splits (24 cells) — between vertically adjacent
-              numbers in same column (rowIdx & rowIdx+1). */}
-          {Array.from({ length: 12 }, (_, col) =>
-            [0, 1].map(vIdx => {
-              const a = numAt(col, vIdx)
-              const b = numAt(col, vIdx + 1)
-              return (
-                <SplitZone
-                  key={`v-${a}-${b}`}
-                  a={a} b={b}
-                  gridRow={splitGridRow(vIdx)}
-                  gridCol={numberGridCol(col)}
-                  orientation="h"   // horizontal divider, vertical split bet visually
-                />
-              )
-            })
-          ).flat()}
-
-          {/* Horizontal splits (33 cells) — between horizontally
-              adjacent numbers in same row (col & col+1). */}
-          {Array.from({ length: 11 }, (_, cPair) =>
-            [0, 1, 2].map(row => {
-              const a = numAt(cPair, row)
-              const b = numAt(cPair + 1, row)
-              return (
-                <SplitZone
-                  key={`h-${a}-${b}`}
-                  a={a} b={b}
-                  gridRow={numberGridRow(row)}
-                  gridCol={splitGridCol(cPair)}
-                  orientation="v"
-                />
-              )
-            })
-          ).flat()}
-
-          {/* Corners (22 cells) — 2x2 blocks at gap intersections. */}
-          {Array.from({ length: 11 }, (_, cPair) =>
-            [0, 1].map(vIdx => {
-              const a = numAt(cPair, vIdx)
-              const b = numAt(cPair, vIdx + 1)
-              const c = numAt(cPair + 1, vIdx)
-              const d = numAt(cPair + 1, vIdx + 1)
-              return (
-                <CornerZone
-                  key={`cor-${a}-${b}-${c}-${d}`}
-                  a={a} b={b} c={c} d={d}
-                  gridRow={splitGridRow(vIdx)}
-                  gridCol={splitGridCol(cPair)}
-                />
-              )
-            })
-          ).flat()}
-
-          {/* Streets (12 cells) — one per number column. */}
-          {Array.from({ length: 12 }, (_, col) => (
-            <StreetZone key={`st-${col + 1}`} idx={col + 1} gridCol={numberGridCol(col)} />
-          ))}
-
-          {/* Lines (11 cells) — between adjacent streets. */}
-          {Array.from({ length: 11 }, (_, cPair) => (
-            <LineZone key={`ln-${cPair + 1}`} idx={cPair + 1} gridCol={splitGridCol(cPair)} />
-          ))}
-        </div>
-
-        {/* Column outside-bets — vertical stack to the right of the
-            grid. Each spans one number row. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 44 }}>
-          {[3, 2, 1].map(c => {
-            const key = `column:${c}`
-            const chips = placed[key] ?? 0
+        {/* Numbers (36 cells) — 12 rows × 3 cols, 1-2-3 / 4-5-6 / … */}
+        {Array.from({ length: 12 }, (_, row) =>
+          [0, 1, 2].map(col => {
+            const n = numAt(row, col)
             return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => interactive && onPlace(key, RL_MAX_OUTSIDE_BET)}
-                disabled={!interactive}
-                style={{
-                  position: 'relative',
-                  flex: 1,
-                  minHeight: 38,
-                  background: '#9fbcd61c',
-                  border: '1px solid #9fbcd655',
-                  color: '#9fbcd6',
-                  borderRadius: 6,
-                  fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  cursor: interactive ? 'pointer' : 'default',
-                }}
-                className="font-karla">
-                Col {c}
-                {chips > 0 && <ChipBadge value={chips} small />}
-              </button>
+              <NumberPocket
+                key={`num-${n}`}
+                n={n}
+                gridRow={numberGridRow(row)}
+                gridCol={numberGridCol(col)}
+              />
             )
-          })}
-        </div>
+          })
+        ).flat()}
+
+        {/* Side-by-side splits (24 cells) — between adjacent numbers in
+            the same row (n / n+1). Thin vertical gap → 'v'. */}
+        {Array.from({ length: 12 }, (_, row) =>
+          [0, 1].map(cPair => {
+            const a = numAt(row, cPair)
+            const b = numAt(row, cPair + 1)
+            return (
+              <SplitZone
+                key={`h-${a}-${b}`}
+                a={a} b={b}
+                gridRow={numberGridRow(row)}
+                gridCol={splitGridCol(cPair)}
+                orientation="v"
+              />
+            )
+          })
+        ).flat()}
+
+        {/* Stacked splits (33 cells) — between numbers in the same
+            column, one row apart (n / n+3). Thin horizontal gap → 'h'. */}
+        {Array.from({ length: 11 }, (_, rPair) =>
+          [0, 1, 2].map(col => {
+            const a = numAt(rPair, col)
+            const b = numAt(rPair + 1, col)
+            return (
+              <SplitZone
+                key={`v-${a}-${b}`}
+                a={a} b={b}
+                gridRow={splitGridRow(rPair)}
+                gridCol={numberGridCol(col)}
+                orientation="h"
+              />
+            )
+          })
+        ).flat()}
+
+        {/* Corners (22 cells) — 2x2 blocks at gap intersections. */}
+        {Array.from({ length: 11 }, (_, rPair) =>
+          [0, 1].map(cPair => {
+            const a = numAt(rPair, cPair)
+            const b = numAt(rPair, cPair + 1)
+            const c = numAt(rPair + 1, cPair)
+            const d = numAt(rPair + 1, cPair + 1)
+            return (
+              <CornerZone
+                key={`cor-${a}-${b}-${c}-${d}`}
+                a={a} b={b} c={c} d={d}
+                gridRow={splitGridRow(rPair)}
+                gridCol={splitGridCol(cPair)}
+              />
+            )
+          })
+        ).flat()}
+
+        {/* Streets (12 cells) — right-rail pill beside each row. */}
+        {Array.from({ length: 12 }, (_, row) => (
+          <StreetZone key={`st-${row + 1}`} idx={row + 1} gridRow={numberGridRow(row)} gridCol={STREET_COL} />
+        ))}
+
+        {/* Lines (11 cells) — right rail, between adjacent streets. */}
+        {Array.from({ length: 11 }, (_, rPair) => (
+          <LineZone key={`ln-${rPair + 1}`} idx={rPair + 1} gridRow={splitGridRow(rPair)} gridCol={STREET_COL} />
+        ))}
+
+        {/* Column bets — bottom row, one under each number column. */}
+        {[1, 2, 3].map(c => {
+          const key = `column:${c}`
+          const chips = placed[key] ?? 0
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => interactive && onPlace(key, RL_MAX_OUTSIDE_BET)}
+              disabled={!interactive}
+              style={{
+                gridRow: COLBET_ROW, gridColumn: numberGridCol(c - 1),
+                position: 'relative',
+                background: '#9fbcd61c',
+                border: '1px solid #9fbcd655',
+                color: '#9fbcd6',
+                borderRadius: 6,
+                fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                cursor: interactive ? 'pointer' : 'default',
+              }}
+              className="font-karla">
+              Col {c}
+              {chips > 0 && <ChipBadge value={chips} small />}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Dozens row — themed by habitat. Spacers match Zero + grid + col-zones. */}
-      <div style={{ display: 'flex', gap: 4, marginTop: 6, minWidth: 600 }}>
-        <div style={{ minWidth: 32 }} />
-        <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-          <ZoneButton label="Shallows · 1-12" zone="dozen:1"  max={RL_MAX_OUTSIDE_BET} accent="#7ad3a0" isOutside />
-          <ZoneButton label="Open · 13-24"    zone="dozen:2"  max={RL_MAX_OUTSIDE_BET} accent="#5fa8c9" isOutside />
-          <ZoneButton label="Deep · 25-36"    zone="dozen:3"  max={RL_MAX_OUTSIDE_BET} accent="#a78bfa" isOutside />
-        </div>
-        <div style={{ width: 44 }} />
+      {/* Dozens row — themed by habitat. */}
+      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+        <ZoneButton label="Shallows · 1-12" zone="dozen:1"  max={RL_MAX_OUTSIDE_BET} accent="#7ad3a0" isOutside />
+        <ZoneButton label="Open · 13-24"    zone="dozen:2"  max={RL_MAX_OUTSIDE_BET} accent="#5fa8c9" isOutside />
+        <ZoneButton label="Deep · 25-36"    zone="dozen:3"  max={RL_MAX_OUTSIDE_BET} accent="#a78bfa" isOutside />
       </div>
 
-      {/* Outside row: low / even / red / black / odd / high */}
-      <div style={{ display: 'flex', gap: 4, marginTop: 6, minWidth: 600 }}>
-        <div style={{ minWidth: 32 }} />
-        <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-          <ZoneButton label="1-18 · Low"   zone="half:low"     max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-          <ZoneButton label="Even"          zone="parity:even"  max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-          <ZoneButton label="Tide · Red"   zone="color:red"    max={RL_MAX_OUTSIDE_BET} accent="#e07c7c" isOutside />
-          <ZoneButton label="Trench · Black" zone="color:black"  max={RL_MAX_OUTSIDE_BET} accent="#9fa3a8" isOutside />
-          <ZoneButton label="Odd"           zone="parity:odd"   max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-          <ZoneButton label="19-36 · High" zone="half:high"    max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-        </div>
-        <div style={{ width: 44 }} />
+      {/* Outside rows: low / even / red, then black / odd / high. */}
+      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+        <ZoneButton label="1-18 · Low"   zone="half:low"     max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+        <ZoneButton label="Even"          zone="parity:even"  max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+        <ZoneButton label="Tide · Red"   zone="color:red"    max={RL_MAX_OUTSIDE_BET} accent="#e07c7c" isOutside />
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+        <ZoneButton label="Trench · Black" zone="color:black"  max={RL_MAX_OUTSIDE_BET} accent="#9fa3a8" isOutside />
+        <ZoneButton label="Odd"           zone="parity:odd"   max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+        <ZoneButton label="19-36 · High" zone="half:high"    max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
       </div>
     </div>
   )
