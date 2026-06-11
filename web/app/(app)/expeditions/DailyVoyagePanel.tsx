@@ -369,7 +369,7 @@ export default function DailyVoyagePanel({
                         ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
                         ['⏳', 'They sail (up to 6 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
                         ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
-                        ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Choose wisely.'],
+                        ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. High crew Fortune cuts the risk, up to 75% at 50 total Fortune. Choose wisely.'],
                       ] as [string, string, string][]).map(([icon, title, desc]) => (
                         <div key={title} style={{ display: 'flex', gap: '0.75rem' }}>
                           <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{icon}</span>
@@ -532,9 +532,18 @@ export default function DailyVoyagePanel({
                                 {minCrew === 1 ? '⚠ Need at least 1 crew to set sail' : `⚠ Need at least ${minCrew} crew to set sail`}
                               </span>
                             ) : riskPct > 0 ? (
-                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: riskColor }}>
-                                {riskPct >= 15 ? '☠' : '⚠'} {riskPct}% chance crew is lost permanently
-                              </span>
+                              <>
+                                <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: riskColor }}>
+                                  {riskPct >= 15 ? '☠' : '⚠'} {riskPct}% chance crew is lost permanently
+                                </span>
+                                {/* Teach the mitigation: noobs should know Fortune is the
+                                    survival stat, and vets should see what theirs is doing. */}
+                                <span className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6f5a' }}>
+                                  {stats.fortune > 0
+                                    ? `Your crew's ${stats.fortune} Fortune trimmed this from ${Math.round(rco.baseCrewLossChance * 100)}%. Max 75% off at 50 Fortune.`
+                                    : 'Crew Fortune trims this risk. Up to 75% off at 50 total Fortune.'}
+                                </span>
+                              </>
                             ) : (
                               <span className="font-karla" style={{ fontSize: '0.74rem', color: '#5a7a5a' }}>No crew risk</span>
                             )}
