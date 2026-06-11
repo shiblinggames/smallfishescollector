@@ -235,9 +235,10 @@ function CrewPanel({
    *  reassigned. Greys the card out and disables the toggle buttons. */
   locked?: boolean
   /** True when the crew has leveled up since the player last opened it.
-   *  Drives a filled Lv chip + small NEW dot so the player knows to tap
-   *  in and see what stat/ability tier they just unlocked. Tracked via
-   *  localStorage 'crewSeenLevels' in the parent. */
+   *  Drives a whole-card gold breathing halo + brightened Lv chip + small
+   *  NEW dot so the player knows to tap in and see what stat/ability tier
+   *  they just unlocked. Tracked via localStorage 'crewSeenLevels' in the
+   *  parent. */
   hasLevelUp?: boolean
   dimmed?: boolean
   hint?: boolean
@@ -284,6 +285,19 @@ function CrewPanel({
           line ('Epic · 2 traits') and the full list surfaces when the
           card opens, so the discovery cue is preserved without coloring
           the card's perimeter. `hint` prop kept for API stability — no-op. */}
+      {/* Level-up halo — gold breathing border over the whole card while a
+          level-up is unseen. Unlike the removed trait halo this one is
+          TRANSIENT (it clears the moment the player opens the card), so at
+          most a couple of cards glow at once and the roster stays calm.
+          Overlay div instead of restyling the card root so it never fights
+          the inline cardShadow/border. */}
+      {hasLevelUp && (
+        <span aria-hidden className="crew-levelup-halo" style={{
+          position: 'absolute', inset: -1, borderRadius: 7,
+          border: '1px solid rgba(255,217,106,0.6)',
+          pointerEvents: 'none', zIndex: 1,
+        }} />
+      )}
       {/* Carved corner brackets */}
       <span style={corner({ top: 4, left: 4, borderTop: b, borderLeft: b })} />
       <span style={corner({ top: 4, right: 4, borderTop: b, borderRight: b })} />

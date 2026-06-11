@@ -20,6 +20,7 @@ import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen
 import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
+import { crewLevelFromXP } from '@/lib/crewLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 
@@ -262,6 +263,22 @@ export default function ShipHero({
     return picked
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roster.length, roster[0]?.id, roster[roster.length - 1]?.id])
+
+  // Gold "crew leveled up" nudge on the Manage Crew column. Reads the same
+  // localStorage ledger the crew page keeps ('crewSeenLevels': crew id →
+  // last level viewed in the detail modal). Any roster member whose current
+  // level outruns the ledger lights the dot; ids MISSING from the ledger
+  // stay calm — the crew page seeds them on first visit, so new players and
+  // fresh recruits aren't nagged before they've even met the card.
+  const [crewLevelUpNudge, setCrewLevelUpNudge] = useState(false)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('crewSeenLevels')
+      if (!raw) return
+      const seen = JSON.parse(raw) as Record<number, number>
+      setCrewLevelUpNudge(roster.some(c => seen[c.id] !== undefined && seen[c.id] < crewLevelFromXP(c.xp)))
+    } catch {}
+  }, [roster])
 
   const [repairing, startRepair] = useTransition()
   const [repairErr, setRepairErr] = useState<string | null>(null)
@@ -828,8 +845,26 @@ export default function ShipHero({
               </div>
               <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{
                 fontSize: '0.7rem', color: '#9ec6ff',
+                position: 'relative',
               }}>
                 Manage Crew
+                {/* Level-up nudge — gold pulsing dot hung off the label's
+                    right edge (absolute, so the label itself stays
+                    centered in the column). Mirrors the Voyages card's
+                    returned-dot pattern, in the crew level-up gold. */}
+                {crewLevelUpNudge && (
+                  <span
+                    aria-label="A crew member leveled up"
+                    title="A crew member leveled up"
+                    className="crew-levelup-dot"
+                    style={{
+                      position: 'absolute', right: -14, top: '50%',
+                      marginTop: -4, width: 8, height: 8, borderRadius: '50%',
+                      background: '#ffd96a',
+                      border: '1px solid rgba(0,0,0,0.55)',
+                    }}
+                  />
+                )}
               </p>
             </Link>
 
