@@ -399,20 +399,21 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
 
       {(phase === 'bet' || phase === 'spinning' || phase === 'reveal') && (
         <>
+          {/* Chip rack — lives ABOVE the table so the pick-a-chip →
+              tap-a-bet flow reads top-down from the wheel. */}
+          <ChipRack
+            presets={RL_BET_PRESETS as readonly number[]}
+            selectedDenom={selectedDenom}
+            onSelect={setSelectedDenom}
+            chipsLeft={chips - totalPlaced}
+          />
+
           {/* Bet table */}
           <BetTable
             placed={placed}
             onPlace={placeChip}
             lastWinner={phase === 'reveal' ? (lastResult?.winningNumber ?? null) : null}
             phase={phase}
-          />
-
-          {/* Chip rack + spin row */}
-          <ChipRack
-            presets={RL_BET_PRESETS as readonly number[]}
-            selectedDenom={selectedDenom}
-            onSelect={setSelectedDenom}
-            chipsLeft={chips - totalPlaced}
           />
 
           {/* Spin moved onto the wheel hub — only Clear Bets lives
@@ -619,12 +620,32 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
       width: '100%',
       margin: '0 auto',
     }}>
+      {/* Common bets FIRST — dozens + even-money rows sit above the
+          long number grid so the casual flow (chip → common bet →
+          spin) never has to scroll past 12 rows of straights. */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <ZoneButton label="Shallows · 1-12" zone="dozen:1"  max={RL_MAX_OUTSIDE_BET} accent="#7ad3a0" isOutside />
+        <ZoneButton label="Open · 13-24"    zone="dozen:2"  max={RL_MAX_OUTSIDE_BET} accent="#5fa8c9" isOutside />
+        <ZoneButton label="Deep · 25-36"    zone="dozen:3"  max={RL_MAX_OUTSIDE_BET} accent="#a78bfa" isOutside />
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+        <ZoneButton label="1-18 · Low"   zone="half:low"     max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+        <ZoneButton label="Even"          zone="parity:even"  max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+        <ZoneButton label="Tide · Red"   zone="color:red"    max={RL_MAX_OUTSIDE_BET} accent="#e07c7c" isOutside />
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+        <ZoneButton label="Trench · Black" zone="color:black"  max={RL_MAX_OUTSIDE_BET} accent="#9fa3a8" isOutside />
+        <ZoneButton label="Odd"           zone="parity:odd"   max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+        <ZoneButton label="19-36 · High" zone="half:high"    max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+      </div>
+
       {/* Zero banner + 12×3 number grid, one vertical CSS grid. */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
         gridTemplateRows: '44px repeat(12, 40px)',
         gap: 4,
+        marginTop: 6,
       }}>
         {/* Zero — full-width banner across the top. */}
         <button
@@ -660,25 +681,6 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
             )
           })
         ).flat()}
-      </div>
-
-      {/* Dozens row — themed by habitat. */}
-      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-        <ZoneButton label="Shallows · 1-12" zone="dozen:1"  max={RL_MAX_OUTSIDE_BET} accent="#7ad3a0" isOutside />
-        <ZoneButton label="Open · 13-24"    zone="dozen:2"  max={RL_MAX_OUTSIDE_BET} accent="#5fa8c9" isOutside />
-        <ZoneButton label="Deep · 25-36"    zone="dozen:3"  max={RL_MAX_OUTSIDE_BET} accent="#a78bfa" isOutside />
-      </div>
-
-      {/* Outside rows: low / even / red, then black / odd / high. */}
-      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-        <ZoneButton label="1-18 · Low"   zone="half:low"     max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-        <ZoneButton label="Even"          zone="parity:even"  max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-        <ZoneButton label="Tide · Red"   zone="color:red"    max={RL_MAX_OUTSIDE_BET} accent="#e07c7c" isOutside />
-      </div>
-      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-        <ZoneButton label="Trench · Black" zone="color:black"  max={RL_MAX_OUTSIDE_BET} accent="#9fa3a8" isOutside />
-        <ZoneButton label="Odd"           zone="parity:odd"   max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-        <ZoneButton label="19-36 · High" zone="half:high"    max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
       </div>
     </div>
   )
