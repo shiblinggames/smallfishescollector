@@ -34,8 +34,26 @@ export default function CasinoHubCard() {
         }}
       />
 
-      {/* Card art center, slot art tucked right — the full-width card
-          has room to show the room holds more than one table. */}
+      {/* Card art center, slot art tucked right, roulette table tucked
+          left — the full-width card has room to show all three tables
+          in the room. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/roulette.png"
+        alt=""
+        aria-hidden
+        loading="lazy"
+        decoding="async"
+        style={{
+          position: 'absolute',
+          top: 36,
+          left: '50%',
+          transform: 'translateX(-158%) rotate(-4deg)',
+          height: 84,
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6)) brightness(0.92)',
+        }}
+      />
       <motion.img
         src="/crownandanchor.png"
         alt=""
