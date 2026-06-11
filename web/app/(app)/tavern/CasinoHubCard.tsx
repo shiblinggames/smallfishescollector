@@ -34,9 +34,11 @@ export default function CasinoHubCard() {
         }}
       />
 
-      {/* Card art center, slot art tucked right, roulette table tucked
-          left — the full-width card has room to show all three tables
-          in the room. */}
+      {/* Three tables posed in a V, same trick as ShipHero's crew
+          lineup: card-room art front-and-center on the shared baseline,
+          roulette peeking from behind-left, slots from behind-right.
+          Backs render smaller + dimmer + desaturated so they read as
+          "behind" without a real camera. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/roulette.png"
@@ -46,29 +48,12 @@ export default function CasinoHubCard() {
         decoding="async"
         style={{
           position: 'absolute',
-          top: 36,
-          left: '50%',
-          transform: 'translateX(-158%) rotate(-4deg)',
-          height: 84,
+          left: '9%',
+          bottom: 46,
+          height: 74,
           objectFit: 'contain',
-          filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6)) brightness(0.92)',
-        }}
-      />
-      <motion.img
-        src="/crownandanchor.png"
-        alt=""
-        aria-hidden
-        animate={{ rotate: [-2.4, 1.6, -2.4] }}
-        transition={{ duration: 5.6, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute',
-          top: 22,
-          left: '50%',
-          translateX: '-62%',
-          height: 100,
-          objectFit: 'contain',
-          filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.6))',
-          transformOrigin: '50% 100%',
+          opacity: 0.72,
+          filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
           zIndex: 1,
         }}
       />
@@ -81,12 +66,31 @@ export default function CasinoHubCard() {
         decoding="async"
         style={{
           position: 'absolute',
-          top: 34,
-          left: '50%',
-          transform: 'translateX(10%) rotate(4deg)',
-          height: 86,
+          right: '9%',
+          bottom: 46,
+          height: 74,
           objectFit: 'contain',
-          filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6)) brightness(0.92)',
+          opacity: 0.72,
+          filter: 'brightness(0.78) saturate(0.85) drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+          zIndex: 1,
+        }}
+      />
+      <motion.img
+        src="/crownandanchor.png"
+        alt=""
+        aria-hidden
+        animate={{ rotate: [-2.4, 1.6, -2.4] }}
+        transition={{ duration: 5.6, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          left: '50%',
+          translateX: '-50%',
+          height: 102,
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.6))',
+          transformOrigin: '50% 100%',
+          zIndex: 2,
         }}
       />
     </ScenicCard>
