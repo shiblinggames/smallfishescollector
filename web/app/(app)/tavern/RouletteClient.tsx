@@ -306,80 +306,82 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
               )}
             </button>
           )}
-        </div>
-        {phase === 'bet' && (
-          <p className="font-karla font-700 uppercase" style={{
-            fontSize: '0.55rem', letterSpacing: '0.18em', color: '#5a7868',
-            textAlign: 'center', marginTop: 4,
-          }}>
-            {totalPlaced > 0 ? 'Tap the wheel to spin' : 'Place your bets'}
-          </p>
-        )}
-        {phase === 'spinning' && winningNumber === null && (
-          <p className="font-karla font-700 uppercase" style={{
-            fontSize: '0.55rem', letterSpacing: '0.18em', color: '#a89878',
-            textAlign: 'center', marginTop: 4,
-          }}>
-            No more bets…
-          </p>
-        )}
-      </div>
 
-      {/* Result panel — slides in on reveal phase with the net delta +
-          a 1-line list of winning bets. Replaces the in-wheel chip
-          label from the v1 ticker UI; the wheel now owns the visual
-          spotlight on the winning pocket. */}
-      <AnimatePresence>
-        {phase === 'reveal' && lastResult && (
-          <motion.div
-            key="result"
-            initial={{ opacity: 0, y: -6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.22 }}
-            style={{
-              background: lastResult.net > 0
-                ? 'linear-gradient(180deg, rgba(122,211,160,0.18) 0%, rgba(0,0,0,0.45) 100%)'
-                : lastResult.net < 0
-                  ? 'linear-gradient(180deg, rgba(240,138,138,0.14) 0%, rgba(0,0,0,0.45) 100%)'
-                  : 'rgba(0,0,0,0.45)',
-              border: `1px solid ${
-                lastResult.net > 0 ? 'rgba(122,211,160,0.5)'
-                : lastResult.net < 0 ? 'rgba(240,138,138,0.4)'
-                : FELT_RIM}`,
-              borderRadius: 12,
-              padding: '0.7rem 0.9rem 0.75rem',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-            <div style={{ flex: 1 }}>
-              <p className="font-karla font-700 uppercase" style={{
-                fontSize: '0.5rem', letterSpacing: '0.16em',
-                color: lastResult.net > 0 ? '#7ad3a0' : lastResult.net < 0 ? '#f08a8a' : '#7a7672',
-              }}>
-                {lastResult.net > 0 ? 'You win' : lastResult.net < 0 ? 'House' : 'Push'}
-              </p>
-              <p className="font-cinzel font-700" style={{
-                fontSize: '1.5rem',
-                color: lastResult.net > 0 ? '#7ad3a0' : lastResult.net < 0 ? '#f08a8a' : '#f0e8d0',
-                lineHeight: 1,
-              }}>
-                {lastResult.net > 0 ? '+' : ''}{lastResult.net.toLocaleString()}
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672' }}>
-                Wagered {lastResult.totalWagered.toLocaleString()}
-              </p>
-              <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672' }}>
-                Paid {lastResult.totalPayout.toLocaleString()}
-              </p>
-              <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: ACCENT, marginTop: 2 }}>
-                Chips: {lastResult.chipsAfter.toLocaleString()}
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {/* Result overlay — floats centered OVER the wheel on reveal
+              instead of inserting into the document flow (which used to
+              shift the whole table down). pointer-events: none so taps
+              pass through; auto-dismisses with the reveal phase. Flex
+              centering (not translate(-50%,-50%)) because framer's
+              scale animation would clobber a static transform. */}
+          <AnimatePresence>
+            {phase === 'reveal' && lastResult && (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.22 }}
+                style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  pointerEvents: 'none', zIndex: 10,
+                }}>
+                <div style={{
+                  minWidth: '62%', maxWidth: '86%',
+                  backgroundColor: 'rgba(12,9,6,0.94)',
+                  backgroundImage: lastResult.net > 0
+                    ? 'linear-gradient(180deg, rgba(122,211,160,0.22) 0%, rgba(0,0,0,0) 60%)'
+                    : lastResult.net < 0
+                      ? 'linear-gradient(180deg, rgba(240,138,138,0.16) 0%, rgba(0,0,0,0) 60%)'
+                      : 'none',
+                  border: `1px solid ${
+                    lastResult.net > 0 ? 'rgba(122,211,160,0.55)'
+                    : lastResult.net < 0 ? 'rgba(240,138,138,0.45)'
+                    : 'rgba(255,255,255,0.18)'}`,
+                  borderRadius: 14,
+                  padding: '0.75rem 1rem 0.7rem',
+                  textAlign: 'center',
+                  boxShadow: '0 10px 32px rgba(0,0,0,0.65)',
+                }}>
+                  <p className="font-karla font-700 uppercase" style={{
+                    fontSize: '0.5rem', letterSpacing: '0.16em',
+                    color: lastResult.net > 0 ? '#7ad3a0' : lastResult.net < 0 ? '#f08a8a' : '#7a7672',
+                  }}>
+                    {lastResult.net > 0 ? 'You win' : lastResult.net < 0 ? 'House' : 'Push'}
+                  </p>
+                  <p className="font-cinzel font-700" style={{
+                    fontSize: '1.5rem',
+                    color: lastResult.net > 0 ? '#7ad3a0' : lastResult.net < 0 ? '#f08a8a' : '#f0e8d0',
+                    lineHeight: 1.1,
+                  }}>
+                    {lastResult.net > 0 ? '+' : ''}{lastResult.net.toLocaleString()}
+                  </p>
+                  <p className="font-karla" style={{ fontSize: '0.58rem', color: '#a89878', marginTop: 4 }}>
+                    Wagered {lastResult.totalWagered.toLocaleString()} · Paid {lastResult.totalPayout.toLocaleString()}
+                  </p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.58rem', color: ACCENT, marginTop: 1 }}>
+                    Chips: {lastResult.chipsAfter.toLocaleString()}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Caption line — ALWAYS rendered so the wheel panel height
+            never changes between phases (no layout shift). */}
+        <p className="font-karla font-700 uppercase" style={{
+          fontSize: '0.55rem', letterSpacing: '0.18em',
+          color: phase === 'spinning' ? '#a89878' : '#5a7868',
+          textAlign: 'center', marginTop: 4, minHeight: '0.8rem',
+        }}>
+          {phase === 'bet'
+            ? (totalPlaced > 0 ? 'Tap the wheel to spin' : 'Place your bets')
+            : phase === 'spinning' && winningNumber === null
+              ? 'No more bets…'
+              : ' '}
+        </p>
+      </div>
 
       {error && (
         <p className="font-karla" style={{ fontSize: '0.7rem', color: '#f08a8a', textAlign: 'center' }}>{error}</p>
