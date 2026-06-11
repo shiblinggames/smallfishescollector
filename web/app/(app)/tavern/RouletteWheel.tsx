@@ -105,6 +105,19 @@ function ballRadiusAt(t: number): number {
   return seg(0.92, 1, 76, BALL_REST_R, x => 1 - (1 - x) * (1 - x))
 }
 
+// Number of ghost dots in the motion trail behind the ball.
+const TRAIL_LEN = 4
+
+/** Pocket-fret deflection: a sharp angular hop that relaxes back to
+ *  the base curve — the ball clipping a fret lip and getting knocked
+ *  on. Sharp attack (pow < 1 skews the sine peak early), zero at both
+ *  ends so the landing angle is untouched. */
+function fretKick(t: number, t0: number, w: number, amp: number): number {
+  if (t < t0 || t > t0 + w) return 0
+  const x = (t - t0) / w
+  return amp * Math.sin(Math.PI * Math.pow(x, 0.55))
+}
+
 export default function RouletteWheel({ phase, winner, size = 340 }: {
   /** 'idle' = at rest, 'spinning' = wind-up + decel motion, 'landed' =
    *  highlighting the winning pocket. */
@@ -132,6 +145,8 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
   // the top where the winning pocket lands.
   const ballRef = useRef<SVGCircleElement>(null)
   const ballHlRef = useRef<SVGCircleElement>(null)
+  const shadowRef = useRef<SVGCircleElement>(null)
+  const trailRefs = useRef<(SVGCircleElement | null)[]>([])
   const ballAnim = useRef({
     mode: 'rest' as 'rest' | 'windup' | 'decel',
     raf: 0,
@@ -142,9 +157,16 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
     angle0: 0,           // angle at decel start
     angleEnd: 0,         // decel target (≡ 0 mod 360)
     radius0: BALL_REST_R,
+    k1: 0,               // fret-deflection amplitudes (set per spin)
+    k2: 0,
+    hist: [] as [number, number][],   // recent painted positions (trail)
   })
 
-  function paintBall(angle: number, radius: number) {
+  /** Paint the ball + its juice layers (shadow, trail) for one frame.
+   *  speed = |deg/s| of the orbit — drives trail opacity so the comet
+   *  fades out naturally as the ball slows. */
+  function paintBall(angle: number, radius: number, speed = 0) {
+    const a = ballAnim.current
     const rad = angle * Math.PI / 180
     const x = radius * Math.sin(rad)
     const y = -radius * Math.cos(rad)
@@ -152,6 +174,35 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
     ballRef.current?.setAttribute('cy', String(y))
     ballHlRef.current?.setAttribute('cx', String(x - 0.9))
     ballHlRef.current?.setAttribute('cy', String(y - 1))
+
+    // Shadow — separates from the ball while it rides the high outer
+    // track, merges back under it as it drops to pocket level. Cheap
+    // height illusion: offset + size + softness all scale with h.
+    const h = Math.min(1, Math.max(0, (radius - BALL_REST_R) / (BALL_TRACK_R - BALL_REST_R)))
+    const sh = shadowRef.current
+    if (sh) {
+      sh.setAttribute('cx', String(x))
+      sh.setAttribute('cy', String(y + 0.8 + 2.4 * h))
+      sh.setAttribute('r', String(3.0 + 1.4 * h))
+      sh.setAttribute('opacity', String(0.32 - 0.16 * h))
+    }
+
+    // Trail — ghost dots at the last few painted positions, so the
+    // comet bends with the orbit. Invisible below ~120°/s; at full
+    // wind-up speed (~770°/s) it reads as a proper motion blur.
+    a.hist.push([x, y])
+    if (a.hist.length > TRAIL_LEN + 1) a.hist.shift()
+    const base = Math.min(1, Math.max(0, (speed - 120) / 650)) * 0.5
+    for (let i = 0; i < TRAIL_LEN; i++) {
+      const el = trailRefs.current[i]
+      if (!el) continue
+      const p = a.hist[a.hist.length - 2 - i]
+      if (!p || base <= 0) { el.setAttribute('opacity', '0'); continue }
+      el.setAttribute('cx', String(p[0]))
+      el.setAttribute('cy', String(p[1]))
+      el.setAttribute('r', String(2.8 - i * 0.45))
+      el.setAttribute('opacity', String(base * (1 - i / TRAIL_LEN)))
+    }
   }
 
   useEffect(() => {
@@ -197,20 +248,30 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
           a.angle -= 770 * dt
           const t = Math.min(1, (now - a.t0) / 250)
           a.radius = a.radius0 + (BALL_TRACK_R - a.radius0) * (1 - (1 - t) * (1 - t))
-          paintBall(a.angle, a.radius)
+          paintBall(a.angle, a.radius, 770)
         } else if (a.mode === 'decel') {
           // Ease-out-cubic on the orbit (gentler than the wheel's
           // quint, so the ball is visibly still creeping when it
-          // leaves the track) + piecewise radial drop-bounce-settle.
+          // leaves the track) + piecewise radial drop-bounce-settle,
+          // plus two fret deflections in the final stretch: a backward
+          // hop off the first pocket lip it hits (t≈0.70, right as the
+          // radial drop lands), then a forward knock during the
+          // descent (t≈0.85). Both relax to zero so the landing angle
+          // is exact.
+          const prevAngle = a.angle
           const t = Math.min(1, (now - a.t0) / 3200)
           a.angle = a.angle0 + (a.angleEnd - a.angle0) * (1 - (1 - t) ** 3)
+            + fretKick(t, 0.70, 0.12, a.k1)
+            + fretKick(t, 0.85, 0.09, a.k2)
           a.radius = ballRadiusAt(t)
-          paintBall(a.angle, a.radius)
+          const speed = dt > 0 ? Math.abs(a.angle - prevAngle) / dt : 0
+          paintBall(a.angle, a.radius, speed)
           if (t >= 1) {
             a.mode = 'rest'
             a.angle = 0
             a.radius = BALL_REST_R
-            paintBall(0, BALL_REST_R)
+            a.hist = []
+            paintBall(0, BALL_REST_R, 0)
             return
           }
         } else {
@@ -228,6 +289,12 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
       const norm = ((a.angle % 360) + 360) % 360
       a.angleEnd = a.angle - norm - 1080
       a.radius0 = a.radius
+      // Fret-deflection amplitudes, varied per spin off the winning
+      // number so consecutive spins don't replay the identical rattle.
+      // Ball travels CCW (angle decreasing): positive = backward hop
+      // against travel, negative = knocked onward.
+      a.k1 = 3.2 + (winner % 4) * 0.8
+      a.k2 = -(2.0 + (winner % 3) * 0.7)
     }
   }, [phase, winner])
 
@@ -332,6 +399,33 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
             Initial attrs = the rest position so SSR/first paint shows
             the ball before any JS runs. */}
         <g style={{ pointerEvents: 'none' }}>
+          {/* Cast shadow — drawn first so the ball sits on top. Offset
+              + size are repainted per frame: separated while the ball
+              flies the high track, tucked under it at pocket level. */}
+          <circle
+            ref={shadowRef}
+            cx="0"
+            cy={-BALL_REST_R + 0.8}
+            r="3"
+            fill="#000"
+            opacity="0.32"
+          />
+          {/* Motion trail — ghost dots at recent ball positions,
+              opacity driven by orbit speed (invisible at rest). */}
+          {Array.from({ length: TRAIL_LEN }, (_, i) => (
+            <circle
+              key={i}
+              ref={el => { trailRefs.current[i] = el }}
+              cx="0"
+              cy="0"
+              r="2.8"
+              fill="#fff"
+              opacity="0"
+            />
+          ))}
+          {/* No CSS drop-shadow here: the cast-shadow circle above does
+              the job, and filters on per-frame-updated elements are a
+              mobile perf trap. */}
           <circle
             ref={ballRef}
             cx="0"
@@ -340,7 +434,6 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
             fill="#fff"
             stroke="#1a0a04"
             strokeWidth="0.6"
-            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))' }}
           />
           {/* Specular highlight on the ball */}
           <circle
