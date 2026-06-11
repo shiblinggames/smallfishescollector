@@ -2,11 +2,16 @@
 -- migration slots_global_jackpot). Single-row table: every spin feeds
 -- the pot, a natural 3-catfish spin claims a share proportional to
 -- wager / max bet, and the pot never resets below seed.
+--
+-- 2026-06-11: seed raised 5,000 → 15,000 in place (UPDATE on the live
+-- row + defaults below). The claim is linear in wager, so the floor
+-- multiple every jackpot pays is seed / max_bet — 15k makes that ~30×
+-- instead of an unenticing 10×. See tavern/constants.ts for the math.
 
 create table public.slots_jackpot (
   id int primary key default 1 check (id = 1),
-  pot int not null default 5000,
-  seed int not null default 5000,
+  pot int not null default 15000,
+  seed int not null default 15000,
   last_winner_id uuid references public.profiles(id),
   last_winner_name text,
   last_win_amount int,

@@ -47,7 +47,7 @@ export async function getSlotsJackpot(): Promise<SlotsJackpotState> {
     .eq('id', 1)
     .single()
   return {
-    pot: data?.pot ?? 5000,
+    pot: data?.pot ?? 15000,
     lastWinnerName: data?.last_winner_name ?? null,
     lastWinAmount: data?.last_win_amount ?? null,
     lastWonAt: data?.last_won_at ?? null,
@@ -137,7 +137,7 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   // contribution is in the pot you might win this very spin.
   const feed = Math.ceil(wager * SLOTS_JACKPOT_FEED_PCT)
   const { data: fedPot } = await admin.rpc('slots_feed_jackpot', { p_amount: feed })
-  let pot = typeof fedPot === 'number' ? fedPot : 5000
+  let pot = typeof fedPot === 'number' ? fedPot : 15000
 
   const winnerName = (profile as { username?: string | null }).username ?? 'A sailor'
   async function claimJackpot(): Promise<number> {

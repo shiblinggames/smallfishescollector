@@ -9,7 +9,7 @@
 // of a fixed multiplier, and a sardine pair is just a near-miss.
 //
 // Base-game RTP at these numbers ≈ 91.6%; the ~5% jackpot feed plus the
-// seeded pot brings the total to ≈ 96.6%. Verified with slots-rtp.mjs
+// seeded pot brings the total to ≈ 96.6%+. Verified with slots-rtp.mjs
 // (repo root) — rerun it before changing ANY weight or payout here.
 //
 // 2026-06-10 small-population retune (second pass same day): with ~25
@@ -20,7 +20,19 @@
 // RTP stays put: catfish pair 15× → 3× (it lands 1-in-20 now, a small
 // frequent win rather than a mid-thrill), sardine triple 3× → 4× and
 // marlin pair 1.5× → 2× give back what the sardine/hook weight cuts
-// took. Pots pop modest (seed + a few thousand of feed) by design.
+// took.
+//
+// 2026-06-11 seed raise (5,000 → 15,000): the claim is linear in wager
+// (pot × wager/500), so EVERY bet wins the same multiple — pot ÷ 500.
+// At the old 5k floor that was a measly 10× and low-bet players saw
+// "jackpot would pay 100 ⟡" on their 10 ⟡ spins — no enticement at
+// all. The 15k floor makes every claim ≥ 30× the wager (10 ⟡ → 300+,
+// max bet → the full 15k+) while keeping EV uniform across bet sizes
+// (no min-bet farming gradient). Jackpot EV at floor rises ~2.7% →
+// ~8.2% of wager, so total RTP sits around ~100% at the floor pot —
+// deliberately player-positive for a 25-active community game; the
+// house eats the seed top-up only after big-bet claims since partial
+// claims leave the remainder in the pot.
 
 export type SlotSymbolId = 'common' | 'rare' | 'legendary' | 'catfish' | 'anchor'
 
@@ -63,8 +75,9 @@ export const SLOTS_DAILY_CAP = 5000
 
 // Global jackpot: every spin feeds the pot by this fraction of the
 // wager; a natural 3-catfish spin wins pot × (wager / SLOTS_MAX_BET).
-// Pot resets to its seed (5,000 ⟡, set in the slots_jackpot row) after
-// a claim, so it never looks empty.
+// Pot resets to its seed (15,000 ⟡, set in the slots_jackpot row;
+// raised from 5,000 on 2026-06-11 — see the seed-raise note above)
+// after a claim, so every jackpot pays at least ~30× the wager.
 export const SLOTS_JACKPOT_FEED_PCT = 0.05
 
 // ─── Blackjack ───────────────────────────────────────────────────────────────
