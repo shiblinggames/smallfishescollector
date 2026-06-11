@@ -4,11 +4,10 @@ import { motion } from 'framer-motion'
 import ScenicCard from './ScenicCard'
 
 /** Tavern hub card for Blackjack. Velvet-red casino-table scene —
- *  the crown-and-anchor art (kept from the legacy card) sits over a
- *  warm red halo, with a slow gentle tilt suggesting cards being
- *  fanned across the felt. (Named *HubCard* to avoid colliding with
- *  the BlackjackCard render fn inside Blackjack.tsx that draws an
- *  actual playing card.) */
+ *  the blackjack-table art sits over a warm red halo, with a slow
+ *  gentle tilt so the card doesn't look dead. (Named *HubCard* to
+ *  avoid colliding with the BlackjackCard render fn inside
+ *  Blackjack.tsx that draws an actual playing card.) */
 export default function BlackjackHubCard() {
   return (
     <ScenicCard
@@ -36,17 +35,17 @@ export default function BlackjackHubCard() {
       />
 
       <motion.img
-        src="/crownandanchor.png"
+        src="/blackjack.png"
         alt=""
         aria-hidden
-        animate={{ rotate: [-2.4, 1.6, -2.4] }}
+        animate={{ rotate: [-1.4, 1.0, -1.4] }}
         transition={{ duration: 5.6, repeat: Infinity, ease: 'easeInOut' }}
         style={{
           position: 'absolute',
-          top: 18,
+          top: 12,
           left: '50%',
           translateX: '-50%',
-          height: 104,
+          height: 116,
           objectFit: 'contain',
           filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.6))',
           transformOrigin: '50% 100%',
