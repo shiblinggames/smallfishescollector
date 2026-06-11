@@ -10,13 +10,14 @@ export type { LeaderboardEntry } from './boardUI'
 
 interface MyScores {
   // null = player has no entry on this board (no row in the underlying
-  // view). A number (incl. 0 or negative on signed-score boards like
-  // Blackjack) means they have a rank and the "you" tile renders.
+  // view). A number (incl. 0 or negative on the signed-score Den
+  // boards) means they have a rank and the "you" tile renders.
   fishing: number | null
   perfectStreak: number | null
   tideRun: number | null
   fishSlots: number | null
   blackjack: number | null
+  roulette: number | null
   expedition: number | null
   raidProgress: number | null
 }
@@ -27,6 +28,7 @@ interface MyRanks {
   tideRun: number | null
   fishSlots: number | null
   blackjack: number | null
+  roulette: number | null
   expedition: number | null
   raidProgress: number | null
 }
@@ -37,6 +39,7 @@ interface Props {
   tideRun: LeaderboardEntry[]
   fishSlots: LeaderboardEntry[]
   blackjack: LeaderboardEntry[]
+  roulette: LeaderboardEntry[]
   expedition: LeaderboardEntry[]
   raidProgress: LeaderboardEntry[]
   myScores: MyScores
@@ -45,15 +48,16 @@ interface Props {
   avatars: AvatarMap
 }
 
-type SectionKey = 'fishing' | 'expeditions' | 'tavern'
+type SectionKey = 'fishing' | 'expeditions' | 'tavern' | 'den'
 
-/** Master sections. Tavern owns 3 boards (Tide Run / Fish Slots /
- *  Blackjack); the board pill grid below adapts its column count to
- *  match each section's length. */
+/** Master sections. The Den owns the 3 gambling boards (all lifetime
+ *  net winnings); Tavern keeps Tide Run. The board pill grid below
+ *  adapts its column count to match each section's length. */
 const SECTIONS: Record<SectionKey, { label: string; boards: BoardKey[] }> = {
   fishing:     { label: 'Fishing',     boards: ['perfectStreak', 'fishingLevel'] },
   expeditions: { label: 'Expeditions', boards: ['raidProgress', 'expedition'] },
-  tavern:      { label: 'Tavern',      boards: ['tideRun', 'fishSlots', 'blackjack'] },
+  tavern:      { label: 'Tavern',      boards: ['tideRun'] },
+  den:         { label: 'The Den',     boards: ['blackjack', 'fishSlots', 'roulette'] },
 }
 
 const PODIUM_COLORS: Record<number, string> = { 1: '#f0c040', 2: '#c0c8d4', 3: '#c47a3a' }
@@ -61,7 +65,7 @@ const NEUTRAL_TEXT = '#d8d4cf'
 const NEUTRAL_BORDER = 'rgba(255,255,255,0.10)'
 const NEUTRAL_BORDER_TOP = 'rgba(255,255,255,0.18)'
 
-export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, blackjack, expedition, raidProgress, myScores, myRanks, currentUserId, avatars }: Props) {
+export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fishSlots, blackjack, roulette, expedition, raidProgress, myScores, myRanks, currentUserId, avatars }: Props) {
   const [section, setSection] = useState<SectionKey>('fishing')
   const [activeTab, setActiveTab] = useState<BoardKey>(SECTIONS.fishing.boards[0])
 
@@ -72,6 +76,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'tideRun' ? tideRun
     : k === 'fishSlots' ? fishSlots
     : k === 'blackjack' ? blackjack
+    : k === 'roulette' ? roulette
     : k === 'expedition' ? expedition
     : raidProgress
   const scoreOf = (k: BoardKey): number | null =>
@@ -80,6 +85,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'tideRun' ? myScores.tideRun
     : k === 'fishSlots' ? myScores.fishSlots
     : k === 'blackjack' ? myScores.blackjack
+    : k === 'roulette' ? myScores.roulette
     : k === 'expedition' ? myScores.expedition
     : myScores.raidProgress
   const rankOf = (k: BoardKey): number | null =>
@@ -88,6 +94,7 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
     : k === 'tideRun' ? myRanks.tideRun
     : k === 'fishSlots' ? myRanks.fishSlots
     : k === 'blackjack' ? myRanks.blackjack
+    : k === 'roulette' ? myRanks.roulette
     : k === 'expedition' ? myRanks.expedition
     : myRanks.raidProgress
 
@@ -101,8 +108,9 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, fis
   return (
     <div style={{ paddingBottom: '2rem' }}>
 
-      {/* ── Section tabs ─────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: '0.6rem' }}>
+      {/* ── Section tabs — 2×2 grid; four labels in one row would
+            squeeze "Expeditions" off mobile widths. ─────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: '0.6rem' }}>
         {(Object.keys(SECTIONS) as SectionKey[]).map(key => {
           const isActive = section === key
           return (

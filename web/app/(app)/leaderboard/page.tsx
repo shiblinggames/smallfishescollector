@@ -122,13 +122,14 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, blackjackData, expeditionData, raidProgressData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_tide_run', user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
     fetchBoard(admin, 'leaderboard_blackjack', user.id),
+    fetchBoard(admin, 'leaderboard_roulette', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
     fetchRaidProgressBoard(admin, user.id),
   ])
@@ -143,6 +144,7 @@ export default async function LeaderboardPage() {
     ...tideRunData.top.map(e => e.user_id),
     ...fishSlotsData.top.map(e => e.user_id),
     ...blackjackData.top.map(e => e.user_id),
+    ...rouletteData.top.map(e => e.user_id),
     ...expeditionData.top.map(e => e.user_id),
     ...raidProgressData.top.map(e => e.user_id),
   ])
@@ -183,6 +185,7 @@ export default async function LeaderboardPage() {
             tideRun={tideRunData.top}
             fishSlots={fishSlotsData.top}
             blackjack={blackjackData.top}
+            roulette={rouletteData.top}
             expedition={expeditionData.top}
             raidProgress={raidProgressData.top}
             myScores={{
@@ -191,6 +194,7 @@ export default async function LeaderboardPage() {
               tideRun: tideRunData.myScore,
               fishSlots: fishSlotsData.myScore,
               blackjack: blackjackData.myScore,
+              roulette: rouletteData.myScore,
               expedition: expeditionData.myScore,
               raidProgress: raidProgressData.myScore,
             }}
@@ -200,6 +204,7 @@ export default async function LeaderboardPage() {
               tideRun: tideRunData.myRank,
               fishSlots: fishSlotsData.myRank,
               blackjack: blackjackData.myRank,
+              roulette: rouletteData.myRank,
               expedition: expeditionData.myRank,
               raidProgress: raidProgressData.myRank,
             }}
