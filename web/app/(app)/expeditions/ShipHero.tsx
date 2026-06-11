@@ -353,6 +353,36 @@ export default function ShipHero({
 
   // Modal state
   const [loadoutOpen, setLoadoutOpen] = useState(false)
+
+  // Gold "new raid item" nudge on the Manage Ship column — mirrors the
+  // crew level-up dot. An owned raid item that is neither equipped nor
+  // recorded in the 'raidItemsSeen' localStorage ledger lights the dot,
+  // so loot that landed in the hold (raid clears, the Quartermaster's
+  // Cache) pulls the player into the loadout drawer instead of sitting
+  // forgotten. Opening the drawer writes every owned id to the ledger;
+  // the recompute (deliberately declared BEFORE the ledger-write effect
+  // below) re-reads it on the close edge, so the dot clears after the
+  // first look while the "New" chips inside the picker stay visible
+  // during it. Equipped ids count as seen from the start — equipping IS
+  // acknowledging the item, whatever surface did it.
+  const [newRaidItems, setNewRaidItems] = useState<Set<string>>(() => new Set())
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('raidItemsSeen')
+      const seen = new Set<string>(raw ? JSON.parse(raw) as string[] : [])
+      setNewRaidItems(new Set(ownedRaidItems.filter(id => !seen.has(id) && !initialEquippedRaidItems.includes(id))))
+    } catch {}
+  }, [ownedRaidItems, initialEquippedRaidItems, loadoutOpen])
+  useEffect(() => {
+    if (!loadoutOpen) return
+    try {
+      const raw = localStorage.getItem('raidItemsSeen')
+      const seen = new Set<string>(raw ? JSON.parse(raw) as string[] : [])
+      for (const id of ownedRaidItems) seen.add(id)
+      for (const id of initialEquippedRaidItems) seen.add(id)
+      localStorage.setItem('raidItemsSeen', JSON.stringify([...seen]))
+    } catch {}
+  }, [loadoutOpen, ownedRaidItems, initialEquippedRaidItems])
   // Drag-to-dismiss controls for the loadout drawer. Only fires from
   // the drag handle (see DrawerHandle), so scrolling inside the
   // drawer body doesn't get captured as a drag-down gesture.
@@ -909,8 +939,25 @@ export default function ShipHero({
               </div>
               <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{
                 fontSize: '0.7rem', color: '#9ec6ff',
+                position: 'relative',
               }}>
                 Manage Ship
+                {/* New-raid-item nudge — same gold pulsing dot as the
+                    crew level-up nudge on the left column. Lights when
+                    an owned raid item is neither equipped nor seen. */}
+                {newRaidItems.size > 0 && (
+                  <span
+                    aria-label="New raid item ready to equip"
+                    title="New raid item ready to equip"
+                    className="crew-levelup-dot"
+                    style={{
+                      position: 'absolute', right: -14, top: '50%',
+                      marginTop: -4, width: 8, height: 8, borderRadius: '50%',
+                      background: '#ffd96a',
+                      border: '1px solid rgba(0,0,0,0.55)',
+                    }}
+                  />
+                )}
               </p>
             </button>
           </div>
@@ -1343,6 +1390,14 @@ export default function ShipHero({
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
                 Tap a slot to assign an item. {raidItemSlots} slot{raidItemSlots === 1 ? '' : 's'} on your hull (bigger ships hold more). Effects only apply in raids, not voyages.
               </p>
+              {/* Closes the loop on the Manage Ship dot: the new item
+                  lives inside the slot pickers, so without this line the
+                  player lands here with no clue what was new. */}
+              {newRaidItems.size > 0 && (
+                <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#ffd96a', marginTop: '-0.45rem', marginBottom: '0.8rem' }}>
+                  ✦ {newRaidItems.size === 1 ? 'A new item waits in your hold. Tap a slot to equip it.' : `${newRaidItems.size} new items wait in your hold. Tap a slot to equip them.`}
+                </p>
+              )}
               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem', padding: '0.9rem 1rem 1rem' }}>
                 <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Loadout · {equippedItems.length}/{raidItemSlots}</p>
                 <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
@@ -1738,7 +1793,14 @@ export default function ShipHero({
                             <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
                           )}
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: isHere ? color : '#f0ede8', marginBottom: 3 }}>{def.name}</p>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: isHere ? color : '#f0ede8', marginBottom: 3 }}>
+                              {def.name}
+                              {/* Fresh-loot marker — only on items that are new
+                                  AND not yet slotted anywhere. */}
+                              {newRaidItems.has(itemId) && equippedAtIdx === -1 && (
+                                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>
+                              )}
+                            </p>
                             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
                           </div>
                           <span
