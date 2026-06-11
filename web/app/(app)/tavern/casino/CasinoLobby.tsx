@@ -2,9 +2,8 @@
 
 // Casino lobby — the one front door for all three tavern casino games.
 // One shared chip purse (buy in / cash out here or at any table), a
-// per-game session breakdown, and the three table cards. Roulette's
-// card only renders for admins while it gets its prod tap-test (the
-// roulette page itself keeps its own redirect gate as defense in depth).
+// per-game session breakdown, and the three table cards. (Roulette
+// released to the public 2026-06-11 after its prod tap-test.)
 
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -19,10 +18,9 @@ import { useAnimatedNumber } from '../useAnimatedNumber'
 
 const GOLD = '#f0c040'
 
-export default function CasinoLobby({ initial, jackpotPot, isAdmin }: {
+export default function CasinoLobby({ initial, jackpotPot }: {
   initial: CasinoWallet
   jackpotPot: number
-  isAdmin: boolean
 }) {
   const [chips, setChips] = useState(initial.chips)
   const [doubloons, setDoubloons] = useState(initial.doubloons)
@@ -158,7 +156,6 @@ export default function CasinoLobby({ initial, jackpotPot, isAdmin }: {
             borderTop: '1px solid rgba(255,255,255,0.06)',
           }}>
             {([['Blackjack', nets.blackjack], ['Roulette', nets.roulette], ['Slots', nets.slots]] as const)
-              .filter(([game]) => game !== 'Roulette' || isAdmin || nets.roulette !== 0)
               .map(([game, net]) => (
                 <div key={game} style={{ textAlign: 'center' }}>
                   <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: '#7a7672' }}>{game}</p>
@@ -272,7 +269,7 @@ export default function CasinoLobby({ initial, jackpotPot, isAdmin }: {
       <div className="grid grid-cols-2 gap-3">
         <BlackjackHubCard />
         <FishSlotsCard jackpotPot={jackpotPot} />
-        {isAdmin && <RouletteHubCard />}
+        <RouletteHubCard />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>

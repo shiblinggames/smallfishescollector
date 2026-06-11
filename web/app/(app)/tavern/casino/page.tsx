@@ -10,12 +10,10 @@ export default async function CasinoPage() {
   if (!user) redirect('/login')
 
   // Parallel: shared wallet snapshot + live jackpot pot (rides on the
-  // slots card) + is_admin (roulette card is admin-gated in the lobby
-  // while it gets its prod tap-test).
-  const [wallet, jackpot, { data: profile }] = await Promise.all([
+  // slots card).
+  const [wallet, jackpot] = await Promise.all([
     getCasinoState(),
     getSlotsJackpot(),
-    supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
   ])
 
   return (
@@ -24,7 +22,6 @@ export default async function CasinoPage() {
         <CasinoLobby
           initial={wallet}
           jackpotPot={jackpot.pot}
-          isAdmin={!!profile?.is_admin}
         />
       </div>
     </main>
