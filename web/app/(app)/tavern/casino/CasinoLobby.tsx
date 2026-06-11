@@ -9,18 +9,20 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { buyInCasino, cashOutCasino } from './actions'
-import type { CasinoWallet, CasinoSessionNets } from './types'
+import type { CasinoWallet, CasinoSessionNets, DenTopEarner } from './types'
 import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, CASINO_DAILY_CAP } from '../constants'
 import BlackjackHubCard from '../BlackjackHubCard'
 import FishSlotsCard from '../FishSlotsCard'
 import RouletteHubCard from '../RouletteHubCard'
 import { useAnimatedNumber } from '../useAnimatedNumber'
+import { Avatar } from '@/app/(app)/leaderboard/boardUI'
 
 const GOLD = '#f0c040'
 
-export default function CasinoLobby({ initial, jackpotPot }: {
+export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
   initial: CasinoWallet
   jackpotPot: number
+  topEarners: DenTopEarner[]
 }) {
   const [chips, setChips] = useState(initial.chips)
   const [doubloons, setDoubloons] = useState(initial.doubloons)
@@ -271,6 +273,50 @@ export default function CasinoLobby({ initial, jackpotPot }: {
         <FishSlotsCard jackpotPot={jackpotPot} />
         <RouletteHubCard />
       </div>
+
+      {/* High Rollers — top 3 combined lifetime earners across every
+          Den game. Rows link to profiles like the leaderboard proper. */}
+      {topEarners.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
+          border: '1px solid rgba(196,169,106,0.25)',
+          borderRadius: 16,
+          padding: '0.85rem 1rem 0.75rem',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+        }}>
+          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
+            High Rollers
+          </p>
+          {topEarners.map((e, i) => (
+            <Link
+              key={e.userId}
+              href={`/u/${e.username}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '0.45rem 0.2rem',
+                borderBottom: i < topEarners.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: i === 0 ? '1.05rem' : '0.9rem', lineHeight: 1, flexShrink: 0 }}>{['🥇', '🥈', '🥉'][i]}</span>
+              <Avatar
+                username={e.username}
+                size={i === 0 ? 30 : 26}
+                characterColor={e.characterColor}
+                equippedHat={e.equippedHat}
+                avatarBg={e.avatarBg}
+                avatarBorder={e.avatarBorder}
+              />
+              <p className="flex-1 font-karla font-700 truncate" style={{ fontSize: '0.78rem', color: '#c8c8c2', minWidth: 0 }}>
+                {e.username}
+              </p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#7fd49a', flexShrink: 0 }}>
+                +{e.score.toLocaleString()} ⟡
+              </p>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
         One purse, every table. Session winnings track per game until you cash out.

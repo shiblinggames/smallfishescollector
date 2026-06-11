@@ -29,3 +29,15 @@ export interface CasinoCashOutResult {
   newDoubloons: number
   cashedOut: number
 }
+
+/** One row of the lobby's High Rollers strip — top combined lifetime
+ *  net across all three Den games (leaderboard_den view). */
+export interface DenTopEarner {
+  userId: string
+  username: string
+  score: number
+  characterColor: string | null
+  equippedHat: string | null
+  avatarBg: string | null
+  avatarBorder: string | null
+}
