@@ -9,7 +9,6 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   POCKETS, colorOf,
@@ -21,6 +20,7 @@ import {
 } from './constants'
 import { placeBetsAndSpin } from './roulette/actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
+import DenNav from './casino/DenNav'
 import type { RouletteState, SpinResult } from './roulette/types'
 import RouletteWheel, { type WheelPhase } from './RouletteWheel'
 import CoinShower from './CoinShower'
@@ -233,18 +233,8 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none' }}>
-          ← Tavern
-        </Link>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
-          Fish Roulette
-        </p>
-        <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672' }}>
-          {dailyRemaining.toLocaleString()} ⟡ / day
-        </span>
-      </div>
+      {/* Header — shared Den back-nav (uniform across the three games). */}
+      <DenNav title="Fish Roulette" right={`${dailyRemaining.toLocaleString()} ⟡ / day`} />
 
       {/* Chip + doubloon header */}
       <div style={{

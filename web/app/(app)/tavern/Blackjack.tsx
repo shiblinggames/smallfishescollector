@@ -9,6 +9,7 @@ import {
   type ClientState, type SettleResult, type Phase, type CardOrBack,
 } from './blackjack/actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
+import DenNav from './casino/DenNav'
 import { handValue, type Card, type Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
 import WagerCircle from './WagerCircle'
@@ -1732,9 +1733,14 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   }, [chips, wager])
 
   return (
+    <div style={{ width: '100%', maxWidth: 420, margin: '0 auto' }}>
+    {/* Shared Den back-nav (uniform across the three games). */}
+    <div style={{ marginBottom: '0.8rem' }}>
+      <DenNav title="Blackjack" />
+    </div>
     <div style={{
       position: 'relative',   // anchor for coin-flight overlay
-      width: '100%', maxWidth: 420, margin: '0 auto',
+      width: '100%',
       // minHeight floor so the wager → play → settle phase swap
       // doesn't yank the parent down by 200+ pixels each transition.
       // Sized to comfortably hold the play screen with a single hand
@@ -1987,6 +1993,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
           </>
         )}
       </AnimatePresence>
+    </div>
     </div>
   )
 }

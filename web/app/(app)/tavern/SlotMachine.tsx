@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { spinSlots } from './actions'
 import type { SlotSpinResult, SlotStats, SlotsJackpotState } from './actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
+import DenNav from './casino/DenNav'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX } from './constants'
 import type { SlotSymbolId } from './constants'
 import { useAnimatedNumber } from './useAnimatedNumber'
@@ -554,6 +555,11 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
           opacity: 0,
         }}
       />
+
+      {/* Shared Den back-nav (uniform across the three games). */}
+      <div style={{ marginBottom: '0.8rem' }}>
+        <DenNav title="Fish Slots" />
+      </div>
 
       {/* Two-column layout on desktop */}
       <div className="w-full sm:flex sm:gap-8 sm:items-start">
