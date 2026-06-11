@@ -243,8 +243,25 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
           <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: ACCENT, lineHeight: 1 }}>{chips.toLocaleString()}</p>
         </div>
         <div style={{ textAlign: 'center', flex: 1 }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#7a7672' }}>Doubloons</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
+          {sessionBuyIns > 0 ? (() => {
+            // Session tally, blackjack-style: chips - buy-ins this
+            // session. Green when up, red when down, grey flat.
+            const tally = chips - sessionBuyIns
+            const color = tally === 0 ? '#8a8478' : tally > 0 ? '#7fd49a' : '#e07070'
+            return (
+              <>
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#7a7672' }}>Session</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>
+                  {tally > 0 ? '+' : ''}{tally.toLocaleString()} ⟡
+                </p>
+              </>
+            )
+          })() : (
+            <>
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#7a7672' }}>Doubloons</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0c040', lineHeight: 1 }}>{doubloons.toLocaleString()} ⟡</p>
+            </>
+          )}
         </div>
         <button
           onClick={handleCashOut}
@@ -400,12 +417,16 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       {(phase === 'bet' || phase === 'spinning' || phase === 'reveal') && (
         <>
           {/* Chip rack — lives ABOVE the table so the pick-a-chip →
-              tap-a-bet flow reads top-down from the wheel. */}
+              tap-a-bet flow reads top-down from the wheel. Clear Bets
+              lives here too so the whole bet-management loop is in one
+              place at the top. */}
           <ChipRack
             presets={RL_BET_PRESETS as readonly number[]}
             selectedDenom={selectedDenom}
             onSelect={setSelectedDenom}
             chipsLeft={chips - totalPlaced}
+            onClear={clearBets}
+            canClear={Object.keys(placed).length > 0 && phase === 'bet'}
           />
 
           {/* Bet table */}
@@ -416,23 +437,8 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
             phase={phase}
           />
 
-          {/* Spin moved onto the wheel hub — only Clear Bets lives
-              down here now. */}
-          <button
-            onClick={clearBets}
-            disabled={Object.keys(placed).length === 0 || phase !== 'bet'}
-            className="font-karla font-700 uppercase"
-            style={{
-              padding: '0.65rem 0', borderRadius: 10,
-              fontSize: '0.7rem', letterSpacing: '0.12em',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(240,232,208,0.6)',
-              cursor: Object.keys(placed).length > 0 && phase === 'bet' ? 'pointer' : 'default',
-            }}
-          >
-            Clear Bets
-          </button>
+          {/* Spin lives on the wheel hub, Clear Bets in the chip rack —
+              nothing left down here. */}
         </>
       )}
 
@@ -569,14 +575,17 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
   }
 
   /** Standard outside-bet pill — used for dozens / color /
-   *  parity / half rows below the grid. */
-  function ZoneButton({ label, zone, max, accent, flex, isOutside }: {
+   *  parity / half rows. `fill` renders a SOLID background (the
+   *  red/black buttons use their actual pocket colors with white
+   *  text so there's zero ambiguity which is which). */
+  function ZoneButton({ label, zone, max, accent, flex, isOutside, fill }: {
     label: string
     zone: string
     max: number
     accent: string
     flex?: number
     isOutside?: boolean
+    fill?: string
   }) {
     const chips = placed[zone] ?? 0
     return (
@@ -587,17 +596,18 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
         style={{
           position: 'relative',
           flex: flex ?? 1,
-          padding: '0.5rem 0.3rem',
-          background: isOutside ? `${accent}1c` : 'transparent',
-          border: `1px solid ${accent}55`,
-          color: accent,
-          borderRadius: 6,
-          fontSize: '0.6rem',
+          padding: '0.55rem 0.3rem',
+          background: fill ?? (isOutside ? `${accent}26` : 'transparent'),
+          border: fill ? '1px solid rgba(255,255,255,0.25)' : `1px solid ${accent}77`,
+          color: fill ? '#fff' : accent,
+          borderRadius: 8,
+          fontSize: '0.78rem',
           fontWeight: 700,
-          letterSpacing: '0.1em',
+          letterSpacing: '0.07em',
           textTransform: 'uppercase',
+          textShadow: fill ? '0 1px 2px rgba(0,0,0,0.6)' : 'none',
           cursor: interactive ? 'pointer' : 'default',
-          minHeight: 34,
+          minHeight: 44,
         }}
         className="font-karla">
         {label}
@@ -620,23 +630,27 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
       width: '100%',
       margin: '0 auto',
     }}>
-      {/* Common bets FIRST — dozens + even-money rows sit above the
+      {/* Common bets FIRST — paired by what they are: Red/Black
+          together (solid pocket colors, white text — unmistakable),
+          then Even/Odd, then Low/High, then the dozens. All above the
           long number grid so the casual flow (chip → common bet →
           spin) never has to scroll past 12 rows of straights. */}
-      <div style={{ display: 'flex', gap: 4 }}>
-        <ZoneButton label="Shallows · 1-12" zone="dozen:1"  max={RL_MAX_OUTSIDE_BET} accent="#7ad3a0" isOutside />
-        <ZoneButton label="Open · 13-24"    zone="dozen:2"  max={RL_MAX_OUTSIDE_BET} accent="#5fa8c9" isOutside />
-        <ZoneButton label="Deep · 25-36"    zone="dozen:3"  max={RL_MAX_OUTSIDE_BET} accent="#a78bfa" isOutside />
+      <div style={{ display: 'flex', gap: 5 }}>
+        <ZoneButton label="Red"   zone="color:red"   max={RL_MAX_OUTSIDE_BET} accent="#e07c7c" fill={RED_POCKET} />
+        <ZoneButton label="Black" zone="color:black" max={RL_MAX_OUTSIDE_BET} accent="#9fa3a8" fill={BLACK_POCKET} />
       </div>
-      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-        <ZoneButton label="1-18 · Low"   zone="half:low"     max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-        <ZoneButton label="Even"          zone="parity:even"  max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-        <ZoneButton label="Tide · Red"   zone="color:red"    max={RL_MAX_OUTSIDE_BET} accent="#e07c7c" isOutside />
+      <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>
+        <ZoneButton label="Even" zone="parity:even" max={RL_MAX_OUTSIDE_BET} accent="#e8d9ae" isOutside />
+        <ZoneButton label="Odd"  zone="parity:odd"  max={RL_MAX_OUTSIDE_BET} accent="#e8d9ae" isOutside />
       </div>
-      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-        <ZoneButton label="Trench · Black" zone="color:black"  max={RL_MAX_OUTSIDE_BET} accent="#9fa3a8" isOutside />
-        <ZoneButton label="Odd"           zone="parity:odd"   max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
-        <ZoneButton label="19-36 · High" zone="half:high"    max={RL_MAX_OUTSIDE_BET} accent="#c4a96a" isOutside />
+      <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>
+        <ZoneButton label="Low · 1-18"   zone="half:low"  max={RL_MAX_OUTSIDE_BET} accent="#e8d9ae" isOutside />
+        <ZoneButton label="High · 19-36" zone="half:high" max={RL_MAX_OUTSIDE_BET} accent="#e8d9ae" isOutside />
+      </div>
+      <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>
+        <ZoneButton label="1-12"  zone="dozen:1" max={RL_MAX_OUTSIDE_BET} accent="#7ad3a0" isOutside />
+        <ZoneButton label="13-24" zone="dozen:2" max={RL_MAX_OUTSIDE_BET} accent="#5fa8c9" isOutside />
+        <ZoneButton label="25-36" zone="dozen:3" max={RL_MAX_OUTSIDE_BET} accent="#a78bfa" isOutside />
       </div>
 
       {/* Zero banner + 12×3 number grid, one vertical CSS grid. */}
@@ -686,67 +700,52 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
   )
 }
 
-// Chip badge — stacked-disc visualization. Each chip placed adds a
-// small offset disc behind the topmost label so a 1,000-chip bet visibly
-// looks like a stack of chips, not a single token. The `key={value}`
-// drives a tiny scale+bounce drop-in animation on every chip add so the
-// player feels the tactile placement. `small=true` shrinks the badge
-// for the cramped inside-bet zones (splits / corners / streets / lines).
+// Chip badge — a proper casino chip dropped CENTERED on the bet zone
+// (the old corner dot was tiny and got clipped by overflow:hidden on
+// the number pockets). Sized like the rack chips so it reads as "your
+// chip is on this spot", with the staked amount in bold white. The
+// `key={value}` re-fires a drop-in spring on every chip add so the
+// player feels each placement. small=true shrinks it a touch for the
+// 40px number pockets.
 function ChipBadge({ value, small }: { value: number; small?: boolean }) {
   const color = pickChipColor(value)
-  // Stack depth scales with chip value: 1 disc up to 100, 2 discs to
-  // 500, 3 discs above 500. Each extra disc shifts 1.5px right/down so
-  // they peek out behind the top label.
-  const stackCount = value >= 500 ? 3 : value >= 100 ? 2 : 1
-  // Dimension constants — the small variant is sized to fit in a 10px
-  // split tap zone or a 22px street pill without overflowing.
-  const w = small ? 18 : 22
-  const h = small ? 14 : 18
-  const offsetTop = small ? -6 : -8
-  const offsetRight = small ? -3 : -5
-  const fontSize = small ? '0.48rem' : '0.55rem'
+  const d = small ? 32 : 38
+  // Compact big stakes so they fit the disc: 2500 → 2.5k.
+  const label = value >= 1000
+    ? `${(value / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k`
+    : String(value)
   return (
     <motion.span
       key={value}                                          // re-keys on every chip add → triggers drop-in
-      initial={{ scale: 0, y: -8 }}
-      animate={{ scale: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+      initial={{ scale: 0.3, y: -14, opacity: 0 }}
+      animate={{ scale: 1, y: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 20 }}
       style={{
-        position: 'absolute', top: offsetTop, right: offsetRight,
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center',
+        // Wide zone buttons keep their label readable: chip sits to
+        // the right. Number pockets center it (covering the number is
+        // the point — your chip is ON that pocket).
+        justifyContent: small ? 'center' : 'flex-end',
+        paddingRight: small ? 0 : 8,
         zIndex: 5,
         pointerEvents: 'none',
       }}
     >
-      {/* Background discs — pure visual stack, no text. */}
-      {Array.from({ length: stackCount - 1 }, (_, i) => (
-        <span key={i} aria-hidden style={{
-          position: 'absolute',
-          top: (i + 1) * 1.5,
-          left: (i + 1) * 1.5,
-          width: w, height: h,
-          borderRadius: 999,
-          background: pickChipColor(value, i + 1),
-          border: '1.5px solid #1a1a1a',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.5)',
-          opacity: 0.92,
-        }} />
-      ))}
-      {/* Label disc — the top, readable chip with the bet amount. */}
-      <span style={{
-        position: 'relative',
-        minWidth: w, height: h, padding: '0 4px',
-        borderRadius: 999,
-        background: `radial-gradient(circle at 50% 30%, ${color}ee 0%, ${color} 75%)`,
-        border: '1.5px solid #1a1a1a',
+      <span className="font-karla" style={{
+        width: d, height: d,
+        borderRadius: '50%',
+        background: `radial-gradient(circle at 50% 32%, ${color} 0%, ${color}aa 85%)`,
+        border: '2px dashed rgba(255,255,255,0.85)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.25)',
         color: '#fff',
-        fontSize,
+        fontSize: small ? '0.62rem' : '0.72rem',
         fontWeight: 700,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         lineHeight: 1,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.2)',
-        textShadow: '0 1px 1px rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        textShadow: '0 1px 2px rgba(0,0,0,0.85)',
       }}>
-        {value.toLocaleString()}
+        {label}
       </span>
     </motion.span>
   )
@@ -761,24 +760,25 @@ function ChipBadge({ value, small }: { value: number; small?: boolean }) {
 // duplicated local definition that used to live here.
 
 // ─── Chip rack ───────────────────────────────────────────────────────
-function ChipRack({ presets, selectedDenom, onSelect, chipsLeft }: {
+// Bigger chips with bolder numbers (the 36px / 0.55rem originals were
+// unreadable on phones), plus the Free-chips count and Clear Bets in a
+// footer row so all bet management lives at the top of the table.
+function ChipRack({ presets, selectedDenom, onSelect, chipsLeft, onClear, canClear }: {
   presets: readonly number[]
   selectedDenom: number
   onSelect: (n: number) => void
   chipsLeft: number
+  onClear: () => void
+  canClear: boolean
 }) {
   return (
     <div style={{
-      display: 'flex', gap: 7, justifyContent: 'space-between', alignItems: 'center',
       background: 'rgba(0,0,0,0.35)',
       border: `1px solid ${FELT_RIM}`,
       borderRadius: 10,
-      padding: '0.45rem',
+      padding: '0.5rem 0.55rem 0.45rem',
     }}>
-      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.14em', color: '#7a7672', flexShrink: 0 }}>
-        Chip
-      </span>
-      <div style={{ display: 'flex', gap: 5, flex: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
         {presets.map(p => {
           const selected = p === selectedDenom
           const tooBig = p > chipsLeft
@@ -789,14 +789,15 @@ function ChipRack({ presets, selectedDenom, onSelect, chipsLeft }: {
               disabled={tooBig}
               className="font-karla font-700"
               style={{
-                width: 36, height: 36, borderRadius: '50%',
+                width: 46, height: 46, borderRadius: '50%',
                 background: `radial-gradient(circle at 50% 35%, ${CHIP_COLORS[p]} 0%, ${CHIP_COLORS[p]}99 80%)`,
-                border: selected ? '2.5px solid #fff' : '2px dashed rgba(255,255,255,0.55)',
-                color: '#0a0a0a',
-                fontSize: '0.55rem', lineHeight: 1,
+                border: selected ? '3px solid #fff' : '2px dashed rgba(255,255,255,0.55)',
+                color: '#fff',
+                fontSize: '0.78rem', lineHeight: 1,
+                textShadow: '0 1px 2px rgba(0,0,0,0.85)',
                 cursor: tooBig ? 'default' : 'pointer',
                 opacity: tooBig ? 0.35 : 1,
-                boxShadow: selected ? '0 0 10px rgba(255,255,255,0.5)' : '0 1px 3px rgba(0,0,0,0.5)',
+                boxShadow: selected ? '0 0 12px rgba(255,255,255,0.55)' : '0 1px 3px rgba(0,0,0,0.5)',
                 padding: 0,
               }}>
               {p}
@@ -804,9 +805,26 @@ function ChipRack({ presets, selectedDenom, onSelect, chipsLeft }: {
           )
         })}
       </div>
-      <span className="font-karla" style={{ fontSize: '0.55rem', color: '#a89878', flexShrink: 0 }}>
-        Free: {chipsLeft.toLocaleString()}
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+        <span className="font-karla" style={{ fontSize: '0.62rem', color: '#a89878' }}>
+          Free: {chipsLeft.toLocaleString()}
+        </span>
+        <button
+          onClick={onClear}
+          disabled={!canClear}
+          className="font-karla font-700 uppercase"
+          style={{
+            padding: '0.35rem 0.7rem', borderRadius: 8,
+            fontSize: '0.6rem', letterSpacing: '0.1em',
+            background: canClear ? 'rgba(240,138,138,0.12)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${canClear ? 'rgba(240,138,138,0.45)' : 'rgba(255,255,255,0.12)'}`,
+            color: canClear ? '#f08a8a' : 'rgba(240,232,208,0.3)',
+            cursor: canClear ? 'pointer' : 'default',
+          }}
+        >
+          Clear Bets
+        </button>
+      </div>
     </div>
   )
 }
