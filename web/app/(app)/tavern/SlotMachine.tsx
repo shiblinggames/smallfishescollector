@@ -824,7 +824,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                       deck swaps Spin for the chip counter. */}
                   <p className="font-karla font-400 text-[#a89e8c] text-center" style={{ fontSize: '0.72rem', marginBottom: '0.7rem', lineHeight: 1.5 }}>
                     {dailyRemaining > 0
-                      ? <>Trade up to <span style={{ color: '#f0c040' }}>{Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining).toLocaleString()} ⟡</span> for chips. Chips are good at every casino table.</>
+                      ? <>Trade up to <span style={{ color: '#f0c040' }}>{Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining).toLocaleString()} ⟡</span> for chips. Chips are good at every table in the Den.</>
                       : 'Daily buy-in cap reached, back tomorrow'}
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '0.8rem' }}>

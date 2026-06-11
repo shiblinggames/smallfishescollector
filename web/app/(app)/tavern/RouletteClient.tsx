@@ -467,7 +467,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       <RecentSpinsStrip spins={initial.recentSpins} />
 
       <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        European single-zero · house edge 2.703% · daily buy-in cap {CASINO_DAILY_CAP.toLocaleString()} ⟡ across all casino tables
+        European single-zero · house edge 2.703% · daily buy-in cap {CASINO_DAILY_CAP.toLocaleString()} ⟡ across every table in the Den
       </p>
     </div>
   )

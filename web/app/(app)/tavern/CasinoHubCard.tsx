@@ -3,45 +3,20 @@
 // Tavern hub card for the Casino — the single door into Blackjack /
 // Fish Slots / Fish Roulette, which now share one chip purse via the
 // /tavern/casino lobby. Velvet-red card-room scene (the warm anchor of
-// the old arcade row) with the live Catfish Jackpot pot riding on top
-// as the pull — the number does the selling.
+// the old arcade row); the live jackpot pot shows inside the lobby on
+// the slots card, not out here on the hub.
 
 import { motion } from 'framer-motion'
 import ScenicCard from './ScenicCard'
 
-export default function CasinoHubCard({ jackpotPot }: { jackpotPot?: number }) {
+export default function CasinoHubCard() {
   return (
     <ScenicCard
       href="/tavern/casino"
-      title="Casino"
+      title="The Den"
       gradient={['#4a1212', '#2a0808', '#100404']}
       accent="#c63838"
     >
-      {jackpotPot !== undefined && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 8,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 2,
-            background: 'rgba(10,8,4,0.78)',
-            border: '1px solid rgba(240,192,64,0.5)',
-            borderRadius: 999,
-            padding: '3px 10px',
-            whiteSpace: 'nowrap',
-            boxShadow: '0 0 14px rgba(240,192,64,0.25)',
-          }}
-        >
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.12em', color: '#c9a24a', marginRight: 5 }}>
-            Jackpot
-          </span>
-          <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0c040' }}>
-            {jackpotPot.toLocaleString()} ⟡
-          </span>
-        </div>
-      )}
-
       {/* Velvet sheen — felt lit from above, slow pulse. */}
       <motion.div
         aria-hidden

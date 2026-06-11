@@ -1076,7 +1076,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             </p>
             <p className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: '#f0e8d0', lineHeight: 1.1 }}>Buy chips</p>
             <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09988', marginTop: 6, lineHeight: 1.5 }}>
-              Trade {dailyRemaining > 0 ? <>up to <span style={{ color: '#f0c040' }}>{Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining).toLocaleString()} ⟡</span></> : '⟡'} for chips to play with. Chips are good at every casino table. Cash out any time.
+              Trade {dailyRemaining > 0 ? <>up to <span style={{ color: '#f0c040' }}>{Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining).toLocaleString()} ⟡</span></> : '⟡'} for chips to play with. Chips are good at every table in the Den. Cash out any time.
             </p>
           </div>
         </div>

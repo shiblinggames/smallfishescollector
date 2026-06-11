@@ -92,7 +92,7 @@ export default function CasinoLobby({ initial, jackpotPot, isAdmin }: {
           ← Tavern
         </Link>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
-          Casino
+          The Den
         </p>
         <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672' }}>
           {doubloons.toLocaleString()} ⟡

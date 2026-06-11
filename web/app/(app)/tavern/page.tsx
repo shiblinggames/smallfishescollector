@@ -2,7 +2,6 @@ import { Suspense, cache } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getChartState } from '@/app/(app)/charting/chartActions'
-import { getSlotsJackpot } from './actions'
 import { isPremiumActive } from '@/lib/premium'
 import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
@@ -59,16 +58,15 @@ function FeaturesSection() {
   )
 }
 
-async function ArcadeSection() {
+function ArcadeSection() {
   // One Casino card — the three games share a single chip purse now, so
   // the hub shows one door into the card room (/tavern/casino lobby
   // handles buy-in, cash-out, and the per-table cards; roulette stays
-  // admin-gated inside the lobby). The live Catfish Jackpot pot rides
-  // on the card as the pull.
-  const jackpot = await getSlotsJackpot()
+  // admin-gated inside the lobby). Jackpot pot lives on the slots card
+  // inside the lobby, not out here.
   return (
     <div className="grid grid-cols-1 gap-3">
-      <CasinoHubCard jackpotPot={jackpot.pot} />
+      <CasinoHubCard />
     </div>
   )
 }
