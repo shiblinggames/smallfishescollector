@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { spinSlots } from './actions'
 import type { SlotSpinResult, SlotStats, SlotsJackpotState } from './actions'
-import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_DAILY_CAP, SLOTS_MIN_BET, SLOTS_MAX_BET } from './constants'
+import { buyInCasino, cashOutCasino } from './casino/actions'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX } from './constants'
 import type { SlotSymbolId } from './constants'
+import { useAnimatedNumber } from './useAnimatedNumber'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const ALL_IDS: SlotSymbolId[] = SLOT_SYMBOLS_LIST.map((s) => s.id)
@@ -223,15 +225,23 @@ const WOOD_DARK   = '#15100a'
 const WOOD_MID    = '#241a10'
 
 interface Props {
+  chips: number          // shared casino purse
   doubloons: number
-  dailyWagered: number
+  sessionBuyIns: number  // shared session buy-in total (gates the tally display)
+  sessionNet: number     // slots' own session win/loss
+  dailyRemaining: number // shared daily buy-in headroom
   initialStats: SlotStats
   initialJackpot: SlotsJackpotState
 }
 
-export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered: initialWagered, initialStats, initialJackpot }: Props) {
+export default function SlotMachine({ chips: initialChips, doubloons: initialDoubloons, sessionBuyIns: initialSessionBuyIns, sessionNet: initialSessionNet, dailyRemaining: initialDailyRemaining, initialStats, initialJackpot }: Props) {
+  const [chips, setChips] = useState(initialChips)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
-  const [dailyWagered, setDailyWagered] = useState(initialWagered)
+  const [sessionBuyIns, setSessionBuyIns] = useState(initialSessionBuyIns)
+  const [sessionNet, setSessionNet] = useState(initialSessionNet)
+  const [dailyRemaining, setDailyRemaining] = useState(initialDailyRemaining)
+  const [buyInAmount, setBuyInAmount] = useState(500)
+  const [walletBusy, setWalletBusy] = useState(false)
   const [wager, setWager] = useState(25)
   const [spinning, setSpinning] = useState(false)
   const [mainRolling, setMainRolling] = useState([false, false, false])
@@ -261,8 +271,48 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
   const [flashColor, setFlashColor] = useState('#f0c040')
   const [jackpotShake, setJackpotShake] = useState(false)
 
-  const dailyRemaining = SLOTS_DAILY_CAP - dailyWagered
-  const canSpin = !spinning && wager >= SLOTS_MIN_BET && wager <= Math.min(SLOTS_MAX_BET, doubloons, dailyRemaining) && dailyRemaining > 0
+  // Spins draw from the shared chip purse now — the daily cap is
+  // enforced at buy-in (shared across all casino tables), not per spin.
+  const canSpin = !spinning && !walletBusy && wager >= SLOTS_MIN_BET && wager <= Math.min(SLOTS_MAX_BET, chips)
+  // No chips to cover even the minimum bet → control deck swaps to the
+  // buy-in panel so the player is never stuck at a dead Spin button.
+  const needsBuyIn = chips < SLOTS_MIN_BET && !spinning
+  const canBuyIn = !walletBusy && buyInAmount >= CASINO_BUY_IN_MIN
+    && buyInAmount <= Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining)
+
+  // Animated header counters, blackjack-style: chips tick through the
+  // net delta; the tally is slots' OWN session net (chips are shared
+  // across casino games, so chips - sessionBuyIns would mix tables).
+  const animatedChips = useAnimatedNumber(chips)
+  const animatedTally = useAnimatedNumber(sessionNet)
+
+  async function handleBuyIn() {
+    if (!canBuyIn) return
+    setError(null)
+    setWalletBusy(true)
+    const r = await buyInCasino(buyInAmount)
+    setWalletBusy(false)
+    if ('error' in r) { setError(r.error); return }
+    setChips(r.newChips)
+    setDoubloons(r.newDoubloons)
+    setSessionBuyIns(r.sessionBuyIns)
+    setDailyRemaining(r.dailyRemaining)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+  }
+
+  async function handleCashOut() {
+    if (walletBusy || spinning || chips <= 0) return
+    setError(null)
+    setWalletBusy(true)
+    const r = await cashOutCasino()
+    setWalletBusy(false)
+    if ('error' in r) { setError(r.error); return }
+    setChips(0)
+    setDoubloons(r.newDoubloons)
+    setSessionBuyIns(0)
+    setSessionNet(0)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+  }
 
   function applyStats(net: number) {
     setStats((prev) => ({
@@ -272,17 +322,21 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
     }))
   }
 
-  /** Common bookkeeping once a spin's outcome is revealed. */
+  /** Common bookkeeping once a spin's outcome is revealed. Chips move,
+   *  doubloons don't — chip movement is internal to the casino session,
+   *  so no Nav currency patch here (that happens at buy-in/cash-out).
+   *  On a bust-to-zero the server ends the casino session: sessionBuyIns
+   *  and sessionNet come back reset and the tally display clears. */
   function settle(result: SlotSpinResult) {
     applyStats(result.net)
-    setDoubloons(result.newDoubloons)
-    setDailyWagered(result.dailyWagered)
+    setChips(result.newChips)
+    setSessionNet(result.sessionNet)
+    setSessionBuyIns(result.sessionBuyIns)
     setPot(result.pot)
     setLastResult(result)
     setShowResult(true)
     setSpinning(false)
     setPotTease(false)
-    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: result.newDoubloons }))
   }
 
   function triggerWin(sym: SlotSymbolId, isBonus: boolean) {
@@ -720,68 +774,161 @@ export default function SlotMachine({ doubloons: initialDoubloons, dailyWagered:
                 padding: '0.9rem 0.9rem 1rem',
               }}
             >
-              {/* Balance + daily limit */}
-              <div className="flex items-baseline justify-between" style={{ marginBottom: '0.7rem' }}>
-                <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.05rem' }}>{doubloons.toLocaleString()} ⟡</p>
-                <p className="font-karla font-400 text-[#a89e8c]" style={{ fontSize: '0.66rem' }}>
-                  {dailyRemaining > 0
-                    ? `${dailyRemaining.toLocaleString()} ⟡ daily limit left`
-                    : 'Daily limit reached, back tomorrow'}
-                </p>
-              </div>
-
-              {/* Bet chips */}
-              <div className="flex gap-1.5 justify-center flex-wrap" style={{ marginBottom: '0.8rem' }}>
-                {BET_PRESETS.map((amt) => {
-                  const disabled = amt > Math.min(doubloons, dailyRemaining)
+              {/* Balance row — shared chip purse + slots' session tally
+                  + cash out. Doubloons only matter at buy-in. */}
+              <div className="flex items-center justify-between" style={{ marginBottom: '0.7rem', gap: 8 }}>
+                <div>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a68a4a' }}>Chips</p>
+                  <p className="font-cinzel font-700 text-[#f0c040]" style={{ fontSize: '1.05rem', lineHeight: 1.1 }}>{animatedChips.toLocaleString()} ⟡</p>
+                </div>
+                {sessionBuyIns > 0 && (() => {
+                  // Sign + color track the ANIMATED value so a swing
+                  // through zero counts through red→grey→green.
+                  const up = animatedTally > 0
+                  const flat = animatedTally === 0
+                  const color = flat ? '#8a8478' : up ? '#7fd49a' : '#e07070'
                   return (
+                    <div style={{ textAlign: 'center' }}>
+                      <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a68a4a' }}>Session</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color, lineHeight: 1.1 }}>
+                        {up ? '+' : ''}{animatedTally.toLocaleString()} ⟡
+                      </p>
+                    </div>
+                  )
+                })()}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  {chips > 0 && !spinning && (
                     <button
-                      key={amt}
-                      onClick={() => !disabled && setWager(amt)}
-                      disabled={disabled}
-                      className="font-karla font-700 transition-all active:scale-95"
+                      type="button"
+                      disabled={walletBusy}
+                      onClick={handleCashOut}
+                      className="font-karla font-700 uppercase tracking-[0.1em]"
                       style={{
-                        minWidth: 50,
-                        padding: '0.45rem 0.5rem',
-                        borderRadius: 999,
-                        fontSize: '0.68rem',
-                        letterSpacing: '0.05em',
-                        background: wager === amt ? 'rgba(240,192,64,0.18)' : 'rgba(8,8,6,0.72)',
-                        border: `1.5px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.14)'}`,
-                        color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
-                        cursor: disabled ? 'default' : 'pointer',
+                        padding: '0.45rem 0.75rem', borderRadius: 999,
+                        background: 'rgba(196,169,106,0.1)',
+                        border: '1px solid rgba(196,169,106,0.45)',
+                        color: '#c4a96a',
+                        fontSize: '0.58rem',
+                        cursor: walletBusy ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      {amt}
+                      Cash Out
                     </button>
-                  )
-                })}
+                  )}
+                </div>
               </div>
 
-              {/* Spin button */}
-              <button
-                onClick={handleSpin}
-                disabled={!canSpin}
-                className="w-full font-cinzel font-700 uppercase active:scale-[0.98]"
-                style={{
-                  padding: '0.9rem 1rem',
-                  borderRadius: 14,
-                  fontSize: '1rem',
-                  letterSpacing: '0.12em',
-                  background: canSpin
-                    ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.10) 100%)'
-                    : 'rgba(255,255,255,0.04)',
-                  border: `2px solid ${canSpin ? BRASS : 'rgba(255,255,255,0.10)'}`,
-                  color: canSpin ? '#f0d696' : '#4a463f',
-                  boxShadow: canSpin ? '0 0 22px rgba(240,192,64,0.18), inset 0 1px 0 rgba(255,255,255,0.10)' : 'none',
-                  transition: 'transform 0.1s, box-shadow 0.3s',
-                  cursor: canSpin ? 'pointer' : 'default',
-                }}
-              >
-                {spinning
-                  ? (showBonus ? 'Bonus Spin…' : 'Spinning…')
-                  : `Spin · ${wager} ⟡`}
-              </button>
+              {needsBuyIn ? (
+                <>
+                  {/* Buy-in panel — shared casino purse is empty, so the
+                      deck swaps Spin for the chip counter. */}
+                  <p className="font-karla font-400 text-[#a89e8c] text-center" style={{ fontSize: '0.72rem', marginBottom: '0.7rem', lineHeight: 1.5 }}>
+                    {dailyRemaining > 0
+                      ? <>Trade up to <span style={{ color: '#f0c040' }}>{Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining).toLocaleString()} ⟡</span> for chips. Chips are good at every casino table.</>
+                      : 'Daily buy-in cap reached, back tomorrow'}
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '0.8rem' }}>
+                    {CASINO_BUY_IN_PRESETS.map(amt => {
+                      const disabled = amt > Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining)
+                      const selected = buyInAmount === amt
+                      return (
+                        <button
+                          key={amt}
+                          type="button"
+                          disabled={disabled || walletBusy}
+                          onClick={() => setBuyInAmount(amt)}
+                          className="font-karla font-700"
+                          style={{
+                            padding: '0.6rem 0', borderRadius: 10,
+                            background: selected ? 'rgba(240,192,64,0.12)' : 'rgba(8,8,6,0.72)',
+                            border: `1.5px solid ${selected ? '#f0c040' : 'rgba(255,255,255,0.14)'}`,
+                            color: disabled ? '#3a3835' : selected ? '#f0c040' : '#a0a09a',
+                            fontSize: '0.78rem',
+                            cursor: disabled || walletBusy ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {amt} ⟡
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleBuyIn}
+                    disabled={!canBuyIn}
+                    className="w-full font-cinzel font-700 uppercase active:scale-[0.98]"
+                    style={{
+                      padding: '0.9rem 1rem',
+                      borderRadius: 14,
+                      fontSize: '0.95rem',
+                      letterSpacing: '0.1em',
+                      background: canBuyIn
+                        ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.10) 100%)'
+                        : 'rgba(255,255,255,0.04)',
+                      border: `2px solid ${canBuyIn ? BRASS : 'rgba(255,255,255,0.10)'}`,
+                      color: canBuyIn ? '#f0d696' : '#4a463f',
+                      cursor: canBuyIn ? 'pointer' : 'default',
+                    }}
+                  >
+                    {walletBusy ? 'Buying…' : `Buy ${buyInAmount.toLocaleString()} ⟡ in chips`}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Bet chips */}
+                  <div className="flex gap-1.5 justify-center flex-wrap" style={{ marginBottom: '0.8rem' }}>
+                    {BET_PRESETS.map((amt) => {
+                      const disabled = amt > chips
+                      return (
+                        <button
+                          key={amt}
+                          onClick={() => !disabled && setWager(amt)}
+                          disabled={disabled}
+                          className="font-karla font-700 transition-all active:scale-95"
+                          style={{
+                            minWidth: 50,
+                            padding: '0.45rem 0.5rem',
+                            borderRadius: 999,
+                            fontSize: '0.68rem',
+                            letterSpacing: '0.05em',
+                            background: wager === amt ? 'rgba(240,192,64,0.18)' : 'rgba(8,8,6,0.72)',
+                            border: `1.5px solid ${wager === amt ? '#f0c040' : 'rgba(255,255,255,0.14)'}`,
+                            color: disabled ? '#3a3835' : wager === amt ? '#f0c040' : '#a0a09a',
+                            cursor: disabled ? 'default' : 'pointer',
+                          }}
+                        >
+                          {amt}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Spin button */}
+                  <button
+                    onClick={handleSpin}
+                    disabled={!canSpin}
+                    className="w-full font-cinzel font-700 uppercase active:scale-[0.98]"
+                    style={{
+                      padding: '0.9rem 1rem',
+                      borderRadius: 14,
+                      fontSize: '1rem',
+                      letterSpacing: '0.12em',
+                      background: canSpin
+                        ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.10) 100%)'
+                        : 'rgba(255,255,255,0.04)',
+                      border: `2px solid ${canSpin ? BRASS : 'rgba(255,255,255,0.10)'}`,
+                      color: canSpin ? '#f0d696' : '#4a463f',
+                      boxShadow: canSpin ? '0 0 22px rgba(240,192,64,0.18), inset 0 1px 0 rgba(255,255,255,0.10)' : 'none',
+                      transition: 'transform 0.1s, box-shadow 0.3s',
+                      cursor: canSpin ? 'pointer' : 'default',
+                    }}
+                  >
+                    {spinning
+                      ? (showBonus ? 'Bonus Spin…' : 'Spinning…')
+                      : `Spin · ${wager} ⟡`}
+                  </button>
+                </>
+              )}
 
               {error && <p className="font-karla font-400 text-[#f87171] text-sm text-center" style={{ marginTop: '0.6rem' }}>{error}</p>}
             </div>

@@ -1,34 +1,32 @@
 'use server'
 
-// Fish Roulette server actions. Mirrors the blackjack pattern — buy-in
-// converts doubloons to chips, chips stake bets that can churn freely
-// without re-hitting the daily cap, cash-out converts chips back. The
-// crucial difference vs. blackjack: roulette has no mid-game state.
-// Bet → spin → settle is one atomic action; there's no "resume the
-// spin" path because nothing is left in-flight.
+// Fish Roulette server actions. Wagers come out of the SHARED casino
+// chip purse (profiles.casino_chips — one balance across blackjack/
+// roulette/slots); buy-in and cash-out live in ../casino/actions.
+// Roulette has no mid-game state: bet → spin → settle is one atomic
+// action, so this file is just the spin plus the page snapshot.
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
 import {
   rollWinningNumber, settleSpin, validateBet,
   type Bet,
 } from '@/lib/roulette'
 import {
   RL_MIN_BET, RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET,
-  RL_DAILY_CAP, RL_BUY_IN_MIN, RL_BUY_IN_MAX,
+  CASINO_DAILY_CAP,
 } from '../constants'
-import type { RouletteState, BuyInResult, CashOutResult, SpinResult, RecentSpin } from './types'
+import type { RouletteState, SpinResult, RecentSpin } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// ── Daily-wager helper (mirrors blackjack's getDailyBuyInTotal) ──────
-
+// Today's buy-ins into the SHARED casino wallet (one cap across all
+// three games — casino_buy_ins is the only source).
 async function getDailyBuyInTotal(userId: string): Promise<number> {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
   const { data } = await admin
-    .from('roulette_buy_ins')
+    .from('casino_buy_ins')
     .select('amount')
     .eq('user_id', userId)
     .gte('created_at', today)
@@ -42,15 +40,15 @@ export async function getRouletteState(): Promise<RouletteState> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return {
-      chips: 0, doubloons: 0, sessionBuyIns: 0,
-      dailyWagered: 0, dailyRemaining: RL_DAILY_CAP,
+      chips: 0, doubloons: 0, sessionBuyIns: 0, sessionNet: 0,
+      dailyBoughtIn: 0, dailyRemaining: CASINO_DAILY_CAP,
       recentSpins: [],
     }
   }
   const admin = createAdminClient()
-  const [{ data: profile }, dailyWagered, { data: recentRows }] = await Promise.all([
+  const [{ data: profile }, dailyBoughtIn, { data: recentRows }] = await Promise.all([
     admin.from('profiles')
-      .select('doubloons, roulette_chips, roulette_session_buy_ins')
+      .select('doubloons, casino_chips, casino_session_buy_ins, roulette_session_net')
       .eq('id', user.id)
       .single(),
     getDailyBuyInTotal(user.id),
@@ -70,107 +68,23 @@ export async function getRouletteState(): Promise<RouletteState> {
   }))
 
   return {
-    chips: (profile?.roulette_chips as number | null) ?? 0,
+    chips: (profile?.casino_chips as number | null) ?? 0,
     doubloons: (profile?.doubloons as number | null) ?? 0,
-    sessionBuyIns: (profile?.roulette_session_buy_ins as number | null) ?? 0,
-    dailyWagered,
-    dailyRemaining: Math.max(0, RL_DAILY_CAP - dailyWagered),
+    sessionBuyIns: (profile?.casino_session_buy_ins as number | null) ?? 0,
+    sessionNet: (profile?.roulette_session_net as number | null) ?? 0,
+    dailyBoughtIn,
+    dailyRemaining: Math.max(0, CASINO_DAILY_CAP - dailyBoughtIn),
     recentSpins,
   }
-}
-
-// ── Buy-in / Cash-out ────────────────────────────────────────────────
-
-/** Convert N doubloons → N chips. Same daily-cap semantics as blackjack
- *  — capped at RL_DAILY_CAP doubloons committed to the table per day. */
-export async function buyInRoulette(amount: number): Promise<BuyInResult | { error: string }> {
-  if (!Number.isInteger(amount) || amount < RL_BUY_IN_MIN || amount > RL_BUY_IN_MAX) {
-    return { error: 'Invalid amount' }
-  }
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, roulette_chips, roulette_session_buy_ins')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-  const doubloons = profile.doubloons as number
-  const chips = (profile.roulette_chips as number | null) ?? 0
-  const prevSessionBuyIns = (profile.roulette_session_buy_ins as number | null) ?? 0
-  if (doubloons < amount) return { error: 'Insufficient doubloons' }
-
-  const dailyAlready = await getDailyBuyInTotal(user.id)
-  if (dailyAlready + amount > RL_DAILY_CAP) {
-    return { error: `Daily limit reached (${RL_DAILY_CAP} ⟡)` }
-  }
-
-  const newDoubloons = doubloons - amount
-  const newChips = chips + amount
-  const newSessionBuyIns = prevSessionBuyIns + amount
-
-  await Promise.all([
-    admin.from('profiles').update({
-      doubloons: newDoubloons,
-      roulette_chips: newChips,
-      roulette_session_buy_ins: newSessionBuyIns,
-    }).eq('id', user.id),
-    admin.from('roulette_buy_ins').insert({ user_id: user.id, amount }),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -amount, reason: `Roulette: buy-in ${amount} ⟡` }),
-  ])
-
-  revalidatePath('/tavern')
-  return {
-    newDoubloons, newChips,
-    dailyWagered: dailyAlready + amount,
-    dailyRemaining: Math.max(0, RL_DAILY_CAP - (dailyAlready + amount)),
-    sessionBuyIns: newSessionBuyIns,
-  }
-}
-
-/** Convert all chips → doubloons. Errors if there are no chips on the
- *  table. Session counter resets to 0 on cash-out (mirrors blackjack). */
-export async function cashOutRoulette(): Promise<CashOutResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, roulette_chips')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-  const doubloons = profile.doubloons as number
-  const chips = (profile.roulette_chips as number | null) ?? 0
-  if (chips <= 0) return { error: 'No chips to cash out' }
-
-  const newDoubloons = doubloons + chips
-
-  await Promise.all([
-    admin.from('profiles').update({
-      doubloons: newDoubloons,
-      roulette_chips: 0,
-      roulette_session_buy_ins: 0,
-    }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: chips, reason: `Roulette: cash-out ${chips} ⟡` }),
-  ])
-
-  revalidatePath('/tavern')
-  return { newDoubloons, cashedOut: chips, sessionBuyIns: 0 }
 }
 
 // ── The actual spin ──────────────────────────────────────────────────
 
 /** Atomic bet → spin → settle. Validates every bet against the configured
- *  min/max, debits chips, rolls the wheel server-side, settles via the
- *  pure logic in lib/roulette, writes one roulette_spins row + updates
- *  the player's chip balance, and returns the winning number + payout
- *  for the client to animate. */
+ *  min/max, debits the shared casino purse, rolls the wheel server-side,
+ *  settles via the pure logic in lib/roulette, writes one roulette_spins
+ *  row + updates the chip balance and roulette's session net, and
+ *  returns the winning number + payout for the client to animate. */
 export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { error: string }> {
   if (!Array.isArray(bets) || bets.length === 0) return { error: 'Place at least one bet' }
   if (bets.length > 50) return { error: 'Too many bets' }
@@ -196,12 +110,12 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('roulette_chips, doubloons')
+    .select('casino_chips, casino_session_buy_ins, roulette_session_net, doubloons')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
 
-  const chipsBefore = (profile.roulette_chips as number | null) ?? 0
+  const chipsBefore = (profile.casino_chips as number | null) ?? 0
   if (chipsBefore < totalWagered) return { error: 'Not enough chips' }
 
   // Server-authoritative spin + pure settlement.
@@ -209,9 +123,20 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
   const settlement = settleSpin(bets, winningNumber)
 
   const chipsAfter = chipsBefore - settlement.totalWagered + settlement.totalPayout
+  const prevSessionNet = (profile.roulette_session_net as number | null) ?? 0
+  const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
+  // Shared purse hitting 0 ends the casino session — reset the shared
+  // buy-in tally and ALL per-game nets (mirrors blackjack's bust-out).
+  const busted = chipsAfter === 0
+  const newSessionNet = busted ? 0 : prevSessionNet + settlement.net
+  const newSessionBuyIns = busted ? 0 : prevSessionBuyIns
 
   await Promise.all([
-    admin.from('profiles').update({ roulette_chips: chipsAfter }).eq('id', user.id),
+    admin.from('profiles').update({
+      casino_chips: chipsAfter,
+      roulette_session_net: newSessionNet,
+      ...(busted ? { casino_session_buy_ins: 0, blackjack_session_net: 0, slots_session_net: 0 } : {}),
+    }).eq('id', user.id),
     admin.from('roulette_spins').insert({
       user_id: user.id,
       bets: bets as unknown as object,
@@ -233,5 +158,7 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
     chipsAfter,
     perBet: settlement.perBet,
     doubloons: (profile.doubloons as number | null) ?? 0,
+    sessionNet: newSessionNet,
+    sessionBuyIns: newSessionBuyIns,
   }
 }

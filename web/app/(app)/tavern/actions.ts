@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_DAILY_CAP, SLOTS_JACKPOT_FEED_PCT } from './constants'
+import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, SLOTS_JACKPOT_FEED_PCT } from './constants'
 import type { SlotSymbolId } from './constants'
 
 // Crown & Anchor was retired 2026-06-06 — replaced by Blackjack
@@ -17,8 +17,9 @@ export interface SlotSpinResult {
   outcome: 'win' | 'jackpot' | 'lose' | 'bonus' | 'refund' | 'near_miss' | 'pair_win'
   payout: number
   net: number
-  newDoubloons: number
-  dailyWagered: number
+  newChips: number          // shared casino purse post-spin
+  sessionNet: number        // slots' win/loss this session (post-spin)
+  sessionBuyIns: number     // shared session buy-ins (0 after a bust-out reset)
   matchedSymbol?: SlotSymbolId
   /** Global jackpot pot AFTER this spin (post-feed, post-claim). */
   pot: number
@@ -90,20 +91,6 @@ export async function getSlotStats(): Promise<SlotStats> {
   return { spins, net, biggestWin }
 }
 
-export async function getSlotsDailyWagered(): Promise<number> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return 0
-  const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
-  const { data } = await admin
-    .from('slot_spins')
-    .select('wager')
-    .eq('user_id', user.id)
-    .gte('created_at', today)
-  return (data ?? []).reduce((sum: number, r: { wager: number }) => sum + r.wager, 0)
-}
-
 export async function spinSlots(wager: number): Promise<SlotSpinResult | { error: string }> {
   if (wager < SLOTS_MIN_BET || wager > SLOTS_MAX_BET) return { error: 'Invalid wager' }
 
@@ -111,22 +98,19 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
+  // Wagers come out of the SHARED casino chip purse (one balance across
+  // blackjack/roulette/slots). The daily cap is enforced at buy-in
+  // (casino_buy_ins) — chips on the table churn freely, so the old
+  // per-spin daily-wager check is gone.
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, username')
+    .select('casino_chips, casino_session_buy_ins, slots_session_net, username')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.doubloons < wager) return { error: 'Insufficient doubloons' }
-
-  const today = new Date().toISOString().split('T')[0]
-  const { data: todaySpins } = await admin
-    .from('slot_spins')
-    .select('wager')
-    .eq('user_id', user.id)
-    .gte('created_at', today)
-  const totalWagered = (todaySpins ?? []).reduce((sum: number, r: { wager: number }) => sum + r.wager, 0)
-  if (totalWagered + wager > SLOTS_DAILY_CAP) return { error: `Daily limit reached (${SLOTS_DAILY_CAP} ⟡)` }
+  if (!profile) return { error: 'Profile not found' }
+  const chipsBefore = (profile.casino_chips as number | null) ?? 0
+  if (chipsBefore < wager) return { error: 'Not enough chips' }
 
   const reels = slotRollReels()
   const [a, b, c] = reels
@@ -222,27 +206,29 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   }
 
   const net = payout - wager
-  const newDoubloons = profile.doubloons + net
+  const newChips = chipsBefore + net
 
-  const outcomeLabel =
-    outcome === 'win'      ? `${SLOT_PAYOUTS[a]}× on ${a}` :
-    outcome === 'jackpot'  ? `JACKPOT — ${payout} from the pot` :
-    outcome === 'bonus'    ? `bonus spin (${bonus!.outcome})` :
-    outcome === 'refund'   ? '2 hooks — refund' :
-    outcome === 'pair_win' ? `pair of ${matchedSymbol}` :
-    'no match'
+  // Chip movement is internal to the casino session — no
+  // doubloon_transactions row here (matches blackjack/roulette;
+  // doubloons only move at buy-in / cash-out).
+  const prevSessionNet = (profile.slots_session_net as number | null) ?? 0
+  const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
+  // Shared purse hitting 0 ends the casino session — reset the shared
+  // buy-in tally and ALL per-game nets (mirrors blackjack's bust-out).
+  const busted = newChips === 0
+  const newSessionNet = busted ? 0 : prevSessionNet + net
+  const newSessionBuyIns = busted ? 0 : prevSessionBuyIns
 
   await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('profiles').update({
+      casino_chips: newChips,
+      slots_session_net: newSessionNet,
+      ...(busted ? { casino_session_buy_ins: 0, blackjack_session_net: 0, roulette_session_net: 0 } : {}),
+    }).eq('id', user.id),
     admin.from('slot_spins').insert({ user_id: user.id, wager, reels, outcome, payout }),
-    admin.from('doubloon_transactions').insert({
-      user_id: user.id,
-      amount: net,
-      reason: `Fish Slots: ${outcomeLabel}`,
-    }),
   ])
 
   revalidatePath('/tavern/slots')
-  return { reels, outcome, payout, net, newDoubloons, dailyWagered: totalWagered + wager, matchedSymbol, pot, jackpotWin, bonus }
+  return { reels, outcome, payout, net, newChips, sessionNet: newSessionNet, sessionBuyIns: newSessionBuyIns, matchedSymbol, pot, jackpotWin, bonus }
 }
 

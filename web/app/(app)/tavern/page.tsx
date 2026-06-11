@@ -9,9 +9,7 @@ import DailyBonusCard from './DailyBonusCard'
 import FishOfTheDayCard from './FishOfTheDayCard'
 import ChartTheCourseCard from './ChartTheCourseCard'
 import RecruitCrewCard from './RecruitCrewCard'
-import BlackjackHubCard from './BlackjackHubCard'
-import FishSlotsCard from './FishSlotsCard'
-import RouletteHubCard from './RouletteHubCard'
+import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
@@ -61,26 +59,16 @@ function FeaturesSection() {
   )
 }
 
-async function ArcadeSection({ isAdmin }: { isAdmin: boolean }) {
-  // Fish Roulette is admin-only for now — the game is functional but we
-  // want a final balance pass + tap-test on the smallest split tap zones
-  // before it goes live to all players. Non-admins see the original
-  // 2-card row (Blackjack + Slots) so the section looks intentional.
-  // The slots card shows the live Catfish Jackpot pot as a pull.
+async function ArcadeSection() {
+  // One Casino card — the three games share a single chip purse now, so
+  // the hub shows one door into the card room (/tavern/casino lobby
+  // handles buy-in, cash-out, and the per-table cards; roulette stays
+  // admin-gated inside the lobby). The live Catfish Jackpot pot rides
+  // on the card as the pull.
   const jackpot = await getSlotsJackpot()
-  if (isAdmin) {
-    return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <BlackjackHubCard />
-        <FishSlotsCard jackpotPot={jackpot.pot} />
-        <RouletteHubCard />
-      </div>
-    )
-  }
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <BlackjackHubCard />
-      <FishSlotsCard jackpotPot={jackpot.pot} />
+    <div className="grid grid-cols-1 gap-3">
+      <CasinoHubCard jackpotPot={jackpot.pot} />
     </div>
   )
 }
@@ -135,13 +123,12 @@ export default async function TavernPage() {
             </Suspense>
           </div>
 
-          {/* Arcade — anytime-play, hiscore-driven games. ArcadeSection
-              receives is_admin so Fish Roulette only shows up to admins
-              while it's being tap-tested in prod. */}
+          {/* Arcade — anytime-play, hiscore-driven games. Single Casino
+              card since the games share one chip purse. */}
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
             <Suspense fallback={<ArcadeCardsSkeleton />}>
-              <ArcadeSection isAdmin={!!profile?.is_admin} />
+              <ArcadeSection />
             </Suspense>
           </div>
 
@@ -187,10 +174,10 @@ function DailyCardsSkeleton() {
 }
 
 function ArcadeCardsSkeleton() {
-  // 2 cards (Crown & Anchor + Fish Slots).
+  // Single full-width Casino card (ScenicCard default height 168).
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {[0, 1].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
+    <div className="grid grid-cols-1 gap-3">
+      <SkeletonBox height={168} radius={18} />
     </div>
   )
 }

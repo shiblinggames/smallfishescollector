@@ -2,6 +2,9 @@
 // rather than in actions.ts so 'use server' doesn't silently strip them
 // at build (sync helpers + interfaces vanish in 'use server' files; the
 // local tsc doesn't catch it).
+//
+// Buy-in / cash-out moved to the shared casino wallet (../casino) —
+// their result types live in ../casino/types now.
 
 import type { Bet } from '@/lib/roulette'
 
@@ -14,26 +17,13 @@ export interface RecentSpin {
 }
 
 export interface RouletteState {
-  chips: number
+  chips: number             // shared casino purse
   doubloons: number
-  sessionBuyIns: number
-  dailyWagered: number
+  sessionBuyIns: number     // shared casino session buy-ins
+  sessionNet: number        // roulette's own win/loss this session
+  dailyBoughtIn: number     // today's shared casino buy-ins
   dailyRemaining: number
   recentSpins: RecentSpin[]
-}
-
-export interface BuyInResult {
-  newDoubloons: number
-  newChips: number
-  dailyWagered: number
-  dailyRemaining: number
-  sessionBuyIns: number
-}
-
-export interface CashOutResult {
-  newDoubloons: number
-  cashedOut: number
-  sessionBuyIns: number
 }
 
 export interface PerBetResult {
@@ -51,4 +41,6 @@ export interface SpinResult {
   chipsAfter: number
   perBet: PerBetResult[]
   doubloons: number
+  sessionNet: number        // roulette session net post-spin
+  sessionBuyIns: number     // shared session buy-ins post-spin (0 after a bust-out reset)
 }

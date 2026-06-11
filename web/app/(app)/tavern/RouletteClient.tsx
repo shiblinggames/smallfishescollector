@@ -16,10 +16,11 @@ import {
   type Bet, type BetType,
 } from '@/lib/roulette'
 import {
-  RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET,
-  RL_DAILY_CAP, RL_BUY_IN_PRESETS, RL_BET_PRESETS,
+  RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET, RL_BET_PRESETS,
+  CASINO_DAILY_CAP, CASINO_BUY_IN_PRESETS,
 } from './constants'
-import { buyInRoulette, cashOutRoulette, placeBetsAndSpin } from './roulette/actions'
+import { placeBetsAndSpin } from './roulette/actions'
+import { buyInCasino, cashOutCasino } from './casino/actions'
 import type { RouletteState, SpinResult } from './roulette/types'
 import RouletteWheel, { type WheelPhase } from './RouletteWheel'
 import CoinShower from './CoinShower'
@@ -61,9 +62,12 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   const [chips, setChips] = useState(initial.chips)
   const [doubloons, setDoubloons] = useState(initial.doubloons)
   const [sessionBuyIns, setSessionBuyIns] = useState(initial.sessionBuyIns)
-  const [dailyWagered, setDailyWagered] = useState(initial.dailyWagered)
+  // Roulette's own session net — chips are the shared casino purse now,
+  // so chips - sessionBuyIns would mix in other tables' results.
+  const [sessionNet, setSessionNet] = useState(initial.sessionNet)
+  const [dailyBoughtIn, setDailyBoughtIn] = useState(initial.dailyBoughtIn)
 
-  const dailyRemaining = Math.max(0, RL_DAILY_CAP - dailyWagered)
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyBoughtIn)
   const [selectedDenom, setSelectedDenom] = useState<number>(50)
   const [placed, setPlaced] = useState<PlacedMap>({})
   const [error, setError] = useState<string | null>(null)
@@ -89,18 +93,18 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   // color of the session tally track the ANIMATED value so a swing
   // through zero visibly counts through the red→grey→green shift.
   const animatedChips = useAnimatedNumber(chips)
-  const animatedTally = useAnimatedNumber(chips - sessionBuyIns)
+  const animatedTally = useAnimatedNumber(sessionNet)
 
   // ── Buy-in handler ──
   function handleBuyIn(amount: number) {
     setError(null)
     startTransition(async () => {
-      const res = await buyInRoulette(amount)
+      const res = await buyInCasino(amount)
       if ('error' in res) { setError(res.error); return }
       setChips(res.newChips)
       setDoubloons(res.newDoubloons)
       setSessionBuyIns(res.sessionBuyIns)
-      setDailyWagered(res.dailyWagered)
+      setDailyBoughtIn(res.dailyBoughtIn)
       setPhase('bet')
       // Patch Nav currency widget.
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
@@ -111,11 +115,12 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   function handleCashOut() {
     setError(null)
     startTransition(async () => {
-      const res = await cashOutRoulette()
+      const res = await cashOutCasino()
       if ('error' in res) { setError(res.error); return }
       setChips(0)
       setDoubloons(res.newDoubloons)
       setSessionBuyIns(0)
+      setSessionNet(0)
       setPlaced({})
       setLastResult(null)
       setPhase('buyIn')
@@ -192,6 +197,8 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       setTimeout(() => {
         setLastResult(res)
         setChips(res.chipsAfter)
+        setSessionNet(res.sessionNet)
+        setSessionBuyIns(res.sessionBuyIns)
         setPhase('reveal')
 
         // Auto-return to bet after 4s on reveal so the player can spin
@@ -414,7 +421,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
 
       {phase === 'buyIn' && (
         <BuyInPanel
-          presets={RL_BUY_IN_PRESETS as readonly number[]}
+          presets={CASINO_BUY_IN_PRESETS as readonly number[]}
           doubloons={doubloons}
           dailyRemaining={dailyRemaining}
           disabled={isPending}
@@ -460,7 +467,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       <RecentSpinsStrip spins={initial.recentSpins} />
 
       <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        European single-zero · house edge 2.703% · daily wager cap {RL_DAILY_CAP.toLocaleString()} ⟡
+        European single-zero · house edge 2.703% · daily buy-in cap {CASINO_DAILY_CAP.toLocaleString()} ⟡ across all casino tables
       </p>
     </div>
   )

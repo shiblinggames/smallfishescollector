@@ -71,7 +71,6 @@ export const SLOT_PAIR_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
 
 export const SLOTS_MIN_BET   = 10
 export const SLOTS_MAX_BET   = 500
-export const SLOTS_DAILY_CAP = 5000
 
 // Global jackpot: every spin feeds the pot by this fraction of the
 // wager; a natural 3-catfish spin wins pot × (wager / SLOTS_MAX_BET).
@@ -80,34 +79,27 @@ export const SLOTS_DAILY_CAP = 5000
 // after a claim, so every jackpot pays at least ~30× the wager.
 export const SLOTS_JACKPOT_FEED_PCT = 0.05
 
+// ─── Shared casino wallet ────────────────────────────────────────────────────
+// One chip purse across Blackjack / Roulette / Slots (profiles.casino_chips),
+// one shared 5,000 ⟡/day buy-in cap (summed from casino_buy_ins), one
+// buy-in surface. Chips churn freely between games without re-hitting
+// the cap; cash-out converts everything back to doubloons and ends the
+// session (per-game session nets reset). Per-game WAGER bands stay below.
+export const CASINO_DAILY_CAP = 5000   // doubloons committed to the casino per day
+export const CASINO_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
+export const CASINO_BUY_IN_MIN = 10
+export const CASINO_BUY_IN_MAX = CASINO_DAILY_CAP
+
 // ─── Blackjack ───────────────────────────────────────────────────────────────
-// Same wager band as C&A + Fish Slots so the tavern reads coherently.
-// The daily cap is enforced server-side as the sum of `total_wagered`
-// rows from blackjack_hands (initial wager + any doubles + splits +
-// insurance) for that day, NOT just the initial deal — so the cap
-// genuinely bounds the player's day at risk.
+// Same wager band as Fish Slots so the tavern reads coherently. Wagers
+// come out of the shared casino chip purse.
 export const BJ_MIN_BET   = 10
 export const BJ_MAX_BET   = 500    // per-hand wager ceiling
-export const BJ_DAILY_CAP = 5000   // also serves as the per-buy-in ceiling
 export const BJ_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
-// Buy-in is a budget commitment (chips on the table that can churn freely
-// without re-hitting the daily cap), so it scales up to the full 5,000
-// cap in one go. Lets a player fund a longer session without having to
-// step out for repeat buy-ins between hands.
-export const BJ_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
-export const BJ_BUY_IN_MIN = 10
-export const BJ_BUY_IN_MAX = BJ_DAILY_CAP
 
 // ─── Fish Roulette ──────────────────────────────────────────────────────────
 // European single-zero wheel — house edge 1/37 ≈ 2.703% across all bets.
-// Same wager band as the rest of the tavern so the lineup reads
-// coherently; daily cap caps doubloons committed to the table per day,
-// not chip-level wagers (chips can churn freely between buy-ins).
 export const RL_MIN_BET   = 10                              // per-bet floor
 export const RL_MAX_STRAIGHT_BET = 500                      // 35:1 single number
 export const RL_MAX_OUTSIDE_BET  = 2500                     // 1:1 / 2:1 outside bets — bigger ceiling, smaller payout
-export const RL_DAILY_CAP = 5000                            // doubloons committed to table per day
 export const RL_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
-export const RL_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
-export const RL_BUY_IN_MIN = 10
-export const RL_BUY_IN_MAX = RL_DAILY_CAP

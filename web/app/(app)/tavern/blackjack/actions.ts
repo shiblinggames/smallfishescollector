@@ -8,7 +8,7 @@ import {
   dealerPlay, settleHand, settleInsurance, cardRank,
   type Card, type SettledHand, type HandOutcome,
 } from '@/lib/blackjack'
-import { BJ_MIN_BET, BJ_MAX_BET, BJ_DAILY_CAP, BJ_BUY_IN_MIN, BJ_BUY_IN_MAX } from '../constants'
+import { BJ_MIN_BET, BJ_MAX_BET, CASINO_DAILY_CAP } from '../constants'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
@@ -67,10 +67,11 @@ export interface ClientState {
   canStand: boolean
   canDouble: boolean
   canSplit: boolean
-  dailyRemaining: number        // doubloons still allowed to buy in today
-  chips: number                 // current chip balance (post-this-hand)
+  dailyRemaining: number        // doubloons still allowed to buy in today (shared casino cap)
+  chips: number                 // shared casino chip balance (post-this-hand)
   doubloons: number             // doubloons balance (off-table)
-  sessionBuyIns: number         // cumulative buy-ins this session (resets on cash-out / bust-out)
+  sessionBuyIns: number         // shared casino session buy-ins (resets on cash-out / bust-out)
+  sessionNet: number            // blackjack's win/loss this session (chips are shared, nets are per-game)
 }
 
 export interface SettleResult {
@@ -82,10 +83,11 @@ export interface SettleResult {
   dealerNatural: boolean
   insurance: { taken: boolean; amount: number; paid: number; net: number; win: boolean }
   netDelta: number              // total change in chips across the hand
-  newChips: number              // chip balance post-settle
+  newChips: number              // shared casino chip balance post-settle
   doubloons: number             // doubloons balance (unchanged by hand-level actions)
-  dailyWagered: number          // sum of today's buy-ins
-  sessionBuyIns: number         // cumulative buy-ins this session (post-settle)
+  dailyWagered: number          // sum of today's shared casino buy-ins
+  sessionBuyIns: number         // shared casino session buy-ins (post-settle)
+  sessionNet: number            // blackjack's session net post-settle
 }
 
 export type ActionResult =
@@ -95,17 +97,16 @@ export type ActionResult =
 
 // ── Daily-wager helper ──
 //
-// "Daily wagered" now tracks BUY-INS (doubloons committed to the table),
-// not per-hand wagers. Conceptually it's "max at-risk doubloons per
-// day" — and since chips never leave the table until cash-out, the
-// at-risk amount IS the buy-in. Players can churn through 50,000 in
-// chip wagers from a single 500 buy-in without re-hitting the cap.
+// "Daily wagered" tracks BUY-INS into the SHARED casino wallet
+// (casino_buy_ins — one cap across blackjack/roulette/slots), not
+// per-hand wagers. Chips on the table can churn freely. Buy-in and
+// cash-out live in ../casino/actions now; this file only plays hands.
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
   const { data } = await admin
-    .from('blackjack_buy_ins')
+    .from('casino_buy_ins')
     .select('amount')
     .eq('user_id', userId)
     .gte('created_at', today)
@@ -117,122 +118,6 @@ export async function getDailyWagered(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
   return getDailyBuyInTotal(user.id)
-}
-
-// ── Buy-in / Cash-out ──
-
-export interface BuyInResult {
-  newDoubloons: number
-  newChips: number
-  dailyWagered: number
-  sessionBuyIns: number
-}
-
-/** Convert N doubloons → N chips. Enforces daily-wager cap + sufficient
- *  doubloons. Errors out if the player still has an active hand (you
- *  can't add to your stack mid-hand). */
-export async function buyInChips(amount: number): Promise<BuyInResult | { error: string }> {
-  if (!Number.isInteger(amount) || amount < BJ_BUY_IN_MIN || amount > BJ_BUY_IN_MAX) {
-    return { error: 'Invalid amount' }
-  }
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const active = await loadActiveHand(user.id)
-  if (active) return { error: 'Finish your hand first' }
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, blackjack_chips, blackjack_session_buy_ins')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-  const doubloons = profile.doubloons as number
-  const chips = (profile.blackjack_chips as number | null) ?? 0
-  const prevSessionBuyIns = (profile.blackjack_session_buy_ins as number | null) ?? 0
-  if (doubloons < amount) return { error: 'Insufficient doubloons' }
-
-  const dailyAlready = await getDailyBuyInTotal(user.id)
-  if (dailyAlready + amount > BJ_DAILY_CAP) {
-    return { error: `Daily limit reached (${BJ_DAILY_CAP} ⟡)` }
-  }
-
-  const newDoubloons = doubloons - amount
-  const newChips = chips + amount
-  const newSessionBuyIns = prevSessionBuyIns + amount
-
-  await Promise.all([
-    admin.from('profiles').update({
-      doubloons: newDoubloons,
-      blackjack_chips: newChips,
-      blackjack_session_buy_ins: newSessionBuyIns,
-    }).eq('id', user.id),
-    admin.from('blackjack_buy_ins').insert({ user_id: user.id, amount }),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -amount, reason: `Blackjack: buy-in ${amount} ⟡` }),
-  ])
-
-  revalidatePath('/tavern')
-  return { newDoubloons, newChips, dailyWagered: dailyAlready + amount, sessionBuyIns: newSessionBuyIns }
-}
-
-export interface CashOutResult {
-  newDoubloons: number
-  cashedOut: number
-  sessionBuyIns: number   // always 0 after cash-out — session ends
-}
-
-/** Convert all chips → doubloons. No-op if chips are zero. Errors if
- *  there's still an active hand — settle first. */
-export async function cashOutChips(): Promise<CashOutResult | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const admin = createAdminClient()
-  const active = await loadActiveHand(user.id)
-  if (active) return { error: 'Finish your hand first' }
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('doubloons, blackjack_chips')
-    .eq('id', user.id)
-    .single()
-  if (!profile) return { error: 'Profile not found' }
-  const doubloons = profile.doubloons as number
-  const chips = (profile.blackjack_chips as number | null) ?? 0
-  if (chips <= 0) return { error: 'No chips to cash out' }
-
-  const newDoubloons = doubloons + chips
-
-  await Promise.all([
-    admin.from('profiles').update({
-      doubloons: newDoubloons,
-      blackjack_chips: 0,
-      blackjack_session_buy_ins: 0,   // session resets on cash-out
-    }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: chips, reason: `Blackjack: cash-out ${chips} ⟡` }),
-  ])
-
-  revalidatePath('/tavern')
-  return { newDoubloons, cashedOut: chips, sessionBuyIns: 0 }
-}
-
-export async function getBlackjackChipsAndDoubloons(): Promise<{ chips: number; doubloons: number }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { chips: 0, doubloons: 0 }
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('profiles')
-    .select('doubloons, blackjack_chips')
-    .eq('id', user.id)
-    .single()
-  return {
-    chips: (data?.blackjack_chips as number | null) ?? 0,
-    doubloons: (data?.doubloons as number | null) ?? 0,
-  }
 }
 
 // ── Helpers: state ↔ client view ──
@@ -252,6 +137,7 @@ function toClientState(
   doubloons: number,
   dailyRemaining: number,
   sessionBuyIns: number,
+  sessionNet: number,
 ): ClientState {
   const activeHand = state.hands[state.activeHandIdx]
   const isPlayerTurn = state.phase === 'playerTurn'
@@ -290,6 +176,7 @@ function toClientState(
     chips,
     doubloons,
     sessionBuyIns,
+    sessionNet,
   }
 }
 
@@ -343,15 +230,19 @@ async function finalizeSettlement(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, blackjack_chips, blackjack_session_buy_ins')
+    .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net')
     .eq('id', userId)
     .single()
-  const currentChips = (profile?.blackjack_chips as number | null) ?? 0
+  const currentChips = (profile?.casino_chips as number | null) ?? 0
   const newChips = currentChips + totalReturned   // wagers already deducted from chips at action time
-  const prevSessionBuyIns = (profile?.blackjack_session_buy_ins as number | null) ?? 0
-  // When the table busts the player out completely (chips → 0), reset
-  // the session tally — next buy-in starts a fresh session.
-  const newSessionBuyIns = newChips === 0 ? 0 : prevSessionBuyIns
+  const prevSessionBuyIns = (profile?.casino_session_buy_ins as number | null) ?? 0
+  const prevSessionNet = (profile?.blackjack_session_net as number | null) ?? 0
+  // When the table busts the player out completely (shared purse → 0),
+  // the casino session is over — reset the shared buy-in tally AND all
+  // three per-game nets; the next buy-in starts a fresh session.
+  const busted = newChips === 0
+  const newSessionBuyIns = busted ? 0 : prevSessionBuyIns
+  const newSessionNet = busted ? 0 : prevSessionNet + netDelta
 
   const resultJson = {
     hands: settled,
@@ -381,8 +272,10 @@ async function finalizeSettlement(
   // the table session and would otherwise bloat the ledger.
   await Promise.all([
     admin.from('profiles').update({
-      blackjack_chips: newChips,
-      blackjack_session_buy_ins: newSessionBuyIns,
+      casino_chips: newChips,
+      casino_session_buy_ins: newSessionBuyIns,
+      blackjack_session_net: newSessionNet,
+      ...(busted ? { roulette_session_net: 0, slots_session_net: 0 } : {}),
     }).eq('id', userId),
     admin.from('blackjack_hands').update({
       status: 'settled',
@@ -410,6 +303,7 @@ async function finalizeSettlement(
     doubloons: currentDoubloons,
     dailyWagered,
     sessionBuyIns: newSessionBuyIns,
+    sessionNet: newSessionNet,
   } as SettleResult
 }
 
@@ -436,17 +330,18 @@ async function persistActiveHand(handId: number, state: ServerState, totalWagere
   await admin.from('blackjack_hands').update({ state, total_wagered: totalWagered }).eq('id', handId)
 }
 
-/** Read the player's chip balance (the table-side spendable purse).
- *  Doubloons are the off-table currency and don't move during hands. */
+/** Read the player's chip balance (the SHARED casino purse — one
+ *  balance across blackjack/roulette/slots). Doubloons are the
+ *  off-table currency and don't move during hands. */
 async function getChips(userId: string): Promise<number> {
   const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('blackjack_chips').eq('id', userId).single()
-  return (data?.blackjack_chips as number | null) ?? 0
+  const { data } = await admin.from('profiles').select('casino_chips').eq('id', userId).single()
+  return (data?.casino_chips as number | null) ?? 0
 }
 
 async function setChips(userId: string, chips: number): Promise<void> {
   const admin = createAdminClient()
-  await admin.from('profiles').update({ blackjack_chips: chips }).eq('id', userId)
+  await admin.from('profiles').update({ casino_chips: chips }).eq('id', userId)
 }
 
 async function getDoubloons(userId: string): Promise<number> {
@@ -455,13 +350,19 @@ async function getDoubloons(userId: string): Promise<number> {
   return (data?.doubloons as number | null) ?? 0
 }
 
-/** Session-buy-ins is the cumulative doubloons committed to the table
- *  since the last reset (cash-out or chips dropping to 0). Drives the
- *  session-tally chip in the header: tally = chips - sessionBuyIns. */
-async function getSessionBuyIns(userId: string): Promise<number> {
+/** Shared-session fields: cumulative buy-ins since the last session
+ *  reset (cash-out or shared purse hitting 0) + blackjack's own session
+ *  net. The header tally shows the NET — chips alone can't tell you how
+ *  blackjack went when the same purse also played roulette/slots. */
+async function getSessionView(userId: string): Promise<{ sessionBuyIns: number; sessionNet: number }> {
   const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('blackjack_session_buy_ins').eq('id', userId).single()
-  return (data?.blackjack_session_buy_ins as number | null) ?? 0
+  const { data } = await admin.from('profiles')
+    .select('casino_session_buy_ins, blackjack_session_net')
+    .eq('id', userId).single()
+  return {
+    sessionBuyIns: (data?.casino_session_buy_ins as number | null) ?? 0,
+    sessionNet: (data?.blackjack_session_net as number | null) ?? 0,
+  }
 }
 
 // ── Public actions ──
@@ -543,10 +444,10 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
 
   const newChips = chips - wager
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
   const doubloons = await getDoubloons(user.id)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return { kind: 'active', state: toClientState(handId, state, wager, newChips, doubloons, dailyRemaining, sessionBuyIns) }
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return { kind: 'active', state: toClientState(handId, state, wager, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
 }
 
 /** Accept insurance: charge half wager, resolve dealer natural check. */
@@ -587,10 +488,10 @@ export async function acceptInsurance(): Promise<ActionResult> {
 
   const newChips = chips - insurance
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
   const doubloons = await getDoubloons(user.id)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns) }
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
 }
 
 /** Decline insurance: no charge; check dealer natural anyway, resolve if hit. */
@@ -620,9 +521,9 @@ export async function declineInsurance(): Promise<ActionResult> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns) }
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
 }
 
 export async function hit(): Promise<ActionResult> {
@@ -650,9 +551,9 @@ export async function hit(): Promise<ActionResult> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns) }
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
 }
 
 export async function stand(): Promise<ActionResult> {
@@ -677,9 +578,9 @@ export async function stand(): Promise<ActionResult> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns) }
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
 }
 
 export async function doubleDown(): Promise<ActionResult> {
@@ -715,10 +616,10 @@ export async function doubleDown(): Promise<ActionResult> {
 
   const newChips = chips - (active.wager / 2)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
   const doubloons = await getDoubloons(user.id)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns) }
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
 }
 
 export async function split(): Promise<ActionResult> {
@@ -774,10 +675,10 @@ export async function split(): Promise<ActionResult> {
 
   const newChips = chips - initialWager
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
   const doubloons = await getDoubloons(user.id)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns) }
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
 }
 
 /** Resume the active hand on page load (or return null if none). */
@@ -790,7 +691,7 @@ export async function resumeHand(): Promise<ClientState | null> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, BJ_DAILY_CAP - dailyAlready)
-  const sessionBuyIns = await getSessionBuyIns(user.id)
-  return toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns)
+  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
+  return toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet)
 }
