@@ -132,21 +132,22 @@ const GRAZE_W = 0.038
 const HIT_W = 0.06
 const CRIT_W = 0.012
 // Indicator slides at constant speed (~0.6% of the bar per 60fps frame).
-// Module-scope because both the RAF tick and lockShot's latency rewind
-// need the same number.
+// Module-scope because both the RAF tick and lockShot's forward
+// prediction need the same number.
 const INDICATOR_SPEED = 0.006
-// Between the finger landing and the lock handler reading the refs, the
-// needle AND zone keep drifting — and the crit band is only ~4 frames of
-// needle travel wide. Two point-in-time corrections failed here: a fixed
-// 2-frame rewind overshot on some devices, and a measured rewind
-// (performance.now() − pointerdown timeStamp) reads ~0 on iOS, which
-// stamps pointer events near dispatch — the real touch-to-handler delay
-// is invisible to JS. So lockShot doesn't model latency at all anymore:
-// the RAF keeps a rolling history of recent (needle, zone) samples and
-// the lock scores the BEST result achieved inside the lookback window.
-// If the needle was on the gold on glass at any plausible perception
-// moment, it crits — generous only on the just-late side, never robbing.
-const AIM_LOOKBACK_MS = 100
+// Forward-predictive lock — the fishing dial's confirmed-good protocol,
+// raid edition. An eye tracking a moving needle perceives it AHEAD of
+// its painted position (flash-lag — the visual system extrapolates
+// smooth motion ~80–100ms forward), so the spot the player committed to
+// is FORWARD of the sampled refs. Every backward correction tried here
+// (fixed 2-frame rewind, measured pointerdown-timeStamp rewind,
+// best-of-100ms-lookback) produced the same field complaint — "left
+// side of the gold misses, right side crits" with a left-to-right
+// needle — because they all judged behind perception. lockShot projects
+// needle AND zone this many frames ahead along their own velocities,
+// judges there, and settles the freeze forward onto the judged spot
+// (never backwards). Tune this one number if the feel drifts again.
+const LOCK_LOOKAHEAD_FRAMES = 3
 
 function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W): ShotResult {
   const grazeL = zoneCenter - HIT_W - GRAZE_W
@@ -579,11 +580,6 @@ export default function RaidCombat({
   const [turn, setTurn]    = useState(1)
   const critFreezeRef      = useRef(false)
   useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
-  // Rolling history of aim samples (one per RAF tick) so lockShot can
-  // score the best result inside the AIM_LOOKBACK_MS window instead of
-  // trusting the single drifted position at handler time. Cleared each
-  // time aiming starts; ~16 entries covers the window with headroom.
-  const aimHistoryRef      = useRef<{ t: number; pos: number; zone: number }[]>([])
   // Ability per-turn reset effect — every new player turn clears the
   // one-ability-per-turn lock and ticks Snare's finite duration down.
   // -1 (rest_of_fight) sticks regardless. Skips the initial mount
@@ -735,7 +731,6 @@ export default function RaidCombat({
   useEffect(() => {
     if (subPhase !== 'aiming') return
     let last = performance.now()
-    aimHistoryRef.current = []
 
     // Zone slides at speed driven by enemy.shipSpeed, slowed by player navigation.
     const baseZone   = enemy.shipSpeed * 0.0008
@@ -761,10 +756,6 @@ export default function RaidCombat({
       const maxZone = 1 - HIT_W - GRAZE_W
       if (zonePosRef.current >= maxZone) { zonePosRef.current = maxZone; zoneDirRef.current = -1 }
       if (zonePosRef.current <= minZone) { zonePosRef.current = minZone; zoneDirRef.current = 1 }
-
-      // Record this frame's geometry for lockShot's lookback judgment.
-      aimHistoryRef.current.push({ t: now, pos: firePosRef.current, zone: zonePosRef.current })
-      if (aimHistoryRef.current.length > 16) aimHistoryRef.current.shift()
 
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
@@ -1030,30 +1021,23 @@ export default function RaidCombat({
     // critical all count).
     const tideCritW = liveCritWRef.current
     lockedCritWRef.current = tideCritW
-    // Lookback judgment: score every frame the bar showed inside the
-    // last AIM_LOOKBACK_MS and take the BEST one. Input delivery latency
-    // is unmeasurable across devices (iOS stamps pointer events near
-    // dispatch) and the zone moves too, so any point-in-time correction
-    // guesses wrong somewhere. The history holds the literal on-glass
-    // geometry, so if the needle touched the gold inside the window the
-    // crit counts — generosity lands only on the just-late side.
-    const tapNow = performance.now()
-    const classify = (p: number, z: number): ShotResult =>
-      p >= z - tideCritW && p <= z + tideCritW ? 'critical'
-      : p >= z - HIT_W && p <= z + HIT_W ? 'hit'
-      : p >= z - HIT_W - GRAZE_W && p <= z + HIT_W + GRAZE_W ? 'graze'
+    // Forward-predictive judgment (see LOCK_LOOKAHEAD_FRAMES): project
+    // needle and zone ahead along their own velocities to where the
+    // player's eye placed them, judge THAT geometry, and settle the
+    // freeze onto it. Reflection handles a projected bounce off an edge.
+    const reflect = (p: number, lo: number, hi: number) =>
+      p > hi ? Math.max(lo, hi - (p - hi)) : p < lo ? Math.min(hi, lo + (lo - p)) : p
+    const zoneSpeed = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015))
+    const pos = reflect(
+      firePosRef.current + INDICATOR_SPEED * LOCK_LOOKAHEAD_FRAMES * fireDirRef.current, 0, 1)
+    const zoneCenter = reflect(
+      zonePosRef.current + zoneSpeed * LOCK_LOOKAHEAD_FRAMES * zoneDirRef.current,
+      HIT_W + GRAZE_W, 1 - HIT_W - GRAZE_W)
+    let res: ShotResult =
+      pos >= zoneCenter - tideCritW && pos <= zoneCenter + tideCritW ? 'critical'
+      : pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W ? 'hit'
+      : pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W ? 'graze'
       : 'miss'
-    const RANK: Record<ShotResult, number> = { critical: 3, hit: 2, graze: 1, miss: 0 }
-    // Current refs as the newest candidate (the handler can run mid-frame,
-    // after the last recorded tick).
-    let pos = firePosRef.current
-    let zoneCenter = zonePosRef.current
-    let res = classify(pos, zoneCenter)
-    for (const s of aimHistoryRef.current) {
-      if (tapNow - s.t > AIM_LOOKBACK_MS) continue
-      const r = classify(s.pos, s.zone)
-      if (RANK[r] > RANK[res]) { res = r; pos = s.pos; zoneCenter = s.zone }
-    }
     // Repaint the frozen needle + zone at the judged (rewound) geometry and
     // color the needle by the judged result — the freeze IS the judgment,
     // so the picture the player studies always matches the badge.
