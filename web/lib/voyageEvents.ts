@@ -270,15 +270,15 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   const crewLost: number[] = []
 
   // ── Crew loss is now a single flat per-voyage roll, not per-event ──
-  // Pre-roll whether the voyage takes a casualty (route base, reduced
-  // slightly by total crew fortune, floored so stats can never fully
-  // remove the risk). If the roll succeeds, pick a victim from the
+  // Pre-roll whether the voyage takes a casualty (route base, scaled down
+  // by total crew fortune — enough fortune zeroes the risk entirely; see
+  // effectiveCrewLossChance). If the roll succeeds, pick a victim from the
   // available non-captain crew; the casualty narrative attaches to the
   // first failing encounter or danger event we generate. If the voyage
   // is clean enough that no fail event ever fires, we append a forced
   // casualty event at the end so the planned loss still lands.
   const lossEligibleCrew = crew.slice(1)
-  const lossChance = effectiveCrewLossChance(rc.baseCrewLossChance, fortune)
+  const lossChance = effectiveCrewLossChance(route, fortune)
   const lossVictim = lossEligibleCrew.length > 0 && Math.random() < lossChance
     ? pick(lossEligibleCrew)
     : null

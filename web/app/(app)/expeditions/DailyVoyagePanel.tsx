@@ -20,14 +20,6 @@ type PanelState = 'idle' | 'away' | 'returned' | 'done'
 
 const BASE_VOYAGE_MS = 6 * 60 * 60 * 1000
 
-const ROUTE_MIN_LEVELS: Record<VoyageRoute, number> = {
-  coastal:  1,
-  open:     5,
-  deep:     15,
-  triangle: 25,
-  shroud:   40,
-}
-
 function computeVoyageDurationMs(expeditionLevel: number, totalNav: number): number {
   const levelReductionMs = 90 * Math.pow(expeditionLevel / 100, 2) * 60 * 1000
   const navReductionMs = Math.min(90 * 60 * 1000, 90 * Math.pow(totalNav / 75, 2) * 60 * 1000)
@@ -144,13 +136,12 @@ function computeRouteEstimate(
   const lootMin = Math.round(rc.baseDoubloons + expected * 0.4)
   const lootMax = Math.round(rc.baseDoubloons + expected * 1.9)
 
-  // Flat per-voyage crew-loss chance, scaled down by total crew fortune
-  // (up to 75% off at fortune 50 — see effectiveCrewLossChance in
-  // lib/voyageRoutes). One-decimal precision: the fortune-mitigated
-  // floors land on fractions (deep 2.5%, triangle 3.75%) and whole-%
-  // rounding would overstate them by up to a fifth.
+  // Flat per-voyage crew-loss chance, scaled down by total crew fortune —
+  // fully zeroed once fortune matches the route's minLevel (see
+  // effectiveCrewLossChance in lib/voyageRoutes). One-decimal precision so
+  // partially-mitigated values don't get overstated by whole-% rounding.
   const crewRiskPct = crewCount >= 2
-    ? Math.round(effectiveCrewLossChance(rc.baseCrewLossChance, stats.fortune) * 1000) / 10
+    ? Math.round(effectiveCrewLossChance(route, stats.fortune) * 1000) / 10
     : 0
 
   // XP estimate — same event counts, best/worst case outcomes
@@ -369,7 +360,7 @@ export default function DailyVoyagePanel({
                         ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
                         ['⏳', 'They sail (up to 6 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
                         ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
-                        ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. High crew Fortune cuts the risk, up to 75% at 50 total Fortune. Choose wisely.'],
+                        ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
                       ] as [string, string, string][]).map(([icon, title, desc]) => (
                         <div key={title} style={{ display: 'flex', gap: '0.75rem' }}>
                           <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: 1 }}>{icon}</span>
@@ -396,7 +387,7 @@ export default function DailyVoyagePanel({
                     const rco = ROUTE_CONFIGS[routeKey]
                     const node = ROUTE_NODES[routeKey]
                     const isSelected = selectedRoute === routeKey
-                    const minLevel = ROUTE_MIN_LEVELS[routeKey]
+                    const minLevel = rco.minLevel
                     const levelLocked = expeditionLevel < minLevel
                     const shipLocked  = shipTier < rco.minShipTier
                     const comingSoon  = COMING_SOON_ROUTES.has(routeKey)
@@ -462,8 +453,8 @@ export default function DailyVoyagePanel({
                 {/* Overlay panel — fades up from the bottom when a route is selected */}
                 {selectedRoute && (() => {
                   const expeditionLevel = getLevelFromXP(expeditionXP)
-                  const minLevel = ROUTE_MIN_LEVELS[selectedRoute]
                   const rco = ROUTE_CONFIGS[selectedRoute]
+                  const minLevel = rco.minLevel
                   const levelLockedRoute = expeditionLevel < minLevel
                   const shipLockedRoute  = shipTier < rco.minShipTier
                   const comingSoonRoute  = COMING_SOON_ROUTES.has(selectedRoute)
@@ -540,10 +531,14 @@ export default function DailyVoyagePanel({
                                     survival stat, and vets should see what theirs is doing. */}
                                 <span className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6f5a' }}>
                                   {stats.fortune > 0
-                                    ? `Your crew's ${stats.fortune} Fortune trimmed this from ${Math.round(rco.baseCrewLossChance * 100)}%. Max 75% off at 50 Fortune.`
-                                    : 'Crew Fortune trims this risk. Up to 75% off at 50 total Fortune.'}
+                                    ? `Your crew's ${stats.fortune} Fortune trimmed this from ${Math.round(rco.baseCrewLossChance * 100)}%. Risk-free at ${rco.minLevel} Fortune.`
+                                    : `Crew Fortune trims this risk. Risk-free at ${rco.minLevel} total Fortune.`}
                                 </span>
                               </>
+                            ) : rco.baseCrewLossChance > 0 && savedCrew.length >= 2 ? (
+                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#4ade80' }}>
+                                ✓ No crew risk. Your crew&apos;s {stats.fortune} Fortune covers these waters.
+                              </span>
                             ) : (
                               <span className="font-karla" style={{ fontSize: '0.74rem', color: '#5a7a5a' }}>No crew risk</span>
                             )}

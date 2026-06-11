@@ -16,8 +16,9 @@ export interface RouteConfig {
   /** Flat per-voyage crew-loss probability for this route (BEFORE crew
    *  fortune mitigation). 0 means crew loss is impossible on this
    *  route. The deeper routes carry real permadeath risk; the early
-   *  routes are safe. Fortune mitigation lives in voyageEvents.ts —
-   *  stats can reduce but never fully remove crew loss. */
+   *  routes are safe. See effectiveCrewLossChance below — total weighted
+   *  crew fortune can reduce this all the way to ZERO once it matches
+   *  the route's minLevel. */
   baseCrewLossChance: number
   gemScale: number
   baseDoubloons: number
@@ -26,6 +27,12 @@ export interface RouteConfig {
    *  since they have a crew-loss risk and we don't want to punish players
    *  who haven't upgraded their ship yet. */
   minShipTier: number
+  /** Nav (expedition) level required to unlock the route on the map. This
+   *  ALSO doubles as the total weighted crew fortune needed to fully zero
+   *  out the route's crew-loss risk (see effectiveCrewLossChance) — one
+   *  number, two gates, and new deeper routes automatically demand more
+   *  fortune to sail safe. */
+  minLevel: number
 }
 
 export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
@@ -39,6 +46,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     gemScale: 0.5,
     baseDoubloons: 50,
     minShipTier: 0,
+    minLevel: 1,
   },
   open: {
     name: 'The Crossing',
@@ -51,6 +59,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     gemScale: 1.0,
     baseDoubloons: 120,
     minShipTier: 2,
+    minLevel: 5,
   },
   deep: {
     name: 'The Howling Deep',
@@ -63,6 +72,7 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     gemScale: 1.5,
     baseDoubloons: 200,
     minShipTier: 2,
+    minLevel: 15,
   },
   triangle: {
     name: 'The Bertuna Triangle',
@@ -76,9 +86,10 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     gemScale: 2.2,
     baseDoubloons: 380,
     minShipTier: 2,
+    minLevel: 25,
   },
-  // Endgame route — Nav Lv 40 gate (see ROUTE_MIN_LEVELS in
-  // DailyVoyagePanel). Tuned roughly 1.4× the Triangle's economy
+  // Endgame route — Nav Lv 40 gate (minLevel below).
+  // Tuned roughly 1.4× the Triangle's economy
   // (payout + base + gems) and a touch riskier on crew loss, so
   // late-game players have a meaningful next rung after they outgrow
   // the Triangle. Color is a deep slate to read as "veiled / colder /
@@ -93,26 +104,23 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
     gemScale: 3.0,
     baseDoubloons: 600,
     minShipTier: 2,
+    minLevel: 40,
   },
 }
 
-// Fortune mitigation — retuned 2026-06-11 so fortune is a survival stat
-// players respect, not scoff at. Mitigation is now MULTIPLICATIVE on the
-// route's base (the old subtractive 0.1pp-per-point made the same fortune
-// matter less on deadlier routes, and its 100-fortune ceiling was out of
-// reach): fortune scales the risk down linearly, capped at a 75% cut once
-// total weighted fortune reaches 50. Each point below the cap removes
-// 1.5% of the BASE risk on every route equally. So fortune 25 on the
-// Howling Deep (10% base) → 6.25%; fortune 50+ → 2.5% / 3.75% / 5% on
-// deep / triangle / shroud. Still never zero: "stats can mitigate but
-// never fully remove crew loss."
-export const CREW_LOSS_MAX_REDUCTION = 0.75
-export const CREW_LOSS_FORTUNE_FOR_MAX = 50
-
-export function effectiveCrewLossChance(base: number, fortune: number): number {
-  if (base === 0) return 0
-  const reduction = CREW_LOSS_MAX_REDUCTION * Math.min(1, fortune / CREW_LOSS_FORTUNE_FOR_MAX)
-  return base * (1 - reduction)
+// Fortune mitigation — retuned 2026-06-11. Fortune scales the route's base
+// risk down linearly and can now remove it ENTIRELY: the threshold for a
+// fully risk-free sail is the route's own Nav level requirement (minLevel).
+// Deep zeroes at 15 weighted fortune, Triangle at 25, Shroud at 40 — and
+// every future, deeper route automatically demands more fortune to sail
+// safe just by carrying a higher Nav gate. This replaced the flat
+// 75%-cap-at-50 scheme: with new voyages on the roadmap, a static cap
+// would make every route share one fortune target, and "fully safe" is a
+// cleaner chase than "75% safer".
+export function effectiveCrewLossChance(route: VoyageRoute, fortune: number): number {
+  const rc = ROUTE_CONFIGS[route]
+  if (rc.baseCrewLossChance === 0) return 0
+  return rc.baseCrewLossChance * Math.max(0, 1 - fortune / rc.minLevel)
 }
 
 export interface VoyageEvent {
