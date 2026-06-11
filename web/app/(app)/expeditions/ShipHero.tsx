@@ -783,10 +783,11 @@ export default function ShipHero({
                 back row tops out at 38 so nothing clips — grid
                 alignItems:end keeps the bottom flush with the ship
                 column. */}
-            <Link href="/crew" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            <Link href="/crew" className="hub-manage-tap" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
               textDecoration: 'none',
               cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
             }}>
               <div style={{
                 height: 56, width: '100%',
@@ -873,14 +874,22 @@ export default function ShipHero({
                   </>
                 )}
               </div>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+              {/* Label pill — bordered + chevroned so it reads as a
+                  BUTTON, not a caption. Brightens on hover/press via
+                  .hub-manage-pill (see globals.css). */}
+              <p className="font-karla font-700 uppercase tracking-[0.08em] hub-manage-pill" style={{
                 fontSize: '0.7rem', color: '#9ec6ff',
                 position: 'relative',
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '0.3rem 0.75rem', borderRadius: 999,
+                background: 'rgba(125,160,216,0.10)',
+                border: '1px solid rgba(125,160,216,0.3)',
+                transition: 'background 0.15s, border-color 0.15s',
               }}>
                 Manage Crew
-                {/* Level-up nudge — gold pulsing dot hung off the label's
-                    right edge (absolute, so the label itself stays
-                    centered in the column). Mirrors the Voyages card's
+                <span aria-hidden style={{ fontSize: '0.72rem', lineHeight: 1, opacity: 0.85, marginTop: -1 }}>›</span>
+                {/* Level-up nudge — gold pulsing dot, badge-style on the
+                    pill's top-right corner. Mirrors the Voyages card's
                     returned-dot pattern, in the crew level-up gold. */}
                 {crewLevelUpNudge && (
                   <span
@@ -888,8 +897,8 @@ export default function ShipHero({
                     title="A crew member leveled up"
                     className="crew-levelup-dot"
                     style={{
-                      position: 'absolute', right: -14, top: '50%',
-                      marginTop: -4, width: 8, height: 8, borderRadius: '50%',
+                      position: 'absolute', right: -3, top: -3,
+                      width: 8, height: 8, borderRadius: '50%',
                       background: '#ffd96a',
                       border: '1px solid rgba(0,0,0,0.55)',
                     }}
@@ -912,10 +921,12 @@ export default function ShipHero({
                 wrapper, which is invisible and harmless. */}
             <button
               onClick={() => setLoadoutOpen(true)}
+              className="hub-manage-tap"
               style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 background: 'transparent', border: 'none', padding: 0,
                 cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
               <div style={{
@@ -937,22 +948,31 @@ export default function ShipHero({
                   }}
                 />
               </div>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+              {/* Label pill — matches the Manage Crew pill so both
+                  columns read as buttons. */}
+              <p className="font-karla font-700 uppercase tracking-[0.08em] hub-manage-pill" style={{
                 fontSize: '0.7rem', color: '#9ec6ff',
                 position: 'relative',
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '0.3rem 0.75rem', borderRadius: 999,
+                background: 'rgba(125,160,216,0.10)',
+                border: '1px solid rgba(125,160,216,0.3)',
+                transition: 'background 0.15s, border-color 0.15s',
               }}>
                 Manage Ship
+                <span aria-hidden style={{ fontSize: '0.72rem', lineHeight: 1, opacity: 0.85, marginTop: -1 }}>›</span>
                 {/* New-raid-item nudge — same gold pulsing dot as the
-                    crew level-up nudge on the left column. Lights when
-                    an owned raid item is neither equipped nor seen. */}
+                    crew level-up nudge, badge-style on the pill corner.
+                    Lights when an owned raid item is neither equipped
+                    nor seen. */}
                 {newRaidItems.size > 0 && (
                   <span
                     aria-label="New raid item ready to equip"
                     title="New raid item ready to equip"
                     className="crew-levelup-dot"
                     style={{
-                      position: 'absolute', right: -14, top: '50%',
-                      marginTop: -4, width: 8, height: 8, borderRadius: '50%',
+                      position: 'absolute', right: -3, top: -3,
+                      width: 8, height: 8, borderRadius: '50%',
                       background: '#ffd96a',
                       border: '1px solid rgba(0,0,0,0.55)',
                     }}

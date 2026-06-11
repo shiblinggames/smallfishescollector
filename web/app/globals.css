@@ -158,6 +158,17 @@ html, body {
 .btn-ghost:active { border-color: #f0ede8; transform: scale(0.97); opacity: 0.85; transition-duration: 0.06s; }
 .btn-ghost:disabled { opacity: 0.45; pointer-events: none; }
 
+/* Tactile press for the expedition hub's Manage Crew / Manage Ship
+   columns. The whole column (art + label) dips on press so a tap
+   anywhere on the image acknowledges instantly — on touch, :hover
+   never fires, so :active is the only feedback channel. Desktop hover
+   brightens the label pill via the parent selector. Kept subtle and
+   localized per the juice rules. */
+.hub-manage-tap { transition: transform 0.16s ease; }
+.hub-manage-tap:active { transform: scale(0.94); transition-duration: 0.06s; }
+.hub-manage-tap:hover  .hub-manage-pill { background: rgba(125,160,216,0.18); border-color: rgba(158,198,255,0.55); }
+.hub-manage-tap:active .hub-manage-pill { background: rgba(125,160,216,0.24); border-color: rgba(158,198,255,0.65); }
+
 /* ── Surfaces & inputs ── */
 .sg-card  { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; }
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
