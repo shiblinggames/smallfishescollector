@@ -135,12 +135,15 @@ const CRIT_W = 0.012
 // Module-scope because both the RAF tick and lockShot's latency rewind
 // need the same number.
 const INDICATOR_SPEED = 0.006
-// Touch delivery + compositor latency on mobile runs ~2 frames — by the
-// time the lock handler reads the refs, needle AND zone have drifted past
-// what was on glass when the player committed. The crit band is only ~4
-// frames of needle travel wide, so judging the drifted position made
-// on-the-gold taps miss. lockShot rewinds both by this many frames.
-const LOCK_REWIND_FRAMES = 2
+// Between the finger landing and the lock handler reading the refs, the
+// needle AND zone keep drifting — and the crit band is only ~4 frames of
+// needle travel wide. lockShot rewinds both by the MEASURED delivery
+// latency (performance.now() − pointerdown timeStamp), so devices that
+// deliver pointerdown instantly rewind ~0 and laggy ones rewind exactly
+// what they lost. A fixed 2-frame rewind (first attempt) overshot on
+// fast devices and pushed the judgment visibly BEHIND the glass. Cap
+// guards against bogus epoch-based timeStamps on old browsers.
+const LOCK_REWIND_CAP_MS = 100
 
 function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W): ShotResult {
   const grazeL = zoneCenter - HIT_W - GRAZE_W
@@ -998,7 +1001,7 @@ export default function RaidCombat({
     }
   }
 
-  function lockShot() {
+  function lockShot(e?: { timeStamp: number }) {
     // critFreezeRef in the guard too: it flips synchronously below, so a
     // double-tap in the same frame can't run the lock twice while the
     // critFreeze state commit is still pending.
@@ -1015,15 +1018,22 @@ export default function RaidCombat({
     const tideCritW = liveCritWRef.current
     lockedCritWRef.current = tideCritW
     // Latency compensation: judge the shot where the player SAW it, not
-    // where the refs drifted to during touch delivery. Rewind needle AND
-    // zone by ~2 frames of their own velocities (the zone moves too, so
-    // against a fast ship the relative drift alone could cross the whole
-    // crit band). Clamps cover the just-bounced-off-an-edge case.
+    // where the refs drifted to during touch delivery. The drift is
+    // MEASURED per tap — pointerdown timeStamp shares performance.now()'s
+    // time origin, so the difference is exactly how long the event took
+    // to reach us (≈0 on fast devices, real ms on laggy ones). Rewind
+    // needle AND zone by that many frames of their own velocities (the
+    // zone moves too, so against a fast ship the relative drift alone
+    // could cross the whole crit band). The clamp-to-0 covers browsers
+    // with epoch-based timeStamps; position clamps cover the
+    // just-bounced-off-an-edge case.
+    const latencyMs = e ? Math.max(0, Math.min(LOCK_REWIND_CAP_MS, performance.now() - e.timeStamp)) : 0
+    const rewindFrames = latencyMs / 16.67
     const zoneSpeed = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015))
     const pos = Math.max(0, Math.min(1,
-      firePosRef.current - INDICATOR_SPEED * LOCK_REWIND_FRAMES * fireDirRef.current))
+      firePosRef.current - INDICATOR_SPEED * rewindFrames * fireDirRef.current))
     const zoneCenter = Math.max(HIT_W + GRAZE_W, Math.min(1 - HIT_W - GRAZE_W,
-      zonePosRef.current - zoneSpeed * LOCK_REWIND_FRAMES * zoneDirRef.current))
+      zonePosRef.current - zoneSpeed * rewindFrames * zoneDirRef.current))
     let res: ShotResult
     if (pos >= zoneCenter - tideCritW && pos <= zoneCenter + tideCritW) res = 'critical'
     else if (pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W) res = 'hit'
@@ -4052,7 +4062,7 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW }:
 // the delta and the UI visibly shifted as the row swapped in. The
 // caption text is transparent — it's only there to reserve the same
 // vertical space CircleBtn's "Dodge"/"Fire" labels would have.
-function InlineLockButton({ onLock }: { onLock: () => void }) {
+function InlineLockButton({ onLock }: { onLock: (e: { timeStamp: number }) => void }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
@@ -4063,7 +4073,11 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
             // after the finger lands, which on a precision timing tap
             // reads as the aim bar "robbing" the player. Mirrors the
             // fishing Reel In / Cast buttons.
-            onPointerDown={(e) => { e.preventDefault(); onLock() }}
+            // Pass the event through — lockShot rewinds the aim refs by
+            // the measured pointerdown delivery latency (timeStamp →
+            // performance.now() delta) so the judged needle position is
+            // the one that was on glass when the finger landed.
+            onPointerDown={(e) => { e.preventDefault(); onLock(e) }}
             className="font-cinzel font-700 uppercase tracking-[0.14em]"
             style={{
               width: '100%', height: 58,
