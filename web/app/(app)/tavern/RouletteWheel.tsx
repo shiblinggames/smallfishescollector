@@ -116,13 +116,18 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
   const [ballTransition, setBallTransition] = useState<Transition>(
     { duration: 0, ease: 'linear' }
   )
-  // Ball radial position (as a translateY on the ball group; negative =
-  // up = toward the rim). Rest in a pocket at idle; flung out to the
-  // rim track on wind-up; drop-bounce-settle keyframes during decel.
+  // Ball radial position — animated as the circle's cy ATTRIBUTE
+  // (negative = up = toward the rim), not a nested group transform:
+  // framer-motion's `y` on an SVG <g> is unreliable (can be treated as
+  // the nonexistent y attribute and silently no-op, leaving the ball
+  // pinned at the wheel center). Rest in a pocket at idle; flung out to
+  // the rim track on wind-up; drop-bounce-settle keyframes during decel.
   const [ballY, setBallY] = useState<number | number[]>(-BALL_REST_R)
   const [ballYTransition, setBallYTransition] = useState<Transition>(
     { duration: 0 }
   )
+  // Specular highlight tracks the ball 1 unit above its center.
+  const highlightY = Array.isArray(ballY) ? ballY.map(v => v - 1) : ballY - 1
 
   useEffect(() => {
     if (phase === 'spinning' && winner === null) {
@@ -271,25 +276,27 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
           transition={ballTransition}
           style={{ transformOrigin: '0px 0px' }}
         >
-          <motion.g animate={{ y: ballY }} transition={ballYTransition}>
-            <circle
-              cx="0"
-              cy="0"
-              r="3"
-              fill="#fff"
-              stroke="#1a0a04"
-              strokeWidth="0.6"
-              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))' }}
-            />
-            {/* Specular highlight on the ball */}
-            <circle
-              cx="-0.9"
-              cy="-1"
-              r="0.9"
-              fill="rgba(255,255,255,0.85)"
-              pointerEvents="none"
-            />
-          </motion.g>
+          <motion.circle
+            cx="0"
+            r="3"
+            fill="#fff"
+            stroke="#1a0a04"
+            strokeWidth="0.6"
+            initial={false}
+            animate={{ cy: ballY }}
+            transition={ballYTransition}
+            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))' }}
+          />
+          {/* Specular highlight on the ball */}
+          <motion.circle
+            cx="-0.9"
+            r="0.9"
+            fill="rgba(255,255,255,0.85)"
+            initial={false}
+            animate={{ cy: highlightY }}
+            transition={ballYTransition}
+            pointerEvents="none"
+          />
         </motion.g>
 
         {/* Static pointer at top — gold arrow pointing into the wheel.
