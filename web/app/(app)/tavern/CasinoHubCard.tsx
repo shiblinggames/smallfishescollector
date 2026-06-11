@@ -35,10 +35,12 @@ export default function CasinoHubCard() {
       />
 
       {/* Three tables posed in a V, same trick as ShipHero's crew
-          lineup: card-room art front-and-center on the shared baseline,
-          roulette peeking from behind-left, slots from behind-right.
-          Backs render smaller + dimmer + desaturated so they read as
-          "behind" without a real camera. */}
+          lineup: the blackjack table front-and-center on the shared
+          baseline, roulette peeking from behind-left, slots from
+          behind-right. Backs anchor off CENTER (not the card edges) so
+          they tuck partially behind the front table at every card
+          width — the overlap is what sells the depth. Backs render
+          smaller + dimmer + desaturated. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/roulette.png"
@@ -48,7 +50,8 @@ export default function CasinoHubCard() {
         decoding="async"
         style={{
           position: 'absolute',
-          left: '9%',
+          left: '50%',
+          transform: 'translateX(-118%)',
           bottom: 46,
           height: 74,
           objectFit: 'contain',
@@ -66,7 +69,8 @@ export default function CasinoHubCard() {
         decoding="async"
         style={{
           position: 'absolute',
-          right: '9%',
+          left: '50%',
+          transform: 'translateX(18%)',
           bottom: 46,
           height: 74,
           objectFit: 'contain',
@@ -76,7 +80,7 @@ export default function CasinoHubCard() {
         }}
       />
       <motion.img
-        src="/crownandanchor.png"
+        src="/blackjack.png"
         alt=""
         aria-hidden
         animate={{ rotate: [-2.4, 1.6, -2.4] }}
