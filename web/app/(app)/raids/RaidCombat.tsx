@@ -131,23 +131,18 @@ function flashBar(el: HTMLDivElement | null, color: string, peak = 0.55) {
 const GRAZE_W = 0.038
 const HIT_W = 0.06
 const CRIT_W = 0.012
-// Base needle speed (~0.6% of the bar per 60fps frame). Enemy ship
-// speed adds on top (see the RAF effect) — the zone itself is STATIC
-// during aiming. Module-scope because both the RAF tick and lockShot's
-// forward prediction need the same number.
+// Needle speed (~0.6% of the bar per 60fps frame). The target zone
+// drifts too, driven by enemy ship speed and slowed by the player's
+// Navigation (see the RAF effect).
 const INDICATOR_SPEED = 0.006
-// The aim bar is structured like the fishing dial on purpose: ONE
-// moving object (the needle) approaching a FIXED target (the zone).
-// The zone used to drift during aiming, and that broke every timing
-// correction we tried — with two moving bodies the eye can't anchor,
-// and the field complaint ("left side of the gold misses, right side
-// crits") didn't even flip with needle direction, so it wasn't timing
-// at all. The zone now freezes for the whole aim (random spot each
-// shot) and ship speed drives the needle instead. On lock the needle
-// is projected this many frames ahead along its path — the dial's
-// confirmed-good flash-lag settle — frozen there, and judged there.
-// Never judge behind the sample, and never let the zone move mid-aim.
-const LOCK_LOOKAHEAD_FRAMES = 2
+// Lock-in judgment is RAW WYSIWYG: lockShot reads the needle and zone
+// refs exactly as painted on the tap frame, judges that geometry, and
+// freezes the picture AT it (critFreezeRef flips synchronously, so the
+// RAF can't run another tick first). No rewinds, no projections — five
+// schemes that adjusted the sample (fixed rewind, measured-latency
+// rewind, best-of-window lookback, dual-body forward projection,
+// static-zone restructure) all read wrong or changed the game. The
+// frozen frame IS the judgment; if it shows gold, the badge says gold.
 
 function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W): ShotResult {
   const grazeL = zoneCenter - HIT_W - GRAZE_W
@@ -550,7 +545,8 @@ export default function RaidCombat({
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
   const fireDirRef  = useRef(1)
-  const zonePosRef  = useRef(0.5)   // static during aiming; re-rolled per shot
+  const zonePosRef  = useRef(0.5)
+  const zoneDirRef  = useRef(1)
   const indicatorRef = useRef<HTMLDivElement>(null)
   const zoneRef      = useRef<HTMLDivElement>(null)
   const barFlashRef  = useRef<HTMLDivElement>(null)
@@ -731,14 +727,9 @@ export default function RaidCombat({
     if (subPhase !== 'aiming') return
     let last = performance.now()
 
-    // The zone is static during aiming (fishing-dial structure — see the
-    // LOCK_LOOKAHEAD_FRAMES note). Enemy ship speed drives the NEEDLE
-    // instead, still slowed by player navigation. Half the old
-    // zone-speed coefficient (0.0008 → 0.0004) keeps difficulty near the
-    // old two-body motion's AVERAGE relative speed — the old worst case
-    // (needle and zone closing head-on) would otherwise be constant.
-    const navSlow      = 1 / (1 + totalNavigation * 0.015)
-    const NEEDLE_SPEED = INDICATOR_SPEED + enemy.shipSpeed * 0.0004 * navSlow
+    // Zone drift: enemy ship speed sets the pace, player Navigation
+    // slows it back down.
+    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015))
 
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
@@ -750,9 +741,13 @@ export default function RaidCombat({
       if (critFreezeRef.current) { rafRef.current = requestAnimationFrame(tick); return }
       const frames = dt / 16.67
 
-      firePosRef.current += NEEDLE_SPEED * frames * fireDirRef.current
+      firePosRef.current += INDICATOR_SPEED * frames * fireDirRef.current
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
+
+      zonePosRef.current += ZONE_SPEED * frames * zoneDirRef.current
+      if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
+      if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
 
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
@@ -988,6 +983,7 @@ export default function RaidCombat({
       // Reset aim positions and indicator styling, then begin aiming
       firePosRef.current = 0; fireDirRef.current = 1
       zonePosRef.current = 0.3 + Math.random() * 0.4
+      zoneDirRef.current = Math.random() < 0.5 ? -1 : 1
       if (indicatorRef.current) {
         indicatorRef.current.style.width = '4px'
         indicatorRef.current.style.boxShadow = '0 0 8px rgba(255,255,255,0.6)'
@@ -1017,27 +1013,20 @@ export default function RaidCombat({
     // critical all count).
     const tideCritW = liveCritWRef.current
     lockedCritWRef.current = tideCritW
-    // WYSIWYG judgment: the zone is STATIC during aiming, so the only
-    // moving body is the needle. Settle it LOCK_LOOKAHEAD_FRAMES forward
-    // along its own velocity (same speed formula as the RAF tick — dial
-    // parity, flash-lag settle), reflect a projected edge bounce, and
-    // judge against the zone exactly where it is drawn. Tap on gold =
-    // gold, from either direction.
-    const reflect = (p: number, lo: number, hi: number) =>
-      p > hi ? Math.max(lo, hi - (p - hi)) : p < lo ? Math.min(hi, lo + (lo - p)) : p
-    const navSlow = 1 / (1 + totalNavigation * 0.015)
-    const needleSpeed = INDICATOR_SPEED + enemy.shipSpeed * 0.0004 * navSlow
-    const pos = reflect(
-      firePosRef.current + needleSpeed * LOCK_LOOKAHEAD_FRAMES * fireDirRef.current, 0, 1)
+    // RAW WYSIWYG judgment (see the module note): read both refs exactly
+    // as painted this frame, no rewind and no projection. The freeze
+    // below repaints needle + zone at this same geometry with the result
+    // color, so the frozen picture can never disagree with the badge.
+    const pos = firePosRef.current
     const zoneCenter = zonePosRef.current
     let res: ShotResult =
       pos >= zoneCenter - tideCritW && pos <= zoneCenter + tideCritW ? 'critical'
       : pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W ? 'hit'
       : pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W ? 'graze'
       : 'miss'
-    // Repaint the frozen needle + zone at the judged (rewound) geometry and
-    // color the needle by the judged result — the freeze IS the judgment,
-    // so the picture the player studies always matches the badge.
+    // Repaint the frozen needle + zone at the judged geometry and color
+    // the needle by the judged result — the freeze IS the judgment, so
+    // the picture the player studies always matches the badge.
     if (indicatorRef.current) {
       indicatorRef.current.style.left = `calc(${pos * 100}% - 2px)`
       indicatorRef.current.style.background =
