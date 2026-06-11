@@ -53,7 +53,6 @@ export default async function AchievementsPage() {
   const voyagesDone = voyageCountRes.count ?? 0
   const streakBest = profile?.highest_perfect_streak ?? 0
   const tideBest = profile?.tide_run_best_distance ?? 0
-  const fotdBest = profile?.fotd_longest_streak ?? 0
   const doubloons = profile?.doubloons ?? 0
 
   // ── Goal builders ───────────────────────────────────────────────────────
@@ -125,7 +124,6 @@ export default async function AchievementsPage() {
       accent: '#f0c040',
       goals: [
         progressGoal('tide_run', 'Tide Run Distance', 'Reach 500 in a single run', tideBest, 500, '/tavern/tide-run', { record: true }),
-        progressGoal('fotd_streak', 'Daily Detective', 'Solve Fish of the Day 10 days in a row', fotdBest, 10, '/tavern/fish-of-the-day', { record: true }),
       ],
     },
     {

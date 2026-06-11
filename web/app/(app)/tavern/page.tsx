@@ -5,7 +5,7 @@ import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
 import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
-import FishOfTheDayCard from './FishOfTheDayCard'
+import TriviaHubCard from './TriviaHubCard'
 import ChartTheCourseCard from './ChartTheCourseCard'
 import RecruitCrewCard from './RecruitCrewCard'
 import CasinoHubCard from './CasinoHubCard'
@@ -28,10 +28,12 @@ const cachedChartState = cache(() => getChartState())
 // ── Sections ────────────────────────────────────────────────────────────────
 
 function DailySection() {
+  // Trivia Night took Fish of the Day's slot on 2026-06-11 — the
+  // trivia hub's Captain's Board is the new daily brain ritual.
   return (
     <div className="grid grid-cols-2 gap-3">
       <DailyBonusCard />
-      <FishOfTheDayCard />
+      <TriviaHubCard />
     </div>
   )
 }
@@ -162,7 +164,7 @@ export default async function TavernPage() {
 // ── Skeletons matching each section's card grid shape ──────────────────────
 
 function DailyCardsSkeleton() {
-  // Always 2 cards (Daily Bonus + Fish of the Day). Charting moved
+  // Always 2 cards (Daily Bonus + Trivia Night). Charting moved
   // to its own bottom-row section on 2026-06-07.
   return (
     <div className="grid grid-cols-2 gap-3">
