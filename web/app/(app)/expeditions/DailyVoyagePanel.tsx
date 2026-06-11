@@ -144,10 +144,13 @@ function computeRouteEstimate(
   const lootMin = Math.round(rc.baseDoubloons + expected * 0.4)
   const lootMax = Math.round(rc.baseDoubloons + expected * 1.9)
 
-  // Flat per-voyage crew-loss chance, mitigated slightly by total crew
-  // fortune (see effectiveCrewLossChance in lib/voyageRoutes).
+  // Flat per-voyage crew-loss chance, scaled down by total crew fortune
+  // (up to 75% off at fortune 50 — see effectiveCrewLossChance in
+  // lib/voyageRoutes). One-decimal precision: the fortune-mitigated
+  // floors land on fractions (deep 2.5%, triangle 3.75%) and whole-%
+  // rounding would overstate them by up to a fifth.
   const crewRiskPct = crewCount >= 2
-    ? Math.round(effectiveCrewLossChance(rc.baseCrewLossChance, stats.fortune) * 100)
+    ? Math.round(effectiveCrewLossChance(rc.baseCrewLossChance, stats.fortune) * 1000) / 10
     : 0
 
   // XP estimate — same event counts, best/worst case outcomes

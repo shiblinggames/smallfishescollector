@@ -96,17 +96,23 @@ export const ROUTE_CONFIGS: Record<VoyageRoute, RouteConfig> = {
   },
 }
 
-// Fortune mitigation: each point of total crew fortune reduces the
-// per-voyage crew-loss chance by 0.1 percentage points (0.001), with a
-// hard floor at 50% of the route's base. So a fortune-25 crew on a
-// Howling Deep voyage (10% base) faces 7.5%; a fortune-60 crew faces
-// the 5% floor. "Stats can mitigate but never fully remove crew loss."
-export const CREW_LOSS_FORTUNE_SLOPE = 0.001
-export const CREW_LOSS_FLOOR_FRACTION = 0.5
+// Fortune mitigation — retuned 2026-06-11 so fortune is a survival stat
+// players respect, not scoff at. Mitigation is now MULTIPLICATIVE on the
+// route's base (the old subtractive 0.1pp-per-point made the same fortune
+// matter less on deadlier routes, and its 100-fortune ceiling was out of
+// reach): fortune scales the risk down linearly, capped at a 75% cut once
+// total weighted fortune reaches 50. Each point below the cap removes
+// 1.5% of the BASE risk on every route equally. So fortune 25 on the
+// Howling Deep (10% base) → 6.25%; fortune 50+ → 2.5% / 3.75% / 5% on
+// deep / triangle / shroud. Still never zero: "stats can mitigate but
+// never fully remove crew loss."
+export const CREW_LOSS_MAX_REDUCTION = 0.75
+export const CREW_LOSS_FORTUNE_FOR_MAX = 50
 
 export function effectiveCrewLossChance(base: number, fortune: number): number {
   if (base === 0) return 0
-  return Math.max(base * CREW_LOSS_FLOOR_FRACTION, base - fortune * CREW_LOSS_FORTUNE_SLOPE)
+  const reduction = CREW_LOSS_MAX_REDUCTION * Math.min(1, fortune / CREW_LOSS_FORTUNE_FOR_MAX)
+  return base * (1 - reduction)
 }
 
 export interface VoyageEvent {
