@@ -131,14 +131,24 @@ function flashBar(el: HTMLDivElement | null, color: string, peak = 0.55) {
 const GRAZE_W = 0.038
 const HIT_W = 0.06
 const CRIT_W = 0.012
+// Indicator slides at constant speed (~0.6% of the bar per 60fps frame).
+// Module-scope because both the RAF tick and lockShot's latency rewind
+// need the same number.
+const INDICATOR_SPEED = 0.006
+// Touch delivery + compositor latency on mobile runs ~2 frames — by the
+// time the lock handler reads the refs, needle AND zone have drifted past
+// what was on glass when the player committed. The crit band is only ~4
+// frames of needle travel wide, so judging the drifted position made
+// on-the-gold taps miss. lockShot rewinds both by this many frames.
+const LOCK_REWIND_FRAMES = 2
 
-function getShotResult(pos: number, zoneCenter: number): ShotResult {
+function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W): ShotResult {
   const grazeL = zoneCenter - HIT_W - GRAZE_W
   const grazeR = zoneCenter + HIT_W + GRAZE_W
   const hitL   = zoneCenter - HIT_W
   const hitR   = zoneCenter + HIT_W
-  const critL  = zoneCenter - CRIT_W
-  const critR  = zoneCenter + CRIT_W
+  const critL  = zoneCenter - critW
+  const critR  = zoneCenter + critW
   if (pos >= critL && pos <= critR)   return 'critical'
   if (pos >= hitL  && pos <= hitR)    return 'hit'
   if (pos >= grazeL && pos <= grazeR) return 'graze'
@@ -361,6 +371,20 @@ export default function RaidCombat({
   // Sharpshot — next N shots have a wider crit zone. Consumed by a shot
   // landing (any of miss/graze/hit/critical — the buff applies *to* the roll).
   const [sharpshotBuff, setSharpshotBuff] = useState<{ multiplier: number; shotsLeft: number } | null>(null)
+  // Live crit half-width: CRIT_W scaled by tide critZoneScale and an active
+  // Sharpshot buff. ONE source of truth for the RAF tick's needle color,
+  // lockShot's judgment, and the gold band AimBarInline draws — previously
+  // the tick colored against base CRIT_W while lockShot judged the widened
+  // band, so the needle could glow green at the lock moment yet resolve
+  // critical. Ref mirror lets the RAF read it without restarting the tick.
+  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1)
+  const liveCritWRef = useRef(liveCritW)
+  useEffect(() => { liveCritWRef.current = liveCritW }, [liveCritW])
+  // Width the shot was JUDGED at, captured in lockShot. The drawn band uses
+  // this during the freeze — consuming Sharpshot at lock would otherwise
+  // shrink the gold band mid-freeze and the picture would lie about the
+  // window the shot was scored against.
+  const lockedCritWRef = useRef(liveCritW)
   // Snare — enemy can't dodge for N player turns. -1 = rest of fight.
   // Decremented at the start of each player turn while > 0; rest-of-fight
   // sticks until the encounter ends (component remounts next fight).
@@ -701,8 +725,6 @@ export default function RaidCombat({
     if (subPhase !== 'aiming') return
     let last = performance.now()
 
-    // Indicator slides at constant speed (~0.6% per frame at 60fps).
-    const INDICATOR_SPEED = 0.006
     // Zone slides at speed driven by enemy.shipSpeed, slowed by player navigation.
     const baseZone   = enemy.shipSpeed * 0.0008
     const navSlow    = 1 / (1 + totalNavigation * 0.015)
@@ -730,7 +752,7 @@ export default function RaidCombat({
 
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
-        const zone = getShotResult(firePosRef.current, zonePosRef.current)
+        const zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
         const bg = zone === 'critical' ? '#fbbf24'
                  : zone === 'hit'      ? '#4ade80'
                  : zone === 'graze'    ? '#94a3b8'
@@ -977,20 +999,50 @@ export default function RaidCombat({
   }
 
   function lockShot() {
-    if (subPhase !== 'aiming' || critFreeze) return
+    // critFreezeRef in the guard too: it flips synchronously below, so a
+    // double-tap in the same frame can't run the lock twice while the
+    // critFreeze state commit is still pending.
+    if (subPhase !== 'aiming' || critFreeze || critFreezeRef.current) return
+    // Freeze the RAF synchronously. The critFreezeRef mirror effect only
+    // commits after this render, which let the tick run 1–2 more frames and
+    // drift the painted needle past the spot being judged.
+    critFreezeRef.current = true
     // Tide critZoneScale widens the gold critical band. Sharpshot ability
-    // also widens it for the next N shots. Both multiply onto CRIT_W; a
-    // wider zone = same aim, more crits. Sharpshot buff is consumed by the
-    // shot landing regardless of result (miss/graze/hit/critical all count).
-    const sharpshotMult = sharpshotBuff ? (1 + sharpshotBuff.multiplier) : 1
-    const tideCritW = CRIT_W * tide.critZoneMult * sharpshotMult
-    const pos = firePosRef.current
-    const zoneCenter = zonePosRef.current
+    // also widens it for the next N shots. Both multiply onto CRIT_W (via
+    // liveCritW); a wider zone = same aim, more crits. Sharpshot buff is
+    // consumed by the shot landing regardless of result (miss/graze/hit/
+    // critical all count).
+    const tideCritW = liveCritWRef.current
+    lockedCritWRef.current = tideCritW
+    // Latency compensation: judge the shot where the player SAW it, not
+    // where the refs drifted to during touch delivery. Rewind needle AND
+    // zone by ~2 frames of their own velocities (the zone moves too, so
+    // against a fast ship the relative drift alone could cross the whole
+    // crit band). Clamps cover the just-bounced-off-an-edge case.
+    const zoneSpeed = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015))
+    const pos = Math.max(0, Math.min(1,
+      firePosRef.current - INDICATOR_SPEED * LOCK_REWIND_FRAMES * fireDirRef.current))
+    const zoneCenter = Math.max(HIT_W + GRAZE_W, Math.min(1 - HIT_W - GRAZE_W,
+      zonePosRef.current - zoneSpeed * LOCK_REWIND_FRAMES * zoneDirRef.current))
     let res: ShotResult
     if (pos >= zoneCenter - tideCritW && pos <= zoneCenter + tideCritW) res = 'critical'
     else if (pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W) res = 'hit'
     else if (pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W) res = 'graze'
     else res = 'miss'
+    // Repaint the frozen needle + zone at the judged (rewound) geometry and
+    // color the needle by the judged result — the freeze IS the judgment,
+    // so the picture the player studies always matches the badge.
+    if (indicatorRef.current) {
+      indicatorRef.current.style.left = `calc(${pos * 100}% - 2px)`
+      indicatorRef.current.style.background =
+        res === 'critical' ? '#fbbf24' :
+        res === 'hit'      ? '#4ade80' :
+        res === 'graze'    ? '#94a3b8' :
+                             'rgba(255,255,255,0.4)'
+    }
+    if (zoneRef.current) {
+      zoneRef.current.style.left = `${(zoneCenter - HIT_W - GRAZE_W) * 100}%`
+    }
 
     // Consume one Sharpshot buff "shot left" regardless of outcome.
     if (sharpshotBuff) {
@@ -2580,7 +2632,14 @@ export default function RaidCombat({
         display: 'flex', flexDirection: 'column', gap: 8,
       }}>
         {subPhase === 'aiming' ? (
-          <AimBarInline indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef} aimFogDensity={enemy.aimFogDensity} />
+          <AimBarInline
+            indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
+            aimFogDensity={enemy.aimFogDensity}
+            // During the freeze, show the width the shot was judged at —
+            // Sharpshot is consumed at lock and the live width would
+            // shrink the band mid-freeze, making the picture lie.
+            critW={critFreeze ? lockedCritWRef.current : liveCritW}
+          />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
         )}
@@ -3871,7 +3930,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -3880,9 +3939,17 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity }: {
    *  raid). ~0.4 thin (his crew tier), ~0.7 deep (the boss himself).
    *  Themed: he runs these waters because the fog hides his charts. */
   aimFogDensity?: number
+  /** Live crit half-width (CRIT_W × tide/Sharpshot wideners). The gold
+   *  band is drawn at its TRUE width — it was a 2px hairline while the
+   *  real window was ~4× wider, so honest crits read as lucky breaks
+   *  and the practice bar (which draws the real band) didn't match. */
+  critW: number
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
+  // The zone div spans ±(HIT_W + GRAZE_W) around its center, so the crit
+  // band's share of it is critW / (HIT_W + GRAZE_W), centered.
+  const critBandPct = (critW / (HIT_W + GRAZE_W)) * 100
   return (
     <div style={{
       background: '#04080e',
@@ -3932,6 +3999,9 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity }: {
         <div ref={zoneRef} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 0, zIndex: 1 }}>
           <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
           <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
+          {/* Gold crit band at its real width (matches the practice bar),
+              with the hairline kept on top as the aim focus. */}
+          <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
