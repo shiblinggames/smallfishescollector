@@ -263,7 +263,9 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
         </button>
       </div>
 
-      {/* Wheel — real SVG with momentum spin + decel-to-pocket. */}
+      {/* Wheel — real SVG with momentum spin + decel-to-pocket. Spin
+          lives ON the wheel: a circular button sized to the static hub
+          so the tap target sits where the eye already is. */}
       <div style={{
         position: 'relative',
         background: `radial-gradient(circle at 50% 35%, ${FELT} 0%, ${FELT_RIM} 80%)`,
@@ -271,13 +273,46 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
         borderRadius: 14,
         padding: '0.9rem 0.8rem 0.7rem',
       }}>
-        <RouletteWheel phase={wheelPhase} winner={winningNumber} size={340} />
+        <div style={{ position: 'relative', maxWidth: 340, margin: '0 auto' }}>
+          <RouletteWheel phase={wheelPhase} winner={winningNumber} size={340} />
+          {phase === 'bet' && (
+            <button
+              onClick={handleSpin}
+              disabled={totalPlaced === 0 || isPending}
+              className="font-cinzel font-700 uppercase"
+              style={{
+                position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '29%', aspectRatio: '1', borderRadius: '50%',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 1,
+                background: totalPlaced > 0
+                  ? `radial-gradient(circle at 50% 35%, ${ACCENT}30 0%, rgba(26,10,4,0.94) 78%)`
+                  : 'rgba(26,10,4,0.88)',
+                border: `2px solid ${totalPlaced > 0 ? ACCENT : 'rgba(240,192,64,0.25)'}`,
+                color: totalPlaced > 0 ? ACCENT : 'rgba(240,232,208,0.35)',
+                fontSize: '0.82rem', letterSpacing: '0.1em',
+                boxShadow: totalPlaced > 0
+                  ? `0 0 16px ${ACCENT}55, inset 0 1px 0 rgba(255,255,255,0.12)`
+                  : 'none',
+                cursor: totalPlaced > 0 && !isPending ? 'pointer' : 'default',
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+              Spin
+              {totalPlaced > 0 && (
+                <span className="font-karla font-700" style={{ fontSize: '0.55rem', letterSpacing: '0.06em' }}>
+                  {totalPlaced.toLocaleString()}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
         {phase === 'bet' && (
           <p className="font-karla font-700 uppercase" style={{
             fontSize: '0.55rem', letterSpacing: '0.18em', color: '#5a7868',
             textAlign: 'center', marginTop: 4,
           }}>
-            Place your bets
+            {totalPlaced > 0 ? 'Tap the wheel to spin' : 'Place your bets'}
           </p>
         )}
         {phase === 'spinning' && winningNumber === null && (
@@ -378,42 +413,23 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
             chipsLeft={chips - totalPlaced}
           />
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={clearBets}
-              disabled={Object.keys(placed).length === 0 || phase !== 'bet'}
-              className="font-karla font-700 uppercase"
-              style={{
-                flex: 1, padding: '0.65rem 0', borderRadius: 10,
-                fontSize: '0.7rem', letterSpacing: '0.12em',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'rgba(240,232,208,0.6)',
-                cursor: Object.keys(placed).length > 0 && phase === 'bet' ? 'pointer' : 'default',
-              }}
-            >
-              Clear Bets
-            </button>
-            <button
-              onClick={handleSpin}
-              disabled={phase !== 'bet' || Object.keys(placed).length === 0 || isPending}
-              className="font-cinzel font-700 uppercase"
-              style={{
-                flex: 2, padding: '0.7rem 0', borderRadius: 10,
-                fontSize: '0.85rem', letterSpacing: '0.14em',
-                background: Object.keys(placed).length > 0 && phase === 'bet'
-                  ? `linear-gradient(180deg, ${ACCENT}33 0%, ${ACCENT}18 100%)`
-                  : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${Object.keys(placed).length > 0 && phase === 'bet' ? `${ACCENT}88` : 'rgba(255,255,255,0.1)'}`,
-                color: Object.keys(placed).length > 0 && phase === 'bet' ? ACCENT : 'rgba(255,255,255,0.3)',
-                boxShadow: Object.keys(placed).length > 0 && phase === 'bet'
-                  ? `0 2px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)` : 'none',
-                cursor: phase === 'bet' && Object.keys(placed).length > 0 ? 'pointer' : 'default',
-              }}
-            >
-              {phase === 'spinning' ? 'Spinning…' : phase === 'reveal' ? 'Settling…' : `Spin · ${totalPlaced.toLocaleString()}`}
-            </button>
-          </div>
+          {/* Spin moved onto the wheel hub — only Clear Bets lives
+              down here now. */}
+          <button
+            onClick={clearBets}
+            disabled={Object.keys(placed).length === 0 || phase !== 'bet'}
+            className="font-karla font-700 uppercase"
+            style={{
+              padding: '0.65rem 0', borderRadius: 10,
+              fontSize: '0.7rem', letterSpacing: '0.12em',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'rgba(240,232,208,0.6)',
+              cursor: Object.keys(placed).length > 0 && phase === 'bet' ? 'pointer' : 'default',
+            }}
+          >
+            Clear Bets
+          </button>
         </>
       )}
 
@@ -484,16 +500,15 @@ function BuyInPanel({ presets, doubloons, dailyRemaining, disabled, onBuyIn }: {
 }
 
 // ─── Bet table ───────────────────────────────────────────────────────
-// Portrait-first layout: 0 banner on top, then the 3×12 number grid
-// rotated VERTICAL — 12 rows of 3 numbers reading 1-2-3 / 4-5-6 / …
-// down the screen, with finger-sized split / corner tap zones woven
-// into the gaps (CSS Grid alternating 1fr/14px columns and rows).
-// Streets + lines live in a narrow right rail beside their rows,
-// column bets sit under their columns, then dozens and the
-// 1-18/Even/Red/Black/Odd/19-36 rows. The whole table fits a phone
-// width with zero sideways scroll. Each inside-bet zone uses the same
-// "type:target" key shape as outside bets so chip stacking + payout
-// settlement reuse the same code paths.
+// Portrait-first, noob-first layout: 0 banner on top, then the number
+// grid rotated VERTICAL — 12 rows of 3 numbers reading 1-2-3 / 4-5-6
+// / … down the screen — then dozens and the 1-18/Even/Red/Black/Odd/
+// 19-36 rows. Only the bets a casual player actually reaches for:
+// straight numbers + the outside bets. Splits / corners / streets /
+// lines / columns were cut from the UI (the server still validates and
+// settles them, so they can return behind an "advanced" toggle if ever
+// wanted). The whole table fits a phone width with zero sideways
+// scroll.
 function BetTable({ placed, onPlace, lastWinner, phase }: {
   placed: PlacedMap
   onPlace: (zone: string, max: number) => void
@@ -550,134 +565,7 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
     )
   }
 
-  /** Thin tap target for a split bet — covers the gap between two
-   *  adjacent numbers. Orientation 'h' for horizontal gaps (same row,
-   *  different columns) and 'v' for vertical gaps (same column,
-   *  different rows). Subtle gold dashed outline so the player can find
-   *  them; lights up to gold fill on chip placement. */
-  function SplitZone({ a, b, gridRow, gridCol, orientation }: {
-    a: number; b: number; gridRow: number; gridCol: number
-    orientation: 'h' | 'v'
-  }) {
-    const sorted = a < b ? [a, b] : [b, a]
-    const key = `split:${sorted[0]}-${sorted[1]}`
-    const chips = placed[key] ?? 0
-    return (
-      <button
-        type="button"
-        onClick={() => interactive && onPlace(key, RL_MAX_STRAIGHT_BET)}
-        disabled={!interactive}
-        title={`Split ${sorted[0]}/${sorted[1]} · 17:1`}
-        style={{
-          gridRow, gridColumn: gridCol,
-          position: 'relative',
-          padding: 0, background: chips > 0 ? `${ACCENT}33` : 'transparent',
-          border: `1px dashed ${chips > 0 ? ACCENT : 'rgba(240,192,64,0.22)'}`,
-          borderRadius: orientation === 'v' ? '3px' : '3px',
-          cursor: interactive ? 'pointer' : 'default',
-          // Tiny visual hint — a thin colored center line so the tap
-          // zone reads as "between two pockets" instead of an empty box.
-          backgroundImage: chips > 0
-            ? undefined
-            : `linear-gradient(${orientation === 'h' ? '0deg' : '90deg'}, transparent 35%, rgba(240,192,64,0.32) 50%, transparent 65%)`,
-        }}
-      >
-        {chips > 0 && <ChipBadge value={chips} small />}
-      </button>
-    )
-  }
-
-  /** Corner bet zone — 2x2 block, 4 numbers. Tiny circular tap target
-   *  at the intersection of a horizontal split column and a vertical
-   *  split row. */
-  function CornerZone({ a, b, c, d, gridRow, gridCol }: {
-    a: number; b: number; c: number; d: number; gridRow: number; gridCol: number
-  }) {
-    const sorted = [a, b, c, d].sort((x, y) => x - y)
-    const key = `corner:${sorted.join('-')}`
-    const chips = placed[key] ?? 0
-    return (
-      <button
-        type="button"
-        onClick={() => interactive && onPlace(key, RL_MAX_STRAIGHT_BET)}
-        disabled={!interactive}
-        title={`Corner ${sorted.join('/')} · 8:1`}
-        style={{
-          gridRow, gridColumn: gridCol,
-          position: 'relative',
-          padding: 0, background: chips > 0 ? `${ACCENT}44` : 'transparent',
-          border: `1px solid ${chips > 0 ? ACCENT : 'rgba(240,192,64,0.2)'}`,
-          borderRadius: '50%',
-          cursor: interactive ? 'pointer' : 'default',
-          width: '100%', height: '100%',
-          minWidth: 8, minHeight: 8,
-        }}
-      >
-        {chips > 0 && <ChipBadge value={chips} small />}
-      </button>
-    )
-  }
-
-  /** Street (3 in a row) — pill in the right rail beside its row. */
-  function StreetZone({ idx, gridRow, gridCol }: { idx: number; gridRow: number; gridCol: number }) {
-    const key = `street:${idx}`
-    const chips = placed[key] ?? 0
-    return (
-      <button
-        type="button"
-        onClick={() => interactive && onPlace(key, RL_MAX_STRAIGHT_BET)}
-        disabled={!interactive}
-        title={`Street ${idx * 3 - 2}-${idx * 3} · 11:1`}
-        style={{
-          gridRow, gridColumn: gridCol,
-          position: 'relative',
-          padding: 0,
-          background: chips > 0 ? `${ACCENT}22` : 'rgba(240,192,64,0.05)',
-          border: `1px solid ${chips > 0 ? ACCENT : 'rgba(240,192,64,0.28)'}`,
-          borderRadius: 5,
-          color: chips > 0 ? '#f0c040' : '#7a6648',
-          fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.04em',
-          cursor: interactive ? 'pointer' : 'default',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-        className="font-karla">
-        S{idx}
-        {chips > 0 && <ChipBadge value={chips} small />}
-      </button>
-    )
-  }
-
-  /** Six-line (2 adjacent streets) — small pill in the right-rail gap
-   *  between street pills. */
-  function LineZone({ idx, gridRow, gridCol }: { idx: number; gridRow: number; gridCol: number }) {
-    const key = `line:${idx}`
-    const chips = placed[key] ?? 0
-    return (
-      <button
-        type="button"
-        onClick={() => interactive && onPlace(key, RL_MAX_STRAIGHT_BET)}
-        disabled={!interactive}
-        title={`Line ${idx * 3 - 2}-${idx * 3 + 3} · 5:1`}
-        style={{
-          gridRow, gridColumn: gridCol,
-          position: 'relative',
-          padding: 0,
-          background: chips > 0 ? `${ACCENT}22` : 'transparent',
-          border: `1px dashed ${chips > 0 ? ACCENT : 'rgba(240,192,64,0.18)'}`,
-          borderRadius: 4,
-          color: chips > 0 ? '#f0c040' : '#7a6648',
-          fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.06em',
-          cursor: interactive ? 'pointer' : 'default',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-        className="font-karla">
-        L
-        {chips > 0 && <ChipBadge value={chips} small />}
-      </button>
-    )
-  }
-
-  /** Standard outside-bet pill — used for dozens / column / color /
+  /** Standard outside-bet pill — used for dozens / color /
    *  parity / half rows below the grid. */
   function ZoneButton({ label, zone, max, accent, flex, isOutside }: {
     label: string
@@ -715,31 +603,9 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
     )
   }
 
-  // Numbers, splits, corners, streets, lines — all addressed by their
-  // (rowIdx, colIdx) where rowIdx 0-11 = street row (top = 1-2-3),
-  // colIdx 0-2 (0 = left column {1,4,7..}, 2 = right column {3,6,9..}).
-  // Helper converts (row, col) → the canonical roulette number 1-36.
+  // (rowIdx, colIdx) → canonical roulette number 1-36. rowIdx 0-11
+  // (top row = 1-2-3), colIdx 0-2.
   const numAt = (row: number, col: number) => row * 3 + col + 1
-
-  // Portrait grid template:
-  //   cols: 3 number cols (1fr) + 2 split cols (14px) woven between
-  //         + 1 street/line rail (30px) on the right = 6 cols
-  //   rows: zero banner (44px) + 12 number rows (40px) with 11 split
-  //         rows (14px) woven between + 6px gap + column-bet row (36px)
-  //
-  // CSS Grid 1-indexed: number col c → grid col c*2 + 1;
-  //                     split between c and c+1 → grid col c*2 + 2;
-  //                     street rail → grid col 6.
-  const numberGridRow = (row: number) => row * 2 + 2      // rowIdx 0 → 2; rowIdx 11 → 24
-  const splitGridRow  = (rPair: number) => rPair * 2 + 3  // between rPair and rPair+1
-  const numberGridCol = (col: number) => col * 2 + 1
-  const splitGridCol  = (cPair: number) => cPair * 2 + 2
-  const STREET_COL = 6
-  const COLBET_ROW = 26
-  const gridTemplateRows =
-    '44px ' +
-    Array.from({ length: 12 }, (_, r) => (r < 11 ? '40px 14px' : '40px')).join(' ') +
-    ' 6px 36px'
 
   return (
     <div style={{
@@ -751,13 +617,12 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
       width: '100%',
       margin: '0 auto',
     }}>
-      {/* Zero + numbers + splits + corners + street rail + column bets,
-          all one vertical CSS grid. */}
+      {/* Zero banner + 12×3 number grid, one vertical CSS grid. */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 14px 1fr 14px 1fr 30px',
-        gridTemplateRows,
-        gap: 3,
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateRows: '44px repeat(12, 40px)',
+        gap: 4,
       }}>
         {/* Zero — full-width banner across the top. */}
         <button
@@ -766,7 +631,7 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
           disabled={!interactive}
           title="The Abyss"
           style={{
-            gridRow: 1, gridColumn: '1 / 7',
+            gridRow: 1, gridColumn: '1 / 4',
             position: 'relative',
             background: GREEN_POCKET,
             border: lastWinner === 0 ? `2px solid ${ACCENT}` : '1px solid rgba(255,255,255,0.1)',
@@ -787,104 +652,12 @@ function BetTable({ placed, onPlace, lastWinner, phase }: {
               <NumberPocket
                 key={`num-${n}`}
                 n={n}
-                gridRow={numberGridRow(row)}
-                gridCol={numberGridCol(col)}
+                gridRow={row + 2}
+                gridCol={col + 1}
               />
             )
           })
         ).flat()}
-
-        {/* Side-by-side splits (24 cells) — between adjacent numbers in
-            the same row (n / n+1). Thin vertical gap → 'v'. */}
-        {Array.from({ length: 12 }, (_, row) =>
-          [0, 1].map(cPair => {
-            const a = numAt(row, cPair)
-            const b = numAt(row, cPair + 1)
-            return (
-              <SplitZone
-                key={`h-${a}-${b}`}
-                a={a} b={b}
-                gridRow={numberGridRow(row)}
-                gridCol={splitGridCol(cPair)}
-                orientation="v"
-              />
-            )
-          })
-        ).flat()}
-
-        {/* Stacked splits (33 cells) — between numbers in the same
-            column, one row apart (n / n+3). Thin horizontal gap → 'h'. */}
-        {Array.from({ length: 11 }, (_, rPair) =>
-          [0, 1, 2].map(col => {
-            const a = numAt(rPair, col)
-            const b = numAt(rPair + 1, col)
-            return (
-              <SplitZone
-                key={`v-${a}-${b}`}
-                a={a} b={b}
-                gridRow={splitGridRow(rPair)}
-                gridCol={numberGridCol(col)}
-                orientation="h"
-              />
-            )
-          })
-        ).flat()}
-
-        {/* Corners (22 cells) — 2x2 blocks at gap intersections. */}
-        {Array.from({ length: 11 }, (_, rPair) =>
-          [0, 1].map(cPair => {
-            const a = numAt(rPair, cPair)
-            const b = numAt(rPair, cPair + 1)
-            const c = numAt(rPair + 1, cPair)
-            const d = numAt(rPair + 1, cPair + 1)
-            return (
-              <CornerZone
-                key={`cor-${a}-${b}-${c}-${d}`}
-                a={a} b={b} c={c} d={d}
-                gridRow={splitGridRow(rPair)}
-                gridCol={splitGridCol(cPair)}
-              />
-            )
-          })
-        ).flat()}
-
-        {/* Streets (12 cells) — right-rail pill beside each row. */}
-        {Array.from({ length: 12 }, (_, row) => (
-          <StreetZone key={`st-${row + 1}`} idx={row + 1} gridRow={numberGridRow(row)} gridCol={STREET_COL} />
-        ))}
-
-        {/* Lines (11 cells) — right rail, between adjacent streets. */}
-        {Array.from({ length: 11 }, (_, rPair) => (
-          <LineZone key={`ln-${rPair + 1}`} idx={rPair + 1} gridRow={splitGridRow(rPair)} gridCol={STREET_COL} />
-        ))}
-
-        {/* Column bets — bottom row, one under each number column. */}
-        {[1, 2, 3].map(c => {
-          const key = `column:${c}`
-          const chips = placed[key] ?? 0
-          return (
-            <button
-              key={c}
-              type="button"
-              onClick={() => interactive && onPlace(key, RL_MAX_OUTSIDE_BET)}
-              disabled={!interactive}
-              style={{
-                gridRow: COLBET_ROW, gridColumn: numberGridCol(c - 1),
-                position: 'relative',
-                background: '#9fbcd61c',
-                border: '1px solid #9fbcd655',
-                color: '#9fbcd6',
-                borderRadius: 6,
-                fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                cursor: interactive ? 'pointer' : 'default',
-              }}
-              className="font-karla">
-              Col {c}
-              {chips > 0 && <ChipBadge value={chips} small />}
-            </button>
-          )
-        })}
       </div>
 
       {/* Dozens row — themed by habitat. */}
