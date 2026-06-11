@@ -271,7 +271,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
         borderRadius: 14,
         padding: '0.9rem 0.8rem 0.7rem',
       }}>
-        <RouletteWheel phase={wheelPhase} winner={winningNumber} size={240} />
+        <RouletteWheel phase={wheelPhase} winner={winningNumber} size={340} />
         {phase === 'bet' && (
           <p className="font-karla font-700 uppercase" style={{
             fontSize: '0.55rem', letterSpacing: '0.18em', color: '#5a7868',

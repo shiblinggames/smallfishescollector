@@ -10,6 +10,10 @@
 //   2. Deceleration — once the server returns the winning number, the
 //      wheel decelerates with an ease-out-quint curve over ~3.2s and
 //      lands with the winning pocket pinned under the top pointer.
+//      The ball, which rode the rim groove during wind-up, slows on a
+//      gentler curve, falls inward off the track, bounces off the
+//      pocket ring, and settles into the winning pocket as the wheel
+//      bottoms out.
 //
 // Math notes:
 // - Each pocket spans 360/37 ≈ 9.73°. Pocket i (in wheel order) is
@@ -79,13 +83,22 @@ function pocketColor(n: number): string {
 
 export type WheelPhase = 'idle' | 'spinning' | 'landed'
 
-export default function RouletteWheel({ phase, winner, size = 260 }: {
+// Ball track + pocket radii. During the spin the ball rides the wooden
+// rim groove (BALL_TRACK_R), then falls inward and settles in the
+// pocket ring (BALL_REST_R) with a couple of radial bounces — the
+// classic "ball rattles into the pocket" moment.
+const BALL_TRACK_R = 96
+const BALL_REST_R  = 78
+
+export default function RouletteWheel({ phase, winner, size = 340 }: {
   /** 'idle' = at rest, 'spinning' = wind-up + decel motion, 'landed' =
    *  highlighting the winning pocket. */
   phase: WheelPhase
   /** Winning number, set by the parent once the server returns. Null
    *  during wind-up; once set, the wheel decelerates to land here. */
   winner: number | null
+  /** Max rendered width — the wheel fills its container up to this cap
+   *  (responsive: on narrow phones it shrinks to the viewport). */
   size?: number
 }) {
   // Cumulative rotation — never resets. New spins add deltas so the
@@ -103,23 +116,32 @@ export default function RouletteWheel({ phase, winner, size = 260 }: {
   const [ballTransition, setBallTransition] = useState<Transition>(
     { duration: 0, ease: 'linear' }
   )
+  // Ball radial position (as a translateY on the ball group; negative =
+  // up = toward the rim). Rest in a pocket at idle; flung out to the
+  // rim track on wind-up; drop-bounce-settle keyframes during decel.
+  const [ballY, setBallY] = useState<number | number[]>(-BALL_REST_R)
+  const [ballYTransition, setBallYTransition] = useState<Transition>(
+    { duration: 0 }
+  )
 
   useEffect(() => {
     if (phase === 'spinning' && winner === null) {
       // Wind-up — fast linear turns while waiting for server. Wheel
-      // goes CW, ball goes CCW for the classic counter-spin look.
+      // goes CW, ball goes CCW for the classic counter-spin look. The
+      // ball is flung outward onto the rim track as the spin starts.
       setRotation(r => r + 1080)                  // 3 turns clockwise
       setTransition({ duration: 1.4, ease: 'linear' })
       setBallRotation(b => b - 1080)              // 3 turns counter-clockwise
       setBallTransition({ duration: 1.4, ease: 'linear' })
+      setBallY(-BALL_TRACK_R)
+      setBallYTransition({ duration: 0.25, ease: 'easeOut' })
     } else if (phase === 'spinning' && winner !== null) {
       // Decelerate to the winning pocket. Snap the wheel's base to a
       // clean multiple of 360 ahead of the current visual position so
       // we get at least 4 more full turns regardless of where the
       // wind-up was. Ball lands at angle 0 (pointer/top), so its decel
       // target is just the next clean multiple of -360 minus a few more
-      // turns. Both animations share the same 3.2s + ease-out-quint
-      // curve so they bottom out together.
+      // turns. Both bottom out together at 3.2s.
       const wIdx = EUROPEAN_WHEEL_ORDER.indexOf(winner)
       const winnerAngle = -wIdx * POCKET_ANGLE
       setRotation(r => {
@@ -128,13 +150,24 @@ export default function RouletteWheel({ phase, winner, size = 260 }: {
       })
       setTransition({ duration: 3.2, ease: [0.16, 1, 0.3, 1] })   // ease-out-quint
       // Ball rotation: settle to 0 (modulo 360), reached after a few
-      // more CCW turns. Picking floor(currentBall/-360)*-360 - 3*360
-      // guarantees at least 3 more CCW turns from wherever it is.
+      // more CCW turns. Ease-out-cubic (gentler than the wheel's quint)
+      // so the ball is visibly still creeping when it leaves the track
+      // — it should look like it falls while moving, not after parking.
       setBallRotation(b => {
         const base = Math.floor(b / -360) * -360 - 360 * 3
         return base
       })
-      setBallTransition({ duration: 3.2, ease: [0.16, 1, 0.3, 1] })
+      setBallTransition({ duration: 3.2, ease: [0.33, 1, 0.68, 1] })  // ease-out-cubic
+      // Radial drop: ride the track for ~60% of the decel, then fall
+      // into the pocket ring, kick back out once, and settle. The
+      // bounce overlaps the last slow degrees of orbit so it reads as
+      // the ball rattling across pocket walls before coming to rest.
+      setBallY([-BALL_TRACK_R, -BALL_TRACK_R, -72, -86, -76, -BALL_REST_R])
+      setBallYTransition({
+        duration: 3.2,
+        times: [0, 0.6, 0.72, 0.82, 0.92, 1],
+        ease: ['linear', 'easeIn', 'easeOut', 'easeIn', 'easeOut'],
+      })
     }
     // 'landed' / 'idle' just leave both where they are — no snap-back.
   }, [phase, winner])
@@ -163,17 +196,20 @@ export default function RouletteWheel({ phase, winner, size = 260 }: {
   return (
     <div style={{
       position: 'relative',
-      width: size, height: size,
+      width: '100%', maxWidth: size,
+      aspectRatio: '1',
       margin: '0 auto',
     }}>
       <svg
         viewBox="-100 -100 200 200"
-        width={size}
-        height={size}
+        width="100%"
+        height="100%"
         style={{ display: 'block', filter: 'drop-shadow(0 8px 18px rgba(0,0,0,0.55))' }}
       >
-        {/* Outer rim — dark wood */}
+        {/* Outer rim — dark wood, with a milled groove the ball rides
+            during the spin. */}
         <circle cx="0" cy="0" r={RIM_OUTER} fill={RIM_OUTER_COLOR} stroke="#0a0402" strokeWidth="0.6" />
+        <circle cx="0" cy="0" r={BALL_TRACK_R} fill="none" stroke="#241204" strokeWidth="4.5" opacity="0.6" />
         <circle cx="0" cy="0" r={POCKET_OUTER + 1.5} fill={RIM_INNER_COLOR} />
 
         {/* Rotating group — all pockets + numbers + inner hub plate.
@@ -224,33 +260,36 @@ export default function RouletteWheel({ phase, winner, size = 260 }: {
         <circle cx="0" cy="0" r={HUB_INNER} fill="#1a0a04" />
         <circle cx="-3" cy="-3" r="1.4" fill="#5a3a18" opacity="0.7" />
 
-        {/* Orbiting ball — independent rotation group. Ball lives on
-            the outer track (radius ~ POCKET_OUTER - 2), rotates opposite
-            the wheel during wind-up, then decelerates to angle 0 (top)
-            so it visually 'falls into' the winning pocket under the
+        {/* Orbiting ball — outer group owns the orbital angle (CCW
+            counter-spin), inner group owns the radial position. During
+            wind-up the ball rides the rim groove; during decel it falls
+            inward, bounces off the pocket ring, and settles at angle 0
+            (top) so it visually drops into the winning pocket under the
             pointer. */}
         <motion.g
           animate={{ rotate: ballRotation }}
           transition={ballTransition}
           style={{ transformOrigin: '0px 0px' }}
         >
-          <circle
-            cx="0"
-            cy={-(POCKET_OUTER - 2.5)}
-            r="3"
-            fill="#fff"
-            stroke="#1a0a04"
-            strokeWidth="0.6"
-            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))' }}
-          />
-          {/* Specular highlight on the ball */}
-          <circle
-            cx="-0.9"
-            cy={-(POCKET_OUTER - 1.5)}
-            r="0.9"
-            fill="rgba(255,255,255,0.85)"
-            pointerEvents="none"
-          />
+          <motion.g animate={{ y: ballY }} transition={ballYTransition}>
+            <circle
+              cx="0"
+              cy="0"
+              r="3"
+              fill="#fff"
+              stroke="#1a0a04"
+              strokeWidth="0.6"
+              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))' }}
+            />
+            {/* Specular highlight on the ball */}
+            <circle
+              cx="-0.9"
+              cy="-1"
+              r="0.9"
+              fill="rgba(255,255,255,0.85)"
+              pointerEvents="none"
+            />
+          </motion.g>
         </motion.g>
 
         {/* Static pointer at top — gold arrow pointing into the wheel.
