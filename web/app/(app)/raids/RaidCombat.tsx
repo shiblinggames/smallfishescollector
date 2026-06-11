@@ -137,13 +137,16 @@ const CRIT_W = 0.012
 const INDICATOR_SPEED = 0.006
 // Between the finger landing and the lock handler reading the refs, the
 // needle AND zone keep drifting — and the crit band is only ~4 frames of
-// needle travel wide. lockShot rewinds both by the MEASURED delivery
-// latency (performance.now() − pointerdown timeStamp), so devices that
-// deliver pointerdown instantly rewind ~0 and laggy ones rewind exactly
-// what they lost. A fixed 2-frame rewind (first attempt) overshot on
-// fast devices and pushed the judgment visibly BEHIND the glass. Cap
-// guards against bogus epoch-based timeStamps on old browsers.
-const LOCK_REWIND_CAP_MS = 100
+// needle travel wide. Two point-in-time corrections failed here: a fixed
+// 2-frame rewind overshot on some devices, and a measured rewind
+// (performance.now() − pointerdown timeStamp) reads ~0 on iOS, which
+// stamps pointer events near dispatch — the real touch-to-handler delay
+// is invisible to JS. So lockShot doesn't model latency at all anymore:
+// the RAF keeps a rolling history of recent (needle, zone) samples and
+// the lock scores the BEST result achieved inside the lookback window.
+// If the needle was on the gold on glass at any plausible perception
+// moment, it crits — generous only on the just-late side, never robbing.
+const AIM_LOOKBACK_MS = 100
 
 function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W): ShotResult {
   const grazeL = zoneCenter - HIT_W - GRAZE_W
@@ -576,6 +579,11 @@ export default function RaidCombat({
   const [turn, setTurn]    = useState(1)
   const critFreezeRef      = useRef(false)
   useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
+  // Rolling history of aim samples (one per RAF tick) so lockShot can
+  // score the best result inside the AIM_LOOKBACK_MS window instead of
+  // trusting the single drifted position at handler time. Cleared each
+  // time aiming starts; ~16 entries covers the window with headroom.
+  const aimHistoryRef      = useRef<{ t: number; pos: number; zone: number }[]>([])
   // Ability per-turn reset effect — every new player turn clears the
   // one-ability-per-turn lock and ticks Snare's finite duration down.
   // -1 (rest_of_fight) sticks regardless. Skips the initial mount
@@ -727,6 +735,7 @@ export default function RaidCombat({
   useEffect(() => {
     if (subPhase !== 'aiming') return
     let last = performance.now()
+    aimHistoryRef.current = []
 
     // Zone slides at speed driven by enemy.shipSpeed, slowed by player navigation.
     const baseZone   = enemy.shipSpeed * 0.0008
@@ -752,6 +761,10 @@ export default function RaidCombat({
       const maxZone = 1 - HIT_W - GRAZE_W
       if (zonePosRef.current >= maxZone) { zonePosRef.current = maxZone; zoneDirRef.current = -1 }
       if (zonePosRef.current <= minZone) { zonePosRef.current = minZone; zoneDirRef.current = 1 }
+
+      // Record this frame's geometry for lockShot's lookback judgment.
+      aimHistoryRef.current.push({ t: now, pos: firePosRef.current, zone: zonePosRef.current })
+      if (aimHistoryRef.current.length > 16) aimHistoryRef.current.shift()
 
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
@@ -1001,7 +1014,7 @@ export default function RaidCombat({
     }
   }
 
-  function lockShot(e?: { timeStamp: number }) {
+  function lockShot() {
     // critFreezeRef in the guard too: it flips synchronously below, so a
     // double-tap in the same frame can't run the lock twice while the
     // critFreeze state commit is still pending.
@@ -1017,28 +1030,30 @@ export default function RaidCombat({
     // critical all count).
     const tideCritW = liveCritWRef.current
     lockedCritWRef.current = tideCritW
-    // Latency compensation: judge the shot where the player SAW it, not
-    // where the refs drifted to during touch delivery. The drift is
-    // MEASURED per tap — pointerdown timeStamp shares performance.now()'s
-    // time origin, so the difference is exactly how long the event took
-    // to reach us (≈0 on fast devices, real ms on laggy ones). Rewind
-    // needle AND zone by that many frames of their own velocities (the
-    // zone moves too, so against a fast ship the relative drift alone
-    // could cross the whole crit band). The clamp-to-0 covers browsers
-    // with epoch-based timeStamps; position clamps cover the
-    // just-bounced-off-an-edge case.
-    const latencyMs = e ? Math.max(0, Math.min(LOCK_REWIND_CAP_MS, performance.now() - e.timeStamp)) : 0
-    const rewindFrames = latencyMs / 16.67
-    const zoneSpeed = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015))
-    const pos = Math.max(0, Math.min(1,
-      firePosRef.current - INDICATOR_SPEED * rewindFrames * fireDirRef.current))
-    const zoneCenter = Math.max(HIT_W + GRAZE_W, Math.min(1 - HIT_W - GRAZE_W,
-      zonePosRef.current - zoneSpeed * rewindFrames * zoneDirRef.current))
-    let res: ShotResult
-    if (pos >= zoneCenter - tideCritW && pos <= zoneCenter + tideCritW) res = 'critical'
-    else if (pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W) res = 'hit'
-    else if (pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W) res = 'graze'
-    else res = 'miss'
+    // Lookback judgment: score every frame the bar showed inside the
+    // last AIM_LOOKBACK_MS and take the BEST one. Input delivery latency
+    // is unmeasurable across devices (iOS stamps pointer events near
+    // dispatch) and the zone moves too, so any point-in-time correction
+    // guesses wrong somewhere. The history holds the literal on-glass
+    // geometry, so if the needle touched the gold inside the window the
+    // crit counts — generosity lands only on the just-late side.
+    const tapNow = performance.now()
+    const classify = (p: number, z: number): ShotResult =>
+      p >= z - tideCritW && p <= z + tideCritW ? 'critical'
+      : p >= z - HIT_W && p <= z + HIT_W ? 'hit'
+      : p >= z - HIT_W - GRAZE_W && p <= z + HIT_W + GRAZE_W ? 'graze'
+      : 'miss'
+    const RANK: Record<ShotResult, number> = { critical: 3, hit: 2, graze: 1, miss: 0 }
+    // Current refs as the newest candidate (the handler can run mid-frame,
+    // after the last recorded tick).
+    let pos = firePosRef.current
+    let zoneCenter = zonePosRef.current
+    let res = classify(pos, zoneCenter)
+    for (const s of aimHistoryRef.current) {
+      if (tapNow - s.t > AIM_LOOKBACK_MS) continue
+      const r = classify(s.pos, s.zone)
+      if (RANK[r] > RANK[res]) { res = r; pos = s.pos; zoneCenter = s.zone }
+    }
     // Repaint the frozen needle + zone at the judged (rewound) geometry and
     // color the needle by the judged result — the freeze IS the judgment,
     // so the picture the player studies always matches the badge.
@@ -4062,7 +4077,7 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW }:
 // the delta and the UI visibly shifted as the row swapped in. The
 // caption text is transparent — it's only there to reserve the same
 // vertical space CircleBtn's "Dodge"/"Fire" labels would have.
-function InlineLockButton({ onLock }: { onLock: (e: { timeStamp: number }) => void }) {
+function InlineLockButton({ onLock }: { onLock: () => void }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
@@ -4073,11 +4088,7 @@ function InlineLockButton({ onLock }: { onLock: (e: { timeStamp: number }) => vo
             // after the finger lands, which on a precision timing tap
             // reads as the aim bar "robbing" the player. Mirrors the
             // fishing Reel In / Cast buttons.
-            // Pass the event through — lockShot rewinds the aim refs by
-            // the measured pointerdown delivery latency (timeStamp →
-            // performance.now() delta) so the judged needle position is
-            // the one that was on glass when the finger landed.
-            onPointerDown={(e) => { e.preventDefault(); onLock(e) }}
+            onPointerDown={(e) => { e.preventDefault(); onLock() }}
             className="font-cinzel font-700 uppercase tracking-[0.14em]"
             style={{
               width: '100%', height: 58,
