@@ -13,6 +13,7 @@ import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solveP
 import { repairShip } from '@/app/(app)/raids/actions'
 import { SHIP_CLASS_LIST, getShipClass } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
+import StoryScene from './StoryScene'
 
 // Single parchment-gold accent for every main-chain node. Earlier this
 // was a six-color per-type palette (cyan/ember/gold/violet/sage/blue),
@@ -625,6 +626,10 @@ function NodeDetailSheet({
   // effect breakdown for raid items, drop chance). Cleared by tapping
   // outside the popup or its close button.
   const [selectedDrop, setSelectedDrop] = useState<RaidNodeDrop | null>(null)
+  // Dialogue scene overlay (story nodes with node.scene). First read
+  // plays the scene and its final CTA marks the node read; cleared
+  // nodes can replay it (replay's CTA just closes — no server write).
+  const [sceneOpen, setSceneOpen] = useState(false)
   const { node, status, claimable, lockReason } = view
   // Single accent now: matches the unified map palette.
   const accent = MAIN_ACCENT
@@ -654,7 +659,7 @@ function NodeDetailSheet({
     setErr(null)
     startTransition(async () => {
       const res = await markStoryNodeRead(node.id)
-      if ('error' in res) { setErr(res.error); return }
+      if ('error' in res) { setErr(res.error); setSceneOpen(false); return }
       router.refresh()
       onClose()
     })
@@ -776,13 +781,25 @@ function NodeDetailSheet({
     cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Coming Soon</div>
   } else if (node.type === 'story') {
     if (cleared) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Logged ✓</div>
+      // With a scene attached, "Logged ✓" doubles as a replay button so
+      // players can re-watch any beat they have already read.
+      cta = node.scene ? (
+        <button
+          onClick={() => setSceneOpen(true)}
+          className="font-cinzel font-800 uppercase tracking-[0.04em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent, cursor: 'pointer' }}
+        >
+          Logged ✓ · Read Again
+        </button>
+      ) : (
+        <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Logged ✓</div>
+      )
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
     } else {
       cta = (
         <button
-          onClick={readStory}
+          onClick={() => node.scene ? setSceneOpen(true) : readStory()}
           disabled={pending}
           className="font-cinzel font-700 uppercase tracking-[0.06em]"
           style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'wait' : 'pointer' }}
@@ -894,9 +911,13 @@ function NodeDetailSheet({
           </button>
         </div>
 
-        {/* Description */}
+        {/* Description. Story nodes with a dialogue scene keep the sheet
+            to a one-line teaser until the scene is read — the scene IS
+            the delivery, and a prose wall above the Continue button is
+            exactly what players were skipping. Once logged, the full
+            text stays here as the archive copy. */}
         <p className="font-karla" style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.72)', whiteSpace: 'pre-line' }}>
-          {detail.description}
+          {node.type === 'story' && node.scene && !cleared && !locked ? node.flavor : detail.description}
         </p>
 
         {/* Where beating this leads: the story beat */}
@@ -1450,8 +1471,24 @@ function NodeDetailSheet({
   // ancestor stacking context.
   const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} onClose={() => setSelectedDrop(null)} /> : null
 
+  // Dialogue scene — StoryScene portals itself to <body> (z-1100, above
+  // the sheet). First read: final CTA fires the mark-read action, and
+  // Skip ALSO marks it read (story must never gate harder than the old
+  // one-button flow — skippers can Read Again from the sheet anytime).
+  // Replay (already cleared): both buttons just close the scene.
+  const storyScene = sceneOpen && node.scene ? (
+    <StoryScene
+      title={node.label}
+      lines={node.scene}
+      ctaLabel={cleared ? 'Close' : (detail.ctaLabel ?? 'Log it →')}
+      pending={pending}
+      onComplete={() => { if (cleared) setSceneOpen(false); else readStory() }}
+      onSkip={() => { if (cleared) setSceneOpen(false); else readStory() }}
+    />
+  ) : null
+
   return typeof document !== 'undefined'
-    ? createPortal(<>{sheet}{dropModal}</>, document.body)
+    ? createPortal(<>{sheet}{dropModal}{storyScene}</>, document.body)
     : null
 }
 

@@ -72,6 +72,22 @@ export interface RaidPuzzle {
   reveal?: string
 }
 
+// ── Dialogue scenes ──────────────────────────────────────────────────────────
+// Story beats play as tap-through dialogue scenes (visual-novel style)
+// instead of prose walls — players read ten-word speech lines, they skip
+// 150-word paragraphs. Each line is one tap. Narrator lines omit both
+// speaker and portrait and render as italic log-style text; character
+// lines show a portrait + name plate. `portrait` can also ride a
+// narrator line for a reveal moment (e.g. Krust's face appearing the
+// first time the fence says his name).
+export interface SceneLine {
+  /** Display name on the plate. Omit for narrator lines. */
+  speaker?: string
+  /** Portrait image path. Falls back to none (text-only line). */
+  portrait?: string
+  text: string
+}
+
 /** One row in a node's "possible drops" panel. */
 export interface RaidNodeDrop {
   label: string
@@ -167,6 +183,11 @@ export interface RaidNode {
    *  zigzag slot, and renders smaller + with the challenge glyph. The main
    *  chain skips it entirely when drawing the route line. */
   sideBranch?: { parentId: string }
+  /** story nodes: tap-through dialogue scene played by the Continue CTA.
+   *  When present, the sheet's prose description becomes the fallback /
+   *  archive text and the scene is the primary delivery. Cleared nodes
+   *  offer a replay. */
+  scene?: SceneLine[]
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
 }
@@ -321,6 +342,17 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "Barnacle Pete plays the broke old fool, but he has robbed the small and the slow for years, and not a coin of it ever stays in his pocket.",
     bridge: "Every thread you tug runs back to one reef, where Pete's little fish do his collecting.",
     image: '/raidlog.png',
+    scene: [
+      { text: "Barnacle Pete robs the small and the slow. Has for years, all up and down this coast." },
+      { text: "Little crews. Fishing folk. The odd unlucky angler. Anyone too small to swing back." },
+      { speaker: 'A Passing Sailor', text: "Pete don't spend his haul. He delivers it." },
+      { text: "Said once, by a sailor who knew better than to say it twice." },
+      { text: "That is the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to someone he would rather you never asked about." },
+      { text: "So of course nobody asks." },
+      { text: "You, on the other hand, have a boat, a free afternoon, and no manners worth mentioning." },
+      { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "Broke, me? Couldn't rob a rockpool. Now mind yer business, guppy." },
+      { text: "Go give the loudest pirate on the water a good shake and see what tumbles out of his coat." },
+    ],
     detail: {
       description:
         "Pete is no broke old chancer. He is very good at one thing, and that thing is picking on anyone too small to swing back. Little crews, fishing folk, the odd unlucky angler. Years of it, all up and down this coast, and somehow he is no richer for any of it.\n\nThat is the funny part. Pete steals a fortune and keeps about a copper. The rest sails off to someone he would rather you never asked about, so of course nobody asks. You, on the other hand, have a boat, a free afternoon, and no manners worth mentioning. Go give the loudest pirate on the water a good shake and see what tumbles out of his coat.",
@@ -420,6 +452,17 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The letter's heading runs dead through the Bilge Strait. Chase C.K.'s cargo and you first have to slip past the thugs who own that water.",
     requiresNode: 'pete',
     image: '/raidlog.png',
+    scene: [
+      { text: "Pete's strongbox cracks open at last. No fortune inside. Only paperwork." },
+      { text: "Cut sheets. Courier routes. Years of neat little sums." },
+      { text: "And one word stamped on every page: the Finndicate." },
+      { speaker: 'Barnacle Pete', portrait: CORSAIRS_RECKONING.enemies.pete.portrait, text: "You think I keep the coin? Not a copper of it stays with me. Never has." },
+      { text: "So much for the kingpin. Pete was a cash cow like all the rest, milked dry and bled the same as everyone he ever robbed." },
+      { text: "And the coin never sits still. Page after page, every haul buys the same thing over again, and not one line will say what." },
+      { text: "Under the ledgers waits a sealed letter. No name on it. Just two letters bitten into the wax: C.K." },
+      { text: "The route is mostly burned away, but the heading held. Out past the Bilge Strait, into the cold." },
+      { text: "Whoever C.K. is, the Finndicate trusts them with cargo by the holdful. And now you know which way it sails." },
+    ],
     detail: {
       description:
         "Pete's strongbox was not empty, only full of the wrong captain's paperwork. Cut sheets, courier routes, years of neat little sums, and one word stamped on every page: the Finndicate. So much for the kingpin. Pete was a cash cow like all the rest, milked dry and bled the same as everyone he ever robbed. And the coin never sits still. Page after page, every haul buys the same thing over again, and not one line will say what.\n\nUnder the ledgers waits a sealed letter. No name on it, just two letters bitten into the wax: C.K. The manifest is heavy and the route mostly burned away, but the heading held. It runs out past the Bilge Strait, into the cold beyond. Whoever C.K. is, the Finndicate trusts them with cargo by the holdful, and now you know which way it sails.",
@@ -482,6 +525,18 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "Captain Krust. He runs the Finndicate's freight, and every hold he fills is a hold you can empty. His consignment is out on the water as you read this.",
     requiresNode: 'quartermaster',
     image: '/raidlog.png',
+    scene: [
+      { text: "Pete's wax only ever coughed up two letters: C.K." },
+      { text: "The fence on the cold side of the strait can fill in the rest. On the strict condition you act like he did you no favour by it." },
+      { speaker: 'The Fence', text: "Captain Krust. And you never heard it here." },
+      { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Old, leathery, and the Finndicate sets its clock by him. He moves their freight. All of it." },
+      { speaker: 'The Fence', portrait: CAPTAIN_KRUST.enemies.krust.portrait, text: "Never once asked whose name rides a manifest. Stayed afloat a lifetime for exactly that reason." },
+      { text: "Nothing like Pete, this one. He does not rob the small. He moves cargo, on time, in bulk." },
+      { speaker: 'The Fence', text: "No kingpin, mind. Krust answers upward, same as every other fish in this sea." },
+      { speaker: 'The Fence', text: "But C.K. don't lose cargo. Lose his cargo, and you find out why." },
+      { text: "A name at last. The Finndicate's freight has a face, and the face keeps a schedule." },
+      { text: "His consignment is on the cold water right now." },
+    ],
     detail: {
       description:
         "Pete's wax only ever coughed up two letters: C.K. The fence past the strait fills in the rest, on the strict condition you act like he did you no favour by it.\n\nCaptain Krust. An old, leathery hand the Finndicate trusts with its freight, the kind who has never once asked whose name rides a manifest and has stayed afloat a lifetime for exactly that reason. He is nothing like Pete. He does not rob the small. He moves cargo, on time, in bulk, and the Finndicate sets its clock by him. Still no kingpin, mind you. He answers upward like every other fish in this sea. But he sits a long way above a barnacled chancer, and his consignment is on the cold water right now.",
@@ -567,6 +622,18 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "They run a special class of freight through water they will only call the danger zones. Whatever it is, it is worth more to them than the ships it keeps eating.",
     requiresNode: 'krust',
     image: '/raidlog.png',
+    scene: [
+      { text: "Krust was no small cog, and the gap he leaves shows plain in the books." },
+      { text: "Somewhere well above the freight desk, somebody sets down the ledgers." },
+      { text: "And takes a long, cold look at the captain who keeps sinking their cargo." },
+      { text: "You have the Finndicate's full attention now. Which is the one prize you cannot hand back." },
+      { text: "A single scrap rode out the wreck of Krust's run." },
+      { speaker: 'A Finndicate Order', text: "Danger-zone consignment. Priority freight. It will not open for him. Find the hands that it will." },
+      { text: "Stamped with a mark no clerk would explain." },
+      { text: "Priority freight, steered through water their own manifests will only call the danger zones. Most captains sail in there exactly once." },
+      { text: "Whatever they are hauling through it is worth every hull it swallows." },
+      { text: "They would dearly love you to set the thread down and walk away. You won't." },
+    ],
     detail: {
       description:
         "Krust was no small cog, and the gap he leaves shows plain in the books. For the first time someone well above the freight desk has set down the ledgers and taken a long, cold look at the captain who keeps sinking their cargo. You have the Finndicate's full attention now, which is the one prize you cannot hand back.\n\nA single scrap rode out the wreck of Krust's run. The Finndicate moves a special class of cargo, priority freight steered through water its own manifests will only call the danger zones. Most captains sail in there exactly once. Whatever they are hauling through it is worth every hull it swallows, and they would dearly love you to set the thread down and walk away.",
