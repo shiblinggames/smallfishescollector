@@ -421,10 +421,14 @@ export default function RaidCombat({
   // ability if any (Carapace etc.), and the enemy's full behavior pattern as
   // a visible cycle so players can study what punches come when.
   const [showEnemyStats, setShowEnemyStats] = useState(false)
-  // Flee confirmation (real raids only). fleeResult holds the outcome of a
-  // failed escape so the modal can show "caught!" before the player dismisses.
+  // Flee confirmation (real raids only). fleeResult holds the outcome of the
+  // escape roll — success AND failure both show the dice math so the player
+  // sees exactly why their build did or didn't get them out.
   const [fleeOpen, setFleeOpen]       = useState(false)
-  const [fleeResult, setFleeResult]   = useState<{ dmg: number; defeated: boolean } | null>(null)
+  const [fleeResult, setFleeResult]   = useState<{
+    natural: number; bonus: number; dc: number; success: boolean
+    dmg?: number; defeated?: boolean
+  } | null>(null)
   // Initial state — tide effects fold into the seed values. Player HP
   // applies hpStartDelta + everyFightHeal at fight start (heal can
   // push above max? no — clamped to max). Enemy HP scales. Player +
@@ -632,12 +636,22 @@ export default function RaidCombat({
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
 
   // ── Flee — leaving a real raid is a gamble, not a free exit ───────────────
-  // A failed escape lets the enemy land a parting shot (Bulwark still
-  // mitigates); bosses are harder to slip. The same prompt handles BOTH the ←
-  // button and any attempt to navigate away mid-battle (RaidGame intercepts
-  // those and signals via fleeSignal). pendingFleeNavRef holds where to go on
-  // a clean getaway so success honours where the player was trying to head.
-  const FLEE_CHANCE = isBoss ? 0.45 : 0.65
+  // Escaping is a visible d20 roll against a DC set by the enemy's speed, so
+  // prep is legible: faster ships and higher crew Nav raise your bonus, faster
+  // enemies (and bosses) raise the bar. Natural 20 always escapes, natural 1
+  // always fails — never a free exit, never hopeless. A failed escape lets the
+  // enemy land a parting shot (Bulwark still mitigates). The same prompt
+  // handles BOTH the ← button and any attempt to navigate away mid-battle
+  // (RaidGame intercepts those and signals via fleeSignal). pendingFleeNavRef
+  // holds where to go on a clean getaway so success honours where the player
+  // was trying to head.
+  // Nav divisor mirrors rollSpeed's nav/10 (tight d20 numbers, no late-game
+  // determinism); tide speedDelta folds into effective speed same as the
+  // turn-order roll. Tune DC base / boss penalty here.
+  const fleeSpeed    = Math.max(1, shipSpeed + tide.speedDelta)
+  const fleeNavBonus = Math.floor(totalNavigation / 10)
+  const fleeBonus    = fleeSpeed + fleeNavBonus
+  const fleeDC       = 10 + enemy.shipSpeed + (isBoss ? 3 : 0)
   const pendingFleeNavRef = useRef<(() => void) | null>(null)
   function promptFlee(nav: () => void) {
     pendingFleeNavRef.current = nav
@@ -645,8 +659,11 @@ export default function RaidCombat({
     setFleeOpen(true)
   }
   function attemptFlee() {
-    if (Math.random() < FLEE_CHANCE) {
-      (pendingFleeNavRef.current ?? (() => onLeave?.()))()
+    const natural = d20()
+    const success = natural === 20 || (natural > 1 && natural + fleeBonus >= fleeDC)
+    if (success) {
+      // Show the winning roll — leaving happens on "Sail Away".
+      setFleeResult({ natural, bonus: fleeBonus, dc: fleeDC, success: true })
       return
     }
     const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
@@ -663,13 +680,14 @@ export default function RaidCombat({
     setResolveLog(prev => [...prev, next <= 0
       ? `You break for it, but ${enemy.name} runs you down for ${dmg}!`
       : `You try to flee, but ${enemy.name} lands a parting shot for ${dmg}.`])
-    setFleeResult({ dmg, defeated: next <= 0 })
+    setFleeResult({ natural, bonus: fleeBonus, dc: fleeDC, success: false, dmg, defeated: next <= 0 })
   }
   function dismissFleeResult() {
-    const defeated = fleeResult?.defeated
+    const res = fleeResult
     setFleeResult(null)
     setFleeOpen(false)
-    if (defeated) { setSubPhase('done'); onPlayerDefeated() }
+    if (res?.success) { (pendingFleeNavRef.current ?? (() => onLeave?.()))(); return }
+    if (res?.defeated) { setSubPhase('done'); onPlayerDefeated() }
   }
   // Bridge: RaidGame bumps fleeSignal when it intercepts a navigation away
   // mid-battle. lastFleeSignalRef avoids a spurious prompt on mount/remount.
@@ -2095,30 +2113,56 @@ export default function RaidCombat({
             <div style={{ width: '100%', maxWidth: 320, background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
               {fleeResult ? (
                 <>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: fleeResult.defeated ? '#f0a890' : '#f0ede8', marginBottom: 6 }}>
-                    {fleeResult.defeated ? 'Run down as you fled' : 'They caught you!'}
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: fleeResult.success ? '#7ee0a0' : fleeResult.defeated ? '#f0a890' : '#f0ede8', marginBottom: 6 }}>
+                    {fleeResult.success ? 'Clean getaway!' : fleeResult.defeated ? 'Run down as you fled' : 'They caught you!'}
+                  </p>
+                  {/* The dice math — same line for every outcome, so the player
+                      always sees exactly what the roll was and what it needed. */}
+                  <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: fleeResult.success ? '#a8e6c0' : '#e8c8b0', marginBottom: 8 }}>
+                    {fleeResult.natural === 20 ? 'Natural 20!'
+                      : fleeResult.natural === 1 ? 'Natural 1. The sea said no.'
+                      : <>Rolled {fleeResult.natural} + {fleeResult.bonus} = {fleeResult.natural + fleeResult.bonus} · needed {fleeResult.dc}</>}
                   </p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
-                    {fleeResult.defeated
+                    {fleeResult.success
+                      ? `You slip ${enemy.name}'s reach and run for open water.`
+                      : fleeResult.defeated
                       ? `${enemy.name} ran you down for ${fleeResult.dmg} and your ship went under.`
                       : `${enemy.name} landed a parting shot for ${fleeResult.dmg}. No escape this time.`}
                   </p>
-                  <button type="button" onClick={dismissFleeResult} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(122,138,160,0.5)', background: 'rgba(20,32,48,0.9)', color: '#cfe2ff', fontSize: '0.8rem', cursor: 'pointer' }}>
-                    {fleeResult.defeated ? 'Continue' : 'Fight On'}
+                  <button type="button" onClick={dismissFleeResult} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ width: '100%', padding: '0.7rem', borderRadius: 10, border: `1px solid ${fleeResult.success ? 'rgba(126,224,160,0.5)' : 'rgba(122,138,160,0.5)'}`, background: fleeResult.success ? 'rgba(24,48,36,0.9)' : 'rgba(20,32,48,0.9)', color: fleeResult.success ? '#c8f0d8' : '#cfe2ff', fontSize: '0.8rem', cursor: 'pointer' }}>
+                    {fleeResult.success ? 'Sail Away' : fleeResult.defeated ? 'Continue' : 'Fight On'}
                   </button>
                 </>
               ) : (
                 <>
                   <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', marginBottom: 6 }}>Flee the raid?</p>
+                  {/* The roll, laid out before the player commits: what the
+                      escape needs, what their build adds, and what that
+                      leaves on the die. Slow ship + green crew reads as the
+                      warning it should be. */}
+                  <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(122,138,160,0.3)', borderRadius: 10, padding: '0.6rem 0.7rem', marginBottom: 10 }}>
+                    <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', marginBottom: 4 }}>
+                      Escape needs {fleeDC}
+                    </p>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8b8d0', lineHeight: 1.5 }}>
+                      Your roll: d20 + {fleeBonus} (Ship Speed {fleeSpeed}{fleeNavBonus > 0 ? `, Crew Nav +${fleeNavBonus}` : ''})
+                    </p>
+                    <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#e4bc6c', marginTop: 4 }}>
+                      {fleeDC - fleeBonus > 20 ? 'Only a natural 20 gets you out.'
+                        : fleeDC - fleeBonus <= 2 ? 'Anything but a natural 1 gets you out.'
+                        : `You need ${fleeDC - fleeBonus} or better on the die.`}
+                    </p>
+                  </div>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
-                    You can try to break away, but you might not get clean. A failed escape lets {enemy.name} land a parting shot.
+                    A failed escape lets {enemy.name} land a parting shot.
                   </p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button type="button" onClick={() => setFleeOpen(false)} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.06)', color: '#cfcabf', fontSize: '0.78rem', cursor: 'pointer' }}>
                       Hold Fast
                     </button>
                     <button type="button" onClick={attemptFlee} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid rgba(228,114,114,0.55)', background: 'rgba(212,84,84,0.22)', color: '#f8d2d2', fontSize: '0.78rem', cursor: 'pointer' }}>
-                      Try to Flee
+                      Roll to Flee
                     </button>
                   </div>
                 </>
