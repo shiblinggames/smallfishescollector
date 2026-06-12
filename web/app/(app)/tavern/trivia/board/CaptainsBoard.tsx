@@ -125,18 +125,23 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-      {/* Header row, same skeleton as the Den lobby */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <Link href="/tavern/trivia" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none' }}>
-          ← The Parlor
-        </Link>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
+      {/* Header row, same skeleton as the Den lobby. Side rails get
+          equal flex so the title sits at the true center. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Link href="/tavern/trivia" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            ← The Parlor
+          </Link>
+        </div>
+        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
           The Captain&apos;s Board
         </p>
-        <BalanceTicker value={balance} glyph="⟡" color={DOUBLOON_COLOR} />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
+          <BalanceTicker value={balance} glyph="⟡" color={DOUBLOON_COLOR} />
+        </div>
       </div>
 
-      <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center' }}>
+      <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
         Four topics chalked fresh each day. Lock in one column and take its three clues in any order; the richer the clue, the harder the question. A wrong answer scuttles the clue, the rest stay open.
       </p>
 

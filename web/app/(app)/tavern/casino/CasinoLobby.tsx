@@ -86,17 +86,22 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none' }}>
-          ← Tavern
-        </Link>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
+      {/* Header row. Side rails get equal flex so the title sits at
+          the true center regardless of the link/balance widths. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            ← Tavern
+          </Link>
+        </div>
+        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
           The Den
         </p>
-        <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672' }}>
-          {doubloons.toLocaleString()} ⟡
-        </span>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
+          <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672', whiteSpace: 'nowrap' }}>
+            {doubloons.toLocaleString()} ⟡
+          </span>
+        </div>
       </div>
 
       {/* Wallet panel — the shared purse. Same wood/brass family as the
