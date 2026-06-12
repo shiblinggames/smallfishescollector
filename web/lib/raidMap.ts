@@ -124,6 +124,11 @@ export interface RaidNodeDetail {
   dropsNote?: string
   /** Override the primary button verb (story nodes). */
   ctaLabel?: string
+  /** Story nodes with a dialogue scene: 1-2 sentence recap shown in the
+   *  sheet once the node is read, instead of the full prose transcript
+   *  (the scene is the delivery and is replayable via Read Again, so
+   *  the sheet only needs the takeaway). */
+  summary?: string
   /** combat: total guaranteed doubloons + Nav XP for clearing every kill. */
   clearReward?: { doubloons: number; xp: number }
 }
@@ -366,6 +371,7 @@ export const RAID_MAP: RaidNode[] = [
       ],
       dropsNote: 'Pages like this pile up the more you go poking. Sooner or later they spell out a name.',
       ctaLabel: 'Pull the Thread →',
+      summary: "Pete robs the small and keeps none of it. Every haul he takes gets delivered somewhere else, and you mean to shake him until the where falls out.",
     },
   },
   {
@@ -482,6 +488,7 @@ export const RAID_MAP: RaidNode[] = [
       ],
       dropsNote: 'A name to chase (the Finndicate) and a lead to follow (C.K., and the way the cargo runs). Both go straight through the Bilge Strait.',
       ctaLabel: 'Follow the Trail →',
+      summary: "Pete's strongbox held no fortune, only ledgers naming the Finndicate, and a sealed letter marked C.K. with a heading out past the Bilge Strait into the cold.",
     },
   },
   {
@@ -550,6 +557,7 @@ export const RAID_MAP: RaidNode[] = [
       ],
       dropsNote: 'A name at last. The Finndicate\'s freight has a face, and the face keeps a schedule.',
       ctaLabel: 'Name the Devil →',
+      summary: "The fence put a name to the wax: Captain Krust, the old hand the Finndicate trusts with all its freight. No kingpin, but his consignment is on the cold water right now.",
     },
   },
   {
@@ -647,6 +655,7 @@ export const RAID_MAP: RaidNode[] = [
       ],
       dropsNote: 'A cargo worth losing ships over, and a heading into water that eats them. The trail runs colder and deeper from here.',
       ctaLabel: 'Follow the Freight →',
+      summary: "Krust's fall bought you the Finndicate's full attention. They run priority freight through water they only call the danger zones, and the trail leads straight in.",
     },
   },
   {

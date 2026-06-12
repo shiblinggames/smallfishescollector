@@ -911,13 +911,16 @@ function NodeDetailSheet({
           </button>
         </div>
 
-        {/* Description. Story nodes with a dialogue scene keep the sheet
-            to a one-line teaser until the scene is read — the scene IS
-            the delivery, and a prose wall above the Continue button is
-            exactly what players were skipping. Once logged, the full
-            text stays here as the archive copy. */}
+        {/* Description. Story nodes with a dialogue scene never show the
+            full prose transcript here — the scene IS the delivery (and
+            replayable via Read Again). Pre-read the sheet teases with
+            the flavor line; once logged it shows the short summary
+            recap instead, so the sheet stays a map surface and the
+            reading happens in the scene. */}
         <p className="font-karla" style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.72)', whiteSpace: 'pre-line' }}>
-          {node.type === 'story' && node.scene && !cleared && !locked ? node.flavor : detail.description}
+          {node.type === 'story' && node.scene
+            ? (cleared ? (detail.summary ?? node.flavor) : node.flavor)
+            : detail.description}
         </p>
 
         {/* Where beating this leads: the story beat */}
