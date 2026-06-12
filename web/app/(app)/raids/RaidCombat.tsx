@@ -421,12 +421,15 @@ export default function RaidCombat({
   // ability if any (Carapace etc.), and the enemy's full behavior pattern as
   // a visible cycle so players can study what punches come when.
   const [showEnemyStats, setShowEnemyStats] = useState(false)
-  // Flee confirmation (real raids only). fleeResult holds the outcome of the
-  // escape roll — success AND failure both show the dice math so the player
-  // sees exactly why their build did or didn't get them out.
+  // Flee confirmation (real raids only). The UI is deliberately one number:
+  // the die face needed to escape. fleeRoll is the in-flight tumble (die
+  // cycling faces before it settles), fleeResult is the settled outcome,
+  // fleeFace is whatever the die is showing this tick.
   const [fleeOpen, setFleeOpen]       = useState(false)
+  const [fleeRoll, setFleeRoll]       = useState<{ natural: number; success: boolean } | null>(null)
+  const [fleeFace, setFleeFace]       = useState(1)
   const [fleeResult, setFleeResult]   = useState<{
-    natural: number; bonus: number; dc: number; success: boolean
+    natural: number; success: boolean
     dmg?: number; defeated?: boolean
   } | null>(null)
   // Initial state — tide effects fold into the seed values. Player HP
@@ -652,36 +655,56 @@ export default function RaidCombat({
   const fleeNavBonus = Math.floor(totalNavigation / 10)
   const fleeBonus    = fleeSpeed + fleeNavBonus
   const fleeDC       = 10 + enemy.shipSpeed + (isBoss ? 3 : 0)
+  // The one number the player sees: the die face they need. Clamped 2–20
+  // because a natural 1 always fails and a natural 20 always escapes.
+  const fleeNeed     = Math.max(2, Math.min(20, fleeDC - fleeBonus))
   const pendingFleeNavRef = useRef<(() => void) | null>(null)
   function promptFlee(nav: () => void) {
     pendingFleeNavRef.current = nav
+    setFleeRoll(null)
     setFleeResult(null)
     setFleeOpen(true)
   }
   function attemptFlee() {
     const natural = d20()
     const success = natural === 20 || (natural > 1 && natural + fleeBonus >= fleeDC)
-    if (success) {
-      // Show the winning roll — leaving happens on "Sail Away".
-      setFleeResult({ natural, bonus: fleeBonus, dc: fleeDC, success: true })
-      return
-    }
-    const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
-    const dmg = Math.max(1, Math.round(base * (1 - (mods.damageTakenPct ?? 0) / 100)))
-    const next = Math.max(0, playerHpRef.current - dmg)
-    setPlayerHp(next)
-    setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
-    setPlayerShakeKey(k => k + 1)
-    // Clear the splat after the standard hold (matches the in-combat
-    // SPLAT_HOLD_MS in resolveTurn). The flee path used to forget this
-    // cleanup, leaving the "-N" number stuck on the ship until the next
-    // turn's splat clobbered it.
-    setTimeout(() => setPHitsplat(null), 480)
-    setResolveLog(prev => [...prev, next <= 0
-      ? `You break for it, but ${enemy.name} runs you down for ${dmg}!`
-      : `You try to flee, but ${enemy.name} lands a parting shot for ${dmg}.`])
-    setFleeResult({ natural, bonus: fleeBonus, dc: fleeDC, success: false, dmg, defeated: next <= 0 })
+    setFleeRoll({ natural, success })
   }
+  // Tumble the die for ~1s, then settle on the real face and apply the
+  // outcome. The parting shot lands AT the settle so the hit reads as a
+  // consequence of the number, not before it.
+  useEffect(() => {
+    if (!fleeRoll) return
+    const iv = setInterval(() => setFleeFace(1 + Math.floor(Math.random() * 20)), 75)
+    const settle = setTimeout(() => {
+      clearInterval(iv)
+      const { natural, success } = fleeRoll
+      setFleeFace(natural)
+      if (success) {
+        // Show the winning face — leaving happens on "Sail Away".
+        setFleeResult({ natural, success: true })
+      } else {
+        const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
+        const dmg = Math.max(1, Math.round(base * (1 - (mods.damageTakenPct ?? 0) / 100)))
+        const next = Math.max(0, playerHpRef.current - dmg)
+        setPlayerHp(next)
+        setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
+        setPlayerShakeKey(k => k + 1)
+        // Clear the splat after the standard hold (matches the in-combat
+        // SPLAT_HOLD_MS in resolveTurn). The flee path used to forget this
+        // cleanup, leaving the "-N" number stuck on the ship until the next
+        // turn's splat clobbered it.
+        setTimeout(() => setPHitsplat(null), 480)
+        setResolveLog(prev => [...prev, next <= 0
+          ? `You break for it, but ${enemy.name} runs you down for ${dmg}!`
+          : `You try to flee, but ${enemy.name} lands a parting shot for ${dmg}.`])
+        setFleeResult({ natural, success: false, dmg, defeated: next <= 0 })
+      }
+      setFleeRoll(null)
+    }, 1000)
+    return () => { clearInterval(iv); clearTimeout(settle) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fleeRoll])
   function dismissFleeResult() {
     const res = fleeResult
     setFleeResult(null)
@@ -2113,15 +2136,23 @@ export default function RaidCombat({
             <div style={{ width: '100%', maxWidth: 320, background: '#0a131f', border: '1px solid #2a3548', borderRadius: 16, padding: '1.1rem 1.1rem 1.2rem', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
               {fleeResult ? (
                 <>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: fleeResult.success ? '#7ee0a0' : fleeResult.defeated ? '#f0a890' : '#f0ede8', marginBottom: 6 }}>
-                    {fleeResult.success ? 'Clean getaway!' : fleeResult.defeated ? 'Run down as you fled' : 'They caught you!'}
-                  </p>
-                  {/* The dice math — same line for every outcome, so the player
-                      always sees exactly what the roll was and what it needed. */}
-                  <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: fleeResult.success ? '#a8e6c0' : '#e8c8b0', marginBottom: 8 }}>
+                  {/* Settled die — pops in on the rolled face. The only
+                      numbers on screen: what you rolled vs what you needed. */}
+                  <motion.div
+                    initial={{ scale: 1.3 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+                    style={{ width: 72, height: 72, margin: '0 auto 8px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: fleeResult.success ? 'rgba(24,48,36,0.9)' : 'rgba(54,22,22,0.9)', border: `2px solid ${fleeResult.success ? 'rgba(126,224,160,0.65)' : 'rgba(228,114,114,0.6)'}` }}
+                  >
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: fleeResult.success ? '#7ee0a0' : '#f0a0a0' }}>{fleeResult.natural}</span>
+                  </motion.div>
+                  <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#a8b8d0', marginBottom: 10 }}>
                     {fleeResult.natural === 20 ? 'Natural 20!'
                       : fleeResult.natural === 1 ? 'Natural 1. The sea said no.'
-                      : <>Rolled {fleeResult.natural} + {fleeResult.bonus} = {fleeResult.natural + fleeResult.bonus} · needed {fleeResult.dc}</>}
+                      : `Needed ${fleeNeed}+`}
+                  </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: fleeResult.success ? '#7ee0a0' : fleeResult.defeated ? '#f0a890' : '#f0ede8', marginBottom: 6 }}>
+                    {fleeResult.success ? 'Clean getaway!' : fleeResult.defeated ? 'Run down as you fled' : 'They caught you!'}
                   </p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
                     {fleeResult.success
@@ -2134,26 +2165,33 @@ export default function RaidCombat({
                     {fleeResult.success ? 'Sail Away' : fleeResult.defeated ? 'Continue' : 'Fight On'}
                   </button>
                 </>
+              ) : fleeRoll ? (
+                <>
+                  {/* Tumbling die — faces cycle until the settle effect lands
+                      the real number. No buttons; the roll is committed. */}
+                  <motion.div
+                    animate={{ rotate: [-7, 7, -7] }}
+                    transition={{ repeat: Infinity, duration: 0.28, ease: 'easeInOut' }}
+                    style={{ width: 72, height: 72, margin: '0 auto 8px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '2px solid rgba(122,138,160,0.5)' }}
+                  >
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: '#f0ede8' }}>{fleeFace}</span>
+                  </motion.div>
+                  <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#e4bc6c', marginBottom: 6 }}>
+                    Need {fleeNeed}+
+                  </p>
+                </>
               ) : (
                 <>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', marginBottom: 6 }}>Flee the raid?</p>
-                  {/* The roll, laid out before the player commits: what the
-                      escape needs, what their build adds, and what that
-                      leaves on the die. Slow ship + green crew reads as the
-                      warning it should be. */}
-                  <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(122,138,160,0.3)', borderRadius: 10, padding: '0.6rem 0.7rem', marginBottom: 10 }}>
-                    <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', marginBottom: 4 }}>
-                      Escape needs {fleeDC}
-                    </p>
-                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8b8d0', lineHeight: 1.5 }}>
-                      Your roll: d20 + {fleeBonus} (Ship Speed {fleeSpeed}{fleeNavBonus > 0 ? `, Crew Nav +${fleeNavBonus}` : ''})
-                    </p>
-                    <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#e4bc6c', marginTop: 4 }}>
-                      {fleeDC - fleeBonus > 20 ? 'Only a natural 20 gets you out.'
-                        : fleeDC - fleeBonus <= 2 ? 'Anything but a natural 1 gets you out.'
-                        : `You need ${fleeDC - fleeBonus} or better on the die.`}
-                    </p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0ede8', marginBottom: 10 }}>Flee the raid?</p>
+                  {/* One number, big: the die face the escape needs. The
+                      breakdown behind it stays in the tuning block — casual
+                      players just need "roll this or better". */}
+                  <div style={{ width: 72, height: 72, margin: '0 auto 6px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: '2px solid rgba(228,188,108,0.45)' }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#e4bc6c' }}>{fleeNeed}+</span>
                   </div>
+                  <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#e4bc6c', marginBottom: 10 }}>
+                    needed to escape
+                  </p>
                   <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8b8d0', lineHeight: 1.55, marginBottom: 14 }}>
                     A failed escape lets {enemy.name} land a parting shot.
                   </p>
