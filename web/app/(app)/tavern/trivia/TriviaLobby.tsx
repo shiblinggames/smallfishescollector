@@ -120,7 +120,7 @@ export default function TriviaLobby({ doubloons, boardLocked, answeredToday, dou
             display: 'flex', alignItems: 'flex-end', gap: 7,
           }}
         >
-          {[10, 50, 180, 500].map((p, i) => (
+          {[20, 100, 360, 1000].map((p, i) => (
             <div
               key={p}
               className="font-karla font-700"

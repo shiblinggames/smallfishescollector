@@ -79,8 +79,8 @@ export function kingWeekStr(now = new Date()): string {
   return monday.toISOString().split('T')[0]
 }
 
-/** Prize per rung (index = rung - 1). A crowned run banks 500 ⟡. */
-export const PIRATE_KING_PRIZES = [10, 20, 30, 50, 80, 120, 180, 260, 360, 500] as const
+/** Prize per rung (index = rung - 1). A crowned run banks 1000 ⟡. */
+export const PIRATE_KING_PRIZES = [20, 40, 60, 100, 160, 240, 360, 520, 720, 1000] as const
 
 export const PIRATE_KING_RUNGS = PIRATE_KING_PRIZES.length
 
