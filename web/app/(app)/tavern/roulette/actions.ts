@@ -94,10 +94,18 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
   // cap. Same constants used by the client buttons so a bet that's UI-
   // valid is also server-valid.
   const INSIDE: ReadonlySet<string> = new Set(['straight', 'split', 'street', 'corner', 'line'])
+  // Per-zone totals — the UI stacks chips into one bet per zone, but a
+  // crafted request could split a zone across duplicate bets that each
+  // pass the per-bet check, so the cap is enforced on the zone total.
+  const zoneTotals = new Map<string, number>()
   for (const bet of bets) {
     const maxBet = INSIDE.has(bet.type) ? RL_MAX_STRAIGHT_BET : RL_MAX_OUTSIDE_BET
     const err = validateBet(bet, RL_MIN_BET, maxBet)
     if (err) return { error: err }
+    const zone = `${bet.type}:${JSON.stringify(bet.target)}`
+    const total = (zoneTotals.get(zone) ?? 0) + bet.amount
+    if (total > maxBet) return { error: `Each bet maxes out at ${maxBet.toLocaleString()} chips` }
+    zoneTotals.set(zone, total)
   }
 
   const totalWagered = bets.reduce((sum, b) => sum + b.amount, 0)
