@@ -28,8 +28,8 @@ const cachedChartState = cache(() => getChartState())
 // ── Sections ────────────────────────────────────────────────────────────────
 
 function DailySection() {
-  // Trivia Night took Fish of the Day's slot on 2026-06-11 — the
-  // trivia hub's Captain's Board is the new daily brain ritual.
+  // The Parlor (trivia hub) took Fish of the Day's slot on
+  // 2026-06-11 — the Captain's Board is the new daily brain ritual.
   return (
     <div className="grid grid-cols-2 gap-3">
       <DailyBonusCard />
@@ -164,7 +164,7 @@ export default async function TavernPage() {
 // ── Skeletons matching each section's card grid shape ──────────────────────
 
 function DailyCardsSkeleton() {
-  // Always 2 cards (Daily Bonus + Trivia Night). Charting moved
+  // Always 2 cards (Daily Bonus + The Parlor). Charting moved
   // to its own bottom-row section on 2026-06-07.
   return (
     <div className="grid grid-cols-2 gap-3">

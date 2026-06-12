@@ -1,4 +1,4 @@
-// Trivia Night — shared constants + types for the trivia hub games.
+// The Parlor — shared constants + types for the trivia hub games.
 // Plain module (NOT 'use server') so sync helpers and types survive
 // the build; server actions import from here.
 

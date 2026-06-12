@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import ScenicCard from './ScenicCard'
 
-/** Tavern hub card for Trivia Night — the single door into the trivia
+/** Tavern hub card for The Parlor — the single door into the trivia
  *  games (/tavern/trivia lobby), taking the slot Fish of the Day held.
  *  Deep violet study scene: three question marks in the category
  *  colors drifting like lantern light, gentle bob only (no hard
@@ -12,7 +12,7 @@ export default function TriviaHubCard() {
   return (
     <ScenicCard
       href="/tavern/trivia"
-      title="Trivia Night"
+      title="The Parlor"
       gradient={['#2a2050', '#191338', '#0c0a20']}
       accent="#a78bfa"
     >

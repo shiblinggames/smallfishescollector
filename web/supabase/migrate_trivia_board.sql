@@ -1,4 +1,4 @@
--- Trivia Night: The Captain's Board (applied to prod 2026-06-11 as
+-- The Parlor (trivia hub): The Captain's Board (applied 2026-06-11 as
 -- migration trivia_captains_board).
 --
 -- Daily Jeopardy-style board: 4 categories (FISH / DEEP / LORE /

@@ -5,7 +5,7 @@ import { getTodaysLadder } from '@/app/(app)/tavern/trivia/king/generate'
 export const maxDuration = 60
 
 // Midnight content roll. Fish of the Day + the orphaned daily quiz
-// retired 2026-06-11 in favor of Trivia Night. Board generates first
+// retired 2026-06-11 in favor of The Parlor. Board generates first
 // so the ladder's avoid-list can see today's board questions.
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')

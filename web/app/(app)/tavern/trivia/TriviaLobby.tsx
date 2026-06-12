@@ -1,6 +1,6 @@
 'use client'
 
-// Trivia Night lobby — the one front door for the trivia games, same
+// The Parlor — the one front door for the trivia games, same
 // skeleton as the Den lobby. The Captain's Board and Pirate King are
 // live; Spin the Capstan is chalked up as coming soon.
 
@@ -37,7 +37,7 @@ export default function TriviaLobby({ gems, answeredToday, gemsToday, king }: {
           ← Tavern
         </Link>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
-          Trivia Night
+          The Parlor
         </p>
         <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672' }}>
           {gems.toLocaleString()} ◆

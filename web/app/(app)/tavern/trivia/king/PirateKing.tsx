@@ -112,7 +112,7 @@ export default function PirateKing({ initial }: { initial: PirateKingState }) {
       {/* Header row, same skeleton as the board */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <Link href="/tavern/trivia" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none' }}>
-          ← Trivia Night
+          ← The Parlor
         </Link>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
           Pirate King
@@ -222,7 +222,7 @@ export default function PirateKing({ initial }: { initial: PirateKingState }) {
               fontSize: '0.68rem', textDecoration: 'none',
             }}
           >
-            Back to Trivia Night
+            Back to the Parlor
           </Link>
         </div>
       ) : current && (
