@@ -7,7 +7,6 @@ import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
 import TriviaHubCard from './TriviaHubCard'
 import ChartTheCourseCard from './ChartTheCourseCard'
-import RecruitCrewCard from './RecruitCrewCard'
 import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
@@ -27,12 +26,15 @@ const cachedChartState = cache(() => getChartState())
 
 // ── Sections ────────────────────────────────────────────────────────────────
 
-function DailySection() {
-  // The Parlor (trivia hub) took Fish of the Day's slot on
-  // 2026-06-11 — the Captain's Board is the new daily brain ritual.
+function GamesSection() {
+  // The Den + The Parlor share one row — both are hub doors into
+  // multi-game rooms (casino tables / trivia games). The Den was a
+  // full-width Arcade hero until 2026-06-11; demoted to a half card
+  // when Recruit Crew left the tavern (crew now lives solely in the
+  // Expeditions flow) and Daily Bonus moved up to the features row.
   return (
     <div className="grid grid-cols-2 gap-3">
-      <DailyBonusCard />
+      <CasinoHubCard />
       <TriviaHubCard />
     </div>
   )
@@ -47,28 +49,14 @@ async function ChartingSection() {
   return <ChartTheCourseCard />
 }
 
-// Top-of-page features grid: Recruit Crew + Tide Run sit alongside each
-// other as standard compact cards. Used to be hero banners; demoted to
-// regular cards on 2026-05-27 to free vertical space — the thin
-// Leaderboards bar above does the social-proof heavy lifting now.
+// Top-of-page features grid: Daily Bonus + Tide Run sit alongside each
+// other as standard compact cards. Daily Bonus took Recruit Crew's
+// slot on 2026-06-11 when crew recruiting moved out of the tavern.
 function FeaturesSection() {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <RecruitCrewCard />
+      <DailyBonusCard />
       <TideRunCard />
-    </div>
-  )
-}
-
-function ArcadeSection() {
-  // One Casino card — the three games share a single chip purse now, so
-  // the hub shows one door into the card room (/tavern/casino lobby
-  // handles buy-in, cash-out, and the per-table cards; roulette stays
-  // admin-gated inside the lobby). Jackpot pot lives on the slots card
-  // inside the lobby, not out here.
-  return (
-    <div className="grid grid-cols-1 gap-3">
-      <CasinoHubCard />
     </div>
   )
 }
@@ -107,29 +95,18 @@ export default async function TavernPage() {
             <TavernLeaderboardsCard />
           </Suspense>
 
-          {/* Featured — Recruit Crew + Tide Run as standard compact
-              cards (same size as Daily/Arcade rows). Used to be
-              hero banners; demoted on 2026-05-27 in favor of more
-              compact pulls. */}
+          {/* Featured — Daily Bonus + Tide Run as standard compact
+              cards. Daily Bonus took Recruit Crew's slot here on
+              2026-06-11. */}
           <div>
             <FeaturesSection />
           </div>
 
-          {/* Daily — true daily rituals only (login claims). */}
+          {/* Games — the Den + the Parlor, one door each into their
+              multi-game rooms. */}
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Daily</p>
-            <Suspense fallback={<DailyCardsSkeleton />}>
-              <DailySection />
-            </Suspense>
-          </div>
-
-          {/* Arcade — anytime-play, hiscore-driven games. Single Casino
-              card since the games share one chip purse. */}
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Arcade</p>
-            <Suspense fallback={<ArcadeCardsSkeleton />}>
-              <ArcadeSection />
-            </Suspense>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Games</p>
+            <GamesSection />
           </div>
 
           {/* Charting — single full-width hero card, only renders when
@@ -161,24 +138,4 @@ export default async function TavernPage() {
   )
 }
 
-// ── Skeletons matching each section's card grid shape ──────────────────────
-
-function DailyCardsSkeleton() {
-  // Always 2 cards (Daily Bonus + The Parlor). Charting moved
-  // to its own bottom-row section on 2026-06-07.
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {[0, 1].map(i => <SkeletonBox key={i} height={132} radius={14} />)}
-    </div>
-  )
-}
-
-function ArcadeCardsSkeleton() {
-  // Single full-width Casino card (ScenicCard default height 168).
-  return (
-    <div className="grid grid-cols-1 gap-3">
-      <SkeletonBox height={168} radius={18} />
-    </div>
-  )
-}
 
