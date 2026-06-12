@@ -84,3 +84,20 @@ create policy "Users can read own ladder attempts"
 alter table public.trivia_board_attempts
   add column category text,
   add column doubloons_awarded integer not null default 0;
+
+-- ── Pirate King: weekly + doubloons (applied to prod 2026-06-11 as
+-- migration pirate_king_weekly_doubloons) ───────────────────────────
+-- All Parlor games pay doubloons now. The King also moved from one
+-- run per day to one run per WEEK: the date column on trivia_ladders
+-- and trivia_ladder_attempts stores the Monday week-start
+-- (kingWeekStr in trivia/constants.ts), the midnight cron is a cache
+-- hit Tuesday-Sunday and rigs the fresh ladder on Monday. Prizes
+-- rescaled to [10..500] with havens paying 50 / 180.
+
+alter table public.trivia_ladder_attempts
+  rename column gems_awarded to doubloons_awarded;
+
+-- Launch-day rows (2026-06-11, a Thursday) were re-keyed to that
+-- week's Monday so the seeded ladder serves the rest of the week:
+update public.trivia_ladders set date = '2026-06-08' where date = '2026-06-11';
+update public.trivia_ladder_attempts set date = '2026-06-08' where date = '2026-06-11';

@@ -1,14 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { anthropic } from '@/lib/anthropic'
-import { PIRATE_KING_RUNGS } from '../constants'
+import { PIRATE_KING_RUNGS, kingWeekStr } from '../constants'
 
-// Pirate King generator — a ten-question ladder a night, difficulty
-// ramping from rung 1 (anyone at the bar gets it) to rung 10 (true
-// enthusiast), authored by Claude on the midnight cron and cached in
-// trivia_ladders. Same cached/generate/fallback shape as the
+// Pirate King generator — a ten-question ladder a WEEK (keyed by the
+// Monday week-start), difficulty ramping from rung 1 (anyone at the
+// bar gets it) to rung 10 (true enthusiast), authored by Claude on
+// the midnight cron and cached in trivia_ladders. The cron still runs
+// nightly; Tuesday through Sunday this is a cache hit, Monday rigs
+// the fresh ladder. Same cached/generate/fallback shape as the
 // Captain's Board generator next door. The avoid-list pulls from BOTH
-// recent ladders and recent boards so a player never meets the same
-// question twice in one night.
+// recent ladders and recent boards so the two games never serve the
+// same fact.
 
 export interface GeneratedRung {
   question: string
@@ -23,7 +25,7 @@ function buildPrompt(recentQuestions: string[]): string {
   const avoidBlock = recentQuestions.length > 0
     ? `\n\nDO NOT repeat or closely paraphrase any of these recently used questions:\n${recentQuestions.map(q => `- ${q}`).join('\n')}`
     : ''
-  return `Generate today's Pirate King ladder: exactly 10 questions in strict ascending difficulty.
+  return `Generate this week's Pirate King ladder: exactly 10 questions in strict ascending difficulty.
 
 Topics: mix freely across fish biology and behavior, the ocean and the deep sea, maritime history and pirate lore, and the craft of fishing. Vary the topics across the ladder; no two consecutive questions on the same narrow topic.
 
@@ -61,24 +63,25 @@ function isValidRung(r: GeneratedRung): boolean {
   return true
 }
 
-export async function getTodaysLadder(): Promise<GeneratedRung[] | null> {
+export async function getThisWeeksLadder(): Promise<GeneratedRung[] | null> {
   const admin = createAdminClient()
+  const week = kingWeekStr()
   const today = new Date().toISOString().split('T')[0]
 
   const { data: cached } = await admin
     .from('trivia_ladders')
     .select('ladder')
-    .eq('date', today)
+    .eq('date', week)
     .single()
 
   if (cached) return cached.ladder as GeneratedRung[]
 
   try {
-    // Avoid both recent ladders and recent boards (including today's)
-    // so the two games never serve the same fact on the same night.
+    // Avoid recent ladders and recent boards (including today's) so
+    // the two games never serve the same fact.
     const [{ data: recentLadders }, { data: recentBoards }] = await Promise.all([
       admin.from('trivia_ladders').select('ladder')
-        .lt('date', today).order('date', { ascending: false }).limit(5),
+        .lt('date', week).order('date', { ascending: false }).limit(5),
       admin.from('trivia_boards').select('board')
         .lte('date', today).order('date', { ascending: false }).limit(5),
     ])
@@ -105,7 +108,7 @@ export async function getTodaysLadder(): Promise<GeneratedRung[] | null> {
       if (!isValidRung(rung)) throw new Error(`Invalid rung: ${JSON.stringify(rung).slice(0, 120)}`)
     }
 
-    await admin.from('trivia_ladders').insert({ date: today, ladder })
+    await admin.from('trivia_ladders').insert({ date: week, ladder })
     return ladder
   } catch (err) {
     console.error('[pirate-king] generation failed:', err)
@@ -113,7 +116,7 @@ export async function getTodaysLadder(): Promise<GeneratedRung[] | null> {
     const { data: fallback } = await admin
       .from('trivia_ladders')
       .select('ladder')
-      .lt('date', today)
+      .lt('date', week)
       .order('date', { ascending: false })
       .limit(1)
       .single()

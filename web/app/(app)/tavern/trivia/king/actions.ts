@@ -4,16 +4,18 @@
 // answers) only ever lives server-side; clients get the current
 // question stripped, every answer is judged here, and the 50/50's
 // removed options are persisted so a reload can't re-roll them.
+// One run per WEEK, keyed by the Monday week-start; pays doubloons.
 // Types live in ../constants ('use server' files silently drop
 // non-async exports at build).
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysLadder, type GeneratedRung } from './generate'
+import { getThisWeeksLadder, type GeneratedRung } from './generate'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_RUNGS,
   kingHavenValue,
+  kingWeekStr,
   type PirateKingState,
   type PirateKingStatus,
   type KingQuestionClient,
@@ -24,12 +26,10 @@ interface AttemptRow {
   rung: number
   status: PirateKingStatus
   fifty: { rung: number; removed: number[] } | null
-  gems_awarded: number
+  doubloons_awarded: number
 }
 
-function todayStr(): string {
-  return new Date().toISOString().split('T')[0]
-}
+const ATTEMPT_COLS = 'rung, status, fifty, doubloons_awarded'
 
 function stripQuestion(q: GeneratedRung, rung: number, fifty: AttemptRow['fifty']): KingQuestionClient {
   return {
@@ -39,14 +39,18 @@ function stripQuestion(q: GeneratedRung, rung: number, fifty: AttemptRow['fifty'
   }
 }
 
-async function payOut(userId: string, gems: number, reason: string) {
-  if (gems <= 0) return
+/** Pays doubloons and returns the new wallet total (null if nothing
+ *  was paid) so the client can tick the Nav header. */
+async function payOut(userId: string, amount: number, reason: string): Promise<number | null> {
+  if (amount <= 0) return null
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('gems').eq('id', userId).single()
+  const { data: profile } = await admin.from('profiles').select('doubloons').eq('id', userId).single()
+  const newTotal = (profile?.doubloons ?? 0) + amount
   await Promise.all([
-    admin.from('profiles').update({ gems: (profile?.gems ?? 0) + gems }).eq('id', userId),
-    admin.from('gem_transactions').insert({ user_id: userId, amount: gems, reason }),
+    admin.from('profiles').update({ doubloons: newTotal }).eq('id', userId),
+    admin.from('doubloon_transactions').insert({ user_id: userId, amount, reason }),
   ])
+  return newTotal
 }
 
 export async function getPirateKingState(): Promise<PirateKingState | { error: string }> {
@@ -55,24 +59,24 @@ export async function getPirateKingState(): Promise<PirateKingState | { error: s
   if (!user) return { error: 'Not authenticated' }
 
   const admin = createAdminClient()
-  const today = todayStr()
+  const week = kingWeekStr()
 
   const [ladder, { data: attempt }] = await Promise.all([
-    getTodaysLadder(),
+    getThisWeeksLadder(),
     admin.from('trivia_ladder_attempts')
-      .select('rung, status, fifty, gems_awarded')
-      .eq('user_id', user.id).eq('date', today)
+      .select(ATTEMPT_COLS)
+      .eq('user_id', user.id).eq('date', week)
       .single(),
   ])
   if (!ladder) return { error: 'No ladder available right now. Try again in a moment.' }
 
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, gems_awarded: 0 }
+  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0 }
 
   return {
-    date: today,
+    date: week,
     status: a.status,
     rung: a.rung,
-    gemsAwarded: a.gems_awarded,
+    doubloonsAwarded: a.doubloons_awarded,
     fiftyUsed: a.fifty !== null,
     current: a.status === 'active' ? stripQuestion(ladder[a.rung], a.rung, a.fifty) : null,
   }
@@ -90,19 +94,19 @@ export async function answerKingRung(
   }
 
   const admin = createAdminClient()
-  const today = todayStr()
+  const week = kingWeekStr()
 
   const [ladder, { data: attempt }] = await Promise.all([
-    getTodaysLadder(),
+    getThisWeeksLadder(),
     admin.from('trivia_ladder_attempts')
-      .select('rung, status, fifty, gems_awarded')
-      .eq('user_id', user.id).eq('date', today)
+      .select(ATTEMPT_COLS)
+      .eq('user_id', user.id).eq('date', week)
       .single(),
   ])
   if (!ladder) return { error: 'No ladder available' }
 
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, gems_awarded: 0 }
-  if (a.status !== 'active') return { error: 'The run is over for today' }
+  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0 }
+  if (a.status !== 'active') return { error: 'The run is over for this week' }
   // Stale client / double submit guard: the answer must target the
   // rung the server says is current.
   if (rung !== a.rung) return { error: 'Out of step with the ladder' }
@@ -116,30 +120,31 @@ export async function answerKingRung(
 
   let status: PirateKingStatus
   let newRung: number
-  let gems = 0
+  let won = 0
   if (correct) {
     newRung = rung + 1
     status = newRung === PIRATE_KING_RUNGS ? 'crowned' : 'active'
-    if (status === 'crowned') gems = PIRATE_KING_PRIZES[PIRATE_KING_RUNGS - 1]
+    if (status === 'crowned') won = PIRATE_KING_PRIZES[PIRATE_KING_RUNGS - 1]
   } else {
     newRung = rung
     status = 'busted'
-    gems = kingHavenValue(rung)
+    won = kingHavenValue(rung)
   }
 
   await admin.from('trivia_ladder_attempts').upsert({
     user_id: user.id,
-    date: today,
+    date: week,
     rung: newRung,
     status,
     fifty: a.fifty,
-    gems_awarded: status === 'active' ? 0 : gems,
+    doubloons_awarded: status === 'active' ? 0 : won,
   })
 
+  let newDoubloons: number | null = null
   if (status === 'crowned') {
-    await payOut(user.id, gems, `Pirate King: crowned, all ${PIRATE_KING_RUNGS} questions`)
-  } else if (status === 'busted' && gems > 0) {
-    await payOut(user.id, gems, `Pirate King: fell to the haven at ${gems} ◆`)
+    newDoubloons = await payOut(user.id, won, `Pirate King: crowned, all ${PIRATE_KING_RUNGS} questions`)
+  } else if (status === 'busted' && won > 0) {
+    newDoubloons = await payOut(user.id, won, `Pirate King: fell to the haven at ${won} ⟡`)
   }
 
   return {
@@ -148,7 +153,8 @@ export async function answerKingRung(
     explanation: q.explanation,
     status,
     rung: newRung,
-    gemsAwarded: status === 'active' ? 0 : gems,
+    doubloonsAwarded: status === 'active' ? 0 : won,
+    newDoubloons,
     next: status === 'active' ? stripQuestion(ladder[newRung], newRung, a.fifty) : null,
   }
 }
@@ -161,19 +167,19 @@ export async function spendKingFiftyFifty(): Promise<{ removed: number[] } | { e
   if (!user) return { error: 'Not authenticated' }
 
   const admin = createAdminClient()
-  const today = todayStr()
+  const week = kingWeekStr()
 
   const [ladder, { data: attempt }] = await Promise.all([
-    getTodaysLadder(),
+    getThisWeeksLadder(),
     admin.from('trivia_ladder_attempts')
-      .select('rung, status, fifty, gems_awarded')
-      .eq('user_id', user.id).eq('date', today)
+      .select(ATTEMPT_COLS)
+      .eq('user_id', user.id).eq('date', week)
       .single(),
   ])
   if (!ladder) return { error: 'No ladder available' }
 
-  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, gems_awarded: 0 }
-  if (a.status !== 'active') return { error: 'The run is over for today' }
+  const a = (attempt as AttemptRow | null) ?? { rung: 0, status: 'active' as const, fifty: null, doubloons_awarded: 0 }
+  if (a.status !== 'active') return { error: 'The run is over for this week' }
   if (a.fifty) return { error: 'The 50/50 is already spent' }
 
   // Strike two of the three wrong options at random.
@@ -184,44 +190,44 @@ export async function spendKingFiftyFifty(): Promise<{ removed: number[] } | { e
 
   await admin.from('trivia_ladder_attempts').upsert({
     user_id: user.id,
-    date: today,
+    date: week,
     rung: a.rung,
     status: 'active',
     fifty: { rung: a.rung, removed },
-    gems_awarded: 0,
+    doubloons_awarded: 0,
   })
 
   return { removed }
 }
 
-export async function walkKingAway(): Promise<{ status: 'walked'; gemsAwarded: number } | { error: string }> {
+export async function walkKingAway(): Promise<{ status: 'walked'; doubloonsAwarded: number; newDoubloons: number | null } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
   const admin = createAdminClient()
-  const today = todayStr()
+  const week = kingWeekStr()
 
   const { data: attempt } = await admin.from('trivia_ladder_attempts')
-    .select('rung, status, fifty, gems_awarded')
-    .eq('user_id', user.id).eq('date', today)
+    .select(ATTEMPT_COLS)
+    .eq('user_id', user.id).eq('date', week)
     .single()
 
   const a = attempt as AttemptRow | null
   if (!a || a.status !== 'active') return { error: 'No run to walk away from' }
   if (a.rung < 1) return { error: 'Answer at least one question first' }
 
-  const gems = PIRATE_KING_PRIZES[a.rung - 1]
+  const won = PIRATE_KING_PRIZES[a.rung - 1]
 
   await admin.from('trivia_ladder_attempts').upsert({
     user_id: user.id,
-    date: today,
+    date: week,
     rung: a.rung,
     status: 'walked',
     fifty: a.fifty,
-    gems_awarded: gems,
+    doubloons_awarded: won,
   })
-  await payOut(user.id, gems, `Pirate King: walked at rung ${a.rung} with ${gems} ◆`)
+  const newDoubloons = await payOut(user.id, won, `Pirate King: walked at rung ${a.rung} with ${won} ⟡`)
 
-  return { status: 'walked', gemsAwarded: gems }
+  return { status: 'walked', doubloonsAwarded: won, newDoubloons }
 }

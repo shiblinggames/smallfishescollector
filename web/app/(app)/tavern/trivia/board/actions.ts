@@ -157,6 +157,7 @@ export async function answerCaptainsTile(
   const value = TRIVIA_TIER_VALUES[tile.tier - 1]
   const doubloonsWon = correct ? value : 0
   const totalAwarded = a.doubloons_awarded + doubloonsWon
+  const newDoubloons = doubloonsWon > 0 ? (profile?.doubloons ?? 0) + doubloonsWon : null
   const newAnswers = { ...a.answers, [key]: { chosen: chosenIndex, correct } }
 
   const writes: PromiseLike<unknown>[] = [
@@ -168,10 +169,10 @@ export async function answerCaptainsTile(
       doubloons_awarded: totalAwarded,
     }),
   ]
-  if (doubloonsWon > 0) {
+  if (newDoubloons !== null) {
     writes.push(
       admin.from('profiles')
-        .update({ doubloons: (profile?.doubloons ?? 0) + doubloonsWon })
+        .update({ doubloons: newDoubloons })
         .eq('id', user.id)
     )
     writes.push(
@@ -190,5 +191,6 @@ export async function answerCaptainsTile(
     explanation: tile.explanation,
     doubloonsWon,
     totalAwarded,
+    newDoubloons,
   }
 }

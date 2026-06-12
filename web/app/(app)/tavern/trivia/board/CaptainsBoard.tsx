@@ -93,6 +93,10 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       setResult(r)
       setDoubloonsAwarded(r.totalAwarded)
       if (r.doubloonsWon > 0) setBalance(prev => prev + r.doubloonsWon)
+      // Keep the Nav header's purse in step with the payout.
+      if (r.newDoubloons !== null) {
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+      }
       setTiles(prev => prev.map(t => t.key === openTile.key
         ? { ...t, answered: { chosen: idx, correct: r.correct, correctIndex: r.correctIndex, explanation: r.explanation } }
         : t

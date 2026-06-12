@@ -19,7 +19,7 @@ export default async function PirateKingPage() {
             </p>
           </div>
         ) : (
-          <PirateKing initial={state} gems={profile?.gems ?? 0} />
+          <PirateKing initial={state} doubloons={profile?.doubloons ?? 0} />
         )}
       </div>
     </main>

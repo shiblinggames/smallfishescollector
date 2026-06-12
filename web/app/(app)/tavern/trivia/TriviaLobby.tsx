@@ -9,26 +9,25 @@ import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
 
-const GEM_COLOR = '#c084fc'
 const GOLD = '#f0c040'
 
 export interface KingChip {
   status: PirateKingStatus
   rung: number
-  gemsAwarded: number
+  doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ gems, boardLocked, answeredToday, doubloonsToday, king }: {
-  gems: number
+export default function TriviaLobby({ doubloons, boardLocked, answeredToday, doubloonsToday, king }: {
+  doubloons: number
   boardLocked: boolean
   answeredToday: number
   doubloonsToday: number
   king: KingChip | null
 }) {
   const kingChipText = king === null ? null
-    : king.status === 'crowned' ? `Crowned · +${king.gemsAwarded} ◆`
-    : king.status === 'walked' ? `Walked · +${king.gemsAwarded} ◆`
-    : king.status === 'busted' ? (king.gemsAwarded > 0 ? `Sunk · +${king.gemsAwarded} ◆` : 'Sunk')
+    : king.status === 'crowned' ? `Crowned · +${king.doubloonsAwarded} ⟡`
+    : king.status === 'walked' ? `Walked · +${king.doubloonsAwarded} ⟡`
+    : king.status === 'busted' ? (king.doubloonsAwarded > 0 ? `Sunk · +${king.doubloonsAwarded} ⟡` : 'Sunk')
     : `Rung ${king.rung} of ${PIRATE_KING_RUNGS}`
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
@@ -41,12 +40,12 @@ export default function TriviaLobby({ gems, boardLocked, answeredToday, doubloon
           The Parlor
         </p>
         <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672' }}>
-          {gems.toLocaleString()} ◆
+          {doubloons.toLocaleString()} ⟡
         </span>
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center' }}>
-        Sharp wits earn coin here. New questions every night.
+        Sharp wits earn doubloons here. New questions every night.
       </p>
 
       {/* The Captain's Board — live */}
@@ -121,7 +120,7 @@ export default function TriviaLobby({ gems, boardLocked, answeredToday, doubloon
             display: 'flex', alignItems: 'flex-end', gap: 7,
           }}
         >
-          {[5, 25, 90, 250].map((p, i) => (
+          {[10, 50, 180, 500].map((p, i) => (
             <div
               key={p}
               className="font-karla font-700"
@@ -135,7 +134,7 @@ export default function TriviaLobby({ gems, boardLocked, answeredToday, doubloon
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              {p} ◆
+              {p} ⟡
             </div>
           ))}
           <motion.span
@@ -153,7 +152,7 @@ export default function TriviaLobby({ gems, boardLocked, answeredToday, doubloon
             style={{
               position: 'absolute', top: 8, right: 10,
               fontSize: '0.58rem', letterSpacing: '0.04em',
-              color: king && king.gemsAwarded > 0 ? GEM_COLOR : '#9a9488',
+              color: king && king.doubloonsAwarded > 0 ? GOLD : '#9a9488',
               background: 'rgba(14,10,6,0.7)',
               border: `1px solid ${GOLD}4d`,
               borderRadius: 999, padding: '0.2rem 0.55rem',
@@ -193,7 +192,7 @@ export default function TriviaLobby({ gems, boardLocked, answeredToday, doubloon
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        Fresh questions are chalked at midnight. Winnings land instantly.
+        The board is chalked fresh at midnight; the King&apos;s ladder is rigged each Monday. Winnings land instantly.
       </p>
     </div>
   )

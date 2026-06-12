@@ -2,7 +2,8 @@
 
 // Pirate King — Millionaire-style ladder. Ten questions, prizes climb,
 // walk away whenever you like or risk the climb; a wrong answer drops
-// you to the last safe haven. One run a day, one 50/50 lifeline.
+// you to the last safe haven. One run a WEEK (fresh ladder each
+// Monday), one 50/50 lifeline. Pays doubloons.
 
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -19,14 +20,13 @@ import {
   type AnswerKingResult,
 } from '../constants'
 
-const GEM_COLOR = '#c084fc'
 const GOLD = '#f0c040'
 
-export default function PirateKing({ initial, gems }: { initial: PirateKingState; gems: number }) {
+export default function PirateKing({ initial, doubloons }: { initial: PirateKingState; doubloons: number }) {
   const [status, setStatus] = useState<PirateKingStatus>(initial.status)
   const [rung, setRung] = useState(initial.rung)
-  const [gemsAwarded, setGemsAwarded] = useState(initial.gemsAwarded)
-  const [balance, setBalance] = useState(gems)
+  const [doubloonsAwarded, setDoubloonsAwarded] = useState(initial.doubloonsAwarded)
+  const [balance, setBalance] = useState(doubloons)
   const [fiftyUsed, setFiftyUsed] = useState(initial.fiftyUsed)
   const [current, setCurrent] = useState<KingQuestionClient | null>(initial.current)
   const [result, setResult] = useState<AnswerKingResult | null>(null)
@@ -40,14 +40,14 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
   useEffect(() => {
     setStatus(initial.status)
     setRung(initial.rung)
-    setGemsAwarded(initial.gemsAwarded)
+    setDoubloonsAwarded(initial.doubloonsAwarded)
     setFiftyUsed(initial.fiftyUsed)
     setCurrent(initial.current)
     setResult(null)
     setChosen(null)
     setWalkConfirm(false)
   }, [initial])
-  useEffect(() => { setBalance(gems) }, [gems])
+  useEffect(() => { setBalance(doubloons) }, [doubloons])
 
   const resolved = result !== null
   // While a result is up, `rung` already advanced; the question on
@@ -69,9 +69,13 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
       setResult(r)
       setStatus(r.status)
       setRung(r.rung)
-      setGemsAwarded(r.gemsAwarded)
-      // Payouts land only at terminal states; tick the purse up then.
-      if (r.status !== 'active' && r.gemsAwarded > 0) setBalance(prev => prev + r.gemsAwarded)
+      setDoubloonsAwarded(r.doubloonsAwarded)
+      // Payouts land only at terminal states; tick the purse up then
+      // and keep the Nav header in step.
+      if (r.newDoubloons !== null) {
+        setBalance(prev => prev + r.doubloonsAwarded)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+      }
     })
   }
 
@@ -102,8 +106,11 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
       const r = await walkKingAway()
       if ('error' in r) { setError(r.error); setWalkConfirm(false); return }
       setStatus('walked')
-      setGemsAwarded(r.gemsAwarded)
-      if (r.gemsAwarded > 0) setBalance(prev => prev + r.gemsAwarded)
+      setDoubloonsAwarded(r.doubloonsAwarded)
+      if (r.newDoubloons !== null) {
+        setBalance(prev => prev + r.doubloonsAwarded)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+      }
       setResult(null)
       setCurrent(null)
       setWalkConfirm(false)
@@ -123,11 +130,11 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
           Pirate King
         </p>
-        <BalanceTicker value={balance} glyph="◆" color={GEM_COLOR} />
+        <BalanceTicker value={balance} glyph="⟡" color={GOLD} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center' }}>
-        Ten questions, each worth more than the last. Walk away with your winnings any time, or climb on. A wrong answer drops you to the last haven.
+        One run a week. Ten questions, each worth more than the last. Walk away with your winnings any time, or climb on. A wrong answer drops you to the last haven.
       </p>
 
       {/* Prize ladder strip */}
@@ -187,7 +194,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
               </motion.p>
               <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: GOLD }}>Pirate King</p>
               <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
-                All ten answered true. The crown and {gemsAwarded} ◆ are yours until the next ladder is rigged.
+                All ten answered true. The crown and {doubloonsAwarded} ⟡ are yours until the next ladder is rigged.
               </p>
             </>
           )}
@@ -196,7 +203,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
               <p style={{ fontSize: '1.8rem', marginBottom: 8 }}>⟡</p>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#e8e2d4' }}>Walked with the winnings</p>
               <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
-                You stepped off at rung {rung} and banked {gemsAwarded} ◆. A wise captain knows when the wind turns.
+                You stepped off at rung {rung} and banked {doubloonsAwarded} ⟡. A wise captain knows when the wind turns.
               </p>
             </>
           )}
@@ -205,14 +212,14 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
               <p style={{ fontSize: '1.8rem', marginBottom: 8 }}>🌊</p>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#e07070' }}>The run is sunk</p>
               <p className="font-karla" style={{ fontSize: '0.76rem', color: '#c8c0ae', lineHeight: 1.55, marginTop: 8 }}>
-                {gemsAwarded > 0
-                  ? `The haven held ${gemsAwarded} ◆ for you. The rest went down with the question.`
+                {doubloonsAwarded > 0
+                  ? `The haven held ${doubloonsAwarded} ⟡ for you. The rest went down with the question.`
                   : 'Nothing banked this run. The first haven sits at rung 4.'}
               </p>
             </>
           )}
           <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a7470', marginTop: 14 }}>
-            A new ladder is rigged at midnight.
+            A new ladder is rigged on Monday.
           </p>
           <Link
             href="/tavern/trivia"
@@ -241,8 +248,8 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.14em', color: GOLD }}>
               Question {questionRung + 1} of {PIRATE_KING_PRIZES.length}
             </p>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: GEM_COLOR }}>
-              {prize} ◆
+            <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: GOLD }}>
+              {prize} ⟡
             </p>
           </div>
 
@@ -325,7 +332,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
                   cursor: rung < 1 || isPending ? 'default' : 'pointer',
                 }}
               >
-                {walkConfirm ? `Sure? Bank ${banked} ◆` : rung < 1 ? 'Walk away' : `Walk with ${banked} ◆`}
+                {walkConfirm ? `Sure? Bank ${banked} ⟡` : rung < 1 ? 'Walk away' : `Walk with ${banked} ⟡`}
               </button>
             </div>
           ) : (
@@ -334,7 +341,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
               {result.correct ? (
                 <>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', textAlign: 'center', color: '#7fd49a' }}>
-                    {result.status === 'crowned' ? 'Crowned. All ten answered.' : `Well answered. ${PIRATE_KING_PRIZES[rung - 1]} ◆ on the line.`}
+                    {result.status === 'crowned' ? 'Crowned. All ten answered.' : `Well answered. ${PIRATE_KING_PRIZES[rung - 1]} ⟡ on the line.`}
                   </p>
                   {result.explanation && (
                     <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center', marginTop: 6 }}>
@@ -355,7 +362,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
                         fontSize: '0.68rem', cursor: 'pointer',
                       }}
                     >
-                      Claim the crown · +{gemsAwarded} ◆
+                      Claim the crown · +{doubloonsAwarded} ⟡
                     </button>
                   ) : (
                     <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -372,7 +379,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
                           fontSize: '0.64rem', cursor: 'pointer',
                         }}
                       >
-                        {walkConfirm ? `Sure? Bank ${banked} ◆` : `Walk with ${banked} ◆`}
+                        {walkConfirm ? `Sure? Bank ${banked} ⟡` : `Walk with ${banked} ⟡`}
                       </button>
                       <button
                         type="button"
@@ -386,7 +393,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
                           fontSize: '0.64rem', cursor: 'pointer',
                         }}
                       >
-                        Climb on · {PIRATE_KING_PRIZES[rung]} ◆
+                        Climb on · {PIRATE_KING_PRIZES[rung]} ⟡
                       </button>
                     </div>
                   )}
@@ -401,9 +408,9 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
                       {result.explanation}
                     </p>
                   )}
-                  <p className="font-karla" style={{ fontSize: '0.72rem', color: havenIfWrong > 0 ? GEM_COLOR : '#7a7470', textAlign: 'center', marginTop: 8 }}>
-                    {gemsAwarded > 0
-                      ? `The haven held ${gemsAwarded} ◆ for you.`
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: havenIfWrong > 0 ? GOLD : '#7a7470', textAlign: 'center', marginTop: 8 }}>
+                    {doubloonsAwarded > 0
+                      ? `The haven held ${doubloonsAwarded} ⟡ for you.`
                       : 'Nothing banked. The first haven sits at rung 4.'}
                   </p>
                   <button
@@ -431,7 +438,7 @@ export default function PirateKing({ initial, gems }: { initial: PirateKingState
       {status === 'active' && !resolved && (
         <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a7470', textAlign: 'center', letterSpacing: '0.04em' }}>
           {havenIfWrong > 0
-            ? `Miss here and the haven keeps ${havenIfWrong} ◆ for you.`
+            ? `Miss here and the haven keeps ${havenIfWrong} ⟡ for you.`
             : 'No haven yet. Miss here and nothing is banked.'}
         </p>
       )}

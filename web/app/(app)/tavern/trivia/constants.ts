@@ -61,14 +61,26 @@ export interface AnswerTileResult {
   explanation: string
   doubloonsWon: number
   totalAwarded: number
+  /** Wallet total after the payout, null when nothing was won — the
+   *  client forwards it to the Nav's doubloons-changed listener. */
+  newDoubloons: number | null
 }
 
 // ── Pirate King ─────────────────────────────────────────────────────
 // Millionaire-style ladder: ten rungs, prizes climb, answer wrong and
-// you fall to the last safe haven. One run a day, one 50/50 lifeline.
+// you fall to the last safe haven. One run a WEEK (fresh ladder each
+// Monday), one 50/50 lifeline. Pays doubloons like the board.
 
-/** Prize per rung (index = rung - 1). A crowned run banks 250 ◆. */
-export const PIRATE_KING_PRIZES = [5, 10, 15, 25, 40, 60, 90, 130, 180, 250] as const
+/** Monday (UTC) of the current week — the key the weekly ladder and
+ *  attempts are stored under. */
+export function kingWeekStr(now = new Date()): string {
+  const diff = (now.getUTCDay() + 6) % 7
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff))
+  return monday.toISOString().split('T')[0]
+}
+
+/** Prize per rung (index = rung - 1). A crowned run banks 500 ⟡. */
+export const PIRATE_KING_PRIZES = [10, 20, 30, 50, 80, 120, 180, 260, 360, 500] as const
 
 export const PIRATE_KING_RUNGS = PIRATE_KING_PRIZES.length
 
@@ -97,12 +109,13 @@ export interface KingQuestionClient {
 }
 
 export interface PirateKingState {
+  /** Week-start Monday this run belongs to. */
   date: string
   status: PirateKingStatus
   /** Questions answered correctly so far (0-10). While active, the
    *  current question is rung + 1. */
   rung: number
-  gemsAwarded: number
+  doubloonsAwarded: number
   fiftyUsed: boolean
   /** Present only while status is 'active'. */
   current: KingQuestionClient | null
@@ -114,7 +127,10 @@ export interface AnswerKingResult {
   explanation: string
   status: PirateKingStatus
   rung: number
-  gemsAwarded: number
+  doubloonsAwarded: number
+  /** Wallet total after a terminal payout, null when nothing paid —
+   *  the client forwards it to the Nav's doubloons-changed listener. */
+  newDoubloons: number | null
   /** Next question if the run continues, already stripped. */
   next: KingQuestionClient | null
 }
