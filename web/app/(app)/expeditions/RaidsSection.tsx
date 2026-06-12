@@ -596,6 +596,14 @@ function RaidMap({
 
 /* ───────────────────────── Detail sheet ───────────────────────── */
 
+// Intro cutscenes (milestone/event nodes with a scene) gate the sheet's
+// interactive bits behind a first watch, but watching isn't persisted
+// server-side — only the claim/choice is. Remember watched node ids for
+// the lifetime of the page load so reopening the sheet (e.g. coming
+// back with enough ⟡ for a toll) doesn't force a rewatch; a fresh page
+// load re-gates, and Skip is one tap.
+const seenIntroScenes = new Set<string>()
+
 function NodeDetailSheet({
   view,
   doubloons,
@@ -626,9 +634,12 @@ function NodeDetailSheet({
   // effect breakdown for raid items, drop chance). Cleared by tapping
   // outside the popup or its close button.
   const [selectedDrop, setSelectedDrop] = useState<RaidNodeDrop | null>(null)
-  // Dialogue scene overlay (story nodes with node.scene). First read
-  // plays the scene and its final CTA marks the node read; cleared
-  // nodes can replay it (replay's CTA just closes — no server write).
+  // Dialogue scene overlay (any node with node.scene). Story nodes:
+  // first read plays the scene and its final CTA marks the node read.
+  // Milestone/event nodes: the scene is an intro cutscene — finishing
+  // (or skipping) it just reveals the interactive bits in the sheet,
+  // no server write; the claim/choice action stays the clear. Cleared
+  // nodes of any type can replay (replay's CTA just closes).
   const [sceneOpen, setSceneOpen] = useState(false)
   const { node, status, claimable, lockReason } = view
   // Single accent now: matches the unified map palette.
@@ -637,6 +648,12 @@ function NodeDetailSheet({
   const locked = status === 'locked'
   const cleared = status === 'cleared'
   const detail = node.detail
+  // Non-story node with an unwatched intro cutscene → hide the
+  // interactive bits (pay bar / choice cards) and offer the scene CTA
+  // instead. Recomputed on every render: finishing the scene adds the
+  // id to seenIntroScenes and the setSceneOpen(false) rerender flips
+  // this to false, revealing the interaction.
+  const introGated = !!node.scene && node.type !== 'story' && !cleared && !locked && !seenIntroScenes.has(node.id)
 
   const dropsTitle = isCombatNode(node.type)
     ? 'Possible Loot'
@@ -742,9 +759,32 @@ function NodeDetailSheet({
     )
   } else if (node.type === 'milestone') {
     if (cleared) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80' }}>{node.milestone?.spend ? 'Passage Bought ✓' : 'Backing Secured ✓'}</div>
+      const doneLabel = node.milestone?.spend ? 'Passage Bought ✓' : 'Backing Secured ✓'
+      cta = node.scene ? (
+        <button
+          onClick={() => setSceneOpen(true)}
+          className="font-cinzel font-800 uppercase tracking-[0.04em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80', cursor: 'pointer' }}
+        >
+          {doneLabel} · Watch Again
+        </button>
+      ) : (
+        <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80' }}>{doneLabel}</div>
+      )
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    } else if (introGated) {
+      // The encounter plays before the toll talk — scene first, pay
+      // bar after.
+      cta = (
+        <button
+          onClick={() => setSceneOpen(true)}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: 'pointer' }}
+        >
+          {detail.ctaLabel ?? 'Continue →'}
+        </button>
+      )
     } else if (claimable) {
       cta = (
         <button
@@ -818,11 +858,33 @@ function NodeDetailSheet({
     }
   } else if (node.type === 'event') {
     // available → choice cards in the body render their own CTAs, so
-    // no bottom button here. cleared/locked just show a status banner.
+    // no bottom button here (unless the intro scene hasn't been watched
+    // yet — then the scene CTA gates them). cleared/locked show a
+    // status banner; cleared doubles as a scene replay when one exists.
     if (cleared) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Choice Made ✓</div>
+      cta = node.scene ? (
+        <button
+          onClick={() => setSceneOpen(true)}
+          className="font-cinzel font-800 uppercase tracking-[0.04em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent, cursor: 'pointer' }}
+        >
+          Choice Made ✓ · Watch Again
+        </button>
+      ) : (
+        <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Choice Made ✓</div>
+      )
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    } else if (introGated) {
+      cta = (
+        <button
+          onClick={() => setSceneOpen(true)}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: 'pointer' }}
+        >
+          {detail.ctaLabel ?? 'Continue →'}
+        </button>
+      )
     }
   }
 
@@ -911,14 +973,14 @@ function NodeDetailSheet({
           </button>
         </div>
 
-        {/* Description. Story nodes with a dialogue scene never show the
-            full prose transcript here — the scene IS the delivery (and
-            replayable via Read Again). Pre-read the sheet teases with
-            the flavor line; once logged it shows the short summary
-            recap instead, so the sheet stays a map surface and the
-            reading happens in the scene. */}
+        {/* Description. Nodes with a dialogue scene never show the full
+            prose transcript here — the scene IS the delivery (and
+            replayable via Watch/Read Again). Pre-watch the sheet teases
+            with the flavor line; once cleared it shows the short
+            summary recap instead, so the sheet stays a map surface and
+            the reading happens in the scene. */}
         <p className="font-karla" style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.72)', whiteSpace: 'pre-line' }}>
-          {node.type === 'story' && node.scene
+          {node.scene
             ? (cleared ? (detail.summary ?? node.flavor) : node.flavor)
             : detail.description}
         </p>
@@ -1104,8 +1166,9 @@ function NodeDetailSheet({
             XP" / "No spoils"); after the player picks, that card
             lights up with a "Chosen ✓" badge and the others go dim +
             "Gone." Same persistence pattern as the shop-choice block
-            above — picks are permanent. */}
-        {node.event && (() => {
+            above — picks are permanent. Hidden while the intro scene
+            hasn't been watched: the encounter plays before the choice. */}
+        {node.event && !introGated && (() => {
           const choiceAccent = '#c084fc' // violet — matches the event glyph color
           const outcomeChip = (outcome: typeof node.event.choices[number]['outcome']) => {
             if (outcome.type === 'doubloons') return `+${outcome.amount.toLocaleString()} ⟡`
@@ -1475,18 +1538,32 @@ function NodeDetailSheet({
   const dropModal = selectedDrop ? <DropDetailModal drop={selectedDrop} onClose={() => setSelectedDrop(null)} /> : null
 
   // Dialogue scene — StoryScene portals itself to <body> (z-1100, above
-  // the sheet). First read: final CTA fires the mark-read action, and
-  // Skip ALSO marks it read (story must never gate harder than the old
-  // one-button flow — skippers can Read Again from the sheet anytime).
+  // the sheet). Story nodes, first read: final CTA fires the mark-read
+  // action, and Skip ALSO marks it read (story must never gate harder
+  // than the old one-button flow — skippers can Read Again anytime).
+  // Milestone/event intro scenes: finishing OR skipping just records
+  // the watch locally and returns to the sheet, where the pay bar /
+  // choice cards are now revealed — no server write here.
   // Replay (already cleared): both buttons just close the scene.
+  const finishScene = () => {
+    if (cleared) { setSceneOpen(false); return }
+    if (node.type === 'story') { readStory(); return }
+    seenIntroScenes.add(node.id)
+    setSceneOpen(false)
+  }
+  const sceneCta = cleared
+    ? 'Close'
+    : node.type === 'story' ? (detail.ctaLabel ?? 'Log it →')
+    : node.type === 'event' ? 'Make the Call →'
+    : 'Talk Terms →'
   const storyScene = sceneOpen && node.scene ? (
     <StoryScene
       title={node.label}
       lines={node.scene}
-      ctaLabel={cleared ? 'Close' : (detail.ctaLabel ?? 'Log it →')}
+      ctaLabel={sceneCta}
       pending={pending}
-      onComplete={() => { if (cleared) setSceneOpen(false); else readStory() }}
-      onSkip={() => { if (cleared) setSceneOpen(false); else readStory() }}
+      onComplete={finishScene}
+      onSkip={finishScene}
     />
   ) : null
 

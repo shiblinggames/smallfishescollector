@@ -188,10 +188,15 @@ export interface RaidNode {
    *  zigzag slot, and renders smaller + with the challenge glyph. The main
    *  chain skips it entirely when drawing the route line. */
   sideBranch?: { parentId: string }
-  /** story nodes: tap-through dialogue scene played by the Continue CTA.
-   *  When present, the sheet's prose description becomes the fallback /
-   *  archive text and the scene is the primary delivery. Cleared nodes
-   *  offer a replay. */
+  /** Tap-through dialogue scene. On story nodes the Continue CTA plays
+   *  it and the final tap marks the node read. On milestone/event nodes
+   *  it's an INTRO cutscene: the sheet gates the interactive bits (pay
+   *  bar / choice cards) behind a first watch, and the node's own
+   *  claim/choice action stays the clear — the scene itself never
+   *  writes to the server. When present, the sheet shows flavor as the
+   *  pre-watch teaser and detail.summary once cleared; the prose
+   *  description becomes archive/fallback text. Cleared nodes offer a
+   *  replay. */
   scene?: SceneLine[]
   /** Rich detail surfaced in the tap-to-open sheet. */
   detail: RaidNodeDetail
@@ -501,6 +506,17 @@ export const RAID_MAP: RaidNode[] = [
     requiresNavLevel: 10,
     milestone: { amount: 1000, spend: true },
     image: '/bilge_eel.png',
+    scene: [
+      { text: "The letter left no address. Only a heading: out past the Bilge Strait, into the cold." },
+      { text: "And the strait, as luck would have it, belongs to the Bilge Eels." },
+      { speaker: 'A Bilge Eel', portrait: '/bilge_eel.png', text: "Far enough, captain. This water runs chain to chain, and the chain is ours." },
+      { speaker: 'A Bilge Eel', portrait: '/bilge_eel.png', text: "No flag tells us a thing. Not the Finndicate, not the navy, and surely not you." },
+      { text: "They bow to nobody. They simply squat on the only water that points where C.K.'s cargo went." },
+      { speaker: 'A Bilge Eel', portrait: '/bilge_eel.png', text: "Heavy freight crossed here, aye. Cold heading, sealed manifest. We watched it go." },
+      { speaker: 'A Bilge Eel', portrait: '/bilge_eel.png', text: "A thousand doubloons buys the crossing. And we forget your sail was ever here." },
+      { text: "There is no bulling through at your size, and they only deal with captains who have logged real sea." },
+      { text: "Pay, and the way opens onto C.K.'s trail. Keep your purse shut, and the trail goes cold as the water." },
+    ],
     detail: {
       description:
         "The letter left no address, only a heading: out past the Bilge Strait, into the cold. That is enough to follow, and as luck would have it the whole stretch belongs to the Bilge Eels.\n\nThey bow to nobody. Not the Finndicate, not you, just a knot of thugs squatting on the only water that points where C.K.'s cargo went, charging good coin to cross it. There is no bulling through at your size. They will only deal with a captain who has logged enough sea to be worth the breath (Navigation 10), and even then they expect paying. Slip them 1,000 ⟡ and the way opens onto C.K.'s trail. Keep your purse shut and the trail goes cold as the water.",
@@ -508,6 +524,8 @@ export const RAID_MAP: RaidNode[] = [
         { emoji: '🗺️', label: "The trail toward C.K.", sublabel: "Passage through the strait, hard on C.K.'s heading.", rarity: 'uncommon' },
       ],
       dropsNote: 'A one-time bribe. The 1,000 ⟡ is spent for good, not held or refunded.',
+      ctaLabel: 'Hail the Strait →',
+      summary: "The Bilge Eels own the only crossing on C.K.'s heading and answer to no flag. A thousand doubloons bought passage, and the trail through the cold water stayed warm.",
     },
   },
   {
@@ -733,7 +751,18 @@ export const RAID_MAP: RaidNode[] = [
     // delayed payoff is wired in later content. The choice copy hints
     // at it ("the cold water remembers") so players sense the cost is
     // not zero, but no mechanic backs it yet — wire when ready.
-    image: '/raidlog.png',
+    image: '/krust_soldier.png',
+    scene: [
+      { text: "Two cutters running tight together. No flag flying, and neither one built to carry freight." },
+      { text: "They were sounding the water ahead of you. The same water the smuggler's chart points past." },
+      { text: "You catch them clean." },
+      { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "Take what you came for, captain. You will get no name off this deck." },
+      { text: "They will not even lie about who they sail for. They go quiet and watch the boards, like sailors who know what telling earns." },
+      { text: "You do not need them to say it. The cargo in the hold says it. The cut of the ships says it." },
+      { text: "The Finndicate has scouts on this water. And scouts carry headings worth more than coin." },
+      { speaker: 'A Caught Scout', portrait: '/krust_soldier.png', text: "Whatever you do, do it quick. This water does not stay empty long." },
+      { text: "The choice is yours, captain. Pick once, and only once." },
+    ],
     event: {
       choices: [
         {
@@ -760,6 +789,8 @@ export const RAID_MAP: RaidNode[] = [
       description:
         "Two cutters running tight together, no flag flying and neither one a freight ship. They were sounding the water ahead of you, no question, the same water the smuggler's chart pointed past. You catch them clean.\n\nThe scouts will not tell you who they sail for. They will not even lie about it. They go quiet and watch the deck like sailors who have run cargo long enough to know what telling earns them. You do not need them to tell you. The cargo in the hold and the cut of the ships makes it plain enough. The Finndicate has scouts on this water, and the scouts have a heading you would dearly love to read.\n\nThe choice is yours, captain. Pick once, and only once.",
       dropsNote: 'One-time event. Pick your option and you sail on. The water past this point answers to a captain you have not met yet.',
+      ctaLabel: 'Board the Cutters →',
+      summary: "Two Finndicate scout cutters, caught clean past the danger line. They never gave a name, but the cargo and the cut of the ships said plenty. You made your call and sailed on.",
     },
   },
   {
