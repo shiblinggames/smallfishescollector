@@ -5399,9 +5399,12 @@ export default function FishingGame({
             SFX (speaker icon). Left edge, below the back-button row.
             Both set state synchronously inside the gesture so iOS PWA
             permits playback in the same call stack. Hidden while any panel
-            (hold/sell/gear/bait/collection) is open so they don't float over it. */}
+            (hold/sell/gear/bait/collection) is open so they don't float over it.
+            zIndex 15: above the scene art (z 0–10) but BELOW every overlay —
+            drawers (20), tours (18/22), level-up (32), toasts (40), challenge
+            complete (60) — so the chips never float over a modal. */}
         {!(holdOpen || gearOpen || baitOpen || collectionOpen) && (
-        <div style={{ position: 'absolute', bottom: 110, left: 10, zIndex: 60, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ position: 'absolute', bottom: 110, left: 10, zIndex: 15, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {([
             {
               key: 'music',
