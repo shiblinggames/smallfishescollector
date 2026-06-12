@@ -64,12 +64,14 @@ const ZONE_BG: Record<string, string> = {
   ancient_deep: '/ancient.jpg',
 }
 
-function ZoneStatCell({ label, value, color }: { label: string; value: string; color: string }) {
+/* Slim inline stat — value + tiny label, no box. The zone art does the
+   talking; stats sit quietly on the bottom scrim. */
+function ZoneStatInline({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ flex: 1, minWidth: 0, textAlign: 'center', background: 'rgba(2,6,12,0.6)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 9, padding: '0.45rem 0.3rem', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}>
-      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
-      <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginTop: 3 }}>{label}</p>
-    </div>
+    <p className="font-karla" style={{ lineHeight: 1, whiteSpace: 'nowrap' }}>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color }}>{value}</span>
+      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginLeft: 5 }}>{label}</span>
+    </p>
   )
 }
 
@@ -218,8 +220,16 @@ export default function ZoneLanding({
             )}
           </div>
 
-          {/* Zone cards */}
-          <div className="flex flex-col gap-3">
+          {/* Zone cards — connected by the descent rail: a thin depth line
+              running through all five zone colors top-to-bottom, one node
+              per zone. Sells the choice as "how deep do you sail", and
+              locked zones read as further down the water column. */}
+          <div className="flex flex-col gap-3" style={{ position: 'relative', paddingLeft: 18 }}>
+            <div aria-hidden style={{
+              position: 'absolute', left: 5, top: 14, bottom: 14, width: 2, borderRadius: 2,
+              background: 'linear-gradient(180deg, #60a5fa, #34d399, #a78bfa, #f87171, #c084fc)',
+              opacity: 0.45,
+            }} />
             {ZONES.map((zone, i) => {
               const minLevel = ZONE_MIN_LEVEL[zone] ?? 1
               const accessible = fishingLevel >= minLevel
@@ -230,7 +240,17 @@ export default function ZoneLanding({
               const isRecommended = accessible && ZONES.filter(z => fishingLevel >= (ZONE_MIN_LEVEL[z] ?? 1)).slice(-1)[0] === zone
 
               return (
-                <motion.div key={zone}
+                <div key={zone} style={{ position: 'relative' }}>
+                  {/* Rail node — lit and glowing in the zone color once the
+                      depth is reachable; a dim hollow ring while locked. */}
+                  <div aria-hidden style={{
+                    position: 'absolute', left: -16, top: '50%', transform: 'translateY(-50%)',
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: accessible ? color : 'rgba(8,18,28,0.9)',
+                    border: accessible ? 'none' : '1.5px solid rgba(255,255,255,0.3)',
+                    boxShadow: accessible ? `0 0 8px ${color}` : 'none',
+                  }} />
+                <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   /* scale gets its own zero-delay spring — the entrance stagger
@@ -262,12 +282,17 @@ export default function ZoneLanding({
                   }}
                 >
                   {/* Zone scene as the card background (same art as the fishing
-                      scene + the profile backgrounds). */}
+                      scene + the profile backgrounds). Accessible cards get the
+                      living-scene drift (see globals.css); per-card duration +
+                      negative delay desync the five loops. Locked cards stay
+                      static — they carry a grayscale filter, and transform
+                      animation on a filtered element is a perf trap. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={ZONE_BG[zone]} alt="" style={{
+                  <img src={ZONE_BG[zone]} alt="" className={accessible ? 'zone-art-drift' : undefined} style={{
                     position: 'absolute', inset: 0, width: '100%', height: '100%',
                     objectFit: 'cover', objectPosition: 'center',
                     filter: accessible ? 'none' : 'grayscale(0.85) brightness(0.4)',
+                    ...(accessible ? { animationDuration: `${22 + i * 4}s`, animationDelay: `-${i * 9}s` } : {}),
                   }} />
                   {/* Legibility scrim — darker toward the bottom where stats sit. */}
                   <div style={{ position: 'absolute', inset: 0, background: accessible
@@ -332,27 +357,29 @@ export default function ZoneLanding({
                       </div>
                     </div>
 
-                    {/* Zone stat row. Ancient Deep fish are kept trophies (no
-                        sell value), so it shows trophy/rarity stats instead. */}
+                    {/* Zone stat row — one slim inline line so the art keeps
+                        breathing under it. Ancient Deep fish are kept trophies
+                        (no sell value), so it shows trophy/rarity stats. */}
                     {accessible && (
-                      <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: '0.9rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 'auto', paddingTop: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
                         {zone === 'ancient_deep' ? (
                           <>
-                            <ZoneStatCell label="Trophies" value={`${stats.count}`} color="#c084fc" />
-                            <ZoneStatCell label="Avg XP" value={`+${stats.avgXp.toLocaleString()}`} color="#60a5fa" />
-                            <ZoneStatCell label="Rarity" value="Legendary" color="#f59e0b" />
+                            <ZoneStatInline label="Trophies" value={`${stats.count}`} color="#c084fc" />
+                            <ZoneStatInline label="Avg XP" value={`+${stats.avgXp.toLocaleString()}`} color="#60a5fa" />
+                            <ZoneStatInline label="Rarity" value="Legendary" color="#f59e0b" />
                           </>
                         ) : (
                           <>
-                            <ZoneStatCell label="Avg Value" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
-                            <ZoneStatCell label="Avg XP" value={`+${stats.avgXp.toLocaleString()}`} color="#60a5fa" />
-                            <ZoneStatCell label="Top Catch" value={`${stats.topValue.toLocaleString()} ⟡`} color="#f59e0b" />
+                            <ZoneStatInline label="Avg" value={`${stats.avgValue.toLocaleString()} ⟡`} color="#f0c040" />
+                            <ZoneStatInline label="Avg XP" value={`+${stats.avgXp.toLocaleString()}`} color="#60a5fa" />
+                            <ZoneStatInline label="Top" value={`${stats.topValue.toLocaleString()} ⟡`} color="#f59e0b" />
                           </>
                         )}
                       </div>
                     )}
                   </div>
                 </motion.div>
+                </div>
               )
             })}
           </div>

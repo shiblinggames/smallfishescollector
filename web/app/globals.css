@@ -1629,3 +1629,25 @@ html, body {
   .profile-ancient-mote { display: none; }
   .profile-ancient-glow { animation: none; opacity: 0.4; }
 }
+
+/* Zone selector "living scenes" — very slow Ken Burns drift on each card's
+   zone art so the paintings read as windows onto moving water, not static
+   photos. Transform-only (GPU-cheap); base scale 1.05 gives the translate
+   room so cover-fit edges never peek in. Per-card duration/negative-delay
+   are set inline to desync the five cards. Locked cards stay static (they
+   also carry a grayscale filter — never animate transform on a filtered
+   element, see perf notes). */
+@keyframes zoneArtDrift {
+  0%   { transform: scale(1.05) translate3d(0, 0, 0); }
+  100% { transform: scale(1.11) translate3d(-1.6%, 1.2%, 0); }
+}
+.zone-art-drift {
+  will-change: transform;
+  animation-name: zoneArtDrift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .zone-art-drift { animation: none; }
+}
