@@ -233,7 +233,17 @@ export default function ZoneLanding({
                 <motion.div key={zone}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.22, delay: i * 0.07 }}
+                  /* scale gets its own zero-delay spring — the entrance stagger
+                     delay must never apply to press feedback or lower cards
+                     would respond a beat late. */
+                  transition={{
+                    duration: 0.22, delay: i * 0.07,
+                    scale: { type: 'spring', stiffness: 520, damping: 28, delay: 0 },
+                  }}
+                  /* Tactile press: the card sinks like a physical tile under the
+                     thumb; snappy spring so release pops back with a little life.
+                     Locked cards stay inert. */
+                  whileTap={accessible ? { scale: 0.965 } : undefined}
                   onClick={() => accessible && onSelect(zone)}
                   style={{
                     position: 'relative',
@@ -242,6 +252,13 @@ export default function ZoneLanding({
                     border: `1px solid ${accessible ? color + '66' : 'rgba(255,255,255,0.12)'}`,
                     minHeight: accessible ? 142 : 84,
                     cursor: accessible ? 'pointer' : 'default',
+                    // Resting depth so the card reads as a raised object you can
+                    // press down, not a flat panel.
+                    boxShadow: accessible
+                      ? `0 3px 10px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset, 0 0 14px ${color}14`
+                      : '0 1px 4px rgba(0,0,0,0.3)',
+                    WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'manipulation',
                   }}
                 >
                   {/* Zone scene as the card background (same art as the fishing
