@@ -7,6 +7,8 @@ export interface MailMessage {
   subject: string
   body: string
   senderLabel: string
+  /** Optional banner image shown above the body in the open message. */
+  imageUrl: string | null
   attachmentDoubloons: number
   attachmentGems: number
   createdAt: string

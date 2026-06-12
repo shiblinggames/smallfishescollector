@@ -20,6 +20,11 @@ CREATE TABLE IF NOT EXISTS mail_messages (
   expires_at    timestamptz NULL
 );
 
+-- 2026-06-12 (mail_image_url migration): optional banner image rendered
+-- above the body in the open message. Plain URL — point it at a /public
+-- asset or a Supabase storage public URL.
+ALTER TABLE mail_messages ADD COLUMN IF NOT EXISTS image_url text;
+
 CREATE INDEX IF NOT EXISTS mail_messages_created_at_idx
   ON mail_messages (created_at DESC);
 

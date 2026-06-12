@@ -29,7 +29,7 @@ export async function getInbox(): Promise<InboxResult> {
 
   const [{ data: msgRows }, { data: readRows }] = await Promise.all([
     admin.from('mail_messages')
-      .select('id, subject, body, sender_label, attachment_doubloons, attachment_gems, created_at, expires_at')
+      .select('id, subject, body, sender_label, image_url, attachment_doubloons, attachment_gems, created_at, expires_at')
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
       // Broadcasts have target_user_id IS NULL; targeted mail only
       // shows to its recipient. Service-role bypasses RLS so the filter
@@ -54,6 +54,7 @@ export async function getInbox(): Promise<InboxResult> {
       subject: m.subject,
       body: m.body,
       senderLabel: m.sender_label,
+      imageUrl: m.image_url ?? null,
       attachmentDoubloons: m.attachment_doubloons ?? 0,
       attachmentGems: m.attachment_gems ?? 0,
       createdAt: m.created_at,

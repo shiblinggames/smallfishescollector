@@ -432,6 +432,28 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
                               padding: '0 0.85rem 0.8rem 1.05rem',
                               borderTop: '1px solid rgba(255,255,255,0.05)',
                             }}>
+                              {msg.imageUrl && (
+                                /* Banner image — reserved-height box so the
+                                   expand animation doesn't jump when the
+                                   image loads in. */
+                                <div style={{
+                                  marginTop: '0.6rem',
+                                  height: 140,
+                                  borderRadius: 9,
+                                  overflow: 'hidden',
+                                  background: 'rgba(255,255,255,0.03)',
+                                  border: '1px solid rgba(255,255,255,0.07)',
+                                }}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={msg.imageUrl}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                  />
+                                </div>
+                              )}
                               <p className="font-karla" style={{
                                 fontSize: '0.8rem',
                                 color: '#e0dccc',
