@@ -153,11 +153,11 @@ export default async function AchievementsPage() {
       // Tight one-line recap per stop: the node's bridge (what beating it
       // set in motion), falling back to its flavor. The full descriptions and
       // fragment quotes stay in the node detail sheets, not this summary.
-      return { label: n.label, kind, lines: [n.bridge ?? n.flavor] }
+      return { label: n.label, kind, lines: [n.bridge ?? n.flavor], image: n.image ?? null }
     })
   const raidNextView = raidViews.find(v => v.status === 'available')
   const raidNext = raidNextView
-    ? { label: raidNextView.node.label, flavor: raidNextView.node.flavor }
+    ? { label: raidNextView.node.label, flavor: raidNextView.node.flavor, image: raidNextView.node.image ?? null }
     : null
 
   const storyData: StoryLogData = {

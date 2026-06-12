@@ -1651,3 +1651,17 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .zone-art-drift { animation: none; }
 }
+
+/* Captain's Log journal — illuminated-manuscript drop cap on the lead
+   paragraph of the freshest story entry. Parchment-gold, Cinzel, floated
+   so the body text wraps around it like an old logbook page. */
+.log-dropcap::first-letter {
+  font-family: var(--font-cinzel), serif;
+  font-weight: 700;
+  font-size: 1.9em;
+  line-height: 0.85;
+  color: #d8b878;
+  float: left;
+  padding-right: 5px;
+  padding-top: 2px;
+}

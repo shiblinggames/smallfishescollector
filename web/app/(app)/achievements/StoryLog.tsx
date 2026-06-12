@@ -16,8 +16,8 @@ export interface StoryLogData {
     total: number
   }
   raid: {
-    done: { label: string; kind: 'story' | 'combat' | 'milestone' | 'shop'; lines: string[] }[]
-    next: { label: string; flavor: string } | null
+    done: { label: string; kind: 'story' | 'combat' | 'milestone' | 'shop'; lines: string[]; image?: string | null }[]
+    next: { label: string; flavor: string; image?: string | null } | null
     clearedCount: number
     total: number
   }
@@ -28,8 +28,16 @@ type RaidStopData = StoryLogData['raid']['done'][number]
 const KIND_COLOR: Record<string, string> = {
   story: '#6fbf73', combat: '#f0743a', milestone: '#e0b358', shop: '#b08bf0',
 }
+const KIND_LABEL: Record<string, string> = {
+  story: 'Story', combat: 'Battle', milestone: 'Milestone', shop: 'Port of Call',
+}
 
-function Beat({ lines, accent }: { lines: string[]; accent: string }) {
+// Warm ink tones — the journal is written on parchment, not a dark glass panel.
+const INK = 'rgba(240,230,210,0.78)'
+const INK_FAINT = 'rgba(240,230,210,0.5)'
+const PARCHMENT_TITLE = '#f0e6d2'
+
+function Beat({ lines, accent, dropcap }: { lines: string[]; accent: string; dropcap?: boolean }) {
   return (
     <div style={{
       borderLeft: `2px solid ${accent}55`,
@@ -37,7 +45,11 @@ function Beat({ lines, accent }: { lines: string[]; accent: string }) {
       display: 'flex', flexDirection: 'column', gap: 3,
     }}>
       {lines.map((l, i) => (
-        <p key={i} className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.66)', whiteSpace: 'pre-line' }}>
+        <p
+          key={i}
+          className={`font-karla${dropcap && i === 0 ? ' log-dropcap' : ''}`}
+          style={{ fontSize: '0.8rem', lineHeight: 1.6, color: INK, whiteSpace: 'pre-line' }}
+        >
           {l}
         </p>
       ))}
@@ -45,23 +57,80 @@ function Beat({ lines, accent }: { lines: string[]; accent: string }) {
   )
 }
 
-function RaidStop({ d }: { d: RaidStopData }) {
-  const accent = KIND_COLOR[d.kind] ?? '#c8704a'
+/** A Finn moment rendered like a remembered exchange — his avatar beside
+ *  the words, so the journal reads as a record of run-ins with the rival. */
+function FinnBeat({ lines, accent, dropcap }: { lines: string[]; accent: string; dropcap?: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: accent, flexShrink: 0 }} />
-        <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: '#f0ede8' }}>{d.label}</span>
-      </div>
-      <div style={{ paddingLeft: 14 }}>
-        <Beat lines={d.lines} accent={accent} />
+    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+      <span style={{ flexShrink: 0, marginTop: 2 }}>
+        <CharacterAvatar
+          characterColor={FINN_AVATAR.characterColor}
+          equippedHat={FINN_AVATAR.equippedHat}
+          size={28}
+          bgColor={FINN_AVATAR.bgColor}
+          ringColor={FINN_AVATAR.borderColor}
+        />
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Beat lines={lines} accent={accent} dropcap={dropcap} />
       </div>
     </div>
   )
 }
 
-/** Card whose header + latest beat are always visible; older beats live
- *  behind the inline "Show earlier" toggle (see EarlierToggle in children). */
+/** Small wax-seal style chip stamping the kind of stop into the margin. */
+function KindSeal({ kind }: { kind: string }) {
+  const accent = KIND_COLOR[kind] ?? '#c8704a'
+  return (
+    <span
+      className="font-karla font-700 uppercase tracking-[0.1em]"
+      style={{
+        fontSize: '0.52rem', color: accent, flexShrink: 0,
+        background: `${accent}1a`, border: `1px solid ${accent}40`,
+        borderRadius: 999, padding: '2px 8px',
+      }}
+    >
+      {KIND_LABEL[kind] ?? kind}
+    </span>
+  )
+}
+
+function RaidStop({ d, dropcap }: { d: RaidStopData; dropcap?: boolean }) {
+  const accent = KIND_COLOR[d.kind] ?? '#c8704a'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        {d.image ? (
+          <span style={{
+            width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+            border: `1.5px solid ${accent}66`,
+            overflow: 'hidden', position: 'relative', display: 'block',
+            background: 'rgba(8,12,16,0.6)',
+          }}>
+            <img
+              src={d.image}
+              alt=""
+              aria-hidden
+              loading="lazy"
+              decoding="async"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </span>
+        ) : (
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: accent, flexShrink: 0, marginLeft: 3 }} />
+        )}
+        <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: PARCHMENT_TITLE, flex: 1, minWidth: 0 }}>{d.label}</span>
+        <KindSeal kind={d.kind} />
+      </div>
+      <div style={{ paddingLeft: d.image ? 43 : 14 }}>
+        <Beat lines={d.lines} accent={accent} dropcap={dropcap} />
+      </div>
+    </div>
+  )
+}
+
+/** Parchment journal page. Header + latest beat are always visible; older
+ *  beats live behind the inline "Show earlier" toggle (see EarlierToggle). */
 function Panel({
   icon, title, accent, chip, children,
 }: {
@@ -73,22 +142,30 @@ function Panel({
 }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.03)',
-      border: `1px solid ${accent}2e`,
+      background: [
+        'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(196,169,106,0.10) 0%, transparent 70%)',
+        'linear-gradient(180deg, rgba(48,36,18,0.38) 0%, rgba(28,20,10,0.6) 100%)',
+      ].join(', '),
+      border: '1px solid rgba(196,169,106,0.25)',
       borderRadius: 14,
+      boxShadow: 'inset 0 0 24px rgba(0,0,0,0.45)',
       overflow: 'hidden',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.85rem 1rem 0.7rem' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.7rem',
+        padding: '0.85rem 1rem 0.7rem',
+        borderBottom: '1px solid rgba(196,169,106,0.14)',
+      }}>
         <span aria-hidden style={{
           width: 32, height: 32, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>{icon}</span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.95rem', color: '#f0ede8' }}>{title}</span>
+          <span className="font-cinzel font-700" style={{ display: 'block', fontSize: '0.95rem', color: PARCHMENT_TITLE }}>{title}</span>
           <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ display: 'block', fontSize: '0.56rem', color: accent, marginTop: 2 }}>{chip}</span>
         </span>
       </div>
-      <div style={{ padding: '0 1rem 1.05rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ padding: '0.9rem 1rem 1.05rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {children}
       </div>
     </div>
@@ -119,7 +196,7 @@ function EarlierToggle({ accent, count, children }: { accent: string; count: num
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#7a7875' }}>
+    <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.58rem', color: '#a89878' }}>
       {children}
     </p>
   )
@@ -140,7 +217,7 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <p className="sg-eyebrow mb-2" style={{ color: '#9a9488' }}>The Story So Far</p>
+      <p className="sg-eyebrow mb-2" style={{ color: '#a89878' }}>The Story So Far</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
         {/* ── Finn ── */}
@@ -159,7 +236,7 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
           chip={`${finn.discovered} / ${finn.total} moments uncovered`}
         >
           {finn.discovered === 0 ? (
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.5)', lineHeight: 1.55 }}>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: INK_FAINT, lineHeight: 1.55 }}>
               You have not crossed his path yet. Keep fishing and a rival will find you.
             </p>
           ) : (
@@ -173,20 +250,20 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
                 }}>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: FINN_ACCENT, marginBottom: 4 }}>The Truth</p>
                   {finn.revealLines.map((l, i) => (
-                    <p key={i} className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.74)' }}>{l}</p>
+                    <p key={i} className={`font-karla${i === 0 ? ' log-dropcap' : ''}`} style={{ fontSize: '0.8rem', lineHeight: 1.6, color: INK }}>{l}</p>
                   ))}
                 </div>
               ) : finnLatestBeat && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <Eyebrow>Latest moment</Eyebrow>
-                  <Beat lines={finnLatestBeat.lines} accent={FINN_ACCENT} />
+                  <FinnBeat lines={finnLatestBeat.lines} accent={FINN_ACCENT} dropcap />
                 </div>
               )}
 
               {/* Earlier moments behind the dropdown */}
               <EarlierToggle accent={FINN_ACCENT} count={finnEarlier.length}>
                 <Eyebrow>What he let slip</Eyebrow>
-                {finnEarlier.map(b => <Beat key={b.id} lines={b.lines} accent={FINN_ACCENT} />)}
+                {finnEarlier.map(b => <FinnBeat key={b.id} lines={b.lines} accent={FINN_ACCENT} />)}
               </EarlierToggle>
             </>
           )}
@@ -221,7 +298,7 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
           chip={`${raid.clearedCount} / ${raid.total} stops cleared`}
         >
           {raid.clearedCount === 0 ? (
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.5)', lineHeight: 1.55 }}>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: INK_FAINT, lineHeight: 1.55 }}>
               The campaign has not begun. Pull the first thread on the Expeditions map.
             </p>
           ) : (
@@ -229,7 +306,7 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
               {raidLatest && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <Eyebrow>Latest stop</Eyebrow>
-                  <RaidStop d={raidLatest} />
+                  <RaidStop d={raidLatest} dropcap />
                 </div>
               )}
               <EarlierToggle accent={RAID_ACCENT} count={raidEarlier.length}>
@@ -240,16 +317,39 @@ export default function StoryLog({ data }: { data: StoryLogData }) {
 
           {raid.next && (
             <div style={{
-              borderTop: '1px dashed rgba(255,255,255,0.12)', paddingTop: '0.85rem',
-              display: 'flex', flexDirection: 'column', gap: 3,
+              borderTop: '1px dashed rgba(196,169,106,0.22)', paddingTop: '0.85rem',
+              display: 'flex', alignItems: 'center', gap: 10,
             }}>
-              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#6a6764' }}>The trail continues</p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: 'rgba(240,237,232,0.7)' }}>{raid.next.label}</p>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.45)', lineHeight: 1.5, fontStyle: 'italic' }}>{raid.next.flavor}</p>
+              {raid.next.image && (
+                <span style={{
+                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                  border: '1.5px solid rgba(196,169,106,0.3)',
+                  overflow: 'hidden', position: 'relative', display: 'block',
+                  background: 'rgba(8,12,16,0.6)',
+                }}>
+                  <img
+                    src={raid.next.image}
+                    alt=""
+                    aria-hidden
+                    loading="lazy"
+                    decoding="async"
+                    style={{
+                      position: 'absolute', inset: 0,
+                      width: '100%', height: '100%', objectFit: 'cover',
+                      opacity: 0.55, filter: 'saturate(0.7)',
+                    }}
+                  />
+                </span>
+              )}
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#a89878' }}>The trail continues</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: 'rgba(240,230,210,0.75)' }}>{raid.next.label}</span>
+                <span className="font-karla" style={{ fontSize: '0.74rem', color: INK_FAINT, lineHeight: 1.5, fontStyle: 'italic' }}>{raid.next.flavor}</span>
+              </span>
             </div>
           )}
           {!raid.next && raid.clearedCount > 0 && (
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#6a6764', lineHeight: 1.5 }}>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: INK_FAINT, lineHeight: 1.5 }}>
               You have uncovered everything there is. For now.
             </p>
           )}
