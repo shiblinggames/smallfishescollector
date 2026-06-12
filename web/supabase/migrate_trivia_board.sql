@@ -70,3 +70,17 @@ alter table public.trivia_ladder_attempts enable row level security;
 create policy "Users can read own ladder attempts"
   on public.trivia_ladder_attempts for select
   using (auth.uid() = user_id);
+
+-- ── Board redesign: one column, doubloons (applied to prod 2026-06-11
+-- as migration captains_board_doubloons_one_column) ──────────────────
+-- The board now pays DOUBLOONS (50 / 100 / 150 per tier, 300 max/day)
+-- and the player locks in ONE category column per day, then climbs
+-- its three clues in tier order. category records the locked column;
+-- question text is withheld client-side for the other three columns
+-- so nobody window-shops before choosing. gems_awarded is left
+-- dormant (always 0 from cutover on); the one existing 0-gem attempt
+-- row for 2026-06-11 was deleted for a clean cutover.
+
+alter table public.trivia_board_attempts
+  add column category text,
+  add column doubloons_awarded integer not null default 0;

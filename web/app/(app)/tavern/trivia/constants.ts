@@ -17,10 +17,10 @@ export function categoryMeta(key: TriviaCategoryKey) {
   return TRIVIA_CATEGORIES.find(c => c.key === key)!
 }
 
-/** Gem payout per tier (index = tier - 1). A swept board banks 160 ◆,
- *  in the same neighborhood as the old Fish of the Day's 100 ◆ pool
- *  but asking twelve answers instead of one lucky guess. */
-export const TRIVIA_TIER_VALUES = [5, 10, 25] as const
+/** Doubloon payout per tier (index = tier - 1). The player locks in
+ *  ONE category column a day and climbs its three clues in order, so
+ *  a swept column banks 300 ⟡. */
+export const TRIVIA_TIER_VALUES = [50, 100, 150] as const
 
 export const TRIVIA_TIERS = [1, 2, 3] as const
 
@@ -28,16 +28,17 @@ export function triviaTileKey(category: TriviaCategoryKey, tier: number): string
   return `${category}-${tier}`
 }
 
-/** One tile as the client sees it. correct_index + explanation only
- *  ride along once the tile has been answered — the unanswered board
- *  payload never contains answers. */
+/** One tile as the client sees it. question/options only ride along
+ *  for the LOCKED column (pre-lock you could otherwise read all four
+ *  columns' questions before choosing); correct_index + explanation
+ *  only once the tile has been answered. */
 export interface BoardTileClient {
   key: string
   category: TriviaCategoryKey
   tier: 1 | 2 | 3
   value: number
-  question: string
-  options: string[]
+  question: string | null
+  options: string[] | null
   answered: null | {
     chosen: number
     correct: boolean
@@ -49,14 +50,16 @@ export interface BoardTileClient {
 export interface CaptainsBoardState {
   date: string
   tiles: BoardTileClient[]
-  gemsAwarded: number
+  /** The column the player committed to today, null before locking. */
+  lockedCategory: TriviaCategoryKey | null
+  doubloonsAwarded: number
 }
 
 export interface AnswerTileResult {
   correct: boolean
   correctIndex: number
   explanation: string
-  gemsWon: number
+  doubloonsWon: number
   totalAwarded: number
 }
 

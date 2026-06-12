@@ -13,7 +13,7 @@ export default async function TriviaPage() {
   const [profile, { data: attempt }, { data: kingAttempt }] = await Promise.all([
     getCurrentProfile(),
     admin.from('trivia_board_attempts')
-      .select('answers, gems_awarded')
+      .select('category, answers, doubloons_awarded')
       .eq('user_id', user.id).eq('date', today)
       .single(),
     admin.from('trivia_ladder_attempts')
@@ -36,8 +36,9 @@ export default async function TriviaPage() {
       <div className="px-4 pt-6 pb-12">
         <TriviaLobby
           gems={profile?.gems ?? 0}
+          boardLocked={!!attempt?.category}
           answeredToday={answeredToday}
-          gemsToday={attempt?.gems_awarded ?? 0}
+          doubloonsToday={attempt?.doubloons_awarded ?? 0}
           king={king}
         />
       </div>

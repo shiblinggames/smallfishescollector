@@ -18,10 +18,11 @@ export interface KingChip {
   gemsAwarded: number
 }
 
-export default function TriviaLobby({ gems, answeredToday, gemsToday, king }: {
+export default function TriviaLobby({ gems, boardLocked, answeredToday, doubloonsToday, king }: {
   gems: number
+  boardLocked: boolean
   answeredToday: number
-  gemsToday: number
+  doubloonsToday: number
   king: KingChip | null
 }) {
   const kingChipText = king === null ? null
@@ -45,7 +46,7 @@ export default function TriviaLobby({ gems, answeredToday, gemsToday, king }: {
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center' }}>
-        Sharp wits earn gems here. New questions every night.
+        Sharp wits earn coin here. New questions every night.
       </p>
 
       {/* The Captain's Board — live */}
@@ -81,25 +82,25 @@ export default function TriviaLobby({ gems, answeredToday, gemsToday, king }: {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                ◆
+                ⟡
               </motion.div>
             )
           })}
         </div>
         {/* Today's progress chip */}
-        {answeredToday > 0 && (
+        {boardLocked && (
           <span
             className="font-karla font-700"
             style={{
               position: 'absolute', top: 8, right: 10,
               fontSize: '0.58rem', letterSpacing: '0.04em',
-              color: gemsToday > 0 ? GEM_COLOR : '#9a9488',
+              color: doubloonsToday > 0 ? GOLD : '#9a9488',
               background: 'rgba(10,8,24,0.7)',
               border: '1px solid rgba(167,139,250,0.3)',
               borderRadius: 999, padding: '0.2rem 0.55rem',
             }}
           >
-            {answeredToday >= 12 ? `Swept · +${gemsToday} ◆` : `${answeredToday}/12 today`}
+            {answeredToday >= 3 ? `Done · +${doubloonsToday} ⟡` : `${answeredToday}/3 clues`}
           </span>
         )}
       </ScenicCard>
@@ -192,7 +193,7 @@ export default function TriviaLobby({ gems, answeredToday, gemsToday, king }: {
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        Fresh questions are chalked at midnight. Gems land instantly.
+        Fresh questions are chalked at midnight. Winnings land instantly.
       </p>
     </div>
   )
