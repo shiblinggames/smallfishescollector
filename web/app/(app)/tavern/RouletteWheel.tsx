@@ -8,7 +8,7 @@
 //      fast linear turns while the server's RNG resolves. Looks like
 //      the croupier's throw. Cheap, hides server latency.
 //   2. Deceleration — once the server returns the winning number, the
-//      wheel decelerates with an ease-out-quint curve over ~3.2s and
+//      wheel decelerates with an ease-out-quint curve over DECEL_MS and
 //      lands with the winning pocket pinned under the top pointer.
 //      The ball, which rode the rim groove during wind-up, slows on a
 //      gentler curve, falls inward off the track, bounces off the
@@ -82,6 +82,13 @@ function pocketColor(n: number): string {
 }
 
 export type WheelPhase = 'idle' | 'spinning' | 'landed'
+
+// Deceleration length, shared with RouletteClient so the reveal panel
+// waits exactly as long as the animation runs. 5.2s gives the ball a
+// long visible die-down on the rim before it drops — the suspense
+// stretch of a real wheel — instead of the original 3.2s which read
+// as "spin, plop, done".
+export const DECEL_MS = 5200
 
 // Ball track + pocket radii. During the spin the ball rides the wooden
 // rim groove (BALL_TRACK_R), then falls inward and settles in the
@@ -215,15 +222,17 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
     } else if (phase === 'spinning' && winner !== null) {
       // Decelerate to the winning pocket. Snap the wheel's base to a
       // clean multiple of 360 ahead of the current visual position so
-      // we get at least 4 more full turns regardless of where the
-      // wind-up was.
+      // we get at least 5 more full turns regardless of where the
+      // wind-up was. (5 turns over the longer DECEL_MS keeps the
+      // handoff speed close to the wind-up so there's no visible
+      // hitch when the ease takes over.)
       const wIdx = EUROPEAN_WHEEL_ORDER.indexOf(winner)
       const winnerAngle = -wIdx * POCKET_ANGLE
       setRotation(r => {
-        const base = Math.ceil(r / 360) * 360 + 360 * 4
+        const base = Math.ceil(r / 360) * 360 + 360 * 5
         return base + winnerAngle
       })
-      setTransition({ duration: 3.2, ease: [0.16, 1, 0.3, 1] })   // ease-out-quint
+      setTransition({ duration: DECEL_MS / 1000, ease: [0.16, 1, 0.3, 1] })   // ease-out-quint
     }
     // 'landed' / 'idle' just leave the wheel where it is — no snap-back.
   }, [phase, winner])
@@ -259,7 +268,7 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
           // descent (t≈0.85). Both relax to zero so the landing angle
           // is exact.
           const prevAngle = a.angle
-          const t = Math.min(1, (now - a.t0) / 3200)
+          const t = Math.min(1, (now - a.t0) / DECEL_MS)
           a.angle = a.angle0 + (a.angleEnd - a.angle0) * (1 - (1 - t) ** 3)
             + fretKick(t, 0.70, 0.12, a.k1)
             + fretKick(t, 0.85, 0.09, a.k2)
@@ -281,13 +290,17 @@ export default function RouletteWheel({ phase, winner, size = 340 }: {
       }
       a.raf = requestAnimationFrame(loop)
     } else if (phase === 'spinning' && winner !== null && a.mode === 'windup') {
-      // Hand off to decel: finish at angle ≡ 0 (top) after at least 3
-      // more CCW turns, timed to bottom out with the wheel at 3.2s.
+      // Hand off to decel: finish at angle ≡ 0 (top) after at least 4
+      // more CCW turns, timed to bottom out with the wheel at DECEL_MS.
+      // 4 turns over 5.2s starts the cubic ease at ~830°/s — right at
+      // the wind-up's 770°/s, so the ball glides into the slowdown
+      // instead of visibly braking, then spends the long middle stretch
+      // audibly dying down on the rim before the drop.
       a.mode = 'decel'
       a.t0 = performance.now()
       a.angle0 = a.angle
       const norm = ((a.angle % 360) + 360) % 360
-      a.angleEnd = a.angle - norm - 1080
+      a.angleEnd = a.angle - norm - 1440
       a.radius0 = a.radius
       // Fret-deflection amplitudes, varied per spin off the winning
       // number so consecutive spins don't replay the identical rattle.

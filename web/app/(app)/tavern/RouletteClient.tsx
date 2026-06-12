@@ -22,7 +22,7 @@ import { placeBetsAndSpin } from './roulette/actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
 import DenNav from './casino/DenNav'
 import type { RouletteState, SpinResult } from './roulette/types'
-import RouletteWheel, { type WheelPhase } from './RouletteWheel'
+import RouletteWheel, { DECEL_MS, type WheelPhase } from './RouletteWheel'
 import CoinShower from './CoinShower'
 import { CHIP_COLORS, pickChipColor as pickChipColorShared } from './ChipDisc'
 import { useAnimatedNumber } from './useAnimatedNumber'
@@ -156,10 +156,10 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   //   t=0      Tap Spin → phase='spinning', winningNumber=null
   //            Wheel does 3 quick turns (1.4s, linear) while server thinks
   //   t≈500ms  Server returns → winningNumber=N
-  //            Wheel decelerates to land on N (3.2s, ease-out-quint)
-  //   t≈3700ms phase='reveal' → result panel slides in
-  //   t≈7700ms placed bets clear, phase='bet' (or 'buyIn' if busted)
-  // Total: ~7.7s per spin from tap to ready-for-next-bet.
+  //            Wheel decelerates to land on N (DECEL_MS, ease-out-quint)
+  //   t≈5700ms phase='reveal' → result panel slides in
+  //   t≈9700ms placed bets clear, phase='bet' (or 'buyIn' if busted)
+  // Total: ~9.7s per spin from tap to ready-for-next-bet.
   function handleSpin() {
     if (phase !== 'bet') return
     if (Object.keys(placed).length === 0) { setError('Place at least one bet'); return }
@@ -193,7 +193,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       // wheel reacts via its own useEffect and runs the ease-out anim.
       setWinningNumber(res.winningNumber)
 
-      // Wait for decel to finish (3.2s) before showing the result panel.
+      // Wait for decel to finish before showing the result panel.
       setTimeout(() => {
         setLastResult(res)
         setChips(res.chipsAfter)
@@ -210,7 +210,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
           setPhase(res.chipsAfter > 0 ? 'bet' : 'buyIn')
           router.refresh()
         }, 4000)
-      }, 3200)
+      }, DECEL_MS)
     })
   }
 
@@ -298,35 +298,59 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
         <div style={{ position: 'relative', maxWidth: 340, margin: '0 auto' }}>
           <RouletteWheel phase={wheelPhase} winner={winningNumber} size={340} />
           {phase === 'bet' && (
-            <button
+            /* Centered via a flex wrap (not translate) so the armed-state
+               pulse animation below can own transform/scale — framer's
+               animate would clobber a static translate(-50%,-50%). */
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              pointerEvents: 'none',
+            }}>
+            <motion.button
               onClick={handleSpin}
               disabled={totalPlaced === 0 || isPending}
               className="font-cinzel font-700 uppercase"
+              // Once a bet is down, the hub breathes — slow glow + scale
+              // pulse so it reads as THE button to press, not wheel
+              // decoration. Localized to the hub (per juice-subtlety),
+              // stops the moment the spin starts because phase leaves
+              // 'bet' and this whole button unmounts.
+              animate={totalPlaced > 0 ? {
+                scale: [1, 1.06, 1],
+                boxShadow: [
+                  `0 0 14px ${ACCENT}44, inset 0 1px 0 rgba(255,255,255,0.12)`,
+                  `0 0 26px ${ACCENT}99, inset 0 1px 0 rgba(255,255,255,0.12)`,
+                  `0 0 14px ${ACCENT}44, inset 0 1px 0 rgba(255,255,255,0.12)`,
+                ],
+              } : { scale: 1, boxShadow: 'none' }}
+              transition={totalPlaced > 0 ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
               style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
                 width: '29%', aspectRatio: '1', borderRadius: '50%',
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', gap: 1,
+                pointerEvents: 'auto',
                 background: totalPlaced > 0
                   ? `radial-gradient(circle at 50% 35%, ${ACCENT}30 0%, rgba(26,10,4,0.94) 78%)`
                   : 'rgba(26,10,4,0.88)',
                 border: `2px solid ${totalPlaced > 0 ? ACCENT : 'rgba(240,192,64,0.25)'}`,
                 color: totalPlaced > 0 ? ACCENT : 'rgba(240,232,208,0.35)',
                 fontSize: '0.82rem', letterSpacing: '0.1em',
-                boxShadow: totalPlaced > 0
-                  ? `0 0 16px ${ACCENT}55, inset 0 1px 0 rgba(255,255,255,0.12)`
-                  : 'none',
                 cursor: totalPlaced > 0 && !isPending ? 'pointer' : 'default',
                 WebkitTapHighlightColor: 'transparent',
               }}>
+              {totalPlaced > 0 && (
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.42rem', letterSpacing: '0.18em', opacity: 0.85 }}>
+                  Tap to
+                </span>
+              )}
               Spin
               {totalPlaced > 0 && (
                 <span className="font-karla font-700" style={{ fontSize: '0.55rem', letterSpacing: '0.06em' }}>
                   {totalPlaced.toLocaleString()}
                 </span>
               )}
-            </button>
+            </motion.button>
+            </div>
           )}
 
           {/* Result overlay — floats centered OVER the wheel on reveal
