@@ -1,21 +1,34 @@
 'use client'
 
 // Trivia Night lobby — the one front door for the trivia games, same
-// skeleton as the Den lobby. The Captain's Board is live; the Pirate
-// King ladder and Spin the Capstan are chalked up as coming soon.
+// skeleton as the Den lobby. The Captain's Board and Pirate King are
+// live; Spin the Capstan is chalked up as coming soon.
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
-import { TRIVIA_CATEGORIES } from './constants'
+import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
 
 const GEM_COLOR = '#c084fc'
+const GOLD = '#f0c040'
 
-export default function TriviaLobby({ gems, answeredToday, gemsToday }: {
+export interface KingChip {
+  status: PirateKingStatus
+  rung: number
+  gemsAwarded: number
+}
+
+export default function TriviaLobby({ gems, answeredToday, gemsToday, king }: {
   gems: number
   answeredToday: number
   gemsToday: number
+  king: KingChip | null
 }) {
+  const kingChipText = king === null ? null
+    : king.status === 'crowned' ? `Crowned · +${king.gemsAwarded} ◆`
+    : king.status === 'walked' ? `Walked · +${king.gemsAwarded} ◆`
+    : king.status === 'busted' ? (king.gemsAwarded > 0 ? `Sunk · +${king.gemsAwarded} ◆` : 'Sunk')
+    : `Rung ${king.rung} of ${PIRATE_KING_RUNGS}`
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       {/* Header row */}
@@ -91,38 +104,91 @@ export default function TriviaLobby({ gems, answeredToday, gemsToday }: {
         )}
       </ScenicCard>
 
-      {/* Coming soon shelf */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { title: 'Pirate King', blurb: 'Climb the question ladder. Walk away rich or lose the lot.', accent: '#f0c040' },
-          { title: 'Spin the Capstan', blurb: 'Spin for stakes, call your letters, solve the phrase.', accent: '#34d399' },
-        ].map(g => (
-          <div
-            key={g.title}
-            style={{
-              position: 'relative', height: 132, borderRadius: 18, overflow: 'hidden',
-              background: 'linear-gradient(180deg, #15131f 0%, #0b0a12 100%)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              padding: '0.9rem 0.85rem',
-              opacity: 0.82,
-            }}
-          >
-            <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#b8b2a4' }}>{g.title}</p>
-            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6f6b66', lineHeight: 1.45, marginTop: 4 }}>{g.blurb}</p>
-            <span
-              className="font-karla font-700 uppercase"
+      {/* Pirate King — live */}
+      <ScenicCard
+        href="/tavern/trivia/king"
+        title="Pirate King"
+        gradient={['#3a2c10', '#221a0c', '#0e0a06']}
+        accent={GOLD}
+      >
+        {/* Mini ladder scene: prize rungs climbing to a crown. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 14, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'flex-end', gap: 7,
+          }}
+        >
+          {[5, 25, 90, 250].map((p, i) => (
+            <div
+              key={p}
+              className="font-karla font-700"
               style={{
-                position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
-                fontSize: '0.54rem', letterSpacing: '0.12em', whiteSpace: 'nowrap',
-                color: `${g.accent}cc`,
-                border: `1px solid ${g.accent}55`,
-                borderRadius: 999, padding: '0.22rem 0.6rem',
+                width: 44, height: 18 + i * 9,
+                borderRadius: 6,
+                background: `${GOLD}${i === 3 ? '26' : '12'}`,
+                border: `1px solid ${GOLD}${i === 3 ? '70' : '40'}`,
+                color: i === 3 ? GOLD : '#c2a050',
+                fontSize: '0.56rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              Coming Soon
-            </span>
-          </div>
-        ))}
+              {p} ◆
+            </div>
+          ))}
+          <motion.span
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ fontSize: '1.5rem', lineHeight: 1, marginLeft: 2, marginBottom: 38 }}
+          >
+            👑
+          </motion.span>
+        </div>
+        {/* Today's run chip */}
+        {kingChipText && (
+          <span
+            className="font-karla font-700"
+            style={{
+              position: 'absolute', top: 8, right: 10,
+              fontSize: '0.58rem', letterSpacing: '0.04em',
+              color: king && king.gemsAwarded > 0 ? GEM_COLOR : '#9a9488',
+              background: 'rgba(14,10,6,0.7)',
+              border: `1px solid ${GOLD}4d`,
+              borderRadius: 999, padding: '0.2rem 0.55rem',
+            }}
+          >
+            {kingChipText}
+          </span>
+        )}
+      </ScenicCard>
+
+      {/* Coming soon shelf */}
+      <div
+        style={{
+          position: 'relative', height: 92, borderRadius: 18, overflow: 'hidden',
+          background: 'linear-gradient(180deg, #15131f 0%, #0b0a12 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          padding: '0.9rem 0.85rem',
+          opacity: 0.82,
+        }}
+      >
+        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#b8b2a4' }}>Spin the Capstan</p>
+        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6f6b66', lineHeight: 1.45, marginTop: 4 }}>
+          Spin for stakes, call your letters, solve the phrase.
+        </p>
+        <span
+          className="font-karla font-700 uppercase"
+          style={{
+            position: 'absolute', top: 12, right: 12,
+            fontSize: '0.54rem', letterSpacing: '0.12em', whiteSpace: 'nowrap',
+            color: '#34d399cc',
+            border: '1px solid #34d39955',
+            borderRadius: 999, padding: '0.22rem 0.6rem',
+          }}
+        >
+          Coming Soon
+        </span>
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
