@@ -101,5 +101,5 @@ export const BJ_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
 // European single-zero wheel — house edge 1/37 ≈ 2.703% across all bets.
 export const RL_MIN_BET   = 10                              // per-bet floor
 export const RL_MAX_STRAIGHT_BET = 500                      // 35:1 single number
-export const RL_MAX_OUTSIDE_BET  = 2500                     // 1:1 / 2:1 outside bets — bigger ceiling, smaller payout
+export const RL_MAX_OUTSIDE_BET  = 500                      // 1:1 / 2:1 outside bets — same 500 cap as inside, matches blackjack
 export const RL_BET_PRESETS = [10, 25, 50, 100, 250, 500] as const
