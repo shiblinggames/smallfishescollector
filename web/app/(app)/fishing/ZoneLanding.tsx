@@ -69,8 +69,8 @@ const ZONE_BG: Record<string, string> = {
 function ZoneStatInline({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <p className="font-karla" style={{ lineHeight: 1, whiteSpace: 'nowrap' }}>
-      <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color }}>{value}</span>
-      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginLeft: 5 }}>{label}</span>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.95rem', color }}>{value}</span>
+      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', marginLeft: 6 }}>{label}</span>
     </p>
   )
 }
@@ -270,7 +270,11 @@ export default function ZoneLanding({
                     borderRadius: 16,
                     overflow: 'hidden',
                     border: `1px solid ${accessible ? color + '66' : 'rgba(255,255,255,0.12)'}`,
-                    minHeight: accessible ? 142 : 84,
+                    // 142 was sized for the old boxed stat cells; the slim
+                    // inline row needs less, and the leftover read as dead
+                    // space between header and stats (marginTop: auto pins
+                    // the row to the bottom).
+                    minHeight: accessible ? 118 : 84,
                     cursor: accessible ? 'pointer' : 'default',
                     // Resting depth so the card reads as a raised object you can
                     // press down, not a flat panel.
