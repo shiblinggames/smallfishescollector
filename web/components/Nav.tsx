@@ -94,10 +94,9 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   useEffect(() => { setDisplayDoubloons(doubloons) }, [doubloons])
   useEffect(() => { setDisplayGems(gems) }, [gems])
   // Profile-button avatar (desktop nav). Pulled on mount and cached in
-  // localStorage so the avatar doesn't flash to "default" between tab
-  // switches — Nav lives inside PageTransition which remounts on every
-  // navigation (key={pathname}), and otherwise these would reset to null
-  // until the supabase fetcher resolves.
+  // localStorage so the avatar doesn't flash to "default" on a hard
+  // reload — these would otherwise reset to null until the supabase
+  // fetcher resolves.
   const [characterColor, setCharacterColor] = useState<string | null>(() => readNavCache('character_color'))
   const [equippedHat, setEquippedHat]       = useState<string | null>(() => readNavCache('equipped_hat'))
   const [avatarBg, setAvatarBg]             = useState<string | null>(() => readNavCache('avatar_bg'))
@@ -157,7 +156,21 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
     })
   }, [])
 
-  useEffect(() => { fetchBadge() }, [fetchBadge])
+  // Nav persists across client-side navigations (PageTransition has no
+  // key={pathname} — it broke iOS PWA fixed positioning), so a mount-only
+  // fetch would mean the mail/voyage badges only ever update on a hard
+  // reload. Re-check on every route change, and when the PWA comes back
+  // to the foreground (visibilitychange) so backgrounded sessions pick up
+  // new mail without a reload.
+  useEffect(() => { fetchBadge() }, [fetchBadge, pathname])
+
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') fetchBadge()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [fetchBadge])
 
   useEffect(() => {
     const standalone =
