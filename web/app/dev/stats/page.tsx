@@ -31,6 +31,7 @@ export default async function DevStatsPage() {
   const RAID_BOSS_NAMES: Record<string, string> = {
     corsairs_reckoning: 'Barnacle Pete',
     captain_krust: 'Captain Krust',
+    the_cartographer: 'The Cartographer',
   }
   const raidBossStats: Stat[] = ((s.raids?.byBoss ?? []) as { raidId: string; players: number; completions: number }[])
     .map(b => ({
@@ -76,6 +77,7 @@ export default async function DevStatsPage() {
         { label: 'Registered players', value: s.players ?? 0 },
         { label: 'Active (7 days)',    value: s.activePlayers ?? 0 },
         { label: 'Premium members',    value: s.members ?? 0 },
+        { label: 'Badges earned',      value: s.badgesEarned ?? 0 },
       ],
     },
     {
@@ -90,6 +92,11 @@ export default async function DevStatsPage() {
         // first time a player landed a tier-Trophy / -Large / etc.
         // catch of that species and got their length recorded.
         { label: 'Personal bests',     value: s.fishing?.personalBests ?? 0 },
+        // Prestige — the zone-reset endgame loop. Captains = players
+        // with at least one prestiged zone; stars capped at 5/zone to
+        // match the badge math on /achievements.
+        { label: 'Captains prestiged', value: s.prestige?.captains ?? 0 },
+        { label: 'Prestige stars lit', value: s.prestige?.stars ?? 0 },
       ],
     },
     {
@@ -156,6 +163,10 @@ export default async function DevStatsPage() {
           value: s.recruits?.topXP ?? 0,
           by:    byIf(s.recruits?.topXP ?? 0, s.recruits?.topXPBy),
         },
+        // Hall ladder (5 tiers): upgrades = total rungs climbed
+        // fleet-wide, maxed = captains sitting at tier 5.
+        { label: 'Hall upgrades bought', value: s.recruits?.hallUpgrades ?? 0 },
+        { label: 'Halls fully upgraded', value: s.recruits?.hallMaxed ?? 0 },
       ],
     },
     {
@@ -168,6 +179,40 @@ export default async function DevStatsPage() {
         { label: 'Slot spins',       value: s.tavern?.slotSpins ?? 0 },
         { label: 'Slot wins',        value: s.tavern?.slotWins ?? 0 },
         { label: 'Biggest slot win', value: `${fmt(s.tavern?.slotBiggest ?? 0)} ⟡` },
+        // Catfish Jackpot — live pot + the last claim. History is only
+        // the most recent winner (single-row state table).
+        { label: 'Jackpot pot now',  value: `${fmt(s.jackpot?.pot ?? 0)} chips` },
+        {
+          label: 'Last catfish',
+          value: s.jackpot?.lastAmount ? `${fmt(s.jackpot.lastAmount)} chips` : '—',
+          by:    s.jackpot?.lastBy ?? null,
+        },
+      ],
+    },
+    {
+      // The Den — the shared chip wallet behind blackjack / roulette /
+      // slots. Chips in play = balances players haven't cashed out or
+      // busted; buy-ins are doubloons converted at the cage.
+      title: 'The Den', accent: '#2dd4bf',
+      stats: [
+        { label: 'Chips in play',     value: s.den?.chipsHeld ?? 0 },
+        { label: 'Buy-ins',           value: s.den?.buyIns ?? 0 },
+        { label: 'Doubloons cashed in', value: `${fmt(s.den?.buyInTotal ?? 0)} ⟡` },
+      ],
+    },
+    {
+      // The Parlor — trivia hub. Board = Captain's Board daily column;
+      // ladder = Pirate King weekly climb with its three endings
+      // (crowned at rung 10, walked with winnings, busted on a miss).
+      title: 'The Parlor', accent: '#e0b358',
+      stats: [
+        { label: 'Board columns played', value: s.parlor?.boardPlays ?? 0 },
+        { label: 'Board payouts',        value: `${fmt(s.parlor?.boardPayout ?? 0)} ⟡` },
+        { label: 'Ladder climbs',        value: s.parlor?.ladderRuns ?? 0 },
+        { label: 'Pirate Kings crowned', value: s.parlor?.kingsCrowned ?? 0 },
+        { label: 'Walked with winnings', value: s.parlor?.walked ?? 0 },
+        { label: 'Busted on the climb',  value: s.parlor?.busted ?? 0 },
+        { label: 'Ladder payouts',       value: `${fmt(s.parlor?.ladderPayout ?? 0)} ⟡` },
       ],
     },
     {
@@ -239,6 +284,9 @@ export default async function DevStatsPage() {
         { label: 'Gems earned',      value: `${fmt(s.economy?.gemsEarned ?? 0)} ◆` },
         { label: 'Doubloons held',   value: `${fmt(s.economy?.doubloonsHeld ?? 0)} ⟡` },
         { label: 'Gems held',        value: `${fmt(s.economy?.gemsHeld ?? 0)} ◆` },
+        // Patient sells = the 90%-in-1h delayed liquidate lane; counts
+        // settled payouts, a read on whether the lane gets used.
+        { label: 'Patient sells settled', value: s.economy?.patientSells ?? 0 },
       ],
     },
   ]
