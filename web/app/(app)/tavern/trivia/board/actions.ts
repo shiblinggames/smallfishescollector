@@ -3,11 +3,11 @@
 // The Captain's Board — server-authoritative play. The full board
 // (with answers) only ever lives server-side; clients get a stripped
 // payload and every answer is judged here. The player locks in ONE
-// category column a day and climbs its three clues in order for
-// doubloons; question text is withheld until the column is locked so
-// nobody window-shops all four columns first. Types live in
-// ../constants ('use server' files silently drop non-async exports
-// at build).
+// category column a day, then answers its three clues in any order
+// (Jeopardy-style) for doubloons; question text is withheld until the
+// column is locked so nobody window-shops all four columns first.
+// Types live in ../constants ('use server' files silently drop
+// non-async exports at build).
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -152,14 +152,6 @@ export async function answerCaptainsTile(
   if (!tile) return { error: 'Unknown tile' }
   if (tile.category !== a.category) return { error: 'That column is not yours today' }
   if (a.answers[key]) return { error: 'Clue already answered' }
-
-  // Clues climb in order: this tile must be the lowest unanswered
-  // tier of the locked column.
-  for (let tier = 1; tier < tile.tier; tier++) {
-    if (!a.answers[triviaTileKey(a.category, tier)]) {
-      return { error: 'Answer the clues in order' }
-    }
-  }
 
   const correct = chosenIndex === tile.correct_index
   const value = TRIVIA_TIER_VALUES[tile.tier - 1]

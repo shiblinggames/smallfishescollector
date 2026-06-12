@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/userData'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getPirateKingState } from './actions'
 import PirateKing from './PirateKing'
 
@@ -7,7 +7,7 @@ export default async function PirateKingPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const state = await getPirateKingState()
+  const [profile, state] = await Promise.all([getCurrentProfile(), getPirateKingState()])
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
@@ -19,7 +19,7 @@ export default async function PirateKingPage() {
             </p>
           </div>
         ) : (
-          <PirateKing initial={state} />
+          <PirateKing initial={state} gems={profile?.gems ?? 0} />
         )}
       </div>
     </main>

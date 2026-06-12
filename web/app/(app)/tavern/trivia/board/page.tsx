@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/userData'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getCaptainsBoardState } from './actions'
 import CaptainsBoard from './CaptainsBoard'
 
@@ -7,7 +7,7 @@ export default async function CaptainsBoardPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const state = await getCaptainsBoardState()
+  const [profile, state] = await Promise.all([getCurrentProfile(), getCaptainsBoardState()])
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
@@ -19,7 +19,7 @@ export default async function CaptainsBoardPage() {
             </p>
           </div>
         ) : (
-          <CaptainsBoard initial={state} />
+          <CaptainsBoard initial={state} doubloons={profile?.doubloons ?? 0} />
         )}
       </div>
     </main>

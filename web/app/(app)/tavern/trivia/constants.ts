@@ -18,8 +18,8 @@ export function categoryMeta(key: TriviaCategoryKey) {
 }
 
 /** Doubloon payout per tier (index = tier - 1). The player locks in
- *  ONE category column a day and climbs its three clues in order, so
- *  a swept column banks 300 ⟡. */
+ *  ONE category column a day and answers its three clues in any
+ *  order (Jeopardy-style), so a swept column banks 300 ⟡. */
 export const TRIVIA_TIER_VALUES = [50, 100, 150] as const
 
 export const TRIVIA_TIERS = [1, 2, 3] as const

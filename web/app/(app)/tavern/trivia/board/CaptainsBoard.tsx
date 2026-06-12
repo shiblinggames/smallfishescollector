@@ -1,20 +1,21 @@
 'use client'
 
 // The Captain's Board — lock in one of four category columns, then
-// climb its three clues in order (50 / 100 / 150 ⟡, rising
-// difficulty). A wrong answer scuttles the clue but the climb goes
-// on. Question modal portals to document.body (Nav's translateZ(0)
-// would otherwise anchor fixed overlays to the header).
+// answer its three clues in any order, Jeopardy-style (50 / 100 /
+// 150 ⟡; the richer the clue, the harder the question). A wrong
+// answer scuttles the clue but the rest stay open. Question modal
+// portals to document.body (Nav's translateZ(0) would otherwise
+// anchor fixed overlays to the header).
 
 import { useEffect, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { answerCaptainsTile, lockCaptainsColumn } from './actions'
+import BalanceTicker from '../BalanceTicker'
 import {
   TRIVIA_CATEGORIES,
   categoryMeta,
-  triviaTileKey,
   type TriviaCategoryKey,
   type CaptainsBoardState,
   type BoardTileClient,
@@ -23,10 +24,11 @@ import {
 
 const DOUBLOON_COLOR = '#f0c040'
 
-export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState }) {
+export default function CaptainsBoard({ initial, doubloons }: { initial: CaptainsBoardState; doubloons: number }) {
   const [tiles, setTiles] = useState<BoardTileClient[]>(initial.tiles)
   const [lockedCategory, setLockedCategory] = useState<TriviaCategoryKey | null>(initial.lockedCategory)
   const [doubloonsAwarded, setDoubloonsAwarded] = useState(initial.doubloonsAwarded)
+  const [balance, setBalance] = useState(doubloons)
   const [pendingLock, setPendingLock] = useState<TriviaCategoryKey | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [result, setResult] = useState<AnswerTileResult | null>(null)
@@ -44,14 +46,13 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
     setLockedCategory(initial.lockedCategory)
     setDoubloonsAwarded(initial.doubloonsAwarded)
   }, [initial])
+  useEffect(() => { setBalance(doubloons) }, [doubloons])
 
   const columnTiles = lockedCategory
     ? tiles.filter(t => t.category === lockedCategory).sort((a, b) => a.tier - b.tier)
     : []
   const answeredCount = columnTiles.filter(t => t.answered).length
   const allDone = lockedCategory !== null && answeredCount === 3
-  // Clues climb in order: only the lowest unanswered tier is open.
-  const nextKey = columnTiles.find(t => !t.answered)?.key ?? null
   const openTile = openKey ? tiles.find(t => t.key === openKey) ?? null : null
 
   function lockColumn(category: TriviaCategoryKey) {
@@ -64,10 +65,6 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
       setLockedCategory(r.lockedCategory)
       setDoubloonsAwarded(r.doubloonsAwarded)
       setPendingLock(null)
-      // Drop straight into the first clue.
-      setOpenKey(triviaTileKey(category, 1))
-      setResult(null)
-      setChosen(null)
     })
   }
 
@@ -80,7 +77,6 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
   function tapTile(tile: BoardTileClient) {
     if (!lockedCategory) { tapColumn(tile.category); return }
     if (tile.category !== lockedCategory) return
-    if (!tile.answered && tile.key !== nextKey) return
     setOpenKey(tile.key)
     setResult(null)
     setChosen(null)
@@ -96,6 +92,7 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
       if ('error' in r) { setError(r.error); setChosen(null); return }
       setResult(r)
       setDoubloonsAwarded(r.totalAwarded)
+      if (r.doubloonsWon > 0) setBalance(prev => prev + r.doubloonsWon)
       setTiles(prev => prev.map(t => t.key === openTile.key
         ? { ...t, answered: { chosen: idx, correct: r.correct, correctIndex: r.correctIndex, explanation: r.explanation } }
         : t
@@ -116,9 +113,10 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
   const shownChosen = chosen ?? viewAnswered?.chosen ?? null
   const shownExplanation = result?.explanation ?? viewAnswered?.explanation ?? null
   const resolved = result !== null || viewAnswered !== null
-  // Is there a clue after the one on screen?
-  const nextAfterOpen = openTile && lockedCategory && openTile.tier < 3
-    ? tiles.find(t => t.category === lockedCategory && t.tier === openTile.tier + 1 && !t.answered) ?? null
+  // Another clue left in the column? Offer the lowest-value one as a
+  // shortcut; the player can always close and pick freely instead.
+  const nextAfterOpen = openTile && lockedCategory
+    ? columnTiles.find(t => !t.answered && t.key !== openTile.key) ?? null
     : null
 
   return (
@@ -131,13 +129,11 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
           The Captain&apos;s Board
         </p>
-        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: doubloonsAwarded > 0 ? DOUBLOON_COLOR : '#7a7672' }}>
-          +{doubloonsAwarded} ⟡
-        </span>
+        <BalanceTicker value={balance} glyph="⟡" color={DOUBLOON_COLOR} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center' }}>
-        Four topics chalked fresh each day. Lock in one column and climb its three clues, each harder and richer than the last. A wrong answer scuttles the clue; the climb goes on.
+        Four topics chalked fresh each day. Lock in one column and take its three clues in any order; the richer the clue, the harder the question. A wrong answer scuttles the clue, the rest stay open.
       </p>
 
       {/* The board: 4 category columns x 3 clue tiles */}
@@ -178,8 +174,7 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
               </p>
               {tiles.filter(t => t.category === cat.key).sort((a, b) => a.tier - b.tier).map(tile => {
                 const a = tile.answered
-                const isNext = isLocked && !a && tile.key === nextKey
-                const isWaiting = isLocked && !a && tile.key !== nextKey
+                const isOpenable = isLocked && !a
                 return (
                   <motion.button
                     key={tile.key}
@@ -190,20 +185,19 @@ export default function CaptainsBoard({ initial }: { initial: CaptainsBoardState
                     className="font-cinzel font-700"
                     style={{
                       height: 50, borderRadius: 10,
-                      cursor: isOut || isWaiting ? 'default' : 'pointer',
+                      cursor: isOut ? 'default' : 'pointer',
                       background: a
                         ? a.correct ? 'rgba(52,211,153,0.1)' : 'rgba(224,112,112,0.06)'
-                        : isNext ? `${cat.color}1f`
+                        : isOpenable ? `${cat.color}1f`
                         : 'rgba(167,139,250,0.08)',
                       border: a
                         ? a.correct ? '1px solid rgba(52,211,153,0.4)' : '1px solid rgba(224,112,112,0.25)'
-                        : isNext ? `1px solid ${cat.color}`
+                        : isOpenable ? `1px solid ${cat.color}`
                         : `1px solid ${cat.color}55`,
                       color: a
                         ? a.correct ? '#7fd49a' : '#7a5a5a'
-                        : isWaiting ? '#8a8478' : '#e8e2d4',
+                        : '#e8e2d4',
                       fontSize: a && !a.correct ? '0.85rem' : '0.74rem',
-                      opacity: isWaiting ? 0.55 : 1,
                     }}
                   >
                     {a ? (a.correct ? `+${tile.value}` : '✕') : `${tile.value} ⟡`}

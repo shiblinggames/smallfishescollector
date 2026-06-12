@@ -8,6 +8,7 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { answerKingRung, spendKingFiftyFifty, walkKingAway } from './actions'
+import BalanceTicker from '../BalanceTicker'
 import {
   PIRATE_KING_PRIZES,
   PIRATE_KING_HAVENS,
@@ -21,10 +22,11 @@ import {
 const GEM_COLOR = '#c084fc'
 const GOLD = '#f0c040'
 
-export default function PirateKing({ initial }: { initial: PirateKingState }) {
+export default function PirateKing({ initial, gems }: { initial: PirateKingState; gems: number }) {
   const [status, setStatus] = useState<PirateKingStatus>(initial.status)
   const [rung, setRung] = useState(initial.rung)
   const [gemsAwarded, setGemsAwarded] = useState(initial.gemsAwarded)
+  const [balance, setBalance] = useState(gems)
   const [fiftyUsed, setFiftyUsed] = useState(initial.fiftyUsed)
   const [current, setCurrent] = useState<KingQuestionClient | null>(initial.current)
   const [result, setResult] = useState<AnswerKingResult | null>(null)
@@ -45,6 +47,7 @@ export default function PirateKing({ initial }: { initial: PirateKingState }) {
     setChosen(null)
     setWalkConfirm(false)
   }, [initial])
+  useEffect(() => { setBalance(gems) }, [gems])
 
   const resolved = result !== null
   // While a result is up, `rung` already advanced; the question on
@@ -67,6 +70,8 @@ export default function PirateKing({ initial }: { initial: PirateKingState }) {
       setStatus(r.status)
       setRung(r.rung)
       setGemsAwarded(r.gemsAwarded)
+      // Payouts land only at terminal states; tick the purse up then.
+      if (r.status !== 'active' && r.gemsAwarded > 0) setBalance(prev => prev + r.gemsAwarded)
     })
   }
 
@@ -98,6 +103,7 @@ export default function PirateKing({ initial }: { initial: PirateKingState }) {
       if ('error' in r) { setError(r.error); setWalkConfirm(false); return }
       setStatus('walked')
       setGemsAwarded(r.gemsAwarded)
+      if (r.gemsAwarded > 0) setBalance(prev => prev + r.gemsAwarded)
       setResult(null)
       setCurrent(null)
       setWalkConfirm(false)
@@ -117,9 +123,7 @@ export default function PirateKing({ initial }: { initial: PirateKingState }) {
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
           Pirate King
         </p>
-        <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: gemsAwarded > 0 ? GEM_COLOR : '#7a7672' }}>
-          +{gemsAwarded} ◆
-        </span>
+        <BalanceTicker value={balance} glyph="◆" color={GEM_COLOR} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center' }}>
