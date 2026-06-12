@@ -5,7 +5,8 @@
 // /tavern/casino lobby. Velvet-red card-room scene. The card is a half
 // card on the Games row now, so instead of posing all three tables at
 // once (too busy at that width) it rotates through one game at a time
-// with a slow crossfade.
+// with a slow crossfade — a lazy 9s dwell per game so it reads as
+// ambient scenery, not a slideshow.
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -17,7 +18,7 @@ export default function CasinoHubCard() {
   const [tableIdx, setTableIdx] = useState(0)
 
   useEffect(() => {
-    const t = setInterval(() => setTableIdx(i => (i + 1) % TABLES.length), 4200)
+    const t = setInterval(() => setTableIdx(i => (i + 1) % TABLES.length), 9000)
     return () => clearInterval(t)
   }, [])
 
@@ -57,7 +58,7 @@ export default function CasinoHubCard() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.9, ease: 'easeInOut' }}
+          transition={{ duration: 1.4, ease: 'easeInOut' }}
           style={{
             position: 'absolute',
             bottom: 42,
