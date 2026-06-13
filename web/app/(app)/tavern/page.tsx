@@ -103,9 +103,9 @@ export default async function TavernPage() {
           </div>
 
           {/* Games — the Den + the Parlor, one door each into their
-              multi-game rooms. */}
+              multi-game rooms. Header dropped 2026-06-13 (it was the last
+              section label left and the cards read fine unlabeled). */}
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-3" style={{ fontSize: '0.72rem' }}>Games</p>
             <GamesSection />
           </div>
 
