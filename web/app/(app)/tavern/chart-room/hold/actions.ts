@@ -286,7 +286,7 @@ export async function submitHold(
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: doubloonsWon,
-      reason: `Quartermaster's Hold: ${HOLD_META[difficulty].label}${clean ? ' (clean)' : ''}`,
+      reason: `The Hold: ${HOLD_META[difficulty].label}${clean ? ' (clean)' : ''}`,
     }),
   ])
 

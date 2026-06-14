@@ -3,7 +3,6 @@ import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getHoldState } from './hold/actions'
 import { getMinefieldState } from '@/app/(app)/charting/actions'
 import { MINEFIELD_POINTS } from '@/app/(app)/charting/constants'
-import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 import ChartRoomLobby from './ChartRoomLobby'
 
 export default async function ChartRoomPage() {
@@ -32,8 +31,6 @@ export default async function ChartRoomPage() {
           minefieldStatus={minefieldStatus}
           minefieldReward={minefieldReward}
           puzzlePoints={puzzlePoints}
-          denCap={denDailyCap(puzzlePoints)}
-          nextTier={nextDenTier(puzzlePoints)}
         />
       </div>
     </main>

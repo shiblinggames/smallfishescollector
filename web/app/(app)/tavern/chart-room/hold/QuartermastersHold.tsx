@@ -261,7 +261,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
           </Link>
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          The Quartermaster&apos;s Hold
+          The Hold
         </p>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
           <BalanceTicker value={balance} glyph="⟡" color={GOLD} />
