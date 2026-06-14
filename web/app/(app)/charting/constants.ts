@@ -12,9 +12,10 @@ export const MINEFIELD_COLS = 9
 export const MINEFIELD_ROWS = 12
 export const MINEFIELD_MINES = 18
 
-/** Puzzle points banked on the first clear of the week (weekly, so
- *  meatier than a daily Hold solve). Feeds the Den purse tiers. */
-export const MINEFIELD_POINTS = 8
+/** Puzzle points banked on the first clear of the week. Tuned to ~one
+ *  great Hold day so the daily Hold stays the main driver and the weekly
+ *  Minefield is a satisfying bonus, not a shortcut. Feeds the Den tiers. */
+export const MINEFIELD_POINTS = 5
 
 /** Monday (UTC) of the current week — the key the weekly board +
  *  attempts are stored under (mirrors the Pirate King ladder). */
