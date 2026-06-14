@@ -6,6 +6,7 @@ import { MINEFIELD_POINTS } from '@/app/(app)/charting/constants'
 import { getRiggingState } from './rigging/actions'
 import { RIGGING_POINTS } from './rigging/constants'
 import ChartRoomLobby from './ChartRoomLobby'
+import ChartRoomBackdrop from './ChartRoomBackdrop'
 
 export default async function ChartRoomPage() {
   const user = await getCurrentUser()
@@ -27,19 +28,24 @@ export default async function ChartRoomPage() {
   const puzzlePoints = Number(profile?.puzzle_points ?? 0)
 
   return (
-    <main className="min-h-screen pb-24 sm:pb-0">
-      <div className="px-4 pt-6 pb-12">
-        <ChartRoomLobby
-          doubloons={profile?.doubloons ?? 0}
-          holdStatus={holdStatus}
-          holdDoubloonsToday={holdDoubloonsToday}
-          minefieldStatus={minefieldStatus}
-          minefieldReward={minefieldReward}
-          riggingStatus={riggingStatus}
-          riggingReward={riggingReward}
-          puzzlePoints={puzzlePoints}
-        />
+    <>
+      <ChartRoomBackdrop />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <main className="min-h-screen pb-24 sm:pb-0">
+          <div className="px-4 pt-6 pb-12">
+            <ChartRoomLobby
+              doubloons={profile?.doubloons ?? 0}
+              holdStatus={holdStatus}
+              holdDoubloonsToday={holdDoubloonsToday}
+              minefieldStatus={minefieldStatus}
+              minefieldReward={minefieldReward}
+              riggingStatus={riggingStatus}
+              riggingReward={riggingReward}
+              puzzlePoints={puzzlePoints}
+            />
+          </div>
+        </main>
       </div>
-    </main>
+    </>
   )
 }
