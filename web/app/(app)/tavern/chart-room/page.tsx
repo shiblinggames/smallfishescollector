@@ -3,6 +3,7 @@ import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getHoldState } from './hold/actions'
 import { getMinefieldState } from '@/app/(app)/charting/actions'
 import { MINEFIELD_POINTS } from '@/app/(app)/charting/constants'
+import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 import ChartRoomLobby from './ChartRoomLobby'
 
 export default async function ChartRoomPage() {
@@ -19,6 +20,8 @@ export default async function ChartRoomPage() {
   const minefieldStatus: 'active' | 'cleared' = 'error' in mine ? 'active' : mine.status
   const minefieldReward = 'error' in mine ? MINEFIELD_POINTS : mine.reward
 
+  const puzzlePoints = Number(profile?.puzzle_points ?? 0)
+
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
       <div className="px-4 pt-6 pb-12">
@@ -28,6 +31,9 @@ export default async function ChartRoomPage() {
           holdDoubloonsToday={holdDoubloonsToday}
           minefieldStatus={minefieldStatus}
           minefieldReward={minefieldReward}
+          puzzlePoints={puzzlePoints}
+          denCap={denDailyCap(puzzlePoints)}
+          nextTier={nextDenTier(puzzlePoints)}
         />
       </div>
     </main>
