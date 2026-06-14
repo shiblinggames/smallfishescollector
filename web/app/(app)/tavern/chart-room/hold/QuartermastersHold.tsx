@@ -275,7 +275,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
         background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)',
       }}>
         <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>
-          {puzzlePoints} puzzle pts
+          {puzzlePoints} charting pts
         </span>
         <span style={{ color: '#6a6258' }}>·</span>
         <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: GOLD }}>
@@ -292,7 +292,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
       {!locked ? (
         <>
           <p className="font-karla" style={{ fontSize: '0.78rem', color: '#cfc6b0', lineHeight: 1.55, textAlign: 'center' }}>
-            Choose one hold to stow this week. The other two close till Monday — harder holds pay more doubloons and more puzzle points.
+            Choose one hold to stow this week. The other two close till Monday — harder holds pay more doubloons and more charting points.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {HOLD_DIFFICULTIES.map(d => {
@@ -424,7 +424,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
             }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: GOLD }}>Hold stowed</p>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', marginTop: 4, lineHeight: 1.5 }}>
-                {solved.clean ? 'Stowed clean. ' : ''}The quartermaster paid {solved.doubloons} ⟡. Your puzzle points stand at {puzzlePoints}. Fresh hold next Monday.
+                {solved.clean ? 'Stowed clean. ' : ''}The quartermaster paid {solved.doubloons} ⟡. Your charting points stand at {puzzlePoints}. Fresh hold next Monday.
               </p>
             </div>
           ) : (
@@ -520,7 +520,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
               </div>
 
               <p className="font-karla" style={{ fontSize: '0.66rem', color: message ? '#e0b48a' : (cleanStill ? '#7bbf7b' : '#a89e86'), textAlign: 'center', minHeight: '1rem', lineHeight: 1.4 }}>
-                {message ?? (cleanStill ? `Stow it clean (no tally) for +${holdPayout(locked, true) - HOLD_META[locked].payout} ⟡ and +1 puzzle point.` : 'Tally used this hold — clean bonus forfeit.')}
+                {message ?? (cleanStill ? `Stow it clean (no tally) for +${holdPayout(locked, true) - HOLD_META[locked].payout} ⟡ and +1 charting point.` : 'Tally used this hold — clean bonus forfeit.')}
               </p>
             </>
           )}
@@ -551,7 +551,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
                   {win.clean ? 'Stowed clean — not a single tally called.' : 'A fair stow.'} The quartermaster counts out your share.
                 </p>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f4ecd8', marginTop: 14 }}>+{win.doubloons} ⟡</p>
-                <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#7bbf7b', marginTop: 6 }}>+{win.points} puzzle point{win.points > 1 ? 's' : ''}</p>
+                <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#7bbf7b', marginTop: 6 }}>+{win.points} charting point{win.points > 1 ? 's' : ''}</p>
                 {win.capUp !== null && (
                   <motion.p
                     initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }}

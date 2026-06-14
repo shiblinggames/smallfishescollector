@@ -208,14 +208,14 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
         padding: '0.45rem 0.7rem', borderRadius: 10,
         background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)',
       }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} puzzle pts</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} charting pts</span>
         <span style={{ color: '#6a6258' }}>·</span>
         <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: GOLD }}>Den purse {denCap.toLocaleString()} ⟡/day</span>
         {nextTier && <span className="font-karla" style={{ fontSize: '0.62rem', color: '#9a9078' }}>({nextTier.points - puzzlePoints} → {nextTier.cap.toLocaleString()} ⟡)</span>}
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', lineHeight: 1.5, textAlign: 'center' }}>
-        Drag a rope from each cleat to its match. Cover every plank, no rope crossing another. Rig the whole deck for +{initial.reward} puzzle points.
+        Drag a rope from each cleat to its match. Cover every plank, no rope crossing another. Rig the whole deck for +{initial.reward} charting points.
       </p>
 
       {/* Board */}
@@ -310,7 +310,7 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
       {cleared && (
         <div style={{ textAlign: 'center', padding: '0.8rem', background: `${GOLD}16`, border: `1px solid ${GOLD}4d`, borderRadius: 12 }}>
           <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: GOLD }}>Rigging laid</p>
-          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cfc6b0', marginTop: 3 }}>Banked +{initial.reward} puzzle points. Fresh rigging next Monday.</p>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cfc6b0', marginTop: 3 }}>Banked +{initial.reward} charting points. Fresh rigging next Monday.</p>
         </div>
       )}
 
@@ -337,7 +337,7 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
                 <p className="font-karla" style={{ fontSize: '0.78rem', color: '#dccba6', lineHeight: 1.5, marginTop: 8 }}>
                   Every line run true, every plank under rope. She&apos;s ready to sail.
                 </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#7bbf7b', marginTop: 14 }}>+{win.points} puzzle points</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#7bbf7b', marginTop: 14 }}>+{win.points} charting points</p>
                 {win.capUp !== null && (
                   <motion.p
                     initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }}

@@ -85,7 +85,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
           })}
         </div>
         <p className="font-karla" style={{ fontSize: '0.64rem', color: '#a89e86', textAlign: 'center', marginTop: 8, lineHeight: 1.4 }}>
-          Solve the puzzles for points → bigger daily casino purse (⟡/day).{nextTier ? ` ${nextTier.points - puzzlePoints} to ${nextTier.cap / 1000}k.` : ' Top purse reached.'}
+          Solve the puzzles for charting points → bigger daily casino purse (⟡/day).{nextTier ? ` ${nextTier.points - puzzlePoints} to ${nextTier.cap / 1000}k.` : ' Top purse reached.'}
         </p>
       </div>
 

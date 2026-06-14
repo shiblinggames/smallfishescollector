@@ -125,7 +125,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
         padding: '0.45rem 0.7rem', borderRadius: 10,
         background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)',
       }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} puzzle pts</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} charting pts</span>
         <span style={{ color: '#6a6258' }}>·</span>
         <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: GOLD }}>Den purse {denCap.toLocaleString()} ⟡/day</span>
         {nextTier && (
@@ -136,7 +136,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', lineHeight: 1.5, textAlign: 'center' }}>
-        Reveal open water. A number is how many mines border that tile. Flag the mines, clear every safe tile. Fresh board each week — clear it for +{initial.reward} puzzle points.
+        Reveal open water. A number is how many mines border that tile. Flag the mines, clear every safe tile. Fresh board each week — clear it for +{initial.reward} charting points.
       </p>
 
       {/* Board */}
@@ -225,7 +225,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
                 <p className="font-karla" style={{ fontSize: '0.78rem', color: '#dccba6', lineHeight: 1.5, marginTop: 8 }}>
                   Every mine charted, every safe tile swept. Fine navigating, captain.
                 </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#7bbf7b', marginTop: 14 }}>+{win.points} puzzle points</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#7bbf7b', marginTop: 14 }}>+{win.points} charting points</p>
                 {win.capUp !== null && (
                   <motion.p
                     initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }}
