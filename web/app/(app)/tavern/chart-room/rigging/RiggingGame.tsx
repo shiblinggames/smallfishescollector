@@ -2,7 +2,9 @@
 
 // Lay the Rigging — a ship-themed Flow puzzle. Drag a rope from each
 // cleat to its matching cleat, cover every deck plank, no rope crosses
-// another. Solve it (all pairs joined + every plank covered) to bank
+// another. Ropes render as glowing SVG cords through the cell centers;
+// cleats are glossy knobs; connecting a pair snaps taut with a pulse +
+// haptic. Solve it (all pairs joined + every plank covered) to bank
 // puzzle points toward your Den purse. One board a week.
 //
 // Server-authoritative: the solve is re-validated in submitRigging
@@ -19,11 +21,14 @@ import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 
 const GOLD = '#f0c040'
 
+function haptic(pattern: number | number[]) {
+  try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern) } catch { /* no-op */ }
+}
+
 export default function RiggingGame({ initial }: { initial: RiggingState }) {
   const { cols, rows, pairs } = initial
   const total = cols * rows
 
-  // cell → color for each endpoint, and the set of endpoint cells.
   const endpointColor = useMemo(() => {
     const m = new Map<number, number>()
     for (const p of pairs) { m.set(p.a, p.color); m.set(p.b, p.color) }
@@ -39,9 +44,12 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
   const [paths, setPathsState] = useState<Record<number, number[]>>(normInit)
   const pathsRef = useRef(paths)
   const [active, setActive] = useState<number | null>(null)
+  const activeRef = useRef<number | null>(null)
   const [status, setStatus] = useState(initial.status)
   const [puzzlePoints, setPuzzlePoints] = useState(initial.puzzlePoints)
   const [denCap, setDenCap] = useState(initial.denCap)
+  const [flash, setFlash] = useState<{ color: number; key: number } | null>(null)
+  const flashKey = useRef(0)
   const [win, setWin] = useState<{ points: number; capUp: number | null } | null>(null)
   const [mounted, setMounted] = useState(false)
   const [, startTransition] = useTransition()
@@ -54,10 +62,10 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
     pathsRef.current = next
     setPathsState(next)
   }, [])
+  const setActiveBoth = useCallback((c: number | null) => { activeRef.current = c; setActive(c) }, [])
 
   const cleared = status === 'cleared'
 
-  // Owner color of each cell (paths are kept disjoint by the cut logic).
   const owner = useMemo(() => {
     const m = new Map<number, number>()
     for (const [k, cellsList] of Object.entries(paths)) {
@@ -68,12 +76,14 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
   }, [paths])
 
   const coverage = owner.size
-  const connected = pairs.filter(p => {
-    const path = paths[p.color]
+  const isConnected = useCallback((color: number) => {
+    const path = paths[color]
     if (!path || path.length < 2) return false
+    const pair = pairs.find(p => p.color === color)!
     const ends = new Set([path[0], path[path.length - 1]])
-    return ends.has(p.a) && ends.has(p.b)
-  }).length
+    return ends.has(pair.a) && ends.has(pair.b)
+  }, [paths, pairs])
+  const connected = pairs.filter(p => isConnected(p.color)).length
 
   function cellFromEvent(e: React.PointerEvent): number | null {
     const el = gridRef.current
@@ -90,60 +100,57 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
   function beginAt(cell: number) {
     const epc = endpointColor.get(cell)
     if (epc !== undefined) {
-      // Start this color fresh from the tapped cleat.
-      const next = { ...pathsRef.current, [epc]: [cell] }
-      commit(next); setActive(epc); return
+      commit({ ...pathsRef.current, [epc]: [cell] }); setActiveBoth(epc); haptic(6); return
     }
     const own = pathsRef.current
     for (const [k, path] of Object.entries(own)) {
       const idx = path.indexOf(cell)
-      if (idx >= 0) {
-        // Grab an existing rope mid-run; continue from here.
-        const color = Number(k)
-        const next = { ...own, [color]: path.slice(0, idx + 1) }
-        commit(next); setActive(color); return
-      }
+      if (idx >= 0) { commit({ ...own, [Number(k)]: path.slice(0, idx + 1) }); setActiveBoth(Number(k)); haptic(6); return }
     }
-    setActive(null)
+    setActiveBoth(null)
   }
 
   function extendTo(cell: number) {
-    if (active === null) return
+    const act = activeRef.current
+    if (act === null) return
     const own = pathsRef.current
-    const path = own[active] ?? []
+    const path = own[act] ?? []
     if (path.length === 0) return
     const last = path[path.length - 1]
     if (cell === last) return
-    // Backtrack.
-    if (path.length >= 2 && cell === path[path.length - 2]) {
-      commit({ ...own, [active]: path.slice(0, -1) })
-      return
-    }
+    if (path.length >= 2 && cell === path[path.length - 2]) { commit({ ...own, [act]: path.slice(0, -1) }); return }
     if (!neighborsOf(last, cols, rows).includes(cell)) return
-    if (path.includes(cell)) return // no self-cross
-    // Can't extend past your own completed endpoint.
-    if (endpointColor.get(last) !== undefined && path.length >= 2) return
-    // Can't run over another pair's cleat.
+    if (path.includes(cell)) return
+    if (endpointColor.get(last) !== undefined && path.length >= 2) return // already at own cleat
     const epc = endpointColor.get(cell)
-    if (epc !== undefined && epc !== active) return
-    // Cut any other rope that occupies this cell.
+    if (epc !== undefined && epc !== act) return // can't run over another pair's cleat
     const next: Record<number, number[]> = { ...own }
+    let cut = false
     for (const [k, p] of Object.entries(own)) {
       const color = Number(k)
-      if (color === active) continue
+      if (color === act) continue
       const idx = p.indexOf(cell)
-      if (idx >= 0) next[color] = p.slice(0, idx)
+      if (idx >= 0) { next[color] = p.slice(0, idx); cut = true }
     }
-    next[active] = [...path, cell]
+    next[act] = [...path, cell]
     commit(next)
+    // Just completed this pair?
+    const pair = pairs.find(p => p.color === act)!
+    const ends = new Set([next[act][0], next[act][next[act].length - 1]])
+    if (ends.has(pair.a) && ends.has(pair.b) && next[act].length >= 2) {
+      flashKey.current++; setFlash({ color: act, key: flashKey.current }); haptic(18)
+    } else {
+      haptic(cut ? [4, 12] : 4)
+    }
   }
 
   function endStroke() {
-    if (active === null) return
-    setActive(null)
+    if (activeRef.current === null) return
+    setActiveBoth(null)
     const current = pathsRef.current
     if (cleared) return
     if (isSolved(cols, rows, pairs, current)) {
+      haptic([12, 40, 12, 40, 20])
       startTransition(async () => {
         const r = await submitRigging(current)
         if ('error' in r) return
@@ -160,21 +167,21 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
       })
       return
     }
-    // Debounced progress save.
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => { void saveRiggingPaths(current) }, 600)
   }
 
   function resetAll() {
     if (cleared) return
-    commit({})
-    setActive(null)
+    commit({}); setActiveBoth(null); haptic(10)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => { void saveRiggingPaths({}) }, 400)
   }
 
   const nextTier = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
-  const boardW = `min(94vw, ${cols * 50}px)`
+  const boardW = `min(96vw, ${cols * 46}px)`
+  const cx = (cell: number) => (cell % cols) + 0.5
+  const cy = (cell: number) => Math.floor(cell / cols) + 0.5
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -215,44 +222,76 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
       <div
         ref={gridRef}
         onPointerDown={e => { if (cleared) return; const c = cellFromEvent(e); if (c !== null) { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); beginAt(c) } }}
-        onPointerMove={e => { if (active === null) return; const c = cellFromEvent(e); if (c !== null) extendTo(c) }}
+        onPointerMove={e => { if (activeRef.current === null) return; const c = cellFromEvent(e); if (c !== null) extendTo(c) }}
         onPointerUp={endStroke}
         onPointerCancel={endStroke}
         style={{
-          width: boardW, aspectRatio: '1 / 1', margin: '0 auto', touchAction: 'none',
-          display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 3,
-          padding: 6, borderRadius: 10,
-          background: 'linear-gradient(180deg, #1a130a 0%, #0e0a05 100%)',
-          border: '1.5px solid rgba(196,169,106,0.3)',
-          boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
+          position: 'relative', width: boardW, aspectRatio: '1 / 1', margin: '0 auto', touchAction: 'none',
+          borderRadius: 14, padding: 7,
+          background: 'linear-gradient(180deg, #241a0e 0%, #140d06 100%)',
+          border: '2px solid rgba(196,169,106,0.4)',
+          boxShadow: '0 8px 22px rgba(0,0,0,0.5), inset 0 0 24px rgba(0,0,0,0.45)',
         }}
       >
-        {Array.from({ length: total }).map((_, i) => {
-          const ep = endpointColor.get(i)
-          const own = owner.get(i)
-          const col = own !== undefined ? RIGGING_PALETTE[own] : null
-          return (
-            <div
-              key={i}
-              style={{
-                position: 'relative', borderRadius: 6,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: col && ep === undefined ? `${col}cc` : 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(196,169,106,0.12)',
-                transition: 'background 0.08s',
-              }}
-            >
-              {ep !== undefined && (
-                <span style={{
-                  width: '64%', height: '64%', borderRadius: '50%',
-                  background: RIGGING_PALETTE[ep],
-                  boxShadow: active === ep ? `0 0 10px ${RIGGING_PALETTE[ep]}` : '0 1px 3px rgba(0,0,0,0.5)',
-                  border: '2px solid rgba(0,0,0,0.25)',
-                }} />
-              )}
-            </div>
-          )
-        })}
+        {/* Plank grid backdrop */}
+        <div aria-hidden style={{ position: 'absolute', inset: 7, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 2, pointerEvents: 'none' }}>
+          {Array.from({ length: total }).map((_, i) => (
+            <div key={i} style={{ borderRadius: 5, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(196,169,106,0.1)' }} />
+          ))}
+        </div>
+
+        {/* Rope + cleat overlay */}
+        <svg aria-hidden viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none"
+          style={{ position: 'absolute', inset: 7, width: `calc(100% - 14px)`, height: `calc(100% - 14px)`, pointerEvents: 'none', overflow: 'visible' }}>
+          {/* ropes */}
+          {pairs.map(p => {
+            const path = paths[p.color]
+            if (!path || path.length < 2) return null
+            const col = RIGGING_PALETTE[p.color]
+            const pts = path.map(c => `${cx(c)},${cy(c)}`).join(' ')
+            const isAct = active === p.color
+            const done = isConnected(p.color)
+            return (
+              <g key={p.color}>
+                {(isAct || done) && (
+                  <polyline points={pts} fill="none" stroke={col} strokeWidth={0.62} strokeLinecap="round" strokeLinejoin="round" opacity={isAct ? 0.5 : 0.32} style={{ filter: 'blur(0.04px)' }} />
+                )}
+                <polyline points={pts} fill="none" stroke={col} strokeWidth={0.42} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 1 : 0.9} />
+                {/* inner sheen */}
+                <polyline points={pts} fill="none" stroke="#ffffff" strokeWidth={0.1} strokeLinecap="round" strokeLinejoin="round" opacity={0.18} />
+              </g>
+            )
+          })}
+          {/* cleats */}
+          {pairs.map(p => {
+            const col = RIGGING_PALETTE[p.color]
+            const done = isConnected(p.color)
+            return [p.a, p.b].map((cell, idx) => (
+              <g key={`${p.color}-${idx}`}>
+                {done && <circle cx={cx(cell)} cy={cy(cell)} r={0.44} fill="none" stroke={col} strokeWidth={0.06} opacity={0.7} />}
+                <circle cx={cx(cell)} cy={cy(cell)} r={0.34} fill={col} stroke="rgba(0,0,0,0.3)" strokeWidth={0.04} />
+                <circle cx={cx(cell) - 0.08} cy={cy(cell) - 0.09} r={0.11} fill="#ffffff" opacity={0.55} />
+              </g>
+            ))
+          })}
+          {/* active head marker */}
+          {active !== null && paths[active] && paths[active].length > 0 && (() => {
+            const head = paths[active][paths[active].length - 1]
+            return <circle cx={cx(head)} cy={cy(head)} r={0.2} fill="#ffffff" opacity={0.5} />
+          })()}
+          {/* connect pulse */}
+          <AnimatePresence>
+            {flash && [pairs.find(p => p.color === flash.color)!.a, pairs.find(p => p.color === flash.color)!.b].map((cell, idx) => (
+              <motion.circle
+                key={`${flash.key}-${idx}`}
+                cx={cx(cell)} cy={cy(cell)} fill="none" stroke={RIGGING_PALETTE[flash.color]} strokeWidth={0.08}
+                initial={{ r: 0.34, opacity: 0.8 }} animate={{ r: 0.85, opacity: 0 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                onAnimationComplete={() => setFlash(f => (f && f.key === flash.key ? null : f))}
+              />
+            ))}
+          </AnimatePresence>
+        </svg>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>

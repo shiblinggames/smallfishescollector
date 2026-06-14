@@ -8,9 +8,10 @@
 
 import type { RiggingPair } from './rigging'
 
-export const RIGGING_COLS = 7
-export const RIGGING_ROWS = 7
-export const RIGGING_COLORS = 6
+// Bigger + harder than a daily — it's a weekly. 9x9 with 8 ropes.
+export const RIGGING_COLS = 9
+export const RIGGING_ROWS = 9
+export const RIGGING_COLORS = 8
 
 /** Puzzle points banked on the first clear of the week (same weight as
  *  the Minefield — a weekly bonus toward the Den purse). */
