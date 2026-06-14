@@ -4562,7 +4562,12 @@ export default function FishingGame({
         const stage = bossStageRef.current
         const bossName = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
         const cfg = BOSS_CONFIG[bossName] ?? { mechanic: 'shrink' as BossMechanic, phases: 2 }
-        if (stage < cfg.phases) {
+        // phases = TOTAL successful catches to land the fish (regulars 2,
+        // trophies 3). stage is 0-indexed, so we clear stages 0..phases-2
+        // and the phases-th catch (stage === phases-1) falls through to the
+        // real reelIn below. (Was `stage < cfg.phases`, an off-by-one that
+        // demanded an extra strike — 3 for regulars, 4 for trophies.)
+        if (stage < cfg.phases - 1) {
           // Mid-stage perfect feedback: the SFX + haptic + needle glow
           // already fired in the tap's JS tick (pre-hop, see the lock-in
           // protocol above), so a perfect on stage 1 of a 2-phase fish
@@ -4620,7 +4625,7 @@ export default function FishingGame({
           setPhase('catching')
           return
         }
-        // Stage 3 cleared — reset stage counter and fall through to reelIn
+        // Final stage cleared — reset stage counter and fall through to reelIn (the landing catch)
         bossStageRef.current = 0
         setBossStage(0)
         activeBossMechanicRef.current = null
@@ -6106,7 +6111,7 @@ export default function FishingGame({
                           if (phase === 'reeling' && bossStageCleared) {
                             const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
                             const maxStages = BOSS_CONFIG[name]?.phases ?? 2
-                            return `Stage ${bossStage - 1}/${maxStages}`
+                            return `Stage ${bossStage + 1}/${maxStages}`
                           }
                           if (phase === 'reeling') return 'Reeling in…'
                           return currentZone?.label ?? ''
@@ -6117,7 +6122,7 @@ export default function FishingGame({
                         BOSS_CONFIG[name].phases so a 2-phase regular
                         renders 2 dots + 'X/2', a 3-phase trophy renders
                         3 dots + 'X/3'. */}
-                    {selectedZone === 'ancient_deep' && phase === 'catching' && bossStage > 0 && (() => {
+                    {selectedZone === 'ancient_deep' && phase === 'catching' && (() => {
                       const name = allFishSpecies.find(f => f.id === hookedFishRef.current?.fishId)?.name ?? ''
                       const maxStages = BOSS_CONFIG[name]?.phases ?? 2
                       const stages = Array.from({ length: maxStages }, (_, i) => i + 1)
