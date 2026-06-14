@@ -7,12 +7,14 @@
 
 import Link from 'next/link'
 import HoldCard from './HoldCard'
-import ChartTheCourseCard from '../ChartTheCourseCard'
+import MinefieldCard from './MinefieldCard'
 
-export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday }: {
+export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, minefieldStatus, minefieldReward }: {
   doubloons: number
   holdStatus: 'open' | 'locked' | 'done'
   holdDoubloonsToday: number
+  minefieldStatus: 'active' | 'cleared'
+  minefieldReward: number
 }) {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
@@ -34,12 +36,12 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        A quiet corner for steady minds. Plot a course, balance a hold.
+        A quiet corner for steady minds. Balance a hold by day, sweep the minefield by week.
       </p>
 
       <div className="grid grid-cols-2 gap-3">
         <HoldCard status={holdStatus} doubloonsToday={holdDoubloonsToday} />
-        <ChartTheCourseCard />
+        <MinefieldCard status={minefieldStatus} reward={minefieldReward} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>

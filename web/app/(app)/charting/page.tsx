@@ -1,19 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getChartState } from './chartActions'
-import ChartBoard from './ChartBoard'
+import { getMinefieldState } from './actions'
+import Minefield from './MinefieldGame'
 
-export default async function ChartingPage() {
+// /charting is now The Minefield (ship-themed weekly minesweeper).
+// Replaced Chart the Course 2026-06-14; the chart_* tables are dormant.
+export default async function MinefieldPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const admin = createAdminClient()
-  const [{ data: profile }, state] = await Promise.all([
-    admin.from('profiles').select('packs_available, doubloons, gems, ship_tier').eq('id', user.id).single(),
-    getChartState(),
-  ])
+  const state = await getMinefieldState()
 
   return (
     <>
@@ -26,35 +23,24 @@ export default async function ChartingPage() {
         />
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0.75) 50%,rgba(0,0,0,0.92) 100%)',
+          background: 'linear-gradient(to bottom,rgba(0,0,0,0.6) 0%,rgba(0,0,0,0.78) 50%,rgba(0,0,0,0.92) 100%)',
         }} />
       </div>
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <main className="min-h-screen pb-24 sm:pb-0">
-          <div className="px-5 max-w-lg mx-auto" style={{ paddingTop: '1rem' }}>
+          <div className="px-4 max-w-lg mx-auto" style={{ paddingTop: '1.25rem' }}>
             {'error' in state ? (
               <div style={{ textAlign: 'center', paddingTop: '5rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#4a4028', marginBottom: '0.5rem' }}>
-                  No Active Contest
+                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#c8bfa6', marginBottom: '0.5rem' }}>
+                  No Minefield This Week
                 </p>
-                <p className="font-karla" style={{ fontSize: '0.76rem', color: '#3a3028' }}>
-                  Check back soon for the next voyage.
+                <p className="font-karla" style={{ fontSize: '0.76rem', color: '#9a9078' }}>
+                  {state.error}
                 </p>
               </div>
             ) : (
-              <ChartBoard
-                contest={state.contest}
-                progress={state.progress}
-                initialGuesses={state.guesses}
-                initialMovesAvailable={state.movesAvailable}
-                nextGrantDate={state.nextGrantDate}
-                pathLength={state.pathLength}
-                startTile={state.startTile}
-                finishers={state.finishers}
-                shipTier={profile?.ship_tier ?? 0}
-                completionPosition={state.completionPosition}
-              />
+              <Minefield initial={state} />
             )}
           </div>
         </main>
