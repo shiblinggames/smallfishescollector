@@ -1,0 +1,53 @@
+'use client'
+
+import { motion } from 'framer-motion'
+import ScenicCard from '../ScenicCard'
+
+const GOLD = '#f0c040'
+const ROPES = ['#e0524e', '#4f9bd0', '#46b46e']
+
+/** Door card for Lay the Rigging (weekly Flow) in the Chart Room. Scene:
+ *  colored cleats joined by gently swaying ropes. Shows whether the
+ *  week's board is rigged. */
+export default function RiggingCard({ status, reward }: { status: 'active' | 'cleared'; reward: number }) {
+  const cleared = status === 'cleared'
+  return (
+    <ScenicCard
+      href="/tavern/chart-room/rigging"
+      title="Lay the Rigging"
+      gradient={['#2a2f1a', '#1a1d10', '#0c0e08']}
+      accent="#8aa85a"
+    >
+      <svg aria-hidden viewBox="0 0 120 90" style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 120, height: 90 }}>
+        {[
+          { c: ROPES[0], d: 'M22,20 C22,50 78,40 78,70', a: [22, 20], b: [78, 70] },
+          { c: ROPES[1], d: 'M58,18 C90,18 90,60 60,68', a: [58, 18], b: [60, 68] },
+          { c: ROPES[2], d: 'M30,72 C30,40 70,30 98,30', a: [30, 72], b: [98, 30] },
+        ].map((r, i) => (
+          <g key={i}>
+            <motion.path
+              d={r.d} fill="none" stroke={r.c} strokeWidth={3} strokeLinecap="round" opacity={0.8}
+              animate={{ opacity: [0.55, 0.9, 0.55] }}
+              transition={{ duration: 4 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.5 }}
+            />
+            <circle cx={r.a[0]} cy={r.a[1]} r={5} fill={r.c} />
+            <circle cx={r.b[0]} cy={r.b[1]} r={5} fill={r.c} />
+          </g>
+        ))}
+      </svg>
+      <span
+        className="font-karla font-700"
+        style={{
+          position: 'absolute', top: 8, right: 10,
+          fontSize: '0.58rem', letterSpacing: '0.04em',
+          color: cleared ? GOLD : '#bcd09a',
+          background: 'rgba(10,14,6,0.72)',
+          border: '1px solid rgba(138,168,90,0.45)',
+          borderRadius: 999, padding: '0.2rem 0.55rem',
+        }}
+      >
+        {cleared ? `Rigged · +${reward} pts` : 'This week'}
+      </span>
+    </ScenicCard>
+  )
+}

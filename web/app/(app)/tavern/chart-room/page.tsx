@@ -3,13 +3,15 @@ import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getHoldState } from './hold/actions'
 import { getMinefieldState } from '@/app/(app)/charting/actions'
 import { MINEFIELD_POINTS } from '@/app/(app)/charting/constants'
+import { getRiggingState } from './rigging/actions'
+import { RIGGING_POINTS } from './rigging/constants'
 import ChartRoomLobby from './ChartRoomLobby'
 
 export default async function ChartRoomPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [profile, hold, mine] = await Promise.all([getCurrentProfile(), getHoldState(), getMinefieldState()])
+  const [profile, hold, mine, rig] = await Promise.all([getCurrentProfile(), getHoldState(), getMinefieldState(), getRiggingState()])
 
   const solvedToday = 'error' in hold ? false : hold.puzzles.some(p => p.solved)
   const holdStatus: 'open' | 'locked' | 'done' =
@@ -18,6 +20,9 @@ export default async function ChartRoomPage() {
 
   const minefieldStatus: 'active' | 'cleared' = 'error' in mine ? 'active' : mine.status
   const minefieldReward = 'error' in mine ? MINEFIELD_POINTS : mine.reward
+
+  const riggingStatus: 'active' | 'cleared' = 'error' in rig ? 'active' : rig.status
+  const riggingReward = 'error' in rig ? RIGGING_POINTS : rig.reward
 
   const puzzlePoints = Number(profile?.puzzle_points ?? 0)
 
@@ -30,6 +35,8 @@ export default async function ChartRoomPage() {
           holdDoubloonsToday={holdDoubloonsToday}
           minefieldStatus={minefieldStatus}
           minefieldReward={minefieldReward}
+          riggingStatus={riggingStatus}
+          riggingReward={riggingReward}
           puzzlePoints={puzzlePoints}
         />
       </div>

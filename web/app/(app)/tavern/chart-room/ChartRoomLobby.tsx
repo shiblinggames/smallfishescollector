@@ -8,16 +8,19 @@
 import Link from 'next/link'
 import HoldCard from './HoldCard'
 import MinefieldCard from './MinefieldCard'
+import RiggingCard from './RiggingCard'
 import { DEN_PURSE_TIERS } from '../constants'
 
 const GOLD = '#f0c040'
 
-export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, minefieldStatus, minefieldReward, puzzlePoints }: {
+export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints }: {
   doubloons: number
   holdStatus: 'open' | 'locked' | 'done'
   holdDoubloonsToday: number
   minefieldStatus: 'active' | 'cleared'
   minefieldReward: number
+  riggingStatus: 'active' | 'cleared'
+  riggingReward: number
   puzzlePoints: number
 }) {
   // Index of the highest tier the player has reached (their active cap).
@@ -43,7 +46,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        A quiet corner for steady minds. Balance a hold by day, sweep the minefield by week.
+        A quiet corner for steady minds. Stow the hold daily; sweep the minefield and lay the rigging each week.
       </p>
 
       {/* Puzzle points + the full Den-purse upgrade chain. Both games
@@ -98,6 +101,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       <div className="grid grid-cols-2 gap-3">
         <HoldCard status={holdStatus} doubloonsToday={holdDoubloonsToday} />
         <MinefieldCard status={minefieldStatus} reward={minefieldReward} />
+        <RiggingCard status={riggingStatus} reward={riggingReward} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
