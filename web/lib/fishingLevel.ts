@@ -50,14 +50,20 @@ export function getXPProgress(xp: number): {
 // XP awarded per successful catch
 const BASE_CATCH_XP = [15, 30, 55, 90, 140] // difficulty 1–5
 // Tuned so BASE XP/hour (worms, ~Lv60, ~85% catch, ~7s cast overhead, no
-// streak/perfect/prestige) lands near: Shallows ~3.3k, Open ~6.6k, Deep ~8k,
-// Abyss ~15k. Deep/Abyss waits are long, so their per-catch XP has to be high to
-// hit those rates. Retune here if the wait bands or fish stats change.
+// streak/perfect/prestige) lands near: Shallows ~3.3k, Open ~6.6k, Deep ~11k,
+// Abyss ~19k, Ancient Deep ~42k. Deeper zones have long waits, so their
+// per-catch XP has to be high to hit those rates. Retune here if the wait
+// bands or fish stats change.
+// 2026-06-14: Deep 1.8→2.5 (~11k/hr), Abyss 4.1→5.2 (~19k/hr), and
+// Ancient Deep added at 15.0 (~42k/hr) — it previously fell through to the
+// ×1.0 fallback (~2.8k/hr), wildly underpaying the endgame zone. Ancient
+// Deep's rate is a model estimate (45–120s waits); revisit after live data.
 const ZONE_XP_MULT: Record<string, number> = {
-  shallows:    0.40,
-  open_waters: 1.10,
-  deep:        1.80,
-  abyss:       4.10,
+  shallows:     0.40,
+  open_waters:  1.10,
+  deep:         2.50,
+  abyss:        5.20,
+  ancient_deep: 15.0,
 }
 
 export function catchXP(difficulty: number, zone: string, isPerfect: boolean): number {
