@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTodaysBoard } from '@/app/(app)/tavern/trivia/board/generate'
 import { getThisWeeksLadder } from '@/app/(app)/tavern/trivia/king/generate'
+import { getTodaysSudoku } from '@/app/(app)/tavern/chart-room/hold/generate'
 
 export const maxDuration = 60
 
@@ -8,7 +9,8 @@ export const maxDuration = 60
 // retired 2026-06-11 in favor of The Parlor. Board generates first
 // so the ladder's avoid-list can see today's board questions. The
 // King ladder is weekly: Tuesday-Sunday this is a cache hit, Monday
-// rigs the fresh one.
+// rigs the fresh one. The Quartermaster's Hold rolls three fresh
+// sudoku (easy/medium/hard) each night.
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -17,9 +19,11 @@ export async function GET(req: NextRequest) {
 
   const board = await Promise.allSettled([getTodaysBoard()]).then(r => r[0])
   const ladder = await Promise.allSettled([getThisWeeksLadder()]).then(r => r[0])
+  const hold = await Promise.allSettled([getTodaysSudoku()]).then(r => r[0])
 
   return NextResponse.json({
     board: board.status === 'fulfilled' ? 'ok' : 'failed',
     ladder: ladder.status === 'fulfilled' ? 'ok' : 'failed',
+    hold: hold.status === 'fulfilled' ? 'ok' : 'failed',
   })
 }

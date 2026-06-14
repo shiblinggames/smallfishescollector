@@ -1,12 +1,11 @@
-import { Suspense, cache } from 'react'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getChartState } from '@/app/(app)/charting/chartActions'
 import { isPremiumActive } from '@/lib/premium'
 import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
 import TriviaHubCard from './TriviaHubCard'
-import ChartTheCourseCard from './ChartTheCourseCard'
+import ChartRoomHubCard from './ChartRoomHubCard'
 import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
@@ -17,12 +16,8 @@ import { SkeletonBox } from '@/components/Skeleton'
 
 // Same streaming pattern as /expeditions: shell + Nav paint as soon as
 // profile arrives, then each card-group section streams in via its own
-// Suspense boundary. chartState gates whether the Charting card mounts
-// at all — it sits in its own bottom-row section now, not folded into
-// Daily, since it's a rare conditional surface and the player's eye
-// shouldn't have to learn 'Daily has 3 cards sometimes / 2 cards
-// other times'.
-const cachedChartState = cache(() => getChartState())
+// Suspense boundary. Charting moved off the home into The Chart Room
+// (2026-06-13), so the old conditional Charting section is gone.
 
 // ── Sections ────────────────────────────────────────────────────────────────
 
@@ -38,15 +33,6 @@ function GamesSection() {
       <TriviaHubCard />
     </div>
   )
-}
-
-async function ChartingSection() {
-  const chartState = await cachedChartState()
-  const hasChart = chartState && !('error' in chartState)
-  if (!hasChart) return null
-  // Single full-width hero card on its own row — no section heading
-  // since the card's own 'Charting' title carries the label.
-  return <ChartTheCourseCard />
 }
 
 // Top-of-page features grid: Daily Bonus + Tide Run sit alongside each
@@ -109,13 +95,13 @@ export default async function TavernPage() {
             <GamesSection />
           </div>
 
-          {/* Charting — single full-width hero card, only renders when
-              the player has an active chart in progress. Sits at the
-              bottom of the hub (above the footer) because it's a rare
-              conditional and shouldn't crowd the primary rows above. */}
-          <Suspense fallback={null}>
-            <ChartingSection />
-          </Suspense>
+          {/* The Chart Room — full-width hero on its own row (echoes the
+              Den's old treatment, spotlights the newest room). Houses the
+              Quartermaster's Hold sudoku + Charting, which moved in here
+              off the home on 2026-06-13. */}
+          <div>
+            <ChartRoomHubCard />
+          </div>
 
           <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
