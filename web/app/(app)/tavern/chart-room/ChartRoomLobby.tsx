@@ -46,7 +46,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        A quiet corner for steady minds. Stow the hold daily; sweep the minefield and lay the rigging each week.
+        A quiet corner for steady minds. Three puzzles, fresh every week.
       </p>
 
       {/* Puzzle points + the full Den-purse upgrade chain. Both games
@@ -105,7 +105,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        The hold is restocked fresh at midnight. Stow it clean for a bonus.
+        Fresh puzzles every Monday. Stow the hold clean for a bonus.
       </p>
     </div>
   )

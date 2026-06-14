@@ -1,13 +1,23 @@
-// The Quartermaster's Hold — shared constants + types for the daily
-// sudoku in The Chart Room. Plain module (NOT 'use server') so sync
-// helpers and types survive the build; server actions import from here.
+// The Hold — shared constants + types for the weekly sudoku in The Chart
+// Room. Plain module (NOT 'use server') so sync helpers and types survive
+// the build; server actions import from here.
 //
 // Theme: a 9x9 cargo hold split into nine 3x3 bays. Pack it so no deck
 // (row), hull section (column), or bay carries two of the same cargo lot
-// (1-9). Classic sudoku rules under a manifest skin.
+// (1-9). Classic sudoku rules under a manifest skin. One hold a WEEK: the
+// player locks one difficulty Monday→Sunday (made weekly 2026-06-14).
 
 export const HOLD_DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 export type HoldDifficulty = (typeof HOLD_DIFFICULTIES)[number]
+
+/** Monday (UTC) of the current week — the key the weekly board +
+ *  attempts are stored under (the daily_sudoku/sudoku_attempts `date`
+ *  column now holds this Monday). */
+export function holdWeekStr(now = new Date()): string {
+  const diff = (now.getUTCDay() + 6) % 7
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff))
+  return monday.toISOString().split('T')[0]
+}
 
 export interface HoldDifficultyMeta {
   key: HoldDifficulty

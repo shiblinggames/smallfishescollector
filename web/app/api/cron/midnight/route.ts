@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTodaysBoard } from '@/app/(app)/tavern/trivia/board/generate'
 import { getThisWeeksLadder } from '@/app/(app)/tavern/trivia/king/generate'
-import { getTodaysSudoku } from '@/app/(app)/tavern/chart-room/hold/generate'
+import { getThisWeeksSudoku } from '@/app/(app)/tavern/chart-room/hold/generate'
 import { getThisWeeksMinefield } from '@/app/(app)/charting/generate'
 import { getThisWeeksRigging } from '@/app/(app)/tavern/chart-room/rigging/generate'
 
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   const board = await Promise.allSettled([getTodaysBoard()]).then(r => r[0])
   const ladder = await Promise.allSettled([getThisWeeksLadder()]).then(r => r[0])
-  const hold = await Promise.allSettled([getTodaysSudoku()]).then(r => r[0])
+  const hold = await Promise.allSettled([getThisWeeksSudoku()]).then(r => r[0])
   const minefield = await Promise.allSettled([getThisWeeksMinefield()]).then(r => r[0])
   const rigging = await Promise.allSettled([getThisWeeksRigging()]).then(r => r[0])
 

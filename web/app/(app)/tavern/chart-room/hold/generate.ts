@@ -1,12 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { HOLD_DIFFICULTIES, HOLD_META, type HoldDifficulty } from './constants'
+import { HOLD_DIFFICULTIES, HOLD_META, holdWeekStr, type HoldDifficulty } from './constants'
 import { generatePuzzle, type SudokuPuzzle } from './sudoku'
 
-// The Quartermaster's Hold generator — three fresh sudoku a night
-// (easy / medium / hard), generated ALGORITHMICALLY (no Claude) via the
-// pure engine in ./sudoku and cached in daily_sudoku. Same
-// cache-fetch / generate-on-miss / fall-back-to-latest shape as the
-// Parlor's getTodaysBoard.
+// The Hold generator — three fresh sudoku a WEEK (easy / medium / hard),
+// generated ALGORITHMICALLY (no Claude) via the pure engine in ./sudoku
+// and cached in daily_sudoku (the `date` column holds the week's Monday).
+// Same cache-fetch / generate-on-miss / fall-back-to-latest shape as the
+// trivia games.
 //
 // Every puzzle has a guaranteed-unique solution (see sudoku.dig). The
 // solution is stored alongside the givens but is SERVER-ONLY; the
@@ -23,14 +23,14 @@ function generateSet(): SudokuSet {
   }
 }
 
-export async function getTodaysSudoku(): Promise<SudokuSet | null> {
+export async function getThisWeeksSudoku(): Promise<SudokuSet | null> {
   const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
+  const week = holdWeekStr()
 
   const { data: cached } = await admin
     .from('daily_sudoku')
     .select('puzzles')
-    .eq('date', today)
+    .eq('date', week)
     .single()
 
   if (cached) return cached.puzzles as SudokuSet
@@ -43,14 +43,14 @@ export async function getTodaysSudoku(): Promise<SudokuSet | null> {
         throw new Error(`Bad puzzle for ${d}`)
       }
     }
-    await admin.from('daily_sudoku').insert({ date: today, puzzles })
+    await admin.from('daily_sudoku').insert({ date: week, puzzles })
     return puzzles
   } catch (err) {
-    console.error('[quartermasters-hold] generation failed:', err)
+    console.error('[the-hold] generation failed:', err)
     const { data: fallback } = await admin
       .from('daily_sudoku')
       .select('puzzles')
-      .lt('date', today)
+      .lt('date', week)
       .order('date', { ascending: false })
       .limit(1)
       .single()

@@ -292,7 +292,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
       {!locked ? (
         <>
           <p className="font-karla" style={{ fontSize: '0.78rem', color: '#cfc6b0', lineHeight: 1.55, textAlign: 'center' }}>
-            Choose one hold to stow today. The other two close till midnight — harder holds pay more doubloons and more puzzle points.
+            Choose one hold to stow this week. The other two close till Monday — harder holds pay more doubloons and more puzzle points.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {HOLD_DIFFICULTIES.map(d => {
@@ -333,7 +333,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
                 background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.45)', color: '#bcd4ff',
               }}
             >
-              Lock in the {HOLD_META[pendingChoice].label} for today
+              Lock in the {HOLD_META[pendingChoice].label} for the week
             </button>
           )}
           {message && <p className="font-karla" style={{ fontSize: '0.7rem', color: '#d98a8a', textAlign: 'center' }}>{message}</p>}
@@ -346,7 +346,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
               {HOLD_META[locked].label}
             </span>
             <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672' }}>
-              · today&apos;s hold
+              · this week&apos;s hold
             </span>
           </div>
 
@@ -424,7 +424,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
             }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: GOLD }}>Hold stowed</p>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#cfc6b0', marginTop: 4, lineHeight: 1.5 }}>
-                {solved.clean ? 'Stowed clean. ' : ''}The quartermaster paid {solved.doubloons} ⟡. Your puzzle points stand at {puzzlePoints}. Fresh holds at midnight.
+                {solved.clean ? 'Stowed clean. ' : ''}The quartermaster paid {solved.doubloons} ⟡. Your puzzle points stand at {puzzlePoints}. Fresh hold next Monday.
               </p>
             </div>
           ) : (

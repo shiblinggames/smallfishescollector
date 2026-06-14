@@ -12,13 +12,14 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getTodaysSudoku } from './generate'
+import { getThisWeeksSudoku } from './generate'
 import { denDailyCap, nextDenTier } from '../../constants'
 import {
   HOLD_DIFFICULTIES,
   HOLD_META,
   holdPayout,
   holdPoints,
+  holdWeekStr,
   isHoldDifficulty,
   isValidBoardString,
   HOLD_CELLS,
@@ -42,8 +43,11 @@ interface AttemptRow {
 
 const ATTEMPT_COLS = 'progress, solved, doubloons_awarded, locked_difficulty'
 
+// The period key for the Hold is the week's Monday (made weekly
+// 2026-06-14); the `date` column on daily_sudoku / sudoku_attempts holds
+// it. Kept the name `today` at call sites to minimise churn.
 function todayStr(): string {
-  return new Date().toISOString().split('T')[0]
+  return holdWeekStr()
 }
 
 function emptyAttempt(): AttemptRow {
@@ -74,7 +78,7 @@ export async function getHoldState(): Promise<HoldState | { error: string }> {
 
   const today = todayStr()
   const [puzzles, attempt, points] = await Promise.all([
-    getTodaysSudoku(),
+    getThisWeeksSudoku(),
     loadAttempt(user.id, today),
     loadPuzzlePoints(user.id),
   ])
@@ -115,7 +119,7 @@ export async function lockHold(difficulty: HoldDifficulty): Promise<LockHoldResu
   const attempt = await loadAttempt(user.id, today)
   if (attempt.locked_difficulty) {
     if (attempt.locked_difficulty !== difficulty) {
-      return { error: "You already chose today's hold. Come back tomorrow for a fresh manifest." }
+      return { error: "You already chose this week's hold. Come back next week for a fresh manifest." }
     }
     return { lockedDifficulty: attempt.locked_difficulty }
   }
@@ -133,8 +137,8 @@ export async function lockHold(difficulty: HoldDifficulty): Promise<LockHoldResu
 
 /** Guard: a difficulty can only be played once it's the locked one. */
 function lockGuard(attempt: AttemptRow, difficulty: HoldDifficulty): string | null {
-  if (!attempt.locked_difficulty) return 'Choose today’s hold first'
-  if (attempt.locked_difficulty !== difficulty) return 'That hold is closed today'
+  if (!attempt.locked_difficulty) return 'Choose this week’s hold first'
+  if (attempt.locked_difficulty !== difficulty) return 'That hold is closed this week'
   return null
 }
 
@@ -181,7 +185,7 @@ export async function tallyHold(
   if (!isValidBoardString(entries)) return { error: 'Invalid board' }
 
   const today = todayStr()
-  const [puzzles, attempt] = await Promise.all([getTodaysSudoku(), loadAttempt(user.id, today)])
+  const [puzzles, attempt] = await Promise.all([getThisWeeksSudoku(), loadAttempt(user.id, today)])
   if (!puzzles) return { error: 'No holds available' }
   const guard = lockGuard(attempt, difficulty)
   if (guard) return { error: guard }
@@ -217,7 +221,7 @@ export async function submitHold(
 
   const today = todayStr()
   const [puzzles, attempt, { data: profile }] = await Promise.all([
-    getTodaysSudoku(),
+    getThisWeeksSudoku(),
     loadAttempt(user.id, today),
     createAdminClient().from('profiles').select('doubloons, puzzle_points').eq('id', user.id).single(),
   ])
