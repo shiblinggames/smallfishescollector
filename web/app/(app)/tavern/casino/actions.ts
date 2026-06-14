@@ -12,7 +12,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { CASINO_DAILY_CAP, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX } from '../constants'
+import { CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, denDailyCap } from '../constants'
 import type { CasinoWallet, CasinoBuyInResult, CasinoCashOutResult } from './types'
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
@@ -26,30 +26,40 @@ async function getDailyBuyInTotal(userId: string): Promise<number> {
   return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
 }
 
+/** A player's effective shared Den daily cap — base 5k raised by the
+ *  puzzle points they've banked in the Chart Room (denDailyCap). */
+async function getDenCap(userId: string): Promise<number> {
+  const admin = createAdminClient()
+  const { data } = await admin.from('profiles').select('puzzle_points').eq('id', userId).single()
+  return denDailyCap((data?.puzzle_points as number | null) ?? 0)
+}
+
 export async function getCasinoState(): Promise<CasinoWallet> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return {
       chips: 0, doubloons: 0, sessionBuyIns: 0,
-      dailyBoughtIn: 0, dailyRemaining: CASINO_DAILY_CAP,
+      dailyBoughtIn: 0, dailyCap: denDailyCap(0), dailyRemaining: denDailyCap(0),
       sessionNets: { blackjack: 0, roulette: 0, slots: 0 },
     }
   }
   const admin = createAdminClient()
   const [{ data: profile }, dailyBoughtIn] = await Promise.all([
     admin.from('profiles')
-      .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, roulette_session_net, slots_session_net')
+      .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, roulette_session_net, slots_session_net, puzzle_points')
       .eq('id', user.id)
       .single(),
     getDailyBuyInTotal(user.id),
   ])
+  const dailyCap = denDailyCap((profile?.puzzle_points as number | null) ?? 0)
   return {
     chips: (profile?.casino_chips as number | null) ?? 0,
     doubloons: (profile?.doubloons as number | null) ?? 0,
     sessionBuyIns: (profile?.casino_session_buy_ins as number | null) ?? 0,
     dailyBoughtIn,
-    dailyRemaining: Math.max(0, CASINO_DAILY_CAP - dailyBoughtIn),
+    dailyCap,
+    dailyRemaining: Math.max(0, dailyCap - dailyBoughtIn),
     sessionNets: {
       blackjack: (profile?.blackjack_session_net as number | null) ?? 0,
       roulette: (profile?.roulette_session_net as number | null) ?? 0,
@@ -81,9 +91,9 @@ export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | {
   const prevSessionBuyIns = (profile.casino_session_buy_ins as number | null) ?? 0
   if (doubloons < amount) return { error: 'Insufficient doubloons' }
 
-  const dailyAlready = await getDailyBuyInTotal(user.id)
-  if (dailyAlready + amount > CASINO_DAILY_CAP) {
-    return { error: `Daily limit reached (${CASINO_DAILY_CAP} ⟡)` }
+  const [dailyAlready, dailyCap] = await Promise.all([getDailyBuyInTotal(user.id), getDenCap(user.id)])
+  if (dailyAlready + amount > dailyCap) {
+    return { error: `Daily limit reached (${dailyCap.toLocaleString()} ⟡)` }
   }
 
   const newDoubloons = doubloons - amount
@@ -104,7 +114,8 @@ export async function buyInCasino(amount: number): Promise<CasinoBuyInResult | {
   return {
     newDoubloons, newChips,
     dailyBoughtIn: dailyAlready + amount,
-    dailyRemaining: Math.max(0, CASINO_DAILY_CAP - (dailyAlready + amount)),
+    dailyCap,
+    dailyRemaining: Math.max(0, dailyCap - (dailyAlready + amount)),
     sessionBuyIns: newSessionBuyIns,
   }
 }

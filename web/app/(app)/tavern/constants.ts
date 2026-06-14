@@ -85,10 +85,40 @@ export const SLOTS_JACKPOT_FEED_PCT = 0.05
 // buy-in surface. Chips churn freely between games without re-hitting
 // the cap; cash-out converts everything back to doubloons and ends the
 // session (per-game session nets reset). Per-game WAGER bands stay below.
-export const CASINO_DAILY_CAP = 5000   // doubloons committed to the casino per day
+export const CASINO_DAILY_CAP = 5000   // base doubloons/day; raised by puzzle points (denDailyCap)
 export const CASINO_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
 export const CASINO_BUY_IN_MIN = 10
-export const CASINO_BUY_IN_MAX = CASINO_DAILY_CAP
+
+// Puzzle-points → Den daily buy-in cap. Cumulative points from solving
+// The Quartermaster's Hold (Chart Room) permanently raise how many
+// doubloons a player can commit to the Den per day. Steady curve: a
+// regular solver tops out in ~4-5 weeks. The cap is the ONLY thing
+// points buy — they're not spent. Tune the ladder here.
+export const DEN_PURSE_TIERS = [
+  { points: 0,  cap: 5000 },
+  { points: 15, cap: 6000 },
+  { points: 40, cap: 7500 },
+  { points: 80, cap: 10000 },
+] as const
+
+/** The shared Den daily buy-in cap for a player with the given lifetime
+ *  puzzle points — the highest tier whose threshold they've reached. */
+export function denDailyCap(puzzlePoints: number): number {
+  let cap: number = DEN_PURSE_TIERS[0].cap
+  for (const t of DEN_PURSE_TIERS) if ((puzzlePoints ?? 0) >= t.points) cap = t.cap
+  return cap
+}
+
+/** The next tier a player is climbing toward, or null at the top. */
+export function nextDenTier(puzzlePoints: number): { points: number; cap: number } | null {
+  for (const t of DEN_PURSE_TIERS) if ((puzzlePoints ?? 0) < t.points) return { points: t.points, cap: t.cap }
+  return null
+}
+
+// A single buy-in can be as large as the top tier's cap (high-tier
+// players buy in big in one go); the per-call amount is still bounded by
+// the player's effective cap + remaining at enforcement time.
+export const CASINO_BUY_IN_MAX = DEN_PURSE_TIERS[DEN_PURSE_TIERS.length - 1].cap
 
 // ─── Blackjack ───────────────────────────────────────────────────────────────
 // Same wager band as Fish Slots so the tavern reads coherently. Wagers

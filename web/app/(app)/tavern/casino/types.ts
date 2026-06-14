@@ -13,7 +13,8 @@ export interface CasinoWallet {
   doubloons: number           // off-table currency
   sessionBuyIns: number       // doubloons committed since the session started
   dailyBoughtIn: number       // today's buy-ins (casino_buy_ins sum)
-  dailyRemaining: number      // CASINO_DAILY_CAP - dailyBoughtIn
+  dailyCap: number            // effective daily cap = denDailyCap(puzzle_points)
+  dailyRemaining: number      // dailyCap - dailyBoughtIn
   sessionNets: CasinoSessionNets   // per-game win/loss since the session started
 }
 
@@ -21,6 +22,7 @@ export interface CasinoBuyInResult {
   newDoubloons: number
   newChips: number
   dailyBoughtIn: number
+  dailyCap: number
   dailyRemaining: number
   sessionBuyIns: number
 }

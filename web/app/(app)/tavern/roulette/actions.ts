@@ -14,7 +14,7 @@ import {
 } from '@/lib/roulette'
 import {
   RL_MIN_BET, RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET,
-  CASINO_DAILY_CAP,
+  denDailyCap,
 } from '../constants'
 import type { RouletteState, SpinResult, RecentSpin } from './types'
 
@@ -41,14 +41,14 @@ export async function getRouletteState(): Promise<RouletteState> {
   if (!user) {
     return {
       chips: 0, doubloons: 0, sessionBuyIns: 0, sessionNet: 0,
-      dailyBoughtIn: 0, dailyRemaining: CASINO_DAILY_CAP,
+      dailyBoughtIn: 0, dailyCap: denDailyCap(0), dailyRemaining: denDailyCap(0),
       recentSpins: [],
     }
   }
   const admin = createAdminClient()
   const [{ data: profile }, dailyBoughtIn, { data: recentRows }] = await Promise.all([
     admin.from('profiles')
-      .select('doubloons, casino_chips, casino_session_buy_ins, roulette_session_net')
+      .select('doubloons, casino_chips, casino_session_buy_ins, roulette_session_net, puzzle_points')
       .eq('id', user.id)
       .single(),
     getDailyBuyInTotal(user.id),
@@ -73,7 +73,8 @@ export async function getRouletteState(): Promise<RouletteState> {
     sessionBuyIns: (profile?.casino_session_buy_ins as number | null) ?? 0,
     sessionNet: (profile?.roulette_session_net as number | null) ?? 0,
     dailyBoughtIn,
-    dailyRemaining: Math.max(0, CASINO_DAILY_CAP - dailyBoughtIn),
+    dailyCap: denDailyCap((profile?.puzzle_points as number | null) ?? 0),
+    dailyRemaining: Math.max(0, denDailyCap((profile?.puzzle_points as number | null) ?? 0) - dailyBoughtIn),
     recentSpins,
   }
 }

@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { buyInCasino, cashOutCasino } from './actions'
 import type { CasinoWallet, CasinoSessionNets, DenTopEarner } from './types'
-import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, CASINO_DAILY_CAP } from '../constants'
+import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX } from '../constants'
 import BlackjackHubCard from '../BlackjackHubCard'
 import FishSlotsCard from '../FishSlotsCard'
 import RouletteHubCard from '../RouletteHubCard'
@@ -28,6 +28,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
   const [doubloons, setDoubloons] = useState(initial.doubloons)
   const [sessionBuyIns, setSessionBuyIns] = useState(initial.sessionBuyIns)
   const [dailyBoughtIn, setDailyBoughtIn] = useState(initial.dailyBoughtIn)
+  const [dailyCap, setDailyCap] = useState(initial.dailyCap)
   const [nets, setNets] = useState<CasinoSessionNets>(initial.sessionNets)
   const [buyInAmount, setBuyInAmount] = useState(500)
   const [showBuyPanel, setShowBuyPanel] = useState(false)
@@ -42,10 +43,11 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
     setDoubloons(initial.doubloons)
     setSessionBuyIns(initial.sessionBuyIns)
     setDailyBoughtIn(initial.dailyBoughtIn)
+    setDailyCap(initial.dailyCap)
     setNets(initial.sessionNets)
   }, [initial])
 
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyBoughtIn)
+  const dailyRemaining = Math.max(0, dailyCap - dailyBoughtIn)
   const buyInCap = Math.min(CASINO_BUY_IN_MAX, doubloons, dailyRemaining)
   const canBuyIn = buyInAmount > 0 && buyInAmount <= buyInCap && !isPending
   const sessionTotal = nets.blackjack + nets.roulette + nets.slots
@@ -65,6 +67,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
       setDoubloons(r.newDoubloons)
       setSessionBuyIns(r.sessionBuyIns)
       setDailyBoughtIn(r.dailyBoughtIn)
+      setDailyCap(r.dailyCap)
       setShowBuyPanel(false)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     })
@@ -263,7 +266,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
         {/* Daily cap line */}
         <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a7470', marginTop: 10, textAlign: 'center', letterSpacing: '0.04em' }}>
           {dailyRemaining > 0
-            ? `${dailyRemaining.toLocaleString()} ⟡ of today's ${CASINO_DAILY_CAP.toLocaleString()} ⟡ buy-in cap left`
+            ? `${dailyRemaining.toLocaleString()} ⟡ of today's ${dailyCap.toLocaleString()} ⟡ buy-in cap left`
             : 'Daily buy-in cap reached, back tomorrow'}
         </p>
 

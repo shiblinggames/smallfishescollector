@@ -9,7 +9,9 @@ export default async function ChartRoomPage() {
 
   const [profile, hold] = await Promise.all([getCurrentProfile(), getHoldState()])
 
-  const holdSolvedCount = 'error' in hold ? 0 : hold.puzzles.filter(p => p.solved).length
+  const solvedToday = 'error' in hold ? false : hold.puzzles.some(p => p.solved)
+  const holdStatus: 'open' | 'locked' | 'done' =
+    'error' in hold ? 'open' : solvedToday ? 'done' : hold.lockedDifficulty ? 'locked' : 'open'
   const holdDoubloonsToday = 'error' in hold ? 0 : hold.doubloonsAwarded
 
   return (
@@ -17,7 +19,7 @@ export default async function ChartRoomPage() {
       <div className="px-4 pt-6 pb-12">
         <ChartRoomLobby
           doubloons={profile?.doubloons ?? 0}
-          holdSolvedCount={holdSolvedCount}
+          holdStatus={holdStatus}
           holdDoubloonsToday={holdDoubloonsToday}
         />
       </div>

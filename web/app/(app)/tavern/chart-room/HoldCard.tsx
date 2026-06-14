@@ -9,7 +9,11 @@ const GOLD = '#f0c040'
  *  Parchment manifest scene: a faint cargo grid with a few lit lots and
  *  a slow drifting glow, so it reads as a half-stowed hold. Shows the
  *  day's progress chip (N/3 holds stowed + ⟡ banked). */
-export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount: number; doubloonsToday: number }) {
+export default function HoldCard({ status, doubloonsToday }: { status: 'open' | 'locked' | 'done'; doubloonsToday: number }) {
+  const chip = status === 'done' ? `Done · +${doubloonsToday} ⟡`
+    : status === 'locked' ? 'In progress'
+    : 'New hold'
+  const chipLit = status === 'done'
   return (
     <ScenicCard
       href="/tavern/chart-room/hold"
@@ -64,13 +68,13 @@ export default function HoldCard({ solvedCount, doubloonsToday }: { solvedCount:
         style={{
           position: 'absolute', top: 8, right: 10,
           fontSize: '0.58rem', letterSpacing: '0.04em',
-          color: doubloonsToday > 0 ? GOLD : '#9a9488',
+          color: chipLit ? GOLD : '#9a9488',
           background: 'rgba(14,10,4,0.7)',
           border: '1px solid rgba(196,169,106,0.35)',
           borderRadius: 999, padding: '0.2rem 0.55rem',
         }}
       >
-        {solvedCount >= 3 ? `Done · +${doubloonsToday} ⟡` : `${solvedCount}/3 stowed`}
+        {chip}
       </span>
     </ScenicCard>
   )

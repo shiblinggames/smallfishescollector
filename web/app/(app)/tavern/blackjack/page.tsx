@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Blackjack from '../Blackjack'
 import { getDailyWagered, resumeHand } from './actions'
 import { getFishArtPool } from '@/lib/blackjackFishArt'
+import { denDailyCap } from '../constants'
 
 export default async function BlackjackPage() {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export default async function BlackjackPage() {
   // active hand; chips > 0 puts them on the wager screen; chips == 0
   // puts them on the buy-in screen.
   const [{ data: profile }, dailyWagered, resumed, fishArtPool] = await Promise.all([
-    supabase.from('profiles').select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net').eq('id', user.id).single(),
+    supabase.from('profiles').select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, puzzle_points').eq('id', user.id).single(),
     getDailyWagered(),
     resumeHand(),
     getFishArtPool(),
@@ -30,6 +31,7 @@ export default async function BlackjackPage() {
           sessionBuyIns={profile?.casino_session_buy_ins ?? 0}
           sessionNet={profile?.blackjack_session_net ?? 0}
           dailyWagered={dailyWagered}
+          dailyCap={denDailyCap(profile?.puzzle_points ?? 0)}
           resumed={resumed}
           fishArtPool={fishArtPool}
         />

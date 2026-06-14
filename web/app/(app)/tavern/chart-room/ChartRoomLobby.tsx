@@ -9,9 +9,9 @@ import Link from 'next/link'
 import HoldCard from './HoldCard'
 import ChartTheCourseCard from '../ChartTheCourseCard'
 
-export default function ChartRoomLobby({ doubloons, holdSolvedCount, holdDoubloonsToday }: {
+export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday }: {
   doubloons: number
-  holdSolvedCount: number
+  holdStatus: 'open' | 'locked' | 'done'
   holdDoubloonsToday: number
 }) {
   return (
@@ -38,7 +38,7 @@ export default function ChartRoomLobby({ doubloons, holdSolvedCount, holdDoubloo
       </p>
 
       <div className="grid grid-cols-2 gap-3">
-        <HoldCard solvedCount={holdSolvedCount} doubloonsToday={holdDoubloonsToday} />
+        <HoldCard status={holdStatus} doubloonsToday={holdDoubloonsToday} />
         <ChartTheCourseCard />
       </div>
 

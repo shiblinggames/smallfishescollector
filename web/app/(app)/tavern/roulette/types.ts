@@ -22,6 +22,7 @@ export interface RouletteState {
   sessionBuyIns: number     // shared casino session buy-ins
   sessionNet: number        // roulette's own win/loss this session
   dailyBoughtIn: number     // today's shared casino buy-ins
+  dailyCap: number          // effective cap = denDailyCap(puzzle_points)
   dailyRemaining: number
   recentSpins: RecentSpin[]
 }

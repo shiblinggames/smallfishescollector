@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect, useRef, useState, useTransition, type CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BJ_BET_PRESETS, BJ_MAX_BET, BJ_MIN_BET, CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, CASINO_BUY_IN_MIN, CASINO_DAILY_CAP } from './constants'
+import { BJ_BET_PRESETS, BJ_MAX_BET, BJ_MIN_BET, CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, CASINO_BUY_IN_MIN } from './constants'
 import {
   dealBlackjack, hit, stand, doubleDown, split,
   acceptInsurance, declineInsurance,
@@ -21,6 +21,7 @@ interface Props {
   sessionBuyIns: number       // shared casino session buy-ins
   sessionNet: number          // blackjack's own win/loss this session
   dailyWagered: number        // today's shared casino buy-ins
+  dailyCap: number            // effective shared daily cap (puzzle-points raised)
   resumed: ClientState | null
   fishArtPool: FishArtPool
 }
@@ -618,7 +619,7 @@ function BlackjackCard({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export default function Blackjack({ doubloons: initialDoubloons, chips: initialChips, sessionBuyIns: initialSessionBuyIns, sessionNet: initialSessionNet, dailyWagered: initialDailyWagered, resumed, fishArtPool }: Props) {
+export default function Blackjack({ doubloons: initialDoubloons, chips: initialChips, sessionBuyIns: initialSessionBuyIns, sessionNet: initialSessionNet, dailyWagered: initialDailyWagered, dailyCap: initialDailyCap, resumed, fishArtPool }: Props) {
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [chips, setChips] = useState(initialChips)
   // Shared casino session buy-ins (resets on cash-out or when the
@@ -630,6 +631,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
   // net instead.
   const [sessionNet, setSessionNet] = useState(initialSessionNet)
   const [dailyWagered, setDailyWagered] = useState(initialDailyWagered)
+  const [dailyCap, setDailyCap] = useState(initialDailyCap)
   // Phases:
   //   buyIn   — no chips at the table; player picks how much to convert
   //   wager   — chips on the table; player picks bet for next hand
@@ -764,7 +766,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
     return f ?? null
   }
 
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyWagered)
+  const dailyRemaining = Math.max(0, dailyCap - dailyWagered)
   // Wager is bounded by chip stack, not doubloons — chips are what's on
   // the table. Daily cap is enforced at buy-in only.
   const canDeal = wager >= BJ_MIN_BET
@@ -845,6 +847,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       setSessionBuyIns(result.sessionBuyIns)
       setSessionNet(result.sessionNet)
       setDailyWagered(result.dailyWagered)
+      setDailyCap(result.dailyCap)
       // Outcome-tiered haptic. Blackjack = long satisfying buzz;
       // dealer-bust win = quick double-tap; regular win = short;
       // push = barely a tick; loss = soft thud.
@@ -888,7 +891,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       insuranceAmount: rr.insurance.amount,
       totalWagered: (playerHand?.wager ?? 0),
       canHit: false, canStand: false, canDouble: false, canSplit: false,
-      dailyRemaining: 0,
+      dailyRemaining: 0, dailyCap,
       chips: 0, doubloons: 0, sessionBuyIns: 0, sessionNet: 0,
     }
   }
@@ -911,7 +914,8 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       setDoubloons(r.state.doubloons)
       setSessionBuyIns(r.state.sessionBuyIns)
       setSessionNet(r.state.sessionNet)
-      setDailyWagered(CASINO_DAILY_CAP - r.state.dailyRemaining)
+      setDailyWagered(r.state.dailyCap - r.state.dailyRemaining)
+      setDailyCap(r.state.dailyCap)
       setPhase('play')
       if (isFreshDeal) kickOffDealReveal()
       return
@@ -1035,6 +1039,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       setDoubloons(r.newDoubloons)
       setSessionBuyIns(r.sessionBuyIns)
       setDailyWagered(r.dailyBoughtIn)
+      setDailyCap(r.dailyCap)
       setPhase('wager')
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     })
@@ -1835,7 +1840,7 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
             </div>
           </div>
         ) : (
-          <DailyCapBar wagered={dailyWagered} cap={CASINO_DAILY_CAP} />
+          <DailyCapBar wagered={dailyWagered} cap={dailyCap} />
         )}
       </div>
 

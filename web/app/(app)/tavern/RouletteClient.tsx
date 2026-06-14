@@ -16,7 +16,7 @@ import {
 } from '@/lib/roulette'
 import {
   RL_MAX_STRAIGHT_BET, RL_MAX_OUTSIDE_BET, RL_BET_PRESETS,
-  CASINO_DAILY_CAP, CASINO_BUY_IN_PRESETS,
+  CASINO_BUY_IN_PRESETS,
 } from './constants'
 import { placeBetsAndSpin } from './roulette/actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
@@ -67,7 +67,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
   const [sessionNet, setSessionNet] = useState(initial.sessionNet)
   const [dailyBoughtIn, setDailyBoughtIn] = useState(initial.dailyBoughtIn)
 
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyBoughtIn)
+  const dailyRemaining = Math.max(0, initial.dailyCap - dailyBoughtIn)
   const [selectedDenom, setSelectedDenom] = useState<number>(50)
   const [placed, setPlaced] = useState<PlacedMap>({})
   const [error, setError] = useState<string | null>(null)
@@ -481,7 +481,7 @@ export default function RouletteClient({ initial }: { initial: RouletteState }) 
       <RecentSpinsStrip spins={initial.recentSpins} />
 
       <p className="font-karla" style={{ fontSize: '0.58rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        European single-zero · house edge 2.703% · daily buy-in cap {CASINO_DAILY_CAP.toLocaleString()} ⟡ across every table in the Den
+        European single-zero · house edge 2.703% · daily buy-in cap {initial.dailyCap.toLocaleString()} ⟡ across every table in the Den
       </p>
     </div>
   )

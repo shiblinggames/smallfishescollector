@@ -8,7 +8,7 @@ import {
   dealerPlay, settleHand, settleInsurance, cardRank,
   type Card, type SettledHand, type HandOutcome,
 } from '@/lib/blackjack'
-import { BJ_MIN_BET, BJ_MAX_BET, CASINO_DAILY_CAP } from '../constants'
+import { BJ_MIN_BET, BJ_MAX_BET, denDailyCap } from '../constants'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
@@ -67,6 +67,7 @@ export interface ClientState {
   canStand: boolean
   canDouble: boolean
   canSplit: boolean
+  dailyCap: number              // effective shared cap = denDailyCap(puzzle_points)
   dailyRemaining: number        // doubloons still allowed to buy in today (shared casino cap)
   chips: number                 // shared casino chip balance (post-this-hand)
   doubloons: number             // doubloons balance (off-table)
@@ -85,6 +86,7 @@ export interface SettleResult {
   netDelta: number              // total change in chips across the hand
   newChips: number              // shared casino chip balance post-settle
   doubloons: number             // doubloons balance (unchanged by hand-level actions)
+  dailyCap: number              // effective shared cap = denDailyCap(puzzle_points)
   dailyWagered: number          // sum of today's shared casino buy-ins
   sessionBuyIns: number         // shared casino session buy-ins (post-settle)
   sessionNet: number            // blackjack's session net post-settle
@@ -113,6 +115,14 @@ async function getDailyBuyInTotal(userId: string): Promise<number> {
   return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
 }
 
+/** Effective shared Den daily cap for this player — base raised by the
+ *  puzzle points banked in the Chart Room (denDailyCap). */
+async function getDenCap(userId: string): Promise<number> {
+  const admin = createAdminClient()
+  const { data } = await admin.from('profiles').select('puzzle_points').eq('id', userId).single()
+  return denDailyCap((data?.puzzle_points as number | null) ?? 0)
+}
+
 export async function getDailyWagered(): Promise<number> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -136,6 +146,7 @@ function toClientState(
   chips: number,
   doubloons: number,
   dailyRemaining: number,
+  dailyCap: number,
   sessionBuyIns: number,
   sessionNet: number,
 ): ClientState {
@@ -173,6 +184,7 @@ function toClientState(
     canDouble,
     canSplit: canSplitNow,
     dailyRemaining,
+    dailyCap,
     chips,
     doubloons,
     sessionBuyIns,
@@ -287,7 +299,7 @@ async function finalizeSettlement(
   ])
   void reason
 
-  const dailyWagered = await getDailyBuyInTotal(userId)
+  const [dailyWagered, dailyCap] = await Promise.all([getDailyBuyInTotal(userId), getDenCap(userId)])
   const currentDoubloons = (profile?.doubloons as number | null) ?? 0
 
   return {
@@ -301,6 +313,7 @@ async function finalizeSettlement(
     netDelta,
     newChips,
     doubloons: currentDoubloons,
+    dailyCap,
     dailyWagered,
     sessionBuyIns: newSessionBuyIns,
     sessionNet: newSessionNet,
@@ -444,10 +457,11 @@ export async function dealBlackjack(wager: number): Promise<ActionResult> {
 
   const newChips = chips - wager
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const doubloons = await getDoubloons(user.id)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return { kind: 'active', state: toClientState(handId, state, wager, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
+  return { kind: 'active', state: toClientState(handId, state, wager, newChips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet) }
 }
 
 /** Accept insurance: charge half wager, resolve dealer natural check. */
@@ -488,10 +502,11 @@ export async function acceptInsurance(): Promise<ActionResult> {
 
   const newChips = chips - insurance
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const doubloons = await getDoubloons(user.id)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet) }
 }
 
 /** Decline insurance: no charge; check dealer natural anyway, resolve if hit. */
@@ -521,9 +536,10 @@ export async function declineInsurance(): Promise<ActionResult> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet) }
 }
 
 export async function hit(): Promise<ActionResult> {
@@ -551,9 +567,10 @@ export async function hit(): Promise<ActionResult> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet) }
 }
 
 export async function stand(): Promise<ActionResult> {
@@ -578,9 +595,10 @@ export async function stand(): Promise<ActionResult> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet) }
 }
 
 export async function doubleDown(): Promise<ActionResult> {
@@ -616,10 +634,11 @@ export async function doubleDown(): Promise<ActionResult> {
 
   const newChips = chips - (active.wager / 2)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const doubloons = await getDoubloons(user.id)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet) }
 }
 
 export async function split(): Promise<ActionResult> {
@@ -675,10 +694,11 @@ export async function split(): Promise<ActionResult> {
 
   const newChips = chips - initialWager
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const doubloons = await getDoubloons(user.id)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, sessionBuyIns, sessionNet) }
+  return { kind: 'active', state: toClientState(hand.id, hand.state, totalWagered, newChips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet) }
 }
 
 /** Resume the active hand on page load (or return null if none). */
@@ -691,7 +711,8 @@ export async function resumeHand(): Promise<ClientState | null> {
   const chips = await getChips(user.id)
   const doubloons = await getDoubloons(user.id)
   const dailyAlready = await getDailyBuyInTotal(user.id)
-  const dailyRemaining = Math.max(0, CASINO_DAILY_CAP - dailyAlready)
+  const dailyCap = await getDenCap(user.id)
+  const dailyRemaining = Math.max(0, dailyCap - dailyAlready)
   const { sessionBuyIns, sessionNet } = await getSessionView(user.id)
-  return toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, sessionBuyIns, sessionNet)
+  return toClientState(hand.id, hand.state, hand.total_wagered, chips, doubloons, dailyRemaining, dailyCap, sessionBuyIns, sessionNet)
 }
