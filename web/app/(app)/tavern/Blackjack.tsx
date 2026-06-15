@@ -438,11 +438,13 @@ function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing', style }: {
   }, [isHidden, mode])
   return (
     <motion.div
-      initial={mode === 'revealed' ? false : { opacity: 0, y: -22, scale: 0.85 }}
-      animate={mode === 'revealed' ? false : { opacity: 1, y: 0, scale: 1 }}
+      initial={mode === 'revealed' ? false : { opacity: 0, y: -22, scale: 0.82 }}
+      // Land bounce: a little scale overshoot as the card settles so each
+      // dealt card "lands" with weight instead of just sliding in.
+      animate={mode === 'revealed' ? false : { opacity: 1, y: 0, scale: [0.82, 1.06, 1] }}
       whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
       whileTap={{ scale: 0.96 }}
-      transition={mode === 'revealed' ? { duration: 0 } : { duration: 0.36, ease: 'easeOut' }}
+      transition={mode === 'revealed' ? { duration: 0 } : { duration: 0.42, ease: 'easeOut', times: [0, 0.6, 1] }}
       style={{ flexShrink: 0, cursor: 'pointer', ...style }}
     >
       {/* Always FlipCard (even for hidden) so the 3D context stays
@@ -504,38 +506,71 @@ function FeltRule({ text }: { text: string | readonly string[] }) {
   )
 }
 
-/** Visual pot indicator. Single source of truth for the player's stake
- *  — used between the dealer + player rows during play AND on the wager
- *  / Deal-Next-Hand screens as the flight target for chip taps. forwarded
- *  ref lets WagerCircle compute the screen-space position to fly chips
- *  into. The number comes from useAnimatedNumber upstream so doubles,
- *  splits, and insurance tick up smoothly during play. */
+/** A stack of poker chips, height scaling with the stake. Decorative
+ *  (denomination-agnostic) — more chips = bigger bet, which reads at a
+ *  glance. Gold chips with the classic dashed edge. */
+function ChipStack({ value }: { value: number }) {
+  // 1 chip minimum once there's a bet, +1 per ~half-K, capped so the
+  // stack never overflows the betting circle.
+  const n = value <= 0 ? 0 : Math.min(6, 1 + Math.floor(value / 500))
+  if (n === 0) return null
+  const size = 30
+  const step = 5
+  return (
+    <div style={{ position: 'relative', width: size, height: size + (n - 1) * step }}>
+      {Array.from({ length: n }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute', left: 0, bottom: i * step, width: size, height: size,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 50% 38%, #f6d585 0%, #dca842 52%, #a87d1e 100%)',
+            border: '2px dashed rgba(255,255,255,0.55)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.45), inset 0 1px 2px rgba(255,255,255,0.4)',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Visual pot indicator — a felt betting spot with a chip stack. Single
+ *  source of truth for the player's stake; used between the dealer +
+ *  player rows during play AND on the wager / Deal-Next-Hand screens as
+ *  the flight target for chip taps. The forwarded ref lets WagerCircle
+ *  compute the screen-space position to fly chips into. The number comes
+ *  from useAnimatedNumber upstream so doubles, splits, and insurance
+ *  tick up smoothly during play. */
 const PotPill = forwardRef<HTMLDivElement, { value: number; label?: string }>(function PotPill(
   { value, label = 'Pot' }, ref
 ) {
   const empty = value <= 0
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 42 }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 78 }}>
       <motion.div
         ref={ref}
-        animate={{
-          scale: empty ? 0.86 : 1,
-          opacity: empty ? 0.32 : 1,
-        }}
+        animate={{ scale: empty ? 0.92 : 1, opacity: empty ? 0.5 : 1 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 10,
-          padding: '0.42rem 1.05rem',
-          borderRadius: 999,
-          background: 'linear-gradient(180deg, rgba(60,42,16,0.62) 0%, rgba(28,18,4,0.62) 100%)',
-          border: `1px solid ${empty ? 'rgba(196,169,106,0.22)' : 'rgba(196,169,106,0.6)'}`,
-          boxShadow: empty ? 'none' : '0 0 22px rgba(240,192,64,0.20), 0 4px 14px rgba(0,0,0,0.45)',
-        }}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
       >
-        <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>{label}</span>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1 }}>
-          {value.toLocaleString()} ⟡
-        </p>
+        {/* Betting circle — the felt spot. Always present (faint when
+            empty) so it reads as "place your bet here". */}
+        <div style={{
+          position: 'relative', width: 60, height: 60, borderRadius: '50%',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          paddingBottom: empty ? 0 : 4,
+          border: `2px dashed ${empty ? 'rgba(196,169,106,0.3)' : 'rgba(240,214,149,0.75)'}`,
+          boxShadow: empty ? 'none' : 'inset 0 0 18px rgba(240,192,64,0.22), 0 0 20px rgba(240,192,64,0.18)',
+          background: empty ? 'transparent' : 'radial-gradient(circle at 50% 60%, rgba(240,192,64,0.12) 0%, transparent 70%)',
+        }}>
+          <ChipStack value={value} />
+        </div>
+        {!empty && (
+          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+            <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>{label}</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{value.toLocaleString()} ⟡</span>
+          </div>
+        )}
       </motion.div>
     </div>
   )
@@ -598,6 +633,10 @@ function BlackjackCard({
           }}
         />
       )}
+      {/* Premium card cues: a glossy top-left sheen + a thin inner frame
+          so the card reads as real card stock, not a flat rectangle. */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 40%)', pointerEvents: 'none' }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 3, borderRadius: 6, border: `1px solid ${color}22`, pointerEvents: 'none' }} />
       <div style={{
         position: 'absolute', top: dims.cornerPad, left: dims.cornerPad,
         color, lineHeight: 1, fontFamily: 'serif',
@@ -1752,7 +1791,15 @@ export default function Blackjack({ doubloons: initialDoubloons, chips: initialC
       // (~520px); larger content (splits, multi-card hands) grows
       // past the floor as needed.
       minHeight: 560,
-      background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
+      // Green felt table: a top spotlight, a faint woven texture, over a
+      // deep-green base. Matches the Den's roulette felt + keeps the gold
+      // trim. Reads as a real blackjack table instead of a flat panel.
+      background: [
+        'radial-gradient(ellipse 92% 60% at 50% 16%, rgba(86,166,120,0.30) 0%, transparent 62%)',
+        'repeating-linear-gradient(45deg, rgba(255,255,255,0.022) 0 2px, transparent 2px 5px)',
+        'repeating-linear-gradient(-45deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 5px)',
+        'linear-gradient(180deg, #11402e 0%, #0c2c20 55%, #071d15 100%)',
+      ].join(', '),
       border: '1px solid rgba(196,169,106,0.25)',
       borderRadius: 18,
       padding: '1.25rem 1.1rem 1.4rem',
