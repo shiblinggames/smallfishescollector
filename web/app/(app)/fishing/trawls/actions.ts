@@ -54,11 +54,14 @@ const isZone = (z: string): z is TrawlZoneKey => z in TRAWL_ZONE_BY_KEY
 
 // Build the full client state from the player's profile + roster + active trawls.
 async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState> {
-  const [{ data: profile }, { data: trawlRows }, { data: crewRows }] = await Promise.all([
+  const [{ data: profile }, { data: trawlRows }, { data: crewRows }, { data: pendingVoyage }] = await Promise.all([
     admin.from('profiles').select('fishing_xp, expedition_xp').eq('id', userId).single(),
     admin.from('trawls').select('zone, crew_id, ends_at').eq('user_id', userId),
     admin.from('user_crew').select(CREW_COLS).eq('user_id', userId).is('died_at', null),
+    // Crew on a pending voyage are also unavailable — exclude from the picker.
+    admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', userId).eq('status', 'pending').maybeSingle(),
   ])
+  const onVoyage = new Set<number>(((pendingVoyage as { crew_variant_ids?: number[] } | null)?.crew_variant_ids ?? []))
 
   const fishingLevel = fishingLevelFromXP((profile?.fishing_xp as number | null) ?? 0)
   const navLevel = navLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
@@ -86,7 +89,7 @@ async function buildTrawlState(admin: Admin, userId: string): Promise<TrawlState
   }
 
   const freeCrew: TrawlCrewView[] = ((crewRows ?? []) as any[])
-    .filter(r => !atSea.has(r.id))
+    .filter(r => !atSea.has(r.id) && !onVoyage.has(r.id))
     .map(r => crewView(r as CrewRow))
     .sort((a, b) => b.savvy + b.fortune - (a.savvy + a.fortune))
 

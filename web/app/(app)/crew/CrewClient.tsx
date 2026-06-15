@@ -210,7 +210,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -231,9 +231,11 @@ function CrewPanel({
    *  a small crown above the assignment pip so the captain is obvious at
    *  a glance. No-op for benched crew. */
   isCaptain?: boolean
-  /** True when this crew is at sea on an in-progress voyage and can't be
-   *  reassigned. Greys the card out and disables the toggle buttons. */
+  /** True when this crew is at sea (voyage OR trawl) and can't be reassigned.
+   *  Greys the card out and disables the toggle buttons. */
   locked?: boolean
+  /** Tooltip on the lock badge — distinguishes voyage vs trawl. */
+  lockLabel?: string
   /** True when the crew has leveled up since the player last opened it.
    *  Drives a whole-card gold breathing halo + brightened Lv chip + small
    *  NEW dot so the player knows to tap in and see what stat/ability tier
@@ -406,7 +408,7 @@ function CrewPanel({
         })()}
         {locked && (
           <div
-            title="This crew is currently at sea on a voyage."
+            title={lockLabel}
             style={{
               position: 'absolute', top: -6, left: -6,
               width: 26, height: 26, borderRadius: '50%',
@@ -945,7 +947,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       // assigns; tapping the currently-active option no-ops. Crew currently
       // at sea (in a pending voyage) are locked — toggle disabled.
       const assignment = crewAssignment(m)
-      const isLocked = state.lockedCrewIds.includes(m.id)
+      const isLocked = state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)
       const onPickVoyage = (e: React.MouseEvent) => {
         e.stopPropagation()
         if (assignment === 'voyage' || isLocked) return
@@ -1535,7 +1537,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
                         assignment={crewAssignment(m)}
                         isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
-                        locked={state.lockedCrewIds.includes(m.id)}
+                        locked={state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)}
+                        lockLabel={state.trawlingCrewIds.includes(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
                         onClick={() => openDetail('roster', m)}>

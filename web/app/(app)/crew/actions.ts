@@ -86,6 +86,9 @@ export type CrewState = {
    *  Crew Hall UI greys these cards out and disables the assignment
    *  toggle — players can't pull a crew off an in-progress voyage. */
   lockedCrewIds: number[]
+  /** user_crew ids currently OUT ON A TRAWL — also locked from reassignment
+   *  (they're hard-locked at sea for the hour), with a distinct badge. */
+  trawlingCrewIds: number[]
   /** Crew Hall building tier (1..5). Drives the recruit board's visual
    *  theme + the level fresh recruits start at (lib/crewHall.ts). */
   hallTier: CrewHallTierNum
@@ -243,19 +246,20 @@ export async function getCrewState(): Promise<CrewState | null> {
   // Pending voyage lock: any crew currently in a 'pending' daily_voyages
   // crew_variant_ids list can't be reassigned until the voyage reveals.
   // Surface those ids so the UI can grey out + disable the toggle.
-  const { data: pendingVoyage } = await admin
-    .from('daily_voyages')
-    .select('crew_variant_ids')
-    .eq('user_id', user.id)
-    .eq('status', 'pending')
-    .maybeSingle()
+  // Crew out on a Trawl are likewise locked from reassignment (hard-locked
+  // at sea for the hour). Surfaced separately so the UI can label them.
+  const [{ data: pendingVoyage }, { data: trawlRows }] = await Promise.all([
+    admin.from('daily_voyages').select('crew_variant_ids').eq('user_id', user.id).eq('status', 'pending').maybeSingle(),
+    admin.from('trawls').select('crew_id').eq('user_id', user.id),
+  ])
   const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
+  const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
 
   return {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
     roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
-    shipCrewSlots, lockedCrewIds,
+    shipCrewSlots, lockedCrewIds, trawlingCrewIds,
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,
   }
@@ -454,6 +458,11 @@ async function assertCanReassign(
     const onActive = pending && Array.isArray((pending as any).crew_variant_ids) && (pending as any).crew_variant_ids.includes(crewId)
     if (onActive) return { error: 'This crew is at sea right now. Wait for their voyage to return.' }
   }
+
+  // Trawl lock — a crew out on a trawl is hard-locked at sea for the hour.
+  const { data: onTrawl } = await admin
+    .from('trawls').select('id').eq('user_id', userId).eq('crew_id', crewId).maybeSingle()
+  if (onTrawl) return { error: 'This crew is out on a trawl. Collect it first to free them up.' }
 
   return { ok: true, crew: crew as any }
 }
