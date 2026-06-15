@@ -1,12 +1,11 @@
 'use client'
 
-// Treasure Match — a ship-themed Match-3. Swap two adjacent treasures to
-// line up 3+ of a kind; they clear, everything drops, and cascades chain.
-// Hit the target score within the move limit to win. One seeded board a
-// week (shared puzzle); first clear banks charting points.
-//
-// The board is deterministic from the week's seed; the engine runs
-// client-side and the server awards the points on a claimed win.
+// Treasure Match — a ship-themed Match-3. Swap two adjacent treasures
+// (drag OR tap) to line up 3+; they pop, everything drops, cascades chain
+// with combo callouts + particle bursts. Reach the target score within
+// the move limit to win. One seeded board a week (shared puzzle); first
+// clear banks charting points. Engine runs client-side; the server awards
+// the points on a claimed win.
 
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -20,6 +19,8 @@ import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 const GOLD = '#f0c040'
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
+
+interface Particle { id: number; x: number; y: number; dx: number; dy: number; color: string }
 
 export default function TreasureMatchGame({ initial }: { initial: MatchState }) {
   const { cols, rows, types, target, seed } = initial
@@ -39,18 +40,52 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   const [denCap, setDenCap] = useState(initial.denCap)
   const [win, setWin] = useState<{ points: number; capUp: number | null } | null>(null)
   const [mounted, setMounted] = useState(false)
+  // Juice
+  const [particles, setParticles] = useState<Particle[]>([])
+  const [combo, setCombo] = useState<{ level: number; key: number } | null>(null)
+  const [scoreFloat, setScoreFloat] = useState<{ amount: number; key: number } | null>(null)
+  const [scorePulse, setScorePulse] = useState(0)
+  const pid = useRef(0)
 
-  // Refs mirror the live values for the async swap resolver.
   const boardRef = useRef(board); useEffect(() => { boardRef.current = board }, [board])
   const scoreRef = useRef(score); useEffect(() => { scoreRef.current = score }, [score])
   const movesRef = useRef(movesLeft); useEffect(() => { movesRef.current = movesLeft }, [movesLeft])
   const busyRef = useRef(false)
+  const gridRef = useRef<HTMLDivElement | null>(null)
+  const dragRef = useRef<{ cell: number; sx: number; sy: number; moved: boolean } | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
   const nextTier = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
   const cleared = status === 'cleared'
   const progress = Math.min(1, score / target)
+  const lowMoves = movesLeft <= 5
+
+  // ── Juice helpers ──────────────────────────────────────────────────
+  function cellCenter(i: number): { x: number; y: number } | null {
+    const el = gridRef.current
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cw = rect.width / cols, ch = rect.height / rows
+    const r = Math.floor(i / cols), c = i % cols
+    return { x: rect.left + (c + 0.5) * cw, y: rect.top + (r + 0.5) * ch }
+  }
+  function spawnBurst(cells: number[]) {
+    const out: Particle[] = []
+    const sample = cells.length > 8 ? cells.filter((_, k) => k % 2 === 0) : cells
+    for (const i of sample) {
+      const ctr = cellCenter(i)
+      if (!ctr) continue
+      const color = (MATCH_TOKENS[boardRef.current[i]] ?? MATCH_TOKENS[0]).color
+      const n = 3
+      for (let k = 0; k < n; k++) {
+        const ang = (k / n) * Math.PI * 2 + Math.random()
+        const dist = 26 + Math.random() * 30
+        out.push({ id: pid.current++, x: ctr.x, y: ctr.y, dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist - 12, color })
+      }
+    }
+    setParticles(out)
+  }
 
   function resetBoard() {
     rngRef.current = makeRng(seed)
@@ -58,7 +93,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     boardRef.current = nb; setBoard(nb)
     scoreRef.current = 0; setScore(0)
     movesRef.current = initial.moves; setMovesLeft(initial.moves)
-    setSelected(null); setPopping(new Set()); setLost(false); setMessage(null)
+    setSelected(null); setPopping(new Set()); setLost(false); setMessage(null); setParticles([])
   }
 
   async function finishWin(finalScore: number) {
@@ -79,27 +114,34 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     const cur = boardRef.current
     const res = resolveSwap(cur, a, b, cols, rows, types, rngRef.current)
     setSelected(null)
-    if (!res) { setInvalid([a, b]); haptic(8); await wait(230); setInvalid(null); return }
+    if (!res) { setInvalid([a, b]); haptic(10); await wait(230); setInvalid(null); return }
 
     busyRef.current = true
     const newMoves = movesRef.current - 1
     movesRef.current = newMoves; setMovesLeft(newMoves)
 
     boardRef.current = res.swapped; setBoard(res.swapped)
-    await wait(150)
+    await wait(140)
 
     let localScore = scoreRef.current
-    for (const step of res.steps) {
-      setPopping(new Set(step.cleared)); haptic(step.gained > 60 ? 16 : 8)
-      await wait(200)
+    for (let s = 0; s < res.steps.length; s++) {
+      const step = res.steps[s]
+      setPopping(new Set(step.cleared))
+      spawnBurst(step.cleared)
+      const cascade = s + 1
+      if (cascade >= 2) { setCombo({ level: cascade, key: pid.current++ }); haptic([10, 30, 10]) }
+      else haptic(step.cleared.length >= 5 ? 18 : 9)
+      setScoreFloat({ amount: step.gained, key: pid.current++ })
+      await wait(250)
       setPopping(new Set())
       boardRef.current = step.resultBoard; setBoard(step.resultBoard)
       localScore += step.gained; scoreRef.current = localScore; setScore(localScore)
-      await wait(160)
+      setScorePulse(p => p + 1)
+      await wait(150)
     }
-
+    setParticles([])
     busyRef.current = false
-    if (localScore >= target) { haptic([12, 40, 12, 40, 20]); await finishWin(localScore); return }
+    if (localScore >= target) { haptic([12, 40, 12, 40, 30]); await finishWin(localScore); return }
     if (newMoves <= 0) { setLost(true); return }
     if (!hasValidMove(boardRef.current, cols, rows)) {
       const nb = reshuffle(rngRef.current, cols, rows, types)
@@ -107,15 +149,60 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     }
   }
 
-  function onCell(i: number) {
-    if (busyRef.current || lost) return
+  function tapCell(i: number) {
     if (selected === null) { setSelected(i); setMessage(null); return }
     if (selected === i) { setSelected(null); return }
     if (areAdjacent(selected, i, cols)) { void attemptSwap(selected, i) }
     else { setSelected(i) }
   }
 
-  const boardW = `min(96vw, ${cols * 46}px)`
+  function cellFromPoint(clientX: number, clientY: number): number | null {
+    const el = gridRef.current
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const x = clientX - rect.left, y = clientY - rect.top
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null
+    const c = Math.min(cols - 1, Math.max(0, Math.floor((x / rect.width) * cols)))
+    const r = Math.min(rows - 1, Math.max(0, Math.floor((y / rect.height) * rows)))
+    return r * cols + c
+  }
+  function neighborOf(cell: number, dir: 'L' | 'R' | 'U' | 'D'): number | null {
+    const r = Math.floor(cell / cols), c = cell % cols
+    if (dir === 'L') return c > 0 ? cell - 1 : null
+    if (dir === 'R') return c < cols - 1 ? cell + 1 : null
+    if (dir === 'U') return r > 0 ? cell - cols : null
+    return r < rows - 1 ? cell + cols : null
+  }
+
+  function onPointerDown(e: React.PointerEvent) {
+    if (busyRef.current || lost) return
+    const cell = cellFromPoint(e.clientX, e.clientY)
+    if (cell === null) return
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    dragRef.current = { cell, sx: e.clientX, sy: e.clientY, moved: false }
+    setSelected(cell)
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    const d = dragRef.current
+    if (!d || d.moved || busyRef.current) return
+    const dx = e.clientX - d.sx, dy = e.clientY - d.sy
+    const rect = gridRef.current?.getBoundingClientRect()
+    const thresh = rect ? (rect.width / cols) * 0.4 : 16
+    if (Math.hypot(dx, dy) < thresh) return
+    d.moved = true
+    const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U')
+    const target = neighborOf(d.cell, dir)
+    setSelected(null)
+    if (target !== null) void attemptSwap(d.cell, target)
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    const d = dragRef.current
+    dragRef.current = null
+    if (!d) return
+    if (!d.moved) tapCell(d.cell)
+  }
+
+  const boardW = `min(96vw, 460px)`
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
@@ -126,85 +213,126 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
             ← Chart Room
           </Link>
         </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          Treasure Match
-        </p>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: cleared ? GOLD : '#8f8672', whiteSpace: 'nowrap' }}>
-            {cleared ? 'Cleared' : `${movesLeft} moves`}
-          </span>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>Treasure Match</p>
+        <div style={{ flex: 1, minWidth: 0 }} />
+      </div>
+
+      {/* Bold HUD — Moves + Score */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 8 }}>
+        <div style={{ padding: '0.5rem 0.7rem', borderRadius: 12, textAlign: 'center', background: lowMoves ? 'rgba(192,57,43,0.16)' : 'rgba(196,169,106,0.1)', border: `1.5px solid ${lowMoves ? '#c0392b' : 'rgba(196,169,106,0.3)'}` }}>
+          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.56rem', color: lowMoves ? '#f0a0a0' : '#a89878' }}>Moves</p>
+          <motion.p key={`mv-${movesLeft}`} initial={{ scale: 1.3 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+            className="font-cinzel font-700" style={{ fontSize: '2rem', lineHeight: 1, color: lowMoves ? '#f08a8a' : '#f4ecd8' }}>{movesLeft}</motion.p>
+        </div>
+        <div style={{ padding: '0.5rem 0.8rem', borderRadius: 12, position: 'relative', background: 'rgba(196,169,106,0.1)', border: '1.5px solid rgba(196,169,106,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+            <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.56rem', color: '#a89878' }}>Score</span>
+            <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672' }}>/ {target.toLocaleString()}</span>
+          </div>
+          <motion.p key={`sc-${scorePulse}`} animate={{ scale: [1, 1.12, 1] }} transition={{ duration: 0.4, times: [0, 0.35, 1] }}
+            className="font-cinzel font-700" style={{ fontSize: '2rem', lineHeight: 1, color: score >= target ? '#7bf0b0' : GOLD, transformOrigin: 'left center' }}>{score.toLocaleString()}</motion.p>
+          <div style={{ marginTop: 5, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+            <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: progress >= 1 ? 'linear-gradient(90deg,#3fae78,#7bf0b0)' : `linear-gradient(90deg,#c4a96a,${GOLD})`, transition: 'width 0.3s' }} />
+          </div>
+          {/* score float */}
+          <AnimatePresence>
+            {scoreFloat && (
+              <motion.span key={scoreFloat.key} initial={{ opacity: 0, y: 6, scale: 0.8 }} animate={{ opacity: 1, y: -16, scale: 1.1 }} exit={{ opacity: 0, y: -26 }} transition={{ duration: 0.6 }}
+                onAnimationComplete={() => setScoreFloat(f => (f && f.key === scoreFloat.key ? null : f))}
+                className="font-cinzel font-700" style={{ position: 'absolute', right: 12, top: 6, fontSize: '1rem', color: '#7bf0b0', textShadow: '0 1px 4px rgba(0,0,0,0.6)', pointerEvents: 'none' }}>
+                +{scoreFloat.amount}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Points readout */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', padding: '0.4rem 0.7rem', borderRadius: 10, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)' }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>{puzzlePoints} charting pts</span>
-        <span style={{ color: '#6a6258' }}>·</span>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: GOLD }}>Den purse {denCap.toLocaleString()} ⟡/day</span>
-        {nextTier && <span className="font-karla" style={{ fontSize: '0.62rem', color: '#9a9078' }}>({nextTier.points - puzzlePoints} → {nextTier.cap.toLocaleString()} ⟡)</span>}
-      </div>
-
-      {/* Score / target progress */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
-          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#a89878' }}>Haul</span>
-          <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: score >= target ? '#7bbf7b' : '#f4ecd8' }}>{score.toLocaleString()} <span style={{ color: '#8f8672', fontSize: '0.7rem' }}>/ {target.toLocaleString()}</span></span>
-        </div>
-        <div style={{ height: 8, borderRadius: 4, background: 'rgba(0,0,0,0.35)', overflow: 'hidden', border: '1px solid rgba(196,169,106,0.2)' }}>
-          <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 4, background: progress >= 1 ? 'linear-gradient(90deg,#3fae78,#7bf0b0)' : `linear-gradient(90deg,#c4a96a,${GOLD})`, transition: 'width 0.3s' }} />
-        </div>
-      </div>
-
-      <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cfc6b0', lineHeight: 1.45, textAlign: 'center' }}>
-        Swap two neighbors to line up 3+. Reach {target.toLocaleString()} to win +{initial.reward} charting points.
+      <p className="font-karla" style={{ fontSize: '0.68rem', color: '#bcb29a', lineHeight: 1.4, textAlign: 'center' }}>
+        Drag or tap to swap neighbors. Line up 3+ to clear. Reach {target.toLocaleString()} for +{initial.reward} charting points.
       </p>
 
       {/* Board */}
-      <div style={{
-        position: 'relative', width: boardW, aspectRatio: `${cols} / ${rows}`, margin: '0 auto',
-        display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 3,
-        padding: 6, borderRadius: 12,
-        background: 'linear-gradient(180deg, #1a130a 0%, #0e0a05 100%)',
-        border: '1.5px solid rgba(196,169,106,0.3)', boxShadow: '0 6px 18px rgba(0,0,0,0.45)',
-      }}>
+      <div
+        ref={gridRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => { dragRef.current = null }}
+        style={{
+          position: 'relative', width: boardW, aspectRatio: `${cols} / ${rows}`, margin: '0 auto', touchAction: 'none',
+          display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 4,
+          padding: 7, borderRadius: 14,
+          background: 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(120,90,40,0.22) 0%, transparent 60%), linear-gradient(180deg, #1c140a 0%, #0e0a05 100%)',
+          border: '2px solid rgba(196,169,106,0.34)', boxShadow: '0 8px 22px rgba(0,0,0,0.5), inset 0 0 22px rgba(0,0,0,0.4)',
+        }}
+      >
         {board.map((t, i) => {
           const tok = MATCH_TOKENS[t] ?? MATCH_TOKENS[0]
           const isSel = selected === i
           const isPop = popping.has(i)
           const isInvalid = invalid && (invalid[0] === i || invalid[1] === i)
           return (
-            <button
+            <div
               key={i}
-              onClick={() => onCell(i)}
               style={{
-                aspectRatio: '1 / 1', borderRadius: 8, padding: 0,
+                pointerEvents: 'none',
+                aspectRatio: '1 / 1', borderRadius: 9,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'clamp(1rem, 5vw, 1.5rem)', lineHeight: 1,
-                background: isInvalid ? 'rgba(192,57,43,0.5)' : `${tok.color}2e`,
-                border: `1.5px solid ${isSel ? '#fff' : isInvalid ? '#c0392b' : `${tok.color}77`}`,
-                boxShadow: isSel ? `0 0 10px ${tok.color}` : 'none',
-                transform: isPop ? 'scale(0.1)' : isSel ? 'scale(1.06)' : 'scale(1)',
-                opacity: isPop ? 0 : 1,
-                transition: 'transform 0.18s ease, opacity 0.18s ease, background 0.12s, border-color 0.12s',
-                cursor: 'pointer',
+                fontSize: 'clamp(1.3rem, 7vw, 2rem)', lineHeight: 1,
+                background: isInvalid ? 'rgba(192,57,43,0.55)' : `${tok.color}33`,
+                border: `2px solid ${isSel ? '#fff' : isInvalid ? '#c0392b' : `${tok.color}88`}`,
+                boxShadow: isSel ? `0 0 14px ${tok.color}, inset 0 0 10px ${tok.color}55` : `inset 0 1px 3px rgba(255,255,255,0.12)`,
+                transform: isSel ? 'scale(1.08)' : 'scale(1)',
+                transition: 'transform 0.12s, background 0.12s, border-color 0.12s, box-shadow 0.12s',
+                animation: isPop ? 'tmPop 0.26s ease forwards' : undefined,
               }}
             >
-              <span aria-hidden>{tok.emoji}</span>
-            </button>
+              <span aria-hidden style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}>{tok.emoji}</span>
+            </div>
           )
         })}
+
+        {/* Combo callout — centered over the board */}
+        <AnimatePresence>
+          {combo && (
+            <motion.div key={combo.key} initial={{ opacity: 0, scale: 0.4, rotate: -8 }} animate={{ opacity: 1, scale: 1.1, rotate: 0 }} exit={{ opacity: 0, scale: 1.4 }} transition={{ duration: 0.5, ease: 'easeOut' }}
+              onAnimationComplete={() => setTimeout(() => setCombo(c => (c && c.key === combo.key ? null : c)), 350)}
+              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <span className="font-cinzel font-700" style={{ fontSize: 'clamp(1.6rem, 9vw, 2.6rem)', color: '#fff', textShadow: `0 0 16px ${GOLD}, 0 0 30px ${GOLD}, 0 2px 6px rgba(0,0,0,0.8)`, letterSpacing: '0.02em' }}>
+                COMBO ×{combo.level}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <p className="font-karla" style={{ fontSize: '0.64rem', color: message ? '#e0b48a' : '#8f8672', textAlign: 'center', minHeight: '1rem', lineHeight: 1.4 }}>
-        {message ?? (cleared ? 'Cleared this week — fresh board Monday.' : 'A new board is dealt every Monday.')}
+      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
+        {cleared ? 'Cleared this week — fresh board Monday.' : message ?? `${puzzlePoints} charting pts · Den purse ${denCap.toLocaleString()} ⟡/day${nextTier ? ` · ${nextTier.points - puzzlePoints} to ${nextTier.cap.toLocaleString()}` : ''}`}
       </p>
+
+      {/* Particle bursts (portal, viewport coords) */}
+      {mounted && createPortal(
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8500, pointerEvents: 'none' }}>
+          <AnimatePresence>
+            {particles.map(p => (
+              <motion.div key={p.id}
+                initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
+                animate={{ x: p.x + p.dx, y: p.y + p.dy, opacity: 0, scale: 0.2 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.55, ease: 'easeOut' }}
+                style={{ position: 'absolute', left: -5, top: -5, width: 10, height: 10, borderRadius: '50%', background: p.color, boxShadow: `0 0 8px ${p.color}` }}
+              />
+            ))}
+          </AnimatePresence>
+        </div>,
+        document.body,
+      )}
 
       {/* Out-of-moves overlay */}
       {mounted && createPortal(
         <AnimatePresence>
           {lost && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
               <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }}
                 style={{ maxWidth: 320, width: '100%', textAlign: 'center', padding: '1.5rem 1.3rem', borderRadius: 18, background: 'linear-gradient(180deg, rgba(40,30,14,0.96) 0%, rgba(20,14,7,0.98) 100%)', border: '1px solid rgba(196,169,106,0.4)' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#e0b48a' }}>Out of moves</p>
@@ -221,8 +349,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       {mounted && createPortal(
         <AnimatePresence>
           {win && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setWin(null)}
-              style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setWin(null)} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
               <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
                 style={{ maxWidth: 340, width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 28%, rgba(196,169,106,0.14) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.96) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: GOLD }}>Haul secured.</p>
