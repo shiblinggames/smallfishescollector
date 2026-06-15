@@ -30,16 +30,22 @@ export async function loadDeployedParty(
   const slotCol = track === 'voyage' ? 'voyage_slot' : 'raid_slot'
   // Live-roster only — fallen crew (died_at IS NOT NULL) are kept on
   // the row for the Crew Hall Graveyard tab but never deployed.
-  const { data } = await admin
-    .from('user_crew')
-    .select(`id, ${slotCol}, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)`)
-    .eq('user_id', userId)
-    .is('died_at', null)
-    .not(slotCol, 'is', null)
-    .order(slotCol)
+  // Crew currently "at sea" on a Trawl are reserved (hard-locked for the
+  // hour) — filter them out so they can't also raid/voyage. See lib/trawls.
+  const [{ data }, { data: atSeaRows }] = await Promise.all([
+    admin
+      .from('user_crew')
+      .select(`id, ${slotCol}, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)`)
+      .eq('user_id', userId)
+      .is('died_at', null)
+      .not(slotCol, 'is', null)
+      .order(slotCol),
+    admin.from('trawls').select('crew_id').eq('user_id', userId),
+  ])
+  const atSea = new Set(((atSeaRows ?? []) as { crew_id: number }[]).map(r => r.crew_id))
   /* eslint-disable @typescript-eslint/no-explicit-any */
   return ((data ?? []) as any[])
-    .filter(r => r[slotCol] < crewSlots)
+    .filter(r => r[slotCol] < crewSlots && !atSea.has(r.id))
     .map(r => ({
       id: r.id,
       slot: r[slotCol] as number,
