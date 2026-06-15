@@ -66,7 +66,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     // Combined with the d20 → d30 speed roll, the build still earns
     // first strike a clear majority of the time but late-game
     // determinism is meaningfully flatter than before.
-    description: 'Adds a fifth of your Navigation to your turn-order roll, so you strike first more often.',
+    description: 'Adds a fifth of your Savvy to your turn-order roll, so you strike first more often.',
     image: '/navigatorscompass.png',
     emoji: '🧭',
     rarity: 'epic',

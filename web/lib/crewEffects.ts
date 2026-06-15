@@ -61,9 +61,9 @@ export const CREW_EFFECTS: Record<string, CrewEffect> = {
 
   // ── Passive · percent — Epic+ ────────────────────────────────────────────
   sharpshooter: { id: 'sharpshooter', name: 'Sharpshooter', kind: 'buff', scope: 'always', minRarity: 3, pct: { power: 25 },   desc: 'A natural shot; their power runs a quarter hotter.' },
-  quick_fins:   { id: 'quick_fins',   name: 'Quick Fins',   kind: 'buff', scope: 'always', minRarity: 3, pct: { dodge: 25 },   desc: 'Slips every net; agility up by a quarter.' },
+  quick_fins:   { id: 'quick_fins',   name: 'Quick Fins',   kind: 'buff', scope: 'always', minRarity: 3, pct: { dodge: 25 },   desc: 'Slips every net; Savvy up by a quarter.' },
   charmed:      { id: 'charmed',      name: 'Charmed',      kind: 'buff', scope: 'always', minRarity: 3, pct: { fortune: 25 }, desc: 'Fortune clings to them; luck up by a quarter.' },
-  brittle:      { id: 'brittle',      name: 'Brittle',      kind: 'flaw', scope: 'always', minRarity: 3, pct: { dodge: -20 },  desc: 'Soft in a scrap; agility cut by a fifth.' },
+  brittle:      { id: 'brittle',      name: 'Brittle',      kind: 'flaw', scope: 'always', minRarity: 3, pct: { dodge: -20 },  desc: 'Soft in a scrap; Savvy cut by a fifth.' },
 
   // ── Raid — Epic+ (Phase 2) ───────────────────────────────────────────────
   berserker:    { id: 'berserker',    name: 'Berserker',    kind: 'buff', scope: 'raid', minRarity: 3, raid: { damagePct: 20 },       desc: 'Fights like a cornered shark: 20% more raid damage.' },
@@ -87,7 +87,7 @@ export const CREW_EFFECTS: Record<string, CrewEffect> = {
 
   // ── Aura — TEAM-WIDE, Epic+ (Phase 2) ────────────────────────────────────
   quartermaster: { id: 'quartermaster', name: 'Quartermaster', kind: 'buff', scope: 'aura', minRarity: 3, flat: { power: 1 },         desc: 'Drills the deck daily: +1 Power to every hand aboard.' },
-  helmsman:      { id: 'helmsman',      name: 'Helmsman',      kind: 'buff', scope: 'aura', minRarity: 3, flat: { dodge: 1 },         desc: 'Steers true through any swell: +1 Agility to every hand aboard.' },
+  helmsman:      { id: 'helmsman',      name: 'Helmsman',      kind: 'buff', scope: 'aura', minRarity: 3, flat: { dodge: 1 },         desc: 'Steers true through any swell: +1 Savvy to every hand aboard.' },
   mascot:        { id: 'mascot',        name: 'Mascot',        kind: 'buff', scope: 'aura', minRarity: 3, flat: { fortune: 1 },       desc: 'Lifts the whole deck: +1 Fortune to every hand aboard.' },
   war_drummer:   { id: 'war_drummer',   name: 'War Drummer',   kind: 'buff', scope: 'aura', minRarity: 3, raid: { damagePct: 10 },    desc: 'Beats the charge: the whole crew deals 10% more raid damage.' },
   shanty_singer: { id: 'shanty_singer', name: 'Shanty Singer', kind: 'buff', scope: 'aura', minRarity: 3, voyage: { scorePct: 5 },    desc: 'Keeps spirits high: +5% Voyage Score for the whole crew.' },
@@ -111,7 +111,7 @@ export const SCOPE_META: Record<CrewEffectScope, { label: string; color: string 
   aura:        { label: 'Crew Aura',   color: '#7fd0a0' },
 }
 
-const LBL: Record<StatKey, string> = { power: 'PWR', dodge: 'AGI', fortune: 'FTN' }
+const LBL: Record<StatKey, string> = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
 
 export function getCrewEffect(id: string): CrewEffect | undefined {
   return CREW_EFFECTS[id]

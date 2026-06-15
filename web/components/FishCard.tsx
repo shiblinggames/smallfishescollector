@@ -129,7 +129,7 @@ export default function FishCard({ name, filename, borderStyle: _borderStyle, ar
           {stats && (
             <div style={{ display: 'flex', width: '100%' }}>
               <StatCell label="PWR" value={stats.power} />
-              <StatCell label="DGE" value={stats.dodge} />
+              <StatCell label="SAV" value={stats.dodge} />
               <StatCell label="FTN" value={stats.fortune} />
             </div>
           )}

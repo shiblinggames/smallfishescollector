@@ -42,7 +42,7 @@ type RosterCrew = {
 
 const STAT_COLS = [
   { key: 'power'   as const, short: 'PWR', color: '#f87171' },
-  { key: 'dodge'   as const, short: 'AGI', color: '#60a5fa' },
+  { key: 'dodge'   as const, short: 'SAV', color: '#60a5fa' },
   { key: 'fortune' as const, short: 'FTN', color: '#f0c040' },
 ]
 
@@ -2207,7 +2207,7 @@ function NavLevelInfoPanel({
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6a6764', lineHeight: 1.55, marginTop: '0.85rem' }}>
-        Navigation XP comes from raids, voyages, and other expedition rewards. Every level adds +1 HP to your ship in raids, and every 5 levels adds +1 Power, +1 Navigation, and +1 Fortune on top of your crew totals.
+        Navigation XP comes from raids, voyages, and other expedition rewards. Every level adds +1 HP to your ship in raids, and every 5 levels adds +1 Power, +1 Savvy, and +1 Fortune on top of your crew totals.
       </p>
     </>
   )
@@ -2222,7 +2222,7 @@ function NavBonusGrid({ currentLevel, currentBonus, nextLevel, nextBonus }: {
   const rows: { label: string; cur: number; next: number | undefined; color: string }[] = [
     { label: 'Ship HP',    cur: currentBonus.hp,         next: nextBonus?.hp,         color: '#86efac' },
     { label: 'Power',      cur: currentBonus.power,      next: nextBonus?.power,      color: '#f87171' },
-    { label: 'Navigation', cur: currentBonus.navigation, next: nextBonus?.navigation, color: '#60a5fa' },
+    { label: 'Savvy',      cur: currentBonus.navigation, next: nextBonus?.navigation, color: '#60a5fa' },
     { label: 'Fortune',    cur: currentBonus.fortune,    next: nextBonus?.fortune,    color: '#f0c040' },
   ]
   const hasNext = nextBonus !== undefined && nextLevel !== undefined
@@ -2312,12 +2312,12 @@ function VoyageScoreBreakdown({ power, dodge, fortune, total, onClose }: {
       fine: <>{power} raw power, caps at <span style={{ color: '#cbb4ad', fontWeight: 600 }}>55</span> (max 80%).</>,
     },
     {
-      label: 'Agility',
+      label: 'Savvy',
       sub: Math.round(dodgeRate * 100),
       bg: 'rgba(96,165,250,0.07)', border: 'rgba(96,165,250,0.24)', bar: '#60a5fa',
       labelColor: '#60a5fa', subLabelColor: '#4a6e9a', textColor: '#aebfd4',
       copy: <>Avoids trouble outright. Drives <span style={{ color: '#f0ede8', fontWeight: 600 }}>danger</span> events; a clean dodge skips the loss entirely.</>,
-      fine: <>{dodge} raw agility, caps at <span style={{ color: '#aebfd4', fontWeight: 600 }}>28</span>.</>,
+      fine: <>{dodge} raw savvy, caps at <span style={{ color: '#aebfd4', fontWeight: 600 }}>28</span>.</>,
     },
     {
       label: 'Fortune',
@@ -2453,7 +2453,7 @@ function RaidScoreBreakdown({
         <p className="font-karla" style={{ fontSize: '0.84rem', color: '#aebfd4', lineHeight: 1.5 }}>
           How much of a beating you can take. Grows with your ship&apos;s{' '}
           <span style={{ color: '#f0ede8', fontWeight: 600 }}>HP</span> and{' '}
-          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Agility</span> (dodge incoming hits),
+          <span style={{ color: '#f0ede8', fontWeight: 600 }}>Savvy</span> (dodge incoming hits),
           with a little sustain from <span style={{ color: '#f0ede8', fontWeight: 600 }}>Fortune</span> (repair kits).
         </p>
         <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a6a60', marginTop: 6 }}>
@@ -2470,7 +2470,7 @@ function RaidScoreBreakdown({
         <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.74rem', color: '#c8704a', marginBottom: '0.6rem' }}>Raise it by</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
           {[
-            'Recruiting stronger crewmates — more Power, Fortune & Agility',
+            'Recruiting stronger crewmates — more Power, Fortune & Savvy',
             'Leveling up your Nav rank — it boosts every stat',
             'Upgrading your ship — more HP to survive longer',
           ].map(t => (

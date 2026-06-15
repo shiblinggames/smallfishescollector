@@ -111,7 +111,7 @@ export default function NavLevelUpOverlay({ info, onDismiss }: Props) {
               </p>
               {deltas.hp         > 0 && <StatDeltaLine label="Max HP"     delta={deltas.hp} />}
               {deltas.power      > 0 && <StatDeltaLine label="Power"      delta={deltas.power} />}
-              {deltas.navigation > 0 && <StatDeltaLine label="Navigation" delta={deltas.navigation} />}
+              {deltas.navigation > 0 && <StatDeltaLine label="Savvy"      delta={deltas.navigation} />}
               {deltas.fortune    > 0 && <StatDeltaLine label="Fortune"    delta={deltas.fortune} />}
             </motion.div>
 

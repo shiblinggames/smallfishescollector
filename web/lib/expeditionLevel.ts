@@ -47,7 +47,7 @@ export function getXPProgress(xp: number): {
 // Veteran-captain stat boost applied on top of ship + crew totals. Per level:
 //   +1 max HP
 // Every 5 levels:
-//   +1 Power, +1 Navigation (Dodge), +1 Fortune
+//   +1 Power, +1 Savvy, +1 Fortune  (the `navigation` field below = the Savvy stat; key kept to avoid a migration)
 // Tuning sanity: at Nav 30 a player gains +30 HP and +6 to each of the other
 // three stats — meaningful but doesn't eclipse crew/gear investment.
 export interface NavLevelBonuses {

@@ -24,7 +24,7 @@ const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
 
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
-const STAT_LABEL = { power: 'PWR', dodge: 'AGI', fortune: 'FTN' }
+const STAT_LABEL = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
 
 // Section accents so the two boards read as visually distinct regions.
 const SECTION_ROSTER = '#6fa8c9'  // cool steel "your manifest"
@@ -616,7 +616,7 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
         {hasLevel && (lifetimeBonus.power + lifetimeBonus.dodge + lifetimeBonus.fortune > 0) && (
           <p className="font-karla italic" style={{ fontSize: '0.62rem', color: 'rgba(214,196,163,0.55)', lineHeight: 1.3 }}>
             Earned <span style={{ color: STAT_COLOR.power }}>+{lifetimeBonus.power} PWR</span>
-            {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{lifetimeBonus.dodge} AGI</span>
+            {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{lifetimeBonus.dodge} SAV</span>
             {' · '}<span style={{ color: STAT_COLOR.fortune }}>+{lifetimeBonus.fortune} FTN</span>
           </p>
         )}
@@ -1922,7 +1922,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     }}>
                       <span style={{ color: 'rgba(255,255,255,0.45)', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.56rem', marginRight: 8 }}>Trained</span>
                       <span style={{ color: STAT_COLOR.power }}>+{bonus.power} PWR</span>
-                      {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{bonus.dodge} AGI</span>
+                      {' · '}<span style={{ color: STAT_COLOR.dodge }}>+{bonus.dodge} SAV</span>
                       {' · '}<span style={{ color: STAT_COLOR.fortune }}>+{bonus.fortune} FTN</span>
                     </p>
                   )
@@ -1967,7 +1967,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     stat-only trait (a {power,dodge,fortune} delta with
                     each value in [-3,+3]). Show the generated label as
                     the row title and a compact stat line ('+2 PWR · -1
-                    AGI') as the summary; buff/flaw/neutral color tracks
+                    SAV') as the summary; buff/flaw/neutral color tracks
                     the net direction. No description to expand any more
                     — the line IS the description. */}
                 {dTraitLabel && (

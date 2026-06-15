@@ -12,7 +12,7 @@ const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
 
 const STAT = [
   { k: 'power' as const, l: 'PWR', c: '#f87171' },
-  { k: 'dodge' as const, l: 'AGI', c: '#60a5fa' },
+  { k: 'dodge' as const, l: 'SAV', c: '#60a5fa' },
   { k: 'fortune' as const, l: 'FTN', c: '#f0c040' },
 ]
 
