@@ -508,27 +508,24 @@ function FeltRule({ text }: { text: string | readonly string[] }) {
   )
 }
 
-/** A stack of poker chips, height scaling with the stake. Decorative
- *  (denomination-agnostic) — more chips = bigger bet, which reads at a
- *  glance. Gold chips with the classic dashed edge. */
+/** A compact, horizontal cluster of poker chips — more chips = bigger
+ *  bet, readable at a glance. Kept small so the pot stays the same height
+ *  as the old pill (no shifting the table down on short screens). */
 function ChipStack({ value }: { value: number }) {
-  // 1 chip minimum once there's a bet, +1 per ~half-K, capped so the
-  // stack never overflows the betting circle.
-  const n = value <= 0 ? 0 : Math.min(6, 1 + Math.floor(value / 500))
+  const n = value <= 0 ? 0 : Math.min(4, 1 + Math.floor(value / 500))
   if (n === 0) return null
-  const size = 30
-  const step = 5
+  const size = 20
   return (
-    <div style={{ position: 'relative', width: size, height: size + (n - 1) * step }}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
       {Array.from({ length: n }).map((_, i) => (
         <div
           key={i}
           style={{
-            position: 'absolute', left: 0, bottom: i * step, width: size, height: size,
-            borderRadius: '50%',
+            width: size, height: size, borderRadius: '50%',
+            marginLeft: i === 0 ? 0 : -8, zIndex: i,
             background: 'radial-gradient(circle at 50% 38%, #f6d585 0%, #dca842 52%, #a87d1e 100%)',
-            border: '2px dashed rgba(255,255,255,0.55)',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.45), inset 0 1px 2px rgba(255,255,255,0.4)',
+            border: '1.5px dashed rgba(255,255,255,0.55)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.45), inset 0 1px 2px rgba(255,255,255,0.4)',
           }}
         />
       ))}
@@ -536,43 +533,38 @@ function ChipStack({ value }: { value: number }) {
   )
 }
 
-/** Visual pot indicator — a felt betting spot with a chip stack. Single
- *  source of truth for the player's stake; used between the dealer +
- *  player rows during play AND on the wager / Deal-Next-Hand screens as
- *  the flight target for chip taps. The forwarded ref lets WagerCircle
- *  compute the screen-space position to fly chips into. The number comes
- *  from useAnimatedNumber upstream so doubles, splits, and insurance
- *  tick up smoothly during play. */
+/** Visual pot indicator — a compact pill with a small chip cluster.
+ *  Single source of truth for the player's stake; used between the
+ *  dealer + player rows during play AND on the wager / Deal-Next-Hand
+ *  screens as the flight target for chip taps. The forwarded ref lets
+ *  WagerCircle compute the screen-space position to fly chips into. The
+ *  number comes from useAnimatedNumber upstream so doubles, splits, and
+ *  insurance tick up smoothly during play. Height matches the original
+ *  pill so it never shifts the table layout. */
 const PotPill = forwardRef<HTMLDivElement, { value: number; label?: string }>(function PotPill(
   { value, label = 'Pot' }, ref
 ) {
   const empty = value <= 0
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 78 }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 44 }}>
       <motion.div
         ref={ref}
-        animate={{ scale: empty ? 0.92 : 1, opacity: empty ? 0.5 : 1 }}
+        animate={{ scale: empty ? 0.86 : 1, opacity: empty ? 0.32 : 1 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 9,
+          padding: '0.36rem 0.95rem 0.36rem 0.6rem',
+          borderRadius: 999,
+          background: 'linear-gradient(180deg, rgba(60,42,16,0.62) 0%, rgba(28,18,4,0.62) 100%)',
+          border: `1px solid ${empty ? 'rgba(196,169,106,0.22)' : 'rgba(196,169,106,0.6)'}`,
+          boxShadow: empty ? 'none' : '0 0 22px rgba(240,192,64,0.20), 0 4px 14px rgba(0,0,0,0.45)',
+        }}
       >
-        {/* Betting circle — the felt spot. Always present (faint when
-            empty) so it reads as "place your bet here". */}
-        <div style={{
-          position: 'relative', width: 60, height: 60, borderRadius: '50%',
-          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          paddingBottom: empty ? 0 : 4,
-          border: `2px dashed ${empty ? 'rgba(196,169,106,0.3)' : 'rgba(240,214,149,0.75)'}`,
-          boxShadow: empty ? 'none' : 'inset 0 0 18px rgba(240,192,64,0.22), 0 0 20px rgba(240,192,64,0.18)',
-          background: empty ? 'transparent' : 'radial-gradient(circle at 50% 60%, rgba(240,192,64,0.12) 0%, transparent 70%)',
-        }}>
-          <ChipStack value={value} />
-        </div>
-        {!empty && (
-          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
-            <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#a68a4a' }}>{label}</span>
-            <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1 }}>{value.toLocaleString()} ⟡</span>
-          </div>
-        )}
+        {!empty && <ChipStack value={value} />}
+        <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>{label}</span>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1 }}>
+          {value.toLocaleString()} ⟡
+        </p>
       </motion.div>
     </div>
   )
