@@ -44,6 +44,8 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   // Juice
   const [particles, setParticles] = useState<Particle[]>([])
   const [combo, setCombo] = useState<{ level: number; key: number } | null>(null)
+  const [dropping, setDropping] = useState<Set<number>>(new Set())
+  const [flash, setFlash] = useState<{ key: number; intensity: number } | null>(null)
   const [scoreFloat, setScoreFloat] = useState<{ amount: number; key: number } | null>(null)
   const [scorePulse, setScorePulse] = useState(0)
   const pid = useRef(0)
@@ -94,7 +96,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     boardRef.current = nb; setBoard(nb)
     scoreRef.current = 0; setScore(0)
     movesRef.current = initial.moves; setMovesLeft(initial.moves)
-    setSelected(null); setPopping(new Set()); setCommitted(null); setLost(false); setMessage(null); setParticles([])
+    setSelected(null); setPopping(new Set()); setCommitted(null); setDropping(new Set()); setCombo(null); setFlash(null); setLost(false); setMessage(null); setParticles([])
   }
 
   async function finishWin(finalScore: number) {
@@ -133,8 +135,11 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     for (let s = 0; s < res.steps.length; s++) {
       const step = res.steps[s]
       const cascade = s + 1
+      // 1) charge + pop the matched tiles (bright flash, particle burst,
+      //    a board-wide light pulse that brightens with the combo).
       setPopping(new Set(step.cleared))
       spawnBurst(step.cleared)
+      setFlash({ key: pid.current++, intensity: Math.min(1, 0.4 + (cascade - 1) * 0.25 + (step.cleared.length >= 5 ? 0.2 : 0)) })
       if (cascade >= 2) { setCombo({ level: cascade, key: pid.current++ }); haptic([0, 18, 50, 18 + cascade * 6]) }
       else haptic(step.cleared.length >= 5 ? 22 : 12)
       setScoreFloat({ amount: step.gained, key: pid.current++ })
@@ -142,14 +147,20 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       // builds weight instead of machine-gunning by. Big clears linger too.
       const big = step.cleared.length >= 5 ? 70 : 0
       await wait(300 + (cascade - 1) * 110 + big)
+      // 2) swap in the settled board and let the changed tiles DROP in.
+      const before = boardRef.current
       setPopping(new Set())
+      const fell = new Set<number>()
+      for (let i = 0; i < step.resultBoard.length; i++) if (before[i] !== step.resultBoard[i]) fell.add(i)
       boardRef.current = step.resultBoard; setBoard(step.resultBoard)
+      setDropping(fell)
       localScore += step.gained; scoreRef.current = localScore; setScore(localScore)
       setScorePulse(p => p + 1)
-      // settle beat before the next link in the chain
-      await wait(170 + (cascade - 1) * 70)
+      // settle beat before the next link in the chain (lets the drop land)
+      await wait(190 + (cascade - 1) * 70)
+      setDropping(new Set())
     }
-    setParticles([])
+    setCombo(null); setFlash(null); setParticles([])
     busyRef.current = false
     if (localScore >= target) { haptic([12, 40, 12, 40, 30]); await finishWin(localScore); return }
     if (newMoves <= 0) { setLost(true); return }
@@ -280,6 +291,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           const tok = MATCH_TOKENS[t] ?? MATCH_TOKENS[0]
           const isSel = selected === i
           const isPop = popping.has(i)
+          const isDrop = dropping.has(i)
           const isCommit = committed !== null && (committed[0] === i || committed[1] === i)
           const isInvalid = invalid && (invalid[0] === i || invalid[1] === i)
           return (
@@ -298,7 +310,8 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
                 zIndex: isCommit ? 2 : undefined,
                 transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1), background 0.12s, border-color 0.12s, box-shadow 0.12s',
-                animation: isPop ? 'tmPop 0.26s ease forwards' : undefined,
+                animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : undefined,
+                color: tok.color,
               }}
             >
               <span aria-hidden style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}>{tok.emoji}</span>
@@ -306,27 +319,33 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           )
         })}
 
-        {/* Combo callout — centered over the board */}
-        <AnimatePresence>
-          {combo && (
-            <motion.div key={combo.key}
-              initial={{ opacity: 0, scale: 0.3, rotate: -10 }}
-              animate={{ opacity: [0, 1, 1, 1], scale: [0.3, 1.25, 1.05, 1.12], rotate: [-10, 2, 0, 0] }}
-              exit={{ opacity: 0, scale: 1.5, y: -14 }}
-              transition={{ duration: 0.62, times: [0, 0.32, 0.55, 1], ease: 'easeOut' }}
-              onAnimationComplete={() => setTimeout(() => setCombo(c => (c && c.key === combo.key ? null : c)), 480)}
-              style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <span className="font-cinzel font-700" style={{ fontSize: `clamp(1.7rem, ${9 + combo.level}vw, 3rem)`, color: '#fff', textShadow: `0 0 18px ${GOLD}, 0 0 34px ${GOLD}, 0 2px 6px rgba(0,0,0,0.85)`, letterSpacing: '0.03em', lineHeight: 1 }}>
-                COMBO ×{combo.level}
+        {/* Board-wide light pulse on every clear — brightens with the combo.
+            Keyed so it remounts (and the CSS animation restarts) each clear. */}
+        {flash && (
+          <div key={flash.key} aria-hidden style={{
+            position: 'absolute', inset: 0, borderRadius: 14, pointerEvents: 'none', zIndex: 1,
+            background: `radial-gradient(ellipse at center, rgba(255,232,150,${0.55 * flash.intensity}) 0%, rgba(240,192,64,${0.3 * flash.intensity}) 42%, transparent 72%)`,
+            mixBlendMode: 'screen', animation: 'tmBoardFlash 0.5s ease-out forwards',
+          }} />
+        )}
+
+        {/* Compact combo badge — a chip in the corner, not a screen-filling
+            word. CSS-animated + key-remounted so it never double-fires. */}
+        {combo && (
+          <div aria-hidden style={{ position: 'absolute', top: 7, left: '50%', transform: 'translateX(-50%)', zIndex: 3, pointerEvents: 'none' }}>
+            <div key={combo.key} style={{ animation: 'tmComboBadge 0.46s cubic-bezier(.34,1.56,.64,1) forwards', transformOrigin: 'center' }}>
+              <span className="font-cinzel font-700" style={{
+                display: 'inline-block', padding: '0.18rem 0.6rem', borderRadius: 999, whiteSpace: 'nowrap',
+                fontSize: 'clamp(0.8rem, 4vw, 1.15rem)', color: '#1c140a',
+                background: `linear-gradient(180deg, #ffe79a, ${GOLD})`,
+                border: '1.5px solid #fff6d8', boxShadow: `0 0 16px ${GOLD}, 0 2px 6px rgba(0,0,0,0.5)`,
+                letterSpacing: '0.04em',
+              }}>
+                ×{combo.level}{combo.level >= 5 ? ' PLUNDER!' : combo.level >= 3 ? ' CHAIN' : ''}
               </span>
-              {combo.level >= 3 && (
-                <span className="font-karla font-700 uppercase" style={{ marginTop: 4, fontSize: 'clamp(0.6rem, 3vw, 0.85rem)', letterSpacing: '0.22em', color: GOLD, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                  {combo.level >= 5 ? 'Plundered!' : 'Chain!'}
-                </span>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        )}
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>

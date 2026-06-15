@@ -1666,15 +1666,34 @@ html, body {
   padding-top: 2px;
 }
 
-/* Treasure Match (Chart Room Match-3) — token clear "pop": a quick
-   scale-up then burst out, so a match reads as a satisfying squash. */
+/* Treasure Match (Chart Room Match-3) — token clear "pop": charge up bright,
+   then burst out with a white flash so a match reads as a satisfying pop. */
 @keyframes tmPop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.34); filter: brightness(1.6); }
-  100% { transform: scale(0); opacity: 0; }
+  0%   { transform: scale(1); filter: brightness(1); }
+  30%  { transform: scale(1.4); filter: brightness(2.2) saturate(1.4); }
+  55%  { transform: scale(1.5); filter: brightness(3); box-shadow: 0 0 22px #fff, 0 0 36px currentColor; }
+  100% { transform: scale(0.15); filter: brightness(2.6); opacity: 0; }
 }
-/* New / dropped-in tokens fall the last bit into place. */
+/* New / dropped-in tokens fall in with a little overshoot bounce. */
 @keyframes tmDrop {
-  0%   { transform: translateY(-26%); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+  0%   { transform: translateY(-58%); opacity: 0; }
+  60%  { transform: translateY(8%); opacity: 1; }
+  80%  { transform: translateY(-3%); }
+  100% { transform: translateY(0); }
+}
+/* Board-wide light pulse on a clear — brightness scales with combo via
+   the inline --tm-flash opacity the component sets. */
+@keyframes tmBoardFlash {
+  0%   { opacity: 0; }
+  18%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Compact combo badge: snap in with an overshoot, settle, hold. CSS-driven
+   (not framer keyframe arrays) so mid-cascade re-renders never restart it. */
+@keyframes tmComboBadge {
+  0%   { transform: scale(0.2) rotate(-12deg); opacity: 0; }
+  45%  { transform: scale(1.3) rotate(4deg); opacity: 1; }
+  65%  { transform: scale(0.96) rotate(0deg); }
+  80%  { transform: scale(1.06); }
+  100% { transform: scale(1); opacity: 1; }
 }
