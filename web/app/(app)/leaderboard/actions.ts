@@ -118,6 +118,23 @@ async function fetchRaidProgress(admin: Admin, userId: string) {
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
+// Charting Points: cumulative puzzle points (Chart Room) from
+// profiles.puzzle_points. Mirrors fetchChartingPointsBoard in
+// /leaderboard/page.tsx — highest total wins, ties broken by username ASC.
+async function fetchChartingPoints(admin: Admin, userId: string) {
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, puzzle_points')
+    .eq('is_admin', false)
+    .gt('puzzle_points', 0)
+  const rows: LeaderboardEntry[] = ((profiles ?? []) as Array<{ id: string; username: string | null; puzzle_points: number | null }>)
+    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.puzzle_points ?? 0 }))
+  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
+
 export interface LeaderboardBoardsResult {
   currentUserId: string
   boards: Partial<Record<BoardKey, LeaderboardEntry[]>>
@@ -142,6 +159,7 @@ export async function getLeaderboardBoards(
     let res: { top: LeaderboardEntry[]; myScore: number | null; myRank: number | null }
     if (key === 'perfectStreak')      res = await fetchPerfectStreak(admin, user.id)
     else if (key === 'raidProgress')  res = await fetchRaidProgress(admin, user.id)
+    else if (key === 'chartingPoints') res = await fetchChartingPoints(admin, user.id)
     else {
       const view = VIEW_BY_KEY[key]
       if (!view) return

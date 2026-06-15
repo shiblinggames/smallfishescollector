@@ -98,6 +98,25 @@ async function fetchRaidProgressBoard(admin: ReturnType<typeof createAdminClient
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
+// Charting Points: cumulative puzzle points banked across the Chart Room
+// (Hold + Rigging + Treasure Match), stored in profiles.puzzle_points.
+// Highest total wins; only players who've banked at least one point show.
+// Ties broken by username ASC for a stable order (no per-point timestamp).
+async function fetchChartingPointsBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, puzzle_points')
+    .eq('is_admin', false)
+    .gt('puzzle_points', 0)
+  type Row = LeaderboardEntry
+  const rows: Row[] = ((profiles ?? []) as Array<{ id: string; username: string | null; puzzle_points: number | null }>)
+    .map(p => ({ user_id: p.id, username: p.username ?? '', score: p.puzzle_points ?? 0 }))
+  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
+
 async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from('leaderboard_perfect_streak')
@@ -122,11 +141,12 @@ export default async function LeaderboardPage() {
 
   const admin = createAdminClient()
 
-  const [profile, fishingData, perfectStreakData, tideRunData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData] = await Promise.all([
+  const [profile, fishingData, perfectStreakData, tideRunData, chartingPointsData, fishSlotsData, blackjackData, rouletteData, expeditionData, raidProgressData] = await Promise.all([
     admin.from('profiles').select('packs_available, doubloons, gems').eq('id', user.id).single(),
     fetchBoard(admin, 'leaderboard_fishing', user.id),
     fetchPerfectStreakBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_tide_run', user.id),
+    fetchChartingPointsBoard(admin, user.id),
     fetchBoard(admin, 'leaderboard_fish_slots', user.id),
     fetchBoard(admin, 'leaderboard_blackjack', user.id),
     fetchBoard(admin, 'leaderboard_roulette', user.id),
@@ -142,6 +162,7 @@ export default async function LeaderboardPage() {
     ...fishingData.top.map(e => e.user_id),
     ...perfectStreakData.top.map(e => e.user_id),
     ...tideRunData.top.map(e => e.user_id),
+    ...chartingPointsData.top.map(e => e.user_id),
     ...fishSlotsData.top.map(e => e.user_id),
     ...blackjackData.top.map(e => e.user_id),
     ...rouletteData.top.map(e => e.user_id),
@@ -183,6 +204,7 @@ export default async function LeaderboardPage() {
             fishing={fishingData.top}
             perfectStreak={perfectStreakData.top}
             tideRun={tideRunData.top}
+            chartingPoints={chartingPointsData.top}
             fishSlots={fishSlotsData.top}
             blackjack={blackjackData.top}
             roulette={rouletteData.top}
@@ -192,6 +214,7 @@ export default async function LeaderboardPage() {
               fishing: fishingData.myScore,
               perfectStreak: perfectStreakData.myScore,
               tideRun: tideRunData.myScore,
+              chartingPoints: chartingPointsData.myScore,
               fishSlots: fishSlotsData.myScore,
               blackjack: blackjackData.myScore,
               roulette: rouletteData.myScore,
@@ -202,6 +225,7 @@ export default async function LeaderboardPage() {
               fishing: fishingData.myRank,
               perfectStreak: perfectStreakData.myRank,
               tideRun: tideRunData.myRank,
+              chartingPoints: chartingPointsData.myRank,
               fishSlots: fishSlotsData.myRank,
               blackjack: blackjackData.myRank,
               roulette: rouletteData.myRank,
