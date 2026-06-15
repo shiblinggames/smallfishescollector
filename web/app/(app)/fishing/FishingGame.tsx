@@ -4939,6 +4939,9 @@ export default function FishingGame({
         setXpPopup({ value: xpGained, id: Date.now(), prestige: (prestigeLevels[fish.habitat] ?? 0) > 0 })
         if (newLevel > oldLevel) {
           setLevelUpNotif({ from: oldLevel, to: newLevel })
+          // Nudge the Trawls indicator to re-check — a fishing level-up can
+          // unlock a new trawl slot (it watches for the slot count to rise).
+          window.dispatchEvent(new CustomEvent('fishing-leveled'))
           checkLeaderboardPosition('fishingLevel').then(r => {
             const cur = r?.position ?? null
             if (cur === 1 && podiumPositionsRef.current.fishingLevel !== 1) setPodiumNotif({ category: 'Fishing Level', position: 1 })

@@ -103,6 +103,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const [coins, setCoins] = useState<{ id: number }[]>([])
   const [flashZone, setFlashZone] = useState<TrawlZoneKey | null>(null)
   const [sendingId, setSendingId] = useState<number | null>(null)
+  const [slotUnlock, setSlotUnlock] = useState<number | null>(null)
   const [mounted, setMounted] = useState(false)
   const pid = useRef(0)
 
@@ -124,6 +125,31 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
   }, [activeTrawls.length])
+
+  // A fishing OR nav level-up can unlock a new trawl slot. Re-check on a
+  // fishing level-up (event) — nav unlocks are caught on next refresh/mount.
+  useEffect(() => {
+    const onLeveled = () => { void refresh() }
+    window.addEventListener('fishing-leveled', onLeveled)
+    return () => window.removeEventListener('fishing-leveled', onLeveled)
+  }, [refresh])
+
+  // Detect a NEWLY unlocked slot vs the last count we saw (localStorage), and
+  // celebrate it. First-ever load records silently so existing slots don't pop.
+  useEffect(() => {
+    if (!state) return
+    let seen: number | null = null
+    try { const v = localStorage.getItem('trawl_seen_slots'); seen = v === null ? null : Number(v) } catch { /* no-op */ }
+    if (seen === null || !Number.isFinite(seen)) {
+      try { localStorage.setItem('trawl_seen_slots', String(state.unlockedSlots)) } catch { /* no-op */ }
+      return
+    }
+    if (state.unlockedSlots > seen) {
+      setSlotUnlock(state.unlockedSlots)
+      haptic([0, 30, 60, 30, 60, 40])
+      try { localStorage.setItem('trawl_seen_slots', String(state.unlockedSlots)) } catch { /* no-op */ }
+    }
+  }, [state])
 
   if (!state) return null
   const hasSlots = state.unlockedSlots > 0
@@ -389,6 +415,43 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     </AnimatePresence>
   )
 
+  // ── New-slot-unlocked celebration ────────────────────────────────────────
+  const slotUnlockOverlay = (
+    <AnimatePresence>
+      {slotUnlock !== null && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSlotUnlock(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9450, background: 'rgba(4,8,14,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <motion.div initial={{ scale: 0.8, y: 18 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 330, damping: 22 }} onClick={e => e.stopPropagation()}
+            style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.8rem 1.5rem', borderRadius: 20, background: ['radial-gradient(ellipse 90% 65% at 50% 18%, rgba(240,192,64,0.22) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(44,34,14,0.98) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}7a`, boxShadow: `0 0 40px ${GOLD}33, inset 0 0 30px rgba(0,0,0,0.5)` }}>
+            <motion.p initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 300 }}
+              className="font-karla font-700 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.22em', color: GOLD }}>
+              {slotUnlock === 1 ? 'Crew Trawls unlocked' : 'Trawl slot unlocked'}
+            </motion.p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f4ecd8', lineHeight: 1.15, marginTop: 8 }}>
+              {slotUnlock === 1 ? 'Send crew to fish for you' : `Run ${slotUnlock} trawls at once`}
+            </p>
+            {/* Slot pips */}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '16px 0 4px' }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 + i * 0.08, type: 'spring', stiffness: 400 }}
+                  style={{ width: 18, height: 18, borderRadius: '50%', background: i < slotUnlock ? GOLD : 'rgba(255,255,255,0.08)', border: `2px solid ${i < slotUnlock ? GOLD : 'rgba(255,255,255,0.18)'}`, boxShadow: i < slotUnlock ? `0 0 9px ${GOLD}` : 'none' }} />
+              ))}
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#cfc6b0', lineHeight: 1.5, marginTop: 10 }}>
+              {slotUnlock === 1
+                ? 'Tap the crew icon on the left to send a crew fishing — they bring back XP and doubloons while you do other things.'
+                : 'More slots means more zones fishing for you at the same time. Pick another zone to crew.'}
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <motion.button whileTap={{ scale: 0.93 }} onClick={() => { setSlotUnlock(null); setOpen(true) }} className="font-cinzel font-700" style={{ flex: 1, padding: '0.65rem', borderRadius: 11, fontSize: '0.84rem', background: `${GOLD}22`, border: `1px solid ${GOLD}88`, color: '#f4ecd8', cursor: 'pointer' }}>Open Trawls</motion.button>
+              <motion.button whileTap={{ scale: 0.93 }} onClick={() => setSlotUnlock(null)} className="font-karla font-700 uppercase" style={{ padding: '0.65rem 1.2rem', borderRadius: 11, letterSpacing: '0.08em', fontSize: '0.68rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: '#cdd3db', cursor: 'pointer' }}>Later</motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+
   const coinFx = (
     <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 9500, pointerEvents: 'none' }}>
       <AnimatePresence>
@@ -406,7 +469,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   return (
     <>
       {indicatorButton}
-      {mounted && createPortal(<>{panel}{picker}{collectReveal}{coinFx}</>, document.body)}
+      {mounted && createPortal(<>{panel}{picker}{collectReveal}{slotUnlockOverlay}{coinFx}</>, document.body)}
     </>
   )
 }
