@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
+import TrawlIndicator from './TrawlIndicator'
 import {
   FINN_ENCOUNTER_RATE, FINN_PERFECT_TIERS, FINN_SPEED_TIERS, FINN_SPEED_ZONE_MULT, FINN_REVEAL_BEAT,
   FINN_OFFER_LINES, FINN_WIN_LINES, FINN_LOSS_LINES,
@@ -5401,6 +5402,11 @@ export default function FishingGame({
         className={`relative w-full max-w-md overflow-hidden${(phase === 'catching' || phase === 'reeling') ? ' ambient-paused' : ''}`}
         style={{ height: '100%' }}
       >
+
+        {/* Trawls (crew passive fishing) — the left HUD indicator lives in the
+            same z-15 layer as the audio chips, hidden behind any open panel so
+            it never floats over a modal. Its own panel/reveal portal to <body>. */}
+        <TrawlIndicator hidden={holdOpen || gearOpen || baitOpen || collectionOpen} />
 
         {/* Background soundtrack lives in lib/fishingMusic singleton —
             kept outside React's tree so unmount fade-out actually runs. */}

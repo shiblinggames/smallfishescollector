@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTrack, fishingTrackForZone } from '@/lib/fishingMusic'
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
-import TrawlIndicator from './TrawlIndicator'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { ZONE_MIN_LEVEL } from './zoneData'
@@ -210,8 +209,6 @@ export default function FishingPageClient({
   }
 
   return (
-    <>
-    <TrawlIndicator />
     <FishingGame
       hookTier={hookTier}
       rodTier={rodTier}
@@ -270,6 +267,5 @@ export default function FishingPageClient({
       initialFinnRevealed={initialFinnRevealed}
       initialFinnLastOutcome={initialFinnLastOutcome}
     />
-    </>
   )
 }
