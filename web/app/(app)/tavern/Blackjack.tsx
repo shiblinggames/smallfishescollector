@@ -438,13 +438,15 @@ function DealtCard({ card, fishArt, onFlipComplete, mode = 'dealing', style }: {
   }, [isHidden, mode])
   return (
     <motion.div
-      initial={mode === 'revealed' ? false : { opacity: 0, y: -22, scale: 0.82 }}
-      // Land bounce: a little scale overshoot as the card settles so each
-      // dealt card "lands" with weight instead of just sliding in.
-      animate={mode === 'revealed' ? false : { opacity: 1, y: 0, scale: [0.82, 1.06, 1] }}
+      // NOTE: do NOT keyframe `scale` here — this wrapper is the 3D
+      // ancestor of the preserve-3d FlipCard, and animating a transform
+      // (esp. a scale overshoot) during the rotateY makes the flip flash
+      // instead of turning smoothly. Keep the slide-in monotonic.
+      initial={mode === 'revealed' ? false : { opacity: 0, y: -22, scale: 0.85 }}
+      animate={mode === 'revealed' ? false : { opacity: 1, y: 0, scale: 1 }}
       whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.55)' }}
       whileTap={{ scale: 0.96 }}
-      transition={mode === 'revealed' ? { duration: 0 } : { duration: 0.42, ease: 'easeOut', times: [0, 0.6, 1] }}
+      transition={mode === 'revealed' ? { duration: 0 } : { duration: 0.36, ease: 'easeOut' }}
       style={{ flexShrink: 0, cursor: 'pointer', ...style }}
     >
       {/* Always FlipCard (even for hidden) so the 3D context stays
