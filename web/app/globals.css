@@ -1688,12 +1688,19 @@ html, body {
   18%  { opacity: 1; }
   100% { opacity: 0; }
 }
-/* Compact combo badge: snap in with an overshoot, settle, hold. CSS-driven
-   (not framer keyframe arrays) so mid-cascade re-renders never restart it. */
-@keyframes tmComboBadge {
-  0%   { transform: scale(0.2) rotate(-12deg); opacity: 0; }
-  45%  { transform: scale(1.3) rotate(4deg); opacity: 1; }
-  65%  { transform: scale(0.96) rotate(0deg); }
-  80%  { transform: scale(1.06); }
-  100% { transform: scale(1); opacity: 1; }
+/* Full-screen combo burst: slam in with an overshoot, hold, then blow out
+   bigger as it fades. CSS-driven (not framer keyframe arrays) + key-remounted
+   so mid-cascade re-renders never restart or double-fire it. */
+@keyframes tmComboBurst {
+  0%   { transform: scale(0.35) rotate(-7deg); opacity: 0; }
+  22%  { transform: scale(1.22) rotate(3deg); opacity: 1; }
+  38%  { transform: scale(0.98) rotate(0deg); opacity: 1; }
+  68%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+/* Radial flash behind the combo word. */
+@keyframes tmComboFlash {
+  0%   { opacity: 0; transform: scale(0.5); }
+  22%  { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(1.8); }
 }

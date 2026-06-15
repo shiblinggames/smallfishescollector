@@ -120,6 +120,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     if (!res) { setInvalid([a, b]); haptic(10); await wait(230); setInvalid(null); return }
 
     busyRef.current = true
+    setCombo(null) // reset last move's combo so this move's burst restarts clean
     const newMoves = movesRef.current - 1
     movesRef.current = newMoves; setMovesLeft(newMoves)
 
@@ -160,7 +161,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       await wait(190 + (cascade - 1) * 70)
       setDropping(new Set())
     }
-    setCombo(null); setFlash(null); setParticles([])
+    setFlash(null); setParticles([]) // combo clears on the next move so its burst can finish
     busyRef.current = false
     if (localScore >= target) { haptic([12, 40, 12, 40, 30]); await finishWin(localScore); return }
     if (newMoves <= 0) { setLost(true); return }
@@ -331,28 +332,43 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           }} />
         )}
 
-        {/* Compact combo badge — a chip in the corner, not a screen-filling
-            word. CSS-animated + key-remounted so it never double-fires. */}
-        {combo && (
-          <div aria-hidden style={{ position: 'absolute', top: 7, left: '50%', transform: 'translateX(-50%)', zIndex: 3, pointerEvents: 'none' }}>
-            <div key={combo.key} style={{ animation: 'tmComboBadge 0.46s cubic-bezier(.34,1.56,.64,1) forwards', transformOrigin: 'center' }}>
-              <span className="font-cinzel font-700" style={{
-                display: 'inline-block', padding: '0.18rem 0.6rem', borderRadius: 999, whiteSpace: 'nowrap',
-                fontSize: 'clamp(0.8rem, 4vw, 1.15rem)', color: '#1c140a',
-                background: `linear-gradient(180deg, #ffe79a, ${GOLD})`,
-                border: '1.5px solid #fff6d8', boxShadow: `0 0 16px ${GOLD}, 0 2px 6px rgba(0,0,0,0.5)`,
-                letterSpacing: '0.04em',
-              }}>
-                ×{combo.level}{combo.level >= 5 ? ' PLUNDER!' : combo.level >= 3 ? ' CHAIN' : ''}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
         {cleared ? 'Cleared this week — fresh board Monday.' : message ?? `${puzzlePoints} charting pts · Den purse ${denCap.toLocaleString()} ⟡/day${nextTier ? ` · ${nextTier.points - puzzlePoints} to ${nextTier.cap.toLocaleString()}` : ''}`}
       </p>
+
+      {/* Full-screen combo burst — viewport-centered, max impact. Keyed so the
+          CSS animation restarts cleanly on each level (no double-fire). */}
+      {mounted && createPortal(
+        combo ? (
+          <div key={combo.key} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8800, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', width: 'min(120vw, 700px)', height: 'min(120vw, 700px)', borderRadius: '50%', animation: 'tmComboFlash 0.85s ease-out forwards', background: `radial-gradient(circle, ${GOLD}55 0%, ${GOLD}22 38%, transparent 66%)` }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'tmComboBurst 0.85s cubic-bezier(.2,.8,.3,1) forwards', transformOrigin: 'center' }}>
+              <span className="font-cinzel font-700" style={{
+                fontSize: 'clamp(2.8rem, 17vw, 6.5rem)', lineHeight: 0.92, color: '#fff', letterSpacing: '0.01em',
+                textShadow: `0 0 22px ${GOLD}, 0 0 48px ${GOLD}, 0 0 80px ${GOLD}cc, 0 4px 10px rgba(0,0,0,0.85)`,
+                WebkitTextStroke: `1.5px ${GOLD}`,
+              }}>
+                COMBO
+              </span>
+              <span className="font-cinzel font-700" style={{
+                fontSize: 'clamp(3.4rem, 22vw, 8rem)', lineHeight: 0.9, marginTop: 2,
+                color: GOLD, letterSpacing: '0.01em',
+                textShadow: `0 0 26px ${GOLD}, 0 0 60px ${GOLD}aa, 0 4px 12px rgba(0,0,0,0.9)`,
+              }}>
+                ×{combo.level}
+              </span>
+              {combo.level >= 3 && (
+                <span className="font-karla font-700 uppercase" style={{ marginTop: 8, fontSize: 'clamp(0.85rem, 4.5vw, 1.4rem)', letterSpacing: '0.28em', color: '#fff', textShadow: `0 0 14px ${GOLD}, 0 2px 6px rgba(0,0,0,0.9)` }}>
+                  {combo.level >= 5 ? 'Plundered!' : 'Chain!'}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : null,
+        document.body,
+      )}
 
       {/* Particle bursts (portal, viewport coords) */}
       {mounted && createPortal(
