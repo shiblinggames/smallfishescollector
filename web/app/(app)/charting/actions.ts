@@ -11,7 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getThisWeeksMatch } from './generate'
 import { denDailyCap } from '@/app/(app)/tavern/constants'
 import {
-  MATCH_POINTS, matchWeekStr,
+  MATCH_TARGET, MATCH_MAX_POINTS, matchWeekStr, pointsForScore,
   type MatchState, type SubmitMatchResult,
 } from './constants'
 
@@ -58,20 +58,25 @@ export async function getMatchState(): Promise<MatchState | { error: string }> {
     cols: config.cols,
     rows: config.rows,
     types: config.types,
-    target: config.target,
+    // Drive tiers off the constant (MATCH_TARGET = 5/5 score), not the
+    // per-board config.target, so older cached boards still tier correctly.
+    target: MATCH_TARGET,
     moves: config.moves,
     status: attempt.status,
     bestScore: attempt.best_score,
     pointsAwarded: attempt.points_awarded,
-    reward: MATCH_POINTS,
     puzzlePoints: points,
     denCap: denDailyCap(points),
   }
 }
 
-/** Report a finished run. `score` updates the best; `won` (score reached
- *  the target) banks charting points once per week. */
-export async function submitMatch(score: number, won: boolean): Promise<SubmitMatchResult | { error: string }> {
+/** Report a finished run with its final `score`. The server tracks the best
+ *  score for the week, maps it to a tier (0-5 charting points), and banks the
+ *  DELTA over whatever was already awarded — so a player who first hits 2/5
+ *  and later grinds up to 4/5 gets +2 more, capped at 5 total. The tier is
+ *  computed server-side from the (server-tracked) best score, so the client
+ *  can't claim points it didn't earn. */
+export async function submitMatch(score: number): Promise<SubmitMatchResult | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
@@ -87,36 +92,38 @@ export async function submitMatch(score: number, won: boolean): Promise<SubmitMa
 
   const admin = createAdminClient()
   const bestScore = Math.max(attempt.best_score, Math.floor(score))
-  // A win requires actually reaching the target (server re-checks the
-  // claim against the stored target — the one cheap guard we can do).
-  const isWin = won && bestScore >= config.target
+  const tier = pointsForScore(bestScore)               // 0-5 for the best score
+  const delta = Math.max(0, tier - attempt.points_awarded) // never claw back
+  const maxed = tier >= MATCH_MAX_POINTS
+  const capBefore = denDailyCap(oldPoints)
 
-  if (!isWin || attempt.points_awarded > 0 || attempt.status === 'cleared') {
+  if (delta <= 0) {
+    // No new tier reached — just persist the (possibly improved) best score.
     await admin.from('treasure_match_attempts').upsert({
       user_id: user.id, week,
-      status: isWin || attempt.status === 'cleared' ? 'cleared' : 'active',
+      status: maxed ? 'cleared' : 'active',
       best_score: bestScore,
       points_awarded: attempt.points_awarded,
       updated_at: new Date().toISOString(),
     })
-    return { cleared: isWin || attempt.status === 'cleared', pointsWon: 0, newPuzzlePoints: null, capBefore: denDailyCap(oldPoints), capAfter: denDailyCap(oldPoints) }
+    return { bestScore, tier, pointsWon: 0, maxed, newPuzzlePoints: null, capBefore, capAfter: capBefore }
   }
 
-  const newPuzzlePoints = oldPoints + MATCH_POINTS
+  const newPuzzlePoints = oldPoints + delta
   await Promise.all([
     admin.from('treasure_match_attempts').upsert({
       user_id: user.id, week,
-      status: 'cleared', best_score: bestScore, points_awarded: MATCH_POINTS,
+      status: maxed ? 'cleared' : 'active',
+      best_score: bestScore, points_awarded: tier,
       updated_at: new Date().toISOString(),
     }),
     admin.from('profiles').update({ puzzle_points: newPuzzlePoints }).eq('id', user.id),
   ])
 
   return {
-    cleared: true,
-    pointsWon: MATCH_POINTS,
+    bestScore, tier, pointsWon: delta, maxed,
     newPuzzlePoints,
-    capBefore: denDailyCap(oldPoints),
+    capBefore,
     capAfter: denDailyCap(newPuzzlePoints),
   }
 }

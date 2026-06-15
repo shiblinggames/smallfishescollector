@@ -2,10 +2,10 @@
 
 // Treasure Match — a ship-themed Match-3. Swap two adjacent treasures
 // (drag OR tap) to line up 3+; they pop, everything drops, cascades chain
-// with combo callouts + particle bursts. Reach the target score within
-// the move limit to win. One seeded board a week (shared puzzle); first
-// clear banks charting points. Engine runs client-side; the server awards
-// the points on a claimed win.
+// with combo callouts + particle bursts. Your BEST score across the week
+// maps to a tier of charting points (1-5); a bigger haul climbs the ladder.
+// One seeded board a week (shared puzzle), unlimited retries. Engine runs
+// client-side; the server tiers the score + banks the delta authoritatively.
 
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -13,18 +13,19 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent } from './treasureMatch'
-import { MATCH_TOKENS, type MatchState } from './constants'
+import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, type MatchState } from './constants'
 import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 
 const GOLD = '#f0c040'
+const GREEN = '#7bf0b0'
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 
 interface Particle { id: number; x: number; y: number; dx: number; dy: number; color: string }
+interface RunResult { score: number; best: number; tier: number; pointsWon: number; maxed: boolean; capUp: number | null }
 
 export default function TreasureMatchGame({ initial }: { initial: MatchState }) {
   const { cols, rows, types, target, seed } = initial
-  const total = cols * rows
 
   const rngRef = useRef(makeRng(seed))
   const [board, setBoard] = useState<number[]>(() => initialBoard(rngRef.current, cols, rows, types))
@@ -35,15 +36,17 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   const [invalid, setInvalid] = useState<[number, number] | null>(null)
   const [committed, setCommitted] = useState<[number, number] | null>(null)
   const [status, setStatus] = useState<'active' | 'cleared'>(initial.status)
-  const [lost, setLost] = useState(false)
+  const [bestScore, setBestScore] = useState(initial.bestScore)
+  const [banked, setBanked] = useState(initial.pointsAwarded)
   const [message, setMessage] = useState<string | null>(null)
   const [puzzlePoints, setPuzzlePoints] = useState(initial.puzzlePoints)
   const [denCap, setDenCap] = useState(initial.denCap)
-  const [win, setWin] = useState<{ points: number; capUp: number | null } | null>(null)
+  const [result, setResult] = useState<RunResult | null>(null)
   const [mounted, setMounted] = useState(false)
   // Juice
   const [particles, setParticles] = useState<Particle[]>([])
   const [combo, setCombo] = useState<{ level: number; key: number } | null>(null)
+  const [tierUp, setTierUp] = useState<{ points: number; key: number } | null>(null)
   const [dropping, setDropping] = useState<Set<number>>(new Set())
   const [flash, setFlash] = useState<{ key: number; intensity: number } | null>(null)
   const [scoreFloat, setScoreFloat] = useState<{ amount: number; key: number } | null>(null)
@@ -53,15 +56,24 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   const boardRef = useRef(board); useEffect(() => { boardRef.current = board }, [board])
   const scoreRef = useRef(score); useEffect(() => { scoreRef.current = score }, [score])
   const movesRef = useRef(movesLeft); useEffect(() => { movesRef.current = movesLeft }, [movesLeft])
+  const bestRef = useRef(bestScore); useEffect(() => { bestRef.current = bestScore }, [bestScore])
+  // Highest tier we've already celebrated this week — starts at what's banked
+  // so retries don't re-celebrate points the player already holds.
+  const shownTierRef = useRef(initial.pointsAwarded)
   const busyRef = useRef(false)
   const gridRef = useRef<HTMLDivElement | null>(null)
   const dragRef = useRef<{ cell: number; sx: number; sy: number; moved: boolean } | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
-  const nextTier = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
+  const denNext = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
   const cleared = status === 'cleared'
-  const progress = Math.min(1, score / target)
+  const displayBest = Math.max(score, bestScore)
+  const liveTier = pointsForScore(score)
+  const nextT = nextMatchTier(score)
+  const curTierScore = liveTier > 0 ? MATCH_TIERS[liveTier - 1].score : 0
+  const nextScore = nextT ? nextT.score : target
+  const segProgress = nextT ? Math.min(1, (score - curTierScore) / (nextScore - curTierScore)) : 1
   const lowMoves = movesLeft <= 5
 
   // ── Juice helpers ──────────────────────────────────────────────────
@@ -96,20 +108,24 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     boardRef.current = nb; setBoard(nb)
     scoreRef.current = 0; setScore(0)
     movesRef.current = initial.moves; setMovesLeft(initial.moves)
-    setSelected(null); setPopping(new Set()); setCommitted(null); setDropping(new Set()); setCombo(null); setFlash(null); setLost(false); setMessage(null); setParticles([])
+    shownTierRef.current = banked
+    setSelected(null); setPopping(new Set()); setCommitted(null); setDropping(new Set())
+    setCombo(null); setTierUp(null); setFlash(null); setResult(null); setMessage(null); setParticles([])
   }
 
-  async function finishWin(finalScore: number) {
-    setStatus('cleared')
-    const r = await submitMatch(finalScore, true)
-    if ('error' in r) return
-    if (r.pointsWon > 0 && r.newPuzzlePoints !== null) {
-      setPuzzlePoints(r.newPuzzlePoints)
-      setDenCap(denDailyCap(r.newPuzzlePoints))
-      setWin({ points: r.pointsWon, capUp: r.capAfter > r.capBefore ? r.capAfter : null })
-    } else {
-      setWin({ points: 0, capUp: null })
+  // Run ended (out of moves, or hit the top tier). Server tiers the best
+  // score and banks the delta; we surface the result overlay.
+  async function endRun(finalScore: number, perfect: boolean) {
+    const r = await submitMatch(finalScore)
+    if ('error' in r) {
+      setResult({ score: finalScore, best: Math.max(finalScore, bestRef.current), tier: pointsForScore(Math.max(finalScore, bestRef.current)), pointsWon: 0, maxed: perfect, capUp: null })
+      return
     }
+    setBestScore(r.bestScore); bestRef.current = r.bestScore
+    setBanked(r.tier); shownTierRef.current = Math.max(shownTierRef.current, r.tier)
+    if (r.newPuzzlePoints !== null) { setPuzzlePoints(r.newPuzzlePoints); setDenCap(denDailyCap(r.newPuzzlePoints)) }
+    if (r.maxed) setStatus('cleared')
+    setResult({ score: finalScore, best: r.bestScore, tier: r.tier, pointsWon: r.pointsWon, maxed: r.maxed, capUp: r.capAfter > r.capBefore ? r.capAfter : null })
   }
 
   async function attemptSwap(a: number, b: number) {
@@ -120,7 +136,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     if (!res) { setInvalid([a, b]); haptic(10); await wait(230); setInvalid(null); return }
 
     busyRef.current = true
-    setCombo(null) // reset last move's combo so this move's burst restarts clean
+    setCombo(null); setTierUp(null) // reset last move's callouts so this move restarts clean
     const newMoves = movesRef.current - 1
     movesRef.current = newMoves; setMovesLeft(newMoves)
 
@@ -163,8 +179,20 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     }
     setFlash(null); setParticles([]) // combo clears on the next move so its burst can finish
     busyRef.current = false
-    if (localScore >= target) { haptic([12, 40, 12, 40, 30]); await finishWin(localScore); return }
-    if (newMoves <= 0) { setLost(true); return }
+
+    const willEnd = localScore >= target || newMoves <= 0
+    // Live tier-up: crossing a NEW tier (above what's banked) mid-run earns a
+    // celebration. Skipped when the run is ending — the result overlay owns it.
+    const liveT = pointsForScore(localScore)
+    if (liveT > shownTierRef.current && !willEnd) {
+      shownTierRef.current = liveT
+      setCombo(null)
+      setTierUp({ points: liveT, key: pid.current++ })
+      haptic([0, 30, 40, 30])
+    }
+
+    if (localScore >= target) { haptic([12, 40, 12, 40, 30]); await endRun(localScore, true); return }
+    if (newMoves <= 0) { await endRun(localScore, false); return }
     if (!hasValidMove(boardRef.current, cols, rows)) {
       const nb = reshuffle(rngRef.current, cols, rows, types)
       boardRef.current = nb; setBoard(nb); setMessage('No matches left — board reshuffled (free).')
@@ -197,7 +225,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   }
 
   function onPointerDown(e: React.PointerEvent) {
-    if (busyRef.current || lost) return
+    if (busyRef.current || result !== null) return
     const cell = cellFromPoint(e.clientX, e.clientY)
     if (cell === null) return
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -213,11 +241,11 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     if (Math.hypot(dx, dy) < thresh) return
     d.moved = true
     const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U')
-    const target = neighborOf(d.cell, dir)
+    const tgt = neighborOf(d.cell, dir)
     setSelected(null)
-    if (target !== null) void attemptSwap(d.cell, target)
+    if (tgt !== null) void attemptSwap(d.cell, tgt)
   }
-  function onPointerUp(e: React.PointerEvent) {
+  function onPointerUp() {
     const d = dragRef.current
     dragRef.current = null
     if (!d) return
@@ -226,8 +254,36 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
   const boardW = `min(96vw, 460px)`
 
+  // Tier ladder — 5 pips, lit when the best score clears each threshold.
+  function TierLadder({ compact = false }: { compact?: boolean }) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${MATCH_TIERS.length}, 1fr)`, gap: compact ? 4 : 5 }}>
+        {MATCH_TIERS.map(t => {
+          const lit = displayBest >= t.score
+          const isNext = !lit && nextScore === t.score
+          return (
+            <div key={t.points} style={{
+              textAlign: 'center', borderRadius: 9, padding: compact ? '0.28rem 0.1rem' : '0.34rem 0.1rem',
+              background: lit ? `linear-gradient(180deg, ${GOLD}33, ${GOLD}14)` : isNext ? 'rgba(196,169,106,0.10)' : 'rgba(255,255,255,0.03)',
+              border: `1.5px solid ${lit ? `${GOLD}aa` : isNext ? `${GOLD}55` : 'rgba(255,255,255,0.08)'}`,
+              boxShadow: lit ? `0 0 10px ${GOLD}40` : 'none',
+              transition: 'background 0.25s, border-color 0.25s, box-shadow 0.25s',
+            }}>
+              <p className="font-cinzel font-700" style={{ fontSize: compact ? '0.72rem' : '0.82rem', lineHeight: 1, color: lit ? GOLD : isNext ? '#d8c89a' : '#6a6658' }}>
+                {t.points}<span style={{ fontSize: '0.6em', opacity: 0.7 }}>/5</span>
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.46rem', marginTop: 2, color: lit ? `${GOLD}cc` : '#7a7464', letterSpacing: '0.02em' }}>
+                {t.score.toLocaleString()}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+    <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -249,19 +305,22 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         <div style={{ padding: '0.5rem 0.8rem', borderRadius: 12, position: 'relative', background: 'rgba(196,169,106,0.1)', border: '1.5px solid rgba(196,169,106,0.3)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
             <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.56rem', color: '#a89878' }}>Score</span>
-            <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672' }}>/ {target.toLocaleString()}</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: liveTier > 0 ? GREEN : '#8f8672' }}>{liveTier}/5 earning</span>
           </div>
           <motion.p key={`sc-${scorePulse}`} animate={{ scale: [1, 1.12, 1] }} transition={{ duration: 0.4, times: [0, 0.35, 1] }}
-            className="font-cinzel font-700" style={{ fontSize: '2rem', lineHeight: 1, color: score >= target ? '#7bf0b0' : GOLD, transformOrigin: 'left center' }}>{score.toLocaleString()}</motion.p>
+            className="font-cinzel font-700" style={{ fontSize: '2rem', lineHeight: 1, color: liveTier > 0 ? GREEN : GOLD, transformOrigin: 'left center' }}>{score.toLocaleString()}</motion.p>
           <div style={{ marginTop: 5, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-            <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: progress >= 1 ? 'linear-gradient(90deg,#3fae78,#7bf0b0)' : `linear-gradient(90deg,#c4a96a,${GOLD})`, transition: 'width 0.3s' }} />
+            <div style={{ width: `${Math.round(segProgress * 100)}%`, height: '100%', borderRadius: 3, background: nextT ? `linear-gradient(90deg,#c4a96a,${GOLD})` : `linear-gradient(90deg,#3fae78,${GREEN})`, transition: 'width 0.3s' }} />
           </div>
+          <p className="font-karla" style={{ fontSize: '0.5rem', marginTop: 2, color: '#8f8672', textAlign: 'right' }}>
+            {nextT ? `${nextScore.toLocaleString()} → ${nextT.points}/5` : 'top tier reached'}
+          </p>
           {/* score float */}
           <AnimatePresence>
             {scoreFloat && (
               <motion.span key={scoreFloat.key} initial={{ opacity: 0, y: 6, scale: 0.8 }} animate={{ opacity: 1, y: -16, scale: 1.1 }} exit={{ opacity: 0, y: -26 }} transition={{ duration: 0.6 }}
                 onAnimationComplete={() => setScoreFloat(f => (f && f.key === scoreFloat.key ? null : f))}
-                className="font-cinzel font-700" style={{ position: 'absolute', right: 12, top: 6, fontSize: '1rem', color: '#7bf0b0', textShadow: '0 1px 4px rgba(0,0,0,0.6)', pointerEvents: 'none' }}>
+                className="font-cinzel font-700" style={{ position: 'absolute', right: 12, top: 6, fontSize: '1rem', color: GREEN, textShadow: '0 1px 4px rgba(0,0,0,0.6)', pointerEvents: 'none' }}>
                 +{scoreFloat.amount}
               </motion.span>
             )}
@@ -269,8 +328,11 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         </div>
       </div>
 
-      <p className="font-karla" style={{ fontSize: '0.68rem', color: '#bcb29a', lineHeight: 1.4, textAlign: 'center' }}>
-        Drag or tap to swap neighbors. Line up 3+ to clear. Reach {target.toLocaleString()} for +{initial.reward} charting points.
+      {/* Tier ladder */}
+      <TierLadder />
+
+      <p className="font-karla" style={{ fontSize: '0.64rem', color: '#bcb29a', lineHeight: 1.4, textAlign: 'center' }}>
+        Bigger haul = more charting points, up to {MATCH_MAX_POINTS}/5. Out of moves? Retry the same board for a better run.
       </p>
 
       {/* Board */}
@@ -335,7 +397,9 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
-        {cleared ? 'Cleared this week — fresh board Monday.' : message ?? `${puzzlePoints} charting pts · Den purse ${denCap.toLocaleString()} ⟡/day${nextTier ? ` · ${nextTier.points - puzzlePoints} to ${nextTier.cap.toLocaleString()}` : ''}`}
+        {cleared
+          ? `Maxed ${MATCH_MAX_POINTS}/5 this week — fresh board Monday.`
+          : message ?? `Best ${displayBest.toLocaleString()} · ${banked}/5 banked · Den purse ${denCap.toLocaleString()} ⟡/day${denNext ? ` · ${denNext.points - puzzlePoints} to ${denNext.cap.toLocaleString()}` : ''}`}
       </p>
 
       {/* Full-screen combo burst — viewport-centered, max impact. Keyed so the
@@ -370,6 +434,24 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         document.body,
       )}
 
+      {/* Tier-up burst — crossing a new charting-point tier mid-run. */}
+      {mounted && createPortal(
+        tierUp ? (
+          <div key={tierUp.key} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8800, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', width: 'min(120vw, 700px)', height: 'min(120vw, 700px)', borderRadius: '50%', animation: 'tmComboFlash 0.95s ease-out forwards', background: `radial-gradient(circle, ${GREEN}44 0%, ${GREEN}1c 38%, transparent 66%)` }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'tmComboBurst 0.95s cubic-bezier(.2,.8,.3,1) forwards', transformOrigin: 'center' }}>
+              <span className="font-cinzel font-700" style={{ fontSize: 'clamp(4rem, 26vw, 9rem)', lineHeight: 0.85, color: GREEN, textShadow: `0 0 26px ${GREEN}, 0 0 60px ${GREEN}aa, 0 4px 12px rgba(0,0,0,0.9)` }}>
+                {tierUp.points}<span style={{ fontSize: '0.5em', color: '#fff' }}>/5</span>
+              </span>
+              <span className="font-karla font-700 uppercase" style={{ marginTop: 6, fontSize: 'clamp(0.85rem, 4.5vw, 1.4rem)', letterSpacing: '0.26em', color: '#fff', textShadow: `0 0 14px ${GREEN}, 0 2px 6px rgba(0,0,0,0.9)` }}>
+                Charting points secured
+              </span>
+            </div>
+          </div>
+        ) : null,
+        document.body,
+      )}
+
       {/* Particle bursts (portal, viewport coords) */}
       {mounted && createPortal(
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8500, pointerEvents: 'none' }}>
@@ -388,43 +470,45 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         document.body,
       )}
 
-      {/* Out-of-moves overlay */}
+      {/* Run result overlay (out of moves OR maxed) */}
       {mounted && createPortal(
         <AnimatePresence>
-          {lost && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          {result && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.84)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
               <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }}
-                style={{ maxWidth: 320, width: '100%', textAlign: 'center', padding: '1.5rem 1.3rem', borderRadius: 18, background: 'linear-gradient(180deg, rgba(40,30,14,0.96) 0%, rgba(20,14,7,0.98) 100%)', border: '1px solid rgba(196,169,106,0.4)' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#e0b48a' }}>Out of moves</p>
-                <p className="font-karla" style={{ fontSize: '0.76rem', color: '#cfc6b0', marginTop: 8, lineHeight: 1.5 }}>You hauled {score.toLocaleString()} of {target.toLocaleString()}. Same board, fresh moves — give it another run.</p>
-                <button onClick={resetBoard} className="font-cinzel font-700" style={{ marginTop: 16, padding: '0.6rem 1.6rem', borderRadius: 10, fontSize: '0.84rem', background: 'rgba(240,192,64,0.18)', border: `1px solid ${GOLD}88`, color: '#f4ecd8', cursor: 'pointer' }}>Try Again</button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
+                style={{ maxWidth: 360, width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 24%, rgba(196,169,106,0.14) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.96) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: result.maxed ? GREEN : GOLD }}>
+                  {result.maxed ? 'Perfect haul — 5/5!' : result.pointsWon > 0 ? 'Tier up!' : 'Run complete'}
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.74rem', color: '#dccba6', lineHeight: 1.5, marginTop: 6 }}>
+                  This run {result.score.toLocaleString()} · best {result.best.toLocaleString()} this week.
+                </p>
 
-      {/* Win overlay */}
-      {mounted && createPortal(
-        <AnimatePresence>
-          {win && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setWin(null)} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(4,8,14,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-              <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
-                style={{ maxWidth: 340, width: '100%', textAlign: 'center', padding: '1.6rem 1.4rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 28%, rgba(196,169,106,0.14) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.96) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: GOLD }}>Haul secured.</p>
-                <p className="font-karla" style={{ fontSize: '0.78rem', color: '#dccba6', lineHeight: 1.5, marginTop: 8 }}>{score.toLocaleString()} aboard — target smashed. Fine work, captain.</p>
-                {win.points > 0
-                  ? <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: '#7bbf7b', marginTop: 14 }}>+{win.points} charting points</p>
-                  : <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a9078', marginTop: 14 }}>Already banked this week — fresh board Monday.</p>}
-                {win.capUp !== null && (
+                <div style={{ marginTop: 14 }}><TierLadder compact /></div>
+
+                <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: result.tier > 0 ? GREEN : '#9a9078', marginTop: 14 }}>
+                  {result.tier}/5 charting points
+                </p>
+                {result.pointsWon > 0
+                  ? <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: GOLD, marginTop: 2 }}>+{result.pointsWon} banked just now</p>
+                  : <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a9078', marginTop: 2 }}>{result.maxed ? 'Maxed out for the week.' : 'Beat your best to bank more.'}</p>}
+
+                {result.capUp !== null && (
                   <motion.p initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.25, type: 'spring', stiffness: 300 }} className="font-cinzel font-700" style={{ marginTop: 12, padding: '0.5rem 0.7rem', borderRadius: 10, fontSize: '0.78rem', color: GOLD, background: `${GOLD}18`, border: `1px solid ${GOLD}55` }}>
-                    Den purse raised to {win.capUp.toLocaleString()} ⟡/day!
+                    Den purse raised to {result.capUp.toLocaleString()} ⟡/day!
                   </motion.p>
                 )}
-                <button onClick={() => setWin(null)} className="font-karla font-700 uppercase" style={{ marginTop: 18, padding: '0.6rem 1.6rem', borderRadius: 10, letterSpacing: '0.1em', fontSize: '0.66rem', background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.4)', color: '#bcd4ff', cursor: 'pointer' }}>
-                  Back to the Deck
-                </button>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+                  {!result.maxed && (
+                    <button onClick={resetBoard} className="font-cinzel font-700" style={{ flex: 1, padding: '0.6rem 0.6rem', borderRadius: 10, fontSize: '0.84rem', background: 'rgba(240,192,64,0.18)', border: `1px solid ${GOLD}88`, color: '#f4ecd8', cursor: 'pointer' }}>
+                      Try Again
+                    </button>
+                  )}
+                  <Link href="/tavern/chart-room" className="font-karla font-700 uppercase" style={{ flex: 1, padding: '0.65rem 0.6rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.66rem', background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.4)', color: '#bcd4ff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    Chart Room
+                  </Link>
+                </div>
               </motion.div>
             </motion.div>
           )}

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getHoldState } from './hold/actions'
 import { getMatchState } from '@/app/(app)/charting/actions'
-import { MATCH_POINTS } from '@/app/(app)/charting/constants'
+import { MATCH_MAX_POINTS } from '@/app/(app)/charting/constants'
 import { getRiggingState } from './rigging/actions'
 import { RIGGING_POINTS } from './rigging/constants'
 import ChartRoomLobby from './ChartRoomLobby'
@@ -20,7 +20,8 @@ export default async function ChartRoomPage() {
   const holdDoubloonsToday = 'error' in hold ? 0 : hold.doubloonsAwarded
 
   const matchStatus: 'active' | 'cleared' = 'error' in mtch ? 'active' : mtch.status
-  const matchReward = 'error' in mtch ? MATCH_POINTS : mtch.reward
+  // The card shows the max attainable (5); the run tiers the actual award.
+  const matchReward = MATCH_MAX_POINTS
 
   const riggingStatus: 'active' | 'cleared' = 'error' in rig ? 'active' : rig.status
   const riggingReward = 'error' in rig ? RIGGING_POINTS : rig.reward

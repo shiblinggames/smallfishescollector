@@ -10,12 +10,38 @@ export const MATCH_COLS = 7
 export const MATCH_ROWS = 7
 export const MATCH_TYPES = 6
 
-/** Win condition: reach MATCH_TARGET points within MATCH_MOVES moves. */
-export const MATCH_TARGET = 2000
 export const MATCH_MOVES = 25
 
-/** Charting points banked on the first clear of the week. */
-export const MATCH_POINTS = 5
+/** Tiered charting-point payout by best score in MATCH_MOVES moves. Calibrated
+ *  against simulated play: a casual single run lands ~1000-2000; a dedicated
+ *  retry player reaches ~2600-3000; ~3600 needs real cascade skill + grinding.
+ *  So 1/5 is a gimme on finishing, and 5/5 is genuinely hard. Unlimited retries
+ *  (same board, fresh moves) let players climb the ladder across the week. */
+export const MATCH_TIERS: { score: number; points: number }[] = [
+  { score: 1200, points: 1 },
+  { score: 1700, points: 2 },
+  { score: 2300, points: 3 },
+  { score: 2900, points: 4 },
+  { score: 3600, points: 5 },
+]
+
+/** Max points (5) + the top-tier score, reused as the progress-bar ceiling
+ *  and the instant-win threshold. MATCH_TARGET name kept for generate.ts. */
+export const MATCH_MAX_POINTS = MATCH_TIERS[MATCH_TIERS.length - 1].points
+export const MATCH_TARGET = MATCH_TIERS[MATCH_TIERS.length - 1].score
+
+/** Charting points earned for a given best score (0 if below tier 1). */
+export function pointsForScore(score: number): number {
+  let p = 0
+  for (const t of MATCH_TIERS) if (score >= t.score) p = t.points
+  return p
+}
+
+/** The next tier above `score`, or null once maxed. */
+export function nextMatchTier(score: number): { score: number; points: number } | null {
+  for (const t of MATCH_TIERS) if (score < t.score) return t
+  return null
+}
 
 /** Token art by type index (must be >= MATCH_TYPES). Emoji on a colored
  *  tile — instantly readable, ship-themed. */
@@ -45,19 +71,20 @@ export interface MatchState {
   cols: number
   rows: number
   types: number
-  target: number
+  target: number      // top-tier (5/5) score — progress ceiling + instant win
   moves: number
-  status: 'active' | 'cleared'
+  status: 'active' | 'cleared'  // cleared = maxed at 5/5
   bestScore: number
-  pointsAwarded: number
-  reward: number
+  pointsAwarded: number          // charting points already banked this week (0-5)
   puzzlePoints: number
   denCap: number
 }
 
 export interface SubmitMatchResult {
-  cleared: boolean
-  pointsWon: number
+  bestScore: number
+  tier: number            // points the best score now earns (0-5)
+  pointsWon: number       // charting points added to the profile this call (the delta)
+  maxed: boolean          // tier === MATCH_MAX_POINTS
   newPuzzlePoints: number | null
   capBefore: number
   capAfter: number

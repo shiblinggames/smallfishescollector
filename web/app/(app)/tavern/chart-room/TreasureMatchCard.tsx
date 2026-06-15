@@ -49,7 +49,7 @@ export default function TreasureMatchCard({ status, reward }: { status: 'active'
           borderRadius: 999, padding: '0.2rem 0.55rem',
         }}
       >
-        {cleared ? `Cleared · +${reward} pts` : 'This week'}
+        {cleared ? `Maxed · ${reward}/5` : 'This week'}
       </span>
     </ScenicCard>
   )
