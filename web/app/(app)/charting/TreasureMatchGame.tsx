@@ -33,6 +33,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   const [selected, setSelected] = useState<number | null>(null)
   const [popping, setPopping] = useState<Set<number>>(new Set())
   const [invalid, setInvalid] = useState<[number, number] | null>(null)
+  const [committed, setCommitted] = useState<[number, number] | null>(null)
   const [status, setStatus] = useState<'active' | 'cleared'>(initial.status)
   const [lost, setLost] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -93,7 +94,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     boardRef.current = nb; setBoard(nb)
     scoreRef.current = 0; setScore(0)
     movesRef.current = initial.moves; setMovesLeft(initial.moves)
-    setSelected(null); setPopping(new Set()); setLost(false); setMessage(null); setParticles([])
+    setSelected(null); setPopping(new Set()); setCommitted(null); setLost(false); setMessage(null); setParticles([])
   }
 
   async function finishWin(finalScore: number) {
@@ -120,24 +121,33 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     const newMoves = movesRef.current - 1
     movesRef.current = newMoves; setMovesLeft(newMoves)
 
+    // Lock-in: the two committed tiles snap together with a white ring + thunk
+    // haptic so the move reads as *committed* before anything pops.
+    setCommitted([a, b]); haptic(22)
     boardRef.current = res.swapped; setBoard(res.swapped)
-    await wait(140)
+    await wait(210)
+    setCommitted(null)
+    await wait(70)
 
     let localScore = scoreRef.current
     for (let s = 0; s < res.steps.length; s++) {
       const step = res.steps[s]
+      const cascade = s + 1
       setPopping(new Set(step.cleared))
       spawnBurst(step.cleared)
-      const cascade = s + 1
-      if (cascade >= 2) { setCombo({ level: cascade, key: pid.current++ }); haptic([10, 30, 10]) }
-      else haptic(step.cleared.length >= 5 ? 18 : 9)
+      if (cascade >= 2) { setCombo({ level: cascade, key: pid.current++ }); haptic([0, 18, 50, 18 + cascade * 6]) }
+      else haptic(step.cleared.length >= 5 ? 22 : 12)
       setScoreFloat({ amount: step.gained, key: pid.current++ })
-      await wait(250)
+      // Dopamine delay: each successive cascade holds longer so the chain
+      // builds weight instead of machine-gunning by. Big clears linger too.
+      const big = step.cleared.length >= 5 ? 70 : 0
+      await wait(300 + (cascade - 1) * 110 + big)
       setPopping(new Set())
       boardRef.current = step.resultBoard; setBoard(step.resultBoard)
       localScore += step.gained; scoreRef.current = localScore; setScore(localScore)
       setScorePulse(p => p + 1)
-      await wait(150)
+      // settle beat before the next link in the chain
+      await wait(170 + (cascade - 1) * 70)
     }
     setParticles([])
     busyRef.current = false
@@ -270,6 +280,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           const tok = MATCH_TOKENS[t] ?? MATCH_TOKENS[0]
           const isSel = selected === i
           const isPop = popping.has(i)
+          const isCommit = committed !== null && (committed[0] === i || committed[1] === i)
           const isInvalid = invalid && (invalid[0] === i || invalid[1] === i)
           return (
             <div
@@ -279,11 +290,14 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 aspectRatio: '1 / 1', borderRadius: 9,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 'clamp(1.3rem, 7vw, 2rem)', lineHeight: 1,
-                background: isInvalid ? 'rgba(192,57,43,0.55)' : `${tok.color}33`,
-                border: `2px solid ${isSel ? '#fff' : isInvalid ? '#c0392b' : `${tok.color}88`}`,
-                boxShadow: isSel ? `0 0 14px ${tok.color}, inset 0 0 10px ${tok.color}55` : `inset 0 1px 3px rgba(255,255,255,0.12)`,
-                transform: isSel ? 'scale(1.08)' : 'scale(1)',
-                transition: 'transform 0.12s, background 0.12s, border-color 0.12s, box-shadow 0.12s',
+                background: isInvalid ? 'rgba(192,57,43,0.55)' : isCommit ? `${tok.color}55` : `${tok.color}33`,
+                border: `2px solid ${isCommit || isSel ? '#fff' : isInvalid ? '#c0392b' : `${tok.color}88`}`,
+                boxShadow: isCommit
+                  ? `0 0 18px #fff, 0 0 30px ${tok.color}, inset 0 0 14px ${tok.color}77`
+                  : isSel ? `0 0 14px ${tok.color}, inset 0 0 10px ${tok.color}55` : `inset 0 1px 3px rgba(255,255,255,0.12)`,
+                transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
+                zIndex: isCommit ? 2 : undefined,
+                transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1), background 0.12s, border-color 0.12s, box-shadow 0.12s',
                 animation: isPop ? 'tmPop 0.26s ease forwards' : undefined,
               }}
             >
@@ -295,12 +309,21 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         {/* Combo callout — centered over the board */}
         <AnimatePresence>
           {combo && (
-            <motion.div key={combo.key} initial={{ opacity: 0, scale: 0.4, rotate: -8 }} animate={{ opacity: 1, scale: 1.1, rotate: 0 }} exit={{ opacity: 0, scale: 1.4 }} transition={{ duration: 0.5, ease: 'easeOut' }}
-              onAnimationComplete={() => setTimeout(() => setCombo(c => (c && c.key === combo.key ? null : c)), 350)}
-              style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <span className="font-cinzel font-700" style={{ fontSize: 'clamp(1.6rem, 9vw, 2.6rem)', color: '#fff', textShadow: `0 0 16px ${GOLD}, 0 0 30px ${GOLD}, 0 2px 6px rgba(0,0,0,0.8)`, letterSpacing: '0.02em' }}>
+            <motion.div key={combo.key}
+              initial={{ opacity: 0, scale: 0.3, rotate: -10 }}
+              animate={{ opacity: [0, 1, 1, 1], scale: [0.3, 1.25, 1.05, 1.12], rotate: [-10, 2, 0, 0] }}
+              exit={{ opacity: 0, scale: 1.5, y: -14 }}
+              transition={{ duration: 0.62, times: [0, 0.32, 0.55, 1], ease: 'easeOut' }}
+              onAnimationComplete={() => setTimeout(() => setCombo(c => (c && c.key === combo.key ? null : c)), 480)}
+              style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <span className="font-cinzel font-700" style={{ fontSize: `clamp(1.7rem, ${9 + combo.level}vw, 3rem)`, color: '#fff', textShadow: `0 0 18px ${GOLD}, 0 0 34px ${GOLD}, 0 2px 6px rgba(0,0,0,0.85)`, letterSpacing: '0.03em', lineHeight: 1 }}>
                 COMBO ×{combo.level}
               </span>
+              {combo.level >= 3 && (
+                <span className="font-karla font-700 uppercase" style={{ marginTop: 4, fontSize: 'clamp(0.6rem, 3vw, 0.85rem)', letterSpacing: '0.22em', color: GOLD, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                  {combo.level >= 5 ? 'Plundered!' : 'Chain!'}
+                </span>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
