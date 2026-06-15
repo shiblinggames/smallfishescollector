@@ -1,65 +1,62 @@
-// The Minefield — shared constants + types for the weekly ship-themed
-// minesweeper in The Chart Room. Plain module (NOT 'use server') so sync
-// helpers + types survive the build.
+// Treasure Match — shared constants + types for the weekly Match-3 in
+// The Chart Room (replaced The Minefield 2026-06-15). Plain module (NOT
+// 'use server') so sync helpers + types survive the build.
 //
-// Sweep a harbor of drifting sea mines: reveal open water, read the
-// numbers (mines bordering a tile), flag the mines, clear every safe
-// tile. Hit a mine and she's lost — but the week's board resets and you
-// try again (unlimited retries). First clear of the week banks puzzle
-// points toward the Den purse. No doubloons.
+// Swap adjacent treasures to line up 3+; matches clear, everything drops,
+// cascades chain. Hit the target score within the move limit to win. One
+// seeded board a week; first clear banks charting points (no doubloons).
 
-export const MINEFIELD_COLS = 9
-export const MINEFIELD_ROWS = 12
-export const MINEFIELD_MINES = 18
+export const MATCH_COLS = 7
+export const MATCH_ROWS = 7
+export const MATCH_TYPES = 6
 
-/** Puzzle points banked on the first clear of the week. Tuned to ~one
- *  great Hold day so the daily Hold stays the main driver and the weekly
- *  Minefield is a satisfying bonus, not a shortcut. Feeds the Den tiers. */
-export const MINEFIELD_POINTS = 5
+/** Win condition: reach MATCH_TARGET points within MATCH_MOVES moves. */
+export const MATCH_TARGET = 2000
+export const MATCH_MOVES = 25
 
-/** Monday (UTC) of the current week — the key the weekly board +
- *  attempts are stored under (mirrors the Pirate King ladder). */
-export function minefieldWeekStr(now = new Date()): string {
+/** Charting points banked on the first clear of the week. */
+export const MATCH_POINTS = 5
+
+/** Token art by type index (must be >= MATCH_TYPES). Emoji on a colored
+ *  tile — instantly readable, ship-themed. */
+export const MATCH_TOKENS: { emoji: string; color: string }[] = [
+  { emoji: '🪙', color: '#caa133' }, // doubloon
+  { emoji: '⚓', color: '#3f7fb0' }, // anchor
+  { emoji: '🐚', color: '#c87fa8' }, // shell
+  { emoji: '🐟', color: '#3fae78' }, // fish
+  { emoji: '💎', color: '#7f63c0' }, // gem
+  { emoji: '💀', color: '#9a948a' }, // skull
+  { emoji: '🦑', color: '#b05f7f' }, // squid (spare)
+  { emoji: '🧭', color: '#b08840' }, // compass (spare)
+]
+
+/** Monday (UTC) of the current week — the weekly key. */
+export function matchWeekStr(now = new Date()): string {
   const diff = (now.getUTCDay() + 6) % 7
   const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff))
   return monday.toISOString().split('T')[0]
 }
 
-/** A revealed tile as the client sees it — its adjacent-mine count.
- *  adj 0 renders as open water. */
-export interface RevealedTile {
-  i: number
-  adj: number
-}
-
-export interface MinefieldState {
+export interface MatchState {
   week: string
+  seed: number
   cols: number
   rows: number
-  mineCount: number
-  revealed: RevealedTile[]
-  flagged: number[]
+  types: number
+  target: number
+  moves: number
   status: 'active' | 'cleared'
-  busts: number
-  /** Points already banked for this week's board (0 until cleared). */
+  bestScore: number
   pointsAwarded: number
-  /** The reward for a first clear. */
   reward: number
-  /** Lifetime puzzle points + the Den perk they buy (for the readout). */
   puzzlePoints: number
   denCap: number
 }
 
-export interface RevealResult {
-  busted: boolean
+export interface SubmitMatchResult {
   cleared: boolean
-  /** The FULL revealed set after this action — the client replaces its
-   *  state with this (small board, simplest + race-proof). On a bust it's
-   *  just the opening region; mines are NEVER sent (busting to peek then
-   *  retrying would be cheating). */
-  revealed: RevealedTile[]
-  status: 'active' | 'cleared'
-  busts: number
   pointsWon: number
   newPuzzlePoints: number | null
+  capBefore: number
+  capAfter: number
 }

@@ -7,18 +7,18 @@
 
 import Link from 'next/link'
 import HoldCard from './HoldCard'
-import MinefieldCard from './MinefieldCard'
+import TreasureMatchCard from './TreasureMatchCard'
 import RiggingCard from './RiggingCard'
 import { DEN_PURSE_TIERS } from '../constants'
 
 const GOLD = '#f0c040'
 
-export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints }: {
+export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, riggingStatus, riggingReward, puzzlePoints }: {
   doubloons: number
   holdStatus: 'open' | 'locked' | 'done'
   holdDoubloonsToday: number
-  minefieldStatus: 'active' | 'cleared'
-  minefieldReward: number
+  matchStatus: 'active' | 'cleared'
+  matchReward: number
   riggingStatus: 'active' | 'cleared'
   riggingReward: number
   puzzlePoints: number
@@ -91,7 +91,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
 
       <div className="grid grid-cols-2 gap-3">
         <HoldCard status={holdStatus} doubloonsToday={holdDoubloonsToday} />
-        <MinefieldCard status={minefieldStatus} reward={minefieldReward} />
+        <TreasureMatchCard status={matchStatus} reward={matchReward} />
         <RiggingCard status={riggingStatus} reward={riggingReward} />
       </div>
 

@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { getHoldState } from './hold/actions'
-import { getMinefieldState } from '@/app/(app)/charting/actions'
-import { MINEFIELD_POINTS } from '@/app/(app)/charting/constants'
+import { getMatchState } from '@/app/(app)/charting/actions'
+import { MATCH_POINTS } from '@/app/(app)/charting/constants'
 import { getRiggingState } from './rigging/actions'
 import { RIGGING_POINTS } from './rigging/constants'
 import ChartRoomLobby from './ChartRoomLobby'
@@ -12,15 +12,15 @@ export default async function ChartRoomPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [profile, hold, mine, rig] = await Promise.all([getCurrentProfile(), getHoldState(), getMinefieldState(), getRiggingState()])
+  const [profile, hold, mtch, rig] = await Promise.all([getCurrentProfile(), getHoldState(), getMatchState(), getRiggingState()])
 
   const solvedToday = 'error' in hold ? false : hold.puzzles.some(p => p.solved)
   const holdStatus: 'open' | 'locked' | 'done' =
     'error' in hold ? 'open' : solvedToday ? 'done' : hold.lockedDifficulty ? 'locked' : 'open'
   const holdDoubloonsToday = 'error' in hold ? 0 : hold.doubloonsAwarded
 
-  const minefieldStatus: 'active' | 'cleared' = 'error' in mine ? 'active' : mine.status
-  const minefieldReward = 'error' in mine ? MINEFIELD_POINTS : mine.reward
+  const matchStatus: 'active' | 'cleared' = 'error' in mtch ? 'active' : mtch.status
+  const matchReward = 'error' in mtch ? MATCH_POINTS : mtch.reward
 
   const riggingStatus: 'active' | 'cleared' = 'error' in rig ? 'active' : rig.status
   const riggingReward = 'error' in rig ? RIGGING_POINTS : rig.reward
@@ -37,8 +37,8 @@ export default async function ChartRoomPage() {
               doubloons={profile?.doubloons ?? 0}
               holdStatus={holdStatus}
               holdDoubloonsToday={holdDoubloonsToday}
-              minefieldStatus={minefieldStatus}
-              minefieldReward={minefieldReward}
+              matchStatus={matchStatus}
+              matchReward={matchReward}
               riggingStatus={riggingStatus}
               riggingReward={riggingReward}
               puzzlePoints={puzzlePoints}
