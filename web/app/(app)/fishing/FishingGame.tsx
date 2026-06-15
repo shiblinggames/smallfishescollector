@@ -3484,6 +3484,16 @@ export default function FishingGame({
   }, [collectionOpen])
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number; prestige?: boolean } | null>(null)
+  // Trawls (crew passive fishing) collect off-screen in the Trawls panel; when
+  // a haul lands it dispatches these so the fishing screen's own XP bar + purse
+  // tick live (the Nav purse already listens to doubloons-changed separately).
+  useEffect(() => {
+    const onXP = (e: Event) => { const v = (e as CustomEvent<number>).detail; if (typeof v === 'number') setFishingXP(v) }
+    const onDbl = (e: Event) => { const v = (e as CustomEvent<number>).detail; if (typeof v === 'number') setDoubloons(v) }
+    window.addEventListener('fishing-xp-changed', onXP)
+    window.addEventListener('doubloons-changed', onDbl)
+    return () => { window.removeEventListener('fishing-xp-changed', onXP); window.removeEventListener('doubloons-changed', onDbl) }
+  }, [])
   // Level-up celebration carries both the old AND new level so we can
   // compute the stat deltas the player just earned (catch-zone width,
   // bite speed, zone unlocks) — see fishingLevelDeltas() helper.
