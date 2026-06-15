@@ -62,6 +62,20 @@ function Portrait({ crew, size = 52, glow }: { crew: TrawlCrewView | null; size?
   )
 }
 
+function CloseBtn({ onClick, label = 'Close' }: { onClick: () => void; label?: string }) {
+  return (
+    <button onClick={onClick} aria-label={label} style={{
+      width: 36, height: 36, borderRadius: 11, flexShrink: 0, padding: 0,
+      background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)',
+      color: '#cdd3db', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+        <path d="M6 6l12 12M18 6 6 18" />
+      </svg>
+    </button>
+  )
+}
+
 // One requirement chip in the "unlock next slot" explainer.
 function Req({ label, need, have }: { label: string; need: number; have: number }) {
   const met = have >= need
@@ -195,7 +209,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)',
               padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))',
             }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>
+              <CloseBtn onClick={() => { setOpen(false); setPicking(null) }} />
+            </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
               Send a crew to fish a zone for 1 hour — even while you&apos;re away or doing other things. Come back to collect the haul, then send them again.
             </p>
@@ -282,7 +299,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
           style={{ position: 'fixed', inset: 0, zIndex: 9200, background: 'rgba(4,8,14,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }} onClick={e => e.stopPropagation()}
             style={{ width: '100%', maxWidth: 470, maxHeight: '84vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8' }}>Send a crew to the {pickZone?.label}</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8' }}>Send a crew to the {pickZone?.label}</p>
+              <CloseBtn onClick={() => setPicking(null)} label="Back" />
+            </div>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: '#bcb29a', lineHeight: 1.45, margin: '4px 0 4px' }}>
               They&apos;re locked at sea for the full hour (can&apos;t raid or voyage). <span style={{ color: BLUE }}>Savvy</span> earns fishing XP, <span style={{ color: GOLD }}>Fortune</span> earns doubloons — the estimates show what each crew would haul here.
             </p>
