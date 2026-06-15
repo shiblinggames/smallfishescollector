@@ -316,7 +316,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 color: tok.color,
               }}
             >
-              <span aria-hidden style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}>{tok.emoji}</span>
+              <img src={tok.img} alt="" draggable={false} style={{ width: '84%', height: '84%', objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.55))' }} />
             </div>
           )
         })}
