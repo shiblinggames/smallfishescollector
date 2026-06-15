@@ -302,8 +302,10 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 aspectRatio: '1 / 1', borderRadius: 9,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 'clamp(1.3rem, 7vw, 2rem)', lineHeight: 1,
-                background: isInvalid ? 'rgba(192,57,43,0.55)' : isCommit ? `${tok.color}55` : `${tok.color}33`,
-                border: `2px solid ${isCommit || isSel ? '#fff' : isInvalid ? '#c0392b' : `${tok.color}88`}`,
+                background: isInvalid ? 'rgba(192,57,43,0.6)'
+                  : isCommit ? `linear-gradient(155deg, ${tok.color}cc 0%, ${tok.color}77 100%)`
+                  : `linear-gradient(155deg, ${tok.color}9e 0%, ${tok.color}4d 100%)`,
+                border: `2px solid ${isCommit || isSel ? '#fff' : isInvalid ? '#c0392b' : `${tok.color}d8`}`,
                 boxShadow: isCommit
                   ? `0 0 18px #fff, 0 0 30px ${tok.color}, inset 0 0 14px ${tok.color}77`
                   : isSel ? `0 0 14px ${tok.color}, inset 0 0 10px ${tok.color}55` : `inset 0 1px 3px rgba(255,255,255,0.12)`,

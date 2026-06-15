@@ -20,14 +20,14 @@ export const MATCH_POINTS = 5
 /** Token art by type index (must be >= MATCH_TYPES). Emoji on a colored
  *  tile — instantly readable, ship-themed. */
 export const MATCH_TOKENS: { emoji: string; color: string }[] = [
-  { emoji: '🪙', color: '#caa133' }, // doubloon
-  { emoji: '⚓', color: '#3f7fb0' }, // anchor
-  { emoji: '🐚', color: '#c87fa8' }, // shell
-  { emoji: '🐟', color: '#3fae78' }, // fish
-  { emoji: '💎', color: '#7f63c0' }, // gem
-  { emoji: '💀', color: '#9a948a' }, // skull
-  { emoji: '🦑', color: '#b05f7f' }, // squid (spare)
-  { emoji: '🧭', color: '#b08840' }, // compass (spare)
+  { emoji: '🪙', color: '#ffc62e' }, // doubloon — bright gold
+  { emoji: '⚓', color: '#2e9bf0' }, // anchor — vivid blue
+  { emoji: '🐚', color: '#ff6fb4' }, // shell — hot pink
+  { emoji: '🐟', color: '#1ed988' }, // fish — bright green
+  { emoji: '💎', color: '#9d5cff' }, // gem — electric violet
+  { emoji: '💀', color: '#34dcd6' }, // skull — bright cyan
+  { emoji: '🦑', color: '#ff5c8a' }, // squid (spare)
+  { emoji: '🧭', color: '#f0a93a' }, // compass (spare)
 ]
 
 /** Monday (UTC) of the current week — the weekly key. */
