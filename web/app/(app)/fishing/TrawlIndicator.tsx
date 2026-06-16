@@ -214,11 +214,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
           )}
         </div>
         <span className="font-karla font-700" style={{
-          fontSize: '0.66rem', letterSpacing: '0.04em', padding: '2px 8px', borderRadius: 999, whiteSpace: 'nowrap',
-          background: 'rgba(8,12,18,0.82)', border: `1px solid ${ringColor}`,
+          fontSize: '0.62rem', letterSpacing: anyReady ? '0.14em' : '0.04em', padding: '2px 9px', borderRadius: 999, whiteSpace: 'nowrap',
+          background: anyReady ? `${GOLD}1c` : 'rgba(8,12,18,0.82)',
+          border: `1px solid ${anyReady ? `${GOLD}55` : ringColor}`,
           color: anyReady ? GOLD : indicatorTrawl ? '#e6dcc2' : '#b6a98c',
         }}>
-          {anyReady ? 'Collect!' : indicatorTrawl ? fmtCountdown(indicatorMs) : 'Trawls'}
+          {anyReady ? 'Ready' : indicatorTrawl ? fmtCountdown(indicatorMs) : 'Trawls'}
         </span>
       </motion.button>
     </div>
