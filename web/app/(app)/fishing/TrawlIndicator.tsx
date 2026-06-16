@@ -29,8 +29,16 @@ const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return 'Ready'
-  const s = Math.ceil(ms / 1000)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+  const totalSec = Math.ceil(ms / 1000)
+  // Only the final minute ticks by the second ("the final countdown"); above
+  // that it sits on calm whole minutes / hours so the readout isn't churning
+  // every second through a 45m–2h cycle.
+  if (totalSec < 60) return `0:${String(totalSec).padStart(2, '0')}`
+  const totalMin = Math.floor(totalSec / 60)
+  if (totalMin < 60) return `${totalMin}m`
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
 function CountUp({ to, prefix = '', className, style }: { to: number; prefix?: string; className?: string; style?: React.CSSProperties }) {
@@ -92,6 +100,18 @@ function Req({ label, need, have }: { label: string; need: number; have: number 
         {met ? 'done' : `you're ${have}`}
       </span>
     </div>
+  )
+}
+
+// Small "best" chip in the crew picker — flags the strongest free crew for a
+// goal in this zone (Savvy → XP, Fortune → doubloons).
+function BestTag({ color }: { color: string }) {
+  return (
+    <span className="font-karla font-800 uppercase" style={{
+      fontSize: '0.46rem', letterSpacing: '0.08em', color,
+      background: `${color}1f`, border: `1px solid ${color}55`, borderRadius: 4,
+      padding: '0.06rem 0.26rem', marginRight: 5, verticalAlign: 'middle',
+    }}>best</span>
   )
 }
 
@@ -418,6 +438,11 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const orderedCrew = picking
     ? [...state.freeCrew].sort((a, b) => (a.id === lastId ? -1 : b.id === lastId ? 1 : (b.savvy + b.fortune) - (a.savvy + a.fortune)))
     : []
+  // Tag the strongest crew for each goal (Savvy → XP, Fortune → doubloons) so a
+  // min-maxer can pick at a glance. Only when there's an actual choice to make.
+  const ests = picking ? orderedCrew.map(c => ({ id: c.id, ...expectedTrawlHaul(picking, c.savvy, c.fortune) })) : []
+  const bestXpId = orderedCrew.length > 1 && ests.length ? ests.reduce((a, b) => (b.xp > a.xp ? b : a)).id : -1
+  const bestDblId = orderedCrew.length > 1 && ests.length ? ests.reduce((a, b) => (b.doubloons > a.doubloons ? b : a)).id : -1
   const picker = (
     <AnimatePresence>
       {picking && (
@@ -452,8 +477,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       </p>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GREEN, lineHeight: 1.25 }}>~{est.xp.toLocaleString()} xp</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GOLD, lineHeight: 1.25 }}>~{est.doubloons.toLocaleString()} ⟡</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GREEN, lineHeight: 1.25 }}>
+                        {c.id === bestXpId && <BestTag color={GREEN} />}~{est.xp.toLocaleString()} xp
+                      </p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GOLD, lineHeight: 1.25 }}>
+                        {c.id === bestDblId && <BestTag color={GOLD} />}~{est.doubloons.toLocaleString()} ⟡
+                      </p>
                     </div>
                   </motion.button>
                 )
@@ -485,11 +514,16 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#dccba6', marginTop: 4 }}>{reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.</p>
 
             {reveal.fish.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', margin: '14px 0' }}>
-                {reveal.fish.map((f, i) => (
-                  <motion.span key={i} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.15 + i * 0.1, type: 'spring', stiffness: 320 }}
-                    className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#cfc6b0', padding: '0.25rem 0.6rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>{f}</motion.span>
-                ))}
+              <div style={{ margin: '14px 0' }}>
+                {/* Flavor only — the actual reward is the XP + doubloons below.
+                    Label it so players don't read these as caught fish items. */}
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.18em', color: '#8a8068', marginBottom: 7 }}>Trawled up</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                  {reveal.fish.map((f, i) => (
+                    <motion.span key={i} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.15 + i * 0.1, type: 'spring', stiffness: 320 }}
+                      className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#cfc6b0', padding: '0.25rem 0.6rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>{f}</motion.span>
+                  ))}
+                </div>
               </div>
             )}
 
