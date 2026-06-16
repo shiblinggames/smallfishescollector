@@ -276,8 +276,8 @@ export const THE_CARTOGRAPHER_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_CARTOGRAPHER, CARTOGRAPHER_CHALLENGE_LOOT)
 
 // The Tollmaster's challenge loot. Doubles the special-drop rates (Spet's Primer
-// 20 → 40, Tollmaster's Hot Iron 5 → 10, Chartmaker Hull 9 → 16) so the
-// legendary Hot Iron becomes the realistic chase and the chapter-2 trophy skin
+// 20 → 40, Tollmaster's Primer 5 → 10, Chartmaker Hull 9 → 16) so the
+// legendary Primer becomes the realistic chase and the chapter-2 trophy skin
 // stays on the table. No phase 2 — like the Cartographer, the raid-wide First
 // Cut + the doubled-opener boss are already the fight's identity.
 const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
@@ -290,7 +290,7 @@ const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
     w('pack_2',                  5),
     w('chartmaker_hull',        16),
     w('spets_primer',           40),
-    w('tollmasters_hot_iron',   10),
+    w('tollmasters_primer',     10),
   ]
 })()
 

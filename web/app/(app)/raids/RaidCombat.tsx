@@ -746,12 +746,13 @@ export default function RaidCombat({
     enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
-    // via Spet's drop (start_charges effect = cannonballs pre-chambered each
-    // fight), capped at MAX. Every other raid opens both sides cold (0).
-    const playerStartCharges = Math.min(
-      MAX_CHARGES,
-      getActiveEffects(equippedRaidItems).filter(e => e.type === 'start_charges').reduce((a, e) => a + e.value, 0),
-    )
+    // via Spet's drops — a CHANCE to open each fight with one chambered (Spet's
+    // Primer 50%, Tollmaster's Primer 100%). Roll the best chance among equipped
+    // items; on a proc, start with 1. Every other raid opens both sides cold.
+    const startChargeChance = getActiveEffects(equippedRaidItems)
+      .filter(e => e.type === 'start_charge_chance')
+      .reduce((a, e) => Math.max(a, e.value), 0)
+    const playerStartCharges = startChargeChance > 0 && Math.random() < startChargeChance ? 1 : 0
     setPlayerCharges(playerStartCharges); setEnemyCharges(enemy.startCharges ?? 0)
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)

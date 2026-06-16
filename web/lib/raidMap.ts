@@ -1120,11 +1120,11 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_TOLLMASTER.enemies.spet.portrait,
     detail: {
       description:
-        "The Tollmaster's whole toll line again, harder for the loss. The barracudas hit cleaner, Spet's doubled opener bites deeper, and every hull still fires first. Crack his crate this run and his own Hot Iron rolls at twice the rate.",
+        "The Tollmaster's whole toll line again, harder for the loss. The barracudas hit cleaner, Spet's doubled opener bites deeper, and every hull still fires first. Crack his crate this run and his own Primer rolls at twice the rate.",
       enemies: ['Silverdart ×2', 'Snapjaw ×2', 'Gulletmaw ×2', 'The Exactor ×2', 'Tollmaster Spet'],
       drops: lootDrops(THE_TOLLMASTER_CHALLENGE.loot),
       clearReward: clearPayout(THE_TOLLMASTER_CHALLENGE),
-      dropsNote: "Every kill pays more, the clear bonus is steeper, and the legendary Tollmaster's Hot Iron rolls at double the normal rate.",
+      dropsNote: "Every kill pays more, the clear bonus is steeper, and the legendary Tollmaster's Primer rolls at double the normal rate.",
     },
   },
   {

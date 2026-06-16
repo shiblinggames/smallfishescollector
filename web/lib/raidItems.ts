@@ -10,7 +10,7 @@ export type RaidEffectType =
   | 'parry_reflect_pct'     // value = 0-1 fraction of the dodged shot's damage roll reflected back when parry triggers
   | 'burn_chance'           // value = 0-1 chance, each player hit, to set the enemy ablaze (DoT, see RaidCombat BURN_*)
   | 'freeze_chance'         // value = 0-1 chance, each player hit, to freeze the enemy (it loses a turn)
-  | 'start_charges'         // value = cannonballs already chambered at the start of every raid fight (the player-side "First Cut")
+  | 'start_charge_chance'   // value = 0-1 chance to open each raid fight with 1 cannonball already loaded (the player-side "First Cut")
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -161,21 +161,21 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'spets_primer',
     name: "Spet's Primer",
-    description: 'Start every raid fight with one cannonball already loaded, so you can fire on the opening bell.',
-    image: null,
+    description: '50% chance to start each raid fight with a cannonball already loaded, so you can fire on the opening bell.',
+    image: '/spetsprimer.png',
     emoji: '🧨',
     rarity: 'epic',
-    effects: [{ type: 'start_charges', value: 1 }],
+    effects: [{ type: 'start_charge_chance', value: 0.5 }],
     source: "The Tollmaster's Cut",
   },
   {
-    id: 'tollmasters_hot_iron',
-    name: "Tollmaster's Hot Iron",
-    description: 'Start every raid fight with two cannonballs already loaded. The Tollmaster never waits to take his cut.',
-    image: null,
+    id: 'tollmasters_primer',
+    name: "Tollmaster's Primer",
+    description: 'Always start each raid fight with a cannonball already loaded. The Tollmaster never waits to take his cut.',
+    image: '/tollmastersprimer.png',
     emoji: '🧨',
     rarity: 'legendary',
-    effects: [{ type: 'start_charges', value: 2 }],
+    effects: [{ type: 'start_charge_chance', value: 1.0 }],
     source: "The Tollmaster's Cut",
   },
   {

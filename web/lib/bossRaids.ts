@@ -605,8 +605,8 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     // win the first exchange far more often than any prior raid (where everyone
     // opened cold and had to reload first). No plating, no fog, no parry — the
     // whole identity is "they hit you before you've loaded." The player answers
-    // with Spet's own drop (Spet's Primer / Tollmaster's Hot Iron = start each
-    // fight loaded yourself). Caps at the Brigantine art tier — Galleon +
+    // with Spet's own drop (Spet's Primer = 50% / Tollmaster's Primer = 100%
+    // chance to open a fight loaded yourself). Caps at the Brigantine art tier — Galleon +
     // Man-o-War are held for later chapters.
     scout: {
       id: 'scout', name: 'Silverdart', hpBase: 60, minDmg: 6, maxDmg: 12,
@@ -693,8 +693,8 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     { id: 'pack_2',                label: '200 Gems',   image: null,              emoji: GEM_GLYPH, rarity: 'epic',      weight: 5  },
     // ~30% special drops
     { id: 'chartmaker_hull',       label: 'Chartmaker Hull',       image: null, emoji: '🚢',  rarity: 'epic',      weight: 9,  shipSkinId: 'chartmaker_hull' },
-    { id: 'spets_primer',          label: "Spet's Primer",         image: null, emoji: '🧨',  rarity: 'epic',      weight: 20 },
-    { id: 'tollmasters_hot_iron',  label: "Tollmaster's Hot Iron", image: null, emoji: '🧨',  rarity: 'legendary', weight: 5  },
+    { id: 'spets_primer',        label: "Spet's Primer",      image: '/spetsprimer.png',       emoji: '🧨',  rarity: 'epic',      weight: 20 },
+    { id: 'tollmasters_primer',  label: "Tollmaster's Primer", image: '/tollmastersprimer.png', emoji: '🧨',  rarity: 'legendary', weight: 5  },
   ],
   killRewards: {
     scout: { gold: 60,  xp: 60  },
