@@ -68,12 +68,15 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_date, gauntlet_deepest')
+    .select('gauntlet_last_date, gauntlet_deepest, is_admin')
     .eq('id', user.id)
     .single()
 
+  // Admins can run it as often as they like (testing the curve).
+  const isAdmin = profile?.is_admin === true
+
   return {
-    available: (profile?.gauntlet_last_date as string | null) !== today(),
+    available: isAdmin || (profile?.gauntlet_last_date as string | null) !== today(),
     deepest: (profile?.gauntlet_deepest as number | null) ?? 0,
   }
 }
@@ -88,12 +91,14 @@ export async function startGauntletRun(): Promise<{ started: boolean; reason?: '
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_date, gauntlet_deepest')
+    .select('gauntlet_last_date, gauntlet_deepest, is_admin')
     .eq('id', user.id)
     .single()
 
   const deepest = (profile?.gauntlet_deepest as number | null) ?? 0
-  if ((profile?.gauntlet_last_date as string | null) === today()) {
+  const isAdmin = profile?.is_admin === true
+  // Admins bypass the once-a-day gate so they can run it repeatedly to test.
+  if (!isAdmin && (profile?.gauntlet_last_date as string | null) === today()) {
     return { started: false, reason: 'used', deepest }
   }
 
