@@ -303,6 +303,11 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             </p>
 
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#8a8068', margin: '16px 0 8px' }}>Fishing zones</p>
+            {freeSlots <= 0 && state.zones.some(z => z.unlocked && !z.trawl) && (
+              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#d2b878', lineHeight: 1.45, margin: '-2px 0 9px', background: 'rgba(210,184,120,0.08)', border: '1px solid rgba(210,184,120,0.22)', borderRadius: 9, padding: '0.45rem 0.6rem' }}>
+                All {state.unlockedSlots} trawl slot{state.unlockedSlots === 1 ? '' : 's'} are busy. Collect a finished haul or wait for a crew to return to open one up.
+              </p>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {state.zones.map((z, i) => {
                 const t = z.trawl
@@ -312,80 +317,91 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const progress = running ? Math.max(0, Math.min(1, 1 - ms / trawlDurationMs(z.key))) : 0
                 const flashing = flashZone === z.key
                 // Odd one out (5 zones / 2 cols) → the last (Ancient Deep) spans
-                // full width as a feature card with a horizontal layout.
+                // full width as a feature card.
                 const wide = i === state.zones.length - 1 && state.zones.length % 2 === 1
-                // Whole card is the tap target now: tap an open zone to send a
-                // crew, tap a finished one to collect. Other states aren't tappable.
                 const sendable = z.unlocked && !t && freeSlots > 0
-                const noFreeSlot = z.unlocked && !t && freeSlots <= 0
                 const actionable = ready || sendable
                 const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setPicking(z.key) } : undefined
                 const glow = ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined
-                // Card background IS the zone's painting (same art the profile
-                // background picker uses), under a dark scrim for text legibility.
-                // The scrim's top is washed with the state accent (ready gold /
-                // running teal / flash green) and the border/glow signal taps.
+                // The zone art (same blue-ocean paintings as the profile picker)
+                // makes every card look alike, so STATE is carried by a bold,
+                // color-coded top strip + per-state treatment, not the bg colour.
+                const cardState: 'locked' | 'ready' | 'running' | 'sendable' | 'noslot' =
+                  !z.unlocked ? 'locked' : ready ? 'ready' : running ? 'running' : sendable ? 'sendable' : 'noslot'
+                const strip = {
+                  ready:    { c: GOLD,      bg: `${GOLD}30`,              label: 'Ready · Tap to collect' },
+                  running:  { c: TEAL,      bg: `${TEAL}26`,              label: `Fishing · ${fmtCountdown(ms)}` },
+                  sendable: { c: BLUE,      bg: `${BLUE}26`,              label: 'Tap to send crew' },
+                  noslot:   { c: '#c8bea4', bg: 'rgba(255,255,255,0.09)', label: 'No free slot' },
+                  locked:   { c: '#9a8f72', bg: 'rgba(255,255,255,0.05)', label: `Locked · Lv ${z.minLevel}` },
+                }[cardState]
                 const zoneArt = getProfileBackground(z.key)?.src
-                const scrimTop = flashing ? `${GREEN}46` : ready ? `${GOLD}4a` : running ? `${TEAL}3a` : 'rgba(8,10,16,0.42)'
-                const scrim = `linear-gradient(180deg, ${scrimTop} 0%, rgba(8,10,16,0.72) 56%, rgba(8,10,16,0.9) 100%)`
+                const scrimTop = flashing ? `${GREEN}46` : ready ? `${GOLD}40` : running ? `${TEAL}30` : 'rgba(8,10,16,0.46)'
+                const scrim = `linear-gradient(180deg, ${scrimTop} 0%, rgba(8,10,16,0.74) 56%, rgba(8,10,16,0.92) 100%)`
                 const cardStyle: React.CSSProperties = {
                   borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
                   backgroundColor: '#0c1018',
                   background: zoneArt ? `${scrim}, url(${zoneArt}) center / cover` : scrim,
-                  border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}80` : running ? `${TEAL}66` : sendable ? `${BLUE}99` : 'rgba(255,255,255,0.16)'}`,
-                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : ready ? `0 0 14px ${GOLD}40` : sendable ? `0 0 10px ${BLUE}22` : 'none',
-                  opacity: z.unlocked ? 1 : 0.55,
+                  border: `1.5px solid ${flashing ? `${GREEN}88` : ready ? GOLD : running ? `${TEAL}88` : sendable ? `${BLUE}99` : 'rgba(255,255,255,0.13)'}`,
+                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : sendable ? `0 0 10px ${BLUE}22` : 'none',
+                  // Running cards dim a touch (busy); no-slot/locked dim more so
+                  // they clearly read as "you can't act here right now".
+                  opacity: !z.unlocked ? 0.5 : cardState === 'noslot' ? 0.62 : 1,
+                  display: 'flex', flexDirection: 'column',
                 }
                 const motionProps = {
                   initial: { opacity: 0, y: 8 },
-                  animate: flashing ? { opacity: 1, y: 0, scale: [1, 1.04, 1] } : { opacity: 1, y: 0, scale: 1 },
-                  transition: flashing ? { duration: 0.5, ease: 'easeOut' as const } : { delay: 0.04 * i, type: 'spring' as const, stiffness: 420, damping: 30 },
+                  animate: flashing
+                    ? { opacity: 1, y: 0, scale: [1, 1.04, 1] }
+                    : ready
+                      // Ready cards keep a breathing gold glow so "come collect me" is unmissable.
+                      ? { opacity: 1, y: 0, boxShadow: [`0 0 12px ${GOLD}45`, `0 0 26px ${GOLD}90`, `0 0 12px ${GOLD}45`] }
+                      : { opacity: 1, y: 0, scale: 1 },
+                  transition: flashing
+                    ? { duration: 0.5, ease: 'easeOut' as const }
+                    : ready
+                      ? { boxShadow: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' as const } }
+                      : { delay: 0.04 * i, type: 'spring' as const, stiffness: 420, damping: 30 },
                   ...(actionable ? { whileTap: { scale: 0.96 } } : {}),
                   onClick: onTapCard,
                 }
-                const nameEl = (center: boolean) => (
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f4ecd8', textShadow: '0 1px 4px rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', gap: 5, lineHeight: 1.15 }}>
-                    {z.label}
-                    {running && <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL, boxShadow: `0 0 6px ${TEAL}`, flexShrink: 0 }} />}
-                  </p>
+                const stateStrip = (
+                  <div style={{ width: '100%', padding: '0.3rem 0.4rem', background: strip.bg, borderBottom: `1px solid ${strip.c}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexShrink: 0 }}>
+                    {(cardState === 'ready' || cardState === 'running') && (
+                      <motion.span animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 6, height: 6, borderRadius: '50%', background: strip.c, boxShadow: `0 0 6px ${strip.c}`, flexShrink: 0 }} />
+                    )}
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.08em', color: strip.c, textShadow: '0 1px 2px rgba(0,0,0,0.6)', whiteSpace: 'nowrap' }}>{strip.label}</span>
+                  </div>
                 )
-                const statusEl = (center: boolean) => (
-                  <p className="font-karla" style={{ fontSize: '0.62rem', color: ready ? GOLD : running ? TEAL : '#cbc2ad', textShadow: '0 1px 3px rgba(0,0,0,0.85)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: center ? 'center' : 'left' }}>
-                    {!z.unlocked ? `Unlocks at Fishing ${z.minLevel}`
-                      : t ? (ready ? 'Haul ready!' : `${t.crew.name}`)
-                      : `${fmtTrawlDuration(z.key)} cycle`}
-                  </p>
+                const body = (portraitSize: number, barMaxW?: number) => (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.7rem 0.55rem 0.75rem', width: '100%' }}>
+                    <Portrait crew={t?.crew ?? null} size={portraitSize} glow={glow} />
+                    <div style={{ width: '100%', minWidth: 0, textAlign: 'center' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f4ecd8', textShadow: '0 1px 4px rgba(0,0,0,0.85)', lineHeight: 1.15 }}>{z.label}</p>
+                      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#cbc2ad', textShadow: '0 1px 3px rgba(0,0,0,0.85)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {t ? t.crew.name : `${fmtTrawlDuration(z.key)} cycle`}
+                      </p>
+                    </div>
+                    {running && (
+                      <div style={{ width: '100%', maxWidth: barMaxW, height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.45)', overflow: 'hidden', marginTop: 1 }}>
+                        <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${TEAL}, ${BLUE})`, transition: 'width 1s linear' }} />
+                      </div>
+                    )}
+                  </div>
                 )
-                // Send/collect labels are gone — the tint + glow carry the
-                // affordance. Only running (countdown), locked, and no-free-slot
-                // states still need a footer line.
-                const footer = !z.unlocked
-                  ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: '#6a6452', textAlign: 'center', display: 'block' }}>Locked</span>
-                  : running
-                    ? <>
-                        <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: TEAL, fontVariantNumeric: 'tabular-nums', textAlign: 'center', marginBottom: 4 }}>{fmtCountdown(ms)}</p>
-                        <div style={{ height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-                          <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${TEAL}, ${BLUE})`, transition: 'width 1s linear' }} />
-                        </div>
-                      </>
-                    : noFreeSlot
-                      ? <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6452', textAlign: 'center', display: 'block' }}>No free slot</span>
-                      : null
 
                 if (wide) {
                   return (
-                    <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '0.9rem 0.6rem' }}>
-                      <Portrait crew={t?.crew ?? null} size={50} glow={glow} />
-                      <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>{nameEl(true)}{statusEl(true)}</div>
-                      {footer && <div style={{ width: '100%', maxWidth: 260, margin: '1px auto 0' }}>{footer}</div>}
+                    <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1' }}>
+                      {stateStrip}
+                      {body(50, 260)}
                     </motion.div>
                   )
                 }
                 return (
-                  <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '0.85rem 0.6rem', minHeight: 122 }}>
-                    <Portrait crew={t?.crew ?? null} size={46} glow={glow} />
-                    <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>{nameEl(true)}{statusEl(true)}</div>
-                    {footer && <div style={{ width: '100%', marginTop: 1 }}>{footer}</div>}
+                  <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, minHeight: 134 }}>
+                    {stateStrip}
+                    {body(46)}
                   </motion.div>
                 )
               })}
