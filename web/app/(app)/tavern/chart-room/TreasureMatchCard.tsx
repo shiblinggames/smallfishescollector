@@ -2,12 +2,15 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
+import { MATCH_TOKENS } from '@/app/(app)/charting/constants'
 
 const GOLD = '#f0c040'
-const TOKENS = ['🪙', '💎', '⚓', '🐚', '🐟', '💎', '🪙', '⚓', '💎']
+// Token indices laid out 3×3 — uses the SAME crew fish art + tints as the
+// actual game board (no emojis).
+const CELLS = [0, 1, 2, 3, 4, 5, 1, 4, 0]
 
 /** Door card for Treasure Match (weekly Match-3) in the Chart Room.
- *  Scene: a little grid of treasures with a few gently pulsing — reads
+ *  Scene: a little grid of crew treasures with a few gently pulsing — reads
  *  as "line up the loot". Shows whether the week's board is cleared. */
 export default function TreasureMatchCard({ status, reward }: { status: 'active' | 'cleared'; reward: number }) {
   const cleared = status === 'cleared'
@@ -25,20 +28,24 @@ export default function TreasureMatchCard({ status, reward }: { status: 'active'
         style={{ position: 'absolute', top: 2, left: '50%', translateX: '-50%', width: 150, height: 110, background: 'radial-gradient(ellipse at center, rgba(240,200,110,0.32) 0%, transparent 70%)', pointerEvents: 'none' }}
       />
       <div aria-hidden style={{ position: 'absolute', top: 22, left: '50%', transform: 'translateX(-50%)', display: 'grid', gridTemplateColumns: 'repeat(3, 30px)', gap: 5 }}>
-        {TOKENS.map((t, i) => (
-          <motion.div
-            key={i}
-            animate={{ scale: [1, i % 4 === 0 ? 1.18 : 1, 1] }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.35 }}
-            style={{
-              width: 30, height: 30, borderRadius: 7, fontSize: '1rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(212,165,68,0.14)', border: '1px solid rgba(212,165,68,0.4)',
-            }}
-          >
-            {t}
-          </motion.div>
-        ))}
+        {CELLS.map((ti, i) => {
+          const tok = MATCH_TOKENS[ti] ?? MATCH_TOKENS[0]
+          return (
+            <motion.div
+              key={i}
+              animate={{ scale: [1, i % 4 === 0 ? 1.18 : 1, 1] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.35 }}
+              style={{
+                width: 30, height: 30, borderRadius: 7, overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `linear-gradient(155deg, ${tok.color}9e 0%, ${tok.color}4d 100%)`,
+                border: `1px solid ${tok.color}aa`,
+              }}
+            >
+              <img src={tok.img} alt="" draggable={false} style={{ width: '82%', height: '82%', objectFit: 'contain' }} />
+            </motion.div>
+          )
+        })}
       </div>
       <span
         className="font-karla font-700"
