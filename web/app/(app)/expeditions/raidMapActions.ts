@@ -120,12 +120,13 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, is_admin')
     .eq('id', user.id)
     .single()
 
   const doubloons = profile?.doubloons ?? 0
   const navLevel = getLevelFromXP(profile?.expedition_xp ?? 0)
+  const isAdmin = profile?.is_admin === true
   const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
   const seenChapterUnlocks = (profile?.seen_chapter_unlocks as string[] | null) ?? []
   // Per-event-node "chosen option" map (raid_node_progress.choices) —
@@ -137,7 +138,7 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
     buildClearedSet(admin, user.id, profile ?? {}),
     loadRaidRecords(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, raidNodeChoices }
+  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, raidNodeChoices }
 }
 
 /** First-time celebration dismiss — appends the chapter id to
@@ -182,10 +183,11 @@ export async function claimMilestoneNode(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (cleared.has(nodeId)) return { error: 'Already claimed' }
@@ -231,10 +233,11 @@ export async function markStoryNodeRead(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress')
+    .select('has_completed_practice_raid, raid_node_progress, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (cleared.has(nodeId)) return { ok: true } // idempotent
@@ -269,10 +272,11 @@ export async function solvePuzzleNode(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const expeditionXp = (profile.expedition_xp as number | null) ?? 0
   const cleared = await buildClearedSet(admin, user.id, profile)
@@ -313,10 +317,11 @@ export async function claimQuartermasterChoice(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress, raid_items, expedition_xp')
+    .select('has_completed_practice_raid, raid_node_progress, raid_items, expedition_xp, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (cleared.has(nodeId)) return { error: 'Already chosen' }
@@ -366,10 +371,11 @@ export async function pickRaidEventChoice(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (cleared.has(nodeId)) return { error: 'Already chosen' }
@@ -439,10 +445,11 @@ export async function rollDiceNode(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (cleared.has(nodeId)) return { error: 'Already thrown' }
@@ -508,10 +515,11 @@ export async function claimScoutDebt(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
   const doubloons = profile.doubloons ?? 0
@@ -574,10 +582,11 @@ export async function pickShipClass(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('has_completed_practice_raid, raid_node_progress, ship_classes')
+    .select('has_completed_practice_raid, raid_node_progress, ship_classes, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
 
   const cleared = await buildClearedSet(admin, user.id, profile)
   if (cleared.has(nodeId)) return { error: 'Already chosen' }

@@ -247,6 +247,10 @@ export interface RaidNode {
   dice?: RaidDice
   /** story-type payoff gated on an earlier choice (the freed-scout debt). */
   payoff?: RaidPayoff
+  /** In-review gate: hide + hard-block this node for non-admins. Filtered out
+   *  of the map view for non-admins (so the chain just ends before it) and
+   *  refused by every server action. Drop the flag to launch the node. */
+  adminOnly?: boolean
   /** Marks this node as a side branch hanging off another node, NOT part of
    *  the main story chain. Used by challenge-mode raids: the challenge node
    *  sits beside its parent on the map (shared row, opposite column),
@@ -908,8 +912,10 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   // ── Chapter II continues: the run on the Gullet ──────────────────────────
+  // All admin-only for now (in review). Drop the adminOnly flags to launch.
   {
     id: 'gullet_heading',
+    adminOnly: true,
     type: 'story',
     label: 'The Throat of the Sea',
     flavor: "The Cartographer's charts and Krust's beacon map finally agree on one point of water, and the crews out here have a name for it they don't say twice.",
@@ -937,6 +943,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'gullet_cipher',
+    adminOnly: true,
     type: 'puzzle',
     label: 'The Wax Cipher',
     flavor: "The mouth of the Gullet drowns any ship that reads the channel wrong. The only safe way in is sealed inside a Finndicate manifest, locked behind a row of wax cipher dials.",
@@ -962,6 +969,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'gullet_bones',
+    adminOnly: true,
     type: 'dice',
     label: 'A Throw of the Bones',
     flavor: "A Finndicate freighter, half-swallowed and snagged on the reef, hold split open and bleeding cargo into the dark. How you plunder her is down to the bones.",
@@ -1020,6 +1028,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'gullet_cache',
+    adminOnly: true,
     type: 'shop',
     label: 'The Sunken Cache',
     flavor: "A fence working a shelf of gear deep inside the Gullet, way too well-stocked for water this far out. Two pieces on the counter, take one, leave the other.",
@@ -1034,6 +1043,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'scout_debt',
+    adminOnly: true,
     type: 'story',
     label: 'A Sail in Your Lee',
     flavor: "You hold at the mouth of the Gullet and watch the fog. Whether a friendly sail comes out of it is down to the mercy you showed back past the danger line.",
@@ -1078,6 +1088,7 @@ export const RAID_MAP: RaidNode[] = [
     // the bridge chain has a terminus. requiresNavLevel is the only gate in the
     // whole Gullet stretch.
     id: 'gullet_raid',
+    adminOnly: true,
     type: 'raid',
     label: 'The Gullet',
     flavor: "Down in the throat, the captain who weighs and stacks everything the sea swallows is waiting. His crews sail loaded, every hull with a shot already in the pipe.",
@@ -1095,6 +1106,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'gullet_raid_challenge',
+    adminOnly: true,
     type: 'raid',
     label: 'Challenge: The Gullet',
     flavor: "The same loaded crews, drilled harder and angrier for the loss.",
@@ -1114,6 +1126,7 @@ export const RAID_MAP: RaidNode[] = [
     // boss (gullet_raid), so it stays locked until the raid ships. Writes
     // profiles.ship_classes['sunken_hand'], stacking with the chapter I pick.
     id: 'chapter_2_class',
+    adminOnly: true,
     type: 'class_pick',
     label: "Captain's Choice",
     flavor: "Three Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for on the deep water.",
@@ -1145,8 +1158,11 @@ export function computeRaidMap(
   cleared: Set<string>,
   doubloons: number,
   navLevel: number,
+  isAdmin = false,
 ): RaidNodeView[] {
-  return RAID_MAP.map(node => {
+  // adminOnly nodes are hidden entirely for non-admins (the chain just ends
+  // before them) while content is in review.
+  return RAID_MAP.filter(node => isAdmin || !node.adminOnly).map(node => {
     if (cleared.has(node.id)) {
       return { node, status: 'cleared' as const, claimable: false }
     }
