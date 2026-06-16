@@ -78,9 +78,19 @@ export default function CipherDialsPuzzle({ puzzle, onSolved }: { puzzle: RaidPu
 
   return (
     <div style={{ marginTop: '0.4rem' }}>
+      {/* Unaligned dials breathe so it's obvious they're live + tappable. */}
+      <style>{`@keyframes cipherBreathe {
+        0%, 100% { box-shadow: inset 0 0 9px rgba(0,0,0,0.45), 0 0 0 rgba(232,200,121,0); }
+        50%      { box-shadow: inset 0 0 9px rgba(0,0,0,0.45), 0 0 13px rgba(232,200,121,0.4); }
+      }`}</style>
+
+      <p className="font-karla" style={{ textAlign: 'center', fontSize: '0.74rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.72)', maxWidth: 300, margin: '0 auto 0.9rem' }}>
+        Tap a dial to turn it. Turning one nudges the dials beside it. Line every seal to the <span style={{ color: LIT }}>gold mark</span> up top.
+      </p>
+
       <div style={{
-        display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
-        padding: '0 12px', flexWrap: 'wrap', maxWidth: 360, margin: '0 auto',
+        display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`, gap: 8,
+        maxWidth: 392, margin: '0 auto', padding: '0 6px',
       }}>
         {state.map((count, i) => {
           const aligned = count % positions === 0
@@ -89,41 +99,47 @@ export default function CipherDialsPuzzle({ puzzle, onSolved }: { puzzle: RaidPu
               key={i}
               type="button"
               onClick={() => turn(i)}
-              aria-label={aligned ? 'Sealed to the index' : 'Off the index'}
+              aria-label={aligned ? 'Sealed to the index' : 'Off the index, tap to turn'}
               aria-pressed={aligned}
               style={{
-                position: 'relative', width: 56, height: 56, padding: 0, flexShrink: 0,
+                position: 'relative', width: '100%', aspectRatio: '1', padding: 0,
                 borderRadius: '50%', cursor: firedRef.current ? 'default' : 'pointer',
                 background: aligned
-                  ? 'radial-gradient(circle at 50% 42%, rgba(232,200,121,0.26), rgba(20,28,40,0.6) 72%)'
-                  : 'linear-gradient(160deg, rgba(30,40,56,0.6), rgba(10,15,24,0.65))',
-                border: `1px solid ${aligned ? `${LIT}77` : 'rgba(132,160,190,0.16)'}`,
-                boxShadow: aligned ? `0 0 14px ${LIT}3a, inset 0 0 9px ${LIT}1f` : 'inset 0 0 8px rgba(0,0,0,0.45)',
-                transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
+                  ? 'radial-gradient(circle at 50% 40%, rgba(232,200,121,0.30), rgba(18,26,38,0.7) 72%)'
+                  : 'radial-gradient(circle at 50% 38%, rgba(42,54,72,0.72), rgba(10,15,24,0.78) 75%)',
+                border: `2px solid ${aligned ? LIT : 'rgba(150,180,210,0.42)'}`,
+                boxShadow: aligned ? `0 0 16px ${LIT}45, inset 0 0 10px ${LIT}22` : 'inset 0 0 9px rgba(0,0,0,0.45)',
+                animation: aligned || firedRef.current ? 'none' : 'cipherBreathe 2.4s ease-in-out infinite',
+                transition: 'background 0.3s, border-color 0.3s',
                 touchAction: 'manipulation',
               }}
             >
               <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', display: 'block' }}>
+                {/* rotate-hint arc + arrowhead — signals the dial turns */}
+                <g opacity={aligned ? 0.22 : 0.55}>
+                  <path d="M30 75 A 26 26 0 0 0 70 75" fill="none" stroke={aligned ? LIT : '#9fb6d2'} strokeWidth={3} strokeLinecap="round" />
+                  <path d="M70 75 l-1 -7 l7 3 z" fill={aligned ? LIT : '#9fb6d2'} />
+                </g>
                 {/* outer ring */}
-                <circle cx={50} cy={50} r={38} fill="none" stroke={aligned ? `${LIT}55` : 'rgba(132,160,190,0.2)'} strokeWidth={2} />
+                <circle cx={50} cy={50} r={38} fill="none" stroke={aligned ? `${LIT}55` : 'rgba(150,180,210,0.3)'} strokeWidth={2} />
                 {/* glyph tick marks */}
                 {ticks.map((deg, k) => (
                   <line
                     key={k}
-                    x1={50} y1={14} x2={50} y2={20}
-                    stroke={aligned ? `${LIT}99` : DARK} strokeWidth={2.5} strokeLinecap="round"
+                    x1={50} y1={13} x2={50} y2={21}
+                    stroke={aligned ? `${LIT}aa` : DARK} strokeWidth={3} strokeLinecap="round"
                     transform={`rotate(${deg} 50 50)`}
                   />
                 ))}
                 {/* brass index marker at 12 o'clock (the target) */}
-                <path d="M50 4 L46 12 L54 12 Z" fill={LIT} opacity={aligned ? 1 : 0.85} />
+                <path d="M50 2 L45 12 L55 12 Z" fill={LIT} opacity={aligned ? 1 : 0.9} />
                 {/* the rotating seal pointer — forward-only rotation by cumulative turns */}
-                <g style={{ transform: `rotate(${count * stepDeg}deg)`, transformOrigin: '50px 50px', transition: 'transform 0.36s cubic-bezier(0.34,1.4,0.5,1)' }}>
-                  <line x1={50} y1={50} x2={50} y2={24} stroke={aligned ? LIT : '#8aa0be'} strokeWidth={4} strokeLinecap="round" />
-                  <circle cx={50} cy={24} r={5} fill={aligned ? LIT : '#8aa0be'} />
+                <g style={{ transform: `rotate(${count * stepDeg}deg)`, transformOrigin: '50px 50px', transition: 'transform 0.4s cubic-bezier(0.34,1.45,0.5,1)' }}>
+                  <line x1={50} y1={52} x2={50} y2={22} stroke={aligned ? LIT : '#c9d8ea'} strokeWidth={5} strokeLinecap="round" />
+                  <circle cx={50} cy={22} r={6} fill={aligned ? LIT : '#c9d8ea'} />
                 </g>
                 {/* hub */}
-                <circle cx={50} cy={50} r={6} fill={aligned ? LIT : DARK} stroke="rgba(0,0,0,0.4)" strokeWidth={1.5} />
+                <circle cx={50} cy={50} r={7} fill={aligned ? LIT : '#54647a'} stroke="rgba(0,0,0,0.45)" strokeWidth={1.5} />
               </svg>
             </button>
           )
@@ -131,12 +147,10 @@ export default function CipherDialsPuzzle({ puzzle, onSolved }: { puzzle: RaidPu
       </div>
 
       <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{
-        textAlign: 'center', marginTop: '0.95rem', fontSize: '0.62rem',
+        textAlign: 'center', marginTop: '1rem', fontSize: '0.62rem',
         color: solved ? LIT : '#7a7875', transition: 'color 0.3s',
       }}>
-        {solved
-          ? 'The cipher reads true'
-          : `${alignedCount} / ${state.length} sealed · line every dial to the index`}
+        {solved ? 'The cipher reads true' : `${alignedCount} / ${state.length} sealed`}
       </p>
     </div>
   )
