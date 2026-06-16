@@ -255,9 +255,9 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     pete:    { gold: 180, xp: 180 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: "A weathered galleon emerges from the fog — barnacle-crusted hull, patched sails, cannons already trained on your ship." },
+    { speaker: 'narrator', text: "A weathered galleon slides out of the fog. Barnacle-crusted hull, patched sails, cannons already trained on your ship." },
     { speaker: 'boss', text: "So another pup thinks they can take old Barnacle Pete. Many've tried, captain. None've sailed home." },
-    { speaker: 'boss', text: "I've been raiding these waters since before your grandfather wet his trousers in his first storm. Your crew, your ship, your name — they'll all join the others at the bottom." },
+    { speaker: 'boss', text: "I've been raiding these waters since before your grandfather wet his trousers in his first storm. Your crew, your ship, your name, they'll all join the others at the bottom." },
     { speaker: 'player', text: "Save your breath, Pete. I'm not here to talk. I'm here for the plunder." },
     { speaker: 'boss', text: "Plunder?! Hah! The only thing you'll take from me is a swift trip to Davy Jones." },
     { speaker: 'boss', text: "Ready your guns. This is where your story ends." },
@@ -383,10 +383,10 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
     krust: { gold: 350, xp: 350 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard grey line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull are the same." },
+    { speaker: 'narrator', text: "Past the Bilge Strait the water turns cold and the fog thins to a hard grey line. A long iron-sided carrack waits there, riding low under more cargo than any honest captain could explain. The wax on Pete's letter and the seal on her hull match." },
     { speaker: 'boss', text: "C.K. So you're the little hook that's been snagging my freight. I wondered who kept making my couriers late." },
     { speaker: 'player', text: "Captain Krust. Pete kept your letters but not his life. You run the Finndicate's cargo." },
-    { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why captains like Pete are fodder and captains like me are not." },
+    { speaker: 'boss', text: "I move what I'm told to move and I don't ask whose name is on the manifest. That's why I've lasted, and that's why captains like Pete are fodder and captains like me aren't." },
     { speaker: 'boss', text: "But you've cost the Finndicate a season's haul, captain, and someone above me will want that back out of you. I'll just take it out first." },
     { speaker: 'boss', text: "Strike your colours or strike your guns. Either way this consignment sails on without you." },
   ],
@@ -577,7 +577,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
   // Krust's structure: narrator scene-set → boss intro → player name him
   // → boss thesis line → boss "I've already mapped you" beat → engage.
   preFightDialogue: [
-    { speaker: 'narrator', text: "The fog thickens until sea and sky blur into one grey wall. Out of that wall a slow-built galleon glides up, decks stacked with rolled charts and brass-bound sextants. No flags fly. No name is painted on the hull." },
+    { speaker: 'narrator', text: "The fog thickens until sea and sky blur into one grey wall. Out of it a slow-built galleon glides up, decks stacked with rolled charts and brass-bound sextants. No flags fly. No name painted on the hull." },
     { speaker: 'boss', text: "I heard a young captain was reading my routes. I came up the line to see what kind of eyes were behind it." },
     { speaker: 'player', text: "You're the Cartographer. The Finndicate's chartmaker. Krust said his couriers followed your lines." },
     { speaker: 'boss', text: "Names belong to ships. I draw seas. Krust ran cargo, and you put him at the bottom of one of my channels. Now you're on a page of mine too." },
