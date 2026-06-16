@@ -311,7 +311,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             </div>
 
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#8a8068', margin: '16px 0 8px' }}>Fishing zones</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {state.zones.map((z, i) => {
                 const t = z.trawl
                 const ready = t ? new Date(t.endsAt).getTime() <= now : false
@@ -325,40 +325,44 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                     animate={flashing ? { opacity: 1, y: 0, scale: [1, 1.04, 1] } : { opacity: 1, y: 0, scale: 1 }}
                     transition={flashing ? { duration: 0.5, ease: 'easeOut' } : { delay: 0.04 * i, type: 'spring', stiffness: 420, damping: 30 }}
                     style={{
-                      display: 'flex', flexDirection: 'column', gap: 8, padding: '0.6rem 0.7rem', borderRadius: 13,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', gap: 7,
+                      padding: '0.75rem 0.6rem 0.65rem', borderRadius: 14, minHeight: 138,
                       background: flashing ? `${GREEN}22` : ready ? `${GOLD}14` : running ? `${TEAL}12` : 'rgba(255,255,255,0.03)',
                       border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}66` : running ? `${TEAL}44` : 'rgba(255,255,255,0.08)'}`,
                       boxShadow: flashing ? `0 0 16px ${GREEN}55` : 'none',
-                      opacity: z.unlocked ? 1 : 0.55,
+                      opacity: z.unlocked ? 1 : 0.5,
                     }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                      <Portrait crew={t?.crew ?? null} size={42} glow={ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f4ecd8', display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {z.label}
-                          {running && <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 7, height: 7, borderRadius: '50%', background: TEAL, boxShadow: `0 0 6px ${TEAL}` }} />}
-                        </p>
-                        <p className="font-karla" style={{ fontSize: '0.72rem', color: ready ? GOLD : running ? TEAL : '#a89e86', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {!z.unlocked ? `Locked — Fishing Lv ${z.minLevel} (you're ${state.fishingLevel})`
-                            : t ? (ready ? `${t.crew.name} · haul ready to collect` : `At sea · ${t.crew.name} · back in ${fmtCountdown(ms)}`)
-                            : `Idle · ${fmtTrawlDuration(z.key)} cycle`}
-                        </p>
-                      </div>
-                      {z.unlocked && (
-                        t
-                          ? ready
-                            ? <motion.button whileTap={{ scale: 0.9 }} disabled={busy} onClick={() => doCollect(z.key)} className="font-cinzel font-700" style={btn(GOLD)}>Collect</motion.button>
-                            : <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: TEAL, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmtCountdown(ms)}</span>
-                          : freeSlots > 0
-                            ? <motion.button whileTap={{ scale: 0.9 }} disabled={busy} onClick={() => { haptic(10); setPicking(z.key) }} className="font-karla font-700 uppercase" style={btn(BLUE, true)}>Send</motion.button>
-                            : <span className="font-karla" style={{ fontSize: '0.66rem', color: '#6a6452', whiteSpace: 'nowrap' }}>No free slot</span>
-                      )}
+                    <Portrait crew={t?.crew ?? null} size={46} glow={ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined} />
+
+                    <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f4ecd8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, lineHeight: 1.15 }}>
+                        {z.label}
+                        {running && <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL, boxShadow: `0 0 6px ${TEAL}`, flexShrink: 0 }} />}
+                      </p>
+                      <p className="font-karla" style={{ fontSize: '0.62rem', color: ready ? GOLD : running ? TEAL : '#a89e86', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {!z.unlocked ? `Needs Fishing ${z.minLevel}`
+                          : t ? (ready ? 'Haul ready!' : `${t.crew.name}`)
+                          : `${fmtTrawlDuration(z.key)} cycle`}
+                      </p>
                     </div>
-                    {running && (
-                      <div style={{ height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${TEAL}, ${BLUE})`, transition: 'width 1s linear' }} />
-                      </div>
-                    )}
+
+                    {/* Footer action — same height across states so cards align. */}
+                    <div style={{ width: '100%', minHeight: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                      {!z.unlocked
+                        ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: '#6a6452', textAlign: 'center' }}>Locked</span>
+                        : running
+                          ? <>
+                              <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: TEAL, fontVariantNumeric: 'tabular-nums', textAlign: 'center', marginBottom: 4 }}>{fmtCountdown(ms)}</p>
+                              <div style={{ height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                                <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${TEAL}, ${BLUE})`, transition: 'width 1s linear' }} />
+                              </div>
+                            </>
+                          : ready
+                            ? <motion.button whileTap={{ scale: 0.92 }} disabled={busy} onClick={() => doCollect(z.key)} className="font-cinzel font-700" style={{ ...btn(GOLD), width: '100%' }}>Collect</motion.button>
+                            : freeSlots > 0
+                              ? <motion.button whileTap={{ scale: 0.92 }} disabled={busy} onClick={() => { haptic(10); setPicking(z.key) }} className="font-karla font-700 uppercase" style={{ ...btn(BLUE, true), width: '100%', textAlign: 'center' }}>Send crew</motion.button>
+                              : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6452', textAlign: 'center' }}>No free slot</span>}
+                    </div>
                   </motion.div>
                 )
               })}
