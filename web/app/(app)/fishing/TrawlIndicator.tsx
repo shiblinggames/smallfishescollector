@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
 import {
   TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs,
@@ -107,8 +107,22 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const [slotUnlock, setSlotUnlock] = useState<number | null>(null)
   const [mounted, setMounted] = useState(false)
   const pid = useRef(0)
+  // Draggable indicator: players can reposition it so it doesn't cover other
+  // UI. Offset (from the default spot) persists in localStorage; constrained
+  // to the play area; a tap (no drag) still opens the panel.
+  const dragBoundsRef = useRef<HTMLDivElement | null>(null)
+  const dragX = useMotionValue(0)
+  const dragY = useMotionValue(0)
+  const draggingRef = useRef(false)
 
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('trawl_indicator_pos')
+      if (raw) { const p = JSON.parse(raw); if (typeof p.x === 'number') dragX.set(p.x); if (typeof p.y === 'number') dragY.set(p.y) }
+    } catch { /* no-op */ }
+  }, [dragX, dragY])
 
   const refresh = useCallback(async () => {
     const r = await getTrawlState()
@@ -193,18 +207,36 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     void refresh()
   }
 
-  // ── Indicator (inline, z-15 HUD layer) ───────────────────────────────────
+  // ── Indicator (inline, z-15 HUD layer; drag to reposition) ────────────────
   const indicatorButton = !hidden && (
-    <div style={{ position: 'absolute', left: 10, top: '44%', transform: 'translateY(-50%)', zIndex: 15 }}>
-      <motion.button
-        onClick={() => { setOpen(true); haptic(12) }}
-        aria-label="Trawls"
-        animate={anyReady ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-        whileTap={{ scale: 0.88 }}
-        transition={anyReady ? { duration: 1.3, repeat: Infinity, ease: 'easeInOut' } : { type: 'spring', stiffness: 500, damping: 22 }}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+    // Full-area boundary (pointer-events:none so it never blocks the game) just
+    // gives the draggable icon its bounds. The icon itself is pointer-events:auto.
+    <div ref={dragBoundsRef} style={{ position: 'absolute', inset: 0, zIndex: 15, pointerEvents: 'none' }}>
+      <motion.div
+        drag
+        dragConstraints={dragBoundsRef}
+        dragMomentum={false}
+        dragElastic={0.1}
+        onDragStart={() => { draggingRef.current = true }}
+        onDragEnd={() => {
+          draggingRef.current = false
+          try { localStorage.setItem('trawl_indicator_pos', JSON.stringify({ x: dragX.get(), y: dragY.get() })) } catch { /* no-op */ }
+        }}
+        onTap={() => { if (!draggingRef.current) { setOpen(true); haptic(12) } }}
+        whileTap={{ scale: 0.9 }}
+        whileDrag={{ scale: 1.08 }}
+        aria-label="Trawls — tap to open, drag to move"
+        style={{
+          position: 'absolute', left: 10, top: '40%', x: dragX, y: dragY,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+          pointerEvents: 'auto', touchAction: 'none', cursor: 'grab',
+        }}
       >
-        <div style={{ position: 'relative' }}>
+        <motion.div
+          animate={anyReady ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+          transition={anyReady ? { duration: 1.3, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
+          style={{ position: 'relative' }}
+        >
           <Portrait crew={indicatorTrawl?.crew ?? null} size={54} glow={anyReady ? GOLD : undefined} />
           {activeTrawls.length > 1 && (
             <span className="font-cinzel font-700" style={{
@@ -213,7 +245,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>{activeTrawls.length}</span>
           )}
-        </div>
+        </motion.div>
         <span className="font-karla font-700" style={{
           fontSize: '0.62rem', letterSpacing: anyReady ? '0.14em' : '0.04em', padding: '2px 9px', borderRadius: 999, whiteSpace: 'nowrap',
           background: anyReady ? `${GOLD}1c` : 'rgba(8,12,18,0.82)',
@@ -222,7 +254,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
         }}>
           {anyReady ? 'Ready' : indicatorTrawl ? fmtCountdown(indicatorMs) : 'Trawls'}
         </span>
-      </motion.button>
+      </motion.div>
     </div>
   )
 
