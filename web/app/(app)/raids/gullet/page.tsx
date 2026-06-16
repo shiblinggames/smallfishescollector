@@ -1,8 +1,5 @@
 // The Tollmaster's Cut — Chapter II's second raid (Tollmaster Spet + his
-// barracuda toll crew, raid-wide "First Cut": every hull opens loaded).
-// ADMIN-ONLY while the Gullet content is in review — non-admins are bounced
-// back to /expeditions (the map already hides the node for them; this guards
-// the direct URL too).
+// barracuda toll crew; the quick hulls have "First Cut": they open loaded).
 
 import { redirect } from 'next/navigation'
 import RaidGame from '../RaidGame'
@@ -19,7 +16,6 @@ export default async function GulletRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  if (!(profile as { is_admin?: boolean } | null)?.is_admin) redirect('/expeditions')
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (

@@ -911,12 +911,9 @@ export const RAID_MAP: RaidNode[] = [
       dropsNote: 'Every kill pays more, the clear bonus is steeper, and the legendary Captain\'s Astrolabe rolls at double the normal rate.',
     },
   },
-  // ── Chapter II continues: the run on the Gullet ──────────────────────────
-  // All admin-only for now (in review). Drop the adminOnly flags to launch.
+  // ── Chapter II continues: the run on the Gullet (LIVE 2026-06-16) ────────
   {
-    id: 'gullet_heading',
-    adminOnly: true,
-    type: 'story',
+    id: 'gullet_heading',    type: 'story',
     label: 'The Throat of the Sea',
     flavor: "The Cartographer's charts and Krust's beacon map finally agree on one point of water, and the crews out here have a name for it they don't say twice.",
     bridge: "You've got the name now: the Gullet, where the sea swallows everything down. The only way in runs through a channel sealed behind a Finndicate cipher.",
@@ -942,9 +939,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'gullet_cipher',
-    adminOnly: true,
-    type: 'puzzle',
+    id: 'gullet_cipher',    type: 'puzzle',
     label: 'The Wax Cipher',
     flavor: "The mouth of the Gullet drowns any ship that reads the channel wrong. The only safe way in is sealed inside a Finndicate manifest, locked behind a row of wax cipher dials.",
     bridge: "The seals line up, the manifest cracks, and the safe channel through the Gullet's teeth opens off your bow.",
@@ -968,9 +963,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'gullet_bones',
-    adminOnly: true,
-    type: 'dice',
+    id: 'gullet_bones',    type: 'dice',
     label: 'A Throw of the Bones',
     flavor: "A Finndicate freighter, half-swallowed and snagged on the reef, hold split open and bleeding cargo into the dark. How you plunder her is down to the bones.",
     bridge: "The wreck slides off the reef behind you, picked over for whatever your throw was worth, and the deep harbour opens up ahead.",
@@ -1027,9 +1020,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'gullet_cache',
-    adminOnly: true,
-    type: 'shop',
+    id: 'gullet_cache',    type: 'shop',
     label: 'The Sunken Cache',
     flavor: "A fence working a shelf of gear deep inside the Gullet, way too well-stocked for water this far out. Two pieces on the counter, take one, leave the other.",
     bridge: "The keeper knew your name before you gave it. You take your pick and try not to wonder too hard who told him you were coming.",
@@ -1042,9 +1033,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'scout_debt',
-    adminOnly: true,
-    type: 'story',
+    id: 'scout_debt',    type: 'story',
     label: 'A Sail in Your Lee',
     flavor: "You hold at the mouth of the Gullet and watch the fog. Whether a friendly sail comes out of it is down to the mercy you showed back past the danger line.",
     bridge: "Whatever answered your lee, the Gullet's throat is dead ahead now, and the captain who runs it is waiting at the bottom of it.",
@@ -1087,9 +1076,7 @@ export const RAID_MAP: RaidNode[] = [
     // BossRaidConfig + art + balance land in a follow-up; the node ships now so
     // the bridge chain has a terminus. requiresNavLevel is the only gate in the
     // whole Gullet stretch.
-    id: 'gullet_raid',
-    adminOnly: true,
-    type: 'raid',
+    id: 'gullet_raid',    type: 'raid',
     label: "The Tollmaster's Cut",
     flavor: "Down in the throat waits Tollmaster Spet, the barracuda who weighs and stacks everything the sea swallows. His quickest hulls sail loaded, a shot in the pipe before you've found your range.",
     bridge: "Spet goes down and the Gullet drains dry. Three Finndicate captains on the seabed now, and the cold water past here answers to a don even Spet would not name.",
@@ -1108,9 +1095,7 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'gullet_raid_challenge',
-    adminOnly: true,
-    type: 'raid',
+    id: 'gullet_raid_challenge',    type: 'raid',
     label: "Challenge: The Tollmaster's Cut",
     flavor: "The same loaded barracudas, drilled harder and angrier for the loss. Spet does not lose his cut twice.",
     requiresNode: 'gullet_raid',
@@ -1131,9 +1116,7 @@ export const RAID_MAP: RaidNode[] = [
     // Chapter II's closing class pick — mirrors chapter_1_class. Gated on the
     // boss (gullet_raid), so it stays locked until the raid ships. Writes
     // profiles.ship_classes['sunken_hand'], stacking with the chapter I pick.
-    id: 'chapter_2_class',
-    adminOnly: true,
-    type: 'class_pick',
+    id: 'chapter_2_class',    type: 'class_pick',
     label: "Captain's Choice",
     flavor: "Three Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for on the deep water.",
     requiresNode: 'gullet_raid',

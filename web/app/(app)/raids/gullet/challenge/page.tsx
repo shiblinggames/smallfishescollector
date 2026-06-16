@@ -1,6 +1,6 @@
 // Challenge variant of /raids/gullet (The Tollmaster's Cut). Loads
-// THE_TOLLMASTER_CHALLENGE. No phase 2 — the raid-wide First Cut + Spet's
-// doubled opener are already the fight's identity. ADMIN-ONLY while in review.
+// THE_TOLLMASTER_CHALLENGE. No phase 2 — the First Cut + Spet's doubled opener
+// are already the fight's identity.
 
 import { redirect } from 'next/navigation'
 import RaidGame from '../../RaidGame'
@@ -17,7 +17,6 @@ export default async function GulletChallengeRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  if (!(profile as { is_admin?: boolean } | null)?.is_admin) redirect('/expeditions')
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (
