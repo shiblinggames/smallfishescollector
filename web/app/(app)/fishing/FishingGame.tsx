@@ -6200,7 +6200,7 @@ export default function FishingGame({
                 <motion.div key="result"
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: crateResult ? 'center' : 'flex-end', gap: '1rem', paddingBottom: '1rem' }}>
 
                   {crateResult ? (
                     <motion.div
@@ -6210,14 +6210,14 @@ export default function FishingGame({
                         background: 'rgba(6,14,22,0.96)',
                         border: `1px solid ${cratePhase === 'revealed' ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.1)'}`,
                         borderRadius: 20,
-                        padding: '1.4rem 1.25rem 1.1rem',
+                        padding: '1.15rem 1.25rem 1.05rem',
                         boxShadow: cratePhase === 'revealed' ? '0 0 50px rgba(251,191,36,0.18), 0 0 120px rgba(251,191,36,0.08)' : 'none',
                         textAlign: 'center',
                       }}
                     >
                       {/* Crate image — fixed slot so the image position
                           doesn't shift between phases. */}
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0.9rem', height: 96 }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0.65rem', height: 88 }}>
                         <motion.img
                           src={(() => {
                             const tier = hookedFish?.crateTier ?? 'wooden'
@@ -6237,18 +6237,18 @@ export default function FishingGame({
                             ? { duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }
                             : {}
                           }
-                          style={{ height: 96, objectFit: 'contain', cursor: cratePhase === 'closed' ? 'pointer' : 'default' }}
+                          style={{ height: 88, objectFit: 'contain', cursor: cratePhase === 'closed' ? 'pointer' : 'default' }}
                           onClick={cratePhase === 'closed' ? handleOpenCrate : undefined}
                         />
                       </div>
 
-                      {/* Phase content slot — fixed height so the panel
-                          stops growing/shrinking between closed → rolling
-                          → revealed. Without this the slot strip jumps
-                          up or down as adjacent content (label vs reward)
-                          swaps in. Inner content centers vertically in
-                          the slot. */}
-                      <div style={{ minHeight: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      {/* Phase content slot — minHeight (not fixed) keeps the
+                          closed → rolling → common-reward phases the same size
+                          so the crate image doesn't jump, while staying compact:
+                          the old fixed 140 was sized for the rare tall rewards
+                          (pet/skin) and left the common doubloon/bait drop half
+                          empty. Tall rewards just grow the slot past the min. */}
+                      <div style={{ minHeight: 92, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                       {cratePhase === 'closed' && (() => {
                         const tier = hookedFish?.crateTier ?? 'wooden'
                         const tierName = tier === 'wooden' ? 'Wooden Crate'
