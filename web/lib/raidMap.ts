@@ -1091,7 +1091,7 @@ export const RAID_MAP: RaidNode[] = [
     adminOnly: true,
     type: 'raid',
     label: 'The Gullet',
-    flavor: "Down in the throat, the captain who weighs and stacks everything the sea swallows is waiting. His crews sail loaded, every hull with a shot already in the pipe.",
+    flavor: "Down in the throat waits Tollmaster Spet, the barracuda who weighs and stacks everything the sea swallows. His crew sails loaded, every hull with a shot already in the pipe.",
     requiresNode: 'scout_debt',
     requiresNavLevel: 35,
     comingSoon: true,
@@ -1100,8 +1100,9 @@ export const RAID_MAP: RaidNode[] = [
     image: '/krust_soldier.png',
     detail: {
       description:
-        "The freight-collector who runs the Gullet, and the crew that taxes the sea for him. Every hull down here opens loaded, a shot already chambered, so they fire on the first bell before a slow captain finds his range. The full fight lands soon.",
-      dropsNote: 'Coming soon. The collector who runs the Gullet, and the crews that sail in loaded.',
+        "Tollmaster Spet, the freight-collector who runs the Gullet, and the barracuda crew that taxes the sea for him. Every hull down here takes the First Cut: it opens loaded, a shot already chambered, so they fire on the first bell before a slow captain finds his range. The full fight lands soon.",
+      enemies: ['Silverdart', 'Snapjaw', 'Gulletmaw', 'The Exactor', 'Tollmaster Spet'],
+      dropsNote: 'Coming soon. Tollmaster Spet and his barracuda toll crew, every one of them firing first.',
     },
   },
   {
