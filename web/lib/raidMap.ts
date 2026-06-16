@@ -1091,7 +1091,7 @@ export const RAID_MAP: RaidNode[] = [
     adminOnly: true,
     type: 'raid',
     label: "The Tollmaster's Cut",
-    flavor: "Down in the throat waits Tollmaster Spet, the barracuda who weighs and stacks everything the sea swallows. His crew sails loaded, every hull with a shot already in the pipe.",
+    flavor: "Down in the throat waits Tollmaster Spet, the barracuda who weighs and stacks everything the sea swallows. His quickest hulls sail loaded, a shot in the pipe before you've found your range.",
     bridge: "Spet goes down and the Gullet drains dry. Three Finndicate captains on the seabed now, and the cold water past here answers to a don even Spet would not name.",
     requiresNode: 'scout_debt',
     requiresNavLevel: 35,
@@ -1100,7 +1100,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_TOLLMASTER.enemies.spet.portrait,
     detail: {
       description:
-        "Tollmaster Spet, the freight-collector who runs the Gullet, and the barracuda crew that taxes the sea for him. Every hull here takes the First Cut: it opens loaded, a shot already chambered, so they fire on the first bell before a slow captain finds his range. Spet himself opens with two. Equip his own drop and you can take the first cut right back.",
+        "Tollmaster Spet, the freight-collector who runs the Gullet, and the barracuda crew that taxes the sea for him. His quickest hulls take the First Cut: they open loaded and fire on the bell before a slow captain finds his range, and Spet himself opens with two. The whole toll line runs a harder cadence than anything you've fought, all volleys and double-taps. Equip his own drop and you can take the first cut right back.",
       enemies: ['Silverdart ×2', 'Snapjaw ×2', 'Gulletmaw ×2', 'The Exactor ×2', 'Tollmaster Spet'],
       drops: lootDrops(THE_TOLLMASTER.loot),
       clearReward: clearPayout(THE_TOLLMASTER),

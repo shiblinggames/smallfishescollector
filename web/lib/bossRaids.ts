@@ -600,21 +600,24 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     // Tier-4 roster, Chapter II's second raid (Nav 35). The Gullet's toll crew
     // are barracudas: fast, toothy, and ambush-built.
     //
-    // RAID-WIDE RULE: "First Cut" — every hull OPENS LOADED (startCharges ≥ 1)
-    // and its pattern leads with `fire`, so they shoot on the opening bell and
-    // win the first exchange far more often than any prior raid (where everyone
-    // opened cold and had to reload first). No plating, no fog, no parry — the
-    // whole identity is "they hit you before you've loaded." The player answers
-    // with Spet's own drop (Spet's Primer = 50% / Tollmaster's Primer = 100%
-    // chance to open a fight loaded yourself). Caps at the Brigantine art tier — Galleon +
-    // Man-o-War are held for later chapters.
+    // SIGNATURE: "First Cut" — the QUICK hulls (scout, elite, boss) open LOADED
+    // (startCharges ≥ 1) with fire-leading patterns, so they shoot on the
+    // opening bell and steal the first exchange. The slower crew (reg, brute)
+    // open cold like a normal raid, giving the player turns to fire first. On
+    // top, this raid's patterns run harder than the Cartographer's: more volleys
+    // and mid-loop double-taps (consecutive fires the player can only half-
+    // dodge, since you can't dodge twice in a row), so the cadence punishes. No
+    // plating, no fog, no parry — the threat is raw aggression + the First Cut
+    // tempo. The player answers with Spet's own drop (Spet's Primer = 50% /
+    // Tollmaster's Primer = 100% chance to open a fight loaded yourself). Caps
+    // at the Brigantine art tier — Galleon + Man-o-War held for later chapters.
     scout: {
       id: 'scout', name: 'Silverdart', hpBase: 60, minDmg: 6, maxDmg: 12,
       shipSpeed: 8, actionMs: 3600,
-      // Fast young barracuda. Opens loaded and fires turn 1, then trades
-      // single shots. Pure first-strike skirmisher — no volley, no tricks.
-      // Charges: 1→0→1→0
-      pattern: ['fire', 'reload', 'fire', 'reload'],
+      // Fast young barracuda — FIRST CUT (opens loaded, fires turn 1). Light but
+      // mean: the opener, then a mid-loop double-tap (T4-T5) the player can only
+      // half-dodge. Charges: 1→0→1→2→1→0
+      pattern: ['fire', 'reload', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.06,
       startCharges: 1,
       image: '/enemychapter2sloop_v2.png',
@@ -623,35 +626,34 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     reg: {
       id: 'reg', name: 'Snapjaw', hpBase: 84, minDmg: 8, maxDmg: 15,
       shipSpeed: 6, actionMs: 4400,
-      // Workhorse of the toll line. First Cut opener, then stacks to a real
-      // volley. Charges: 1→0→1→2→3→volley(0)→dodge
-      pattern: ['fire', 'reload', 'reload', 'reload', 'volley', 'dodge'],
+      // Workhorse of the toll line. Opens COLD (no First Cut), but punishing:
+      // stacks to a volley, then a double-tap before it braces. Charges:
+      // 0→1→2→3→volley(0)→fire/fire (self-correct as charges allow)→dodge
+      pattern: ['reload', 'reload', 'reload', 'volley', 'fire', 'fire', 'dodge'],
       critChance: 0.08,
-      startCharges: 1,
       image: '/enemychapter2schooner_v2.png',
       portrait: '/raid4_snapjaw.png',
     },
     brute: {
       id: 'brute', name: 'Gulletmaw', hpBase: 122, minDmg: 11, maxDmg: 19,
       shipSpeed: 3, actionMs: 5400,
-      // Big, slow old barracuda that swallows hulls whole. Opens loaded, builds
-      // to a heavy volley, trades from there. Speed 3 means it usually shoots
-      // after the player despite First Cut — the opener is its one free hit.
-      // Charges: 1→0→1→2→3→volley(0)→dodge→1→fire(0)
-      pattern: ['fire', 'reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'fire'],
+      // Big, slow old barracuda. Opens COLD, but hits like a hammer: TWIN
+      // volleys per loop with a single dodge between. Speed 3 means it shoots
+      // late, so the threat is the size of the volleys, not the timing.
+      // Charges: 0→1→2→3→volley(0)→dodge→1→2→volley(self-corrects to 3)
+      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
-      startCharges: 1,
       image: '/enemychapter2brigantine_v2.png',
       portrait: '/raid4_gulletmaw.png',
     },
     elite: {
       id: 'elite', name: 'The Exactor', hpBase: 106, minDmg: 10, maxDmg: 18,
       shipSpeed: 9, actionMs: 3200,
-      // Spet's chief enforcer. The fastest hull in the raid: First Cut PLUS a
-      // top speed roll means it opens with a near-guaranteed first hit, then
-      // double-taps and closes with a volley. The real test before the boss.
-      // Charges: 1→0→1→0→1→2→3→volley(0)→dodge (cycles)
-      pattern: ['fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'dodge'],
+      // Spet's chief enforcer — FIRST CUT + the fastest hull in the raid (speed
+      // 9), so it almost always lands the opener, then a mid-loop double-tap
+      // (T4-T5, guaranteed one hits) and a closing volley. The real test before
+      // the boss. Charges: 1→0→1→2→1→0→volley(self-corrects)→dodge
+      pattern: ['fire', 'reload', 'reload', 'fire', 'fire', 'reload', 'volley', 'dodge'],
       critChance: 0.12,
       startCharges: 1,
       image: '/enemychapter2brigantine_v2.png',
@@ -660,13 +662,13 @@ export const THE_TOLLMASTER: BossRaidConfig = {
     spet: {
       id: 'spet', name: 'Tollmaster Spet', hpBase: 185, minDmg: 15, maxDmg: 27,
       shipSpeed: 7, actionMs: 4200,
-      // The collector himself. His First Cut is DOUBLED — opens with TWO
-      // cannonballs chambered, so he fires on the bell AND again the next turn
-      // before the player has loaded a reply. Then stacks to a volley and keeps
-      // the pressure on. No second signature mechanic — the doubled opener +
-      // the highest stats in the chapter are the fight.
-      // Charges: 2→fire1→fire0→reload1→reload2→reload3→volley0→fire(reload-sub)
-      pattern: ['fire', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'fire'],
+      // The collector himself. FIRST CUT, DOUBLED — opens with two chambered and
+      // double-fires turns 1-2 before the player can reply, then a volley and
+      // ANOTHER fire, closing on a single dodge. Five damage turns in eight, the
+      // heaviest cadence in the game. No second signature mechanic — the doubled
+      // opener + the highest stats in the chapter are the fight.
+      // Charges: 2→fire1→fire0→reload1→reload2→reload3→volley0→fire(sub)→dodge
+      pattern: ['fire', 'fire', 'reload', 'reload', 'reload', 'volley', 'fire', 'dodge'],
       critChance: 0.11,
       startCharges: 2,
       image: '/enemychapter2brigantine_v2.png',
