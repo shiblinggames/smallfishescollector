@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
 import {
-  TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration,
+  TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs,
   type TrawlState, type TrawlZoneKey, type ActiveTrawlView, type TrawlCrewView, type CollectTrawlResult,
 } from './trawls/constants'
 import { getXPProgress } from '@/lib/fishingLevel'
@@ -22,6 +22,7 @@ const artSrc = (f?: string) => (f ? `${SUPA}/storage/v1/object/public/card-arts/
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 const BLUE = '#9fc0ef'
+const TEAL = '#5fd0c4'  // "at sea / in progress" accent
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
 
@@ -279,7 +280,9 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               {state.zones.map((z, i) => {
                 const t = z.trawl
                 const ready = t ? new Date(t.endsAt).getTime() <= now : false
+                const running = !!t && !ready
                 const ms = t ? new Date(t.endsAt).getTime() - now : 0
+                const progress = running ? Math.max(0, Math.min(1, 1 - ms / trawlDurationMs(z.key))) : 0
                 const flashing = flashZone === z.key
                 return (
                   <motion.div key={z.key}
@@ -287,29 +290,39 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                     animate={flashing ? { opacity: 1, y: 0, scale: [1, 1.04, 1] } : { opacity: 1, y: 0, scale: 1 }}
                     transition={flashing ? { duration: 0.5, ease: 'easeOut' } : { delay: 0.04 * i, type: 'spring', stiffness: 420, damping: 30 }}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 11, padding: '0.6rem 0.7rem', borderRadius: 13,
-                      background: flashing ? `${GREEN}22` : ready ? `${GOLD}14` : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}66` : 'rgba(255,255,255,0.08)'}`,
+                      display: 'flex', flexDirection: 'column', gap: 8, padding: '0.6rem 0.7rem', borderRadius: 13,
+                      background: flashing ? `${GREEN}22` : ready ? `${GOLD}14` : running ? `${TEAL}12` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}66` : running ? `${TEAL}44` : 'rgba(255,255,255,0.08)'}`,
                       boxShadow: flashing ? `0 0 16px ${GREEN}55` : 'none',
                       opacity: z.unlocked ? 1 : 0.55,
                     }}>
-                    <Portrait crew={t?.crew ?? null} size={42} glow={ready ? GOLD : flashing ? GREEN : undefined} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f4ecd8' }}>{z.label}</p>
-                      <p className="font-karla" style={{ fontSize: '0.72rem', color: ready ? GOLD : '#a89e86', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {!z.unlocked ? `Locked — Fishing Lv ${z.minLevel} (you're ${state.fishingLevel})`
-                          : t ? `${t.crew.name} · ${ready ? 'haul ready to collect' : `back in ${fmtCountdown(ms)}`}`
-                          : `Idle · ${fmtTrawlDuration(z.key)} cycle`}
-                      </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                      <Portrait crew={t?.crew ?? null} size={42} glow={ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f4ecd8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {z.label}
+                          {running && <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 7, height: 7, borderRadius: '50%', background: TEAL, boxShadow: `0 0 6px ${TEAL}` }} />}
+                        </p>
+                        <p className="font-karla" style={{ fontSize: '0.72rem', color: ready ? GOLD : running ? TEAL : '#a89e86', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {!z.unlocked ? `Locked — Fishing Lv ${z.minLevel} (you're ${state.fishingLevel})`
+                            : t ? (ready ? `${t.crew.name} · haul ready to collect` : `At sea · ${t.crew.name} · back in ${fmtCountdown(ms)}`)
+                            : `Idle · ${fmtTrawlDuration(z.key)} cycle`}
+                        </p>
+                      </div>
+                      {z.unlocked && (
+                        t
+                          ? ready
+                            ? <motion.button whileTap={{ scale: 0.9 }} disabled={busy} onClick={() => doCollect(z.key)} className="font-cinzel font-700" style={btn(GOLD)}>Collect</motion.button>
+                            : <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: TEAL, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmtCountdown(ms)}</span>
+                          : freeSlots > 0
+                            ? <motion.button whileTap={{ scale: 0.9 }} disabled={busy} onClick={() => { haptic(10); setPicking(z.key) }} className="font-karla font-700 uppercase" style={btn(BLUE, true)}>Send</motion.button>
+                            : <span className="font-karla" style={{ fontSize: '0.66rem', color: '#6a6452', whiteSpace: 'nowrap' }}>No free slot</span>
+                      )}
                     </div>
-                    {z.unlocked && (
-                      t
-                        ? ready
-                          ? <motion.button whileTap={{ scale: 0.9 }} disabled={busy} onClick={() => doCollect(z.key)} className="font-cinzel font-700" style={btn(GOLD)}>Collect</motion.button>
-                          : <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#bcae8a', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmtCountdown(ms)}</span>
-                        : freeSlots > 0
-                          ? <motion.button whileTap={{ scale: 0.9 }} disabled={busy} onClick={() => { haptic(10); setPicking(z.key) }} className="font-karla font-700 uppercase" style={btn(BLUE, true)}>Send</motion.button>
-                          : <span className="font-karla" style={{ fontSize: '0.66rem', color: '#6a6452', whiteSpace: 'nowrap' }}>No free slot</span>
+                    {running && (
+                      <div style={{ height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${TEAL}, ${BLUE})`, transition: 'width 1s linear' }} />
+                      </div>
                     )}
                   </motion.div>
                 )
