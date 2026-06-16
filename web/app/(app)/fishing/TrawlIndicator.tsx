@@ -219,8 +219,11 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
         dragElastic={0.1}
         onDragStart={() => { draggingRef.current = true }}
         onDragEnd={() => {
-          draggingRef.current = false
+          // Keep the guard up briefly — framer fires onDragEnd BEFORE the
+          // trailing onTap on the same pointer-up, so resetting here
+          // immediately would let that tap open the panel after a drag.
           try { localStorage.setItem('trawl_indicator_pos', JSON.stringify({ x: dragX.get(), y: dragY.get() })) } catch { /* no-op */ }
+          setTimeout(() => { draggingRef.current = false }, 150)
         }}
         onTap={() => { if (!draggingRef.current) { setOpen(true); haptic(12) } }}
         whileTap={{ scale: 0.9 }}
