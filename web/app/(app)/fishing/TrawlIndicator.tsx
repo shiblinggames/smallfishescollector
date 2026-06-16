@@ -26,8 +26,11 @@ const TEAL = '#5fd0c4'  // "at sea / in progress" accent
 // Each zone carries its own accent so a card reads as that zone at a glance
 // (mirrors the leaderboard zone colors). State accents (ready/running/sendable)
 // layer on top via border + glow.
+// Ancient Deep diverges from its canonical #c084fc here: against abyss' red
+// (#f87171) the two muddied together as low-alpha card tints, so it gets a
+// distinct fuchsia that also dodges every state accent (gold/teal/blue/green).
 const ZONE_TINT: Record<TrawlZoneKey, string> = {
-  shallows: '#60a5fa', open_waters: '#34d399', deep: '#a78bfa', abyss: '#f87171', ancient_deep: '#c084fc',
+  shallows: '#60a5fa', open_waters: '#34d399', deep: '#a78bfa', abyss: '#f87171', ancient_deep: '#e879f9',
 }
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
