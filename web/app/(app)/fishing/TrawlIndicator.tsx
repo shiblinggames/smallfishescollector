@@ -268,9 +268,6 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                     <Req label="Fishing Lv" need={ns.fishing} have={state.fishingLevel} />
                     {ns.nav > 0 && <Req label="Nav Lv" need={ns.nav} have={state.navLevel} />}
                   </div>
-                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a9078', lineHeight: 1.45, marginTop: 8 }}>
-                    Raise <span style={{ color: BLUE }}>Fishing</span> by catching fish. Raise <span style={{ color: '#c8a0e0' }}>Nav</span> by raiding &amp; voyaging. More slots = more zones at once.
-                  </p>
                 </>
               ) : (
                 <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: GREEN, marginTop: 8 }}>All {TRAWL_MAX_SLOTS} slots unlocked — your whole fleet&apos;s at work.</p>
