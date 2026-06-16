@@ -232,7 +232,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
         whileDrag={{ scale: 1.08 }}
         aria-label="Trawls — tap to open, drag to move"
         style={{
-          position: 'absolute', left: 10, top: '40%', x: dragX, y: dragY,
+          // Default spot: left edge, just above the music/SFX chips (which sit
+          // at bottom:110, ~34px tall each). Players can drag it elsewhere; the
+          // offset persists in localStorage relative to this base.
+          position: 'absolute', left: 10, bottom: 200, x: dragX, y: dragY,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
           pointerEvents: 'auto', touchAction: 'none', cursor: 'grab',
         }}

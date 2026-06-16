@@ -5408,8 +5408,10 @@ export default function FishingGame({
 
         {/* Trawls (crew passive fishing) — the left HUD indicator lives in the
             same z-15 layer as the audio chips, hidden behind any open panel so
-            it never floats over a modal. Its own panel/reveal portal to <body>. */}
-        <TrawlIndicator hidden={holdOpen || gearOpen || baitOpen || collectionOpen} />
+            it never floats over a modal. Also hidden on the result phase so it
+            never sits in front of the catch result card. Its own panel/reveal
+            portal to <body>. */}
+        <TrawlIndicator hidden={holdOpen || gearOpen || baitOpen || collectionOpen || phase === 'result'} />
 
         {/* Background soundtrack lives in lib/fishingMusic singleton —
             kept outside React's tree so unmount fade-out actually runs. */}
