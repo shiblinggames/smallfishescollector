@@ -15,7 +15,7 @@ import {
   TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs,
   type TrawlState, type TrawlZoneKey, type ActiveTrawlView, type TrawlCrewView, type CollectTrawlResult,
 } from './trawls/constants'
-import { getXPProgress } from '@/lib/fishingLevel'
+import { getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f?: string) => (f ? `${SUPA}/storage/v1/object/public/card-arts/${f}` : '')
@@ -410,9 +410,28 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
 
             <CountUp to={reveal.xpGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: GREEN, display: 'block', marginTop: 6 }} />
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: '#7fae8f' }}>fishing xp</p>
+
+            {/* Level-up callout — collectTrawl returns old/new fishing level. */}
+            {reveal.newFishingLevel > reveal.oldFishingLevel && (
+              <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 320, damping: 18 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '0.28rem 0.75rem', borderRadius: 999, background: `${GOLD}1f`, border: `1px solid ${GOLD}66`, boxShadow: `0 0 14px ${GOLD}33` }}>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: GOLD }}>
+                  Level up! Lv {reveal.oldFishingLevel} → {reveal.newFishingLevel}
+                </span>
+              </motion.div>
+            )}
+
             {xpProg && (
-              <div style={{ margin: '7px auto 0', maxWidth: 230, height: 7, borderRadius: 4, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round(xpProg.progress * 100)}%` }} transition={{ delay: 0.3, duration: 0.7 }} style={{ height: '100%', background: `linear-gradient(90deg, #3fae78, ${GREEN})` }} />
+              <div style={{ maxWidth: 230, margin: '9px auto 0' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#e6dcc2' }}>Lv {reveal.newFishingLevel}</span>
+                  <span className="font-karla" style={{ fontSize: '0.6rem', color: '#8a8068' }}>
+                    {reveal.newFishingLevel >= MAX_LEVEL ? 'Max level' : `${Math.round(xpProg.progress * 100)}% to ${reveal.newFishingLevel + 1}`}
+                  </span>
+                </div>
+                <div style={{ height: 7, borderRadius: 4, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round(xpProg.progress * 100)}%` }} transition={{ delay: 0.35, duration: 0.7 }} style={{ height: '100%', background: `linear-gradient(90deg, #3fae78, ${GREEN})` }} />
+                </div>
               </div>
             )}
 
