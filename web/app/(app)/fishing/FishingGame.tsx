@@ -5935,36 +5935,36 @@ export default function FishingGame({
           </div>
 
 
-          {/* Active Finn challenge chip — sits directly below the XP bar
-              so the player can glance up and see where they are in the
-              bet. Amber palette to keep the rival vibe light. */}
-          {finnChallenge && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 8, marginBottom: '0.4rem',
-              padding: '0.32rem 0.78rem',
-              background: 'linear-gradient(180deg, rgba(200,168,80,0.18) 0%, rgba(200,168,80,0.05) 100%), #14100a',
-              border: '1px solid rgba(200,168,80,0.42)',
-              borderTop: '1px solid rgba(200,168,80,0.70)',
-              borderRadius: 999,
-              boxShadow: '0 0 14px rgba(200,168,80,0.18)',
-            }}>
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#d8b878', letterSpacing: '0.16em' }}>
-                Finn&apos;s Bet
-              </span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0d8a0' }}>
-                {finnChallenge.type === 'perfect_streak'
-                  ? `${finnChallenge.perfectsHit ?? 0} / ${finnChallenge.perfectsTarget} perfects`
-                  : `${finnChallenge.fishCaught ?? 0} / ${finnChallenge.fishTarget} fish`}
-              </span>
-              {finnChallenge.type === 'speed_catch' && (
-                <SpeedClock endsAt={finnChallenge.speedEndsAt ?? 0} paused={!!levelUpNotif} />
-              )}
-            </div>
-          )}
-
-          {/* Active event indicator — below XP bar, reserved height prevents layout shift */}
-          <div style={{ minHeight: 28, marginBottom: '0.3rem' }}>
+          {/* Active event + Finn-bet indicators share ONE reserved strip below
+              the XP bar. The Finn chip used to be its own row, which added ~36px
+              of fixed header height while a challenge was live — on short phones
+              that pushed the (intentionally compact) result card's bottom, and
+              the Cast Again button, below the fold so it read as cut off. Folding
+              it into the already-reserved strip costs ~zero extra height. */}
+          <div style={{ minHeight: 28, marginBottom: '0.3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {finnChallenge && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 8, padding: '0.22rem 0.7rem',
+                background: 'linear-gradient(180deg, rgba(200,168,80,0.18) 0%, rgba(200,168,80,0.05) 100%), #14100a',
+                border: '1px solid rgba(200,168,80,0.42)',
+                borderTop: '1px solid rgba(200,168,80,0.70)',
+                borderRadius: 999,
+                boxShadow: '0 0 14px rgba(200,168,80,0.18)',
+              }}>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', color: '#d8b878', letterSpacing: '0.16em' }}>
+                  Finn&apos;s Bet
+                </span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0d8a0' }}>
+                  {finnChallenge.type === 'perfect_streak'
+                    ? `${finnChallenge.perfectsHit ?? 0} / ${finnChallenge.perfectsTarget} perfects`
+                    : `${finnChallenge.fishCaught ?? 0} / ${finnChallenge.fishTarget} fish`}
+                </span>
+                {finnChallenge.type === 'speed_catch' && (
+                  <SpeedClock endsAt={finnChallenge.speedEndsAt ?? 0} paused={!!levelUpNotif} />
+                )}
+              </div>
+            )}
             <AnimatePresence>
               {activeEvent && (() => {
                 const def = EVENT_DEFS[activeEvent.type]
