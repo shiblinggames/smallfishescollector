@@ -40,6 +40,14 @@ const MAX_CHARGES = 3
 const PLAYER_COLOR = '#4ade80'
 const ENEMY_COLOR  = '#ef4444'
 
+// Incendiary Cannonball: a burn proc lasts this many enemy turns and ticks for
+// this fraction of the hit that lit it (locked at application, "constant fixed
+// damage scaled to your damage").
+const BURN_TURNS = 2
+const BURN_TICK_PCT = 0.30
+const BURN_COLOR = '#fb923c'
+const FREEZE_COLOR = '#7dd3fc'
+
 // ─── Math helpers ──────────────────────────────────────────────────────────────
 
 const d20 = () => Math.floor(Math.random() * 20) + 1
@@ -636,6 +644,11 @@ export default function RaidCombat({
 
   const playerHpRef = useRef(initialPlayerHp)
   const enemyHpRef  = useRef(enemy.hpBase)
+  // Status effects on the CURRENT enemy (Incendiary / Frozen cannonballs).
+  // Refs (not state) so the precomputed turn loop reads them synchronously;
+  // both reset when the fight moves to a new enemy.
+  const enemyBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
+  const enemyFrozenRef = useRef(false)
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
 
   // ── Flee — leaving a real raid is a gamble, not a free exit ───────────────
@@ -730,6 +743,7 @@ export default function RaidCombat({
   // appears below — same rhythm as the in-fight action log.
   useEffect(() => {
     setEnemyHp(enemy.hpBase); enemyHpRef.current = enemy.hpBase
+    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false
     setPlayerCharges(0); setEnemyCharges(0)
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
@@ -1227,8 +1241,25 @@ export default function RaidCombat({
     let eCharges = enemyCharges
     const steps: Step[] = []
 
+    // Incendiary burn ticks at the top of the turn. It reads the burn set on a
+    // PRIOR turn (a burn lit this turn ticks next turn, not now), and a tick
+    // that drops the enemy to 0 ends the fight via the final-step death check.
+    if (enemyBurnRef.current.turns > 0 && eHp > 0) {
+      const tick = enemyBurnRef.current.dmg
+      eHp = Math.max(0, eHp - tick)
+      enemyBurnRef.current = { turns: enemyBurnRef.current.turns - 1, dmg: enemyBurnRef.current.dmg }
+      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`The ${enemy.name} is ablaze, burning for ${tick}.`] })
+    }
+
     for (const who of order) {
       if (pHp <= 0 || eHp <= 0) break
+      // Frozen Cannonball: the enemy loses this whole turn (skips before its
+      // turn-start heal + action). One turn, then the ice breaks.
+      if (who === 'enemy' && enemyFrozenRef.current) {
+        enemyFrozenRef.current = false
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [`The ${enemy.name} is frozen solid and loses its turn.`] })
+        continue
+      }
       const action = who === 'player' ? pAction : eAction
       let splatTarget: Actor | null = null
       let splatText = ''
@@ -1460,6 +1491,23 @@ export default function RaidCombat({
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
           if (dmg > 0) onPlayerHit?.(dmg)
+          // Incendiary / Frozen cannonball — 15% on-hit procs, only when the
+          // shot actually landed and didn't already sink them. Burn refreshes
+          // to a fresh 2 turns; freeze flags the enemy's next turn to skip.
+          if (dmg > 0 && eHp > 0) {
+            const onHitEffects = getActiveEffects(equippedRaidItems)
+            const burnChance = onHitEffects.filter(e => e.type === 'burn_chance').reduce((a, e) => Math.max(a, e.value), 0)
+            const freezeChance = onHitEffects.filter(e => e.type === 'freeze_chance').reduce((a, e) => Math.max(a, e.value), 0)
+            if (burnChance > 0 && Math.random() < burnChance) {
+              const tickDmg = Math.max(1, Math.round(dmg * BURN_TICK_PCT))
+              enemyBurnRef.current = { turns: BURN_TURNS, dmg: tickDmg }
+              stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
+            }
+            if (freezeChance > 0 && Math.random() < freezeChance) {
+              enemyFrozenRef.current = true
+              stepLines.push(`Frozen shot! The ${enemy.name} ices over and loses a turn.`)
+            }
+          }
           // Reflective affix: 50% chance to bounce a slice of the damage
           // back to the player on landing. Fires only when actual damage
           // landed (partial-dodge included; missed shots aren't reflected).
@@ -1822,6 +1870,12 @@ export default function RaidCombat({
         setTimeout(() => {
           setPlayerHp(step.pHp)
           setEnemyHp(step.eHp)
+          // Burn tick / freeze steps ride the reload branch but carry an enemy
+          // splat (a "-N" flame or a "Frozen" tag). Float it so the status reads.
+          if (step.splatTarget === 'enemy' && step.splatText) {
+            setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: false })
+            setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
+          }
         }, PROJECTILE_FLIGHT_MS)
       }
 

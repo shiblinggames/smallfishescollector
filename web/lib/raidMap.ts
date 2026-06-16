@@ -1034,7 +1034,7 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "A fence working a shelf of gear deep inside the Gullet, way too well-stocked for water this far out. Two pieces on the counter, take one, leave the other.",
     bridge: "The keeper knew your name before you gave it. You take your pick and try not to wonder too hard who told him you were coming.",
     requiresNode: 'gullet_bones',
-    choice: { items: ['corsair_cannon', 'krusts_carapace'] },
+    choice: { items: ['incendiary_cannonball', 'frozen_cannonball'] },
     detail: {
       description:
         "Deep in the Gullet, where no honest captain has charts, there's a fence working a shelf of gear that's far too well-stocked for water this far out. He knows your name before you give it, and he runs the same trick every fence past the strait pulls: two pieces of kit on the counter, take one, leave the other for good. You grab what you came for and try not to think too hard about who tipped him off.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",

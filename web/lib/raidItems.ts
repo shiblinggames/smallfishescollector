@@ -8,6 +8,8 @@ export type RaidEffectType =
   | 'max_hp_mult'           // value = multiplier on player's max HP at raid start (e.g. 1.15 = +15%)
   | 'parry_chance'          // value = 0-1 chance, on a SUCCESSFUL dodge, to reflect a slice of the dodged shot
   | 'parry_reflect_pct'     // value = 0-1 fraction of the dodged shot's damage roll reflected back when parry triggers
+  | 'burn_chance'           // value = 0-1 chance, each player hit, to set the enemy ablaze (DoT, see RaidCombat BURN_*)
+  | 'freeze_chance'         // value = 0-1 chance, each player hit, to freeze the enemy (it loses a turn)
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -127,6 +129,30 @@ export const RAID_ITEMS: RaidItemDef[] = [
   // the chase rate (and bumped by the challenge variant). Both grant
   // a player-side mirror of the boss's Riposte: on a successful dodge,
   // a chance to reflect a slice of the would-be hit back at him.
+  // The Sunken Cache pair (Gullet, Chapter II). Two themed cannonballs, each a
+  // 15% on-hit status proc. Burn = damage-over-time scaled to the hit; Freeze =
+  // skip the enemy's turn. Effects resolved in RaidCombat (BURN_* consts +
+  // burn_chance/freeze_chance handling).
+  {
+    id: 'incendiary_cannonball',
+    name: 'Incendiary Cannonball',
+    description: 'Each hit has a 15% chance to set the enemy ablaze, burning them for 2 turns (damage scaled to the hit that lit them).',
+    image: '/incendiarycannonball.png',
+    emoji: '🔥',
+    rarity: 'epic',
+    effects: [{ type: 'burn_chance', value: 0.15 }],
+    source: 'The Sunken Cache',
+  },
+  {
+    id: 'frozen_cannonball',
+    name: 'Frozen Cannonball',
+    description: 'Each hit has a 15% chance to freeze the enemy solid, making them lose their next turn.',
+    image: '/frozencannonball.png',
+    emoji: '❄️',
+    rarity: 'epic',
+    effects: [{ type: 'freeze_chance', value: 0.15 }],
+    source: 'The Sunken Cache',
+  },
   {
     id: 'cartographers_astrolabe',
     name: "Cartographer's Astrolabe",
