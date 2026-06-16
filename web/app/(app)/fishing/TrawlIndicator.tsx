@@ -451,6 +451,13 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
 
   // ── Collect reveal ───────────────────────────────────────────────────────
   const xpProg = reveal ? getXPProgress(reveal.newFishingXP) : null
+  // Where the bar STARTS its fill: the player's progress before this haul's XP
+  // was added, so the gain visibly pushes the bar forward. On a level-up it
+  // starts empty (you genuinely entered a fresh level). Without this it always
+  // animated from 0, reading as if every collect reset your level progress.
+  const xpFromProgress = reveal
+    ? (reveal.newFishingLevel > reveal.oldFishingLevel ? 0 : getXPProgress(reveal.newFishingXP - reveal.xpGained).progress)
+    : 0
   const collectReveal = (
     <AnimatePresence>
       {reveal && (
@@ -492,7 +499,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   </span>
                 </div>
                 <div style={{ height: 7, borderRadius: 4, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round(xpProg.progress * 100)}%` }} transition={{ delay: 0.35, duration: 0.7 }} style={{ height: '100%', background: `linear-gradient(90deg, #3fae78, ${GREEN})` }} />
+                  <motion.div initial={{ width: `${Math.round(xpFromProgress * 100)}%` }} animate={{ width: `${Math.round(xpProg.progress * 100)}%` }} transition={{ delay: 0.35, duration: 0.7 }} style={{ height: '100%', background: `linear-gradient(90deg, #3fae78, ${GREEN})` }} />
                 </div>
               </div>
             )}
