@@ -374,10 +374,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
 
                 if (wide) {
                   return (
-                    <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '0.7rem 0.85rem' }}>
+                    <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '0.9rem 0.6rem' }}>
                       <Portrait crew={t?.crew ?? null} size={50} glow={glow} />
-                      <div style={{ minWidth: 0, textAlign: 'center' }}>{nameEl(true)}{statusEl(true)}</div>
-                      {footer && <div style={{ flexShrink: 0, minWidth: 90 }}>{footer}</div>}
+                      <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>{nameEl(true)}{statusEl(true)}</div>
+                      {footer && <div style={{ width: '100%', maxWidth: 260, margin: '1px auto 0' }}>{footer}</div>}
                     </motion.div>
                   )
                 }
