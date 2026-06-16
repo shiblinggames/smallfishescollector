@@ -660,7 +660,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
       portrait: '/raid4_theexactor.png',
     },
     spet: {
-      id: 'spet', name: 'Tollmaster Spet', hpBase: 185, minDmg: 15, maxDmg: 27,
+      id: 'spet', name: 'Tollmaster Spet', hpBase: 215, minDmg: 18, maxDmg: 32,
       shipSpeed: 7, actionMs: 4200,
       // The collector himself. FIRST CUT, DOUBLED — opens with two chambered and
       // double-fires turns 1-2 before the player can reply, then a volley and
