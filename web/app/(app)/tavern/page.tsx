@@ -62,7 +62,10 @@ export default async function TavernPage() {
             currentColor={profile?.character_color ?? 'default'}
             unlockedColors={unlockedColors}
             showWelcomeAfter={!profile?.has_seen_welcome}
-            hasUsername={!!profile?.username}
+            // New accounts get an auto-assigned default username, so `username`
+            // is always set — gate the setup step on whether they've actually
+            // CHOSEN one (username_changed), matching updateUsername's one-time lock.
+            hasUsername={!!profile?.username_changed}
             isPremium={isPremiumActive(profile)}
           />
         : !profile?.has_seen_welcome
