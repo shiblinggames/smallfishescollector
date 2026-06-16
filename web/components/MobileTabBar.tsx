@@ -50,6 +50,12 @@ export default function MobileTabBar() {
   const [pendingVoyages, setPendingVoyages] = useState<{ created_at: string; duration_ms: number | null }[]>([])
   const fetchedOnceRef   = useRef(false)
   const wasExpeditionsRef = useRef(false)
+  // Active trawls (crew passive fishing) — same cached-rows + derive-readiness
+  // pattern as voyages: network on first mount + around /fishing, pure local
+  // time math everywhere else. Lets the Fishing tab pulse when a haul is ready.
+  const [trawls, setTrawls] = useState<{ ends_at: string }[]>([])
+  const trawlsFetchedRef = useRef(false)
+  const wasFishingRef    = useRef(false)
 
   useEffect(() => {
     const inExpeditions = pathname.startsWith('/expeditions')
@@ -76,10 +82,41 @@ export default function MobileTabBar() {
     })
   }, [pathname])
 
+  useEffect(() => {
+    const inFishing = pathname.startsWith('/fishing')
+    const needFetch = !trawlsFetchedRef.current || wasFishingRef.current || inFishing
+    wasFishingRef.current = inFishing
+    if (!needFetch) return
+    trawlsFetchedRef.current = true
+    const { createClient } = require('@/lib/supabase/client')
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string } } | null } }) => {
+      const user = session?.user
+      if (!user) return
+      supabase
+        .from('trawls')
+        .select('ends_at')
+        .eq('user_id', user.id)
+        .then(({ data }: { data: { ends_at: string }[] | null }) => setTrawls(data ?? []))
+    })
+  }, [pathname])
+
+  // Readiness is derived from cached rows at render. Re-render on a slow tick
+  // while anything is pending so a trawl/voyage that ripens lights the badge
+  // WITHOUT needing a navigation (otherwise it'd only update on the next tap).
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (trawls.length === 0 && pendingVoyages.length === 0) return
+    const id = setInterval(() => setTick(t => t + 1), 20000)
+    return () => clearInterval(id)
+  }, [trawls.length, pendingVoyages.length])
+
   const voyageNow = Date.now()
   const voyageBadge = pendingVoyages.some(
     r => new Date(r.created_at).getTime() + (r.duration_ms ?? 7200000) <= voyageNow
   )
+  // Any trawl whose cycle has finished → pulse the Fishing tab.
+  const trawlReady = trawls.some(t => new Date(t.ends_at).getTime() <= voyageNow)
 
   if (pathname === '/' || pathname === '/login') return null
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
@@ -103,6 +140,7 @@ export default function MobileTabBar() {
       {LINKS.map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         const badge = href === '/expeditions' && voyageBadge ? true : null
+        const pulse = href === '/fishing' && trawlReady
         return (
           <Link
             key={href}
@@ -124,6 +162,16 @@ export default function MobileTabBar() {
                     {badge > 99 ? '99+' : badge}
                   </span>
                 : <span className="absolute top-2 right-[calc(50%-10px)] bg-[#f0c040] rounded-full w-2 h-2" />
+            )}
+            {pulse && (
+              <span className="absolute top-2 right-[calc(50%-10px)] w-2 h-2">
+                <motion.span
+                  animate={{ scale: [1, 2.4, 1], opacity: [0.55, 0, 0.55] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+                  className="absolute inset-0 bg-[#f0c040] rounded-full"
+                />
+                <span className="absolute inset-0 bg-[#f0c040] rounded-full" />
+              </span>
             )}
           </Link>
         )
