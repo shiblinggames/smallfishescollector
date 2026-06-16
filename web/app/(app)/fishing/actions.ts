@@ -1049,6 +1049,67 @@ export async function sellFish(
   return { earned, doubloons: newDoubloons }
 }
 
+/** Quick-sell the player's ENTIRE hold in one shot — same 75% rate (100% on a
+ *  full moon) and per-species floor as sellFish, just batched so the UI gets a
+ *  single lump sum instead of selling stack-by-stack. One doubloon update + one
+ *  transaction row for the whole sweep. */
+export async function quickSellAllFish(): Promise<
+  { earned: number; fishSold: number; doubloons: number } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+
+  const [inventoryRes, { data: profile }] = await Promise.all([
+    admin.from('fish_inventory')
+      .select('fish_id, quantity, fish_species(sell_value)')
+      .eq('user_id', user.id)
+      .gt('quantity', 0),
+    admin.from('profiles').select('doubloons, active_event').eq('id', user.id).single(),
+  ])
+
+  if (!profile) return { error: 'Profile not found' }
+
+  type InvRow = { fish_id: number; quantity: number; fish_species: { sell_value: number } | null }
+  const inventory = (inventoryRes.data ?? []) as unknown as InvRow[]
+  if (inventory.length === 0) return { error: 'Nothing to sell' }
+
+  const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
+  const rate = fullPrice ? 1.0 : 0.75
+
+  let totalEarned = 0
+  let totalFishSold = 0
+  for (const item of inventory) {
+    const sellValue = item.fish_species?.sell_value ?? 0
+    // Per-species floor mirrors sellFish exactly so the total is identical to
+    // looping it — this is purely a batching change, no economy change.
+    totalEarned += Math.floor(sellValue * rate) * item.quantity
+    totalFishSold += item.quantity
+  }
+
+  if (totalEarned <= 0) return { error: 'Nothing to sell' }
+
+  const newDoubloons = (profile.doubloons ?? 0) + totalEarned
+
+  await Promise.all([
+    ...inventory.map(item =>
+      admin.from('fish_inventory')
+        .update({ quantity: 0 })
+        .eq('user_id', user.id)
+        .eq('fish_id', item.fish_id)
+    ),
+    admin.from('profiles').update({ doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id, amount: totalEarned, reason: `Sold ${totalFishSold} fish (quick-sell)`,
+    }),
+    ...(newDoubloons >= 1_000_000 ? [unlockBadge('deep_pockets')] : []),
+  ])
+
+  return { earned: totalEarned, fishSold: totalFishSold, doubloons: newDoubloons }
+}
+
 // Perfect streak is fully server-authoritative inside reelIn now (it tracks the
 // live streak in current_perfect_streak, computes the XP bonus, and updates the
 // highest_perfect_streak record + 'unbroken' badge). The old client-driven

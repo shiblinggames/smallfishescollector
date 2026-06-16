@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { castLine, reelIn, reelCrate, sellFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, quickSellAllFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import TrawlIndicator from './TrawlIndicator'
@@ -3278,7 +3278,7 @@ export default function FishingGame({
   const [sessionCatches, setSessionCatches] = useState<FishSpecies[]>([])
   const [sessionPerfects, setSessionPerfects] = useState(0)
   const [sessionNewSpecies, setSessionNewSpecies] = useState(0)
-  const [sellPending, setSellPending] = useState<number | null>(null)
+  const [sellingAll, setSellingAll] = useState(false)
   const [liquidating, setLiquidating] = useState(false)
   const [holdUpgradeConfirm, setHoldUpgradeConfirm] = useState(false)
   const [holdUpgrading, setHoldUpgrading] = useState(false)
@@ -4974,17 +4974,19 @@ export default function FishingGame({
     })
   }
 
-  async function handleSell(fishId: number, qty: number) {
-    setSellPending(fishId)
-    const res = await sellFish(fishId, qty)
-    setSellPending(null)
+  // Quick Sell now sweeps the whole hold in ONE server call (quickSellAllFish)
+  // and updates the UI once with the lump sum — it used to loop sellFish per
+  // species, awaiting each round-trip, so a full hold sold stack-by-stack.
+  async function quickSellAll() {
+    if (sellingAll || inventory.length === 0) return
+    setSellingAll(true)
+    const res = await quickSellAllFish()
+    setSellingAll(false)
     if ('error' in res) return
     setDoubloons(res.doubloons)
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-    setInventory(prev => prev
-      .map(i => i.fish_id === fishId ? { ...i, quantity: i.quantity - qty } : i)
-      .filter(i => i.quantity > 0)
-    )
+    setInventory([])
+    setExpandedSellLane(null)
   }
 
   async function handleLiquidate() {
@@ -9255,7 +9257,7 @@ export default function FishingGame({
                   }}>
                     {(() => {
                       type LaneKey = 'quick' | 'liquidate' | 'market'
-                      const sellingNow = !!sellPending
+                      const sellingNow = sellingAll
                       const quickLossText = isFullMoon
                         ? 'Full price — Full Moon Rising'
                         : `Instant · 75% of value · you lose ${Math.floor(holdBaseValue * 0.25).toLocaleString()} ⟡`
@@ -9278,10 +9280,7 @@ export default function FishingGame({
                           tradeoff: quickLossText,
                           action: 'confirm',
                           confirmLabel: sellingNow ? 'Selling…' : 'Sell All Now',
-                          run: async () => {
-                            for (const item of inventory) await handleSell(item.fish_id, item.quantity)
-                            setExpandedSellLane(null)
-                          },
+                          run: () => quickSellAll(),
                           pending: sellingNow,
                         },
                         {
