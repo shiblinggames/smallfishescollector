@@ -10,6 +10,7 @@ export type RaidEffectType =
   | 'parry_reflect_pct'     // value = 0-1 fraction of the dodged shot's damage roll reflected back when parry triggers
   | 'burn_chance'           // value = 0-1 chance, each player hit, to set the enemy ablaze (DoT, see RaidCombat BURN_*)
   | 'freeze_chance'         // value = 0-1 chance, each player hit, to freeze the enemy (it loses a turn)
+  | 'start_charges'         // value = cannonballs already chambered at the start of every raid fight (the player-side "First Cut")
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -152,6 +153,30 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'epic',
     effects: [{ type: 'freeze_chance', value: 0.15 }],
     source: 'The Sunken Cache',
+  },
+  // Tollmaster Spet's signature drop (The Tollmaster's Cut, Chapter II). The
+  // player-side mirror of his crew's "First Cut" trait: start every raid fight
+  // with cannonballs already chambered, so YOU take the first shot. Two-tier
+  // like the other boss drops (epic standard + legendary "prime" from challenge).
+  {
+    id: 'spets_primer',
+    name: "Spet's Primer",
+    description: 'Start every raid fight with one cannonball already loaded, so you can fire on the opening bell.',
+    image: null,
+    emoji: '🧨',
+    rarity: 'epic',
+    effects: [{ type: 'start_charges', value: 1 }],
+    source: "The Tollmaster's Cut",
+  },
+  {
+    id: 'tollmasters_hot_iron',
+    name: "Tollmaster's Hot Iron",
+    description: 'Start every raid fight with two cannonballs already loaded. The Tollmaster never waits to take his cut.',
+    image: null,
+    emoji: '🧨',
+    rarity: 'legendary',
+    effects: [{ type: 'start_charges', value: 2 }],
+    source: "The Tollmaster's Cut",
   },
   {
     id: 'cartographers_astrolabe',

@@ -22,6 +22,11 @@ export interface BroadsideEnemy {
    *  aim bar; enemies don't have that, so this stat gives them the same
    *  outcome via RNG. On crit, damage is multiplied by 1.5×. */
   critChance: number
+  /** Cannonballs already chambered when this enemy becomes the active target —
+   *  the raid-wide "First Cut" trait (Tollmaster Spet's barracuda crew open
+   *  loaded, so they can fire on the opening bell). Default 0 (every other raid
+   *  opens cold and must reload first). The boss opens with 2. */
+  startCharges?: number
   image: string
   portrait?: string
   /** Themed raid ability (optional). Each raid gives its crew one signature
@@ -583,6 +588,128 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
     { speaker: 'boss', text: "Names belong to ships. I draw seas. Krust ran cargo, and you put him at the bottom of one of my channels. Now you're on a page of mine too." },
     { speaker: 'boss', text: "Every water you've crossed since Driftwood is marked in the cabin behind me. I knew the shape of your wake before you knew the shape of your hold." },
     { speaker: 'boss', text: "Lock your gunports if you've any sense. Or don't, and let this fog have you the way it had the others." },
+  ],
+}
+
+export const THE_TOLLMASTER: BossRaidConfig = {
+  raidId: 'tollmasters_cut',
+  raidTitle: "The Tollmaster's Cut",
+  bossDefeatedText: 'Tollmaster Spet Defeated',
+  atmosphere: 'overcast',
+  enemies: {
+    // Tier-4 roster, Chapter II's second raid (Nav 35). The Gullet's toll crew
+    // are barracudas: fast, toothy, and ambush-built.
+    //
+    // RAID-WIDE RULE: "First Cut" — every hull OPENS LOADED (startCharges ≥ 1)
+    // and its pattern leads with `fire`, so they shoot on the opening bell and
+    // win the first exchange far more often than any prior raid (where everyone
+    // opened cold and had to reload first). No plating, no fog, no parry — the
+    // whole identity is "they hit you before you've loaded." The player answers
+    // with Spet's own drop (Spet's Primer / Tollmaster's Hot Iron = start each
+    // fight loaded yourself). Caps at the Brigantine art tier — Galleon +
+    // Man-o-War are held for later chapters.
+    scout: {
+      id: 'scout', name: 'Silverdart', hpBase: 60, minDmg: 6, maxDmg: 12,
+      shipSpeed: 8, actionMs: 3600,
+      // Fast young barracuda. Opens loaded and fires turn 1, then trades
+      // single shots. Pure first-strike skirmisher — no volley, no tricks.
+      // Charges: 1→0→1→0
+      pattern: ['fire', 'reload', 'fire', 'reload'],
+      critChance: 0.06,
+      startCharges: 1,
+      image: '/enemychapter2sloop_v2.png',
+      portrait: '/raid4_silverdart.png',
+    },
+    reg: {
+      id: 'reg', name: 'Snapjaw', hpBase: 84, minDmg: 8, maxDmg: 15,
+      shipSpeed: 6, actionMs: 4400,
+      // Workhorse of the toll line. First Cut opener, then stacks to a real
+      // volley. Charges: 1→0→1→2→3→volley(0)→dodge
+      pattern: ['fire', 'reload', 'reload', 'reload', 'volley', 'dodge'],
+      critChance: 0.08,
+      startCharges: 1,
+      image: '/enemychapter2schooner_v2.png',
+      portrait: '/raid4_snapjaw.png',
+    },
+    brute: {
+      id: 'brute', name: 'Gulletmaw', hpBase: 122, minDmg: 11, maxDmg: 19,
+      shipSpeed: 3, actionMs: 5400,
+      // Big, slow old barracuda that swallows hulls whole. Opens loaded, builds
+      // to a heavy volley, trades from there. Speed 3 means it usually shoots
+      // after the player despite First Cut — the opener is its one free hit.
+      // Charges: 1→0→1→2→3→volley(0)→dodge→1→fire(0)
+      pattern: ['fire', 'reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'fire'],
+      critChance: 0.06,
+      startCharges: 1,
+      image: '/enemychapter2brigantine_v2.png',
+      portrait: '/raid4_gulletmaw.png',
+    },
+    elite: {
+      id: 'elite', name: 'The Exactor', hpBase: 106, minDmg: 10, maxDmg: 18,
+      shipSpeed: 9, actionMs: 3200,
+      // Spet's chief enforcer. The fastest hull in the raid: First Cut PLUS a
+      // top speed roll means it opens with a near-guaranteed first hit, then
+      // double-taps and closes with a volley. The real test before the boss.
+      // Charges: 1→0→1→0→1→2→3→volley(0)→dodge (cycles)
+      pattern: ['fire', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley', 'dodge'],
+      critChance: 0.12,
+      startCharges: 1,
+      image: '/enemychapter2brigantine_v2.png',
+      portrait: '/raid4_theexactor.png',
+    },
+    spet: {
+      id: 'spet', name: 'Tollmaster Spet', hpBase: 185, minDmg: 15, maxDmg: 27,
+      shipSpeed: 7, actionMs: 4200,
+      // The collector himself. His First Cut is DOUBLED — opens with TWO
+      // cannonballs chambered, so he fires on the bell AND again the next turn
+      // before the player has loaded a reply. Then stacks to a volley and keeps
+      // the pressure on. No second signature mechanic — the doubled opener +
+      // the highest stats in the chapter are the fight.
+      // Charges: 2→fire1→fire0→reload1→reload2→reload3→volley0→fire(reload-sub)
+      pattern: ['fire', 'fire', 'reload', 'reload', 'reload', 'volley', 'reload', 'fire'],
+      critChance: 0.11,
+      startCharges: 2,
+      image: '/enemychapter2brigantine_v2.png',
+      portrait: '/raid4_tollmasterspet.png',
+    },
+  },
+  // Same interleaved 8-fight gauntlet shape as the Cartographer (no back-to-back
+  // duplicates, every type met by fight 5), into Spet at fight 9.
+  sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
+  bossId: 'spet',
+  // Tides after the 3rd + 6th kills, same as the Cartographer. maxTier 1 keeps
+  // the foundational pool; bump later if the raid wants stronger swings.
+  tides: { slots: [3, 6], maxTier: 1 },
+  // 70/30 currency/special split, same as every prior raid. Spet's drop is the
+  // First Cut pair (Spet's Primer epic at the standard rate, Tollmaster's Hot
+  // Iron legendary at the chase rate). Chartmaker Hull (the chapter-2 trophy
+  // skin) rides here at the realistic chase rate now — higher than the
+  // Cartographer's reserve weight, since this is the chapter's second raid.
+  loot: [
+    // ~70% currency
+    { id: 'doubloons_600',         label: '+600 ⟡',     image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',    weight: 30 },
+    { id: 'doubloons_1200',        label: '+1,200 ⟡',   image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon',  weight: 20 },
+    { id: 'gems_50',               label: '50 Gems',    image: null,              emoji: GEM_GLYPH, rarity: 'rare',      weight: 15 },
+    { id: 'pack_2',                label: '200 Gems',   image: null,              emoji: GEM_GLYPH, rarity: 'epic',      weight: 5  },
+    // ~30% special drops
+    { id: 'chartmaker_hull',       label: 'Chartmaker Hull',       image: null, emoji: '🚢',  rarity: 'epic',      weight: 9,  shipSkinId: 'chartmaker_hull' },
+    { id: 'spets_primer',          label: "Spet's Primer",         image: null, emoji: '🧨',  rarity: 'epic',      weight: 20 },
+    { id: 'tollmasters_hot_iron',  label: "Tollmaster's Hot Iron", image: null, emoji: '🧨',  rarity: 'legendary', weight: 5  },
+  ],
+  killRewards: {
+    scout: { gold: 60,  xp: 60  },
+    reg:   { gold: 85,  xp: 90  },
+    brute: { gold: 115, xp: 125 },
+    elite: { gold: 140, xp: 150 },
+    spet:  { gold: 520, xp: 520 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: "The fog peels back and the Gullet opens its throat. Ranks of low barracuda hulls sit waiting, guns already run out, hot and loaded." },
+    { speaker: 'boss', text: "You came a long way down my channel, captain. Everything that swims this deep pays the toll. Coin, cargo, hull, crew. I take my cut of all of it." },
+    { speaker: 'player', text: "Tollmaster Spet. You're the one the whole Finndicate funnels its plunder to." },
+    { speaker: 'boss', text: "I'm the one who counts it. Krust shipped it, the Cartographer charted it, and it all comes down my throat to be weighed. You sank two of mine. That's a debt." },
+    { speaker: 'boss', text: "And out here, captain, I always collect first." },
+    { speaker: 'boss', text: "Run out your guns if you've got the nerve. Mine already are. We fire on the bell." },
   ],
 }
 

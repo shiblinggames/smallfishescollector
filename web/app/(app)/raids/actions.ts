@@ -235,6 +235,8 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   captains_carapace:       { raidItem: 'captains_carapace' },
   cartographers_astrolabe: { raidItem: 'cartographers_astrolabe' },
   captains_astrolabe:      { raidItem: 'captains_astrolabe' },
+  spets_primer:            { raidItem: 'spets_primer' },
+  tollmasters_hot_iron:    { raidItem: 'tollmasters_hot_iron' },
   finndicate_hull:         { shipSkin:  'finndicate_hull' },
   chartmaker_hull:         { shipSkin:  'chartmaker_hull' },
 }

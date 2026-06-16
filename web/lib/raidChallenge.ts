@@ -11,7 +11,7 @@
 // raid_id so completions track in their own bucket on the leaderboard.
 // PHASE 2: elite enemy variants + the affix system. PHASE 3: boss phases.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
 
 /** Multipliers applied by buildChallengeRaid. Tweak here, not per-raid. */
 export const CHALLENGE_MODS = {
@@ -274,3 +274,25 @@ export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig =
   withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST, KRUST_CHALLENGE_LOOT), 'krust', KRUST_PHASE2)
 export const THE_CARTOGRAPHER_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_CARTOGRAPHER, CARTOGRAPHER_CHALLENGE_LOOT)
+
+// The Tollmaster's challenge loot. Doubles the special-drop rates (Spet's Primer
+// 20 → 40, Tollmaster's Hot Iron 5 → 10, Chartmaker Hull 9 → 16) so the
+// legendary Hot Iron becomes the realistic chase and the chapter-2 trophy skin
+// stays on the table. No phase 2 — like the Cartographer, the raid-wide First
+// Cut + the doubled-opener boss are already the fight's identity.
+const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
+  const byId = Object.fromEntries(THE_TOLLMASTER.loot.map(l => [l.id, l]))
+  const w = (id: string, weight: number) => ({ ...byId[id], weight })
+  return [
+    w('doubloons_600',          15),
+    w('doubloons_1200',         10),
+    w('gems_50',                10),
+    w('pack_2',                  5),
+    w('chartmaker_hull',        16),
+    w('spets_primer',           40),
+    w('tollmasters_hot_iron',   10),
+  ]
+})()
+
+export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
+  buildChallengeRaid(THE_TOLLMASTER, TOLLMASTER_CHALLENGE_LOOT)

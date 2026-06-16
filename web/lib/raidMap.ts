@@ -10,8 +10,8 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -1090,36 +1090,41 @@ export const RAID_MAP: RaidNode[] = [
     id: 'gullet_raid',
     adminOnly: true,
     type: 'raid',
-    label: 'The Gullet',
+    label: "The Tollmaster's Cut",
     flavor: "Down in the throat waits Tollmaster Spet, the barracuda who weighs and stacks everything the sea swallows. His crew sails loaded, every hull with a shot already in the pipe.",
+    bridge: "Spet goes down and the Gullet drains dry. Three Finndicate captains on the seabed now, and the cold water past here answers to a don even Spet would not name.",
     requiresNode: 'scout_debt',
     requiresNavLevel: 35,
-    comingSoon: true,
     route: '/raids/gullet',
-    raidId: 'gullet_collector',
-    image: '/krust_soldier.png',
+    raidId: THE_TOLLMASTER.raidId,
+    image: THE_TOLLMASTER.enemies.spet.portrait,
     detail: {
       description:
-        "Tollmaster Spet, the freight-collector who runs the Gullet, and the barracuda crew that taxes the sea for him. Every hull down here takes the First Cut: it opens loaded, a shot already chambered, so they fire on the first bell before a slow captain finds his range. The full fight lands soon.",
-      enemies: ['Silverdart', 'Snapjaw', 'Gulletmaw', 'The Exactor', 'Tollmaster Spet'],
-      dropsNote: 'Coming soon. Tollmaster Spet and his barracuda toll crew, every one of them firing first.',
+        "Tollmaster Spet, the freight-collector who runs the Gullet, and the barracuda crew that taxes the sea for him. Every hull here takes the First Cut: it opens loaded, a shot already chambered, so they fire on the first bell before a slow captain finds his range. Spet himself opens with two. Equip his own drop and you can take the first cut right back.",
+      enemies: ['Silverdart ×2', 'Snapjaw ×2', 'Gulletmaw ×2', 'The Exactor ×2', 'Tollmaster Spet'],
+      drops: lootDrops(THE_TOLLMASTER.loot),
+      clearReward: clearPayout(THE_TOLLMASTER),
+      dropsNote: 'One crate per Spet clear, rolled once and scaled by your Fortune. Every kill pays gold + Nav XP, and the run carries two Tide events between fights.',
     },
   },
   {
     id: 'gullet_raid_challenge',
     adminOnly: true,
     type: 'raid',
-    label: 'Challenge: The Gullet',
-    flavor: "The same loaded crews, drilled harder and angrier for the loss.",
+    label: "Challenge: The Tollmaster's Cut",
+    flavor: "The same loaded barracudas, drilled harder and angrier for the loss. Spet does not lose his cut twice.",
     requiresNode: 'gullet_raid',
-    comingSoon: true,
     route: '/raids/gullet/challenge',
-    raidId: 'gullet_collector_challenge',
+    raidId: THE_TOLLMASTER_CHALLENGE.raidId,
     sideBranch: { parentId: 'gullet_raid' },
-    image: '/krust_soldier.png',
+    image: THE_TOLLMASTER.enemies.spet.portrait,
     detail: {
-      description: "The harder run on the Gullet. Coming soon, once the fight itself lands.",
-      dropsNote: 'Coming soon.',
+      description:
+        "The Tollmaster's whole toll line again, harder for the loss. The barracudas hit cleaner, Spet's doubled opener bites deeper, and every hull still fires first. Crack his crate this run and his own Hot Iron rolls at twice the rate.",
+      enemies: ['Silverdart ×2', 'Snapjaw ×2', 'Gulletmaw ×2', 'The Exactor ×2', 'Tollmaster Spet'],
+      drops: lootDrops(THE_TOLLMASTER_CHALLENGE.loot),
+      clearReward: clearPayout(THE_TOLLMASTER_CHALLENGE),
+      dropsNote: "Every kill pays more, the clear bonus is steeper, and the legendary Tollmaster's Hot Iron rolls at double the normal rate.",
     },
   },
   {
