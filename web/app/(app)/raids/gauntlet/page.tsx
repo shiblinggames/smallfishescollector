@@ -19,6 +19,11 @@ export default async function GauntletPage() {
     getGauntletDailyState(),
   ])
 
+  // Admin-only during review: the node is hidden from the map for non-admins
+  // (adminOnly flag), and this guard blocks the URL directly. Drop both
+  // together to launch to all players.
+  if (profile?.is_admin !== true) redirect('/expeditions')
+
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (

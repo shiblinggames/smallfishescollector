@@ -1138,8 +1138,9 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Davy Jones Gauntlet',
     flavor: "An open hole in the seabed past the Gullet, colder than the rest of the deep. Ships you have already sunk come crawling back up it, meaner each time, and what you haul out is only yours if you climb back into the light.",
     requiresNode: 'chapter_2_class',
-    requiresNavLevel: 35,
+    requiresNavLevel: 45,
     route: '/raids/gauntlet',
+    adminOnly: true,
     sideBranch: { parentId: 'chapter_2_class' },
     detail: {
       description:
