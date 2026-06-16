@@ -1,0 +1,177 @@
+'use server'
+
+// Server-authoritative gate + payout for the Davy Jones Gauntlet.
+// Combat is client-driven (same trust model as every raid). The server:
+//   - consumes the daily attempt on START (so a quit-retry can't reroll a
+//     bad opener), keyed by a date string on the profile;
+//   - on CASH OUT, clamps the reported pot to the depth ceiling, applies the
+//     depth-tiered chest multiplier, and banks doubloons / XP / gems;
+//   - on DEATH, closes the run and banks nothing.
+// The once-a-day gate is the real limiter, so we trust the client's reported
+// depth/pot up to the computed ceiling.
+
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { aggregateShipClasses } from '@/lib/shipClasses'
+import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
+import { maxPotForDepth, chestForDepth, MAX_GAUNTLET_DEPTH } from '@/lib/gauntlet'
+
+function today(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+/** Whether the player can start a run today + their lifetime deepest. */
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { available: false, deepest: 0 }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_last_date, gauntlet_deepest')
+    .eq('id', user.id)
+    .single()
+
+  return {
+    available: (profile?.gauntlet_last_date as string | null) !== today(),
+    deepest: (profile?.gauntlet_deepest as number | null) ?? 0,
+  }
+}
+
+/** Consume the daily attempt and open a run. Starting (not finishing) spends
+ *  the day. */
+export async function startGauntletRun(): Promise<{ started: boolean; reason?: 'used'; deepest: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { started: false, reason: 'used', deepest: 0 }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_last_date, gauntlet_deepest')
+    .eq('id', user.id)
+    .single()
+
+  const deepest = (profile?.gauntlet_deepest as number | null) ?? 0
+  if ((profile?.gauntlet_last_date as string | null) === today()) {
+    return { started: false, reason: 'used', deepest }
+  }
+
+  await admin
+    .from('profiles')
+    .update({ gauntlet_last_date: today(), gauntlet_run_open: true })
+    .eq('id', user.id)
+
+  return { started: true, deepest }
+}
+
+/** Cash out an open run at the reached depth, banking the (clamped) pot ×
+ *  chest multiplier + the chest's gem bonus. Closes the run. */
+export async function cashOutGauntlet(depth: number, pot: number): Promise<
+  | { ok: false }
+  | {
+      ok: true
+      depth: number
+      chest: { tier: number; label: string; potMult: number }
+      bankedDoubloons: number
+      bankedXp: number
+      gems: number
+      newDoubloons: number
+      newExpeditionXP: number
+      deepest: number
+      crewXP: CrewXPGrant[]
+    }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_run_open, gauntlet_deepest, expedition_xp, doubloons, gems, ship_classes')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.gauntlet_run_open !== true) return { ok: false }
+
+  const d = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(depth)))
+  if (d <= 0) {
+    // Nothing cleared — just close the run.
+    await admin.from('profiles').update({ gauntlet_run_open: false }).eq('id', user.id)
+    return { ok: false }
+  }
+
+  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(d)))
+  const chest = chestForDepth(d)
+
+  const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
+  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
+
+  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult)
+  const bankedXp        = Math.round(cleanPot * chest.potMult)
+  const gems            = chest.gems
+
+  const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
+  const newGems          = (profile.gems ?? 0) + gems
+  const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
+  const deepest          = Math.max((profile.gauntlet_deepest as number | null) ?? 0, d)
+
+  const [, , crewXP] = await Promise.all([
+    admin.from('profiles').update({
+      doubloons: newDoubloons,
+      gems: newGems,
+      expedition_xp: newExpeditionXP,
+      gauntlet_run_open: false,
+      gauntlet_deepest: deepest,
+    }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: bankedDoubloons,
+      reason: `Davy Jones Gauntlet: depth ${d}`,
+    }),
+    grantXPToAssignedCrew(admin, user.id, bankedXp),
+  ])
+
+  return {
+    ok: true,
+    depth: d,
+    chest: { tier: chest.tier, label: chest.label, potMult: chest.potMult },
+    bankedDoubloons,
+    bankedXp,
+    gems,
+    newDoubloons,
+    newExpeditionXP,
+    deepest,
+    crewXP,
+  }
+}
+
+/** Close an open run after a wipe. Banks nothing; still records deepest. */
+export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean; deepest: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, deepest: 0 }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_run_open, gauntlet_deepest')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.gauntlet_run_open !== true) {
+    return { ok: false, deepest: (profile?.gauntlet_deepest as number | null) ?? 0 }
+  }
+
+  const d = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(depth)))
+  const deepest = Math.max((profile.gauntlet_deepest as number | null) ?? 0, d)
+
+  await admin
+    .from('profiles')
+    .update({ gauntlet_run_open: false, gauntlet_deepest: deepest })
+    .eq('id', user.id)
+
+  return { ok: true, deepest }
+}

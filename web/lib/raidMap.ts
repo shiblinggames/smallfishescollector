@@ -21,7 +21,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -1126,6 +1126,26 @@ export const RAID_MAP: RaidNode[] = [
         "You read the Cartographer's seas, cracked the Gullet's cipher, and put its collector under. Pick a class for the deep water ahead. Once it's chosen it stays with you for every raid from here on, stacking with the captain you already are.",
       dropsNote: 'Deepen the class you already sail (a Mark II that stacks on top of it) or branch into a fresh one. Permanent, and the other options are gone for good.',
       ctaLabel: 'Pick a class',
+    },
+  },
+  {
+    // Chapter 2.5 — the optional "halfway" detour. A daily push-your-luck
+    // gauntlet that pulls depth-scaled ships from every crew you've fought
+    // (Raids 1-4). Never marked cleared (no raidId, not in raid_node_progress)
+    // so it stays available forever; the once-a-day limit lives in the route's
+    // server actions. Sits as a side branch off the chapter-2 close.
+    id: 'davy_jones_gauntlet',    type: 'gauntlet',
+    label: 'The Davy Jones Gauntlet',
+    flavor: "An open hole in the seabed past the Gullet, colder than the rest of the deep. Ships you have already sunk come crawling back up it, meaner each time, and what you haul out is only yours if you climb back into the light.",
+    requiresNode: 'chapter_2_class',
+    requiresNavLevel: 35,
+    route: '/raids/gauntlet',
+    sideBranch: { parentId: 'chapter_2_class' },
+    detail: {
+      description:
+        "Fight down through the deep. Every win drags up a harder ship from the crews you've already faced, and the loot piles into one pot. After each fight you choose: cash out and bank it, or push on for a bigger haul. The deeper you go the fatter it gets, but if your ship sinks the whole pot goes down with it. One run a day.",
+      dropsNote: 'Doubloons, Nav XP, and a depth-scaled chest on cash-out. Push deeper for a richer chest. Nothing if you sink.',
+      ctaLabel: 'Enter the Gauntlet',
     },
   },
 ]

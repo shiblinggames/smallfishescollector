@@ -1,18 +1,15 @@
-Trawls panel: reclaim space — inline slot chip, zone-tinted cards, no tap labels.
+Trawls polish: calmer countdown, labeled reveal flavor, best-crew tags.
 
-Four tightening passes on the Trawls sheet:
-- Slot count moves into the header: a compact "N/4" + dot-pip chip sits inline
-  with the "Trawls" title and is tappable, opening a new slot-info modal (pips,
-  the next-slot Fishing/Nav requirements, and how to raise each). The big
-  slot-explainer box is gone from the panel body, freeing a whole block.
-- Zone cards drop the "Tap to send crew" / "Tap to collect" labels — the tint
-  and glow already carry the affordance — so cards are shorter and cleaner.
-  Only running (countdown), locked, and no-free-slot still show a footer line.
-- The full-width Ancient Deep card now centers its content (portrait + text +
-  any footer) instead of spreading left-to-right.
-- Each zone card is tinted with that zone's own accent (shallows blue, open
-  green, deep violet, abyss red, ancient violet) instead of the flat neutral;
-  ready/running/flashing state accents still override the fill and the border/
-  glow signal tappability.
+Three polish passes from the review:
+- Countdown now sits on calm whole units (1h 4m / 47m) and only ticks by the
+  second in the final minute (0:NN), instead of churning M:SS for the whole
+  45m-2h cycle. Applies to the indicator chip + the in-progress card strip.
+- Collect reveal: the species chips get a 'Trawled up' label so they read as
+  flavor, not caught fish items (the real reward is the XP + doubloons below).
+- Crew picker: a small 'best' chip flags the strongest free crew for each goal
+  in this zone (Savvy->XP, Fortune->doubloons), shown only when there's a choice.
+
+Left the loop tedium intact (no Collect All / quick re-deploy) per the call that
+it's already very easy passive income.
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>

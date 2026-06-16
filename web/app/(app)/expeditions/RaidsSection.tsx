@@ -94,6 +94,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
       <path d="M11 14.5h2" />
     </svg>
   )
+  // gauntlet: a maelstrom (the hole in the seabed you climb back out of)
+  if (type === 'gauntlet') return <svg {...common}><path d="M12 12a2.5 2.5 0 1 0 2.5 2.5M14.5 14.5A4.7 4.7 0 0 1 7 14a6.8 6.8 0 0 1 9.4-6.2A9 9 0 0 1 4.5 18.5" /></svg>
   // shop: market stall
   if (type === 'shop') return <svg {...common}><path d="M3 9l1.5-5h15L21 9M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9M4 9h16M9 13h6" /></svg>
   // story: open book
@@ -127,6 +129,7 @@ function nodeTypeLabel(type: string): string {
     case 'puzzle':     return 'Puzzle'
     case 'class_pick': return 'Class'
     case 'event':      return 'Event'
+    case 'gauntlet':   return 'Gauntlet'
     default:           return type
   }
 }
@@ -928,6 +931,20 @@ function NodeDetailSheet({
         </button>
       )
     }
+  } else if (node.type === 'gauntlet') {
+    // Repeatable daily detour — never "cleared". Locked shows a banner;
+    // available routes into the gauntlet page (which owns the daily gate).
+    cta = locked ? (
+      <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    ) : (
+      <button
+        onClick={enter}
+        className="font-cinzel font-700 uppercase tracking-[0.06em]"
+        style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: 'pointer' }}
+      >
+        {detail.ctaLabel ?? 'Enter the Gauntlet'} →
+      </button>
+    )
   }
 
   const sheet = (
