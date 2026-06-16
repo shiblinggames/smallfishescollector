@@ -322,18 +322,25 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // Odd one out (5 zones / 2 cols) → the last (Ancient Deep) spans
                 // full width as a feature card with a horizontal layout.
                 const wide = i === state.zones.length - 1 && state.zones.length % 2 === 1
+                // Whole card is the tap target now: tap an open zone to send a
+                // crew, tap a finished one to collect. Other states aren't tappable.
+                const sendable = z.unlocked && !t && freeSlots > 0
+                const actionable = ready || sendable
+                const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setPicking(z.key) } : undefined
                 const glow = ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined
                 const cardStyle: React.CSSProperties = {
-                  borderRadius: 14,
-                  background: flashing ? `${GREEN}22` : ready ? `${GOLD}14` : running ? `${TEAL}12` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}66` : running ? `${TEAL}44` : 'rgba(255,255,255,0.08)'}`,
-                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : 'none',
+                  borderRadius: 14, cursor: actionable ? 'pointer' : 'default',
+                  background: flashing ? `${GREEN}22` : ready ? `${GOLD}16` : running ? `${TEAL}12` : sendable ? `${BLUE}12` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}70` : running ? `${TEAL}44` : sendable ? `${BLUE}55` : 'rgba(255,255,255,0.08)'}`,
+                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : ready ? `0 0 12px ${GOLD}33` : 'none',
                   opacity: z.unlocked ? 1 : 0.5,
                 }
                 const motionProps = {
                   initial: { opacity: 0, y: 8 },
                   animate: flashing ? { opacity: 1, y: 0, scale: [1, 1.04, 1] } : { opacity: 1, y: 0, scale: 1 },
                   transition: flashing ? { duration: 0.5, ease: 'easeOut' as const } : { delay: 0.04 * i, type: 'spring' as const, stiffness: 420, damping: 30 },
+                  ...(actionable ? { whileTap: { scale: 0.96 } } : {}),
+                  onClick: onTapCard,
                 }
                 const nameEl = (center: boolean) => (
                   <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f4ecd8', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', gap: 5, lineHeight: 1.15 }}>
@@ -348,6 +355,12 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       : `${fmtTrawlDuration(z.key)} cycle`}
                   </p>
                 )
+                const tapLabel = (color: string, text: string) => (
+                  <span className="font-karla font-700 uppercase" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3, width: '100%', fontSize: '0.6rem', letterSpacing: '0.08em', color }}>
+                    {text}
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
+                  </span>
+                )
                 const footer = !z.unlocked
                   ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: '#6a6452', textAlign: 'center', display: 'block' }}>Locked</span>
                   : running
@@ -358,9 +371,9 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                         </div>
                       </>
                     : ready
-                      ? <motion.button whileTap={{ scale: 0.92 }} disabled={busy} onClick={() => doCollect(z.key)} className="font-cinzel font-700" style={{ ...btn(GOLD), width: '100%' }}>Collect</motion.button>
-                      : freeSlots > 0
-                        ? <motion.button whileTap={{ scale: 0.92 }} disabled={busy} onClick={() => { haptic(10); setPicking(z.key) }} className="font-karla font-700 uppercase" style={{ ...btn(BLUE, true), width: '100%', textAlign: 'center' }}>Send crew</motion.button>
+                      ? tapLabel(GOLD, 'Tap to collect')
+                      : sendable
+                        ? tapLabel(BLUE, 'Tap to send crew')
                         : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6452', textAlign: 'center', display: 'block' }}>No free slot</span>
 
                 if (wide) {
@@ -555,12 +568,4 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
       {mounted && createPortal(<>{panel}{picker}{collectReveal}{slotUnlockOverlay}{coinFx}</>, document.body)}
     </>
   )
-}
-
-function btn(color: string, small = false): React.CSSProperties {
-  return {
-    padding: small ? '0.4rem 0.9rem' : '0.42rem 1rem', borderRadius: 10, fontSize: small ? '0.7rem' : '0.82rem',
-    letterSpacing: small ? '0.06em' : undefined, whiteSpace: 'nowrap',
-    background: `${color}22`, border: `1px solid ${color}88`, color: color === GOLD ? '#f4ecd8' : color, cursor: 'pointer',
-  }
 }
