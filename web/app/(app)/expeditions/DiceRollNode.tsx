@@ -28,13 +28,6 @@ function successPct(dc: number, bonus: number): number {
   return Math.round((winningFaces / 20) * 100)
 }
 
-function oddsLabel(pct: number): string {
-  if (pct >= 75) return 'Likely'
-  if (pct >= 55) return 'Even'
-  if (pct >= 35) return 'Long shot'
-  return 'Desperate'
-}
-
 type RollResult = Awaited<ReturnType<typeof rollDiceNode>>
 
 export default function DiceRollNode({
@@ -146,51 +139,103 @@ export default function DiceRollNode({
   // ── Pick view ───────────────────────────────────────────────────────────────
   return (
     <div style={{ marginTop: '1rem' }}>
-      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
-        Pick your play · d20 + {bonus} to your throw
+      <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.78)', marginBottom: '0.7rem' }}>
+        Pick how you plunder the wreck. Each play is a throw of <span style={{ color: GOLD }}>1d20 + {bonus}</span> (your Navigation). Beat the mark and it lands.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         {dice.options.map(opt => {
           const pct = successPct(opt.dc, bonus)
           const locked = !!opt.requiresDoubloons && doubloons < opt.requiresDoubloons
+          const missBad = (opt.miss.doubloons ?? 0) < 0
           return (
             <button
               key={opt.id}
               onClick={() => !locked && choose(opt)}
               disabled={locked}
               style={{
-                textAlign: 'left', padding: '0.7rem 0.8rem', borderRadius: 12,
+                textAlign: 'left', padding: '0.85rem 0.9rem', borderRadius: 14,
                 background: locked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${locked ? 'rgba(255,255,255,0.08)' : `${GOLD}3a`}`,
-                cursor: locked ? 'not-allowed' : 'pointer', opacity: locked ? 0.6 : 1,
+                border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${GOLD}40`}`,
+                cursor: locked ? 'not-allowed' : 'pointer', opacity: locked ? 0.7 : 1,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{opt.label}</span>
-                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.58rem', color: locked ? '#8a8880' : GOLD, flexShrink: 0 }}>
-                  {locked ? `Need ${opt.requiresDoubloons?.toLocaleString()} ⟡` : `Beat ${opt.dc} · ${oddsLabel(pct)} (${pct}%)`}
-                </span>
+              {/* Title + odds pill */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', lineHeight: 1.1 }}>{opt.label}</span>
+                {!locked && <OddsPill pct={pct} />}
               </div>
-              <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.6)', marginTop: 3, lineHeight: 1.4 }}>
+
+              <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.45, marginBottom: 10 }}>
                 {opt.description}
               </p>
-              <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#9a9690', marginTop: 5 }}>
-                {grantLine('Win', opt.win)} · {grantLine('Miss', opt.miss)}
-              </p>
+
+              {locked ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.55rem 0.7rem', borderRadius: 10, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.28)' }}>
+                  <LockIcon />
+                  <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0a8a8' }}>
+                    Need {opt.requiresDoubloons?.toLocaleString()} ⟡ in hand to risk this one.
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0.6rem 0.7rem', borderRadius: 10, background: 'rgba(0,0,0,0.22)' }}>
+                  <OutcomeRow label="If it lands" dotColor={GREEN} grant={opt.win} />
+                  <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
+                  <OutcomeRow label="If it misses" dotColor={missBad ? RED : '#8a8880'} grant={opt.miss} />
+                </div>
+              )}
             </button>
           )
         })}
       </div>
-      {err && <p className="font-karla" style={{ fontSize: '0.7rem', color: RED, marginTop: '0.6rem', textAlign: 'center' }}>{err}</p>}
+      {err && <p className="font-karla" style={{ fontSize: '0.74rem', color: RED, marginTop: '0.7rem', textAlign: 'center' }}>{err}</p>}
     </div>
   )
 }
 
-function grantLine(prefix: string, g: { doubloons?: number; navXp?: number }): string {
-  const parts: string[] = []
-  if (g.doubloons) parts.push(`${g.doubloons > 0 ? '+' : ''}${g.doubloons.toLocaleString()} ⟡`)
-  if (g.navXp) parts.push(`+${g.navXp.toLocaleString()} Nav XP`)
-  return `${prefix} ${parts.length ? parts.join(', ') : 'nothing'}`
+// Reward/loss chips for one outcome (coin gold, Nav XP green, a loss red).
+function outcomeChips(g: { doubloons?: number; navXp?: number }): { text: string; color: string }[] {
+  const out: { text: string; color: string }[] = []
+  if (g.doubloons) out.push({ text: `${g.doubloons > 0 ? '+' : '−'}${Math.abs(g.doubloons).toLocaleString()} ⟡`, color: g.doubloons > 0 ? GOLD : RED })
+  if (g.navXp) out.push({ text: `+${g.navXp.toLocaleString()} Nav XP`, color: GREEN })
+  if (out.length === 0) out.push({ text: 'Nothing', color: '#8a8880' })
+  return out
+}
+
+function OutcomeRow({ label, dotColor, grant }: { label: string; dotColor: string; grant: { doubloons?: number; navXp?: number } }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.66rem', color: '#a89e86' }}>{label}</span>
+      </span>
+      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        {outcomeChips(grant).map((c, i) => (
+          <span key={i} className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c.color, lineHeight: 1 }}>{c.text}</span>
+        ))}
+      </span>
+    </div>
+  )
+}
+
+// Colored risk pill: green Likely / gold Even / red Long shot, with the %.
+function OddsPill({ pct }: { pct: number }) {
+  const tier = pct >= 75 ? { label: 'Likely', c: GREEN } : pct >= 55 ? { label: 'Even', c: GOLD } : pct >= 35 ? { label: 'Long shot', c: '#fb923c' } : { label: 'Desperate', c: RED }
+  return (
+    <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{
+      flexShrink: 0, fontSize: '0.64rem', color: tier.c,
+      background: `${tier.c}1c`, border: `1px solid ${tier.c}55`, borderRadius: 999, padding: '0.28rem 0.6rem',
+    }}>
+      {pct}% · {tier.label}
+    </span>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f0a8a8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden>
+      <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  )
 }
 
 function RewardChip({ text, color }: { text: string; color: string }) {
