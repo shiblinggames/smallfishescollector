@@ -576,7 +576,7 @@ export async function pickShipClass(
   // Server-side validation of the class id against the registry. Lazy
   // import so this server action doesn't pull SHIP_CLASSES into the
   // raid map's edge bundle when unrelated callers compile it.
-  const { SHIP_CLASSES } = await import('@/lib/shipClasses')
+  const { SHIP_CLASSES, offeredShipClassIds } = await import('@/lib/shipClasses')
   if (!(classId in SHIP_CLASSES)) return { error: 'Invalid class' }
 
   const admin = createAdminClient()
@@ -594,6 +594,13 @@ export async function pickShipClass(
 
   const picks = (profile.ship_classes as Record<string, string> | null) ?? {}
   if (picks[node.classPick.chapterId]) return { error: 'Class already picked for this chapter' }
+  // Tall-vs-wide gating: the class must actually be ON THIS PLAYER'S MENU —
+  // a Mark II is only offered for a line they already sail (a Mark I they own).
+  // Computed from their other picks (this chapter isn't picked yet, so picks
+  // already excludes it).
+  if (!offeredShipClassIds(picks).includes(classId as never)) {
+    return { error: 'That class is not available to you' }
+  }
 
   const newPicks = { ...picks, [node.classPick.chapterId]: classId }
   const prog = (profile.raid_node_progress as { cleared?: string[] } | null) ?? {}

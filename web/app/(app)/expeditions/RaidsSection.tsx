@@ -11,7 +11,7 @@ import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
-import { SHIP_CLASS_LIST, getShipClass } from '@/lib/shipClasses'
+import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 import CipherDialsPuzzle from './CipherDialsPuzzle'
 import DiceRollNode from './DiceRollNode'
@@ -1303,15 +1303,21 @@ function NodeDetailSheet({
             (lock is permanent). Otherwise every card is a tap target;
             the chosen class goes to the server via pickShipClass. */}
         {node.classPick && (() => {
-          const chosenId = shipClasses[node.classPick.chapterId]
+          const chapterId = node.classPick.chapterId
+          const chosenId = shipClasses[chapterId]
           const chosen = chosenId ? getShipClass(chosenId) : undefined
+          // Offered classes are computed from the player's OTHER picks (exclude
+          // this chapter's own, so a cleared node still shows what was on the
+          // menu). Owned Mark I → its Mark II ("deepen"); untouched → Mark I.
+          const priorPicks = Object.fromEntries(Object.entries(shipClasses).filter(([k]) => k !== chapterId))
+          const offered = offeredShipClasses(priorPicks)
           return (
             <div style={{ marginTop: '1.1rem' }}>
               <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.68rem', color: '#7a7875', marginBottom: '0.65rem' }}>
                 {chosen ? 'You Chose' : 'Pick a Class'}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {SHIP_CLASS_LIST.map(cls => {
+                {offered.map(cls => {
                   const isChosen = chosen?.id === cls.id
                   const dimmed = !!chosen && !isChosen
                   return (

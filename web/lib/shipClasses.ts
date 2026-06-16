@@ -10,7 +10,9 @@
 // twice doubles down on the identity (and the tradeoff); spreading
 // picks across classes softens or cancels the tradeoffs.
 
-export type ShipClassId = 'master_gunner' | 'ironside' | 'helmsman' | 'buccaneer'
+export type ShipClassId =
+  | 'master_gunner' | 'ironside' | 'helmsman' | 'buccaneer'           // Mark I (chapter-1 starters)
+  | 'master_gunner_ii' | 'ironside_ii' | 'helmsman_ii' | 'buccaneer_ii' // Mark II (deepen a line you already sail)
 
 export interface ShipClassEffects {
   /** Multiplier on player outgoing raid damage. 1.15 = +15%, 0.90 = -10%. Default 1. */
@@ -92,6 +94,92 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     emoji: '⊕',
     effects: { damageMult: 1.05, hpMult: 1.05 },
   },
+
+  // ── Mark II — the "deepen" tier ──────────────────────────────────────────
+  // Only offered on a class_pick when you ALREADY sail the Mark I of that line.
+  // A moderate extra rung that STACKS on top of your Mark I (see
+  // offeredShipClasses), so committing to one identity across chapters
+  // compounds harder (and the tradeoff bites harder) than spreading wide.
+  master_gunner_ii: {
+    id: 'master_gunner_ii',
+    name: 'Master Gunner II',
+    tagline: 'Deeper into the bargain. Hotter still.',
+    description: 'You lean further into the gunner\'s trade. Even more bite, even less plate. Stacks on your Master Gunner.',
+    bullets: [
+      { label: '+10% damage', positive: true  },
+      { label: '−7% HP',      positive: false },
+    ],
+    color: '#f0743a',
+    emoji: '✦',
+    effects: { damageMult: 1.10, hpMult: 0.93 },
+  },
+  ironside_ii: {
+    id: 'ironside_ii',
+    name: 'Ironside II',
+    tagline: 'Plate over plate. You will not sink.',
+    description: 'Reinforce what was already reinforced. Your hull soaks more; your guns sit lighter still. Stacks on your Ironside.',
+    bullets: [
+      { label: '+10% HP',     positive: true  },
+      { label: '−7% damage',  positive: false },
+    ],
+    color: '#7dd3fc',
+    emoji: '▣',
+    effects: { damageMult: 0.93, hpMult: 1.10 },
+  },
+  helmsman_ii: {
+    id: 'helmsman_ii',
+    name: 'Helmsman II',
+    tagline: 'The hold runs deeper.',
+    description: 'More of the prize, more of the drag. You sail heavier and richer. Stacks on your Helmsman.',
+    bullets: [
+      { label: '+15% doubloons', positive: true  },
+      { label: '−5 speed',       positive: false },
+    ],
+    color: '#f0c040',
+    emoji: '⟡',
+    effects: { doubloonMult: 1.15, speedFlat: -5 },
+  },
+  buccaneer_ii: {
+    id: 'buccaneer_ii',
+    name: 'Buccaneer II',
+    tagline: 'A little better at everything. Again.',
+    description: 'Another small lift across the board for the captain who keeps their options open. Stacks on your Buccaneer.',
+    bullets: [
+      { label: '+5% damage', positive: true },
+      { label: '+5% HP',     positive: true },
+    ],
+    color: '#9aa6b8',
+    emoji: '⊕',
+    effects: { damageMult: 1.05, hpMult: 1.05 },
+  },
+}
+
+// Tier ladders, lowest → highest. A class_pick offers the LOWEST tier in each
+// line the player doesn't already own — so an untouched line offers Mark I
+// ("branch out") while a line you already sail offers its Mark II ("deepen").
+// Add Mark III etc. here as later chapters extend each ladder.
+export const SHIP_CLASS_LINES: ShipClassId[][] = [
+  ['master_gunner', 'master_gunner_ii'],
+  ['ironside',      'ironside_ii'],
+  ['helmsman',      'helmsman_ii'],
+  ['buccaneer',     'buccaneer_ii'],
+]
+
+/** Which class each line offers next, given the player's existing picks. The
+ *  tall-vs-wide engine: owned Mark I → its card becomes Mark II (deepen);
+ *  untouched line → Mark I (branch). A fully-owned line drops off the menu. */
+export function offeredShipClasses(picks: Record<string, string>): ShipClassDef[] {
+  const owned = new Set(Object.values(picks))
+  const out: ShipClassDef[] = []
+  for (const line of SHIP_CLASS_LINES) {
+    const next = line.find(id => !owned.has(id))
+    if (next) out.push(SHIP_CLASSES[next])
+  }
+  return out
+}
+
+export function offeredShipClassIds(picks: Record<string, string>): ShipClassId[] {
+  return offeredShipClasses(picks).map(c => c.id)
 }
 
 export const SHIP_CLASS_LIST: ShipClassDef[] = [
