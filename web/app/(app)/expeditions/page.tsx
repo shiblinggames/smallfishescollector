@@ -2,6 +2,7 @@ import { Suspense, cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier, computeCombatRating } from '@/lib/expeditions'
+import { getShipSkin } from '@/lib/shipSkins'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { getXPProgress, navLevelBonuses } from '@/lib/expeditionLevel'
 import RaidsSection from './RaidsSection'
@@ -251,11 +252,17 @@ async function RaidsMapSection() {
     cachedRaidMap(),
     fetchTopRaidProgress(),
   ])
+  // The player's current boat sprite (skin-aware, same derivation as the raid
+  // pages) — class-pick nodes show this instead of a generic glyph.
+  const shipTier = (profile?.ship_tier as number | null) ?? 0
+  const baseShip = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  const playerShipImage = getShipSkin((profile?.equipped_ship_skin as string | null) ?? '')?.imageByTier?.[shipTier] ?? baseShip.image
   return (
     <RaidsSection
       views={raidMap.views}
       doubloons={raidMap.doubloons}
       navLevel={raidMap.navLevel}
+      playerShipImage={playerShipImage}
       raidRecords={raidMap.raidRecords}
       repairOwed={profile?.raid_repair_owed ?? 0}
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}

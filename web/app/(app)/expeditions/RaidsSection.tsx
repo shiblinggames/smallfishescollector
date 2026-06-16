@@ -153,12 +153,16 @@ const REVEAL_AHEAD = 2
 function RaidMap({
   views,
   doubloons,
+  playerShipImage,
   onSelect,
   onRepairBlocked,
   repairOwed,
 }: {
   views: RaidNodeView[]
   doubloons: number
+  /** The player's current boat sprite — shown on class_pick ("Captain's
+   *  Choice") nodes in place of the generic glyph. */
+  playerShipImage?: string
   onSelect: (v: RaidNodeView) => void
   /** Called when the player taps a combat node that's blocked because
    *  the ship is sunk. RaidsSection opens a focused repair prompt
@@ -368,7 +372,9 @@ function RaidMap({
         // communicated by the glyph + portrait, not by color. Side branches
         // still use the crimson challenge accent.
         const accent = isSide ? SIDE_BRANCH_ACCENT : MAIN_ACCENT
-        const img = node.image ?? TYPE_IMAGE[node.type]
+        // class_pick ("Captain's Choice") nodes show the player's actual boat
+        // sprite instead of the generic glyph — it's a decision about YOUR ship.
+        const img = node.image ?? (node.type === 'class_pick' ? playerShipImage : undefined) ?? TYPE_IMAGE[node.type]
         const size = isSide ? SIDE_BRANCH_SIZE : nodeSizeFor(node.type)
         const glyph = Math.round(size * 0.42)
         const badge = Math.max(15, Math.round(size * 0.34))
@@ -2136,7 +2142,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, navLevel, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
+export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -2415,7 +2421,7 @@ export default function RaidsSection({ views, doubloons, navLevel, raidRecords, 
                         transition={{ duration: 0.22, ease: 'easeOut' }}
                         style={{ overflow: 'hidden' }}
                       >
-                        <RaidMap views={bucket.views} doubloons={doubloons} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} repairOwed={repairOwed} />
+                        <RaidMap views={bucket.views} doubloons={doubloons} playerShipImage={playerShipImage} onSelect={setSelected} onRepairBlocked={() => setRepairPromptOpen(true)} repairOwed={repairOwed} />
                       </motion.div>
                     )}
                   </AnimatePresence>
