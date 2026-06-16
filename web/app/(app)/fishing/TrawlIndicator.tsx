@@ -23,6 +23,12 @@ const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 const BLUE = '#9fc0ef'
 const TEAL = '#5fd0c4'  // "at sea / in progress" accent
+// Each zone carries its own accent so a card reads as that zone at a glance
+// (mirrors the leaderboard zone colors). State accents (ready/running/sendable)
+// layer on top via border + glow.
+const ZONE_TINT: Record<TrawlZoneKey, string> = {
+  shallows: '#60a5fa', open_waters: '#34d399', deep: '#a78bfa', abyss: '#f87171', ancient_deep: '#c084fc',
+}
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
 
@@ -105,6 +111,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const [flashZone, setFlashZone] = useState<TrawlZoneKey | null>(null)
   const [sendingId, setSendingId] = useState<number | null>(null)
   const [slotUnlock, setSlotUnlock] = useState<number | null>(null)
+  const [slotInfo, setSlotInfo] = useState(false)
   const [mounted, setMounted] = useState(false)
   const pid = useRef(0)
   // Draggable indicator: players can reposition it so it doesn't cover other
@@ -277,38 +284,25 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)',
               padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))',
             }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: '#f4ecd8' }}>Trawls</p>
+                {/* Slot count is now a compact tappable chip — opens the slot-info modal. */}
+                <motion.button onClick={() => { haptic(8); setSlotInfo(true) }} whileTap={{ scale: 0.9 }} aria-label="Trawl slots — how to get more"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.26rem 0.55rem', borderRadius: 999, background: 'rgba(196,169,106,0.1)', border: '1px solid rgba(196,169,106,0.32)', cursor: 'pointer' }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: GOLD }}>{state.unlockedSlots}/{TRAWL_MAX_SLOTS}</span>
+                  <div style={{ display: 'flex', gap: 3.5 }}>
+                    {Array.from({ length: TRAWL_MAX_SLOTS }).map((_, i) => (
+                      <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i < state.unlockedSlots ? GOLD : 'rgba(255,255,255,0.1)', border: `1px solid ${i < state.unlockedSlots ? GOLD : 'rgba(255,255,255,0.2)'}`, boxShadow: i < state.unlockedSlots ? `0 0 5px ${GOLD}88` : 'none' }} />
+                    ))}
+                  </div>
+                </motion.button>
+              </div>
               <CloseBtn onClick={() => { setOpen(false); setPicking(null) }} />
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
               Send a crew to passively fish a zone — collect their XP + doubloon haul when they return.
             </p>
-
-            {/* Slots explainer */}
-            <div style={{ marginTop: 14, padding: '0.85rem 0.9rem', borderRadius: 14, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8' }}>
-                  {state.unlockedSlots} of {TRAWL_MAX_SLOTS} trawl slots
-                </span>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {Array.from({ length: TRAWL_MAX_SLOTS }).map((_, i) => (
-                    <div key={i} style={{ width: 13, height: 13, borderRadius: '50%', background: i < state.unlockedSlots ? GOLD : 'rgba(255,255,255,0.08)', border: `1.5px solid ${i < state.unlockedSlots ? GOLD : 'rgba(255,255,255,0.18)'}`, boxShadow: i < state.unlockedSlots ? `0 0 7px ${GOLD}88` : 'none' }} />
-                  ))}
-                </div>
-              </div>
-              {ns ? (
-                <>
-                  <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: '#dccba6', margin: '10px 0 6px' }}>Unlock slot {ns.slot} — reach BOTH:</p>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <Req label="Fishing Lv" need={ns.fishing} have={state.fishingLevel} />
-                    {ns.nav > 0 && <Req label="Nav Lv" need={ns.nav} have={state.navLevel} />}
-                  </div>
-                </>
-              ) : (
-                <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: GREEN, marginTop: 8 }}>All {TRAWL_MAX_SLOTS} slots unlocked — your whole fleet&apos;s at work.</p>
-              )}
-            </div>
 
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#8a8068', margin: '16px 0 8px' }}>Fishing zones</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -325,14 +319,22 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // Whole card is the tap target now: tap an open zone to send a
                 // crew, tap a finished one to collect. Other states aren't tappable.
                 const sendable = z.unlocked && !t && freeSlots > 0
+                const noFreeSlot = z.unlocked && !t && freeSlots <= 0
                 const actionable = ready || sendable
                 const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setPicking(z.key) } : undefined
                 const glow = ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined
+                // Base card carries the zone's own color; state accents (ready
+                // gold / running teal / flashing green) override the fill, and
+                // the border/glow signal whether it's tappable.
+                const zc = ZONE_TINT[z.key]
                 const cardStyle: React.CSSProperties = {
                   borderRadius: 14, cursor: actionable ? 'pointer' : 'default',
-                  background: flashing ? `${GREEN}22` : ready ? `${GOLD}16` : running ? `${TEAL}12` : sendable ? `${BLUE}12` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}70` : running ? `${TEAL}44` : sendable ? `${BLUE}55` : 'rgba(255,255,255,0.08)'}`,
-                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : ready ? `0 0 12px ${GOLD}33` : 'none',
+                  background: flashing ? `${GREEN}22`
+                    : ready ? `linear-gradient(160deg, ${GOLD}26, ${zc}12)`
+                    : running ? `linear-gradient(160deg, ${TEAL}1e, ${zc}12)`
+                    : `linear-gradient(160deg, ${zc}28, ${zc}0c)`,
+                  border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}80` : running ? `${TEAL}55` : sendable ? `${zc}aa` : `${zc}40`}`,
+                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : ready ? `0 0 12px ${GOLD}40` : 'none',
                   opacity: z.unlocked ? 1 : 0.5,
                 }
                 const motionProps = {
@@ -355,12 +357,9 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       : `${fmtTrawlDuration(z.key)} cycle`}
                   </p>
                 )
-                const tapLabel = (color: string, text: string) => (
-                  <span className="font-karla font-700 uppercase" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3, width: '100%', fontSize: '0.6rem', letterSpacing: '0.08em', color }}>
-                    {text}
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
-                  </span>
-                )
+                // Send/collect labels are gone — the tint + glow carry the
+                // affordance. Only running (countdown), locked, and no-free-slot
+                // states still need a footer line.
                 const footer = !z.unlocked
                   ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: '#6a6452', textAlign: 'center', display: 'block' }}>Locked</span>
                   : running
@@ -370,26 +369,24 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                           <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${TEAL}, ${BLUE})`, transition: 'width 1s linear' }} />
                         </div>
                       </>
-                    : ready
-                      ? tapLabel(GOLD, 'Tap to collect')
-                      : sendable
-                        ? tapLabel(BLUE, 'Tap to send crew')
-                        : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6452', textAlign: 'center', display: 'block' }}>No free slot</span>
+                    : noFreeSlot
+                      ? <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a6452', textAlign: 'center', display: 'block' }}>No free slot</span>
+                      : null
 
                 if (wide) {
                   return (
-                    <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 13, padding: '0.7rem 0.85rem' }}>
+                    <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '0.7rem 0.85rem' }}>
                       <Portrait crew={t?.crew ?? null} size={50} glow={glow} />
-                      <div style={{ flex: 1, minWidth: 0 }}>{nameEl(false)}{statusEl(false)}</div>
-                      <div style={{ flexShrink: 0, width: 132 }}>{footer}</div>
+                      <div style={{ minWidth: 0, textAlign: 'center' }}>{nameEl(true)}{statusEl(true)}</div>
+                      {footer && <div style={{ flexShrink: 0, minWidth: 90 }}>{footer}</div>}
                     </motion.div>
                   )
                 }
                 return (
-                  <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', gap: 7, padding: '0.75rem 0.6rem 0.65rem', minHeight: 138 }}>
+                  <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '0.85rem 0.6rem', minHeight: 122 }}>
                     <Portrait crew={t?.crew ?? null} size={46} glow={glow} />
                     <div style={{ textAlign: 'center', width: '100%', minWidth: 0 }}>{nameEl(true)}{statusEl(true)}</div>
-                    <div style={{ width: '100%', minHeight: 30, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>{footer}</div>
+                    {footer && <div style={{ width: '100%', marginTop: 1 }}>{footer}</div>}
                   </motion.div>
                 )
               })}
@@ -548,6 +545,48 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     </AnimatePresence>
   )
 
+  // ── Slot info (opened from the header chip) ──────────────────────────────
+  const slotInfoOverlay = (
+    <AnimatePresence>
+      {slotInfo && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSlotInfo(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9300, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <motion.div initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 340, damping: 30 }} onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 470, background: 'linear-gradient(180deg, #1b1813 0%, #100c07 100%)', borderTopLeftRadius: 22, borderTopRightRadius: 22, border: '1px solid rgba(196,169,106,0.34)', padding: '1.2rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f4ecd8' }}>Trawl slots</p>
+              <CloseBtn onClick={() => setSlotInfo(false)} />
+            </div>
+            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
+              Each slot lets one more zone fish for you at the same time. You have <span style={{ color: GOLD }}>{state.unlockedSlots} of {TRAWL_MAX_SLOTS}</span>.
+            </p>
+
+            <div style={{ display: 'flex', gap: 9, justifyContent: 'center', margin: '16px 0 6px' }}>
+              {Array.from({ length: TRAWL_MAX_SLOTS }).map((_, i) => (
+                <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: i < state.unlockedSlots ? GOLD : 'rgba(255,255,255,0.08)', border: `2px solid ${i < state.unlockedSlots ? GOLD : 'rgba(255,255,255,0.18)'}`, boxShadow: i < state.unlockedSlots ? `0 0 8px ${GOLD}88` : 'none' }} />
+              ))}
+            </div>
+
+            {ns ? (
+              <div style={{ marginTop: 12, padding: '0.85rem 0.9rem', borderRadius: 14, background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)' }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.84rem', color: '#dccba6', marginBottom: 8 }}>Unlock slot {ns.slot} — reach BOTH:</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Req label="Fishing Lv" need={ns.fishing} have={state.fishingLevel} />
+                  {ns.nav > 0 && <Req label="Nav Lv" need={ns.nav} have={state.navLevel} />}
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.74rem', color: '#a89e86', lineHeight: 1.5, marginTop: 10 }}>
+                  Raise <span style={{ color: '#e6dcc2' }}>Fishing</span> by catching fish. Raise <span style={{ color: '#e6dcc2' }}>Navigation</span> on raids and voyages.
+                </p>
+              </div>
+            ) : (
+              <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: GREEN, textAlign: 'center', marginTop: 10 }}>All {TRAWL_MAX_SLOTS} slots unlocked — your whole fleet&apos;s at work.</p>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+
   const coinFx = (
     <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 9500, pointerEvents: 'none' }}>
       <AnimatePresence>
@@ -565,7 +604,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   return (
     <>
       {indicatorButton}
-      {mounted && createPortal(<>{panel}{picker}{collectReveal}{slotUnlockOverlay}{coinFx}</>, document.body)}
+      {mounted && createPortal(<>{panel}{picker}{slotInfoOverlay}{collectReveal}{slotUnlockOverlay}{coinFx}</>, document.body)}
     </>
   )
 }

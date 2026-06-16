@@ -9,7 +9,8 @@
       "Read(//c/Users/Kong/.claude/projects/c--Users-Kong-Projects-shiblinggames-smallfishes/memory/**)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\" -Recurse -Directory)",
       "Bash(Select-Object -First 20 FullName)",
-      "PowerShell(& \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\" 2>&1)"
+      "PowerShell(& \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\\\\node_modules\\\\.bin\\\\tsc.cmd\" --noEmit -p \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\\\\web\" 2>&1)",
+      "PowerShell(\\(Get-Content \"web/app/\\(app\\)/crew/CrewClient.tsx\" | Measure-Object -Line\\).Lines)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Kong\\Projects\\shiblinggames\\smallfishes\\web\\app\\u",
