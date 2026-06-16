@@ -159,6 +159,15 @@ export default function RaidLootStage(props: Props) {
     setTimeout(() => setPhase('revealed'), 2200)
   }, [phase, slotFinal, loot, lootAmount])
 
+  // Keep the Plunder log pinned to its newest line as entries stream in — the
+  // box is a FIXED height that scrolls internally (see render), so the lines
+  // never grow the stage and shove the action button off screen.
+  const logScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = logScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [logLines])
+
   const slotItem = loot[slotDisplay]
   const finalItem = loot[slotFinal]
   const landedColor = RARITY_COLOR[finalItem.rarity]
@@ -352,32 +361,37 @@ export default function RaidLootStage(props: Props) {
         </div>
       </div>
 
-      {/* ── Log box — same shape as RaidCombat's ────────────────────── */}
+      {/* ── Log box — same shape as RaidCombat's, but FIXED height + internal
+          scroll so a long captain's-log (lots of crew XP lines) never grows the
+          stage and pushes the action button off screen. ─────────────────── */}
       <div style={{ padding: '0.85rem 0.85rem 0' }}>
         <div style={{
           background: '#04080e',
           border: '1px solid #1f2e42',
           borderRadius: 12,
           padding: '0.65rem 0.85rem',
-          minHeight: 138,
+          height: 150,
+          display: 'flex', flexDirection: 'column',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexShrink: 0 }}>
             <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#5a7a9a' }}>
               Plunder
             </p>
           </div>
-          {logLines.map((line, i) => (
-            <motion.p
-              key={`${i}-${line}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="font-karla"
-              style={{ fontSize: '0.84rem', color: '#d0d8e4', lineHeight: 1.5 }}
-            >
-              {line}
-            </motion.p>
-          ))}
+          <div ref={logScrollRef} className="scrollbar-hide" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            {logLines.map((line, i) => (
+              <motion.p
+                key={`${i}-${line}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="font-karla"
+                style={{ fontSize: '0.84rem', color: '#d0d8e4', lineHeight: 1.5 }}
+              >
+                {line}
+              </motion.p>
+            ))}
+          </div>
         </div>
       </div>
 
