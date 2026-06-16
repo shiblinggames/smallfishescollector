@@ -20,22 +20,34 @@ export interface TrawlZone {
   activeXpHr: number
   /** Active-fishing doubloons/hr (65% quick-sell estimate) — the doubloon benchmark. */
   activeDblHr: number
+  /** Hard-locked cycle length in minutes. Deeper zones take longer, so their
+   *  big hauls pay out at a lower EFFECTIVE xp/hr — offsetting the deep-zone
+   *  reward without shrinking the haul itself. Still all roughly "hourly". */
+  durationMin: number
 }
 
 // Ordered shallow → deep. Anchors per the locked balance model.
 export const TRAWL_ZONES: TrawlZone[] = [
-  { key: 'shallows',     label: 'Shallows',     minLevel: 1,  activeXpHr: 2_000,  activeDblHr: 1_300 },
-  { key: 'open_waters',  label: 'Open Waters',  minLevel: 15, activeXpHr: 5_000,  activeDblHr: 2_100 },
-  { key: 'deep',         label: 'Deep',         minLevel: 30, activeXpHr: 11_000, activeDblHr: 2_850 },
-  { key: 'abyss',        label: 'Abyss',        minLevel: 50, activeXpHr: 19_000, activeDblHr: 5_800 },
-  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 75, activeXpHr: 42_000, activeDblHr: 5_400 },
+  { key: 'shallows',     label: 'Shallows',     minLevel: 1,  activeXpHr: 2_000,  activeDblHr: 1_300, durationMin: 45 },
+  { key: 'open_waters',  label: 'Open Waters',  minLevel: 15, activeXpHr: 5_000,  activeDblHr: 2_100, durationMin: 55 },
+  { key: 'deep',         label: 'Deep',         minLevel: 30, activeXpHr: 11_000, activeDblHr: 2_850, durationMin: 65 },
+  { key: 'abyss',        label: 'Abyss',        minLevel: 50, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 78 },
+  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 75, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 90 },
 ]
 
 export const TRAWL_ZONE_BY_KEY: Record<TrawlZoneKey, TrawlZone> =
   Object.fromEntries(TRAWL_ZONES.map(z => [z.key, z])) as Record<TrawlZoneKey, TrawlZone>
 
-/** One-hour hard-locked cycle. */
-export const TRAWL_DURATION_MS = 60 * 60 * 1000
+/** Cycle length (ms) for a zone's trawl — deeper = longer (see durationMin). */
+export function trawlDurationMs(zoneKey: TrawlZoneKey): number {
+  return (TRAWL_ZONE_BY_KEY[zoneKey]?.durationMin ?? 60) * 60 * 1000
+}
+
+/** Pretty cycle length, e.g. "50m" or "1h 35m". */
+export function fmtTrawlDuration(zoneKey: TrawlZoneKey): string {
+  const m = TRAWL_ZONE_BY_KEY[zoneKey]?.durationMin ?? 60
+  return m < 60 ? `${m}m` : m % 60 === 0 ? `${m / 60}h` : `${Math.floor(m / 60)}h ${m % 60}m`
+}
 
 /** You can't even trawl until Fishing 25 (slot 1). */
 export const TRAWL_UNLOCK_LEVEL = 25

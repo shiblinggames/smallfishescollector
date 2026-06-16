@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
 import {
-  TRAWL_MAX_SLOTS, expectedTrawlHaul,
+  TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration,
   type TrawlState, type TrawlZoneKey, type ActiveTrawlView, type TrawlCrewView, type CollectTrawlResult,
 } from './trawls/constants'
 import { getXPProgress } from '@/lib/fishingLevel'
@@ -302,7 +302,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       <p className="font-karla" style={{ fontSize: '0.72rem', color: ready ? GOLD : '#a89e86', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {!z.unlocked ? `Locked — Fishing Lv ${z.minLevel} (you're ${state.fishingLevel})`
                           : t ? `${t.crew.name} · ${ready ? 'haul ready to collect' : `back in ${fmtCountdown(ms)}`}`
-                          : 'Idle — no crew fishing here'}
+                          : `Idle · ${fmtTrawlDuration(z.key)} cycle`}
                       </p>
                     </div>
                     {z.unlocked && (
@@ -342,7 +342,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               <CloseBtn onClick={() => setPicking(null)} label="Back" />
             </div>
             <p className="font-karla" style={{ fontSize: '0.78rem', color: '#bcb29a', lineHeight: 1.45, margin: '4px 0 4px' }}>
-              They&apos;re locked at sea for the full hour (can&apos;t raid or voyage). <span style={{ color: BLUE }}>Savvy</span> earns fishing XP, <span style={{ color: GOLD }}>Fortune</span> earns doubloons — the estimates show what each crew would haul here.
+              Locked at sea for the full <span style={{ color: '#e6dcc2' }}>{picking ? fmtTrawlDuration(picking) : ''}</span> cycle (can&apos;t raid or voyage). <span style={{ color: BLUE }}>Savvy</span> earns fishing XP, <span style={{ color: GOLD }}>Fortune</span> earns doubloons — the estimates show what each crew hauls per run here.
             </p>
             {orderedCrew.length === 0 && <p className="font-karla" style={{ fontSize: '0.84rem', color: '#a89e86', textAlign: 'center', padding: '2rem 0' }}>No free crew — they&apos;re all at sea, raiding, or voyaging. Recruit more in the Crew Hall.</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 8 }}>

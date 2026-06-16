@@ -14,7 +14,7 @@ import { applyLevelBonuses, crewLevelFromXP } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
 import { crewDisplayName } from '@/lib/crewGen'
 import {
-  TRAWL_ZONES, TRAWL_ZONE_BY_KEY, TRAWL_DURATION_MS,
+  TRAWL_ZONES, TRAWL_ZONE_BY_KEY, trawlDurationMs,
   unlockedTrawlSlots, nextTrawlSlot, rollTrawlHaul, expectedTrawlHaul,
   type TrawlZoneKey, type TrawlState, type TrawlCrewView, type ActiveTrawlView, type CollectTrawlResult,
 } from './constants'
@@ -145,7 +145,7 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
 
   const { error } = await admin.from('trawls').insert({
     user_id: user.id, zone, crew_id: crewId,
-    ends_at: new Date(Date.now() + TRAWL_DURATION_MS).toISOString(),
+    ends_at: new Date(Date.now() + trawlDurationMs(zone)).toISOString(),
   })
   if (error) return { error: 'Could not send the trawl' }
 
