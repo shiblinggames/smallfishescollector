@@ -16,6 +16,7 @@ import {
   type TrawlState, type TrawlZoneKey, type ActiveTrawlView, type TrawlCrewView, type CollectTrawlResult,
 } from './trawls/constants'
 import { getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
+import { getProfileBackground } from '@/lib/profileBackgrounds'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f?: string) => (f ? `${SUPA}/storage/v1/object/public/card-arts/${f}` : '')
@@ -23,16 +24,6 @@ const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 const BLUE = '#9fc0ef'
 const TEAL = '#5fd0c4'  // "at sea / in progress" accent
-// Each zone carries its own accent so a card reads as that zone at a glance
-// (mirrors the leaderboard zone colors). State accents (ready/running/sendable)
-// layer on top via border + glow.
-// Ancient Deep diverges from its canonical #c084fc here: that purple muddied
-// against Deep's lavender-violet (#a78bfa) as a low-alpha card tint, so it gets
-// a saturated pink/magenta — far from Deep on the wheel, and clear of every
-// state accent (gold/teal/blue/green) and the abyss red.
-const ZONE_TINT: Record<TrawlZoneKey, string> = {
-  shallows: '#60a5fa', open_waters: '#34d399', deep: '#a78bfa', abyss: '#f87171', ancient_deep: '#ec4899',
-}
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
 
@@ -327,19 +318,20 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const actionable = ready || sendable
                 const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setPicking(z.key) } : undefined
                 const glow = ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined
-                // Base card carries the zone's own color; state accents (ready
-                // gold / running teal / flashing green) override the fill, and
-                // the border/glow signal whether it's tappable.
-                const zc = ZONE_TINT[z.key]
+                // Card background IS the zone's painting (same art the profile
+                // background picker uses), under a dark scrim for text legibility.
+                // The scrim's top is washed with the state accent (ready gold /
+                // running teal / flash green) and the border/glow signal taps.
+                const zoneArt = getProfileBackground(z.key)?.src
+                const scrimTop = flashing ? `${GREEN}46` : ready ? `${GOLD}4a` : running ? `${TEAL}3a` : 'rgba(8,10,16,0.42)'
+                const scrim = `linear-gradient(180deg, ${scrimTop} 0%, rgba(8,10,16,0.72) 56%, rgba(8,10,16,0.9) 100%)`
                 const cardStyle: React.CSSProperties = {
-                  borderRadius: 14, cursor: actionable ? 'pointer' : 'default',
-                  background: flashing ? `${GREEN}22`
-                    : ready ? `linear-gradient(160deg, ${GOLD}26, ${zc}12)`
-                    : running ? `linear-gradient(160deg, ${TEAL}1e, ${zc}12)`
-                    : `linear-gradient(160deg, ${zc}28, ${zc}0c)`,
-                  border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}80` : running ? `${TEAL}55` : sendable ? `${zc}aa` : `${zc}40`}`,
-                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : ready ? `0 0 12px ${GOLD}40` : 'none',
-                  opacity: z.unlocked ? 1 : 0.5,
+                  borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
+                  backgroundColor: '#0c1018',
+                  background: zoneArt ? `${scrim}, url(${zoneArt}) center / cover` : scrim,
+                  border: `1px solid ${flashing ? `${GREEN}88` : ready ? `${GOLD}80` : running ? `${TEAL}66` : sendable ? `${BLUE}99` : 'rgba(255,255,255,0.16)'}`,
+                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : ready ? `0 0 14px ${GOLD}40` : sendable ? `0 0 10px ${BLUE}22` : 'none',
+                  opacity: z.unlocked ? 1 : 0.55,
                 }
                 const motionProps = {
                   initial: { opacity: 0, y: 8 },
@@ -349,13 +341,13 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   onClick: onTapCard,
                 }
                 const nameEl = (center: boolean) => (
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f4ecd8', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', gap: 5, lineHeight: 1.15 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f4ecd8', textShadow: '0 1px 4px rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', gap: 5, lineHeight: 1.15 }}>
                     {z.label}
                     {running && <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL, boxShadow: `0 0 6px ${TEAL}`, flexShrink: 0 }} />}
                   </p>
                 )
                 const statusEl = (center: boolean) => (
-                  <p className="font-karla" style={{ fontSize: '0.62rem', color: ready ? GOLD : running ? TEAL : '#a89e86', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: center ? 'center' : 'left' }}>
+                  <p className="font-karla" style={{ fontSize: '0.62rem', color: ready ? GOLD : running ? TEAL : '#cbc2ad', textShadow: '0 1px 3px rgba(0,0,0,0.85)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: center ? 'center' : 'left' }}>
                     {!z.unlocked ? `Needs Fishing ${z.minLevel}`
                       : t ? (ready ? 'Haul ready!' : `${t.crew.name}`)
                       : `${fmtTrawlDuration(z.key)} cycle`}
