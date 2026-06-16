@@ -403,6 +403,10 @@ export default function RaidCombat({
   // the current value without listing it as a dep.
   const snareDodgeTurnsRef = useRef(0)
   useEffect(() => { snareDodgeTurnsRef.current = snareDodgeTurns }, [snareDodgeTurns])
+  // Set by pickEnemyAction when the snare actually substitutes an enemy dodge
+  // this turn; resolveTurn reads it to surface a "jammed!" log so the player
+  // SEES the snare working (otherwise the swap is invisible).
+  const snareBlockedRef = useRef(false)
   // Per-turn ability lock + Snare countdown — the useEffect that reacts to
   // turn changes is defined further down where the `turn` state is in
   // scope (search for "ability per-turn reset effect").
@@ -743,7 +747,7 @@ export default function RaidCombat({
   // appears below — same rhythm as the in-fight action log.
   useEffect(() => {
     setEnemyHp(enemy.hpBase); enemyHpRef.current = enemy.hpBase
-    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false
+    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; snareBlockedRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
     // via Spet's drops — a CHANCE to open each fight with one chambered (Spet's
@@ -869,6 +873,7 @@ export default function RaidCombat({
     // reload) so they still have a turn but lose their defensive option.
     if (action === 'dodge' && snareDodgeTurnsRef.current !== 0) {
       action = enemyCharges >= 1 ? 'fire' : 'reload'
+      snareBlockedRef.current = true
     }
     return action
   }, [enemy.pattern, enemy.phase2, enemyCharges])
@@ -910,11 +915,13 @@ export default function RaidCombat({
         setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
         playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
         if (mm.cleanseDebuff) setCleanseDebuffPending(true)
+        setResolveLog(prev => [...prev, `${crew.name} patches the hull. +${heal} HP${mm.cleanseDebuff ? ', debuffs cleared' : ''}.`])
         break
       }
       case 'sharpshot': {
         const sm = m as import('@/lib/crewClasses').SharpshotMilestone
         setSharpshotBuff({ multiplier: sm.critZoneMultiplier, shotsLeft: sm.shotsBuffed })
+        setResolveLog(prev => [...prev, `${crew.name} steadies your aim — a wider crit window on your next ${sm.shotsBuffed} shot${sm.shotsBuffed === 1 ? '' : 's'}.`])
         break
       }
       case 'snare': {
@@ -926,6 +933,10 @@ export default function RaidCombat({
           setSnareDodgeTurns(sn.disableDodgeTurns)
           snareDodgeTurnsRef.current = sn.disableDodgeTurns
         }
+        const snDur = sn.disableDodgeTurns === 'rest_of_fight'
+          ? 'the rest of the fight'
+          : `${sn.disableDodgeTurns} turn${sn.disableDodgeTurns === 1 ? '' : 's'}`
+        setResolveLog(prev => [...prev, `${crew.name} jams the ${enemy.name}'s helm. No dodging for ${snDur}.`])
         break
       }
       case 'anchor': {
@@ -933,6 +944,7 @@ export default function RaidCombat({
         setAnchorReductionPct(an.pctReduction)
         // absorbsCrits handling is deferred — applies on the next hit
         // resolve. Tracked in state for now; future polish wires it.
+        setResolveLog(prev => [...prev, `${crew.name} drops the sea anchor — the next hit you take is cut ${Math.round(an.pctReduction * 100)}%.`])
         break
       }
       case 'navigator': {
@@ -944,6 +956,9 @@ export default function RaidCombat({
         if (add > 0) {
           setPlayerCharges(prev => Math.min(MAX_CHARGES, prev + add))
         }
+        setResolveLog(prev => [...prev, add > 0
+          ? `${crew.name} runs the powder up — +${add} cannonball${add === 1 ? '' : 's'} loaded.`
+          : `${crew.name} works the powder but comes up empty this time.`])
         break
       }
       // ── Legendary signature abilities ────────────────────────────────
@@ -1275,6 +1290,14 @@ export default function RaidCombat({
       let splatColor = '#ef4444'
       let enemyCrit = false
       const stepLines: string[] = []
+
+      // Snare made good — the enemy tried to slip aside but its helm is jammed,
+      // so its dodge got swapped for a fire/reload. Surface it so the player
+      // sees the crew ability doing its job.
+      if (who === 'enemy' && snareBlockedRef.current) {
+        stepLines.push(`Jammed! The ${enemy.name} can't dodge.`)
+        snareBlockedRef.current = false
+      }
 
       // Resilient affix: 33% chance to regen at the top of each enemy
       // turn. Heals max(base, % of maxHP) so small ships get a flat 5
