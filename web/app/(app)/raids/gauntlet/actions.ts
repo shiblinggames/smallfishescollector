@@ -20,6 +20,45 @@ function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
+/** The single deepest run across all captains + this player's own deepest.
+ *  Surfaced on the gauntlet map node. */
+export async function getGauntletLeaderboard(): Promise<{
+  top: { name: string; depth: number } | null
+  mine: number
+}> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const admin = createAdminClient()
+  const { data: top } = await admin
+    .from('profiles')
+    .select('username, ship_name, gauntlet_deepest')
+    .gt('gauntlet_deepest', 0)
+    .order('gauntlet_deepest', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let mine = 0
+  if (user) {
+    const { data: me } = await admin
+      .from('profiles')
+      .select('gauntlet_deepest')
+      .eq('id', user.id)
+      .single()
+    mine = (me?.gauntlet_deepest as number | null) ?? 0
+  }
+
+  return {
+    top: top
+      ? {
+          name: (top.username as string | null) ?? (top.ship_name as string | null) ?? 'A captain',
+          depth: (top.gauntlet_deepest as number | null) ?? 0,
+        }
+      : null,
+    mine,
+  }
+}
+
 /** Whether the player can start a run today + their lifetime deepest. */
 export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number }> {
   const supabase = await createClient()

@@ -16,6 +16,7 @@ import BeaconChainPuzzle from './BeaconChainPuzzle'
 import CipherDialsPuzzle from './CipherDialsPuzzle'
 import DiceRollNode from './DiceRollNode'
 import StoryScene from './StoryScene'
+import { getGauntletLeaderboard } from '@/app/(app)/raids/gauntlet/actions'
 
 // Single parchment-gold accent for every main-chain node. Earlier this
 // was a six-color per-type palette (cyan/ember/gold/violet/sage/blue),
@@ -658,7 +659,15 @@ function NodeDetailSheet({
   // no server write; the claim/choice action stays the clear. Cleared
   // nodes of any type can replay (replay's CTA just closes).
   const [sceneOpen, setSceneOpen] = useState(false)
+  // Gauntlet node: deepest-run board (global #1 + this player's best).
+  const [gauntletBoard, setGauntletBoard] = useState<{ top: { name: string; depth: number } | null; mine: number } | null>(null)
   const { node, status, claimable, lockReason } = view
+  useEffect(() => {
+    if (node.type !== 'gauntlet') return
+    let alive = true
+    getGauntletLeaderboard().then(b => { if (alive) setGauntletBoard(b) }).catch(() => {})
+    return () => { alive = false }
+  }, [node.type])
   // Single accent now: matches the unified map palette.
   const accent = MAIN_ACCENT
   const img = node.image ?? TYPE_IMAGE[node.type]
@@ -1043,6 +1052,32 @@ function NodeDetailSheet({
             ? (cleared ? (detail.summary ?? node.flavor) : node.flavor)
             : detail.description}
         </p>
+
+        {/* Gauntlet: deepest-run board (global record holder + your best) */}
+        {node.type === 'gauntlet' && (
+          <div style={{ marginTop: '0.9rem', display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1, background: 'rgba(0,0,0,0.32)', border: `1px solid ${accent}30`, borderRadius: 10, padding: '0.55rem 0.65rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#8a8880', marginBottom: 4 }}>Deepest Run</p>
+              {gauntletBoard?.top ? (
+                <>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: accent, lineHeight: 1.1 }}>Depth {gauntletBoard.top.depth}</p>
+                  <p className="font-karla" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.6)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{gauntletBoard.top.name}</p>
+                </>
+              ) : (
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a7875' }}>{gauntletBoard ? 'Unclaimed' : '…'}</p>
+              )}
+            </div>
+            <div style={{ flex: 1, background: 'rgba(0,0,0,0.32)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '0.55rem 0.65rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#8a8880', marginBottom: 4 }}>Your Best</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: '#e8dfc8', lineHeight: 1.1 }}>
+                {gauntletBoard ? (gauntletBoard.mine > 0 ? `Depth ${gauntletBoard.mine}` : '—') : '…'}
+              </p>
+              {gauntletBoard && gauntletBoard.mine === 0 && (
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a7875', marginTop: 2 }}>No run yet</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Where beating this leads: the story beat */}
         {node.bridge && (

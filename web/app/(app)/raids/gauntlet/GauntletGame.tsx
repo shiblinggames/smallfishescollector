@@ -389,10 +389,20 @@ function drawGauntletTide(depth: number, hp: number, hpMax: number): TideEvent {
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="flex flex-col" style={{
-      maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '0 0.25rem',
+      maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '12px 0.25rem',
       paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
     }}>
-      {children}
+      {/* Solid dark panel so copy stays legible over the ocean background. */}
+      <div style={{
+        background: 'linear-gradient(180deg, rgba(10,14,22,0.94) 0%, rgba(5,8,14,0.97) 100%)',
+        border: `1px solid ${GOLD}26`,
+        borderRadius: 18,
+        padding: '1.25rem 1.2rem 1.4rem',
+        boxShadow: '0 18px 54px rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+      }}>
+        {children}
+      </div>
     </div>
   )
 }
