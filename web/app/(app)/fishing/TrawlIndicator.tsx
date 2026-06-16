@@ -247,7 +247,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               <CloseBtn onClick={() => { setOpen(false); setPicking(null) }} />
             </div>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#bcb29a', lineHeight: 1.45, marginTop: 2 }}>
-              Send a crew to fish a zone for 1 hour — even while you&apos;re away or doing other things. Come back to collect the haul, then send them again.
+              Send a crew to passively fish a zone — collect their XP + doubloon haul when they return.
             </p>
 
             {/* Slots explainer */}
