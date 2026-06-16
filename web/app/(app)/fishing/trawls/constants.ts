@@ -14,7 +14,9 @@ export type TrawlZoneKey = 'shallows' | 'open_waters' | 'deep' | 'abyss' | 'anci
 export interface TrawlZone {
   key: TrawlZoneKey
   label: string
-  /** Fishing level required to trawl here (matches active-fishing unlock). */
+  /** Fishing level required to TRAWL here. Deliberately offset +3 above the
+   *  zone's active-fishing unlock (ZONE_MIN_LEVEL) so you have to fish a new
+   *  zone with your own rod for a few levels before you can automate it. */
   minLevel: number
   /** Active-fishing xp/hr in this zone — the benchmark the trawl rate scales off. */
   activeXpHr: number
@@ -26,13 +28,16 @@ export interface TrawlZone {
   durationMin: number
 }
 
-// Ordered shallow → deep. Anchors per the locked balance model.
+// Ordered shallow → deep. Anchors per the locked balance model. minLevel is the
+// zone's active-fishing unlock (1/15/30/50/75) PLUS a +3 trawl offset — you fish
+// a fresh zone yourself before you can automate it. (The +3 only bites on Deep/
+// Abyss/Ancient; shallows/open are moot since trawl slot 1 needs Fishing 25.)
 export const TRAWL_ZONES: TrawlZone[] = [
-  { key: 'shallows',     label: 'Shallows',     minLevel: 1,  activeXpHr: 2_000,  activeDblHr: 1_300, durationMin: 45 },
-  { key: 'open_waters',  label: 'Open Waters',  minLevel: 15, activeXpHr: 5_000,  activeDblHr: 2_100, durationMin: 55 },
-  { key: 'deep',         label: 'Deep',         minLevel: 30, activeXpHr: 11_000, activeDblHr: 2_850, durationMin: 65 },
-  { key: 'abyss',        label: 'Abyss',        minLevel: 50, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 78 },
-  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 75, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 120 },
+  { key: 'shallows',     label: 'Shallows',     minLevel: 4,  activeXpHr: 2_000,  activeDblHr: 1_300, durationMin: 45 },
+  { key: 'open_waters',  label: 'Open Waters',  minLevel: 18, activeXpHr: 5_000,  activeDblHr: 2_100, durationMin: 55 },
+  { key: 'deep',         label: 'Deep',         minLevel: 33, activeXpHr: 11_000, activeDblHr: 2_850, durationMin: 65 },
+  { key: 'abyss',        label: 'Abyss',        minLevel: 53, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 78 },
+  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 78, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 120 },
 ]
 
 export const TRAWL_ZONE_BY_KEY: Record<TrawlZoneKey, TrawlZone> =

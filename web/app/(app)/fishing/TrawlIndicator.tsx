@@ -351,7 +351,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 )
                 const statusEl = (center: boolean) => (
                   <p className="font-karla" style={{ fontSize: '0.62rem', color: ready ? GOLD : running ? TEAL : '#cbc2ad', textShadow: '0 1px 3px rgba(0,0,0,0.85)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: center ? 'center' : 'left' }}>
-                    {!z.unlocked ? `Needs Fishing ${z.minLevel}`
+                    {!z.unlocked ? `Unlocks at Fishing ${z.minLevel}`
                       : t ? (ready ? 'Haul ready!' : `${t.crew.name}`)
                       : `${fmtTrawlDuration(z.key)} cycle`}
                   </p>
