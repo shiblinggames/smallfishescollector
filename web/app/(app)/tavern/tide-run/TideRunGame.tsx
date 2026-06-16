@@ -399,6 +399,28 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
     if (!hasSeenTour) setShowTour(true)
   }, [hasSeenTour])
 
+  // Kill iOS double-tap-to-zoom + text selection page-wide WHILE Tide Run is
+  // mounted. The viewport's user-scalable=no is ignored by iOS Safari, and the
+  // game surface's touch-action only covers taps that land on it — fast taps
+  // that miss (edges / overlays) fall through to the page and zoom/select.
+  // touch-action:manipulation on <html> disables the double-tap-zoom gesture
+  // everywhere (keeps pan/scroll, so overscroll bounce is untouched); the
+  // selection props stop the highlight. Reverted on unmount.
+  useEffect(() => {
+    const root = document.documentElement
+    const prevTouch = root.style.touchAction
+    const prevSelect = root.style.userSelect
+    const prevWebkit = root.style.getPropertyValue('-webkit-user-select')
+    root.style.touchAction = 'manipulation'
+    root.style.userSelect = 'none'
+    root.style.setProperty('-webkit-user-select', 'none')
+    return () => {
+      root.style.touchAction = prevTouch
+      root.style.userSelect = prevSelect
+      root.style.setProperty('-webkit-user-select', prevWebkit)
+    }
+  }, [])
+
   function closeTour() {
     setShowTour(false)
     startTransition(() => { void markTideRunTourSeen() })
