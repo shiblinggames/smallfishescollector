@@ -32,7 +32,7 @@ export const TRAWL_ZONES: TrawlZone[] = [
   { key: 'open_waters',  label: 'Open Waters',  minLevel: 15, activeXpHr: 5_000,  activeDblHr: 2_100, durationMin: 55 },
   { key: 'deep',         label: 'Deep',         minLevel: 30, activeXpHr: 11_000, activeDblHr: 2_850, durationMin: 65 },
   { key: 'abyss',        label: 'Abyss',        minLevel: 50, activeXpHr: 19_000, activeDblHr: 5_800, durationMin: 78 },
-  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 75, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 90 },
+  { key: 'ancient_deep', label: 'Ancient Deep', minLevel: 75, activeXpHr: 42_000, activeDblHr: 5_400, durationMin: 120 },
 ]
 
 export const TRAWL_ZONE_BY_KEY: Record<TrawlZoneKey, TrawlZone> =
