@@ -21,7 +21,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -61,15 +61,77 @@ export function isCombatNode(t: RaidNodeType): boolean {
 // completion + pays the reward (same trust level as the "mark story read" nodes).
 // Difficulty knobs = grid size + scrambleTaps.
 export interface RaidPuzzle {
-  cols: number
-  rows: number
-  /** Random taps applied from the solved (all-lit) board to scramble it. */
-  scrambleTaps: number
+  /** Which puzzle engine renders this node. 'beacon' = Lights Out (default,
+   *  back-compat for the existing smuggler's-chart node). 'cipher' = the
+   *  coupled wax dials (turn one, its neighbours turn too; line every seal
+   *  to the index at once). */
+  kind?: 'beacon' | 'cipher'
+  /** beacon: grid columns. */
+  cols?: number
+  /** beacon: grid rows. */
+  rows?: number
+  /** beacon: random taps applied from the solved (all-lit) board to scramble it. */
+  scrambleTaps?: number
+  /** cipher: number of wax dials in the row. */
+  dials?: number
+  /** cipher: glyph positions per dial (the index is position 0). */
+  positions?: number
+  /** cipher: random turns applied from the aligned board to scramble it. */
+  scrambleTurns?: number
   /** Nav XP granted on solve (no doubloons — this is a navigation discovery). */
   rewardNavXp: number
-  /** Story payoff shown the moment the chain is lit: where the freight runs,
+  /** Story payoff shown the moment the puzzle resolves: where the freight runs,
    *  i.e. the next place to head. Supports \n line breaks. */
   reveal?: string
+}
+
+// ── Bones (a d20 skill-check / risk-reward node) ─────────────────────────────
+// A D&D-style throw: the player picks ONE approach, the server rolls a d20 and
+// adds a small Navigation bonus, and the total vs the option's DC decides win or
+// miss. One-time. Risk/reward is baked per option — a safe option always pays
+// something, the bold one can cost the player coin on a miss. Server-rolled
+// (rollDiceNode) so the throw can't be cheated.
+export interface RaidDiceGrant {
+  /** Doubloons moved. NEGATIVE = a loss (clamped so the purse can't go below 0). */
+  doubloons?: number
+  /** Navigation XP granted (never negative). */
+  navXp?: number
+}
+export interface RaidDiceOption {
+  /** Stable id stored in raid_node_progress.choices (which approach you took). */
+  id: string
+  label: string
+  description: string
+  /** Beat this on (d20 + Nav bonus) to succeed. */
+  dc: number
+  /** Doubloons you must hold to even attempt this option (the at-risk amount);
+   *  the card locks below it so a broke captain can't risk nothing. */
+  requiresDoubloons?: number
+  win: RaidDiceGrant
+  miss: RaidDiceGrant
+  /** Flavor shown after the roll resolves. */
+  winText: string
+  missText: string
+}
+export interface RaidDice {
+  /** Nav bonus to the d20 = min(maxBonus, floor(navLevel / bonusPerLevels)). */
+  bonusPerLevels: number
+  maxBonus: number
+  options: RaidDiceOption[]
+}
+
+// ── Choice-gated payoff ──────────────────────────────────────────────────────
+// A story-type node whose reward (and which scene plays) depends on a choice the
+// player made at an EARLIER node. Used for the freed-scout payoff: if you cut the
+// scouts loose back at cartographer_reveal, they sail back with intel + coin;
+// if you didn't, you go in blind and empty. Granted by claimScoutDebt.
+export interface RaidPayoff {
+  /** The earlier node + choice id that unlocks the reward. */
+  requiresChoice: { nodeId: string; choiceId: string }
+  /** Granted only when the prior choice matches. */
+  grant: RaidDiceGrant
+  /** Scene played when the prior choice was NOT made (node.scene is the met one). */
+  sceneUnmet: SceneLine[]
 }
 
 // ── Dialogue scenes ──────────────────────────────────────────────────────────
@@ -179,8 +241,12 @@ export interface RaidNode {
    *  chapterId is the RAID_CHAPTERS.id this pick contributes to (so
    *  the picker writes into profiles.ship_classes[chapterId]). */
   classPick?: { chapterId: string }
-  /** puzzle: the beacon-chain (Lights Out). Solving clears the node. */
+  /** puzzle: the beacon-chain (Lights Out) or cipher dials. Solving clears it. */
   puzzle?: RaidPuzzle
+  /** dice: a d20 skill-check / risk-reward throw. Picking + rolling clears it. */
+  dice?: RaidDice
+  /** story-type payoff gated on an earlier choice (the freed-scout debt). */
+  payoff?: RaidPayoff
   /** Marks this node as a side branch hanging off another node, NOT part of
    *  the main story chain. Used by challenge-mode raids: the challenge node
    *  sits beside its parent on the map (shared row, opposite column),
@@ -321,12 +387,13 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     romanNumeral: 'II',
     title:      'The Sunken Hand',
     subtitle:   "The shadow you've been pulling at finally has a name.",
-    // Post-Krust setup arc: finndicate_notice → smugglers_chart →
-    // last_cache → cartographer_reveal → cartographer → cartographer_challenge.
-    // A chapter_2_class node will land later — when it does, this
-    // lastNodeId bumps to that, mirroring chapter I. Chapter III only
-    // starts after a new RAID_CHAPTERS entry is added.
-    lastNodeId: 'cartographer_challenge',
+    // finndicate_notice → smugglers_chart → last_cache → cartographer_reveal →
+    // cartographer → (the Gullet run) gullet_heading → gullet_cipher →
+    // gullet_bones → gullet_cache → scout_debt → gullet_raid → chapter_2_class.
+    // gullet_raid + its challenge are coming-soon stubs; chapter_2_class is the
+    // real tail gate, so the chapter only reads "cleared" once the boss ships
+    // and the player picks a class. Chapter III starts with a new entry.
+    lastNodeId: 'chapter_2_class',
   },
 ]
 
@@ -838,6 +905,224 @@ export const RAID_MAP: RaidNode[] = [
       drops: lootDrops(THE_CARTOGRAPHER_CHALLENGE.loot),
       clearReward: clearPayout(THE_CARTOGRAPHER_CHALLENGE),
       dropsNote: 'Every kill pays more, the clear bonus is steeper, and the legendary Captain\'s Astrolabe rolls at double the normal rate.',
+    },
+  },
+  // ── Chapter II continues: the run on the Gullet ──────────────────────────
+  {
+    id: 'gullet_heading',
+    type: 'story',
+    label: 'The Throat of the Sea',
+    flavor: "The Cartographer's charts and Krust's beacon map finally agree on one point of water, and the crews out here have a name for it they don't say twice.",
+    bridge: "You've got the name now: the Gullet, where the sea swallows everything down. The only way in runs through a channel sealed behind a Finndicate cipher.",
+    requiresNode: 'cartographer',
+    image: '/raidlog.png',
+    scene: [
+      { text: "The Cartographer's charts and Krust's beacon map finally point the same way." },
+      { text: "Every freight lane you've chased bends to one spot, far past the danger line." },
+      { text: "The old charts leave it blank. No depth, no name. Only a warning." },
+      { text: "The crews out here have a name for it, though. They don't say it twice." },
+      { text: "The Gullet. Where the sea swallows everything down." },
+      { text: "Whatever the Finndicate takes off the weak, it all ends up down there. And so do you." },
+    ],
+    detail: {
+      description:
+        "The Cartographer's charts and Krust's beacon map finally agree: every freight lane bends to one drowned anchorage far past the danger line, the place the old charts leave blank with only a warning. The crews call it the Gullet, and they don't say it twice. Whatever the Finndicate takes off the weak gets swallowed down there, and that's exactly where you're bound.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment VI", sublabel: "\"Nothing the Finndicate takes ever gets spent. It just gets swallowed.\"", rarity: 'uncommon' },
+      ],
+      dropsNote: 'A place with a name at last, and a heading right down its throat.',
+      ctaLabel: 'Read the Charts →',
+      summary: "The charts agree at last: every freight lane ends at the Gullet, a drowned anchorage past the danger line where the Finndicate swallows all it takes. You set a heading down its throat.",
+    },
+  },
+  {
+    id: 'gullet_cipher',
+    type: 'puzzle',
+    label: 'The Wax Cipher',
+    flavor: "The mouth of the Gullet drowns any ship that reads the channel wrong. The only safe way in is sealed inside a Finndicate manifest, locked behind a row of wax cipher dials.",
+    bridge: "The seals line up, the manifest cracks, and the safe channel through the Gullet's teeth opens off your bow.",
+    requiresNode: 'gullet_heading',
+    puzzle: {
+      kind: 'cipher',
+      dials: 5,
+      positions: 3,
+      scrambleTurns: 9,
+      rewardNavXp: 600,
+      reveal:
+        "The seals line up and the manifest cracks open. There's a thin lane of deep water through a throat of reef that'd gut any ship that guessed.\n\nYou've got the safe way into the Gullet now. Sail it.",
+    },
+    detail: {
+      description:
+        "The Finndicate seals its headings behind wax cipher dials, rigged so no single turn ever gives the code away: turn one dial and the dials beside it turn with it. Line every seal to the brass index at once and the manifest reads true, the safe channel and all.",
+      drops: [
+        { emoji: '🧭', label: '600 Nav XP', sublabel: 'Cracking the manifest sharpens your navigation. No coin in it, just the safe heading.', rarity: 'rare' },
+      ],
+      dropsNote: 'Turn the dials to line every seal to the index at once. Each turn also nudges the dials beside it. One-time, no cost, no fight.',
+    },
+  },
+  {
+    id: 'gullet_bones',
+    type: 'dice',
+    label: 'A Throw of the Bones',
+    flavor: "A Finndicate freighter, half-swallowed and snagged on the reef, hold split open and bleeding cargo into the dark. How you plunder her is down to the bones.",
+    bridge: "The wreck slides off the reef behind you, picked over for whatever your throw was worth, and the deep harbour opens up ahead.",
+    requiresNode: 'gullet_cipher',
+    image: '/raidlog.png',
+    scene: [
+      { text: "Deep in the Gullet's throat, a Finndicate freighter hangs snagged on the reef, half-swallowed already." },
+      { text: "Her hold's split wide, cargo bleeding out into the dark, and the whole wreck's one bad lurch from sliding off for good." },
+      { text: "No time to be careful. Pick your play and roll the bones." },
+    ],
+    dice: {
+      bonusPerLevels: 10,
+      maxBonus: 4,
+      options: [
+        {
+          id: 'skim',
+          label: 'Skim the spill',
+          description: "Grab the cargo already loose in the water. Easy pickings, nothing fancy.",
+          dc: 8,
+          win: { doubloons: 800 },
+          miss: { doubloons: 250 },
+          winText: "Clean grab. Your hold's heavier and the wreck never even shifts.",
+          missText: "The current fights you the whole way, but you come up with a fistful anyway.",
+        },
+        {
+          id: 'manifests',
+          label: 'Pull the manifests',
+          description: "Leave the coin, dive for the freight charts. They're worth more than what's in the hold.",
+          dc: 12,
+          win: { navXp: 600, doubloons: 200 },
+          miss: { navXp: 150 },
+          winText: "You surface with the captain's charts dry and readable. Out here that's worth more than coin.",
+          missText: "Half the charts are pulp by the time you reach air. A few marks survive.",
+        },
+        {
+          id: 'strongroom',
+          label: 'Crack the strongroom',
+          description: "Force the captain's strongroom before the wreck slides. All of it, or none of it.",
+          dc: 16,
+          requiresDoubloons: 400,
+          win: { doubloons: 2500, navXp: 400 },
+          miss: { doubloons: -400 },
+          winText: "The strongroom gives all at once. You haul up more than the rest of the wreck put together.",
+          missText: "The wreck lurches off the reef and drags your grapples down with it. You cut loose with nothing but a lighter purse.",
+        },
+      ],
+    },
+    detail: {
+      description:
+        "A Finndicate freighter, snagged on the reef and half-swallowed, hold cracked wide and spilling cargo into the dark. She's one bad lurch from sliding off for good, so there's no being careful about it. Pick how you plunder her and throw the bones: a d20 plus a little of your Navigation, beat the mark to pull it off. Skim what's loose for easy coin, dive for the charts, or force the strongroom for everything she's got, knowing a bad throw on that one costs you.",
+      dropsNote: 'Pick one approach and roll once. The safe play always pays something; forcing the strongroom can cost you doubloons on a miss, and only opens to a captain who can cover the loss.',
+      ctaLabel: 'Throw the Bones →',
+      summary: "A half-sunk Finndicate freighter, plundered on a single throw of the bones. You made your play, the dice fell, and the wreck slid off the reef behind you.",
+    },
+  },
+  {
+    id: 'gullet_cache',
+    type: 'shop',
+    label: 'The Sunken Cache',
+    flavor: "A fence working a shelf of gear deep inside the Gullet, way too well-stocked for water this far out. Two pieces on the counter, take one, leave the other.",
+    bridge: "The keeper knew your name before you gave it. You take your pick and try not to wonder too hard who told him you were coming.",
+    requiresNode: 'gullet_bones',
+    choice: { items: ['corsair_cannon', 'krusts_carapace'] },
+    detail: {
+      description:
+        "Deep in the Gullet, where no honest captain has charts, there's a fence working a shelf of gear that's far too well-stocked for water this far out. He knows your name before you give it, and he runs the same trick every fence past the strait pulls: two pieces of kit on the counter, take one, leave the other for good. You grab what you came for and try not to think too hard about who tipped him off.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout with the rest of your kit.",
+      dropsNote: 'Pick one. Permanent, equippable, and you can\'t come back for the other.',
+    },
+  },
+  {
+    id: 'scout_debt',
+    type: 'story',
+    label: 'A Sail in Your Lee',
+    flavor: "You hold at the mouth of the Gullet and watch the fog. Whether a friendly sail comes out of it is down to the mercy you showed back past the danger line.",
+    bridge: "Whatever answered your lee, the Gullet's throat is dead ahead now, and the captain who runs it is waiting at the bottom of it.",
+    requiresNode: 'gullet_cache',
+    image: '/krust_soldier.png',
+    payoff: {
+      requiresChoice: { nodeId: 'cartographer_reveal', choiceId: 'release' },
+      grant: { doubloons: 1200, navXp: 750 },
+      sceneUnmet: [
+        { text: "You hold at the Gullet's mouth and watch the fog for a friendly sail." },
+        { text: "None comes." },
+        { text: "Out here you get back exactly what you gave, and you gave the cold water nothing." },
+        { text: "Whatever's waiting down the throat, you'll meet it the way you came. Blind, and on your own keel." },
+      ],
+    },
+    scene: [
+      { text: "A cutter slides out of the fog and pulls in alongside you. No flag, but you know that hull." },
+      { text: "The scouts you let go, way back past the danger line. Turns out the cold water remembers." },
+      { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "We owe you a deck, captain. We pay what we owe." },
+      { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "Every crew in the Gullet sails loaded. They've all got a shot in the pipe before the fight even starts." },
+      { speaker: 'A Freed Scout', portrait: '/krust_soldier.png', text: "They'll hit you on the first bell, before a slow captain's even found his range. Go in ready to take one." },
+      { text: "They hand across a strongbox and a folded chart, and slip back into the grey." },
+      { text: "Richer, wiser, and not sailing in blind anymore. The mercy paid." },
+    ],
+    detail: {
+      description:
+        "You hold at the mouth of the Gullet and watch the fog. Out here a captain gets back exactly what he gave, no more. If you cut those scouts loose back past the danger line, the cold water remembers, and a sail comes out of the grey to settle the debt with coin, charts, and a warning worth more than both. If you didn't, the fog stays empty and you go in the way you came.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment VII", sublabel: "\"Out past the danger line, the only sail that comes back for you is one you let go.\"", rarity: 'uncommon' },
+      ],
+      dropsNote: 'A payoff for an old mercy: the scouts you spared sail back with coin, charts, and the only pre-fight intel in the game.',
+      ctaLabel: 'Watch the Fog →',
+      summary: "You held at the Gullet's mouth. What sailed out of the fog came down to the mercy you showed past the danger line, and the throat of the Gullet is dead ahead.",
+    },
+  },
+  {
+    // Chapter II's boss raid. Coming-soon stub: the freight-collector who runs
+    // the Gullet (name TBD) and his crews, whose shared trait is opening LOADED
+    // (one cannonball pre-chambered, so they can fire on the opening bell). Full
+    // BossRaidConfig + art + balance land in a follow-up; the node ships now so
+    // the bridge chain has a terminus. requiresNavLevel is the only gate in the
+    // whole Gullet stretch.
+    id: 'gullet_raid',
+    type: 'raid',
+    label: 'The Gullet',
+    flavor: "Down in the throat, the captain who weighs and stacks everything the sea swallows is waiting. His crews sail loaded, every hull with a shot already in the pipe.",
+    requiresNode: 'scout_debt',
+    requiresNavLevel: 35,
+    comingSoon: true,
+    route: '/raids/gullet',
+    raidId: 'gullet_collector',
+    image: '/krust_soldier.png',
+    detail: {
+      description:
+        "The freight-collector who runs the Gullet, and the crew that taxes the sea for him. Every hull down here opens loaded, a shot already chambered, so they fire on the first bell before a slow captain finds his range. The full fight lands soon.",
+      dropsNote: 'Coming soon. The collector who runs the Gullet, and the crews that sail in loaded.',
+    },
+  },
+  {
+    id: 'gullet_raid_challenge',
+    type: 'raid',
+    label: 'Challenge: The Gullet',
+    flavor: "The same loaded crews, drilled harder and angrier for the loss.",
+    requiresNode: 'gullet_raid',
+    comingSoon: true,
+    route: '/raids/gullet/challenge',
+    raidId: 'gullet_collector_challenge',
+    sideBranch: { parentId: 'gullet_raid' },
+    image: '/krust_soldier.png',
+    detail: {
+      description: "The harder run on the Gullet. Coming soon, once the fight itself lands.",
+      dropsNote: 'Coming soon.',
+    },
+  },
+  {
+    // Chapter II's closing class pick — mirrors chapter_1_class. Gated on the
+    // boss (gullet_raid), so it stays locked until the raid ships. Writes
+    // profiles.ship_classes['sunken_hand'], stacking with the chapter I pick.
+    id: 'chapter_2_class',
+    type: 'class_pick',
+    label: "Captain's Choice",
+    flavor: "Three Finndicate captains on the seabed and the Gullet drained dry. Time to decide what your name stands for on the deep water.",
+    requiresNode: 'gullet_raid',
+    classPick: { chapterId: 'sunken_hand' },
+    detail: {
+      description:
+        "You read the Cartographer's seas, cracked the Gullet's cipher, and put its collector under. Pick a class for the deep water ahead. Once it's chosen it stays with you for every raid from here on, stacking with the captain you already are.",
+      ctaLabel: 'Pick a class',
     },
   },
 ]

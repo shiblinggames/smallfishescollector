@@ -112,10 +112,10 @@ async function loadRaidRecords(
   return result
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string> }> {
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string> }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], raidNodeChoices: {} }
+  if (!user) return { views: [], doubloons: 0, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], raidNodeChoices: {} }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -137,7 +137,7 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
     buildClearedSet(admin, user.id, profile ?? {}),
     loadRaidRecords(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, raidRecords, shipClasses, seenChapterUnlocks, raidNodeChoices }
+  return { views: computeRaidMap(cleared, doubloons, navLevel), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, raidNodeChoices }
 }
 
 /** First-time celebration dismiss — appends the chapter id to
@@ -410,6 +410,144 @@ export async function pickRaidEventChoice(
   }
 
   return { ok: true, newDoubloons, newExpeditionXp }
+}
+
+// Dice node (a d20 skill-check throw). The player picks ONE approach; the server
+// rolls a real d20, adds a small Navigation bonus, and the total vs the option's
+// DC decides win or miss. Server-rolled so the throw can't be re-rolled or
+// cheated. Risk/reward is per option: a miss can move doubloons NEGATIVE (clamped
+// so the purse never goes below 0), and an option can require holding the at-risk
+// amount up front. One-time: records the node cleared + which option in
+// raid_node_progress.choices. Returns the roll details for the reveal animation.
+export async function rollDiceNode(
+  nodeId: string,
+  optionId: string,
+): Promise<
+  | { roll: number; bonus: number; total: number; dc: number; success: boolean; doubloonsDelta: number; navXpDelta: number; newDoubloons: number; newExpeditionXp: number }
+  | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'dice' || !node.dice) return { error: 'Invalid node' }
+  if (node.comingSoon) return { error: 'Coming soon' }
+  const option = node.dice.options.find(o => o.id === optionId)
+  if (!option) return { error: 'Invalid option' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { error: 'Already thrown' }
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+  if (node.requiresNavLevel && navLevel < node.requiresNavLevel) return { error: 'Locked' }
+
+  const doubloons = profile.doubloons ?? 0
+  if (option.requiresDoubloons && doubloons < option.requiresDoubloons) {
+    return { error: `Need ${option.requiresDoubloons.toLocaleString()} doubloons to risk it` }
+  }
+
+  const bonus = Math.min(node.dice.maxBonus, Math.floor(navLevel / node.dice.bonusPerLevels))
+  const roll = 1 + Math.floor(Math.random() * 20)
+  const total = roll + bonus
+  const success = total >= option.dc
+  const grant = success ? option.win : option.miss
+
+  const rawDoubloons = doubloons + (grant.doubloons ?? 0)
+  const newDoubloons = Math.max(0, rawDoubloons)
+  const doubloonsDelta = newDoubloons - doubloons // clamped actual movement
+  const navXpDelta = grant.navXp ?? 0
+  const newExpeditionXp = ((profile.expedition_xp as number | null) ?? 0) + navXpDelta
+
+  const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+  const newChoices = { ...(prog.choices ?? {}), [nodeId]: optionId }
+
+  const updates: Record<string, unknown> = {
+    raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
+  }
+  if (doubloonsDelta !== 0) updates.doubloons = newDoubloons
+  if (navXpDelta !== 0) updates.expedition_xp = newExpeditionXp
+
+  await admin.from('profiles').update(updates).eq('id', user.id)
+
+  if (doubloonsDelta !== 0) {
+    await admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: doubloonsDelta,
+      reason: `Raid: ${node.label} (${option.label}, ${success ? 'won' : 'lost'})`,
+    }).then(() => {}, () => {})
+  }
+
+  return { roll, bonus, total, dc: option.dc, success, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp }
+}
+
+// Choice-gated payoff (the freed-scout debt). A story-type node whose reward
+// depends on a choice made at an EARLIER node (raid_node_progress.choices). If
+// the prior choice matches node.payoff.requiresChoice, grant the coin + Nav XP;
+// either way mark it read. Idempotent.
+export async function claimScoutDebt(
+  nodeId: string,
+): Promise<{ met: boolean; doubloonsDelta: number; navXpDelta: number; newDoubloons: number; newExpeditionXp: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'story' || !node.payoff) return { error: 'Invalid node' }
+  if (node.comingSoon) return { error: 'Coming soon' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+
+  const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
+  const doubloons = profile.doubloons ?? 0
+  const expeditionXp = (profile.expedition_xp as number | null) ?? 0
+  const met = prog.choices?.[node.payoff.requiresChoice.nodeId] === node.payoff.requiresChoice.choiceId
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) {
+    return { met, doubloonsDelta: 0, navXpDelta: 0, newDoubloons: doubloons, newExpeditionXp: expeditionXp }
+  }
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+
+  const grant = met ? node.payoff.grant : {}
+  const doubloonsDelta = grant.doubloons ?? 0
+  const navXpDelta = grant.navXp ?? 0
+  const newDoubloons = doubloons + doubloonsDelta
+  const newExpeditionXp = expeditionXp + navXpDelta
+
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+  const updates: Record<string, unknown> = {
+    raid_node_progress: { ...prog, cleared: newCleared },
+  }
+  if (doubloonsDelta !== 0) updates.doubloons = newDoubloons
+  if (navXpDelta !== 0) updates.expedition_xp = newExpeditionXp
+
+  await admin.from('profiles').update(updates).eq('id', user.id)
+
+  if (doubloonsDelta !== 0) {
+    await admin.from('doubloon_transactions').insert({
+      user_id: user.id,
+      amount: doubloonsDelta,
+      reason: `Raid: ${node.label}`,
+    }).then(() => {}, () => {})
+  }
+
+  return { met, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp }
 }
 
 // Chapter-end class pick. Writes profiles.ship_classes[chapterId] =

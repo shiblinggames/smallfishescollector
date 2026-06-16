@@ -9,10 +9,12 @@ import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
-import { claimMilestoneNode, markStoryNodeRead, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { SHIP_CLASS_LIST, getShipClass } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
+import CipherDialsPuzzle from './CipherDialsPuzzle'
+import DiceRollNode from './DiceRollNode'
 import StoryScene from './StoryScene'
 
 // Single parchment-gold accent for every main-chain node. Earlier this
@@ -607,15 +609,18 @@ const seenIntroScenes = new Set<string>()
 function NodeDetailSheet({
   view,
   doubloons,
+  navLevel,
   ownedRaidItems,
   equippedRaidItems,
   shipClasses,
   raidRecords,
   pickedEventChoiceId,
+  allNodeChoices,
   onClose,
 }: {
   view: RaidNodeView
   doubloons: number
+  navLevel: number
   ownedRaidItems: string[]
   equippedRaidItems: string[]
   shipClasses: Record<string, string>
@@ -624,6 +629,9 @@ function NodeDetailSheet({
    *  of its choices did they pick? Drives the "Chosen ✓" badge + the
    *  dimmed-other-options visual state on revisit. */
   pickedEventChoiceId?: string
+  /** Every node's recorded choice (raid_node_progress.choices). Lets a
+   *  payoff node read a choice made at an EARLIER node (the freed scout). */
+  allNodeChoices: Record<string, string>
   onClose: () => void
 }) {
   const router = useRouter()
@@ -648,6 +656,10 @@ function NodeDetailSheet({
   const locked = status === 'locked'
   const cleared = status === 'cleared'
   const detail = node.detail
+  // Payoff node (freed-scout debt): does the player's earlier choice match?
+  // Picks which scene plays (met = node.scene, unmet = node.payoff.sceneUnmet).
+  const payoffMet = node.payoff ? allNodeChoices[node.payoff.requiresChoice.nodeId] === node.payoff.requiresChoice.choiceId : false
+  const sceneLines = node.payoff && !payoffMet ? node.payoff.sceneUnmet : node.scene
   // Non-story node with an unwatched intro cutscene → hide the
   // interactive bits (pay bar / choice cards) and offer the scene CTA
   // instead. Recomputed on every render: finishing the scene adds the
@@ -675,8 +687,14 @@ function NodeDetailSheet({
   function readStory() {
     setErr(null)
     startTransition(async () => {
-      const res = await markStoryNodeRead(node.id)
+      // Payoff nodes (the freed-scout debt) grant a conditional reward based on
+      // an earlier choice — route them through claimScoutDebt instead of the
+      // plain mark-read so the coin/Nav XP actually land.
+      const res = node.payoff ? await claimScoutDebt(node.id) : await markStoryNodeRead(node.id)
       if ('error' in res) { setErr(res.error); setSceneOpen(false); return }
+      if ('newDoubloons' in res && res.doubloonsDelta !== 0) {
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      }
       router.refresh()
       onClose()
     })
@@ -852,9 +870,27 @@ function NodeDetailSheet({
     // available → the puzzle itself is rendered in the body (auto-solves);
     // cleared/locked just show a status banner here.
     if (cleared) {
-      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Beacons Lit ✓</div>
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>{node.puzzle?.kind === 'cipher' ? 'Manifest Read ✓' : 'Beacons Lit ✓'}</div>
     } else if (locked) {
       cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    }
+  } else if (node.type === 'dice') {
+    // available + watched → DiceRollNode in the body owns the interaction (no
+    // bottom CTA); intro scene gates it first; cleared/locked show a banner.
+    if (cleared) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>The Bones Fell ✓</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    } else if (introGated) {
+      cta = (
+        <button
+          onClick={() => setSceneOpen(true)}
+          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+          style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '1rem', background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, cursor: 'pointer' }}
+        >
+          {detail.ctaLabel ?? 'Throw the Bones →'}
+        </button>
+      )
     }
   } else if (node.type === 'event') {
     // available → choice cards in the body render their own CTAs, so
@@ -1008,10 +1044,26 @@ function NodeDetailSheet({
           </div>
         )}
 
-        {/* Puzzle: the beacon-chain (Lights Out), live when available */}
+        {/* Puzzle: beacon-chain (Lights Out) or cipher dials, live when available */}
         {node.type === 'puzzle' && node.puzzle && status === 'available' && !revealed && (
           <div style={{ marginTop: '1.1rem' }}>
-            <BeaconChainPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
+            {node.puzzle.kind === 'cipher'
+              ? <CipherDialsPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
+              : <BeaconChainPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />}
+          </div>
+        )}
+
+        {/* Dice: A Throw of the Bones — the d20 skill-check, live when available
+            and the intro scene has been watched. */}
+        {node.type === 'dice' && node.dice && status === 'available' && !introGated && (
+          <div style={{ marginTop: '1.1rem' }}>
+            <DiceRollNode
+              nodeId={node.id}
+              dice={node.dice}
+              doubloons={doubloons}
+              navLevel={navLevel}
+              onResolved={() => { router.refresh(); onClose() }}
+            />
           </div>
         )}
 
@@ -1024,7 +1076,7 @@ function NodeDetailSheet({
             boxShadow: `0 0 20px ${accent}22`, padding: '1.1rem 1rem',
           }}>
             <p className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: accent, marginBottom: '0.6rem', textAlign: 'center' }}>
-              The Network Reads True
+              {node.puzzle.kind === 'cipher' ? 'The Cipher Reads True' : 'The Network Reads True'}
             </p>
             <p className="font-karla" style={{ fontSize: '0.84rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.8)', whiteSpace: 'pre-line', textAlign: 'center' }}>
               {node.puzzle.reveal}
@@ -1555,11 +1607,12 @@ function NodeDetailSheet({
     ? 'Close'
     : node.type === 'story' ? (detail.ctaLabel ?? 'Log it →')
     : node.type === 'event' ? 'Make the Call →'
+    : node.type === 'dice' ? (detail.ctaLabel ?? 'Throw the Bones →')
     : 'Talk Terms →'
-  const storyScene = sceneOpen && node.scene ? (
+  const storyScene = sceneOpen && sceneLines ? (
     <StoryScene
       title={node.label}
-      lines={node.scene}
+      lines={sceneLines}
       ctaLabel={sceneCta}
       pending={pending}
       onComplete={finishScene}
@@ -2083,7 +2136,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
+export default function RaidsSection({ views, doubloons, navLevel, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -2379,11 +2432,13 @@ export default function RaidsSection({ views, doubloons, raidRecords, repairOwed
             key={selected.node.id}
             view={selected}
             doubloons={doubloons}
+            navLevel={navLevel}
             ownedRaidItems={ownedRaidItems}
             equippedRaidItems={equippedRaidItems}
             shipClasses={shipClasses}
             raidRecords={selected.node.type === 'raid' && selected.node.raidId ? raidRecords[selected.node.raidId] ?? null : null}
             pickedEventChoiceId={raidNodeChoices[selected.node.id]}
+            allNodeChoices={raidNodeChoices}
             onClose={() => setSelected(null)}
           />
         )}

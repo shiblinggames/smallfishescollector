@@ -51,7 +51,9 @@ function makeBoard(cols: number, rows: number, taps: number): boolean[] {
 }
 
 export default function BeaconChainPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzzle; onSolved: () => void }) {
-  const { cols, rows, scrambleTaps } = puzzle
+  const cols = puzzle.cols ?? 4
+  const rows = puzzle.rows ?? 4
+  const scrambleTaps = puzzle.scrambleTaps ?? 12
   const [state, setState] = useState<boolean[]>(() => makeBoard(cols, rows, scrambleTaps))
   const firedRef = useRef(false)
 

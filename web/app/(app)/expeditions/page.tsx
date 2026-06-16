@@ -255,6 +255,7 @@ async function RaidsMapSection() {
     <RaidsSection
       views={raidMap.views}
       doubloons={raidMap.doubloons}
+      navLevel={raidMap.navLevel}
       raidRecords={raidMap.raidRecords}
       repairOwed={profile?.raid_repair_owed ?? 0}
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
