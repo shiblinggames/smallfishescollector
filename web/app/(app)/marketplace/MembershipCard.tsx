@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from '@/app/(app)/tavern/ScenicCard'
+import { openMembership } from '@/components/MembershipModal'
 
 /** Marketplace card for the Membership upsell. Warm gold scene that
  *  reads as treasure / value — the membership art breathes gently
@@ -12,11 +13,11 @@ import ScenicCard from '@/app/(app)/tavern/ScenicCard'
 export default function MembershipCard({ isPremium }: { isPremium: boolean }) {
   return (
     <ScenicCard
-      href="https://shiblingshop.com/products/small-fishes-premium-membership"
+      href="#"
       title={isPremium ? "You're a Member" : 'Membership'}
       gradient={['#3a2a0e', '#1f160a', '#0e0a06']}
       accent="#f0c040"
-      external
+      onActivate={isPremium ? () => {} : openMembership}
     >
       <motion.div
         aria-hidden

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
+import { openMembership } from '@/components/MembershipModal'
 
 const GOLD = '#f0c040'
 const ROPES = ['#e0524e', '#4f9bd0', '#46b46e']
@@ -14,10 +15,11 @@ export default function RiggingCard({ status, reward, isMember }: { status: 'act
   const cleared = status === 'cleared'
   return (
     <ScenicCard
-      href={isMember ? '/tavern/chart-room/rigging' : '/marketplace'}
+      href={isMember ? '/tavern/chart-room/rigging' : '#'}
       title="Lay the Rigging"
       gradient={['#2a2f1a', '#1a1d10', '#0c0e08']}
       accent="#8aa85a"
+      onActivate={isMember ? undefined : openMembership}
     >
       <svg aria-hidden viewBox="0 0 120 90" style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 120, height: 90, opacity: isMember ? 1 : 0.4, filter: isMember ? undefined : 'grayscale(0.6)' }}>
         {[

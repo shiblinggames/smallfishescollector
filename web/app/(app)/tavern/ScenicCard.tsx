@@ -22,6 +22,9 @@ interface Props {
    *  anchor instead of router.push (used for Shopify product links
    *  from the marketplace). */
   external?: boolean
+  /** When set, tapping fires this instead of navigating to `href` — used by
+   *  cards that open an in-app popup (e.g. the membership purchase modal). */
+  onActivate?: () => void
   /** Bespoke scene art rendered absolute inside the card. ScenicCard
    *  owns the gradient bg, border, bottom scrim, title, and tap feel
    *  — scenes just supply the illustration + animation. */
@@ -33,9 +36,10 @@ interface Props {
  *  by default (168px tall, fills its grid cell). Pass `external` to
  *  navigate via <a target="_blank"> instead of next/navigation
  *  router.push — used by the marketplace's Shopify links. */
-export default function ScenicCard({ href, title, gradient, accent, height = 168, external, children }: Props) {
+export default function ScenicCard({ href, title, gradient, accent, height = 168, external, onActivate, children }: Props) {
   const router = useRouter()
   const handleActivate = () => {
+    if (onActivate) { onActivate(); return }
     if (external) {
       window.open(href, '_blank', 'noopener,noreferrer')
     } else {

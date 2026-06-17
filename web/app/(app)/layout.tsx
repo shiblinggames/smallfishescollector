@@ -25,6 +25,7 @@
 // the dedup that React.cache was set up for actually fires now.
 
 import Nav from '@/components/Nav'
+import MembershipModal from '@/components/MembershipModal'
 import { getCurrentProfile } from '@/lib/userData'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         gems={profile?.gems}
       />
       {children}
+      {/* Global membership purchase popup — opens on the `open-membership`
+          event fired by every "Become a member" CTA across the app. */}
+      <MembershipModal />
     </>
   )
 }

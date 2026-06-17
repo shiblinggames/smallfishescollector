@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions/dailyBonus'
+import { openMembership } from '@/components/MembershipModal'
 
 const GEM = '#a78bfa'
 const BAIT = '#4ade80'
@@ -135,9 +136,9 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
       </div>
 
       {!isPremium && (
-        <Link href="/marketplace" className="font-karla" style={{ display: 'block', textAlign: 'center', marginTop: 18, fontSize: '0.74rem', color: GOLD, textDecoration: 'none' }}>
+        <button type="button" onClick={openMembership} className="font-karla" style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 18, fontSize: '0.74rem', color: GOLD, background: 'none', border: 'none', cursor: 'pointer' }}>
           Become a Member for 150 gems, chum, and a gold crate →
-        </Link>
+        </button>
       )}
 
       {/* Full-screen reveal for rare pulls (cosmetics / pets) */}

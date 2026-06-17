@@ -10,6 +10,7 @@ import HoldCard from './HoldCard'
 import TreasureMatchCard from './TreasureMatchCard'
 import RiggingCard from './RiggingCard'
 import { DEN_PURSE_TIERS, DEN_CAP_NONMEMBER } from '../constants'
+import { openMembership } from '@/components/MembershipModal'
 
 const GOLD = '#f0c040'
 
@@ -107,9 +108,9 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
         ) : (
           <p className="font-karla" style={{ fontSize: '0.64rem', color: '#a89e86', textAlign: 'center', marginTop: 8, lineHeight: 1.45 }}>
             You sit at a flat <span className="font-700" style={{ color: '#d8cfb6' }}>{DEN_CAP_NONMEMBER.toLocaleString()} ⟡</span>/day. Your {puzzlePoints} points are banked —{' '}
-            <Link href="/marketplace" style={{ color: GOLD, textDecoration: 'none', fontWeight: 700 }}>
+            <button type="button" onClick={openMembership} className="font-700" style={{ color: GOLD, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>
               become a member
-            </Link>{' '}
+            </button>{' '}
             and your purse jumps to <span className="font-700" style={{ color: GOLD }}>{memberUnlockCap / 1000}k</span> instantly.
           </p>
         )}
