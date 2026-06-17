@@ -313,13 +313,8 @@ export default function ShipHero({
   // (same trick the upgrade panel uses lower down) so we don't need to
   // thread a separate prop in.
   const [equippedItems, setEquippedItems] = useState<string[]>(initialEquippedRaidItems)
-  // Raid items use the same slot-tap-to-open-picker pattern as crew.
-  // The picker shows every owned item with a status chip ("Equipped",
-  // "In Slot N", or "Equip"); tapping a row assigns it to the active
-  // slot (swap-aware: if the picked item is already equipped in
-  // another slot, the slots swap positions).
-  const [itemPickerSlot, setItemPickerSlot] = useState<number | null>(null)
-  const [itemSheetOpen, setItemSheetOpen]   = useState(false)
+  // Raid items are inventory-first: the whole owned collection renders in the
+  // drawer and tapping toggles equip/unequip directly (no per-slot picker).
 
   // Resync local state when fresh server data arrives via router.refresh().
   // Without these, a mutation in the HubCards prep modal (which fires
@@ -412,9 +407,9 @@ export default function ShipHero({
   const [, startTransition] = useTransition()
 
   useEffect(() => {
-    document.body.style.overflow = (loadoutOpen || sheetOpen || itemSheetOpen) ? 'hidden' : ''
+    document.body.style.overflow = (loadoutOpen || sheetOpen) ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
-  }, [loadoutOpen, sheetOpen, itemSheetOpen])
+  }, [loadoutOpen, sheetOpen])
 
   // The hub-card modal dispatches 'expedition:open-loadout' when the
   // player taps "Open Prep" to commit to the next launch. We open the
@@ -546,67 +541,24 @@ export default function ShipHero({
     startTransition(async () => { await equipShipSkin(skinId) })
   }
 
-  // Raid items use a slot-tap picker (mirrors crew). Tap any slot
-  // circle to open a bottom-sheet showing every owned item; tap an
-  // item to assign it to the active slot. Swap-aware: if the picked
-  // item is already in another slot, the two positions swap.
-  function openItemPicker(slot: number) {
-    setItemPickerSlot(slot)
-    setItemSheetOpen(true)
-  }
-
-  function closeItemSheet() {
-    setItemSheetOpen(false)
-    setItemPickerSlot(null)
-  }
-
-  /** Place `itemId` into the active picker slot. Handles four cases:
-   *  - Item not equipped + target empty → append
-   *  - Item not equipped + target filled → replace at index
-   *  - Item equipped elsewhere + target filled → SWAP positions
-   *  - Item equipped elsewhere + target empty → move (vacate old, append) */
-  function assignItemToSlot(itemId: string) {
-    if (itemPickerSlot === null) return
-    const targetIdx = itemPickerSlot
-    const itemCurrentIdx = equippedItems.indexOf(itemId)
-    if (itemCurrentIdx === targetIdx) { closeItemSheet(); return }
-
+  // Raid items are an inventory-first toggle: the whole owned collection is
+  // shown in the drawer and tapping an item equips/unequips it directly (no
+  // per-slot picker — effects stack regardless of position, so "slots" are
+  // just a capacity cap). Tap an equipped item to free it; unequipped items
+  // grey out once the hull is full. Server caps + validates ownership.
+  function toggleItem(itemId: string) {
+    const equipped = equippedItems.includes(itemId)
     let next: string[]
-    if (itemCurrentIdx !== -1 && targetIdx < equippedItems.length) {
-      // True swap — both positions filled; trade them.
-      next = [...equippedItems]
-      next[targetIdx] = itemId
-      next[itemCurrentIdx] = equippedItems[targetIdx]
-    } else if (itemCurrentIdx !== -1) {
-      // Item equipped elsewhere, target slot is trailing-empty.
-      // Storage is dense so empty trailing slots collapse — move the
-      // item to the end of the array, which renders at targetIdx.
-      next = equippedItems.filter((_, i) => i !== itemCurrentIdx)
-      next.push(itemId)
-    } else if (targetIdx < equippedItems.length) {
-      // Not equipped, replace whatever sits at this position.
-      next = equippedItems.map((id, i) => i === targetIdx ? itemId : id)
+    if (equipped) {
+      next = equippedItems.filter(id => id !== itemId)
     } else {
-      // Not equipped, fill an empty trailing slot.
+      if (equippedItems.length >= raidItemSlots) return // hull full — no-op
       next = [...equippedItems, itemId]
     }
-
     setEquippedItems(next)
-    closeItemSheet()
     // router.refresh() re-runs the server components so the prep modal's
     // ready-check (server-rendered from profile.equipped_raid_items)
     // reflects the new state too.
-    startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
-  }
-
-  /** Empty the active picker slot (Remove button in the picker
-   *  header). Compacts the dense storage; trailing slots that
-   *  were just-tapped pickers won't change their open-slot state. */
-  function removeFromActiveItemSlot() {
-    if (itemPickerSlot === null || itemPickerSlot >= equippedItems.length) return
-    const next = equippedItems.filter((_, idx) => idx !== itemPickerSlot)
-    setEquippedItems(next)
-    closeItemSheet()
     startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
   }
 
@@ -1399,75 +1351,100 @@ export default function ShipHero({
               })()}
 
               {/* ── Raid Items ──
-                  Slot-tap-to-picker pattern — mirrors crew. The slot
-                  row IS the action surface: tap an empty slot to fill
-                  it, tap a filled slot to swap or remove what's in it.
-                  Picker (rendered at the top level of this component)
-                  shows every owned item with a status chip ("Equipped",
-                  "In Slot N", or "Equip"); tapping a row assigns it to
-                  the active slot. Swap-aware. */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Raid Items</p>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
-                Tap a slot to assign an item. {raidItemSlots} slot{raidItemSlots === 1 ? '' : 's'} on your hull (bigger ships hold more). Effects only apply in raids, not voyages.
+                  Inventory-first: the whole owned collection is laid out
+                  here and tapping a row toggles equip/unequip directly.
+                  Effects stack regardless of position, so there are no typed
+                  slots — just a capacity cap (raidItemSlots, scales with
+                  hull). Equipped rows light up with a check; once the hull
+                  is full the unequipped rows grey out until one is freed. */}
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Raid Items</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#8a8480' }}>{equippedItems.length}/{raidItemSlots}</span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {Array.from({ length: raidItemSlots }, (_, i) => (
+                      <div key={i} style={{ width: 9, height: 9, borderRadius: '50%', background: i < equippedItems.length ? '#d4ba78' : 'transparent', border: `1px solid ${i < equippedItems.length ? '#d4ba78' : 'rgba(255,255,255,0.22)'}` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+                Tap to equip up to {raidItemSlots} item{raidItemSlots === 1 ? '' : 's'} (bigger hulls hold more). Effects only apply in raids, not voyages.
               </p>
-              {/* Closes the loop on the Manage Ship dot: the new item
-                  lives inside the slot pickers, so without this line the
-                  player lands here with no clue what was new. */}
-              {newRaidItems.size > 0 && (
-                <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#ffd96a', marginTop: '-0.45rem', marginBottom: '0.8rem' }}>
-                  ✦ {newRaidItems.size === 1 ? 'A new item waits in your hold. Tap a slot to equip it.' : `${newRaidItems.size} new items wait in your hold. Tap a slot to equip them.`}
-                </p>
-              )}
-              <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem', padding: '0.9rem 1rem 1rem' }}>
-                <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.62rem', color: '#8a8480', marginBottom: '0.7rem' }}>Loadout · {equippedItems.length}/{raidItemSlots}</p>
-                <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
-                  {Array.from({ length: raidItemSlots }, (_, i) => i).map(i => {
-                    const itemId  = equippedItems[i]
-                    const itemDef = itemId ? getRaidItem(itemId) : null
-                    const color   = itemDef ? RARITY_ITEM_COLOR[itemDef.rarity] : null
+
+              {ownedRaidItems.length === 0 ? (
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', marginBottom: '1.5rem' }}>
+                  <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', lineHeight: 1.55 }}>No items yet.<br />Clear raids to earn them.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                  {ownedRaidItems.map(itemId => {
+                    const def = getRaidItem(itemId)
+                    if (!def) return null
+                    const color = RARITY_ITEM_COLOR[def.rarity]
+                    const equipped = equippedItems.includes(itemId)
+                    const full = equippedItems.length >= raidItemSlots
+                    const disabled = !equipped && full
+                    const isNew = newRaidItems.has(itemId) && !equipped
                     return (
                       <button
-                        key={i}
+                        key={itemId}
                         type="button"
-                        onClick={() => openItemPicker(i)}
-                        aria-label={itemDef ? `Slot ${i + 1}: ${itemDef.name}. Tap to change.` : `Slot ${i + 1}: empty. Tap to assign.`}
+                        onClick={disabled ? undefined : () => toggleItem(itemId)}
+                        disabled={disabled}
+                        aria-label={equipped ? `${def.name}, equipped. Tap to remove.` : disabled ? `${def.name}. Hull full, free a slot first.` : `${def.name}. Tap to equip.`}
                         style={{
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem',
-                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                          background: equipped ? `${color}1c` : 'rgba(255,255,255,0.04)',
+                          border: `1.5px solid ${equipped ? color + '88' : 'rgba(255,255,255,0.1)'}`,
+                          borderRadius: 12,
+                          padding: '0.7rem 0.8rem',
+                          display: 'flex', alignItems: 'center', gap: '0.8rem',
+                          cursor: disabled ? 'not-allowed' : 'pointer',
+                          width: '100%', textAlign: 'left',
+                          opacity: disabled ? 0.42 : 1,
+                          boxShadow: equipped ? `0 0 14px ${color}1f` : 'none',
+                          transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
                         }}
                       >
-                        {itemDef ? (
-                          <>
-                            <div
-                              style={{ position: 'relative', width: 60, height: 60, borderRadius: 12, background: `${color}11`, border: `1.5px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
-                            >
-                              {itemDef.image ? (
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                <img src={itemDef.image} alt={itemDef.name} style={{ width: 38, height: 38, objectFit: 'contain' }} />
-                              ) : (
-                                <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{itemDef.emoji}</span>
-                              )}
+                        <div style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 10, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {def.image ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
+                          ) : (
+                            <span style={{ fontSize: '1.55rem', lineHeight: 1 }}>{def.emoji}</span>
+                          )}
+                          {equipped && (
+                            <div style={{ position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #14110d' }}>
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#14110d" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                             </div>
-                            <p className="font-karla font-600 truncate text-center" style={{ fontSize: '0.62rem', color: color ?? '#b8b3ac', maxWidth: 60, lineHeight: 1.2 }}>{itemDef.name}</p>
-                          </>
-                        ) : (
-                          <>
-                            <div style={{ width: 60, height: 60, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1.5px dashed rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                            </div>
-                            <p className="font-karla font-600 text-center" style={{ fontSize: '0.62rem', color: '#7a7470', maxWidth: 60, lineHeight: 1.2 }}>Empty</p>
-                          </>
-                        )}
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: equipped ? color : '#f0ede8', marginBottom: 2 }}>
+                            {def.name}
+                            {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
+                          </p>
+                          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
+                        </div>
+                        <span
+                          className="font-karla font-700 uppercase tracking-[0.06em]"
+                          style={{
+                            fontSize: '0.58rem',
+                            color: equipped ? color : disabled ? '#6a6764' : '#9ae6b4',
+                            padding: '0.24rem 0.55rem',
+                            borderRadius: 999,
+                            background: equipped ? `${color}1a` : disabled ? 'rgba(255,255,255,0.04)' : 'rgba(154,230,180,0.10)',
+                            border: `1px solid ${equipped ? color + '50' : disabled ? 'rgba(255,255,255,0.1)' : 'rgba(154,230,180,0.32)'}`,
+                            flexShrink: 0, whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {equipped ? 'Equipped' : disabled ? 'Full' : 'Equip'}
+                        </span>
                       </button>
                     )
                   })}
                 </div>
-                {ownedRaidItems.length === 0 && (
-                  <p className="font-karla" style={{ fontSize: '0.7rem', color: '#6a6460', marginTop: '0.85rem', lineHeight: 1.5 }}>
-                    No items yet. Clear raids to earn them.
-                  </p>
-                )}
-              </div>
+              )}
               </>)}
               </div>{/* end scrollable */}
 
@@ -1684,170 +1661,6 @@ export default function ShipHero({
         )
       })()}
 
-      {/* Raid item picker — opens from any slot circle in the loadout
-          drawer's Raid Items section. Same z-stack as the crew picker
-          (130/131) so it overlays the loadout drawer cleanly. Lists
-          every owned item with a status chip; tap to assign to the
-          active slot. assignItemToSlot is swap-aware (see its docstring
-          for the four-case branch). */}
-      {itemSheetOpen && itemPickerSlot !== null && (() => {
-        const slotIdx = itemPickerSlot
-        const currentItemId = equippedItems[slotIdx]
-        const currentDef = currentItemId ? getRaidItem(currentItemId) : null
-        const currentColor = currentDef ? RARITY_ITEM_COLOR[currentDef.rarity] : '#6a6764'
-        const slotAccent = '#d4ba78'
-        return (
-          <>
-            <div
-              onClick={closeItemSheet}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(2,4,8,0.78)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', zIndex: 130 }}
-            />
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                position: 'fixed', zIndex: 131,
-                top: 'max(72px, env(safe-area-inset-top, 0px) + 16px)',
-                bottom: 0,
-                left: 'max(0px, calc(50% - 270px))',
-                right: 'max(0px, calc(50% - 270px))',
-                background: 'linear-gradient(180deg, #1a1610 0%, #0a0907 100%)',
-                borderTop: `2px solid ${slotAccent}`,
-                borderLeft: '1px solid rgba(255,255,255,0.12)',
-                borderRight: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '20px 20px 0 0',
-                boxShadow: '0 -10px 44px rgba(0,0,0,0.6)',
-                display: 'flex', flexDirection: 'column',
-                overflow: 'hidden',
-              }}
-            >
-              {/* Header */}
-              <div style={{ padding: '1.1rem 1.25rem 0.95rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
-                <div style={{ minWidth: 0 }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: slotAccent, marginBottom: 4 }}>
-                    Item · Slot {slotIdx + 1}
-                  </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f5f2ec', lineHeight: 1.1 }}>
-                    Assign Item
-                  </p>
-                  {currentDef ? (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, maxWidth: '100%', padding: '0.22rem 0.55rem 0.22rem 0.28rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <div style={{ width: 22, height: 22, borderRadius: 6, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${currentColor}`, background: `${currentColor}11`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {currentDef.image ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={currentDef.image} alt="" loading="lazy" decoding="async" style={{ width: 16, height: 16, objectFit: 'contain' }} />
-                        ) : (
-                          <span style={{ fontSize: '0.9rem', lineHeight: 1 }}>{currentDef.emoji}</span>
-                        )}
-                      </div>
-                      <span className="font-karla truncate" style={{ fontSize: '0.66rem', color: '#9aa0a6', minWidth: 0 }}>
-                        Currently <span className="font-700" style={{ color: '#dfe9e3' }}>{currentDef.name}</span>
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="font-karla" style={{ marginTop: 7, fontSize: '0.66rem', color: '#6a6764' }}>This slot is empty.</p>
-                  )}
-                </div>
-                <button onClick={closeItemSheet} aria-label="Close" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0, marginLeft: '0.75rem' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2aca3" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-              </div>
-
-              {/* Body — owned items list. The "Empty this slot" row only
-                  surfaces when the slot currently holds an item. */}
-              <div
-                style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, padding: '1rem 1.25rem 1.5rem', overscrollBehavior: 'contain' }}
-              >
-                {ownedRaidItems.length === 0 ? (
-                  <p className="font-karla text-center" style={{ fontSize: '0.85rem', color: '#8a857c', padding: '3rem 1rem', lineHeight: 1.6 }}>No items yet.<br />Clear raids to earn them.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                    {currentDef && (
-                      <button
-                        type="button"
-                        onClick={removeFromActiveItemSlot}
-                        style={{
-                          padding: '0.65rem 0.85rem',
-                          borderRadius: 10,
-                          background: 'rgba(248,113,113,0.08)',
-                          border: '1px solid rgba(248,113,113,0.35)',
-                          color: '#fca5a5',
-                          fontSize: '0.74rem',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        }}
-                        className="font-karla font-700 uppercase tracking-[0.08em]"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                        Empty this slot
-                      </button>
-                    )}
-                    {ownedRaidItems.map(itemId => {
-                      const def = getRaidItem(itemId)
-                      if (!def) return null
-                      const color = RARITY_ITEM_COLOR[def.rarity]
-                      const equippedAtIdx = equippedItems.indexOf(itemId)
-                      const isHere = equippedAtIdx === slotIdx
-                      const isElsewhere = equippedAtIdx !== -1 && equippedAtIdx !== slotIdx
-                      return (
-                        <button
-                          key={itemId}
-                          type="button"
-                          onClick={isHere ? undefined : () => assignItemToSlot(itemId)}
-                          disabled={isHere}
-                          style={{
-                            background: isHere ? `${color}1f` : 'rgba(255,255,255,0.04)',
-                            border: `1.5px solid ${isHere ? color + '70' : isElsewhere ? 'rgba(125,211,252,0.45)' : 'rgba(255,255,255,0.12)'}`,
-                            borderRadius: 10,
-                            padding: '0.75rem 0.85rem',
-                            display: 'flex', alignItems: 'center', gap: '0.8rem',
-                            cursor: isHere ? 'default' : 'pointer',
-                            width: '100%', textAlign: 'left',
-                            opacity: isHere ? 0.85 : 1,
-                          }}
-                        >
-                          {def.image ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
-                          ) : (
-                            <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{def.emoji}</span>
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: isHere ? color : '#f0ede8', marginBottom: 3 }}>
-                              {def.name}
-                              {/* Fresh-loot marker — only on items that are new
-                                  AND not yet slotted anywhere. */}
-                              {newRaidItems.has(itemId) && equippedAtIdx === -1 && (
-                                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>
-                              )}
-                            </p>
-                            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
-                          </div>
-                          <span
-                            className="font-karla font-700 uppercase tracking-[0.06em]"
-                            style={{
-                              fontSize: '0.6rem',
-                              color: isHere ? color : isElsewhere ? '#7dd3fc' : '#9ae6b4',
-                              padding: '0.22rem 0.5rem',
-                              borderRadius: 999,
-                              background: isHere ? `${color}1a` : isElsewhere ? 'rgba(125,211,252,0.10)' : 'rgba(154,230,180,0.10)',
-                              border: `1px solid ${isHere ? color + '45' : isElsewhere ? 'rgba(125,211,252,0.32)' : 'rgba(154,230,180,0.32)'}`,
-                              flexShrink: 0,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {isHere ? 'Equipped' : isElsewhere ? `In Slot ${equippedAtIdx + 1}` : 'Equip'}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )
-      })()}
 
       {/* Score breakdown modal — opens when the player taps a score on the
           hero strip. Shows the actual formula with the player's numbers
