@@ -341,7 +341,7 @@ const SPECIAL_ITEM_TIPS: { condition: (ctx: TipContext) => boolean; tip: string 
   },
   {
     condition: ctx => !ctx.hasAutoCaster,
-    tip: "Tip: the Auto Caster snaps a new cast right after each catch and pops crates open for you — pick it up in the gear shop for 5,000 ⟡.",
+    tip: "Tip: the Auto Caster keeps casting for you and opens crates between catches. Find it in the gear shop for 5,000 ⟡.",
   },
 ]
 
@@ -351,6 +351,8 @@ const SKIN_TIPS = [
   "Tip: reach Navigation Level 50 on voyages to unlock the Sky character color.",
   "Tip: the Golden character color can be bought for 1,000,000 doubloons from your profile.",
   "Tip: open fishing crates for a rare chance to find the Mint character color.",
+  "Tip: reach Fishing Level 75 to unlock the Ice character color.",
+  "Tip: the Autumn and Ruby character colors can be bought with gems from your profile.",
 ]
 
 // General mechanics tips. Always in the pool (no unlock condition), so
@@ -360,7 +362,7 @@ const SKIN_TIPS = [
 const GENERAL_TIPS = [
   "Tip: prestige a zone and every catch there earns +10% XP per prestige level — forever.",
   "Tip: a zone's completion reward grows each time you prestige it, up to double at Prestige 5.",
-  "Tip: quick-sell only pays 65%. Sell on the market or liquidate for far more.",
+  "Tip: quick-sell pays 75%. Liquidate your whole hold for 87% an hour later, or work the market for the best price.",
   "Tip: each hook tier widens your catch zone by 3°. It adds up fast.",
   "Tip: a better reel slows the needle — the single biggest skill upgrade.",
   "Tip: the Twin-Strike rod has a 25% chance to land two fish at once.",
@@ -380,16 +382,43 @@ const GENERAL_TIPS = [
   "Tip: recruit a crew at the Crew Hall, then send them on voyages and raids for loot and rare gear.",
   "Tip: special fishing gear like the Tide Turner is won out on voyages and raids.",
   "Tip: give your captain a background and border on your profile to stand out on the leaderboards.",
+  // Trawls — crew passive fishing (the headline new feature).
+  "Tip: idle crew can Trawl a zone for you. Tap the crew badge on the fishing screen to send them off, and they haul back fishing XP and doubloons on their own.",
+  "Tip: on a Trawl, a crew's Savvy grows the XP it brings back and Fortune grows the doubloons. Match the crew to what you need.",
+  "Tip: you can run several Trawls at once, one per zone you've unlocked. Passive XP and gold while you cast or while you're away.",
+  // Fish size / records.
+  "Tip: every catch rolls a size. Land a Large or a Trophy and it earns a place in your records.",
+  // New doubloon-earning rooms in the tavern.
+  "Tip: the Parlor's daily trivia and weekly Pirate King ladder pay straight doubloons. Easy gold between casts.",
+  "Tip: the Chart Room hides daily puzzles that bank doubloons for the patient. Good for a break between casts.",
 ]
 
 type TipContext = { hasTideTurner: boolean; hasPhantomHook: boolean; hasAutoCaster: boolean }
+
+// Max message LENGTH (characters) a zone will show, scaled to how long a
+// bite takes there. Shallow water bites almost instantly, so a long tip
+// flashes past before you can read it — cap it to one-liners. The deep
+// zones make you wait, so there's time to read the full informative tips.
+// Anything over a zone's budget is filtered out of that zone's pool.
+const ZONE_READ_BUDGET: Record<ZoneKey, number> = {
+  shallows:     52,
+  open_waters:  92,
+  deep:         150,
+  abyss:        999,   // long waits — no practical cap
+  ancient_deep: 999,
+}
 
 function pickWaitMessage(zone: ZoneKey, streak: number, ctx?: TipContext): string {
   for (const [threshold, msgs] of STREAK_MESSAGES) {
     if (streak >= threshold) return msgs[Math.floor(Math.random() * msgs.length)]
   }
 
-  // 1-in-6 chance to show a contextual tip instead of a zone message
+  const budget = ZONE_READ_BUDGET[zone]
+
+  // 1-in-6 chance to show a contextual tip instead of a zone message —
+  // but only ones short enough to actually finish reading before the
+  // bite lands in this zone. Shallow water filters out the long tips;
+  // the deep lets them all through.
   if (ctx && Math.random() < 1 / 6) {
     const available: string[] = []
     for (const { condition, tip } of SPECIAL_ITEM_TIPS) {
@@ -397,11 +426,14 @@ function pickWaitMessage(zone: ZoneKey, streak: number, ctx?: TipContext): strin
     }
     available.push(...SKIN_TIPS)
     available.push(...GENERAL_TIPS)
-    if (available.length > 0) return available[Math.floor(Math.random() * available.length)]
+    const fits = available.filter(t => t.length <= budget)
+    if (fits.length > 0) return fits[Math.floor(Math.random() * fits.length)]
+    // else fall through to a (short) zone flavor message
   }
 
-  const pool = WAIT_MESSAGES[zone]
-  return pool[Math.floor(Math.random() * pool.length)]
+  const pool = WAIT_MESSAGES[zone].filter(m => m.length <= budget)
+  const usePool = pool.length > 0 ? pool : WAIT_MESSAGES[zone]
+  return usePool[Math.floor(Math.random() * usePool.length)]
 }
 
 // ─── Catch mechanics tour ────────────────────────────────────────────────────
