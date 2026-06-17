@@ -6,6 +6,7 @@ import TideRunCard from './TideRunCard'
 import DailyBonusCard from './DailyBonusCard'
 import TriviaHubCard from './TriviaHubCard'
 import ChartRoomHubCard from './ChartRoomHubCard'
+import ContestsHubCard from './ContestsHubCard'
 import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
@@ -98,12 +99,14 @@ export default async function TavernPage() {
             <GamesSection />
           </div>
 
-          {/* The Chart Room — full-width hero on its own row (echoes the
-              Den's old treatment, spotlights the newest room). Houses the
-              Quartermaster's Hold sudoku + Charting, which moved in here
-              off the home on 2026-06-13. */}
-          <div>
+          {/* The Chart Room + Contests share a row — both are destination
+              doors (Chart Room's puzzles; Contests tracks the active
+              community races + their winners). Chart Room dropped its
+              full-width hero treatment when Contests joined it here
+              (2026-06-17). */}
+          <div className="grid grid-cols-2 gap-3">
             <ChartRoomHubCard />
+            <ContestsHubCard />
           </div>
 
           <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

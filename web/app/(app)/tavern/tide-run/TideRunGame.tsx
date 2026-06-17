@@ -6,6 +6,7 @@ import { awardTideRunBeacons, submitTideRunBest, recordTideRunRun, getPlayerTide
 import TideRunTour from './TideRunTour'
 import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
+import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { prefetchTideRunAudio, unlockTideRunAudio, teardownTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
@@ -375,6 +376,11 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   // PB that lifts the player past someone is reflected on the very
   // next wreck modal, not a page refresh later.
   const [rank, setRank] = useState<PlayerTideRunRank | null>(initialRank)
+  // Tide Champion contest win — the server returns wonTideChampion on the
+  // first run to cross 500m. Fires the shared podium celebration toast
+  // (same one the fishing milestones use); a targeted mail with the prize
+  // details lands server-side at the same moment.
+  const [podiumNotif, setPodiumNotif] = useState<PodiumNotif | null>(null)
   const [deadCount, setDeadCount] = useState(0)   // wreck-screen count-up
   // Per-run beacon doubloon reward. Set optimistically the moment
   // the wreck modal appears (beacons * 2 client-side) so the modal
@@ -1222,7 +1228,12 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
         // Chain the rank refresh off the PB submission so the wreck
         // modal lands on the updated position, not the stale one.
         submitTideRunBest(finalMeters)
-          .then(() => getPlayerTideRunRank())
+          .then(res => {
+            if (res && 'wonTideChampion' in res && res.wonTideChampion) {
+              setPodiumNotif({ category: 'Tide Champion', position: 1 })
+            }
+            return getPlayerTideRunRank()
+          })
           .then(r => { if (r) setRank(r) })
           .catch(() => {})
       }
@@ -1699,6 +1710,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
   return (
     <div className="flex flex-col">
       {showTour && <TideRunTour onClose={closeTour} />}
+      <PodiumToast notif={podiumNotif} onDone={() => setPodiumNotif(null)} />
 
       <div
         ref={wrapperRef}

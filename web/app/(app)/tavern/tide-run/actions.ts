@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TIDE_CHAMPION_CONTEST_ID, TIDE_CHAMPION_GOAL_M, TIDE_CHAMPION_PRIZE_CODE } from '@/lib/contests'
 
 /**
  * Record the player's distance for the all-time best (leaderboard). Only
@@ -9,7 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * Called from the client after every death (and on mount with localStorage
  * best, to backfill old scores).
  */
-export async function submitTideRunBest(distance: number): Promise<{ ok: true; best: number } | { error: string }> {
+export async function submitTideRunBest(distance: number): Promise<{ ok: true; best: number; wonTideChampion?: boolean } | { error: string }> {
   try {
     if (typeof distance !== 'number' || !isFinite(distance) || distance < 0) {
       return { error: 'Invalid distance' }
@@ -37,7 +38,32 @@ export async function submitTideRunBest(distance: number): Promise<{ ok: true; b
     // PostgREST may return numeric() as a string — coerce to be safe
     // so the comparison and the return value are always numbers.
     const currentBest = Number(profile.tide_run_best_distance ?? 0)
-    if (meters <= currentBest) return { ok: true, best: currentBest }
+
+    // Tide Champion contest — the first captain to cross 500m wins. Atomic:
+    // the first INSERT for this contest_id wins; every later one fails the
+    // PK and reads back as null (same pattern as the first-ancient-catch).
+    // Checked before the PB early-return so a 500m run always claims it.
+    let wonTideChampion = false
+    if (meters >= TIDE_CHAMPION_GOAL_M) {
+      const { data: claimed } = await admin
+        .from('contests')
+        .insert({ contest_id: TIDE_CHAMPION_CONTEST_ID, winner_user_id: user.id, prize_code: TIDE_CHAMPION_PRIZE_CODE })
+        .select('contest_id')
+        .maybeSingle()
+      if (claimed) {
+        wonTideChampion = true
+        // Targeted mail — prize details + claim instructions, only the
+        // winner sees it (target_user_id filter), mirroring first-ancient.
+        await admin.from('mail_messages').insert({
+          subject: '🏆 Tide Champion — You Crossed 500m',
+          body: "You did it. You're the first captain ever to push a Tide Run past 500 meters.\n\nAs promised, you've won a special customization reward, designed just for you. Reply to this email to claim it:\n\nhello@shiblinggames.com\n\nInclude your prize code: TIDE-CHAMPION-500\n\nWe'll work with you on the design. The deep current is yours.\n\n— Cap'n Shibling",
+          sender_label: "Cap'n Shibling",
+          target_user_id: user.id,
+        })
+      }
+    }
+
+    if (meters <= currentBest) return { ok: true, best: currentBest, wonTideChampion }
 
     // Stamp the moment alongside the new best so the leaderboard tiebreaks
     // ties on first-to-reach (see leaderboard_tide_run view + the
@@ -51,7 +77,7 @@ export async function submitTideRunBest(distance: number): Promise<{ ok: true; b
       .eq('id', user.id)
     if (updateErr) return { error: 'Update failed' }
 
-    return { ok: true, best: meters }
+    return { ok: true, best: meters, wonTideChampion }
   } catch {
     return { error: 'Server error' }
   }
