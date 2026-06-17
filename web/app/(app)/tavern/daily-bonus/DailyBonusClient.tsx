@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions/dailyBonus'
-import { openMembership } from '@/components/MembershipModal'
+import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 
 const GEM = '#a78bfa'
 const BAIT = '#4ade80'
@@ -136,9 +136,12 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
       </div>
 
       {!isPremium && (
-        <button type="button" onClick={openMembership} className="font-karla" style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 18, fontSize: '0.74rem', color: GOLD, background: 'none', border: 'none', cursor: 'pointer' }}>
-          Become a Captain for 150 gems, chum, and a gold crate →
-        </button>
+        <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <BecomeCaptainButton full />
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8270', textAlign: 'center' }}>
+            150 gems, premium chum, and a gold crate every week.
+          </p>
+        </div>
       )}
 
       {/* Full-screen reveal for rare pulls (cosmetics / pets) */}

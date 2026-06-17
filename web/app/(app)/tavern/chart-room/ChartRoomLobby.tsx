@@ -10,7 +10,7 @@ import HoldCard from './HoldCard'
 import TreasureMatchCard from './TreasureMatchCard'
 import RiggingCard from './RiggingCard'
 import { DEN_PURSE_TIERS, DEN_CAP_NONMEMBER } from '../constants'
-import { openMembership } from '@/components/MembershipModal'
+import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 
 const GOLD = '#f0c040'
 
@@ -106,13 +106,12 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
             Solve the puzzles for charting points → bigger daily casino purse (⟡/day).{nextTier ? ` ${nextTier.points - puzzlePoints} to ${nextTier.cap / 1000}k.` : ' Top purse reached.'}
           </p>
         ) : (
-          <p className="font-karla" style={{ fontSize: '0.64rem', color: '#a89e86', textAlign: 'center', marginTop: 8, lineHeight: 1.45 }}>
-            You sit at a flat <span className="font-700" style={{ color: '#d8cfb6' }}>{DEN_CAP_NONMEMBER.toLocaleString()} ⟡</span>/day. Your {puzzlePoints} points are banked —{' '}
-            <button type="button" onClick={openMembership} className="font-700" style={{ color: GOLD, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-              become a Captain
-            </button>{' '}
-            and your purse jumps to <span className="font-700" style={{ color: GOLD }}>{memberUnlockCap / 1000}k</span> instantly.
-          </p>
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#a89e86', textAlign: 'center', lineHeight: 1.45 }}>
+              You sit at a flat <span className="font-700" style={{ color: '#d8cfb6' }}>{DEN_CAP_NONMEMBER.toLocaleString()} ⟡</span>/day. Your {puzzlePoints} points are banked — become a Captain and your purse jumps to <span className="font-700" style={{ color: GOLD }}>{memberUnlockCap / 1000}k</span> instantly.
+            </p>
+            <BecomeCaptainButton style={{ padding: '0.55rem 1.1rem', fontSize: '0.82rem' }} />
+          </div>
         )}
       </div>
 

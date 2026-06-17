@@ -11,6 +11,7 @@ import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
+import SupportStudioCard from '@/components/SupportStudioCard'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
@@ -109,14 +110,9 @@ export default async function TavernPage() {
             <ContestsHubCard />
           </div>
 
-          <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <p className="font-karla text-[#6a6764]" style={{ fontSize: '0.75rem' }}>
-              Enjoying the game?{' '}
-              <Link href="/marketplace" className="text-[#f0c040] hover:text-[#f5d060] transition-colors">
-                Support our indie studio with a membership →
-              </Link>
-            </p>
-            <p className="font-karla text-[#4a4845]" style={{ fontSize: '0.72rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <SupportStudioCard isPremium={isPremiumActive(profile)} />
+            <p className="font-karla text-[#4a4845] text-center" style={{ fontSize: '0.72rem' }}>
               Questions or feedback?{' '}
               <Link href="/contact" className="text-[#6a6764] hover:text-[#9a9488] transition-colors" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>
                 Contact us

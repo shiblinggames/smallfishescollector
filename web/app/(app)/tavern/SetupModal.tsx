@@ -8,7 +8,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { AVATAR_PALETTE, NONE_VALUE } from '@/lib/avatarColors'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import WelcomeModal from './WelcomeModal'
-import { openMembership } from '@/components/MembershipModal'
+import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 
 type Step = 'username' | 'color' | 'avatar'
 
@@ -428,14 +428,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                   {avatarLockMsg}
                 </p>
               ) : !isPremium ? (
-                <button
-                  type="button"
-                  onClick={openMembership}
-                  className="font-karla font-600"
-                  style={{ fontSize: '0.66rem', color: '#f0c040', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.03em' }}
-                >
-                  ✦ Unlock more as a Captain →
-                </button>
+                <BecomeCaptainButton label="Unlock more as a Captain" style={{ padding: '0.55rem 1rem', fontSize: '0.78rem' }} />
               ) : null}
             </div>
 

@@ -14,7 +14,7 @@ import { StatTile } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
-import { openMembership } from '@/components/MembershipModal'
+import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { getBoat, boatGlowClass } from '@/lib/boats'
@@ -1573,19 +1573,7 @@ export default function ProfileClient({
                   {avatarLockMsg}
                 </p>
               ) : !isPremium ? (
-                <button
-                  type="button"
-                  onClick={openMembership}
-                  className="font-karla font-600"
-                  style={{
-                    fontSize: '0.7rem',
-                    color: '#f0c040',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    letterSpacing: '0.03em',
-                  }}
-                >
-                  ✦ Unlock more as a Captain →
-                </button>
+                <BecomeCaptainButton label="Unlock more as a Captain" />
               ) : null}
             </div>
 
