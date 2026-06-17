@@ -24,12 +24,14 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
   const [crateClaimed, setCrateClaimed] = useState(c0)
   const [loading, setLoading] = useState<'gems' | 'bait' | 'crate' | null>(null)
   const [crateLoot, setCrateLoot] = useState<Extract<CrateLoot, { claimed: true }> | null>(null)
+  const [crateOpening, setCrateOpening] = useState(false)
 
   const gemAmount = isPremium ? 150 : 50
   const baitName = isPremium ? 'Chum' : 'Worms'
   const baitImg = isPremium ? '/chum.png' : '/worms.png'
   const crateName = isPremium ? 'Gold Crate' : 'Wooden Crate'
   const crateClosed = isPremium ? '/goldcrateclosed.png' : '/crateclosed.png'
+  const crateOpen = isPremium ? '/goldcrateopen.png' : '/crateopen.png'
 
   const allDone = gemsClaimed && baitClaimed && crateClaimed
 
@@ -55,10 +57,16 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
   async function claimCrate() {
     if (crateClaimed || loading) return
     setLoading('crate')
-    const r = await claimWeeklyCrate()
+    setCrateOpening(true)          // crate starts shaking
+    const [r] = await Promise.all([
+      claimWeeklyCrate(),
+      // Hold the suspense — let the lid rattle for a beat before it pops.
+      new Promise(res => setTimeout(res, 950)),
+    ])
+    setCrateOpening(false)
     if (r.claimed) {
       setCrateClaimed(true)
-      setCrateLoot(r)
+      setCrateLoot(r)             // swaps to the open crate + reveals the loot
       // Crate doubloons/cosmetics land server-side; resync the Nav + balances.
       router.refresh()
     }
@@ -111,6 +119,8 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
           isPremium={isPremium}
           crateName={crateName}
           crateClosed={crateClosed}
+          crateOpen={crateOpen}
+          opening={crateOpening}
           claimed={crateClaimed}
           loading={loading === 'crate'}
           onClaim={claimCrate}
@@ -166,20 +176,21 @@ function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, 
   )
 }
 
-function CrateCard({ isPremium, crateName, crateClosed, claimed, loading, onClaim, loot }: {
-  isPremium: boolean; crateName: string; crateClosed: string
+function CrateCard({ isPremium, crateName, crateClosed, crateOpen, opening, claimed, loading, onClaim, loot }: {
+  isPremium: boolean; crateName: string; crateClosed: string; crateOpen: string; opening: boolean
   claimed: boolean; loading: boolean; onClaim: () => void
   loot: Extract<CrateLoot, { claimed: true }> | null
 }) {
   const accent = isPremium ? GOLD : '#c8a06a'
   const reveal = loot && loot.loot && !('error' in loot.loot) ? loot.loot : null
+  const opened = !!loot   // crate has popped (open art + reveal)
   return (
     <div style={{
       background: 'linear-gradient(180deg, rgba(28,22,10,0.95) 0%, rgba(12,9,5,0.97) 100%)',
-      border: `1px solid ${claimed && !reveal ? 'rgba(255,255,255,0.08)' : `${accent}55`}`,
+      border: `1px solid ${claimed && !reveal && !opening ? 'rgba(255,255,255,0.08)' : `${accent}55`}`,
       borderRadius: 18, padding: '1.1rem 1.05rem',
-      boxShadow: claimed && !reveal ? 'none' : `0 8px 28px rgba(0,0,0,0.45), 0 0 26px ${accent}1c`,
-      opacity: claimed && !reveal ? 0.62 : 1,
+      boxShadow: claimed && !reveal && !opening ? 'none' : `0 8px 28px rgba(0,0,0,0.45), 0 0 26px ${accent}1c`,
+      opacity: claimed && !reveal && !opening ? 0.62 : 1,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: `${accent}cc` }}>Weekly Crate</p>
@@ -188,19 +199,33 @@ function CrateCard({ isPremium, crateName, crateClosed, claimed, loading, onClai
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <motion.div
-          animate={claimed ? {} : { y: [0, -4, 0] }}
-          transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+          // Idle bob → frantic rattle while opening → settle once popped.
+          animate={
+            opening ? { rotate: [0, -6, 6, -5, 5, -3, 3, 0], scale: [1, 1.04, 1.04, 1.05, 1.04, 1.03, 1.02, 1] }
+            : opened ? { scale: [0.8, 1.12, 1], rotate: 0 }
+            : claimed ? {} : { y: [0, -4, 0] }
+          }
+          transition={
+            opening ? { duration: 0.5, repeat: Infinity, ease: 'easeInOut' }
+            : opened ? { type: 'spring', stiffness: 320, damping: 14 }
+            : { duration: 3.4, repeat: Infinity, ease: 'easeInOut' }
+          }
           style={{ width: 76, height: 76, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
         >
-          <div aria-hidden style={{ position: 'absolute', inset: -6, borderRadius: '50%', background: `radial-gradient(circle, ${accent}33 0%, transparent 70%)`, opacity: claimed ? 0.3 : 1 }} />
+          {/* Glow — flares as the crate rattles, bursts on open. */}
+          <motion.div aria-hidden
+            animate={{ opacity: opening ? [0.5, 1, 0.5] : opened ? 1 : (claimed ? 0.3 : 0.85), scale: opened ? [0.6, 1.6, 1.15] : 1 }}
+            transition={opening ? { duration: 0.5, repeat: Infinity } : opened ? { duration: 0.6, ease: 'easeOut' } : { duration: 0.3 }}
+            style={{ position: 'absolute', inset: -8, borderRadius: '50%', background: `radial-gradient(circle, ${accent}55 0%, transparent 70%)`, pointerEvents: 'none' }}
+          />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={crateClosed} alt={crateName} style={{ width: 70, height: 70, objectFit: 'contain', filter: claimed ? 'grayscale(0.5) brightness(0.7)' : `drop-shadow(0 4px 10px ${accent}55)` }} />
+          <img src={opened ? crateOpen : crateClosed} alt={crateName} style={{ width: 70, height: 70, objectFit: 'contain', filter: claimed && !reveal && !opening ? 'grayscale(0.5) brightness(0.7)' : `drop-shadow(0 4px 12px ${accent}66)` }} />
         </motion.div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: claimed && !reveal ? '#8a8884' : '#f5ecd6', lineHeight: 1.1 }}>{crateName}</p>
+          <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: claimed && !reveal && !opening ? '#8a8884' : '#f5ecd6', lineHeight: 1.1 }}>{crateName}</p>
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a89e86', lineHeight: 1.45, marginTop: 3 }}>
-            {isPremium ? 'A free gold crate every week, full loot inside.' : 'A free crate weekly. Members open a gold one.'}
+            {opening ? 'The lid rattles…' : isPremium ? 'A free gold crate every week, full loot inside.' : 'A free crate weekly. Members open a gold one.'}
           </p>
         </div>
       </div>
