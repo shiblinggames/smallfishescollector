@@ -21,7 +21,7 @@ export function categoryMeta(key: TriviaCategoryKey) {
  *  (fresh Monday) and the player plays ONE card a day, picking from the
  *  12 on the board (4 topics × 3 tiers) — up to 7 over the week. The
  *  richer the tier, the harder the clue. */
-export const TRIVIA_TIER_VALUES = [50, 100, 150] as const
+export const TRIVIA_TIER_VALUES = [50, 100, 200] as const
 
 export const TRIVIA_TIERS = [1, 2, 3] as const
 

@@ -1,7 +1,7 @@
 'use client'
 
 // The Captain's Board — twelve cards chalked fresh each Monday (4 topics ×
-// 3 tiers, 50 / 100 / 150 ⟡). You play ONE card a day: pick a card, commit
+// 3 tiers, 50 / 100 / 200 ⟡). You play ONE card a day: pick a card, commit
 // (which reveals its question — no peeking first), and answer it. Over the
 // week you take up to 7 of the 12. A wrong answer scuttles the card; the
 // board resets Monday. Question modal portals to document.body (Nav's
