@@ -55,8 +55,11 @@ export interface CaptainsBoardState {
   /** Week-start Monday this board belongs to. */
   date: string
   tiles: BoardTileClient[]
-  /** True once the player has committed their one card for today (whether
-   *  or not they've answered it yet) — the board locks until tomorrow. */
+  /** Picks allowed per day — 1 for everyone, 2 for members. */
+  picksAllowed: number
+  /** Picks used today (committed or answered). */
+  picksToday: number
+  /** True once the day's picks are spent — the board locks until tomorrow. */
   playedToday: boolean
   /** The card committed today but not yet answered — the resume target so
    *  a refresh reopens the same question. null when nothing is pending. */

@@ -13,7 +13,7 @@ import { DEN_PURSE_TIERS } from '../constants'
 
 const GOLD = '#f0c040'
 
-export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, riggingStatus, riggingReward, puzzlePoints }: {
+export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, riggingStatus, riggingReward, puzzlePoints, isMember }: {
   doubloons: number
   holdStatus: 'open' | 'locked' | 'done'
   holdDoubloonsToday: number
@@ -22,6 +22,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
   riggingStatus: 'active' | 'cleared'
   riggingReward: number
   puzzlePoints: number
+  isMember: boolean
 }) {
   // Index of the highest tier the player has reached (their active cap).
   const currentIdx = DEN_PURSE_TIERS.reduce((acc, t, i) => (puzzlePoints >= t.points ? i : acc), 0)
@@ -92,7 +93,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       <div className="grid grid-cols-2 gap-3">
         <HoldCard status={holdStatus} doubloonsToday={holdDoubloonsToday} />
         <TreasureMatchCard status={matchStatus} reward={matchReward} />
-        <RiggingCard status={riggingStatus} reward={riggingReward} />
+        <RiggingCard status={riggingStatus} reward={riggingReward} isMember={isMember} />
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>

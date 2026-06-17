@@ -26,6 +26,8 @@ const DOUBLOON_COLOR = '#f0c040'
 export default function CaptainsBoard({ initial, doubloons }: { initial: CaptainsBoardState; doubloons: number }) {
   const [tiles, setTiles] = useState<BoardTileClient[]>(initial.tiles)
   const [playedToday, setPlayedToday] = useState(initial.playedToday)
+  const [picksAllowed, setPicksAllowed] = useState(initial.picksAllowed)
+  const [picksToday, setPicksToday] = useState(initial.picksToday)
   const [committedKey, setCommittedKey] = useState<string | null>(initial.committedKey)
   const [doubloonsAwarded, setDoubloonsAwarded] = useState(initial.doubloonsAwarded)
   const [balance, setBalance] = useState(doubloons)
@@ -52,6 +54,8 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
   useEffect(() => {
     setTiles(initial.tiles)
     setPlayedToday(initial.playedToday)
+    setPicksAllowed(initial.picksAllowed)
+    setPicksToday(initial.picksToday)
     setCommittedKey(initial.committedKey)
     setDoubloonsAwarded(initial.doubloonsAwarded)
   }, [initial])
@@ -69,6 +73,8 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       if ('error' in r) { setError(r.error); setPendingPlay(null); return }
       setTiles(r.tiles)
       setPlayedToday(r.playedToday)
+      setPicksAllowed(r.picksAllowed)
+      setPicksToday(r.picksToday)
       setCommittedKey(r.committedKey)
       setDoubloonsAwarded(r.doubloonsAwarded)
       setPendingPlay(null)
@@ -136,7 +142,7 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Twelve cards chalked fresh each Monday. Play one a day — pick a card and the clue is revealed; answer it for doubloons. The richer the card, the harder the question. Choose wisely: you only get one a day.
+        Twelve cards chalked fresh each Monday. {picksAllowed === 2 ? 'Members play two a day' : 'Play one a day'} — pick a card and the clue is revealed; answer it for doubloons. The richer the card, the harder the question. Choose wisely.
       </p>
 
       {/* The board: 4 category columns × 3 cards */}
@@ -238,12 +244,10 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       {/* Status line */}
       <p className="font-karla" style={{ fontSize: '0.68rem', color: playedToday && !awaitingAnswer ? DOUBLOON_COLOR : '#7a7470', textAlign: 'center', letterSpacing: '0.04em' }}>
         {awaitingAnswer
-          ? 'Answer the card you chose to finish your turn.'
+          ? 'Answer the card you revealed to finish.'
           : playedToday
-            ? `Card played. ${doubloonsAwarded} ⟡ banked this week. Come back tomorrow for your next card.`
-            : answeredCount > 0
-              ? `${answeredCount} card${answeredCount === 1 ? '' : 's'} played this week. Pick today's card.`
-              : 'Pick a card to play today.'}
+            ? `Picks spent for today. ${doubloonsAwarded} ⟡ banked this week. Back tomorrow.`
+            : `${picksAllowed - picksToday} pick${picksAllowed - picksToday === 1 ? '' : 's'} left today.${answeredCount > 0 ? ` ${answeredCount} played this week.` : ''}`}
       </p>
 
       {/* Question modal */}

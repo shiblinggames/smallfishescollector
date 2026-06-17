@@ -9,6 +9,7 @@ import {
   type Card, type SettledHand, type HandOutcome,
 } from '@/lib/blackjack'
 import { BJ_MIN_BET, BJ_MAX_BET, denDailyCap } from '../constants'
+import { isPremiumActive } from '@/lib/premium'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
@@ -115,12 +116,12 @@ async function getDailyBuyInTotal(userId: string): Promise<number> {
   return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
 }
 
-/** Effective shared Den daily cap for this player — base raised by the
- *  puzzle points banked in the Chart Room (denDailyCap). */
+/** Effective shared Den daily cap for this player — members climb the
+ *  puzzle-point ladder; non-members sit at the flat 2,000 ⟡/day cap. */
 async function getDenCap(userId: string): Promise<number> {
   const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('puzzle_points').eq('id', userId).single()
-  return denDailyCap((data?.puzzle_points as number | null) ?? 0)
+  const { data } = await admin.from('profiles').select('puzzle_points, is_premium, premium_expires_at').eq('id', userId).single()
+  return denDailyCap((data?.puzzle_points as number | null) ?? 0, isPremiumActive(data))
 }
 
 export async function getDailyWagered(): Promise<number> {

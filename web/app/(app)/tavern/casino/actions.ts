@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX, denDailyCap } from '../constants'
+import { isPremiumActive } from '@/lib/premium'
 import type { CasinoWallet, CasinoBuyInResult, CasinoCashOutResult } from './types'
 
 async function getDailyBuyInTotal(userId: string): Promise<number> {
@@ -26,12 +27,12 @@ async function getDailyBuyInTotal(userId: string): Promise<number> {
   return (data ?? []).reduce((sum, r) => sum + (r.amount as number), 0)
 }
 
-/** A player's effective shared Den daily cap — base 5k raised by the
- *  puzzle points they've banked in the Chart Room (denDailyCap). */
+/** A player's effective shared Den daily cap — members climb the puzzle-point
+ *  ladder (5k→10k); non-members are capped flat at 2,000 ⟡/day. */
 async function getDenCap(userId: string): Promise<number> {
   const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('puzzle_points').eq('id', userId).single()
-  return denDailyCap((data?.puzzle_points as number | null) ?? 0)
+  const { data } = await admin.from('profiles').select('puzzle_points, is_premium, premium_expires_at').eq('id', userId).single()
+  return denDailyCap((data?.puzzle_points as number | null) ?? 0, isPremiumActive(data))
 }
 
 export async function getCasinoState(): Promise<CasinoWallet> {
@@ -40,19 +41,19 @@ export async function getCasinoState(): Promise<CasinoWallet> {
   if (!user) {
     return {
       chips: 0, doubloons: 0, sessionBuyIns: 0,
-      dailyBoughtIn: 0, dailyCap: denDailyCap(0), dailyRemaining: denDailyCap(0),
+      dailyBoughtIn: 0, dailyCap: denDailyCap(0, false), dailyRemaining: denDailyCap(0, false),
       sessionNets: { blackjack: 0, roulette: 0, slots: 0 },
     }
   }
   const admin = createAdminClient()
   const [{ data: profile }, dailyBoughtIn] = await Promise.all([
     admin.from('profiles')
-      .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, roulette_session_net, slots_session_net, puzzle_points')
+      .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, roulette_session_net, slots_session_net, puzzle_points, is_premium, premium_expires_at')
       .eq('id', user.id)
       .single(),
     getDailyBuyInTotal(user.id),
   ])
-  const dailyCap = denDailyCap((profile?.puzzle_points as number | null) ?? 0)
+  const dailyCap = denDailyCap((profile?.puzzle_points as number | null) ?? 0, isPremiumActive(profile))
   return {
     chips: (profile?.casino_chips as number | null) ?? 0,
     doubloons: (profile?.doubloons as number | null) ?? 0,

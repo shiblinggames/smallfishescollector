@@ -1,11 +1,17 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/userData'
+import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { isPremiumActive } from '@/lib/premium'
 import { getRiggingState } from './actions'
 import RiggingGame from './RiggingGame'
 
 export default async function RiggingPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+
+  // Lay the Rigging is a members-only puzzle. Non-members get bounced to the
+  // membership page (the card in the Chart Room already shows the lock).
+  const profile = await getCurrentProfile()
+  if (!isPremiumActive(profile)) redirect('/marketplace')
 
   const state = await getRiggingState()
 

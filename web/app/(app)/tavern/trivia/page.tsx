@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import TriviaLobby, { type KingChip } from './TriviaLobby'
 import { kingWeekStr, type PirateKingStatus } from './constants'
+import { isPremiumActive } from '@/lib/premium'
 
 export default async function TriviaPage() {
   const user = await getCurrentUser()
@@ -24,7 +25,9 @@ export default async function TriviaPage() {
   ])
 
   const boardAnswers = (attempt?.answers as Record<string, { day?: string; chosen?: number }> | null) ?? {}
-  const boardPlayedToday = Object.values(boardAnswers).some(a => a.day === today)
+  const picksAllowed = isPremiumActive(profile) ? 2 : 1
+  const boardPicksToday = Object.values(boardAnswers).filter(a => a.day === today).length
+  const boardPlayedToday = boardPicksToday >= picksAllowed
   const boardPlayedThisWeek = Object.values(boardAnswers).filter(a => a.chosen !== undefined).length
   const king: KingChip | null = kingAttempt
     ? {

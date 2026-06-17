@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { isPremiumActive } from '@/lib/premium'
 import { getHoldState } from './hold/actions'
 import { getMatchState } from '@/app/(app)/charting/actions'
 import { MATCH_MAX_POINTS } from '@/app/(app)/charting/constants'
@@ -43,6 +44,7 @@ export default async function ChartRoomPage() {
               riggingStatus={riggingStatus}
               riggingReward={riggingReward}
               puzzlePoints={puzzlePoints}
+              isMember={isPremiumActive(profile)}
             />
           </div>
         </main>

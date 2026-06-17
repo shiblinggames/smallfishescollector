@@ -6,19 +6,20 @@ import ScenicCard from '../ScenicCard'
 const GOLD = '#f0c040'
 const ROPES = ['#e0524e', '#4f9bd0', '#46b46e']
 
-/** Door card for Lay the Rigging (weekly Flow) in the Chart Room. Scene:
- *  colored cleats joined by gently swaying ropes. Shows whether the
- *  week's board is rigged. */
-export default function RiggingCard({ status, reward }: { status: 'active' | 'cleared'; reward: number }) {
+/** Door card for Lay the Rigging (weekly Flow) in the Chart Room — a
+ *  MEMBERS-ONLY puzzle. Scene: colored cleats joined by gently swaying ropes.
+ *  Non-members see a lock treatment and the card routes to the membership
+ *  page instead of the puzzle. */
+export default function RiggingCard({ status, reward, isMember }: { status: 'active' | 'cleared'; reward: number; isMember: boolean }) {
   const cleared = status === 'cleared'
   return (
     <ScenicCard
-      href="/tavern/chart-room/rigging"
+      href={isMember ? '/tavern/chart-room/rigging' : '/marketplace'}
       title="Lay the Rigging"
       gradient={['#2a2f1a', '#1a1d10', '#0c0e08']}
       accent="#8aa85a"
     >
-      <svg aria-hidden viewBox="0 0 120 90" style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 120, height: 90 }}>
+      <svg aria-hidden viewBox="0 0 120 90" style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 120, height: 90, opacity: isMember ? 1 : 0.4, filter: isMember ? undefined : 'grayscale(0.6)' }}>
         {[
           { c: ROPES[0], d: 'M22,20 C22,50 78,40 78,70', a: [22, 20], b: [78, 70] },
           { c: ROPES[1], d: 'M58,18 C90,18 90,60 60,68', a: [58, 18], b: [60, 68] },
@@ -27,7 +28,7 @@ export default function RiggingCard({ status, reward }: { status: 'active' | 'cl
           <g key={i}>
             <motion.path
               d={r.d} fill="none" stroke={r.c} strokeWidth={3} strokeLinecap="round" opacity={0.8}
-              animate={{ opacity: [0.55, 0.9, 0.55] }}
+              animate={isMember ? { opacity: [0.55, 0.9, 0.55] } : undefined}
               transition={{ duration: 4 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.5 }}
             />
             <circle cx={r.a[0]} cy={r.a[1]} r={5} fill={r.c} />
@@ -36,17 +37,21 @@ export default function RiggingCard({ status, reward }: { status: 'active' | 'cl
         ))}
       </svg>
       <span
-        className="font-karla font-700"
+        className="font-karla font-700 uppercase"
         style={{
           position: 'absolute', top: 8, right: 10,
-          fontSize: '0.58rem', letterSpacing: '0.04em',
-          color: cleared ? GOLD : '#bcd09a',
+          fontSize: '0.56rem', letterSpacing: '0.06em',
+          color: isMember ? (cleared ? GOLD : '#bcd09a') : GOLD,
           background: 'rgba(10,14,6,0.72)',
-          border: '1px solid rgba(138,168,90,0.45)',
+          border: `1px solid ${isMember ? 'rgba(138,168,90,0.45)' : `${GOLD}66`}`,
           borderRadius: 999, padding: '0.2rem 0.55rem',
+          display: 'inline-flex', alignItems: 'center', gap: 4,
         }}
       >
-        {cleared ? `Rigged · +${reward} pts` : 'This week'}
+        {!isMember && (
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+        )}
+        {isMember ? (cleared ? `Rigged · +${reward} pts` : 'This week') : 'Members'}
       </span>
     </ScenicCard>
   )

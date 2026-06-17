@@ -101,9 +101,17 @@ export const DEN_PURSE_TIERS = [
   { points: 80, cap: 10000 },
 ] as const
 
-/** The shared Den daily buy-in cap for a player with the given lifetime
- *  puzzle points — the highest tier whose threshold they've reached. */
-export function denDailyCap(puzzlePoints: number): number {
+/** Flat Den daily buy-in cap for NON-members — the puzzle-point ladder is a
+ *  member perk, so non-members sit at a hard 2,000 ⟡/day regardless of points. */
+export const DEN_CAP_NONMEMBER = 2000
+
+/** The shared Den daily buy-in cap. Members climb the puzzle-point ladder
+ *  (5k → 10k); non-members are capped flat at DEN_CAP_NONMEMBER. `isMember`
+ *  defaults to true so the Chart Room's "puzzle points unlock this cap"
+ *  feedback shows the member ladder (the cap is a member perk); the casino
+ *  trio passes the player's real membership so the live limit is correct. */
+export function denDailyCap(puzzlePoints: number, isMember: boolean = true): number {
+  if (!isMember) return DEN_CAP_NONMEMBER
   let cap: number = DEN_PURSE_TIERS[0].cap
   for (const t of DEN_PURSE_TIERS) if ((puzzlePoints ?? 0) >= t.points) cap = t.cap
   return cap

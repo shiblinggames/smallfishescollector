@@ -11,6 +11,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isPremiumActive } from '@/lib/premium'
 import { getThisWeeksBoard, type GeneratedTile } from './generate'
 import {
   TRIVIA_TIER_VALUES,
@@ -43,9 +44,18 @@ function committedKeyToday(answers: Record<string, AnswerEntry>, today: string):
   }
   return null
 }
-/** Has the player used their one play for today (committed OR answered)? */
-function hasPlayedToday(answers: Record<string, AnswerEntry>, today: string): boolean {
-  return Object.values(answers).some(a => a.day === today)
+/** How many cards the player has played today (committed OR answered). */
+function playsToday(answers: Record<string, AnswerEntry>, today: string): number {
+  return Object.values(answers).filter(a => a.day === today).length
+}
+/** Picks per day: 1 for everyone, 2 for members. */
+const MEMBER_PICKS = 2
+const FREE_PICKS = 1
+
+/** Read the player's daily pick allowance from their membership. */
+async function picksAllowedFor(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<number> {
+  const { data } = await admin.from('profiles').select('is_premium, premium_expires_at').eq('id', userId).single()
+  return isPremiumActive(data) ? MEMBER_PICKS : FREE_PICKS
 }
 
 function buildTiles(
@@ -87,19 +97,23 @@ export async function getCaptainsBoardState(): Promise<CaptainsBoardState | { er
   const week = kingWeekStr()
   const today = todayStr()
 
-  const [board, { data: attempt }] = await Promise.all([
+  const [board, { data: attempt }, picksAllowed] = await Promise.all([
     getThisWeeksBoard(),
     admin.from('trivia_board_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
+    picksAllowedFor(admin, user.id),
   ])
   if (!board) return { error: 'No board available right now. Try again in a moment.' }
 
   const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0 }
   const committedKey = committedKeyToday(a.answers, today)
+  const picks = playsToday(a.answers, today)
 
   return {
     date: week,
     tiles: buildTiles(board, a.answers, committedKey),
-    playedToday: hasPlayedToday(a.answers, today),
+    picksAllowed,
+    picksToday: picks,
+    playedToday: picks >= picksAllowed,
     committedKey,
     doubloonsAwarded: a.doubloons_awarded,
   }
@@ -117,14 +131,16 @@ export async function playCaptainsCard(key: string): Promise<CaptainsBoardState 
   const week = kingWeekStr()
   const today = todayStr()
 
-  const [board, { data: attempt }] = await Promise.all([
+  const [board, { data: attempt }, picksAllowed] = await Promise.all([
     getThisWeeksBoard(),
     admin.from('trivia_board_attempts').select(ATTEMPT_COLS).eq('user_id', user.id).eq('date', week).single(),
+    picksAllowedFor(admin, user.id),
   ])
   if (!board) return { error: 'No board available' }
 
   const a = (attempt as AttemptRow | null) ?? { answers: {}, doubloons_awarded: 0 }
   const answers = { ...a.answers }
+  const picks = playsToday(answers, today)
 
   const existingCommitted = committedKeyToday(answers, today)
   // Re-committing today's pending card is idempotent — just re-reveal it
@@ -133,13 +149,19 @@ export async function playCaptainsCard(key: string): Promise<CaptainsBoardState 
     return {
       date: week,
       tiles: buildTiles(board, answers, key),
-      playedToday: true,
+      picksAllowed,
+      picksToday: picks,
+      playedToday: picks >= picksAllowed,
       committedKey: key,
       doubloonsAwarded: a.doubloons_awarded,
     }
   }
-  if (existingCommitted) return { error: "You've already chosen your card for today." }
-  if (hasPlayedToday(answers, today)) return { error: "You've already played today. Come back tomorrow for your next card." }
+  // One card in flight at a time: members get 2 picks/day but must answer
+  // the card they revealed before revealing the next.
+  if (existingCommitted) return { error: 'Answer the card you already revealed first.' }
+  if (picks >= picksAllowed) {
+    return { error: picksAllowed > 1 ? `You've used both picks today. Come back tomorrow.` : "You've already played today. Come back tomorrow for your next card." }
+  }
   // Any existing entry means the card was already answered OR forfeited — dead.
   if (answers[key]) return { error: 'That card has already been played.' }
 
@@ -158,7 +180,9 @@ export async function playCaptainsCard(key: string): Promise<CaptainsBoardState 
   return {
     date: week,
     tiles: buildTiles(board, answers, key),
-    playedToday: true,
+    picksAllowed,
+    picksToday: picks + 1,
+    playedToday: (picks + 1) >= picksAllowed,
     committedKey: key,
     doubloonsAwarded: a.doubloons_awarded,
   }
