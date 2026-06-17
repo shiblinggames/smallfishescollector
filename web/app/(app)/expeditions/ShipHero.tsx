@@ -680,31 +680,56 @@ export default function ShipHero({
           {/* Soft sea-glow backdrop for cohesion */}
           <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 75% 60% at 50% 42%, rgba(60,110,180,0.16) 0%, rgba(10,16,28,0) 70%)' }} />
 
-          {/* Level pill — centered above the two-column row. */}
-          <div style={{ position: 'relative', textAlign: 'center' }}>
-            <button
-              type="button"
-              onClick={() => setNavInfoOpen(true)}
-              aria-label="Show navigation level info"
-              className="font-karla font-600"
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '0.18rem 0.55rem', borderRadius: 7,
-                background: 'transparent', border: '1px solid transparent',
-                color: 'inherit', cursor: 'pointer',
-                transition: 'background 0.15s, border-color 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.25)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
-            >
-              <span style={{ fontSize: '0.95rem', color: '#7da0d8', whiteSpace: 'nowrap' }}>
-                <span className="font-cinzel font-700">Lv {xpProgress.level}</span>
-              </span>
-              <div style={{ width: 84, flexShrink: 0, height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${xpProgress.progress * 100}%`, background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)', borderRadius: 3 }} />
-              </div>
-            </button>
-          </div>
+          {/* Nav level + XP — full-width bar across the card (mirrors the
+              fishing screen's XPBarDisplay): big level number on the left,
+              the progress bar stretching the card width, XP-to-next on the
+              right. Whole row is the tap target for the Nav-level info
+              modal (captain bonuses + next-level carrot). */}
+          {(() => {
+            const atMax = xpProgress.level >= MAX_LEVEL
+            const fillPct = atMax ? 100 : xpProgress.progress * 100
+            const toGo = Math.max(0, xpProgress.xpForLevel - xpProgress.xpInLevel)
+            return (
+              <button
+                type="button"
+                onClick={() => setNavInfoOpen(true)}
+                aria-label="Show navigation level info"
+                className="font-karla font-600"
+                style={{
+                  position: 'relative',
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '0.3rem 0.35rem', borderRadius: 12,
+                  background: 'transparent', border: '1px solid transparent',
+                  color: 'inherit', cursor: 'pointer',
+                  transition: 'background 0.15s, border-color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.22)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
+              >
+                <div className="shrink-0" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#7da0d8bb', letterSpacing: '0.08em' }}>LV</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '1.55rem', color: '#7da0d8', lineHeight: 1 }}>{xpProgress.level}</span>
+                </div>
+                <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                  <motion.div
+                    key={xpProgress.level}
+                    initial={{ width: '0%' }}
+                    animate={{ width: `${fillPct}%` }}
+                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    style={{
+                      height: '100%', borderRadius: 999,
+                      background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)',
+                      boxShadow: '0 0 10px #7da0d870',
+                    }}
+                  />
+                </div>
+                <span className="font-karla font-600 shrink-0"
+                  style={{ fontSize: '0.62rem', color: atMax ? '#f0c040' : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                  {atMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
+                </span>
+              </button>
+            )
+          })()}
 
           {/* Two-column row — left links to /crew, right opens the
               Manage Ship drawer. Each column IS the tap target now:
