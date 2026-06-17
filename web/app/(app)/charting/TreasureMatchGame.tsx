@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent } from './treasureMatch'
-import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, type MatchState } from './constants'
+import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, type MatchState } from './constants'
 import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 
 const GOLD = '#f0c040'
@@ -357,19 +357,16 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           const isDrop = dropping.has(i)
           const isCommit = committed !== null && (committed[0] === i || committed[1] === i)
           const isInvalid = invalid && (invalid[0] === i || invalid[1] === i)
-          // Each token has its own silhouette (tok.clip). The colored gem is a
-          // back layer carrying the shape; the fish floats ON TOP unclipped so
+          // Each token has its own silhouette (tok.clip). A faceted gem sits as
+          // a back layer carrying the shape; the fish floats ON TOP unclipped so
           // it stays whole. Glows use filter:drop-shadow (which follows the
           // clipped shape) — box-shadow would get clipped away.
-          const gemBg = isInvalid
-            ? 'rgba(192,57,43,0.72)'
-            : isCommit ? `linear-gradient(155deg, ${tok.color}e6 0%, ${tok.color}8c 100%)`
-            : `linear-gradient(155deg, ${tok.color}b0 0%, ${tok.color}55 100%)`
+          const gemBg = isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
           const gemGlow = isCommit
-            ? `drop-shadow(0 0 7px #fff) drop-shadow(0 0 13px ${tok.color})`
-            : isSel ? `drop-shadow(0 0 7px ${tok.color}) drop-shadow(0 1px 2px rgba(0,0,0,0.5))`
-            : isInvalid ? `drop-shadow(0 0 6px #c0392b)`
-            : `drop-shadow(0 1px 2px rgba(0,0,0,0.55))`
+            ? `drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
+            : isSel ? `drop-shadow(0 0 9px ${tok.color}) drop-shadow(0 1px 2px rgba(0,0,0,0.5)) brightness(1.1)`
+            : isInvalid ? `drop-shadow(0 0 7px #d6392a)`
+            : `drop-shadow(0 1.5px 2.5px rgba(0,0,0,0.55))`
           return (
             <div
               key={i}
@@ -383,17 +380,23 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : undefined,
               }}
             >
-              {/* shaped gem (back layer) */}
+              {/* shaped faceted gem (back layer) */}
               <div aria-hidden style={{
                 position: 'absolute', inset: 0,
                 clipPath: tok.clip || undefined,
                 borderRadius: tok.clip ? 0 : '24%',
                 background: gemBg,
                 filter: gemGlow,
-                transition: 'background 0.12s, filter 0.12s',
+                transition: 'filter 0.12s',
+              }} />
+              {/* a crisp little sparkle, top-left, for cut-gem shine */}
+              <div aria-hidden style={{
+                position: 'absolute', left: '21%', top: '16%', width: '20%', height: '20%', borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)',
+                pointerEvents: 'none',
               }} />
               {/* fish (on top, unclipped) */}
-              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '74%', height: '74%', objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }} />
+              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
             </div>
           )
         })}

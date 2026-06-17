@@ -49,15 +49,38 @@ export function nextMatchTier(score: number): { score: number; points: number } 
  *  colourblind-safe and instant even at thumbnail size. `clip` is a CSS
  *  clip-path; '' = the default rounded square. emoji is a fallback only. */
 export const MATCH_TOKENS: { img: string; emoji: string; color: string; clip: string }[] = [
-  { img: '/fish/clownfish.png',     emoji: '🐠', color: '#ff8a2e', clip: 'circle(49% at 50% 50%)' },                                              // orange · circle
-  { img: '/fish/blue-tang.png',     emoji: '🐟', color: '#2e9bf0', clip: 'polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%)' },                           // blue · diamond
-  { img: '/fish/pufferfish.png',    emoji: '🐡', color: '#f0cb3e', clip: '' },                                                                    // yellow · rounded square
-  { img: '/fish/lionfish.png',      emoji: '🦂', color: '#ec5138', clip: 'polygon(50% 1%, 94% 26%, 94% 74%, 50% 99%, 6% 74%, 6% 26%)' },          // red · hexagon
-  { img: '/fish/mahi-mahi.png',     emoji: '🐠', color: '#28d484', clip: 'polygon(50% 4%, 97% 95%, 3% 95%)' },                                    // green · triangle
-  { img: '/fish/dumbo-octopus.png', emoji: '🐙', color: '#b06fe0', clip: 'polygon(30% 2%, 70% 2%, 98% 30%, 98% 70%, 70% 98%, 30% 98%, 2% 70%, 2% 30%)' }, // violet · octagon
-  { img: '/fish/seahorse.png',      emoji: '🌊', color: '#ff5c8a', clip: 'polygon(50% 1%, 99% 39%, 80% 98%, 20% 98%, 1% 39%)' },                  // pink · pentagon (spare)
-  { img: '/fish/manta-ray.png',     emoji: '🧭', color: '#5ad0d0', clip: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }, // teal · star (spare)
+  { img: '/fish/clownfish.png',     emoji: '🐠', color: '#ff7e1c', clip: 'circle(49% at 50% 50%)' },                                              // orange · circle
+  { img: '/fish/blue-tang.png',     emoji: '🐟', color: '#2aa4ff', clip: 'polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%)' },                           // blue · diamond
+  { img: '/fish/pufferfish.png',    emoji: '🐡', color: '#ffd028', clip: '' },                                                                    // yellow · rounded square
+  { img: '/fish/lionfish.png',      emoji: '🦂', color: '#ff4631', clip: 'polygon(50% 1%, 94% 26%, 94% 74%, 50% 99%, 6% 74%, 6% 26%)' },          // red · hexagon
+  { img: '/fish/mahi-mahi.png',     emoji: '🐠', color: '#0fd886', clip: 'polygon(50% 4%, 97% 95%, 3% 95%)' },                                    // green · triangle
+  { img: '/fish/dumbo-octopus.png', emoji: '🐙', color: '#bb55ff', clip: 'polygon(30% 2%, 70% 2%, 98% 30%, 98% 70%, 70% 98%, 30% 98%, 2% 70%, 2% 30%)' }, // violet · octagon
+  { img: '/fish/seahorse.png',      emoji: '🌊', color: '#ff4f85', clip: 'polygon(50% 1%, 99% 39%, 80% 98%, 20% 98%, 1% 39%)' },                  // pink · pentagon (spare)
+  { img: '/fish/manta-ray.png',     emoji: '🧭', color: '#29e0d2', clip: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }, // teal · star (spare)
 ]
+
+/** Lighten (amt > 0, toward white) or darken (amt < 0, toward black) a #rrggbb
+ *  hex by |amt| ∈ [0,1]. Returns rgb() — no CSS color-mix dependency so it
+ *  renders on every device. */
+export function shade(hex: string, amt: number): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16)
+  const t = amt >= 0 ? 255 : 0, a = Math.abs(amt)
+  const mix = (c: number) => Math.max(0, Math.min(255, Math.round(c + (t - c) * a)))
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`
+}
+
+/** Faceted-gem surface for a token colour: a bright top-left highlight, a
+ *  glossy diagonal sheen, a saturated body, and darker depth toward the
+ *  bottom-right. Used by the board tiles + the door-card preview so a token
+ *  reads as a cut gem, not a flat chip. */
+export function gemSurface(color: string): string {
+  return [
+    'radial-gradient(34% 30% at 27% 21%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%)',
+    'linear-gradient(157deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.06) 20%, rgba(255,255,255,0) 42%)',
+    `radial-gradient(125% 125% at 33% 26%, ${shade(color, 0.5)} 0%, ${color} 46%, ${shade(color, -0.42)} 100%)`,
+  ].join(', ')
+}
 
 /** Monday (UTC) of the current week — the weekly key. */
 export function matchWeekStr(now = new Date()): string {
