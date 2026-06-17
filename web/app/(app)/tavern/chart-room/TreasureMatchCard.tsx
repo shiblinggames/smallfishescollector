@@ -35,14 +35,16 @@ export default function TreasureMatchCard({ status, reward }: { status: 'active'
               key={i}
               animate={{ scale: [1, i % 4 === 0 ? 1.18 : 1, 1] }}
               transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: (i % 5) * 0.35 }}
-              style={{
-                width: 30, height: 30, borderRadius: 7, overflow: 'hidden',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: `linear-gradient(155deg, ${tok.color}9e 0%, ${tok.color}4d 100%)`,
-                border: `1px solid ${tok.color}aa`,
-              }}
+              style={{ width: 30, height: 30, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              <img src={tok.img} alt="" draggable={false} style={{ width: '82%', height: '82%', objectFit: 'contain' }} />
+              <div aria-hidden style={{
+                position: 'absolute', inset: 0,
+                clipPath: tok.clip || undefined,
+                borderRadius: tok.clip ? 0 : 7,
+                background: `linear-gradient(155deg, ${tok.color}b0 0%, ${tok.color}55 100%)`,
+                filter: `drop-shadow(0 1px 1.5px rgba(0,0,0,0.5))`,
+              }} />
+              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain' }} />
             </motion.div>
           )
         })}

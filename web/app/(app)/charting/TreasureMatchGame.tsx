@@ -357,29 +357,43 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           const isDrop = dropping.has(i)
           const isCommit = committed !== null && (committed[0] === i || committed[1] === i)
           const isInvalid = invalid && (invalid[0] === i || invalid[1] === i)
+          // Each token has its own silhouette (tok.clip). The colored gem is a
+          // back layer carrying the shape; the fish floats ON TOP unclipped so
+          // it stays whole. Glows use filter:drop-shadow (which follows the
+          // clipped shape) — box-shadow would get clipped away.
+          const gemBg = isInvalid
+            ? 'rgba(192,57,43,0.72)'
+            : isCommit ? `linear-gradient(155deg, ${tok.color}e6 0%, ${tok.color}8c 100%)`
+            : `linear-gradient(155deg, ${tok.color}b0 0%, ${tok.color}55 100%)`
+          const gemGlow = isCommit
+            ? `drop-shadow(0 0 7px #fff) drop-shadow(0 0 13px ${tok.color})`
+            : isSel ? `drop-shadow(0 0 7px ${tok.color}) drop-shadow(0 1px 2px rgba(0,0,0,0.5))`
+            : isInvalid ? `drop-shadow(0 0 6px #c0392b)`
+            : `drop-shadow(0 1px 2px rgba(0,0,0,0.55))`
           return (
             <div
               key={i}
               style={{
-                pointerEvents: 'none',
-                aspectRatio: '1 / 1', borderRadius: 9,
+                pointerEvents: 'none', position: 'relative',
+                aspectRatio: '1 / 1',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'clamp(1.3rem, 7vw, 2rem)', lineHeight: 1,
-                background: isInvalid ? 'rgba(192,57,43,0.6)'
-                  : isCommit ? `linear-gradient(155deg, ${tok.color}cc 0%, ${tok.color}77 100%)`
-                  : `linear-gradient(155deg, ${tok.color}9e 0%, ${tok.color}4d 100%)`,
-                border: `2px solid ${isCommit || isSel ? '#fff' : isInvalid ? '#c0392b' : `${tok.color}d8`}`,
-                boxShadow: isCommit
-                  ? `0 0 18px #fff, 0 0 30px ${tok.color}, inset 0 0 14px ${tok.color}77`
-                  : isSel ? `0 0 14px ${tok.color}, inset 0 0 10px ${tok.color}55` : `inset 0 1px 3px rgba(255,255,255,0.12)`,
                 transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
                 zIndex: isCommit ? 2 : undefined,
-                transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1), background 0.12s, border-color 0.12s, box-shadow 0.12s',
+                transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1)',
                 animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : undefined,
-                color: tok.color,
               }}
             >
-              <img src={tok.img} alt="" draggable={false} style={{ width: '84%', height: '84%', objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.55))' }} />
+              {/* shaped gem (back layer) */}
+              <div aria-hidden style={{
+                position: 'absolute', inset: 0,
+                clipPath: tok.clip || undefined,
+                borderRadius: tok.clip ? 0 : '24%',
+                background: gemBg,
+                filter: gemGlow,
+                transition: 'background 0.12s, filter 0.12s',
+              }} />
+              {/* fish (on top, unclipped) */}
+              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '74%', height: '74%', objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }} />
             </div>
           )
         })}

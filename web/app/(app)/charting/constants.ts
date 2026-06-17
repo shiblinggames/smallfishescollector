@@ -43,19 +43,20 @@ export function nextMatchTier(score: number): { score: number; points: number } 
   return null
 }
 
-/** Token art by type index (must be >= MATCH_TYPES). Emoji on a colored
- *  tile — instantly readable, ship-themed. */
-// Tiles are crew art (the fish sprites). Each gets a strong, distinct hue so
-// matches read instantly even at thumbnail size; emoji is a fallback only.
-export const MATCH_TOKENS: { img: string; emoji: string; color: string }[] = [
-  { img: '/fish/clownfish.png', emoji: '🐠', color: '#ff8a2e' }, // orange
-  { img: '/fish/blue-tang.png', emoji: '🐟', color: '#2e9bf0' }, // blue
-  { img: '/fish/pufferfish.png', emoji: '🐡', color: '#f0cb3e' }, // yellow
-  { img: '/fish/lionfish.png', emoji: '🦂', color: '#ec5138' }, // red
-  { img: '/fish/mahi-mahi.png', emoji: '🐠', color: '#28d484' }, // green
-  { img: '/fish/dumbo-octopus.png', emoji: '🐙', color: '#b06fe0' }, // violet
-  { img: '/fish/seahorse.png', emoji: '🌊', color: '#ff5c8a' }, // pink (spare)
-  { img: '/fish/manta-ray.png', emoji: '🧭', color: '#5ad0d0' }, // teal (spare)
+/** Token art by type index (must be >= MATCH_TYPES). Each token is a crew fish
+ *  sprite on a colored gem, and EACH GETS ITS OWN SILHOUETTE (`clip`) so the
+ *  six in play (0-5) read apart by shape AND colour AND art — fully
+ *  colourblind-safe and instant even at thumbnail size. `clip` is a CSS
+ *  clip-path; '' = the default rounded square. emoji is a fallback only. */
+export const MATCH_TOKENS: { img: string; emoji: string; color: string; clip: string }[] = [
+  { img: '/fish/clownfish.png',     emoji: '🐠', color: '#ff8a2e', clip: 'circle(49% at 50% 50%)' },                                              // orange · circle
+  { img: '/fish/blue-tang.png',     emoji: '🐟', color: '#2e9bf0', clip: 'polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%)' },                           // blue · diamond
+  { img: '/fish/pufferfish.png',    emoji: '🐡', color: '#f0cb3e', clip: '' },                                                                    // yellow · rounded square
+  { img: '/fish/lionfish.png',      emoji: '🦂', color: '#ec5138', clip: 'polygon(50% 1%, 94% 26%, 94% 74%, 50% 99%, 6% 74%, 6% 26%)' },          // red · hexagon
+  { img: '/fish/mahi-mahi.png',     emoji: '🐠', color: '#28d484', clip: 'polygon(50% 4%, 97% 95%, 3% 95%)' },                                    // green · triangle
+  { img: '/fish/dumbo-octopus.png', emoji: '🐙', color: '#b06fe0', clip: 'polygon(30% 2%, 70% 2%, 98% 30%, 98% 70%, 70% 98%, 30% 98%, 2% 70%, 2% 30%)' }, // violet · octagon
+  { img: '/fish/seahorse.png',      emoji: '🌊', color: '#ff5c8a', clip: 'polygon(50% 1%, 99% 39%, 80% 98%, 20% 98%, 1% 39%)' },                  // pink · pentagon (spare)
+  { img: '/fish/manta-ray.png',     emoji: '🧭', color: '#5ad0d0', clip: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }, // teal · star (spare)
 ]
 
 /** Monday (UTC) of the current week — the weekly key. */
