@@ -33,10 +33,6 @@ export default function ContestsClient({ views }: { views: Record<string, Contes
         <h1 className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#f0ece4' }}>Contests</h1>
         <span style={{ width: 56 }} />
       </div>
-      <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#9a948a', marginBottom: 14, lineHeight: 1.5 }}>
-        Community races for one-of-a-kind rewards. Be the first to the mark and the prize is yours alone.
-      </p>
-
       {/* Carry-over assurance — these prizes are permanent, beta or not. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24,
