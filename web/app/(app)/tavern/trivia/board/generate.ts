@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { anthropic } from '@/lib/anthropic'
 import { TRIVIA_CATEGORY_KEYS, TRIVIA_TIERS, type TriviaCategoryKey } from '../constants'
+import { findTriviaIssues, TRIVIA_GEN_MODEL, type TriviaIssue } from '@/lib/triviaVerify'
 
 // The Captain's Board generator — twelve fresh questions a night
 // (4 categories x 3 tiers), authored by Claude on the midnight cron
@@ -26,9 +27,13 @@ const CATEGORY_BRIEFS: Record<TriviaCategoryKey, string> = {
   CATCH: 'The Catch: the craft of fishing. Techniques, tackle, angling records, commercial fishing history, seafood',
 }
 
-function buildPrompt(recentQuestions: string[]): string {
+function buildPrompt(recentQuestions: string[], priorIssues: TriviaIssue[] = []): string {
   const avoidBlock = recentQuestions.length > 0
     ? `\n\nDO NOT repeat or closely paraphrase any of these recently used questions:\n${recentQuestions.map(q => `- ${q}`).join('\n')}`
+    : ''
+  // On a regeneration pass, hand back exactly what the fact-checker caught.
+  const fixBlock = priorIssues.length > 0
+    ? `\n\nYour previous attempt failed fact-checking on these. Do not repeat them; make sure every correct_index is truly correct and every stem matches its answer:\n${priorIssues.map(p => `- ${p.problem}`).join('\n')}`
     : ''
   return `Generate today's trivia board: exactly 12 questions, one for every combination of the 4 categories and 3 difficulty tiers.
 
@@ -60,7 +65,7 @@ Rules:
 - options must have exactly 4 entries, all plausible, all distinct, only one correct
 - correct_index must be 0, 1, 2, or 3 and the correct position must vary across the 12 questions
 - Keep questions under 140 characters and options under 40 characters; this renders on a phone
-- explanation is shown after answering; make it a satisfying little fact, not a restatement${avoidBlock}`
+- explanation is shown after answering; make it a satisfying little fact, not a restatement${avoidBlock}${fixBlock}`
 }
 
 function isValidTile(t: GeneratedTile): boolean {
@@ -100,29 +105,41 @@ export async function getTodaysBoard(): Promise<GeneratedTile[] | null> {
     const recentQuestions = (recentRows ?? [])
       .flatMap(r => (r.board as GeneratedTile[]).map(t => t.question))
 
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: buildPrompt(recentQuestions) }],
-    })
+    // Author -> structural validate -> independent fact-check, regenerating
+    // (up to 3 tries) with the fact-checker's complaints fed back in so a wrong
+    // answer or a self-contradicting question never reaches players.
+    let priorIssues: TriviaIssue[] = []
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const message = await anthropic.messages.create({
+        model: TRIVIA_GEN_MODEL,
+        max_tokens: 4000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildPrompt(recentQuestions, priorIssues) }],
+      })
 
-    const raw = (message.content[0] as { type: string; text: string }).text.trim()
-    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
-    const board: GeneratedTile[] = JSON.parse(text)
+      const raw = (message.content[0] as { type: string; text: string }).text.trim()
+      const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+      const board: GeneratedTile[] = JSON.parse(text)
 
-    if (!Array.isArray(board) || board.length !== 12) {
-      throw new Error(`Expected 12 tiles, got ${Array.isArray(board) ? board.length : typeof board}`)
+      if (!Array.isArray(board) || board.length !== 12) {
+        throw new Error(`Expected 12 tiles, got ${Array.isArray(board) ? board.length : typeof board}`)
+      }
+      for (const tile of board) {
+        if (!isValidTile(tile)) throw new Error(`Invalid tile: ${JSON.stringify(tile).slice(0, 120)}`)
+      }
+      // Every category-tier pair exactly once.
+      const combos = new Set(board.map(t => `${t.category}-${t.tier}`))
+      if (combos.size !== 12) throw new Error('Duplicate or missing category-tier pairs')
+
+      const issues = await findTriviaIssues(board)
+      if (issues.length === 0) {
+        await admin.from('trivia_boards').insert({ date: today, board })
+        return board
+      }
+      console.warn(`[captains-board] attempt ${attempt} failed fact-check (${issues.length} issue(s)); regenerating`, issues.map(i => i.problem))
+      priorIssues = issues
     }
-    for (const tile of board) {
-      if (!isValidTile(tile)) throw new Error(`Invalid tile: ${JSON.stringify(tile).slice(0, 120)}`)
-    }
-    // Every category-tier pair exactly once.
-    const combos = new Set(board.map(t => `${t.category}-${t.tier}`))
-    if (combos.size !== 12) throw new Error('Duplicate or missing category-tier pairs')
-
-    await admin.from('trivia_boards').insert({ date: today, board })
-    return board
+    throw new Error('Board failed fact-check after 3 attempts')
   } catch (err) {
     console.error('[captains-board] generation failed:', err)
 
