@@ -41,12 +41,17 @@ export default function MembershipModal() {
     setClientSecret(null); setError(null); setPaid(false)
     if (!stripePromise) { setError('Payments are not configured yet.'); return }
     let alive = true
+    // Watchdog: if the session call hangs (network), don't spin forever.
+    const watchdog = window.setTimeout(() => {
+      if (alive) setError('Checkout is taking too long. Check your connection and try again.')
+    }, 15000)
     createMembershipCheckout().then(r => {
+      window.clearTimeout(watchdog)
       if (!alive) return
       if ('error' in r) setError(r.error)
       else setClientSecret(r.clientSecret)
-    }).catch(() => { if (alive) setError('Could not start checkout.') })
-    return () => { alive = false }
+    }).catch((e) => { window.clearTimeout(watchdog); if (alive) setError(e instanceof Error ? e.message : 'Could not start checkout.') })
+    return () => { alive = false; window.clearTimeout(watchdog) }
   }, [open])
 
   useEffect(() => {

@@ -44,8 +44,13 @@ export async function createMembershipCheckout(): Promise<{ clientSecret: string
     })
     if (!session.client_secret) return { error: 'Could not start checkout.' }
     return { clientSecret: session.client_secret }
-  } catch {
-    return { error: 'Could not start checkout. Try again in a moment.' }
+  } catch (e) {
+    // Surface the real Stripe message during beta so misconfig (bad key, wrong
+    // ui_mode for the account's API version, etc.) is diagnosable instead of a
+    // silent endless spinner.
+    const msg = e instanceof Error ? e.message : 'Could not start checkout.'
+    console.error('[membership] checkout session create failed:', msg)
+    return { error: msg }
   }
 }
 
