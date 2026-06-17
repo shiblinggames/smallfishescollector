@@ -38,15 +38,16 @@ export default function SupportStudioCard({ isPremium }: { isPremium: boolean })
         boxShadow: `0 6px 20px rgba(0,0,0,0.4), 0 0 22px ${GOLD}14, inset 0 1px 0 rgba(255,255,255,0.05)`,
       }}
     >
-      {/* Captain crew portrait — the great white */}
+      {/* Captain crew portrait — the great white. Rounded-rect frame (not a
+          circle) so the full bust + hat + coat shows without clipping. */}
       <div style={{
-        flexShrink: 0, width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
+        flexShrink: 0, width: 54, height: 54, borderRadius: 13, overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 32%, #1f4360 0%, #0b1923 100%)',
+        background: 'radial-gradient(ellipse at 50% 30%, #20465f 0%, #0b1923 80%)',
         border: `1.5px solid ${GOLD}aa`,
         boxShadow: `0 3px 11px rgba(0,0,0,0.5), 0 0 12px ${GOLD}22, inset 0 0 10px rgba(0,0,0,0.4)`,
       }}>
-        <img src={CAPTAIN_ART} alt="" aria-hidden draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+        <img src={CAPTAIN_ART} alt="" aria-hidden draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
       </div>
 
       {/* Copy */}
