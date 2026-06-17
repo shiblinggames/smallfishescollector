@@ -7,7 +7,7 @@
 // app. Payment is fulfilled by the Stripe webhook (it flips is_premium); the
 // modal polls until that lands, then refreshes so the whole app updates.
 
-import { useCallback, useEffect, useState } from 'react'
+import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
@@ -16,6 +16,19 @@ import { createMembershipCheckout, checkMembership } from '@/app/actions/members
 const GOLD = '#f0c040'
 const PUBLISHABLE = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
 const stripePromise = PUBLISHABLE ? loadStripe(PUBLISHABLE) : null
+
+// Without this, a render crash inside Stripe's EmbeddedCheckout (bad
+// publishable key, stripe.js failing to init the session) unmounts the whole
+// modal subtree and the popup just vanishes. The boundary catches it and hands
+// the message back so we can show it instead.
+class CheckoutBoundary extends Component<{ onError: (msg: string) => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  componentDidCatch(err: unknown) {
+    this.props.onError(err instanceof Error ? err.message : 'Checkout failed to load.')
+  }
+  render() { return this.state.failed ? null : this.props.children }
+}
 
 /** Open the membership popup from anywhere. */
 export function openMembership() {
@@ -119,9 +132,11 @@ export default function MembershipModal() {
           </div>
         ) : clientSecret && stripePromise ? (
           <div style={{ borderRadius: 12, overflow: 'hidden' }}>
-            <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret, onComplete }}>
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+            <CheckoutBoundary onError={setError}>
+              <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret, onComplete }}>
+                <EmbeddedCheckout />
+              </EmbeddedCheckoutProvider>
+            </CheckoutBoundary>
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '2.4rem 0.5rem' }}>
