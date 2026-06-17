@@ -21,10 +21,30 @@ export default async function DevStatsPage() {
   const { data: prof } = await admin.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!prof?.is_admin) notFound()
 
-  const { data } = await admin.rpc('admin_stats')
+  const [{ data }, { data: trawlData }] = await Promise.all([
+    admin.rpc('admin_stats'),
+    admin.rpc('trawl_admin_stats'),
+  ])
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const s = (data ?? {}) as any
+  const t = (trawlData ?? {}) as any
   const byIf = (v: number, name: unknown) => (v > 0 ? (name as string) : null)
+
+  // Trawls — crew passive fishing. Active trawls are a live snapshot (the
+  // `trawls` table, cleared on collect); the rest is collection history from
+  // the doubloon ledger. XP isn't logged separately, so only doubloons show.
+  const topTrawlZone = ((t.byZone ?? []) as { label: string; collections: number; doubloons: number }[])[0] ?? null
+  const trawlStats: Stat[] = [
+    { label: 'At sea now',        value: t.activeNow ?? 0,        by: byIf(t.readyToCollect ?? 0, `${fmt(t.readyToCollect ?? 0)} ready to collect`) },
+    { label: 'Captains at sea',   value: t.captainsTrawling ?? 0 },
+    { label: 'Hauls collected',   value: t.collections ?? 0 },
+    { label: 'Doubloons paid',    value: `${fmt(t.totalDoubloons ?? 0)} ⟡` },
+    { label: 'Avg per haul',      value: `${fmt(t.avgDoubloons ?? 0)} ⟡` },
+    { label: 'Captains who trawled', value: t.uniqueCaptains ?? 0 },
+    { label: 'Last 24h',          value: `${fmt(t.collections24h ?? 0)} hauls`, by: byIf(t.doubloons24h ?? 0, `${fmt(t.doubloons24h ?? 0)} ⟡`) },
+    { label: 'Last 7d',           value: `${fmt(t.collections7d ?? 0)} hauls`,  by: byIf(t.doubloons7d ?? 0, `${fmt(t.doubloons7d ?? 0)} ⟡`) },
+    ...(topTrawlZone ? [{ label: 'Top zone', value: topTrawlZone.label, by: `${fmt(topTrawlZone.doubloons)} ⟡ · ${fmt(topTrawlZone.collections)} hauls` }] : []),
+  ]
 
   // Raid id → boss display name (see lib/bossRaids.ts). Falls back to the raw
   // id so a newly-added raid still appears.
@@ -140,6 +160,12 @@ export default async function DevStatsPage() {
         { label: 'Loot hauled',       value: `${fmt(s.voyages?.loot ?? 0)} ⟡` },
         { label: 'Crew lost',         value: s.voyages?.crewLost ?? 0 },
       ],
+    },
+    {
+      // Trawls — crew passive fishing. "At sea now" + "Captains at sea" are a
+      // live snapshot; everything below is collection history from the ledger.
+      title: 'Trawls', accent: '#5eead4',
+      stats: trawlStats,
     },
     {
       // Crew Hall — recruit + deployment + sentiment signals. Fallen
