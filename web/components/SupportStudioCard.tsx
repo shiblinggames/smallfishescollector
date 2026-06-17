@@ -8,6 +8,8 @@ import { motion } from 'framer-motion'
 import { openMembership } from './MembershipModal'
 
 const GOLD = '#f0c040'
+// Great White crew card art (Expeditions), from the card-arts bucket.
+const CAPTAIN_ART = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Great_White_Shark.png`
 
 export default function SupportStudioCard({ isPremium }: { isPremium: boolean }) {
   if (isPremium) {
@@ -44,7 +46,7 @@ export default function SupportStudioCard({ isPremium }: { isPremium: boolean })
         border: `1.5px solid ${GOLD}aa`,
         boxShadow: `0 3px 11px rgba(0,0,0,0.5), 0 0 12px ${GOLD}22, inset 0 0 10px rgba(0,0,0,0.4)`,
       }}>
-        <img src="/fish/great-white-shark.png" alt="" aria-hidden draggable={false} style={{ width: '90%', height: '90%', objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+        <img src={CAPTAIN_ART} alt="" aria-hidden draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
       </div>
 
       {/* Copy */}

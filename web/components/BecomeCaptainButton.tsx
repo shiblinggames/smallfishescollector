@@ -8,6 +8,10 @@
 import { motion } from 'framer-motion'
 import { openMembership } from './MembershipModal'
 
+// The Captain emblem = the Great White crew card art (Expeditions art, not the
+// fishing sprite), served from the card-arts bucket.
+const CAPTAIN_ART = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/card-arts/Great_White_Shark.png`
+
 export default function BecomeCaptainButton({
   label = 'Become a Captain',
   full = false,
@@ -36,7 +40,7 @@ export default function BecomeCaptainButton({
         ...style,
       }}
     >
-      <img src="/fish/great-white-shark.png" alt="" aria-hidden draggable={false} style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' }} />
+      <img src={CAPTAIN_ART} alt="" aria-hidden draggable={false} style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' }} />
       <span>{label}</span>
     </motion.button>
   )
