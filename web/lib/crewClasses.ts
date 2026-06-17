@@ -206,8 +206,9 @@ export interface ClassDef<M> {
 // Tuning targets (910 XP/Krust raid, 2 ability uses per raid post rest-stop):
 //   - Mender Lv 100: 60% HP heal × 2 uses = 120% HP. Enough to fully restore
 //     between rest stops; deliberately caps below "immortal heal".
-//   - Sharpshot Lv 100: 4× crit zone for 3 shots. Doesn't guarantee crits
-//     (player still has to aim), but enormously rewards careful shooting.
+//   - Sharpshot Lv 100: 6× crit zone for 3 shots — the gold zone grows past
+//     the hit zone, so any clean hit (and even an edge one) crits. Lv 75
+//     already matches the hit width (clean hit = crit). Retuned up 2026-06-17.
 //   - Snare Lv 100: full-fight dodge lock. Removes the boss's defensive
 //     option for a single encounter — earned victory.
 //   - Anchor Lv 100: 95% damage reduction on next hit. Practically full
@@ -229,14 +230,20 @@ export const MENDER: ClassDef<MenderMilestone> = {
 
 export const SHARPSHOT: ClassDef<SharpshotMilestone> = {
   id: 'sharpshot', name: 'Sharpshot', shortLabel: 'Steady Aim',
-  blurb: 'Widens the crit zone of your next manually-landed shot. You still have to aim.',
+  blurb: 'Widens the gold crit zone on your next shots. By the top tiers, any clean hit crits.',
   color: '#fbbf24', emoji: '◎',
+  // Base gold zone is thin (CRIT_W 0.012) vs the hit zone (HIT_W 0.06) — a 1:5
+  // ratio. The old multipliers (0.5–3.0) left the buffed zone well under the
+  // hit width at every tier except Lv100, so the ability barely read as doing
+  // anything. Retuned 2026-06-17 (players flagged it weak): the zone now scales
+  // 2× → 6× the base, hitting the FULL hit width at Lv75 (so landing any clean
+  // hit = a crit) and spilling slightly into the graze band at Lv100.
   milestones: [
-    { unlockLevel: 10,  critZoneMultiplier: 0.5, shotsBuffed: 1, desc: 'Next shot crit zone +50% wider.' },
-    { unlockLevel: 25,  critZoneMultiplier: 1.0, shotsBuffed: 1, desc: 'Next shot crit zone doubled.' },
-    { unlockLevel: 40,  critZoneMultiplier: 1.5, shotsBuffed: 1, desc: 'Next shot crit zone 2.5× wider.' },
-    { unlockLevel: 75,  critZoneMultiplier: 2.0, shotsBuffed: 2, desc: 'Next 2 shots crit zone 3× wider.' },
-    { unlockLevel: 100, critZoneMultiplier: 3.0, shotsBuffed: 3, desc: 'Next 3 shots crit zone 4× wider.' },
+    { unlockLevel: 10,  critZoneMultiplier: 1.0, shotsBuffed: 1, desc: 'Next shot crit zone doubled.' },
+    { unlockLevel: 25,  critZoneMultiplier: 2.0, shotsBuffed: 1, desc: 'Next shot crit zone tripled.' },
+    { unlockLevel: 40,  critZoneMultiplier: 3.0, shotsBuffed: 2, desc: 'Next 2 shots crit zone 4× wider.' },
+    { unlockLevel: 75,  critZoneMultiplier: 4.0, shotsBuffed: 2, desc: 'Next 2 shots: any clean hit lands a crit.' },
+    { unlockLevel: 100, critZoneMultiplier: 5.0, shotsBuffed: 3, desc: 'Next 3 shots: a huge crit window — even edge hits crit.' },
   ],
 }
 
