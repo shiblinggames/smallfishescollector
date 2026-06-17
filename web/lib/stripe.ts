@@ -12,7 +12,7 @@ export function getStripe(): Stripe {
   return _stripe
 }
 
-// Membership = a one-time, lifetime unlock (mirrors the existing model where
-// premium_expires_at = null means "never expires"). $10.00 USD.
-export const MEMBERSHIP_PRICE_CENTS = 1000
-export const MEMBERSHIP_PRODUCT_NAME = "Sea's The Booty Membership"
+// Captaincy = a one-time, lifetime unlock (mirrors the existing model where
+// premium_expires_at = null means "never expires"). $9.99 USD.
+export const MEMBERSHIP_PRICE_CENTS = 999
+export const MEMBERSHIP_PRODUCT_NAME = "Sea's The Booty — Captain"

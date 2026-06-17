@@ -90,10 +90,10 @@ export default function MembershipModal() {
         borderRadius: 18, padding: '1.15rem 1.1rem 1.25rem',
         boxShadow: `0 18px 60px rgba(0,0,0,0.6), 0 0 40px ${GOLD}12`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 2 }}>
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>Membership</p>
-            <h2 className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#f5ecd6', lineHeight: 1.1 }}>Become a Member</h2>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>Captain&apos;s Commission</p>
+            <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f5ecd6', lineHeight: 1.1 }}>Become a Captain</h2>
           </div>
           <button onClick={close} aria-label="Close" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#b2aca3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -105,29 +105,32 @@ export default function MembershipModal() {
             <div style={{ width: 56, height: 56, margin: '0 auto 12px', borderRadius: '50%', background: `${GOLD}1f`, border: `1px solid ${GOLD}66`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
             </div>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: GOLD }}>You&apos;re aboard!</p>
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a89e86', marginTop: 6, lineHeight: 1.5 }}>Welcome to the crew. Your perks are unlocking now.</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: GOLD }}>Welcome aboard, Captain!</p>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a89e86', marginTop: 6, lineHeight: 1.5 }}>Your perks are unlocking now.</p>
             <button onClick={close} className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 18, padding: '0.7rem 1.8rem', borderRadius: 12, background: `${GOLD}26`, border: `1px solid ${GOLD}66`, color: GOLD, fontSize: '0.78rem', cursor: 'pointer' }}>Set sail</button>
           </div>
         ) : (
           <>
-            <p className="font-karla" style={{ fontSize: '0.8rem', color: '#a89e86', lineHeight: 1.55, margin: '6px 0 14px' }}>
-              <span className="font-cinzel font-800" style={{ color: GOLD, fontSize: '0.98rem' }}>$10</span> once, yours for life. More daily gems, premium bait, a gold weekly crate, two Captain&apos;s Board picks, a bigger Den purse, and members-only games. Cosmetic and convenience only, never pay-to-win.
+            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b3a98f', lineHeight: 1.5, margin: '8px 0 14px' }}>
+              Every perk below, for life. Cosmetic and convenience only &mdash; never pay-to-win.
             </p>
 
             {/* Perk list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
               {[
-                '150 gems every day (3× the free 50)',
-                'Premium chum bait daily',
-                'A gold crate every week',
-                'Two Captain’s Board picks a day',
-                'A bigger daily Den purse',
-                'Members-only games & rigging',
-              ].map((perk) => (
-                <div key={perk} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><path d="M20 6L9 17l-5-5" /></svg>
-                  <span className="font-karla" style={{ fontSize: '0.76rem', color: '#cfc6b0', lineHeight: 1.35 }}>{perk}</span>
+                ['150 gems a day', '3× the free haul'],
+                ['Premium chum bait', 'every day'],
+                ['A gold crate', 'every week'],
+                ['2 Captain’s Board picks', 'a day'],
+                ['A bigger Den purse', 'higher daily cap'],
+                ['Captain-only games', 'the Rigging & more'],
+              ].map(([perk, sub]) => (
+                <div key={perk} style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, alignSelf: 'center' }}><path d="M20 6L9 17l-5-5" /></svg>
+                  <span className="font-karla" style={{ fontSize: '0.82rem', color: '#e6dcc4' }}>
+                    <span className="font-700">{perk}</span>
+                    <span style={{ color: '#8a8270' }}> — {sub}</span>
+                  </span>
                 </div>
               ))}
             </div>
@@ -139,18 +142,26 @@ export default function MembershipModal() {
             <button
               onClick={startCheckout}
               disabled={loading}
-              className="font-cinzel font-700 uppercase tracking-[0.08em]"
+              className="font-cinzel font-700"
               style={{
-                width: '100%', padding: '0.85rem 1rem', borderRadius: 12,
+                width: '100%', padding: '0.9rem 1rem', borderRadius: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 background: loading ? 'rgba(240,192,64,0.18)' : `${GOLD}28`,
-                border: `1px solid ${GOLD}77`, color: GOLD, fontSize: '0.82rem',
+                border: `1px solid ${GOLD}77`, color: GOLD,
                 cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Opening secure checkout…' : 'Continue to checkout →'}
+              {loading ? (
+                <span className="uppercase tracking-[0.08em]" style={{ fontSize: '0.82rem' }}>Opening checkout…</span>
+              ) : (
+                <>
+                  <span className="uppercase tracking-[0.08em]" style={{ fontSize: '0.86rem' }}>Become a Captain</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>$9.99</span>
+                </>
+              )}
             </button>
             <p className="font-karla" style={{ fontSize: '0.62rem', color: '#6f6a60', textAlign: 'center', marginTop: 9, lineHeight: 1.4 }}>
-              Secure payment by Stripe. You&apos;ll return here right after.
+              One payment, yours forever. Secure checkout by Stripe.
             </p>
           </>
         )}
