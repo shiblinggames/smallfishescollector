@@ -53,7 +53,7 @@ export default function RiggingCard({ status, reward, isMember }: { status: 'act
         {!isMember && (
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
         )}
-        {isMember ? (cleared ? `Rigged · +${reward} pts` : 'This week') : 'Members'}
+        {isMember ? (cleared ? `Rigged · +${reward} pts` : 'This week') : 'Captains'}
       </span>
     </ScenicCard>
   )

@@ -142,7 +142,7 @@ export default function CaptainsBoard({ initial, doubloons }: { initial: Captain
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Twelve cards chalked fresh each Monday. {picksAllowed === 2 ? 'Members play two a day' : 'Play one a day'} — pick a card and the clue is revealed; answer it for doubloons. The richer the card, the harder the question. Choose wisely.
+        Twelve cards chalked fresh each Monday. {picksAllowed === 2 ? 'Captains play two a day' : 'Play one a day'} — pick a card and the clue is revealed; answer it for doubloons. The richer the card, the harder the question. Choose wisely.
       </p>
 
       {/* The board: 4 category columns × 3 cards */}

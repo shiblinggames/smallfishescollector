@@ -14,6 +14,7 @@ import { StatTile } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
+import { openMembership } from '@/components/MembershipModal'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import { getBoat, boatGlowClass } from '@/lib/boats'
@@ -446,11 +447,11 @@ export default function ProfileClient({
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{username}</p>
               {isPremium && (
-                <span title="Member" className="flex items-center gap-1 rounded-full" style={{ padding: '0.2rem 0.55rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)' }}>
+                <span title="Captain" className="flex items-center gap-1 rounded-full" style={{ padding: '0.2rem 0.55rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)' }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                   </svg>
-                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Member</span>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Captain</span>
                 </span>
               )}
             </div>
@@ -1311,7 +1312,7 @@ export default function ProfileClient({
                     key={`bg-${c.id}`}
                     type="button"
                     onClick={() => {
-                      if (locked) { flashLockMsg('Requires Premium membership'); return }
+                      if (locked) { flashLockMsg('Captain-only color'); return }
                       saveAvatarBg(c.hex)
                     }}
                     aria-label={`Background ${c.label}${locked ? ' (premium)' : ''}`}
@@ -1351,7 +1352,7 @@ export default function ProfileClient({
                     onClick={() => {
                       if (!owned) {
                         if (!isPremium) {
-                          flashLockMsg(`${s.label} — Premium membership required`)
+                          flashLockMsg(`${s.label} — Captain-only`)
                           return
                         }
                         setPurchaseError(null)
@@ -1397,7 +1398,7 @@ export default function ProfileClient({
                     key={`bd-${c.id}`}
                     type="button"
                     onClick={() => {
-                      if (locked) { flashLockMsg('Requires Premium membership'); return }
+                      if (locked) { flashLockMsg('Captain-only color'); return }
                       saveAvatarBorder(c.hex)
                     }}
                     aria-label={`Border ${c.label}${locked ? ' (premium)' : ''}`}
@@ -1439,7 +1440,7 @@ export default function ProfileClient({
                     onClick={() => {
                       if (!owned) {
                         if (!isPremium) {
-                          flashLockMsg(`${s.label} — Premium membership required`)
+                          flashLockMsg(`${s.label} — Captain-only`)
                           return
                         }
                         setPurchaseError(null)
@@ -1572,20 +1573,19 @@ export default function ProfileClient({
                   {avatarLockMsg}
                 </p>
               ) : !isPremium ? (
-                <a
-                  href="https://shiblingshop.com/products/small-fishes-premium-membership"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={openMembership}
                   className="font-karla font-600"
                   style={{
                     fontSize: '0.7rem',
                     color: '#f0c040',
-                    textDecoration: 'none',
+                    background: 'none', border: 'none', cursor: 'pointer',
                     letterSpacing: '0.03em',
                   }}
                 >
-                  ✦ Unlock more with Premium membership →
-                </a>
+                  ✦ Unlock more as a Captain →
+                </button>
               ) : null}
             </div>
 

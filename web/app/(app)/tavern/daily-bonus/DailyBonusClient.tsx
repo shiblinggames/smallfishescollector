@@ -105,7 +105,7 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none' }}>← Tavern</Link>
         {isPremium && (
-          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: GOLD, background: `${GOLD}16`, border: `1px solid ${GOLD}44`, borderRadius: 999, padding: '0.2rem 0.5rem' }}>Member</span>
+          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: GOLD, background: `${GOLD}16`, border: `1px solid ${GOLD}44`, borderRadius: 999, padding: '0.2rem 0.5rem' }}>Captain</span>
         )}
       </div>
       <h1 className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: '#f5f0e6', textAlign: 'center', marginBottom: 2 }}>Daily Haul</h1>
@@ -116,14 +116,14 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <ClaimCard
           accent={GEM} eyebrow="Daily Gems" title={`+${gemAmount} ◆`}
-          sub={isPremium ? 'Your member gem stipend, every day.' : 'Members earn 150 a day.'}
+          sub={isPremium ? 'Your Captain gem stipend, every day.' : 'Captains earn 150 a day.'}
           claimed={gemsClaimed} claimedSub="Back tomorrow." loading={loading === 'gems'} onClaim={claimGems}
           glyph={<span className="font-cinzel font-800" style={{ fontSize: '2rem', color: GEM, lineHeight: 1 }}>◆</span>}
         />
 
         <ClaimCard
           accent={BAIT} eyebrow="Daily Bait" title={`+20 ${baitName}`}
-          sub={isPremium ? 'Premium chum to draw the big ones.' : 'Members get chum instead.'}
+          sub={isPremium ? 'Premium chum to draw the big ones.' : 'Captains get chum instead.'}
           claimed={baitClaimed} claimedSub="Back tomorrow." loading={loading === 'bait'} onClaim={claimBait}
           img={baitImg}
         />
@@ -137,7 +137,7 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
 
       {!isPremium && (
         <button type="button" onClick={openMembership} className="font-karla" style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 18, fontSize: '0.74rem', color: GOLD, background: 'none', border: 'none', cursor: 'pointer' }}>
-          Become a Member for 150 gems, chum, and a gold crate →
+          Become a Captain for 150 gems, chum, and a gold crate →
         </button>
       )}
 
@@ -299,7 +299,7 @@ function CrateCard({ isPremium, crateName, crateClosed, crateOpen, phase, strip,
           <div style={{ flex: 1, minWidth: 0 }}>
             <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: dim ? '#8a8884' : '#f5ecd6', lineHeight: 1.1 }}>{crateName}</p>
             <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a89e86', lineHeight: 1.45, marginTop: 3 }}>
-              {isPremium ? 'A free gold crate every week, full loot inside.' : 'A free crate weekly. Members open a gold one.'}
+              {isPremium ? 'A free gold crate every week, full loot inside.' : 'A free crate weekly. Captains open a gold one.'}
             </p>
           </div>
         </div>

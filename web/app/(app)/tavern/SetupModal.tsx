@@ -8,6 +8,7 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { AVATAR_PALETTE, NONE_VALUE } from '@/lib/avatarColors'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import WelcomeModal from './WelcomeModal'
+import { openMembership } from '@/components/MembershipModal'
 
 type Step = 'username' | 'color' | 'avatar'
 
@@ -427,15 +428,14 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                   {avatarLockMsg}
                 </p>
               ) : !isPremium ? (
-                <a
-                  href="https://shiblingshop.com/products/small-fishes-premium-membership"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={openMembership}
                   className="font-karla font-600"
-                  style={{ fontSize: '0.66rem', color: '#f0c040', textDecoration: 'none', letterSpacing: '0.03em' }}
+                  style={{ fontSize: '0.66rem', color: '#f0c040', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.03em' }}
                 >
-                  ✦ Unlock more with Premium membership →
-                </a>
+                  ✦ Unlock more as a Captain →
+                </button>
               ) : null}
             </div>
 

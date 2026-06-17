@@ -172,7 +172,7 @@ export async function updateAvatarColors(input: {
       .single()
 
     if (needsPremiumCheck && !isPremiumActive(profile)) {
-      return { error: 'That color requires Premium membership.' }
+      return { error: 'That color is Captain-only.' }
     }
     if (needsOwnedCheck) {
       const owned = (profile?.unlocked_avatar_specials as string[] | null) ?? []
@@ -238,7 +238,7 @@ export async function purchaseAvatarSpecial(specialId: string): Promise<
     .single()
   if (!profile) return { error: 'Profile not found' }
 
-  if (!isPremiumActive(profile)) return { error: 'Premium membership required' }
+  if (!isPremiumActive(profile)) return { error: 'Captain-only — become a Captain first' }
 
   const owned = (profile.unlocked_avatar_specials as string[] | null) ?? []
   if (owned.includes(specialId)) return { error: 'Already owned' }

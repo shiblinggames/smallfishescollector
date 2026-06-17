@@ -180,7 +180,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
       >
         <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#b8b2a4' }}>Spin the Capstan</p>
         <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6f6b66', lineHeight: 1.45, marginTop: 4 }}>
-          Spin for stakes, call your letters, solve the phrase. A members-only game.
+          Spin for stakes, call your letters, solve the phrase. A Captain-only game.
         </p>
         <span
           className="font-karla font-700 uppercase"
@@ -194,7 +194,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
           }}
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-          Members · Soon
+          Captains · Soon
         </span>
       </div>
 

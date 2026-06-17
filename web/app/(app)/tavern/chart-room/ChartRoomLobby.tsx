@@ -68,7 +68,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
             {!isMember && (
               <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.46rem', color: GOLD, background: `${GOLD}16`, border: `1px solid ${GOLD}44`, borderRadius: 999, padding: '0.14rem 0.4rem' }}>
                 <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.8" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                Member perk
+                Captain perk
               </span>
             )}
           </div>
@@ -95,7 +95,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
                   {t.cap / 1000}k
                 </div>
                 <div className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.06em', marginTop: 2, color: peak ? GOLD : reached ? '#7bbf7b' : '#8f8676' }}>
-                  {lit ? 'Now' : peak ? (isMember ? 'Now' : 'Member') : reached ? '✓' : `${t.points} pt`}
+                  {lit ? 'Now' : peak ? (isMember ? 'Now' : 'Captain') : reached ? '✓' : `${t.points} pt`}
                 </div>
               </div>
             )
@@ -109,7 +109,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
           <p className="font-karla" style={{ fontSize: '0.64rem', color: '#a89e86', textAlign: 'center', marginTop: 8, lineHeight: 1.45 }}>
             You sit at a flat <span className="font-700" style={{ color: '#d8cfb6' }}>{DEN_CAP_NONMEMBER.toLocaleString()} ⟡</span>/day. Your {puzzlePoints} points are banked —{' '}
             <button type="button" onClick={openMembership} className="font-700" style={{ color: GOLD, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-              become a member
+              become a Captain
             </button>{' '}
             and your purse jumps to <span className="font-700" style={{ color: GOLD }}>{memberUnlockCap / 1000}k</span> instantly.
           </p>
