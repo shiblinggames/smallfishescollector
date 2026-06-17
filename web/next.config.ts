@@ -10,11 +10,15 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  // unsafe-eval required by Next.js dev; tighten in future
+      // Stripe.js + embedded Checkout load from js.stripe.com and
+      // checkout.stripe.com — without these the embedded card form is blocked
+      // and renders blank. (Hosted Checkout still works since it's a redirect.)
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com",  // unsafe-eval required by Next.js dev; tighten in future
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.supabase.co",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.stripe.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://checkout.stripe.com",
+      "frame-src https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
       "frame-ancestors 'none'",
     ].join('; '),
   },

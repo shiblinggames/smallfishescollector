@@ -185,7 +185,7 @@ export default function MembershipModal() {
             <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a89e86', lineHeight: 1.5, margin: '8px 0 12px' }}>
               <span className="font-cinzel font-800" style={{ color: GOLD }}>$9.99</span> once, yours for life. Every Captain perk, unlocked.
             </p>
-            <div style={{ borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ borderRadius: 12, overflow: 'hidden', minHeight: 240 }}>
               <CheckoutBoundary onError={() => setEmbeddedFailed(true)}>
                 <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret, onComplete }}>
                   <EmbeddedCheckout />
