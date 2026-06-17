@@ -36,9 +36,7 @@ export default function BecomeCaptainButton({
         ...style,
       }}
     >
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden style={{ flexShrink: 0 }}>
-        <path d="M3 18.2 1.5 7.6l5 3.5L12 4.4l5.5 6.7 5-3.5L21 18.2H3Zm0 1.6h18v1.8H3v-1.8Z" />
-      </svg>
+      <img src="/fish/great-white-shark.png" alt="" aria-hidden draggable={false} style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' }} />
       <span>{label}</span>
     </motion.button>
   )

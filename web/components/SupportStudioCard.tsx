@@ -36,16 +36,15 @@ export default function SupportStudioCard({ isPremium }: { isPremium: boolean })
         boxShadow: `0 6px 20px rgba(0,0,0,0.4), 0 0 22px ${GOLD}14, inset 0 1px 0 rgba(255,255,255,0.05)`,
       }}
     >
-      {/* Crown badge */}
+      {/* Captain crew portrait — the great white */}
       <div style={{
-        flexShrink: 0, width: 44, height: 44, borderRadius: 12,
+        flexShrink: 0, width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(180deg, #ffe08a 0%, #f3c651 46%, #e0a52a 100%)',
-        boxShadow: `0 3px 10px ${GOLD}55, inset 0 1px 0 rgba(255,255,255,0.6)`,
+        background: 'radial-gradient(circle at 50% 32%, #1f4360 0%, #0b1923 100%)',
+        border: `1.5px solid ${GOLD}aa`,
+        boxShadow: `0 3px 11px rgba(0,0,0,0.5), 0 0 12px ${GOLD}22, inset 0 0 10px rgba(0,0,0,0.4)`,
       }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="#3a2606" aria-hidden>
-          <path d="M3 18.2 1.5 7.6l5 3.5L12 4.4l5.5 6.7 5-3.5L21 18.2H3Zm0 1.6h18v1.8H3v-1.8Z" />
-        </svg>
+        <img src="/fish/great-white-shark.png" alt="" aria-hidden draggable={false} style={{ width: '90%', height: '90%', objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
       </div>
 
       {/* Copy */}
