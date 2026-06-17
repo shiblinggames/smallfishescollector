@@ -3,19 +3,19 @@
 // Global membership ("Captain") purchase popup. Mounted once in the app shell;
 // every "Become a Captain" CTA dispatches a window `open-membership` event.
 //
-// Payment UX, in priority order:
-//   1. EMBEDDED — Stripe's card form rendered right inside this popup, no
-//      leaving the app. The seamless path.
-//   2. HOSTED FALLBACK — if the publishable key is missing, or embedded errors
-//      / crashes / the buyer taps "having trouble", we hand off to Stripe's own
-//      hosted page (window.location). This path always works, so the popup can
-//      never dead-end on a blank embedded frame.
+// Two-step flow:
+//   STEP 1 "intro" — show ALL the Captain perks + a clear $9.99 CTA, so people
+//     see what they get before any payment UI.
+//   STEP 2 "pay" — tapping the CTA reveals Stripe's EMBEDDED card form right
+//     inside the same modal (no leaving the app). If embedded can't be used
+//     (no publishable key, a soft error, or a render crash) we seamlessly hand
+//     off to Stripe's HOSTED page instead, so it can never dead-end.
 //
 // Fulfillment is ALWAYS the webhook (it flips is_premium); we never trust the
 // client. Embedded completion polls checkMembership inline; the hosted path
 // returns via /marketplace?membership=success which we detect below.
 
-import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
@@ -52,45 +52,21 @@ const PERKS = [
 export default function MembershipModal() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [step, setStep] = useState<'intro' | 'pay'>('intro')
   const [paid, setPaid] = useState(false)
   const [error, setError] = useState<string | null>(null)        // hard errors only (already a Captain, not signed in)
-  const [hostedLoading, setHostedLoading] = useState(false)
+  const [loading, setLoading] = useState(false)                  // creating a session / opening checkout
   const [clientSecret, setClientSecret] = useState<string | null>(null)
-  const [embeddedFailed, setEmbeddedFailed] = useState(false)    // → silently use hosted instead
-  const aliveRef = useRef(true)
 
-  // Open from any CTA → reset + try to spin up an embedded session.
+  // Open from any CTA → reset to the perks step.
   useEffect(() => {
     const onOpen = () => {
-      setPaid(false); setError(null); setHostedLoading(false)
-      setClientSecret(null); setEmbeddedFailed(false)
+      setStep('intro'); setPaid(false); setError(null); setLoading(false); setClientSecret(null)
       setOpen(true)
     }
     window.addEventListener('open-membership', onOpen)
     return () => window.removeEventListener('open-membership', onOpen)
   }, [])
-
-  // Fetch the embedded client secret each time we open (only if we have a
-  // publishable key — otherwise we go straight to the hosted button).
-  useEffect(() => {
-    if (!open || !stripePromise) return
-    aliveRef.current = true
-    // Watchdog: if creating the session hangs, drop to hosted.
-    const watchdog = window.setTimeout(() => { if (aliveRef.current) setEmbeddedFailed(true) }, 9000)
-    createEmbeddedCheckout().then(r => {
-      window.clearTimeout(watchdog)
-      if (!aliveRef.current) return
-      if ('error' in r) {
-        // Hard errors (already a Captain / not signed in) get shown; anything
-        // else is a config/Stripe hiccup → quietly fall back to hosted.
-        if (/already a Captain|sign in/i.test(r.error)) setError(r.error)
-        else setEmbeddedFailed(true)
-      } else {
-        setClientSecret(r.clientSecret)
-      }
-    }).catch(() => { window.clearTimeout(watchdog); if (aliveRef.current) setEmbeddedFailed(true) })
-    return () => { aliveRef.current = false; window.clearTimeout(watchdog) }
-  }, [open])
 
   // Detect the return from a HOSTED checkout (success_url ?membership=success).
   useEffect(() => {
@@ -125,27 +101,41 @@ export default function MembershipModal() {
     poll()
   }
 
-  // Embedded payment succeeded without leaving the app.
-  const onComplete = useCallback(() => { setPaid(true); pollMembership() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Hand off to Stripe's hosted page (fallback / no-key path).
-  const startHosted = useCallback(async () => {
-    setHostedLoading(true); setError(null)
+  // Redirect to Stripe's hosted page (fallback whenever embedded can't run).
+  const goHosted = useCallback(async () => {
+    setLoading(true); setError(null)
     try {
       const r = await createHostedCheckout()
-      if ('error' in r) { setError(r.error); setHostedLoading(false); return }
+      if ('error' in r) { setError(r.error); setLoading(false); return }
       window.location.href = r.url
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not start checkout.'); setHostedLoading(false)
+      setError(e instanceof Error ? e.message : 'Could not start checkout.'); setLoading(false)
     }
   }, [])
+
+  // CTA from the perks step. Try embedded first (reveal the card form inline);
+  // on no-key / soft error, seamlessly fall back to the hosted redirect.
+  const startCheckout = useCallback(async () => {
+    setError(null); setLoading(true)
+    if (stripePromise) {
+      try {
+        const r = await createEmbeddedCheckout()
+        if (!('error' in r)) { setClientSecret(r.clientSecret); setStep('pay'); setLoading(false); return }
+        // Hard errors get shown; anything else falls through to hosted.
+        if (/already a Captain|sign in/i.test(r.error)) { setError(r.error); setLoading(false); return }
+      } catch { /* fall through to hosted */ }
+    }
+    await goHosted()
+  }, [goHosted])
+
+  // Embedded payment succeeded without leaving the app.
+  const onComplete = useCallback(() => { setPaid(true); pollMembership() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function close() { setOpen(false); router.refresh() }
 
   if (!open) return null
 
-  const showEmbedded = !!stripePromise && !!clientSecret && !embeddedFailed
-  const embeddedLoading = !!stripePromise && !embeddedFailed && !clientSecret && !error
+  const showEmbedded = step === 'pay' && !!stripePromise && !!clientSecret
 
   return (
     <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,4,8,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
@@ -156,10 +146,19 @@ export default function MembershipModal() {
         borderRadius: 18, padding: '1.15rem 1.1rem 1.25rem',
         boxShadow: `0 18px 60px rgba(0,0,0,0.6), 0 0 40px ${GOLD}12`,
       }}>
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 2 }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>Captain&apos;s Commission</p>
-            <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f5ecd6', lineHeight: 1.1 }}>Become a Captain</h2>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            {/* Back to perks from the pay step */}
+            {showEmbedded && !paid && (
+              <button onClick={() => { setStep('intro'); setClientSecret(null) }} aria-label="Back" style={{ marginTop: 2, flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#b2aca3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+            )}
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>Captain&apos;s Commission</p>
+              <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f5ecd6', lineHeight: 1.1 }}>Become a Captain</h2>
+            </div>
           </div>
           <button onClick={close} aria-label="Close" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#b2aca3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -181,30 +180,24 @@ export default function MembershipModal() {
             <button onClick={close} className="font-karla font-700 uppercase tracking-[0.08em]" style={{ marginTop: 14, padding: '0.6rem 1.4rem', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfc9bf', fontSize: '0.72rem', cursor: 'pointer' }}>Close</button>
           </div>
         ) : showEmbedded ? (
+          /* STEP 2 — embedded card form, in-app. */
           <>
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a89e86', lineHeight: 1.5, margin: '8px 0 12px' }}>
-              <span className="font-cinzel font-800" style={{ color: GOLD }}>$9.99</span> once, yours for life. Every Captain perk, unlocked.
-            </p>
-            <div style={{ borderRadius: 12, overflow: 'hidden', minHeight: 240 }}>
-              <CheckoutBoundary onError={() => setEmbeddedFailed(true)}>
+            <div style={{ borderRadius: 12, overflow: 'hidden', minHeight: 240, marginTop: 10 }}>
+              <CheckoutBoundary onError={goHosted}>
                 <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret, onComplete }}>
                   <EmbeddedCheckout />
                 </EmbeddedCheckoutProvider>
               </CheckoutBoundary>
             </div>
-            <button type="button" onClick={startHosted} disabled={hostedLoading} className="font-karla" style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 10, fontSize: '0.66rem', color: '#8a857c', background: 'none', border: 'none', cursor: 'pointer' }}>
-              {hostedLoading ? 'Opening…' : 'Trouble loading? Pay on Stripe’s secure page →'}
+            <button type="button" onClick={goHosted} disabled={loading} className="font-karla" style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 10, fontSize: '0.66rem', color: '#8a857c', background: 'none', border: 'none', cursor: 'pointer' }}>
+              {loading ? 'Opening…' : 'Trouble loading? Pay on Stripe’s secure page →'}
             </button>
           </>
-        ) : embeddedLoading ? (
-          <div style={{ textAlign: 'center', padding: '2.4rem 0.5rem' }}>
-            <p className="font-karla" style={{ fontSize: '0.8rem', color: '#8a857c' }}>Loading secure checkout…</p>
-          </div>
         ) : (
-          /* Hosted path — no publishable key, or embedded fell back. */
+          /* STEP 1 — the perks, then the CTA. */
           <>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b3a98f', lineHeight: 1.5, margin: '8px 0 14px' }}>
-              Every perk below, yours for life.
+              Everything below, yours for life — for less than a sandwich.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
               {PERKS.map(([perk, sub]) => (
@@ -218,18 +211,20 @@ export default function MembershipModal() {
               ))}
             </div>
             <button
-              onClick={startHosted}
-              disabled={hostedLoading}
+              onClick={startCheckout}
+              disabled={loading}
               className="font-cinzel font-700"
               style={{
                 width: '100%', padding: '0.9rem 1rem', borderRadius: 12,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                background: hostedLoading ? 'rgba(240,192,64,0.18)' : `${GOLD}28`,
-                border: `1px solid ${GOLD}77`, color: GOLD,
-                cursor: hostedLoading ? 'default' : 'pointer', opacity: hostedLoading ? 0.7 : 1,
+                background: loading ? 'rgba(240,192,64,0.18)' : 'linear-gradient(180deg, #ffe08a 0%, #f3c651 46%, #e0a52a 100%)',
+                border: loading ? `1px solid ${GOLD}77` : '1px solid #ffe9ab',
+                color: loading ? GOLD : '#3a2606',
+                cursor: loading ? 'default' : 'pointer',
+                boxShadow: loading ? 'none' : '0 5px 16px rgba(240,192,64,0.34), inset 0 1px 0 rgba(255,255,255,0.55)',
               }}
             >
-              {hostedLoading ? (
+              {loading ? (
                 <span className="uppercase tracking-[0.08em]" style={{ fontSize: '0.82rem' }}>Opening checkout…</span>
               ) : (
                 <>
