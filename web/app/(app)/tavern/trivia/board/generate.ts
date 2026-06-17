@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { anthropic } from '@/lib/anthropic'
-import { TRIVIA_CATEGORY_KEYS, TRIVIA_TIERS, type TriviaCategoryKey } from '../constants'
+import { TRIVIA_CATEGORY_KEYS, TRIVIA_TIERS, kingWeekStr, type TriviaCategoryKey } from '../constants'
 import { findTriviaIssues, TRIVIA_GEN_MODEL, type TriviaIssue } from '@/lib/triviaVerify'
 
 // The Captain's Board generator — twelve fresh questions a night
@@ -81,25 +81,27 @@ function isValidTile(t: GeneratedTile): boolean {
   return true
 }
 
-export async function getTodaysBoard(): Promise<GeneratedTile[] | null> {
+export async function getThisWeeksBoard(): Promise<GeneratedTile[] | null> {
   const admin = createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
+  // Weekly board, keyed by the Monday week-start (same key the Pirate King
+  // ladder uses). Tue–Sun this is a cache hit; Monday rolls a fresh board.
+  const week = kingWeekStr()
 
   const { data: cached } = await admin
     .from('trivia_boards')
     .select('board')
-    .eq('date', today)
+    .eq('date', week)
     .single()
 
   if (cached) return cached.board as GeneratedTile[]
 
   try {
-    // Last few boards' question texts feed the avoid-list so the
-    // board doesn't circle the same favorite facts every week.
+    // Last few weeks' boards feed the avoid-list so the board doesn't
+    // circle the same favorite facts week to week.
     const { data: recentRows } = await admin
       .from('trivia_boards')
       .select('board')
-      .lt('date', today)
+      .lt('date', week)
       .order('date', { ascending: false })
       .limit(5)
     const recentQuestions = (recentRows ?? [])
@@ -133,7 +135,7 @@ export async function getTodaysBoard(): Promise<GeneratedTile[] | null> {
 
       const issues = await findTriviaIssues(board)
       if (issues.length === 0) {
-        await admin.from('trivia_boards').insert({ date: today, board })
+        await admin.from('trivia_boards').insert({ date: week, board })
         return board
       }
       console.warn(`[captains-board] attempt ${attempt} failed fact-check (${issues.length} issue(s)); regenerating`, issues.map(i => i.problem))
@@ -146,7 +148,7 @@ export async function getTodaysBoard(): Promise<GeneratedTile[] | null> {
     const { data: fallback } = await admin
       .from('trivia_boards')
       .select('board')
-      .lt('date', today)
+      .lt('date', week)
       .order('date', { ascending: false })
       .limit(1)
       .single()

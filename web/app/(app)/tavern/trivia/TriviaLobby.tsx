@@ -17,11 +17,11 @@ export interface KingChip {
   doubloonsAwarded: number
 }
 
-export default function TriviaLobby({ doubloons, boardLocked, answeredToday, doubloonsToday, king }: {
+export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedThisWeek, doubloonsThisWeek, king }: {
   doubloons: number
-  boardLocked: boolean
-  answeredToday: number
-  doubloonsToday: number
+  boardPlayedToday: boolean
+  boardPlayedThisWeek: number
+  doubloonsThisWeek: number
   king: KingChip | null
 }) {
   const kingChipText = king === null ? null
@@ -50,7 +50,7 @@ export default function TriviaLobby({ doubloons, boardLocked, answeredToday, dou
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        Sharp wits earn doubloons here. New questions every night.
+        Sharp wits earn doubloons here. Fresh boards every Monday.
       </p>
 
       {/* The Captain's Board — live */}
@@ -91,22 +91,22 @@ export default function TriviaLobby({ doubloons, boardLocked, answeredToday, dou
             )
           })}
         </div>
-        {/* Today's progress chip */}
-        {boardLocked && (
-          <span
-            className="font-karla font-700"
-            style={{
-              position: 'absolute', top: 8, right: 10,
-              fontSize: '0.58rem', letterSpacing: '0.04em',
-              color: doubloonsToday > 0 ? GOLD : '#9a9488',
-              background: 'rgba(10,8,24,0.7)',
-              border: '1px solid rgba(167,139,250,0.3)',
-              borderRadius: 999, padding: '0.2rem 0.55rem',
-            }}
-          >
-            {answeredToday >= 3 ? `Done · +${doubloonsToday} ⟡` : `${answeredToday}/3 clues`}
-          </span>
-        )}
+        {/* Daily-card chip — one card a day off the weekly board */}
+        <span
+          className="font-karla font-700"
+          style={{
+            position: 'absolute', top: 8, right: 10,
+            fontSize: '0.58rem', letterSpacing: '0.04em',
+            color: boardPlayedToday ? (doubloonsThisWeek > 0 ? GOLD : '#9a9488') : '#a78bfa',
+            background: 'rgba(10,8,24,0.7)',
+            border: '1px solid rgba(167,139,250,0.3)',
+            borderRadius: 999, padding: '0.2rem 0.55rem',
+          }}
+        >
+          {boardPlayedToday
+            ? (doubloonsThisWeek > 0 ? `Played · ${doubloonsThisWeek} ⟡ wk` : 'Played today')
+            : 'Card ready'}
+        </span>
       </ScenicCard>
 
       {/* Pirate King — live */}
@@ -197,7 +197,7 @@ export default function TriviaLobby({ doubloons, boardLocked, answeredToday, dou
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
-        The board is chalked fresh at midnight; the King&apos;s ladder is rigged each Monday. Winnings land instantly.
+        Both the board and the King&apos;s ladder are rigged fresh each Monday. Play one board card a day; winnings land instantly.
       </p>
     </div>
   )

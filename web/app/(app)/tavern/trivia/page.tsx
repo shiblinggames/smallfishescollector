@@ -12,9 +12,10 @@ export default async function TriviaPage() {
   const admin = createAdminClient()
   const [profile, { data: attempt }, { data: kingAttempt }] = await Promise.all([
     getCurrentProfile(),
+    // Board is weekly now (keyed by the Monday week-start, like the ladder).
     admin.from('trivia_board_attempts')
-      .select('category, answers, doubloons_awarded')
-      .eq('user_id', user.id).eq('date', today)
+      .select('answers, doubloons_awarded')
+      .eq('user_id', user.id).eq('date', kingWeekStr())
       .single(),
     admin.from('trivia_ladder_attempts')
       .select('rung, status, doubloons_awarded')
@@ -22,7 +23,9 @@ export default async function TriviaPage() {
       .single(),
   ])
 
-  const answeredToday = attempt ? Object.keys((attempt.answers as object) ?? {}).length : 0
+  const boardAnswers = (attempt?.answers as Record<string, { day?: string; chosen?: number }> | null) ?? {}
+  const boardPlayedToday = Object.values(boardAnswers).some(a => a.day === today)
+  const boardPlayedThisWeek = Object.values(boardAnswers).filter(a => a.chosen !== undefined).length
   const king: KingChip | null = kingAttempt
     ? {
         status: kingAttempt.status as PirateKingStatus,
@@ -36,9 +39,9 @@ export default async function TriviaPage() {
       <div className="px-4 pt-6 pb-12">
         <TriviaLobby
           doubloons={profile?.doubloons ?? 0}
-          boardLocked={!!attempt?.category}
-          answeredToday={answeredToday}
-          doubloonsToday={attempt?.doubloons_awarded ?? 0}
+          boardPlayedToday={boardPlayedToday}
+          boardPlayedThisWeek={boardPlayedThisWeek}
+          doubloonsThisWeek={attempt?.doubloons_awarded ?? 0}
           king={king}
         />
       </div>
