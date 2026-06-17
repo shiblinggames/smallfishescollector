@@ -37,7 +37,7 @@ export async function createMembershipCheckout(): Promise<{ url: string } | { er
           unit_amount: MEMBERSHIP_PRICE_CENTS,
           product_data: {
             name: MEMBERSHIP_PRODUCT_NAME,
-            description: 'Lifetime Captaincy — cosmetic perks + small daily boosts. Never pay-to-win.',
+            description: 'Lifetime membership. More daily gems, premium bait, a weekly gold crate, and Captain-only games.',
           },
         },
       }],

@@ -112,7 +112,7 @@ export default function MembershipModal() {
         ) : (
           <>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b3a98f', lineHeight: 1.5, margin: '8px 0 14px' }}>
-              Every perk below, for life. Cosmetic and convenience only &mdash; never pay-to-win.
+              Every perk below, yours for life.
             </p>
 
             {/* Perk list */}
