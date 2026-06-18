@@ -46,6 +46,7 @@ import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import PopupShell from '@/components/PopupShell'
+import SpinReel from '@/components/SpinReel'
 import { finishSession, type ActiveSession } from '@/app/(app)/social/challengeActions'
 import { equipRod, purchaseRod, sellRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
@@ -6323,16 +6324,19 @@ export default function FishingGame({
                             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%)',
                           }}
                         >
-                          <motion.div
-                            style={{ display: 'flex', width: crateStrip.length * CRATE_TILE_W, height: CRATE_TILE_H }}
-                            initial={{ x: 0 }}
-                            animate={{ x: -((crateStrip.length - 1) * CRATE_TILE_W) }}
-                            transition={{ duration: CRATE_SPIN_DURATION_MS / 1000, ease: [0.15, 0.8, 0.3, 1] }}
-                          >
-                            {crateStrip.map((tile, i) => (
-                              <CrateSlotTile key={i} tile={tile} />
-                            ))}
-                          </motion.div>
+                          {/* Scrolling reel (blur past → ease onto reward), same
+                              feel as Fish Slots. Reward is the strip's last tile. */}
+                          <SpinReel
+                            items={crateStrip}
+                            landedIndex={crateStrip.length - 1}
+                            orientation="horizontal"
+                            tileMain={CRATE_TILE_W}
+                            tileCross={CRATE_TILE_H}
+                            spinMs={1450}
+                            landMs={760}
+                            blurPx={3}
+                            renderItem={(tile) => <CrateSlotTile tile={tile} />}
+                          />
                         </div>
                       )}
 

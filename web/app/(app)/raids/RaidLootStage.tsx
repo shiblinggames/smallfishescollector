@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
+import SpinReel from '@/components/SpinReel'
 
 interface Props {
   /** The boss that was just defeated — used for kill narration only. */
@@ -61,7 +62,6 @@ export default function RaidLootStage(props: Props) {
 
   const [phase, setPhase]               = useState<Phase>('pending')
   const [logLines, setLogLines]         = useState<string[]>([])
-  const [slotDisplay, setSlotDisplay]   = useState(0)
   // Track if we've already pushed kill narration. Strict-mode double-mount
   // would otherwise double the lines.
   const mountedRef = useRef(false)
@@ -97,52 +97,8 @@ export default function RaidLootStage(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boss.name, killGold, killXP])
 
-  // ─── Slot machine tick ─────────────────────────────────────────────────────
-  // Build a fixed sequence of displayed indices BEFORE we start ticking,
-  // so the deceleration naturally walks INTO slotFinal instead of
-  // hard-snapping to it on the last tick.
-  //
-  // The intervals below decelerate: 60ms (fast) → 110 → 200 → 320 (slow).
-  // The last 5 ticks land in the slow region — meaning those are the
-  // entries the player can actually read. We plan them so they read as
-  // a wheel slowing through neighbors and stopping on the reward:
-  //   tick T-4: slotFinal - 4
-  //   tick T-3: slotFinal - 3
-  //   tick T-2: slotFinal - 2
-  //   tick T-1: slotFinal - 1
-  //   tick T  : slotFinal           ← settle
-  // Earlier ticks (fast region) just spin through random indices for
-  // flavor — too fast to read, so randomness doesn't matter there.
-  useEffect(() => {
-    if (phase !== 'spinning') return
-    let cancelled = false
-    const total = 22
-    const mod = (n: number) => ((n % loot.length) + loot.length) % loot.length
-
-    const sequence: number[] = []
-    for (let s = 0; s < total - 5; s++) {
-      sequence.push(Math.floor(Math.random() * loot.length))
-    }
-    // Last 5 entries lead INTO slotFinal — predecessors of the final
-    // index (mod len), ending exactly on slotFinal.
-    for (let off = 4; off >= 0; off--) sequence.push(mod(slotFinal - off))
-
-    let i = 0
-    const tick = () => {
-      if (cancelled) return
-      i++
-      setSlotDisplay(sequence[i - 1])
-      if (i >= total) {
-        setPhase('landed')
-        return
-      }
-      const remaining = total - i
-      const interval = remaining > 12 ? 60 : remaining > 6 ? 110 : remaining > 2 ? 200 : 320
-      setTimeout(tick, interval)
-    }
-    setTimeout(tick, 60)
-    return () => { cancelled = true }
-  }, [phase, slotFinal, loot.length])
+  // The reel spin + deceleration is owned by <SpinReel> (see render); it calls
+  // onSettle → setPhase('landed') when it lands on slotFinal.
 
   // ─── After slot lands: visual hold, then narrate loot, then reveal ─────────
   useEffect(() => {
@@ -168,10 +124,30 @@ export default function RaidLootStage(props: Props) {
     if (el) el.scrollTop = el.scrollHeight
   }, [logLines])
 
-  const slotItem = loot[slotDisplay]
   const finalItem = loot[slotFinal]
   const landedColor = RARITY_COLOR[finalItem.rarity]
   const showLandedItem = phase === 'landed' || phase === 'revealed'
+
+  // One loot tile (image / skin preview / gem glyph) for the reel + the final
+  // reveal. Label is rendered separately below the reel so it only shows on land.
+  function lootNode(item: RaidLootItem) {
+    if (item.shipSkinId) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={getShipSkin(item.shipSkinId)?.imageByTier?.[4] ?? shipImageUrl} alt={item.label}
+          style={{ width: 78, height: 78, objectFit: 'contain', objectPosition: 'bottom', filter: getShipSkin(item.shipSkinId)?.filter ?? 'none' }} />
+      )
+    }
+    if (item.image) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={item.image} alt={item.label} style={{ width: 78, height: 78, objectFit: 'contain' }} />
+    }
+    return (
+      <span className={item.emoji === GEM_GLYPH ? 'font-cinzel font-700' : undefined} style={{ fontSize: '3rem', color: item.emoji === GEM_GLYPH ? GEM_COLOR : undefined }}>
+        {item.emoji}
+      </span>
+    )
+  }
 
 
   return (
@@ -283,56 +259,35 @@ export default function RaidLootStage(props: Props) {
                   transition: 'border-color 0.2s, background 0.2s',
                 }}
               >
-                {slotItem.shipSkinId ? (
-                  // imageByTier skins (Finndicate Hull) swap the sprite
-                  // outright — preview the BRIGANTINE variant as the
-                  // marketing shot so the player actually sees what they
-                  // won. Filter-based skins keep using the player's
-                  // current ship + tinted via CSS.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={getShipSkin(slotItem.shipSkinId)?.imageByTier?.[4] ?? shipImageUrl}
-                    alt={slotItem.label}
-                    style={{
-                      width: 80, height: 80, objectFit: 'contain', objectPosition: 'bottom',
-                      filter: !showLandedItem ? 'blur(1.5px) brightness(0.3)' : getShipSkin(slotItem.shipSkinId)?.filter ?? 'none',
-                      transition: 'filter 0.15s',
-                    }}
-                  />
-                ) : slotItem.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={slotItem.image}
-                    alt={slotItem.label}
-                    style={{
-                      width: 80, height: 80, objectFit: 'contain',
-                      filter: !showLandedItem ? 'blur(1.5px) brightness(0.6)' : 'none',
-                      transition: 'filter 0.15s',
-                    }}
-                  />
-                ) : (
-                  <span
-                    className={slotItem.emoji === GEM_GLYPH ? 'font-cinzel font-700' : undefined}
-                    style={{
-                      fontSize: '3rem',
-                      color: slotItem.emoji === GEM_GLYPH ? GEM_COLOR : undefined,
-                      filter: !showLandedItem ? 'blur(1.5px) brightness(0.6)' : 'none',
-                      transition: 'filter 0.15s',
-                    }}
-                  >
-                    {slotItem.emoji}
-                  </span>
-                )}
+                {/* Scrolling loot reel — same feel as Fish Slots: a strip of
+                    loot tiles blurs past, then eases onto the reward. Stays
+                    mounted through landed/revealed so it never flickers. */}
+                <SpinReel
+                  items={loot}
+                  landedIndex={slotFinal}
+                  orientation="vertical"
+                  tileMain={104}
+                  tileCross={118}
+                  spinMs={1700}
+                  landMs={760}
+                  blurPx={3}
+                  onSettle={() => setPhase('landed')}
+                  renderItem={(item) => (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {lootNode(item)}
+                    </div>
+                  )}
+                />
                 <p
                   className="font-karla font-700"
                   style={{
                     fontSize: '0.78rem',
                     color: showLandedItem ? landedColor : 'transparent',
-                    textAlign: 'center', lineHeight: 1.2,
+                    textAlign: 'center', lineHeight: 1.2, marginTop: 2,
                     transition: 'color 0.2s',
                   }}
                 >
-                  {slotItem.label}
+                  {finalItem.label}
                 </p>
               </motion.div>
               {/* eslint-disable-next-line @next/next/no-img-element */}

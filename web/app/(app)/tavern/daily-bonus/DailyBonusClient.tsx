@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions/dailyBonus'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
+import SpinReel from '@/components/SpinReel'
 
 const GEM = '#a78bfa'
 const BAIT = '#4ade80'
@@ -267,7 +268,8 @@ function CrateCard({ isPremium, crateName, crateClosed, crateOpen, phase, strip,
         <span className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#8a857c' }}>Resets Monday</span>
       </div>
 
-      {/* Rolling: slot strip that decelerates onto the reward */}
+      {/* Rolling: scrolling slot reel that blurs past then eases onto the
+          reward (same feel as Fish Slots). Reward is the strip's last tile. */}
       {rolling && strip ? (
         <div style={{
           margin: '6px auto 2px', width: TILE_W, height: TILE_H, overflow: 'hidden', borderRadius: 12,
@@ -275,14 +277,17 @@ function CrateCard({ isPremium, crateName, crateClosed, crateOpen, phase, strip,
           maskImage: 'linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%)',
           WebkitMaskImage: 'linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%)',
         }}>
-          <motion.div
-            style={{ display: 'flex', width: strip.length * TILE_W, height: TILE_H }}
-            initial={{ x: 0 }}
-            animate={{ x: -((strip.length - 1) * TILE_W) }}
-            transition={{ duration: SPIN_MS / 1000, ease: [0.15, 0.8, 0.3, 1] }}
-          >
-            {strip.map((t, i) => <SlotTile key={i} loot={t} />)}
-          </motion.div>
+          <SpinReel
+            items={strip}
+            landedIndex={strip.length - 1}
+            orientation="horizontal"
+            tileMain={TILE_W}
+            tileCross={TILE_H}
+            spinMs={1500}
+            landMs={760}
+            blurPx={2.5}
+            renderItem={(t) => <SlotTile loot={t} />}
+          />
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
