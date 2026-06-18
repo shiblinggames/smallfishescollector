@@ -115,23 +115,23 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
         background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
         border: '1px solid rgba(196,169,106,0.25)',
         borderRadius: 16,
-        padding: '1rem 1rem 0.9rem',
+        padding: '0.7rem 0.85rem 0.7rem',
         boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10 }}>
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Chips</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: GOLD, lineHeight: 1 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a68a4a' }}>Chips</p>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: GOLD, lineHeight: 1.05 }}>
               {animatedChips.toLocaleString()} ⟡
             </p>
           </div>
-          <div style={{ textAlign: 'center', minWidth: 88 }}>
+          <div style={{ textAlign: 'center', minWidth: 80 }}>
             {sessionBuyIns > 0 && (() => {
               const color = animatedTally === 0 ? '#8a8478' : animatedTally > 0 ? '#7fd49a' : '#e07070'
               return (
                 <>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a' }}>Session</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a68a4a' }}>Session</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color, lineHeight: 1.05 }}>
                     {animatedTally > 0 ? '+' : ''}{animatedTally.toLocaleString()} ⟡
                   </p>
                 </>
@@ -164,7 +164,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
         {sessionBuyIns > 0 && (
           <div style={{
             display: 'flex', justifyContent: 'center', gap: 14,
-            marginTop: 10, paddingTop: 10,
+            marginTop: 8, paddingTop: 8,
             borderTop: '1px solid rgba(255,255,255,0.06)',
           }}>
             {([['Blackjack', nets.blackjack], ['Roulette', nets.roulette], ['Slots', nets.slots]] as const)
@@ -184,13 +184,13 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
 
         {/* Buy-in — full panel when the purse is empty (first visit /
             after cash-out), collapsible top-up otherwise. */}
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 9 }}>
           {panelOpen ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a09988', lineHeight: 1.5, textAlign: 'center' }}>
-                {chips === 0 ? <>Trade doubloons for chips to sit at any table. Cash out any time.</> : <>Top up the purse. Chips work at every table.</>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a09988', lineHeight: 1.4, textAlign: 'center' }}>
+                {chips === 0 ? <>Buy chips to play any table — cash out any time.</> : <>Top up. Chips work at every table.</>}
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
                 {CASINO_BUY_IN_PRESETS.map(amt => {
                   const disabled = amt > buyInCap
                   const selected = buyInAmount === amt
@@ -202,11 +202,11 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
                       onClick={() => setBuyInAmount(amt)}
                       className="font-karla font-700"
                       style={{
-                        padding: '0.7rem 0', borderRadius: 10,
-                        background: selected ? 'rgba(240,192,64,0.12)' : 'rgba(4,10,20,0.5)',
+                        padding: '0.5rem 0', borderRadius: 9,
+                        background: selected ? 'rgba(240,192,64,0.14)' : 'rgba(4,10,20,0.5)',
                         border: `1px solid ${selected ? GOLD : 'rgba(255,255,255,0.12)'}`,
                         color: disabled ? '#3a3835' : selected ? GOLD : '#9a9488',
-                        fontSize: '0.85rem',
+                        fontSize: '0.8rem',
                         cursor: disabled || isPending ? 'not-allowed' : 'pointer',
                       }}
                     >
@@ -219,15 +219,15 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
                 type="button"
                 disabled={!canBuyIn}
                 onClick={doBuyIn}
-                whileTap={canBuyIn ? { y: 3, scale: 0.94 } : undefined}
+                whileTap={canBuyIn ? { y: 2, scale: 0.96 } : undefined}
                 transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 className="font-cinzel font-700 uppercase tracking-[0.1em]"
                 style={{
-                  padding: '0.9rem 0', borderRadius: 14,
+                  padding: '0.65rem 0', borderRadius: 11,
                   background: canBuyIn ? 'linear-gradient(180deg, rgba(240,192,64,0.35) 0%, rgba(196,169,106,0.18) 100%)' : 'rgba(255,255,255,0.05)',
                   border: `1px solid ${canBuyIn ? GOLD : 'rgba(255,255,255,0.1)'}`,
                   color: canBuyIn ? '#f0d695' : '#5a5550',
-                  fontSize: '0.9rem', letterSpacing: '0.08em',
+                  fontSize: '0.84rem', letterSpacing: '0.08em',
                   cursor: canBuyIn ? 'pointer' : 'not-allowed',
                 }}
               >
@@ -238,7 +238,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
                   type="button"
                   onClick={() => setShowBuyPanel(false)}
                   className="font-karla"
-                  style={{ background: 'none', border: 'none', color: '#7a7672', fontSize: '0.65rem', cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: '#7a7672', fontSize: '0.62rem', cursor: 'pointer', padding: 0 }}
                 >
                   Close
                 </button>
@@ -252,11 +252,11 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
               className="font-karla font-700 uppercase tracking-[0.1em]"
               style={{
                 width: '100%',
-                padding: '0.6rem 0', borderRadius: 10,
+                padding: '0.5rem 0', borderRadius: 9,
                 background: 'rgba(240,192,64,0.08)',
                 border: '1px solid rgba(240,192,64,0.35)',
                 color: buyInCap > 0 ? '#d4ba78' : '#5a5550',
-                fontSize: '0.65rem',
+                fontSize: '0.64rem',
                 cursor: buyInCap > 0 ? 'pointer' : 'not-allowed',
               }}
             >
@@ -266,25 +266,24 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
         </div>
 
         {/* Daily cap line */}
-        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a7470', marginTop: 10, textAlign: 'center', letterSpacing: '0.04em' }}>
+        <p className="font-karla" style={{ fontSize: '0.6rem', color: '#7a7470', marginTop: 8, textAlign: 'center', letterSpacing: '0.04em' }}>
           {dailyRemaining > 0
             ? `${dailyRemaining.toLocaleString()} ⟡ of today's ${dailyCap.toLocaleString()} ⟡ buy-in cap left`
             : 'Daily buy-in cap reached, back tomorrow'}
         </p>
 
-        {/* Non-member cap upsell — Captains jump from the flat 2k to 5k+ and
-            climb to 10k with charting points. */}
+        {/* Non-member cap upsell — compact: one line + the button. */}
         {!initial.isMember && (
-          <div style={{ marginTop: 11, paddingTop: 11, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a89e86', textAlign: 'center', lineHeight: 1.45 }}>
-              Need a bigger cap? Captains start at <span className="font-700" style={{ color: GOLD }}>{MEMBER_START_CAP.toLocaleString()} ⟡</span>/day and climb to <span className="font-700" style={{ color: GOLD }}>{MEMBER_MAX_CAP.toLocaleString()} ⟡</span>.
-            </p>
-            <BecomeCaptainButton style={{ padding: '0.55rem 1.05rem', fontSize: '0.8rem' }} />
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span className="font-karla" style={{ fontSize: '0.6rem', color: '#9a907c', textAlign: 'center' }}>
+              Captains play up to <span className="font-700" style={{ color: GOLD }}>{MEMBER_MAX_CAP.toLocaleString()} ⟡</span>/day
+            </span>
+            <BecomeCaptainButton style={{ padding: '0.4rem 0.85rem', fontSize: '0.72rem' }} />
           </div>
         )}
 
         {error && (
-          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center', marginTop: 8 }}>{error}</p>
+          <p className="font-karla" style={{ fontSize: '0.7rem', color: '#f08a8a', textAlign: 'center', marginTop: 8 }}>{error}</p>
         )}
       </div>
 
