@@ -761,6 +761,9 @@ export default function GearScreen({
     name: string; color: string; cost: number; onConfirm: () => void | Promise<void>
     details?: React.ReactNode
     kind?: 'buy' | 'sell'
+    /** When false, the dialog still shows the item's info but the CTA is a
+     *  disabled "Need X more" instead of a Buy button. Omitted = affordable. */
+    affordable?: boolean
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -1342,7 +1345,9 @@ export default function GearScreen({
                             {unownedRodDefs.map(r => {
                               const canAfford = doubloons >= r.cost
                               const onTap = () => {
-                                if (!canAfford) return
+                                // Open the detail view either way — players can read
+                                // a rod's stats before they can afford it; the dialog
+                                // just shows a disabled "Need X more" CTA.
                                 // Build "what changes vs my current rod" deltas. If two
                                 // rods are stat-identical (rare but possible across re-skins),
                                 // fall back to the new rod's full stat list so the modal
@@ -1350,7 +1355,7 @@ export default function GearScreen({
                                 const deltas = rodStatDeltas(rod, r)
                                 const fallbackLines = deltas.length === 0 ? rodStatLines(r) : null
                                 setPendingPurchase({
-                                  name: r.name, color: r.color, cost: r.cost,
+                                  name: r.name, color: r.color, cost: r.cost, affordable: canAfford,
                                   onConfirm: async () => { flashPurchase(r.name, r.color, r.cost, 'rod'); await onBuyRod(r.tier) },
                                   details: (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1416,7 +1421,6 @@ export default function GearScreen({
                                 <button
                                   key={r.tier}
                                   onClick={onTap}
-                                  disabled={!canAfford}
                                   className="font-karla"
                                   style={{
                                     position: 'relative',
@@ -1425,8 +1429,8 @@ export default function GearScreen({
                                     borderRadius: 12,
                                     background: 'rgba(4,10,18,0.72)',
                                     border: `1px solid ${canAfford ? r.color + '50' : 'rgba(255,255,255,0.09)'}`,
-                                    cursor: canAfford ? 'pointer' : 'default',
-                                    opacity: canAfford ? 1 : 0.78,
+                                    cursor: 'pointer',
+                                    opacity: canAfford ? 1 : 0.82,
                                     textAlign: 'left',
                                     width: '100%',
                                     overflow: 'hidden',
@@ -2467,6 +2471,8 @@ export default function GearScreen({
             >
               {(() => {
                 const isSell = pendingPurchase.kind === 'sell'
+                const unaffordable = !isSell && pendingPurchase.affordable === false
+                const need = Math.max(0, pendingPurchase.cost - doubloons)
                 const ctaBg     = isSell ? 'rgba(196,169,106,0.18)' : 'rgba(96,165,250,0.16)'
                 const ctaBorder = isSell ? 'rgba(196,169,106,0.6)'  : 'rgba(96,165,250,0.55)'
                 const ctaColor  = isSell ? '#f0d695'                : '#cfe2ff'
@@ -2504,8 +2510,9 @@ export default function GearScreen({
                       </button>
                       <button
                         type="button"
-                        disabled={confirming}
+                        disabled={confirming || unaffordable}
                         onClick={async () => {
+                          if (unaffordable) return
                           setConfirming(true)
                           await pendingPurchase.onConfirm()
                           setConfirming(false)
@@ -2514,15 +2521,15 @@ export default function GearScreen({
                         className="font-karla font-700 uppercase tracking-[0.08em]"
                         style={{
                           flex: 2, padding: '0.7rem 0',
-                          background: ctaBg,
-                          border: `1px solid ${ctaBorder}`,
-                          color: ctaColor,
+                          background: unaffordable ? 'rgba(255,255,255,0.04)' : ctaBg,
+                          border: `1px solid ${unaffordable ? 'rgba(255,255,255,0.12)' : ctaBorder}`,
+                          color: unaffordable ? '#f0c04099' : ctaColor,
                           borderRadius: 12, fontSize: '0.72rem',
-                          cursor: confirming ? 'default' : 'pointer',
+                          cursor: (confirming || unaffordable) ? 'default' : 'pointer',
                           opacity: confirming ? 0.65 : 1,
                         }}
                       >
-                        {confirming ? verbing : verbLabel}
+                        {unaffordable ? `Need ${need.toLocaleString()} ⟡ more` : (confirming ? verbing : verbLabel)}
                       </button>
                     </div>
                   </>
