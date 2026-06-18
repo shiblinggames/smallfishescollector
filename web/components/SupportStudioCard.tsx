@@ -61,12 +61,12 @@ export default function SupportStudioCard({ isPremium }: { isPremium: boolean })
       </div>
 
       {/* Join pill */}
-      <span className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{
+      <span className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{
         flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
-        padding: '0.5rem 0.9rem', borderRadius: 999,
-        background: 'linear-gradient(180deg, #ffe08a 0%, #f3c651 46%, #e0a52a 100%)',
-        border: '1px solid #ffe9ab', color: '#3a2606', fontSize: '0.72rem',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
+        padding: '0.5rem 0.9rem', borderRadius: 10,
+        background: 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(196,169,106,0.12) 100%)',
+        border: `1px solid ${GOLD}88`, color: '#f0d695', fontSize: '0.7rem',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
       }}>
         Join
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14M13 6l6 6-6 6" /></svg>

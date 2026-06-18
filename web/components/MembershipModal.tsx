@@ -213,23 +213,22 @@ export default function MembershipModal() {
             <button
               onClick={startCheckout}
               disabled={loading}
-              className="font-cinzel font-700"
+              className="font-cinzel font-700 uppercase tracking-[0.08em]"
               style={{
-                width: '100%', padding: '0.9rem 1rem', borderRadius: 12,
+                width: '100%', padding: '0.85rem 1rem', borderRadius: 12,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                background: loading ? 'rgba(240,192,64,0.18)' : 'linear-gradient(180deg, #ffe08a 0%, #f3c651 46%, #e0a52a 100%)',
-                border: loading ? `1px solid ${GOLD}77` : '1px solid #ffe9ab',
-                color: loading ? GOLD : '#3a2606',
-                cursor: loading ? 'default' : 'pointer',
-                boxShadow: loading ? 'none' : '0 5px 16px rgba(240,192,64,0.34), inset 0 1px 0 rgba(255,255,255,0.55)',
+                background: 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(196,169,106,0.12) 100%)',
+                border: `1px solid ${GOLD}88`, color: '#f0d695',
+                cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 14px rgba(0,0,0,0.35)',
               }}
             >
               {loading ? (
-                <span className="uppercase tracking-[0.08em]" style={{ fontSize: '0.82rem' }}>Opening checkout…</span>
+                <span style={{ fontSize: '0.82rem' }}>Opening checkout…</span>
               ) : (
                 <>
-                  <span className="uppercase tracking-[0.08em]" style={{ fontSize: '0.86rem' }}>Become a Captain</span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>$9.99</span>
+                  <span style={{ fontSize: '0.85rem' }}>Become a Captain</span>
+                  <span style={{ fontSize: '0.9rem', color: GOLD }}>$9.99</span>
                 </>
               )}
             </button>
