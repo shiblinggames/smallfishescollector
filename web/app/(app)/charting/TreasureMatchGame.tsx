@@ -263,16 +263,16 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           const isNext = !lit && nextScore === t.score
           return (
             <div key={t.points} style={{
-              textAlign: 'center', borderRadius: 9, padding: compact ? '0.28rem 0.1rem' : '0.34rem 0.1rem',
-              background: lit ? `linear-gradient(180deg, ${GOLD}33, ${GOLD}14)` : isNext ? 'rgba(196,169,106,0.10)' : 'rgba(255,255,255,0.03)',
-              border: `1.5px solid ${lit ? `${GOLD}aa` : isNext ? `${GOLD}55` : 'rgba(255,255,255,0.08)'}`,
+              textAlign: 'center', borderRadius: 9, padding: compact ? '0.3rem 0.1rem' : '0.38rem 0.1rem',
+              background: lit ? `linear-gradient(180deg, ${GOLD}3a, ${GOLD}1c)` : isNext ? 'rgba(60,48,22,0.85)' : 'rgba(14,11,6,0.82)',
+              border: `1.5px solid ${lit ? `${GOLD}c0` : isNext ? `${GOLD}66` : 'rgba(196,169,106,0.22)'}`,
               boxShadow: lit ? `0 0 10px ${GOLD}40` : 'none',
               transition: 'background 0.25s, border-color 0.25s, box-shadow 0.25s',
             }}>
-              <p className="font-cinzel font-700" style={{ fontSize: compact ? '0.72rem' : '0.82rem', lineHeight: 1, color: lit ? GOLD : isNext ? '#d8c89a' : '#6a6658' }}>
-                {t.points}<span style={{ fontSize: '0.6em', opacity: 0.7 }}>/5</span>
+              <p className="font-cinzel font-700" style={{ fontSize: compact ? '0.78rem' : '0.9rem', lineHeight: 1, color: lit ? GOLD : isNext ? '#e6d6a6' : '#9a9078' }}>
+                {t.points}<span style={{ fontSize: '0.6em', opacity: 0.75 }}>/5</span>
               </p>
-              <p className="font-karla" style={{ fontSize: '0.46rem', marginTop: 2, color: lit ? `${GOLD}cc` : '#7a7464', letterSpacing: '0.02em' }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.56rem', marginTop: 3, color: lit ? `${GOLD}dd` : isNext ? '#c2b288' : '#938a76', letterSpacing: '0.01em' }}>
                 {t.score.toLocaleString()}
               </p>
             </div>
@@ -291,28 +291,29 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
             ← Chart Room
           </Link>
         </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>Treasure Match</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>Treasure Match</p>
         <div style={{ flex: 1, minWidth: 0 }} />
       </div>
 
-      {/* Bold HUD — Moves + Score */}
+      {/* Bold HUD — Moves + Score. Solid dark panels so the readout stays
+          legible over the painted background. */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 8 }}>
-        <div style={{ padding: '0.5rem 0.7rem', borderRadius: 12, textAlign: 'center', background: lowMoves ? 'rgba(192,57,43,0.16)' : 'rgba(196,169,106,0.1)', border: `1.5px solid ${lowMoves ? '#c0392b' : 'rgba(196,169,106,0.3)'}` }}>
-          <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.56rem', color: lowMoves ? '#f0a0a0' : '#a89878' }}>Moves</p>
+        <div style={{ padding: '0.5rem 0.7rem', borderRadius: 12, textAlign: 'center', background: lowMoves ? 'linear-gradient(180deg, rgba(120,36,28,0.92), rgba(70,18,14,0.95))' : 'linear-gradient(180deg, rgba(40,32,16,0.94), rgba(17,13,7,0.96))', border: `1.5px solid ${lowMoves ? '#d6584a' : 'rgba(196,169,106,0.55)'}`, boxShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
+          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: lowMoves ? '#f4b6b6' : '#cdbf9e' }}>Moves</p>
           <motion.p key={`mv-${movesLeft}`} initial={{ scale: 1.3 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-            className="font-cinzel font-700" style={{ fontSize: '2rem', lineHeight: 1, color: lowMoves ? '#f08a8a' : '#f4ecd8' }}>{movesLeft}</motion.p>
+            className="font-cinzel font-700" style={{ fontSize: '2rem', lineHeight: 1, color: lowMoves ? '#ff9e9e' : '#fbf3df' }}>{movesLeft}</motion.p>
         </div>
-        <div style={{ padding: '0.5rem 0.8rem', borderRadius: 12, position: 'relative', background: 'rgba(196,169,106,0.1)', border: '1.5px solid rgba(196,169,106,0.3)' }}>
+        <div style={{ padding: '0.5rem 0.8rem', borderRadius: 12, position: 'relative', background: 'linear-gradient(180deg, rgba(40,32,16,0.94), rgba(17,13,7,0.96))', border: '1.5px solid rgba(196,169,106,0.55)', boxShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-            <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.56rem', color: '#a89878' }}>Score</span>
-            <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: liveTier > 0 ? GREEN : '#8f8672' }}>{liveTier}/5 earning</span>
+            <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: '#cdbf9e' }}>Score</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: liveTier > 0 ? GREEN : '#b1a886' }}>{liveTier}/5 earning</span>
           </div>
           <motion.p key={`sc-${scorePulse}`} animate={{ scale: [1, 1.12, 1] }} transition={{ duration: 0.4, times: [0, 0.35, 1] }}
             className="font-cinzel font-700" style={{ fontSize: '2rem', lineHeight: 1, color: liveTier > 0 ? GREEN : GOLD, transformOrigin: 'left center' }}>{score.toLocaleString()}</motion.p>
-          <div style={{ marginTop: 5, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+          <div style={{ marginTop: 5, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.5)', overflow: 'hidden' }}>
             <div style={{ width: `${Math.round(segProgress * 100)}%`, height: '100%', borderRadius: 3, background: nextT ? `linear-gradient(90deg,#c4a96a,${GOLD})` : `linear-gradient(90deg,#3fae78,${GREEN})`, transition: 'width 0.3s' }} />
           </div>
-          <p className="font-karla" style={{ fontSize: '0.5rem', marginTop: 2, color: '#8f8672', textAlign: 'right' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.56rem', marginTop: 3, color: '#b1a886', textAlign: 'right' }}>
             {nextT ? `${nextScore.toLocaleString()} → ${nextT.points}/5` : 'top tier reached'}
           </p>
           {/* score float */}
@@ -331,7 +332,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       {/* Tier ladder */}
       <TierLadder />
 
-      <p className="font-karla" style={{ fontSize: '0.64rem', color: '#bcb29a', lineHeight: 1.4, textAlign: 'center' }}>
+      <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d2c8ae', lineHeight: 1.45, textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
         Bigger haul = more charting points, up to {MATCH_MAX_POINTS}/5. Out of moves? Retry the same board for a better run.
       </p>
 
