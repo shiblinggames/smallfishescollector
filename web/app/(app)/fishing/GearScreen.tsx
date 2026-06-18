@@ -551,16 +551,17 @@ function AppearanceSlot({
       }}>
         <div style={{
           position: 'absolute',
-          // Centered vertically (top:50% + translateY(-50%)) instead
-          // of bottom-anchored, so the awkward empty space that used
-          // to sit above the composite is now split + reduced as
-          // breathing room on both sides. Width tuned so:
-          //   - line (image's ~18%) clips off the slot's left edge
-          //   - character body sits centered ~19-69% of slot
-          //   - pet bird right edge stays in-frame at ~95% of slot
-          //   - boat hull spans ~30-80% of slot
-          top: '50%', left: '-30%', width: '135%',
-          transform: 'translateY(-50%)',
+          // Centered vertically, then lifted a touch (translateY(-54%)) so the
+          // boat — which hangs off the BOTTOM of the character image (boat rest
+          // top ~77%) — stays fully in frame instead of clipping at the bottom.
+          // Width pulled in from 135%→118% so the whole character+boat stack
+          // fits the slot height. Left re-tuned to keep:
+          //   - the rod line clipped off the slot's left edge
+          //   - the character body centered (~24-68% of slot)
+          //   - the pet's right edge in-frame (~90%)
+          //   - the boat hull spanning ~33-77% of slot
+          top: '50%', left: '-19%', width: '118%',
+          transform: 'translateY(-54%)',
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={charSrc.rest} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} />
