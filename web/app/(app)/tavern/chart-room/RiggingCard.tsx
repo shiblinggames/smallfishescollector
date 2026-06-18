@@ -28,13 +28,20 @@ export default function RiggingCard({ status, reward, isMember }: { status: 'act
           { c: ROPES[2], d: 'M30,72 C30,40 70,30 98,30', a: [30, 72], b: [98, 30] },
         ].map((r, i) => (
           <g key={i}>
+            {/* dark rope edge */}
+            <path d={r.d} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={3.7} strokeLinecap="round" opacity={0.85} />
+            {/* rope body (breathes) */}
             <motion.path
-              d={r.d} fill="none" stroke={r.c} strokeWidth={3} strokeLinecap="round" opacity={0.8}
-              animate={isMember ? { opacity: [0.55, 0.9, 0.55] } : undefined}
+              d={r.d} fill="none" stroke={r.c} strokeWidth={3} strokeLinecap="round" opacity={0.85}
+              animate={isMember ? { opacity: [0.6, 0.95, 0.6] } : undefined}
               transition={{ duration: 4 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.5 }}
             />
-            <circle cx={r.a[0]} cy={r.a[1]} r={5} fill={r.c} />
-            <circle cx={r.b[0]} cy={r.b[1]} r={5} fill={r.c} />
+            {/* twisted-hemp bands + light strands */}
+            <path d={r.d} fill="none" stroke="rgba(0,0,0,0.32)" strokeWidth={3} strokeLinecap="butt" strokeDasharray="1.1 2.2" opacity={0.5} />
+            <path d={r.d} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={3} strokeLinecap="butt" strokeDasharray="0.55 2.75" strokeDashoffset={1.6} opacity={0.5} />
+            <path d={r.d} fill="none" stroke="#ffffff" strokeWidth={0.7} strokeLinecap="round" opacity={0.2} />
+            <circle cx={r.a[0]} cy={r.a[1]} r={5} fill={r.c} stroke="rgba(0,0,0,0.4)" strokeWidth={0.6} />
+            <circle cx={r.b[0]} cy={r.b[1]} r={5} fill={r.c} stroke="rgba(0,0,0,0.4)" strokeWidth={0.6} />
           </g>
         ))}
       </svg>

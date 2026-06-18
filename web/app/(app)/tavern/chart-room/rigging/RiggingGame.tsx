@@ -252,11 +252,18 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
             return (
               <g key={p.color}>
                 {(isAct || done) && (
-                  <polyline points={pts} fill="none" stroke={col} strokeWidth={0.62} strokeLinecap="round" strokeLinejoin="round" opacity={isAct ? 0.5 : 0.32} style={{ filter: 'blur(0.04px)' }} />
+                  <polyline points={pts} fill="none" stroke={col} strokeWidth={0.66} strokeLinecap="round" strokeLinejoin="round" opacity={isAct ? 0.42 : 0.28} style={{ filter: 'blur(0.05px)' }} />
                 )}
-                <polyline points={pts} fill="none" stroke={col} strokeWidth={0.42} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 1 : 0.9} />
-                {/* inner sheen */}
-                <polyline points={pts} fill="none" stroke="#ffffff" strokeWidth={0.1} strokeLinecap="round" strokeLinejoin="round" opacity={0.18} />
+                {/* dark rope edge — gives the cord an outline + depth */}
+                <polyline points={pts} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={0.5} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 0.95 : 0.8} />
+                {/* rope body in the pair colour */}
+                <polyline points={pts} fill="none" stroke={col} strokeWidth={0.4} strokeLinecap="round" strokeLinejoin="round" opacity={done ? 1 : 0.92} />
+                {/* twisted-hemp texture: dark bands + offset light strands read
+                    as the diagonal twist of a laid rope */}
+                <polyline points={pts} fill="none" stroke="rgba(0,0,0,0.34)" strokeWidth={0.4} strokeLinecap="butt" strokeLinejoin="round" strokeDasharray="0.085 0.17" opacity={done ? 0.7 : 0.5} />
+                <polyline points={pts} fill="none" stroke="rgba(255,255,255,0.26)" strokeWidth={0.4} strokeLinecap="butt" strokeLinejoin="round" strokeDasharray="0.04 0.215" strokeDashoffset="0.12" opacity={done ? 0.6 : 0.42} />
+                {/* top sheen — rounds the cord */}
+                <polyline points={pts} fill="none" stroke="#ffffff" strokeWidth={0.09} strokeLinecap="round" strokeLinejoin="round" opacity={0.2} />
               </g>
             )
           })}
