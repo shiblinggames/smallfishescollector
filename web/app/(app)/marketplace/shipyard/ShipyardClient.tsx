@@ -133,11 +133,15 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
         </p>
       </div>
 
-      {/* ── Fleet ────────────────────────────────────────────────────── */}
-      <SectionLabel>Fleet</SectionLabel>
+      {/* ── Available ships — only the upgrade path ahead. Boats you've
+          already upgraded past aren't "owned" and you never sail them again,
+          so they're hidden; your active hull is the hero above. ───────────── */}
+      {shipTier < SHIPS.length - 1 && (
+        <>
+          <SectionLabel>Available Ships</SectionLabel>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {SHIPS.map(ship => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {SHIPS.filter(ship => ship.tier > shipTier).map(ship => {
           const stats = EXPEDITION_SHIP_STATS[ship.tier]
           const owned = ship.tier <= shipTier
           const isActive = ship.tier === shipTier
@@ -235,8 +239,10 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
               )}
             </div>
           )
-        })}
-      </div>
+            })}
+          </div>
+        </>
+      )}
 
       {error && <p className="font-karla font-300 text-red-400 text-xs text-center mt-4">{error}</p>}
       {shipTier === SHIPS.length - 1 && (
