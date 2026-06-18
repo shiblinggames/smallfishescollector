@@ -218,6 +218,32 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     return () => window.removeEventListener('fishing-leveled', onLeveled)
   }, [refresh])
 
+  // The "Crew Trawls unlocked" celebration is held while a fishing level-up
+  // overlay is showing, so the two popups don't stack — it fires once the
+  // level-up is dismissed (the level-up overlay itself announces the unlock).
+  const levelUpOpenRef = useRef(false)
+  const pendingUnlockRef = useRef<number | null>(null)
+  const fireSlotUnlock = useCallback((n: number) => {
+    setSlotUnlock(n)
+    haptic([0, 30, 60, 30, 60, 40])
+  }, [])
+  useEffect(() => {
+    const onOpen = () => { levelUpOpenRef.current = true }
+    const onClosed = () => {
+      levelUpOpenRef.current = false
+      if (pendingUnlockRef.current !== null) {
+        fireSlotUnlock(pendingUnlockRef.current)
+        pendingUnlockRef.current = null
+      }
+    }
+    window.addEventListener('fishing-levelup-open', onOpen)
+    window.addEventListener('fishing-levelup-closed', onClosed)
+    return () => {
+      window.removeEventListener('fishing-levelup-open', onOpen)
+      window.removeEventListener('fishing-levelup-closed', onClosed)
+    }
+  }, [fireSlotUnlock])
+
   // Detect a NEWLY unlocked slot vs the last count we saw (localStorage), and
   // celebrate it. First-ever load records silently so existing slots don't pop.
   useEffect(() => {
@@ -229,11 +255,13 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
       return
     }
     if (state.unlockedSlots > seen) {
-      setSlotUnlock(state.unlockedSlots)
-      haptic([0, 30, 60, 30, 60, 40])
       try { localStorage.setItem('trawl_seen_slots', String(state.unlockedSlots)) } catch { /* no-op */ }
+      // Defer the celebration if a level-up overlay is mid-show; it fires on
+      // 'fishing-levelup-closed'. Otherwise (nav unlock, admin grant) show now.
+      if (levelUpOpenRef.current) pendingUnlockRef.current = state.unlockedSlots
+      else fireSlotUnlock(state.unlockedSlots)
     }
-  }, [state])
+  }, [state, fireSlotUnlock])
 
   if (!state) return null
   const hasSlots = state.unlockedSlots > 0

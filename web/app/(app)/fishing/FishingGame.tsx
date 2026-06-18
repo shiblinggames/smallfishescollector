@@ -4972,8 +4972,10 @@ export default function FishingGame({
         setXpPopup({ value: xpGained, id: Date.now(), prestige: (prestigeLevels[fish.habitat] ?? 0) > 0 })
         if (newLevel > oldLevel) {
           setLevelUpNotif({ from: oldLevel, to: newLevel })
-          // Nudge the Trawls indicator to re-check — a fishing level-up can
-          // unlock a new trawl slot (it watches for the slot count to rise).
+          // Tell the Trawls indicator a level-up overlay is showing, so it
+          // holds any "Crew Trawls unlocked" celebration until this is dismissed
+          // (no stacked popups). Then nudge it to re-check the slot count.
+          window.dispatchEvent(new CustomEvent('fishing-levelup-open'))
           window.dispatchEvent(new CustomEvent('fishing-leveled'))
           checkLeaderboardPosition('fishingLevel').then(r => {
             const cur = r?.position ?? null
@@ -5092,6 +5094,7 @@ export default function FishingGame({
     setHookedFish(null)
     setPerfectFlash(false)
     setLevelUpNotif(null)
+    window.dispatchEvent(new CustomEvent('fishing-levelup-closed'))
     setHoldOpen(false)
     setGearOpen(false)
     setShinyChoiceModalOpen(false)
@@ -5170,6 +5173,7 @@ export default function FishingGame({
     setHookedFish(null)
     setPerfectFlash(false)
     setLevelUpNotif(null)
+    window.dispatchEvent(new CustomEvent('fishing-levelup-closed'))
     setHoldOpen(false)
     setGearOpen(false)
     await doCast()
@@ -9060,6 +9064,10 @@ export default function FishingGame({
         {levelUpNotif && (() => {
           const perks = fishingLevelPerks(levelUpNotif.to)
           const zoneUnlocks = zonesUnlockedBetween(levelUpNotif.from, levelUpNotif.to)
+          // Crew Trawls (passive crew fishing) unlock at Fishing 25 — call it
+          // out here so the level-up actually announces it; the dedicated
+          // Trawls celebration then fires once this overlay is dismissed.
+          const trawlsUnlocked = levelUpNotif.from < 25 && levelUpNotif.to >= 25
           return (
           <motion.div
             key="levelup"
@@ -9067,7 +9075,7 @@ export default function FishingGame({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.3 } }}
             transition={{ duration: 0.25 }}
-            onClick={() => setLevelUpNotif(null)}
+            onClick={() => { setLevelUpNotif(null); window.dispatchEvent(new CustomEvent('fishing-levelup-closed')) }}
             style={{
               position: 'absolute', inset: 0, zIndex: 32,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -9169,6 +9177,32 @@ export default function FishingGame({
                   </span>
                   <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8', textShadow: '0 0 12px rgba(96,165,250,0.55)' }}>
                     {zoneUnlocks.map(z => z.label).join(' · ')}
+                  </span>
+                </motion.div>
+              )}
+
+              {/* Crew Trawls unlock — gold callout at Fishing 25. */}
+              {trawlsUnlocked && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.58, type: 'spring', stiffness: 300, damping: 18 }}
+                  style={{
+                    marginTop: '0.7rem',
+                    padding: '0.55rem 1rem',
+                    background: 'linear-gradient(180deg, rgba(240,192,64,0.22) 0%, rgba(240,192,64,0.06) 100%), #161009',
+                    border: '1px solid rgba(240,192,64,0.50)',
+                    borderTop: '1px solid rgba(240,192,64,0.85)',
+                    borderRadius: 999,
+                    boxShadow: '0 0 22px rgba(240,192,64,0.35)',
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                  }}
+                >
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: '#f0c040', letterSpacing: '0.20em' }}>
+                    Unlocked
+                  </span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f5ecd6', textShadow: '0 0 12px rgba(240,192,64,0.55)' }}>
+                    Crew Trawls — send crew to fish
                   </span>
                 </motion.div>
               )}
