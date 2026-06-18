@@ -183,7 +183,7 @@ export const RODS: RodDef[] = [
     color: '#a78bfa', rarityBonus: 0.40, biteIntervalMs: 2600, catchZoneBonus: 6,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     wormhole: true,
-    imageUrl: '/rod_galaxy.png', glow: true, glowType: 'sparkle',
+    slug: 'rod_galaxy', glow: true, glowType: 'sparkle',
   },
   {
     tier: 19, name: 'Lightsaber Rod', cost: 300000,
@@ -191,7 +191,7 @@ export const RODS: RodDef[] = [
     color: '#5fd0ff', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 8,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     instantBiteChance: 0.35,
-    imageUrl: '/rod_lightsaber.png', glow: true, glowType: 'electric',
+    slug: 'rod_lightsaber', glow: true, glowType: 'electric',
   },
 ]
 
