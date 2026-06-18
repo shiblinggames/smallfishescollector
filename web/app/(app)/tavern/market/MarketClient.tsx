@@ -198,7 +198,7 @@ function MoverCard({ entry, label, labelColor }: { entry: MarketFishEntry; label
   return (
     <div style={{
       flex: 1, minWidth: 0,
-      background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.1)',
+      background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: 12, padding: '0.65rem 0.75rem',
     }}>
       <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: labelColor, marginBottom: 4 }}>{label}</p>
@@ -486,7 +486,7 @@ export default function MarketClient({
 
         {/* ── Market status ticker ── */}
         <div style={{
-          background: 'rgba(8,8,6,0.82)', border: `1px solid ${mood.border}`,
+          background: 'rgba(11,13,18,0.96)', border: `1px solid ${mood.border}`,
           borderRadius: 12, padding: '0.7rem 0.9rem',
           display: 'flex', alignItems: 'center', gap: '0.7rem',
         }}>
@@ -512,7 +512,7 @@ export default function MarketClient({
         {/* ── Portfolio hero ── */}
         {portfolio.length > 0 && (
           <div style={{
-            background: 'linear-gradient(165deg, rgba(240,192,64,0.07) 0%, rgba(8,8,6,0.86) 55%)',
+            background: 'linear-gradient(165deg, rgba(60,48,16,0.92) 0%, rgba(11,13,18,0.97) 55%)',
             border: '1px solid rgba(240,192,64,0.22)', borderTop: '1px solid rgba(240,192,64,0.45)',
             borderRadius: 16, padding: '1.1rem 1.15rem 0.95rem', overflow: 'hidden',
           }}>
@@ -566,7 +566,7 @@ export default function MarketClient({
         {pendingSales.length > 0 && (
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#bda05a' }}>Pending Sales</p>
-            <div style={{ background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)', borderRadius: 12, padding: '0.6rem 0.85rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ background: 'rgba(34,27,10,0.95)', border: '1px solid rgba(240,192,64,0.38)', borderRadius: 12, padding: '0.6rem 0.85rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {pendingSales.map(p => {
                 const minutes = Math.max(0, Math.ceil((new Date(p.settlesAt).getTime() - pendingNow) / 60_000))
                 const timeLabel = minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`
@@ -591,9 +591,9 @@ export default function MarketClient({
 
         {/* ── Holdings ── */}
         <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Holdings</p>
+          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.68rem', color: '#ddd6c8' }}>Holdings</p>
           {portfolio.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12 }}>
+            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#6a6764', marginBottom: '0.5rem' }}>No fish in hold</p>
               <p className="font-karla font-400" style={{ fontSize: '0.8rem', color: '#4a4845', marginBottom: '1.25rem' }}>Head to the docks to catch something worth selling.</p>
               <Link href="/fishing" className="font-karla font-700 uppercase tracking-[0.1em]"
@@ -602,7 +602,7 @@ export default function MarketClient({
               </Link>
             </div>
           ) : (
-            <div style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.85rem' }}>
+            <div style={{ background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.85rem' }}>
               {portfolio.map(entry => (
                 <HoldingRow key={entry.fish_id} entry={entry} fee={fee} onOpen={setTradeFish} />
               ))}
@@ -613,7 +613,7 @@ export default function MarketClient({
         {/* ── Today's Movers ── */}
         {(movers.riser || movers.faller) && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Today&apos;s Movers</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.68rem', color: '#ddd6c8' }}>Today&apos;s Movers</p>
             <div className="flex gap-2.5">
               {movers.riser && <MoverCard entry={movers.riser} label="Top Riser" labelColor={UP} />}
               {movers.faller && <MoverCard entry={movers.faller} label="Top Faller" labelColor={DOWN} />}
@@ -624,14 +624,14 @@ export default function MarketClient({
         {/* ── Market Prices (browse) ── */}
         {allMarket.filter(e => !ownedIds.has(e.fish_id)).length > 0 && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Market Prices</p>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.68rem', color: '#ddd6c8' }}>Market Prices</p>
 
             {/* sort + filter controls */}
             <div className="flex items-center gap-2 mb-2" style={{ flexWrap: 'wrap' }}>
-              <div className="flex" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.14)' }}>
+              <div className="flex" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)' }}>
                 {([['value', 'Value'], ['change', 'Change'], ['name', 'A–Z']] as const).map(([k, lbl], i) => (
                   <button key={k} onClick={() => setSortKey(k)} className="font-karla font-700 uppercase tracking-[0.06em]"
-                    style={{ fontSize: '0.56rem', padding: '0.35rem 0.6rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.12)', background: sortKey === k ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.02)', color: sortKey === k ? GOLD : '#8a8784', cursor: 'pointer' }}>
+                    style={{ fontSize: '0.58rem', padding: '0.4rem 0.7rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.18)', background: sortKey === k ? 'rgba(240,192,64,0.22)' : 'rgba(28,32,40,0.95)', color: sortKey === k ? GOLD : '#c4bfb6', cursor: 'pointer' }}>
                     {lbl}
                   </button>
                 ))}
@@ -646,14 +646,14 @@ export default function MarketClient({
               </div>
             )}
 
-            <div style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.75rem' }}>
+            <div style={{ background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.75rem' }}>
               {browseList.length === 0
                 ? <p className="font-karla font-400 text-center" style={{ fontSize: '0.72rem', color: '#6a6764', padding: '1.25rem 0' }}>No species match.</p>
                 : browseList.map(entry => <BrowseRow key={entry.fish_id} entry={entry} />)}
             </div>
             {browseAll.length > 10 && (
               <button onClick={() => setBrowseExpanded(v => !v)} className="font-karla font-600 w-full mt-2"
-                style={{ fontSize: '0.7rem', padding: '0.6rem', borderRadius: 10, background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.14)', color: '#7a7774', cursor: 'pointer' }}>
+                style={{ fontSize: '0.7rem', padding: '0.6rem', borderRadius: 10, background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', color: '#7a7774', cursor: 'pointer' }}>
                 {browseExpanded ? 'Show less' : `Show all ${browseAll.length} species`}
               </button>
             )}
@@ -697,7 +697,7 @@ export default function MarketClient({
 function FilterChip({ label, active, color, onClick }: { label: string; active: boolean; color: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="font-karla font-700 uppercase tracking-[0.06em]"
-      style={{ fontSize: '0.54rem', padding: '0.3rem 0.6rem', borderRadius: 999, background: active ? `${color}1f` : 'rgba(255,255,255,0.03)', border: `1px solid ${active ? `${color}66` : 'rgba(255,255,255,0.1)'}`, color: active ? '#fff' : '#8a8784', cursor: 'pointer' }}>
+      style={{ fontSize: '0.56rem', padding: '0.34rem 0.65rem', borderRadius: 999, background: active ? `${color}33` : 'rgba(28,32,40,0.95)', border: `1px solid ${active ? `${color}88` : 'rgba(255,255,255,0.18)'}`, color: active ? '#fff' : '#c4bfb6', cursor: 'pointer' }}>
       {label}
     </button>
   )
