@@ -111,7 +111,7 @@ export const RODS: RodDef[] = [
   {
     tier: 10, name: 'Legendary Rod', cost: 200000,
     description: 'Forged from the mast of a sunken galleon. 40% faster bites — the rarest fish cannot resist.',
-    color: '#ff6b35', rarityBonus: 0.85, biteIntervalMs: 2280, catchZoneBonus: 0,
+    color: '#ff6b35', rarityBonus: 1.50, biteIntervalMs: 2280, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     slug: 'rod_legendary', glow: true, glowType: 'fire',
   },
