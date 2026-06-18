@@ -158,71 +158,89 @@ export default function TackleShopClient({
 
   // ── Landing ────────────────────────────────────────────────────────────
   if (section === null) {
-    return (
-      <div className="px-4 sm:px-6 max-w-sm sm:max-w-2xl mx-auto pb-16">
-        <ShopHeader title="Tackle Shop" backLabel="Market" href="/marketplace" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => (
-            <motion.div
-              key={key}
-              onClick={() => { setSection(key); setError(null) }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-              style={{
-                position: 'relative',
-                background: `linear-gradient(165deg, ${color}16 0%, rgba(6,12,20,0.94) 60%)`,
-                border: `1px solid ${color}30`,
-                borderTop: `1px solid ${color}70`,
-                borderRadius: 18,
-                padding: '1.15rem 1.3rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                overflow: 'hidden',
-                boxShadow: `0 3px 12px rgba(0,0,0,0.4), 0 0 16px ${color}12`,
-              }}
-            >
-              {/* top sheen */}
-              <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 22%)', pointerEvents: 'none' }} />
-              {/* Left: text */}
-              <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#ffffff', lineHeight: 1.2, marginBottom: '0.35rem' }}>
-                  {label}
-                </p>
-                <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#b0ada8', lineHeight: 1.5 }}>
-                  {desc}
-                </p>
-              </div>
+    // Storefront grid: 2-up art-forward tiles so the row width is actually
+    // used (the old single-column rows left a big empty gutter beside the
+    // short text). Line is the odd one out → it spans full width as a wide
+    // banner that also has room for its "earned by species" context.
+    const tileBase = (color: string): React.CSSProperties => ({
+      position: 'relative', cursor: 'pointer', overflow: 'hidden',
+      background: `linear-gradient(165deg, ${color}1c 0%, rgba(6,12,20,0.95) 62%)`,
+      border: `1px solid ${color}30`,
+      borderTop: `1px solid ${color}70`,
+      borderRadius: 18,
+      boxShadow: `0 3px 12px rgba(0,0,0,0.4), 0 0 16px ${color}12`,
+    })
+    const sheen = <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 22%)', pointerEvents: 'none', zIndex: 1 }} />
 
-              {/* Right: image */}
-              {imageUrl && (
-                <div style={{
-                  flexShrink: 0, width: 92, height: 92, position: 'relative',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrl}
-                    alt={label}
-                    loading="lazy"
-                    decoding="async"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: 92,
-                      objectFit: 'contain',
-                      filter: `drop-shadow(0 4px 16px ${color}55)`,
-                      opacity: 0.95,
-                    }}
-                  />
-                </div>
-              )}
-              {/* chevron */}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={`${color}99`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ position: 'relative', flexShrink: 0 }}>
-                <path d="M9 6l6 6-6 6" />
-              </svg>
-            </motion.div>
-          ))}
+    return (
+      <div className="px-4 sm:px-6 max-w-lg sm:max-w-2xl mx-auto pb-16">
+        <ShopHeader title="Tackle Shop" backLabel="Market" href="/marketplace" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+          {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => {
+            const wide = key === 'line'
+            return (
+              <motion.div
+                key={key}
+                onClick={() => { setSection(key); setError(null) }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                style={{
+                  ...tileBase(color),
+                  gridColumn: wide ? '1 / -1' : undefined,
+                  display: 'flex',
+                  flexDirection: wide ? 'row' : 'column',
+                  alignItems: wide ? 'center' : 'stretch',
+                  gap: wide ? '1rem' : 0,
+                  padding: wide ? '0.9rem 1.2rem' : 0,
+                }}
+              >
+                {sheen}
+
+                {wide ? (
+                  <>
+                    <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 2 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '1.25rem', color: '#fff', lineHeight: 1.15, marginBottom: '0.3rem' }}>{label}</p>
+                      <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#b0ada8', lineHeight: 1.45 }}>{desc}</p>
+                    </div>
+                    {imageUrl && (
+                      <div style={{ flexShrink: 0, width: 92, height: 80, position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={imageUrl} alt={label} loading="lazy" decoding="async" style={{ maxWidth: '100%', maxHeight: 80, objectFit: 'contain', filter: `drop-shadow(0 4px 16px ${color}55)` }} />
+                      </div>
+                    )}
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={`${color}99`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ position: 'relative', zIndex: 2, flexShrink: 0 }}>
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </>
+                ) : (
+                  <>
+                    {/* Art scene — fills the tile width with a radial halo behind the piece */}
+                    <div style={{
+                      position: 'relative', height: 120,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `radial-gradient(ellipse 75% 70% at 50% 45%, ${color}24 0%, transparent 70%)`,
+                      borderBottom: `1px solid ${color}1f`,
+                    }}>
+                      {imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={imageUrl} alt={label} loading="lazy" decoding="async" style={{ maxWidth: '72%', maxHeight: 96, objectFit: 'contain', filter: `drop-shadow(0 5px 18px ${color}60)`, position: 'relative', zIndex: 2 }} />
+                      )}
+                    </div>
+                    {/* Label + desc */}
+                    <div style={{ position: 'relative', zIndex: 2, padding: '0.7rem 0.85rem 0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.18rem', color: '#fff', lineHeight: 1.1 }}>{label}</p>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={`${color}99`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+                          <path d="M9 6l6 6-6 6" />
+                        </svg>
+                      </div>
+                      <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#b0ada8', lineHeight: 1.4, marginTop: 3 }}>{desc}</p>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )
+          })}
         </div>
       </div>
     )
