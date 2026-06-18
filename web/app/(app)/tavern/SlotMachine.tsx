@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { spinSlots } from './actions'
 import type { SlotSpinResult, SlotStats, SlotsJackpotState } from './actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
@@ -122,40 +122,92 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
    *  haptic on each reel landing. Android only; iOS no-ops. */
   onLand?: () => void
 }) {
-  const [display, setDisplay] = useState<SlotSymbolId>(symbol)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // A real spinning reel: a vertical strip of symbols (3 copies of the set for
+  // runway) scrolls upward with motion blur while rolling, then eases to a stop
+  // with the target symbol centered — instead of flipping symbols in place.
+  const winRef = useRef<HTMLDivElement | null>(null)   // the window (clips the strip)
+  const stripRef = useRef<HTMLDivElement | null>(null) // the moving column
+  const posRef = useRef(0)                             // current scroll distance (px)
+  const rafRef = useRef<number | null>(null)
+  const tileHRef = useRef(96)
+  const startedRef = useRef(false)
+  const [isSpinning, setIsSpinning] = useState(false)
+  const [landedSym, setLandedSym] = useState<SlotSymbolId>(symbol)
+
+  const LEN = ALL_IDS.length
+  const strip = useMemo(() => [...ALL_IDS, ...ALL_IDS, ...ALL_IDS], [])
+  const setY = (px: number) => { if (stripRef.current) stripRef.current.style.transform = `translateY(${-px}px)` }
+
+  // Keep tile height in sync with the (responsive) reel window.
+  useEffect(() => {
+    const measure = () => {
+      if (!winRef.current) return
+      tileHRef.current = winRef.current.clientHeight
+      if (!isSpinning) { posRef.current = ALL_IDS.indexOf(landedSym) * tileHRef.current; setY(posRef.current) }
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (winRef.current) ro.observe(winRef.current)
+    return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
+    const tileH = tileHRef.current
     if (rolling) {
-      let idx = 0
-      intervalRef.current = setInterval(() => {
-        idx = (idx + 1) % ALL_IDS.length
-        setDisplay(ALL_IDS[idx])
-      }, 80)
-    } else {
-      // Small snap delay so the last cycling frame has time to render
-      timeoutRef.current = setTimeout(() => {
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        setDisplay(symbol)
-        onLand?.()
-      }, 60)
+      startedRef.current = true
+      setIsSpinning(true)
+      if (stripRef.current) { stripRef.current.style.transition = 'none'; stripRef.current.style.filter = 'blur(2.4px)' }
+      const speed = tileH * 24 // ~24 tiles/sec
+      let last = performance.now()
+      const loop = (t: number) => {
+        const dt = Math.min(0.05, (t - last) / 1000); last = t
+        posRef.current = (posRef.current + speed * dt) % (LEN * tileH)
+        setY(posRef.current)
+        rafRef.current = requestAnimationFrame(loop)
+      }
+      rafRef.current = requestAnimationFrame(loop)
+      return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+
+    // Not rolling:
+    if (!startedRef.current) {
+      // Never spun — just place the target instantly (no settle animation).
+      posRef.current = ALL_IDS.indexOf(symbol) * tileH
+      if (stripRef.current) stripRef.current.style.transition = 'none'
+      setY(posRef.current)
+      setLandedSym(symbol)
+      return
     }
+    // Land: normalize the current (looping) position, then ease one rotation
+    // ahead onto the target — strong ease-out so it snaps fast then settles.
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+    const p0 = posRef.current % (LEN * tileH)
+    if (stripRef.current) { stripRef.current.style.transition = 'none' }
+    setY(p0)
+    const ti = ALL_IDS.indexOf(symbol)
+    const finalPos = (LEN + ti) * tileH
+    posRef.current = finalPos
+    const raf = requestAnimationFrame(() => {
+      if (!stripRef.current) return
+      stripRef.current.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+      stripRef.current.style.filter = 'blur(0px)'
+      setY(finalPos)
+    })
+    const to = setTimeout(() => { setIsSpinning(false); setLandedSym(symbol); onLand?.() }, 360)
+    return () => { cancelAnimationFrame(raf); clearTimeout(to) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rolling, symbol])
 
-  const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === display)!
+  const sym = SLOT_SYMBOLS_LIST.find((s) => s.id === (isSpinning ? symbol : landedSym))!
   const color = won && winColor ? winColor : sym.color
+  const rollingNow = isSpinning
 
   const borderColor = won ? (winColor ?? color)
     : matchColor ? matchColor
     : nearMiss ? '#f97316'
     : nearMissOdd ? 'rgba(255,255,255,0.06)'
-    : (rolling ? 'rgba(255,255,255,0.10)' : `${color}90`)
+    : (rollingNow ? 'rgba(255,255,255,0.10)' : `${color}90`)
   const bg = won ? `${winColor ?? color}40`
     : matchColor ? `${matchColor}25`
     : nearMiss ? 'rgba(249,115,22,0.22)'
@@ -164,7 +216,7 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
     ? `0 0 28px ${winColor ?? color}70, 0 0 56px ${winColor ?? color}30`
     : matchColor ? `0 0 18px ${matchColor}60`
     : nearMiss ? '0 0 18px #f9731660'
-    : (rolling ? 'inset 0 6px 14px rgba(0,0,0,0.55)' : `inset 0 6px 14px rgba(0,0,0,0.45), 0 0 14px ${color}28`)
+    : (rollingNow ? 'inset 0 6px 14px rgba(0,0,0,0.55)' : `inset 0 6px 14px rgba(0,0,0,0.45), 0 0 14px ${color}28`)
   const anim = won
     ? `reel-pop 0.55s cubic-bezier(0.36,0.07,0.19,0.97) ${winDelayMs}ms forwards`
     : nearMissOdd ? 'near-miss-wobble 0.55s ease-out'
@@ -173,6 +225,7 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
 
   return (
     <div
+      ref={winRef}
       className="w-24 h-24 sm:w-[130px] sm:h-[130px]"
       style={{
         position: 'relative',
@@ -185,7 +238,17 @@ function Reel({ symbol, rolling, won, winColor, winDelayMs = 0, nearMiss, nearMi
         transition: 'border-color 0.15s, background 0.15s',
       }}
     >
-      <SlotSymbolDisplay id={display} />
+      {/* The scrolling strip — 3 copies of the symbol set stacked vertically,
+          each tile sized to the (square) reel window. */}
+      <div ref={stripRef} style={{ willChange: 'transform' }}>
+        {strip.map((s, k) => (
+          <div key={k} style={{ width: '100%', aspectRatio: '1 / 1' }}>
+            <SlotSymbolDisplay id={s} />
+          </div>
+        ))}
+      </div>
+      {/* Soft top/bottom shade so symbols fade into the cabinet edges. */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 12, background: 'linear-gradient(180deg, rgba(6,5,4,0.55) 0%, transparent 24%, transparent 76%, rgba(6,5,4,0.55) 100%)' }} />
       {/* Glass highlight across the top of the reel window */}
       <div
         aria-hidden
@@ -262,6 +325,25 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
   })
   const [potTease, setPotTease] = useState(false)
   const [potWon, setPotWon] = useState(false)
+
+  // Pull-lever + win-celebration juice
+  const [leverPulled, setLeverPulled] = useState(false)
+  const [coins, setCoins] = useState<{ id: number; dx: number; delay: number }[]>([])
+  const [edgeGlow, setEdgeGlow] = useState<{ key: number; big: boolean } | null>(null)
+  const fxId = useRef(0)
+  function pullLever() {
+    setLeverPulled(true)
+    setTimeout(() => setLeverPulled(false), 240)
+  }
+  // Coin spill + screen-edge glow, scaled by win tier.
+  function celebrateWin(sym: SlotSymbolId) {
+    const big = sym === 'catfish' || sym === 'legendary'
+    const n = sym === 'catfish' ? 20 : sym === 'legendary' ? 13 : sym === 'rare' ? 8 : 5
+    setCoins(Array.from({ length: n }, () => ({ id: fxId.current++, dx: (Math.random() * 2 - 1) * 72, delay: Math.random() * 0.18 })))
+    setTimeout(() => setCoins([]), 1300)
+    setEdgeGlow({ key: fxId.current++, big })
+    setTimeout(() => setEdgeGlow(null), big ? 1500 : 950)
+  }
 
   // Celebration state
   const [wonMainReels, setWonMainReels] = useState(false)
@@ -347,6 +429,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
     setWinSym(sym)
     setFlashColor(color)
     setFlashKey((k) => k + 1)
+    celebrateWin(sym)
     // Win haptic — escalates with payout tier. Catfish gets the
     // longest, most punchy pattern; common is just a confirming pulse.
     if (sym === 'catfish') {
@@ -372,6 +455,7 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
 
   async function handleSpin() {
     if (!canSpin) return
+    pullLever()
     setError(null)
     setLastResult(null)
     setShowResult(false)
@@ -542,6 +626,17 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
           0%, 100% { transform: scale(1); }
           50%      { transform: scale(1.05); }
         }
+        @keyframes slot-edge-glow {
+          0%   { opacity: 0; }
+          16%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes slot-coin {
+          0%   { transform: translateY(0) scale(1); opacity: 1; }
+          12%  { transform: translateY(-14px) scale(1.1); opacity: 1; }
+          78%  { opacity: 1; }
+          100% { transform: translateY(-62vh) scale(0.5); opacity: 0; }
+        }
       `}</style>
 
       {/* Full-screen flash */}
@@ -556,6 +651,30 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
         }}
       />
 
+      {/* Win celebration — screen-edge gold glow (brighter for big wins). */}
+      {edgeGlow && (
+        <div key={edgeGlow.key} aria-hidden style={{
+          position: 'fixed', inset: 0, zIndex: 190, pointerEvents: 'none', opacity: 0,
+          boxShadow: `inset 0 0 ${edgeGlow.big ? 130 : 75}px ${edgeGlow.big ? 60 : 34}px rgba(240,192,64,${edgeGlow.big ? 0.5 : 0.32})`,
+          animation: `slot-edge-glow ${edgeGlow.big ? 1.5 : 0.95}s ease-out forwards`,
+        }} />
+      )}
+
+      {/* Coin spill — erupts from the machine, flies up toward the chip purse. */}
+      {coins.length > 0 && (
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 196, pointerEvents: 'none' }}>
+          {coins.map((c) => (
+            <div key={c.id} style={{
+              position: 'absolute', left: `calc(50% + ${c.dx}px)`, top: '56%',
+              width: 15, height: 15, borderRadius: '50%',
+              background: 'radial-gradient(circle at 35% 30%, #ffe79a 0%, #f0c040 70%)',
+              boxShadow: '0 0 9px #f0c040, inset 0 -2px 3px rgba(120,80,10,0.5)',
+              animation: `slot-coin 1.05s cubic-bezier(0.2,0.6,0.3,1) ${c.delay}s forwards`,
+            }} />
+          ))}
+        </div>
+      )}
+
       {/* Shared Den back-nav (uniform across the three games). */}
       <div style={{ marginBottom: '0.8rem' }}>
         <DenNav title="Fish Slots" />
@@ -567,8 +686,37 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
         {/* ── Left: the machine ── */}
         <div
           className="flex flex-col items-center gap-5 flex-1 min-w-0"
-          style={{ animation: jackpotShake ? 'jackpot-shake 0.65s ease-out' : 'none' }}
+          style={{ position: 'relative', paddingRight: 30, animation: jackpotShake ? 'jackpot-shake 0.65s ease-out' : 'none' }}
         >
+
+          {/* ── Pull lever — sits in the right gutter, level with the reels.
+                Tap it (or the Spin button) and it yanks down, then springs
+                back, kicking off the spin. ── */}
+          <button
+            type="button"
+            onClick={() => { if (canSpin) handleSpin() }}
+            disabled={!canSpin}
+            aria-label="Pull to spin"
+            style={{
+              position: 'absolute', right: 0, top: 112, width: 30, height: 168, zIndex: 6,
+              background: 'none', border: 'none', padding: 0,
+              cursor: canSpin ? 'pointer' : 'default', opacity: canSpin ? 1 : 0.45,
+              touchAction: 'manipulation',
+            }}
+          >
+            {/* mounting track */}
+            <div style={{ position: 'absolute', left: '50%', top: 22, bottom: 8, width: 9, transform: 'translateX(-50%)', borderRadius: 6, background: `linear-gradient(180deg, ${WOOD_MID}, #120c06)`, border: `1px solid ${BRASS_DIM}`, boxShadow: 'inset 0 0 6px rgba(0,0,0,0.6)' }} />
+            {/* rod + ball knob — slides down when pulled */}
+            <div style={{
+              position: 'absolute', left: '50%', top: 0,
+              transform: `translateX(-50%) translateY(${leverPulled ? 60 : 0}px)`,
+              transition: 'transform 0.22s cubic-bezier(0.36,0.07,0.19,0.97)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+            }}>
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'radial-gradient(circle at 36% 30%, #ff9a6a 0%, #c0392b 72%)', border: `2px solid ${BRASS}`, boxShadow: `0 3px 8px rgba(0,0,0,0.55), 0 0 10px ${BRASS}55` }} />
+              <div style={{ width: 7, height: 96, marginTop: -2, borderRadius: 4, background: `linear-gradient(90deg, #6e4f24, ${BRASS} 50%, #6e4f24)`, boxShadow: '0 0 4px rgba(0,0,0,0.4)' }} />
+            </div>
+          </button>
 
           {/* ── Cabinet ── */}
           <div
