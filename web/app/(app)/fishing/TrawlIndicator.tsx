@@ -404,18 +404,24 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // Per-zone DEPTH gradient over the art, so each zone reads as a
                 // different water. State (flash / ready / running) brightens the
                 // top band; the body always sinks to that zone's deep colour.
+                // Locked / no-slot cards are dead ends right now — render them as
+                // obviously inert: a flat neutral gradient, no zone colour.
+                const inert = cardState === 'locked' || cardState === 'noslot'
                 const topBand = flashing ? `${theme.accent}54` : ready ? `${GOLD}44` : running ? `${theme.accent}3c` : theme.top
-                const scrim = `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
+                const scrim = inert
+                  ? 'linear-gradient(180deg, rgba(40,42,46,0.62) 0%, rgba(20,22,26,0.86) 55%, rgba(11,12,15,0.96) 100%)'
+                  : `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
                 const cardStyle: React.CSSProperties = {
                   position: 'relative',
                   borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
                   backgroundColor: '#0c1018',
                   background: zoneArt ? `${scrim}, url(${zoneArt}) center / cover` : scrim,
-                  border: `1.5px solid ${flashing ? `${theme.accent}cc` : ready ? GOLD : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.13)'}`,
+                  border: `1.5px solid ${flashing ? `${theme.accent}cc` : ready ? GOLD : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.1)'}`,
                   boxShadow: flashing ? `0 0 18px ${theme.accent}66` : sendable ? `0 0 10px ${theme.accent}33` : running ? `0 0 12px ${theme.accent}22` : 'none',
-                  // Running cards dim a touch (busy); no-slot/locked dim more so
-                  // they clearly read as "you can't act here right now".
-                  opacity: !z.unlocked ? 0.5 : cardState === 'noslot' ? 0.62 : 1,
+                  // …and desaturate the whole card (art + gradient) to gray + dim,
+                  // so they read as plainly unavailable, not just a dark zone.
+                  filter: inert ? 'grayscale(1) brightness(0.82)' : undefined,
+                  opacity: cardState === 'locked' ? 0.48 : cardState === 'noslot' ? 0.55 : 1,
                   display: 'flex', flexDirection: 'column',
                 }
                 const motionProps = {
