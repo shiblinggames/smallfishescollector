@@ -1,9 +1,16 @@
 'use client'
 
-import { useState, useEffect, useTransition, useCallback } from 'react'
+import { useState, useEffect, useTransition, useCallback, useId, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { marketSellFish, liquidateAllFish } from './actions'
 import type { MarketFishEntry, MarketState } from './page'
+
+// ── Palette ──────────────────────────────────────────────────────────────
+const UP = '#4ade80'
+const DOWN = '#f87171'
+const GOLD = '#f0c040'
 
 const HABITAT_COLOR: Record<string, string> = {
   shallows:    '#38bdf8',
@@ -11,42 +18,69 @@ const HABITAT_COLOR: Record<string, string> = {
   deep:        '#818cf8',
   abyss:       '#f87171',
 }
-
-const RARITY_COLOR: Record<number, string> = {
-  1: '#9ca3af',
-  2: '#34d399',
-  3: '#60a5fa',
-  4: '#c084fc',
-  5: '#fb923c',
+const HABITAT_LABEL: Record<string, string> = {
+  shallows: 'Shallows', open_waters: 'Open Waters', deep: 'Deep', abyss: 'Abyss',
 }
+const RARITY_COLOR: Record<number, string> = {
+  1: '#9ca3af', 2: '#34d399', 3: '#60a5fa', 4: '#c084fc', 5: '#fb923c',
+}
+
+// Tabular figures so prices line up like a ticker, not flowing serif text.
+const TNUM: React.CSSProperties = { fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"tnum"', letterSpacing: '-0.01em' }
 
 const MOOD_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; desc: string }> = {
-  calm:           { color: '#38bdf8', bg: 'rgba(56,189,248,0.1)',   border: 'rgba(56,189,248,0.25)',  label: 'Calm Market',     desc: 'Prices stable. Small swings.' },
-  storm:          { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)',  label: 'Storm',           desc: 'Choppy market. Could go either way.' },
-  kraken:         { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)',   label: 'Kraken',          desc: 'Extreme volatility. Anything can happen.' },
-  tide_rising:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.25)',  label: 'Tide Rising',     desc: 'Prices trending up. Good time to hold.' },
-  bounty_season:  { color: '#f0c040', bg: 'rgba(240,192,64,0.1)',   border: 'rgba(240,192,64,0.25)', label: 'Bounty Season',   desc: 'Strong upward pressure. Rare fish climbing.' },
-  low_tide:       { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)',  border: 'rgba(148,163,184,0.25)', label: 'Low Tide',        desc: 'Prices drifting down. Consider selling.' },
-  cursed_waters:  { color: '#c084fc', bg: 'rgba(192,132,252,0.1)',  border: 'rgba(192,132,252,0.25)', label: 'Cursed Waters',   desc: 'Heavy sell pressure. Prices falling fast.' },
+  calm:           { color: '#38bdf8', bg: 'rgba(56,189,248,0.1)',   border: 'rgba(56,189,248,0.25)',  label: 'Calm Market',   desc: 'Prices stable. Small swings.' },
+  storm:          { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)',  label: 'Storm',         desc: 'Choppy market. Could go either way.' },
+  kraken:         { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)',   label: 'Kraken',        desc: 'Extreme volatility. Anything can happen.' },
+  tide_rising:    { color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.25)',  label: 'Tide Rising',   desc: 'Prices trending up. Good time to hold.' },
+  bounty_season:  { color: '#f0c040', bg: 'rgba(240,192,64,0.1)',   border: 'rgba(240,192,64,0.25)',  label: 'Bounty Season', desc: 'Strong upward pressure. Rare fish climbing.' },
+  low_tide:       { color: '#94a3b8', bg: 'rgba(148,163,184,0.1)',  border: 'rgba(148,163,184,0.25)', label: 'Low Tide',      desc: 'Prices drifting down. Consider selling.' },
+  cursed_waters:  { color: '#c084fc', bg: 'rgba(192,132,252,0.1)',  border: 'rgba(192,132,252,0.25)', label: 'Cursed Waters', desc: 'Heavy sell pressure. Prices falling fast.' },
 }
 
-function Sparkline({ history, current, up, height = 40 }: { history: number[]; current: number; up: boolean; height?: number }) {
-  const data = [...history, current]
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
+const pctOf = (now: number, prev: number) => (prev > 0 ? ((now - prev) / prev) * 100 : 0)
+const fmtPct = (p: number) => `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`
+
+function ChangeArrow({ up }: { up: boolean }) {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill={up ? UP : DOWN} aria-hidden style={{ transform: up ? 'none' : 'scaleY(-1)' }}>
+      <path d="M12 4l8 12H4z" />
+    </svg>
+  )
+}
+
+// ── Sparkline (line + optional gradient fill, RH-style) ──────────────────
+function Sparkline({ data, up, height = 40, fill = false }: { data: number[]; up: boolean; height?: number; fill?: boolean }) {
+  const id = useId()
   if (data.length < 2) return <div style={{ height, flex: 1 }} />
   const min = Math.min(...data)
   const max = Math.max(...data)
   const range = max - min || 0.001
   const W = 100
   const H = height
-  const pts = data.map((v, i) => {
+  const xy = data.map((v, i) => {
     const x = (i / (data.length - 1)) * W
     const y = H - ((v - min) / range) * (H - 4) - 2
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
-  const color = up ? '#4ade80' : '#f87171'
+    return [x, y] as const
+  })
+  const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+  const color = up ? UP : DOWN
+  const area = `0,${H} ${line} ${W},${H}`
   return (
-    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ flex: 1, display: 'block' }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ flex: 1, display: 'block', overflow: 'visible' }}>
+      {fill && (
+        <>
+          <defs>
+            <linearGradient id={`g${id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <polygon points={area} fill={`url(#g${id})`} />
+        </>
+      )}
+      <polyline points={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
@@ -66,215 +100,257 @@ function useCountdown(targetIso: string) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function PortfolioCard({
-  entry,
-  onSell,
-  selling,
-  isPremium,
-}: {
-  entry: MarketFishEntry
-  onSell: (fishId: number, qty: number) => void
-  selling: boolean
-  isPremium: boolean
-}) {
-  // Quantity is backed by a STRING so the field can be cleared and retyped
-  // freely on mobile (a controlled number input with a `|| 1` fallback
-  // snapped back to 1 the moment you cleared it, making custom amounts
-  // impossible — it felt like "1 or max only"). `qty` is the clamped
-  // numeric value derived for pricing + selling; the raw string is what
-  // the input shows while editing.
-  const [qtyStr, setQtyStr] = useState(String(entry.quantity))
-  const qty = Math.max(1, Math.min(entry.quantity, parseInt(qtyStr, 10) || 1))
-  const fee = isPremium ? 1.0 : 0.97
+// Build an aggregate portfolio-value curve from each holding's multiplier
+// history (tail-aligned so the newest ticks line up), in doubloons.
+function portfolioCurve(portfolio: MarketFishEntry[], fee: number): number[] {
+  const L = Math.max(0, ...portfolio.map(e => e.history.length))
+  if (L === 0) return []
+  const pts: number[] = []
+  for (let i = 0; i < L; i++) {
+    let sum = 0
+    for (const e of portfolio) {
+      const offset = L - e.history.length
+      const v = i < offset ? (e.history[0] ?? e.multiplier) : e.history[i - offset]
+      sum += e.sell_value * v * e.quantity
+    }
+    pts.push(Math.floor(sum * fee))
+  }
+  return pts
+}
 
-  const pctChange = entry.prev_multiplier > 0
-    ? ((entry.multiplier - entry.prev_multiplier) / entry.prev_multiplier) * 100
-    : 0
-  const up = pctChange >= 0
-  const pctStr = `${up ? '+' : ''}${pctChange.toFixed(1)}%`
+// ── Light holding row (tap to open the trade sheet) ──────────────────────
+function HoldingRow({ entry, fee, onOpen }: { entry: MarketFishEntry; fee: number; onOpen: (e: MarketFishEntry) => void }) {
+  const pct = pctOf(entry.multiplier, entry.prev_multiplier)
+  const up = pct >= 0
   const priceEach = Math.floor(entry.sell_value * entry.multiplier * fee)
-  const priceAll  = priceEach * Math.min(qty, entry.quantity)
-  const allHistory = [...entry.history, entry.multiplier]
-  const histMax = allHistory.length > 0 ? Math.max(...allHistory) : entry.multiplier
-  const histMin = allHistory.length > 0 ? Math.min(...allHistory) : entry.multiplier
+  const value = priceEach * entry.quantity
+  const rColor = RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af'
+  return (
+    <motion.button
+      type="button"
+      onClick={() => onOpen(entry)}
+      whileTap={{ scale: 0.99 }}
+      transition={{ type: 'spring', stiffness: 600, damping: 24 }}
+      className="w-full"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 11,
+        padding: '0.7rem 0.25rem', background: 'none', border: 'none',
+        borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', textAlign: 'left',
+      }}
+    >
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: rColor, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{entry.name}</p>
+        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7774', ...TNUM }}>
+          ×{entry.quantity} · {value.toLocaleString()} ⟡
+        </p>
+      </div>
+      <div style={{ width: 54, flexShrink: 0 }}>
+        <Sparkline data={[...entry.history, entry.multiplier]} up={up} height={26} />
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 74 }}>
+        <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#fff', ...TNUM }}>{priceEach.toLocaleString()} ⟡</p>
+        <p className="font-karla font-700 flex items-center justify-end gap-1" style={{ fontSize: '0.66rem', color: up ? UP : DOWN, ...TNUM }}>
+          <ChangeArrow up={up} />{fmtPct(pct)}
+        </p>
+      </div>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5a5654" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </motion.button>
+  )
+}
+
+// ── Browse row (discovered, not held) ────────────────────────────────────
+function BrowseRow({ entry }: { entry: MarketFishEntry }) {
+  const pct = pctOf(entry.multiplier, entry.prev_multiplier)
+  const up = pct >= 0
+  const price = Math.floor(entry.sell_value * entry.multiplier * 0.97)
   const hColor = HABITAT_COLOR[entry.habitat] ?? '#888'
   const rColor = RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af'
-
   return (
-    <div style={{
-      background: 'rgba(8,8,6,0.82)',
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 14,
-      padding: '1.1rem',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.75rem',
-    }}>
-      {/* Row 1: name + meta */}
-      <div className="flex items-center gap-2">
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: rColor, flexShrink: 0 }} />
-        <p className="font-cinzel font-700 flex-1 truncate" style={{ fontSize: '1rem', color: '#f0ede8' }}>
-          {entry.name}
-        </p>
-        <span className="font-karla font-700"
-          style={{ fontSize: '0.62rem', color: hColor, background: `${hColor}18`, border: `1px solid ${hColor}35`,
-            padding: '0.15rem 0.55rem', borderRadius: '2rem', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {entry.habitat.replace('_', ' ')}
-        </span>
-        <span className="font-karla font-700"
-          style={{ fontSize: '0.65rem', color: '#e0ddd8', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-            padding: '0.15rem 0.55rem', borderRadius: '2rem', flexShrink: 0 }}>
-          ×{entry.quantity}
+    <div className="flex items-center gap-3 py-2.5 px-1" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: rColor, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.85rem', color: '#d0cdc8' }}>{entry.name}</p>
+        <span className="font-karla font-600" style={{ fontSize: '0.56rem', color: hColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          {HABITAT_LABEL[entry.habitat] ?? entry.habitat}
         </span>
       </div>
-
-      {/* Row 2: price hero + sparkline */}
-      <div className="flex items-end gap-3">
-        <div style={{ flexShrink: 0 }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.75rem', color: '#ffffff', lineHeight: 1 }}>
-            {priceEach.toLocaleString()}{' '}
-            <span style={{ fontSize: '0.9rem', color: '#9a9488' }}>⟡</span>
-          </p>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span style={{ fontSize: '0.85rem', color: up ? '#4ade80' : '#f87171', fontFamily: 'var(--font-karla)', fontWeight: 700 }}>
-              {up ? '▲' : '▼'} {pctStr}
-            </span>
-            <span className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6764' }}>vs last tick</span>
-          </div>
-        </div>
-        <Sparkline history={entry.history} current={entry.multiplier} up={up} height={44} />
+      <div style={{ width: 56, flexShrink: 0 }}>
+        <Sparkline data={[...entry.history, entry.multiplier]} up={up} height={26} />
       </div>
-
-      {/* Row 3: stats */}
-      <div className="flex items-center gap-4">
-        <div>
-          <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Base</p>
-          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#a0a09a' }}>{entry.sell_value.toLocaleString()} ⟡</p>
-        </div>
-        <div>
-          <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>24h High</p>
-          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#4ade80' }}>{Math.floor(entry.sell_value * histMax * fee).toLocaleString()}</p>
-        </div>
-        <div>
-          <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>24h Low</p>
-          <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f87171' }}>{Math.floor(entry.sell_value * histMin * fee).toLocaleString()}</p>
-        </div>
-        <p className="font-karla font-700 ml-auto" style={{ fontSize: '0.72rem', color: '#9a9488' }}>
-          {entry.multiplier.toFixed(2)}×
+      <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 78 }}>
+        <p className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#f0ede8', ...TNUM }}>{price.toLocaleString()} ⟡</p>
+        <p className="font-karla font-700 flex items-center justify-end gap-1" style={{ fontSize: '0.64rem', color: up ? UP : DOWN, ...TNUM }}>
+          <ChangeArrow up={up} />{fmtPct(pct)}
         </p>
-      </div>
-
-      {/* Row 4: qty stepper + sell */}
-      <div className="flex gap-2 items-center">
-        <div className="flex items-center" style={{ flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)' }}>
-          <button
-            type="button"
-            aria-label="Decrease quantity"
-            onClick={() => setQtyStr(String(Math.max(1, qty - 1)))}
-            disabled={selling || qty <= 1}
-            className="font-karla font-700"
-            style={{
-              width: 34, padding: '0.55rem 0', background: 'rgba(20,18,15,0.9)',
-              color: '#f0ede8', fontSize: '1rem', lineHeight: 1,
-              opacity: (selling || qty <= 1) ? 0.4 : 1, cursor: (selling || qty <= 1) ? 'default' : 'pointer',
-            }}
-          >−</button>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={entry.quantity}
-            value={qtyStr}
-            onChange={e => setQtyStr(e.target.value)}
-            onBlur={() => setQtyStr(String(qty))}
-            onFocus={e => e.target.select()}
-            disabled={selling}
-            className="font-karla font-600"
-            style={{
-              width: 54, padding: '0.55rem 0.25rem', textAlign: 'center',
-              background: 'rgba(20,18,15,0.9)', border: 'none',
-              borderLeft: '1px solid rgba(255,255,255,0.15)', borderRight: '1px solid rgba(255,255,255,0.15)',
-              color: '#f0ede8', fontSize: '0.75rem', outline: 'none',
-            }}
-          />
-          <button
-            type="button"
-            aria-label="Increase quantity"
-            onClick={() => setQtyStr(String(Math.min(entry.quantity, qty + 1)))}
-            disabled={selling || qty >= entry.quantity}
-            className="font-karla font-700"
-            style={{
-              width: 34, padding: '0.55rem 0', background: 'rgba(20,18,15,0.9)',
-              color: '#f0ede8', fontSize: '1rem', lineHeight: 1,
-              opacity: (selling || qty >= entry.quantity) ? 0.4 : 1, cursor: (selling || qty >= entry.quantity) ? 'default' : 'pointer',
-            }}
-          >+</button>
-        </div>
-        <button
-          type="button"
-          aria-label="Set quantity to max"
-          onClick={() => setQtyStr(String(entry.quantity))}
-          disabled={selling || qty >= entry.quantity}
-          className="font-karla font-700 uppercase tracking-[0.06em]"
-          style={{
-            fontSize: '0.6rem', padding: '0.6rem 0.5rem', borderRadius: 8, flexShrink: 0,
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
-            color: '#c0bdb8', opacity: (selling || qty >= entry.quantity) ? 0.4 : 1,
-            cursor: (selling || qty >= entry.quantity) ? 'default' : 'pointer',
-          }}>
-          Max
-        </button>
-        <button
-          onClick={() => onSell(entry.fish_id, Math.min(qty, entry.quantity))}
-          disabled={selling}
-          className="font-karla font-700 uppercase tracking-[0.08em] flex-1"
-          style={{
-            fontSize: '0.65rem', padding: '0.6rem 0.75rem', borderRadius: 8,
-            background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)',
-            color: '#f0c040', opacity: selling ? 0.45 : 1, cursor: selling ? 'default' : 'pointer',
-          }}>
-          {selling ? '…' : `Sell · ${priceAll.toLocaleString()} ⟡`}
-        </button>
       </div>
     </div>
   )
 }
 
-function BrowseRow({ entry }: { entry: MarketFishEntry }) {
-  const pctChange = entry.prev_multiplier > 0
-    ? ((entry.multiplier - entry.prev_multiplier) / entry.prev_multiplier) * 100
-    : 0
-  const up = pctChange >= 0
-  const pctStr = `${up ? '+' : ''}${pctChange.toFixed(1)}%`
+// ── Top movers card ──────────────────────────────────────────────────────
+function MoverCard({ entry, label, labelColor }: { entry: MarketFishEntry; label: string; labelColor: string }) {
+  const pct = pctOf(entry.multiplier, entry.prev_multiplier)
+  const up = pct >= 0
   const price = Math.floor(entry.sell_value * entry.multiplier * 0.97)
-  const hColor = HABITAT_COLOR[entry.habitat] ?? '#888'
-  const rColor = RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af'
-
   return (
-    <div className="flex items-center gap-3 py-3 px-1"
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      <span style={{ width: 7, height: 7, borderRadius: '50%', background: rColor, flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.85rem', color: '#d0cdc8' }}>
-          {entry.name}
-        </p>
-        <span className="font-karla font-600"
-          style={{ fontSize: '0.58rem', color: hColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-          {entry.habitat.replace('_', ' ')}
+    <div style={{
+      flex: 1, minWidth: 0,
+      background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 12, padding: '0.65rem 0.75rem',
+    }}>
+      <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: labelColor, marginBottom: 4 }}>{label}</p>
+      <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{entry.name}</p>
+      <div className="flex items-baseline gap-1.5 mt-1">
+        <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#e0ddd8', ...TNUM }}>{price.toLocaleString()} ⟡</span>
+        <span className="font-karla font-700 flex items-center gap-0.5" style={{ fontSize: '0.62rem', color: up ? UP : DOWN, ...TNUM }}>
+          <ChangeArrow up={up} />{fmtPct(pct)}
         </span>
       </div>
-      <div style={{ width: 60, flexShrink: 0 }}>
-        <Sparkline history={entry.history} current={entry.multiplier} up={up} height={28} />
-      </div>
-      <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 80 }}>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>
-          {price.toLocaleString()} ⟡
-        </p>
-        <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: up ? '#4ade80' : '#f87171' }}>
-          {up ? '▲' : '▼'} {pctStr}
-        </p>
-      </div>
     </div>
+  )
+}
+
+// ── Trade sheet (bottom sheet) ───────────────────────────────────────────
+function TradeSheet({ entry, fee, selling, onSell, onClose }: {
+  entry: MarketFishEntry
+  fee: number
+  selling: boolean
+  onSell: (fishId: number, qty: number) => void
+  onClose: () => void
+}) {
+  const [qtyStr, setQtyStr] = useState(String(entry.quantity))
+  const qty = Math.max(1, Math.min(entry.quantity, parseInt(qtyStr, 10) || 1))
+  const pct = pctOf(entry.multiplier, entry.prev_multiplier)
+  const up = pct >= 0
+  const priceEach = Math.floor(entry.sell_value * entry.multiplier * fee)
+  const proceeds = priceEach * qty
+  const allHistory = [...entry.history, entry.multiplier]
+  const histMax = Math.max(...allHistory)
+  const histMin = Math.min(...allHistory)
+  const hColor = HABITAT_COLOR[entry.habitat] ?? '#888'
+
+  const chip = (label: string, target: number) => {
+    const active = qty === target
+    return (
+      <button key={label} type="button" onClick={() => setQtyStr(String(target))} disabled={selling}
+        className="font-karla font-700 flex-1"
+        style={{
+          fontSize: '0.72rem', padding: '0.5rem 0', borderRadius: 9,
+          background: active ? `${hColor}26` : 'rgba(255,255,255,0.05)',
+          border: `1px solid ${active ? `${hColor}70` : 'rgba(255,255,255,0.12)'}`,
+          color: active ? '#fff' : '#b0ada8', cursor: selling ? 'default' : 'pointer',
+        }}>
+        {label}
+      </button>
+    )
+  }
+
+  const stat = (label: string, value: string, color: string) => (
+    <div style={{ flex: 1 }}>
+      <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: '#6a6764' }}>{label}</p>
+      <p className="font-karla font-700" style={{ fontSize: '0.78rem', color, ...TNUM }}>{value}</p>
+    </div>
+  )
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 60 }}
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+        style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 61,
+          maxWidth: 512, margin: '0 auto',
+          background: 'linear-gradient(180deg, #14161d 0%, #0b0c11 100%)',
+          borderTop: `1px solid ${hColor}55`,
+          borderRadius: '20px 20px 0 0',
+          padding: '0.75rem 1.15rem calc(1.5rem + env(safe-area-inset-bottom))',
+          boxShadow: '0 -8px 30px rgba(0,0,0,0.55)',
+        }}
+      >
+        {/* grab handle */}
+        <div style={{ width: 38, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)', margin: '0 auto 14px' }} />
+
+        {/* header: name + price */}
+        <div className="flex items-end justify-between gap-3 mb-3">
+          <div style={{ minWidth: 0 }}>
+            <div className="flex items-center gap-2">
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af', flexShrink: 0 }} />
+              <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.1rem', color: '#f4ecd8' }}>{entry.name}</p>
+            </div>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', color: hColor, letterSpacing: '0.08em' }}>
+              {HABITAT_LABEL[entry.habitat] ?? entry.habitat} · holding ×{entry.quantity}
+            </span>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <p className="font-karla font-700" style={{ fontSize: '1.5rem', color: '#fff', lineHeight: 1, ...TNUM }}>{priceEach.toLocaleString()} <span style={{ fontSize: '0.85rem', color: '#9a9488' }}>⟡</span></p>
+            <p className="font-karla font-700 flex items-center justify-end gap-1 mt-1" style={{ fontSize: '0.72rem', color: up ? UP : DOWN, ...TNUM }}>
+              <ChangeArrow up={up} />{fmtPct(pct)} <span className="font-karla font-400" style={{ color: '#6a6764' }}>vs last tick</span>
+            </p>
+          </div>
+        </div>
+
+        {/* chart */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '0.6rem 0.5rem', marginBottom: 12 }}>
+          <Sparkline data={allHistory} up={up} height={70} fill />
+        </div>
+
+        {/* stats */}
+        <div className="flex items-center gap-3 mb-3" style={{ padding: '0 0.15rem' }}>
+          {stat('Base', `${entry.sell_value.toLocaleString()} ⟡`, '#a0a09a')}
+          {stat('24h High', Math.floor(entry.sell_value * histMax * fee).toLocaleString(), UP)}
+          {stat('24h Low', Math.floor(entry.sell_value * histMin * fee).toLocaleString(), DOWN)}
+          {stat('Mult', `${entry.multiplier.toFixed(2)}×`, '#9a9488')}
+        </div>
+
+        {/* qty controls */}
+        <div className="flex items-center gap-2 mb-2">
+          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#7a7774' }}>Sell quantity</p>
+          <input
+            type="number" inputMode="numeric" min={1} max={entry.quantity}
+            value={qtyStr}
+            onChange={e => setQtyStr(e.target.value)}
+            onBlur={() => setQtyStr(String(qty))}
+            onFocus={e => e.target.select()}
+            disabled={selling}
+            className="font-karla font-700 ml-auto"
+            style={{ width: 70, padding: '0.4rem 0.5rem', textAlign: 'center', background: 'rgba(4,7,12,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#f0ede8', fontSize: '0.85rem', outline: 'none', ...TNUM }}
+          />
+        </div>
+        <div className="flex gap-2 mb-4">
+          {chip('25%', Math.max(1, Math.floor(entry.quantity * 0.25)))}
+          {chip('50%', Math.max(1, Math.floor(entry.quantity * 0.5)))}
+          {chip('All', entry.quantity)}
+        </div>
+
+        {/* confirm */}
+        <motion.button
+          onClick={() => onSell(entry.fish_id, qty)}
+          disabled={selling}
+          whileTap={selling ? undefined : { scale: 0.97 }}
+          transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+          className="font-karla font-700 uppercase tracking-[0.08em] w-full"
+          style={{
+            padding: '0.85rem', borderRadius: 12,
+            background: `linear-gradient(180deg, ${GOLD}33 0%, ${GOLD}1a 100%)`,
+            border: `1px solid ${GOLD}80`, color: GOLD, fontSize: '0.85rem',
+            opacity: selling ? 0.55 : 1, cursor: selling ? 'default' : 'pointer',
+            boxShadow: `0 2px 14px ${GOLD}1f, inset 0 1px 0 rgba(255,255,255,0.08)`, ...TNUM,
+          }}>
+          {selling ? 'Selling…' : `Sell ${qty} · ${proceeds.toLocaleString()} ⟡`}
+        </motion.button>
+        <p className="font-karla font-400 text-center mt-2" style={{ fontSize: '0.6rem', color: '#5a5654' }}>
+          {fee < 1 ? '3% market fee applied · instant payout' : 'No fee (Captain) · instant payout'}
+        </p>
+      </motion.div>
+    </>
   )
 }
 
@@ -295,9 +371,13 @@ export default function MarketClient({
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [selling, setSelling] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [tradeFish, setTradeFish] = useState<MarketFishEntry | null>(null)
+  const [mounted, setMounted] = useState(false)
   const [pendingSales, setPendingSales] = useState<{ id: string; amount: number; fishCount: number; reason: string; settlesAt: string }[]>([])
   const [pendingNow, setPendingNow] = useState(() => Date.now())
   const [, startTransition] = useTransition()
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     function onChange(e: Event) {
@@ -305,8 +385,6 @@ export default function MarketClient({
       setPendingSales(list)
     }
     window.addEventListener('pending-sales-changed', onChange)
-    // Ask the watcher to refetch and re-dispatch — covers the case where the
-    // watcher's initial fetch completed before this component mounted.
     window.dispatchEvent(new Event('pending-sales-may-have-changed'))
     return () => window.removeEventListener('pending-sales-changed', onChange)
   }, [])
@@ -319,12 +397,22 @@ export default function MarketClient({
 
   const countdown = useCountdown(marketState.next_update_at)
   const mood = MOOD_CONFIG[marketState.mood] ?? MOOD_CONFIG.calm
-
   const fee = isPremium ? 1.0 : 0.97
-  const totalMarketValue = portfolio.reduce(
-    (s, e) => s + Math.floor(e.sell_value * e.multiplier * fee) * e.quantity, 0
-  )
+
+  // Hero totals + "vs last tick" change.
+  const totalMarketValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * e.multiplier * fee) * e.quantity, 0)
+  const prevValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * e.prev_multiplier * fee) * e.quantity, 0)
+  const heroDelta = totalMarketValue - prevValue
+  const heroPct = pctOf(totalMarketValue, prevValue)
+  const heroUp = heroDelta >= 0
   const totalCount = portfolio.reduce((s, e) => s + e.quantity, 0)
+  const heroCurve = useMemo(() => [...portfolioCurve(portfolio, fee), totalMarketValue], [portfolio, fee, totalMarketValue])
+
+  // Sea Index — average multiplier across all discovered species.
+  const seaIndex = mean(allMarket.map(e => e.multiplier))
+  const seaPrev = mean(allMarket.map(e => e.prev_multiplier))
+  const seaPct = pctOf(seaIndex, seaPrev)
+  const seaUp = seaPct >= 0
 
   function showToast(msg: string) {
     setToast(msg)
@@ -341,6 +429,7 @@ export default function MarketClient({
       setDoubloons(res.doubloons)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
       showToast(`+${res.earned.toLocaleString()} ⟡`)
+      setTradeFish(null)
       setPortfolio(prev =>
         prev.map(e => e.fish_id === fishId ? { ...e, quantity: e.quantity - qty } : e)
             .filter(e => e.quantity > 0)
@@ -351,9 +440,7 @@ export default function MarketClient({
   const [browseExpanded, setBrowseExpanded] = useState(false)
   const [liquidateConfirm, setLiquidateConfirm] = useState(false)
   const [liquidating, setLiquidating] = useState(false)
-  const liquidateValue = portfolio.reduce(
-    (s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.90 * fee) * e.quantity, 0
-  )
+  const liquidateValue = portfolio.reduce((s, e) => s + Math.floor(e.sell_value * e.multiplier * 0.90 * fee) * e.quantity, 0)
 
   function handleLiquidate() {
     if (liquidating) return
@@ -369,62 +456,132 @@ export default function MarketClient({
     })
   }
 
+  // ── Browse: sort + filter ──
+  const [sortKey, setSortKey] = useState<'value' | 'change' | 'name'>('value')
+  const [habitatFilter, setHabitatFilter] = useState<string | null>(null)
   const ownedIds = new Set(portfolio.map(e => e.fish_id))
-  const browseAll = allMarket.filter(e => !ownedIds.has(e.fish_id))
+  const browseAll = useMemo(() => {
+    let list = allMarket.filter(e => !ownedIds.has(e.fish_id))
+    if (habitatFilter) list = list.filter(e => e.habitat === habitatFilter)
+    const sorted = [...list]
+    if (sortKey === 'value') sorted.sort((a, b) => b.sell_value * b.multiplier - a.sell_value * a.multiplier)
+    else if (sortKey === 'change') sorted.sort((a, b) => pctOf(b.multiplier, b.prev_multiplier) - pctOf(a.multiplier, a.prev_multiplier))
+    else sorted.sort((a, b) => a.name.localeCompare(b.name))
+    return sorted
+  }, [allMarket, ownedIds, habitatFilter, sortKey])
   const browseList = browseExpanded ? browseAll : browseAll.slice(0, 10)
+  const habitatsPresent = useMemo(() => [...new Set(allMarket.map(e => e.habitat))], [allMarket])
+
+  // Top movers across all discovered species.
+  const movers = useMemo(() => {
+    const withPct = allMarket.map(e => ({ e, p: pctOf(e.multiplier, e.prev_multiplier) }))
+    const riser = withPct.reduce<{ e: MarketFishEntry; p: number } | null>((best, c) => (!best || c.p > best.p ? c : best), null)
+    const faller = withPct.reduce<{ e: MarketFishEntry; p: number } | null>((worst, c) => (!worst || c.p < worst.p ? c : worst), null)
+    return { riser: riser && riser.p > 0.05 ? riser.e : null, faller: faller && faller.p < -0.05 ? faller.e : null }
+  }, [allMarket])
 
   return (
     <main className="min-h-screen pb-24 sm:pb-0">
       <div className="px-5 pt-5 max-w-lg mx-auto flex flex-col gap-4 pb-10">
-        {/* Mood banner — includes countdown */}
+
+        {/* ── Market status ticker ── */}
         <div style={{
           background: 'rgba(8,8,6,0.82)', border: `1px solid ${mood.border}`,
-          borderRadius: 12, padding: '0.85rem 1rem',
-          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          borderRadius: 12, padding: '0.7rem 0.9rem',
+          display: 'flex', alignItems: 'center', gap: '0.7rem',
         }}>
-          <MoodIcon mood={marketState.mood} color={mood.color} />
-          <div style={{ flex: 1 }}>
-            <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: mood.color }}>{mood.label}</p>
-            <p className="font-karla font-400" style={{ fontSize: '0.72rem', color: '#9a9488' }}>{mood.desc}</p>
+          <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: mood.bg, border: `1px solid ${mood.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MoodIcon mood={marketState.mood} color={mood.color} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="font-karla font-700 truncate" style={{ fontSize: '0.82rem', color: mood.color }}>{mood.label}</p>
+            <div className="flex items-center gap-1.5">
+              <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#7a7774' }}>Sea Index</span>
+              <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#c0bdb8', ...TNUM }}>{seaIndex.toFixed(2)}×</span>
+              <span className="font-karla font-700 flex items-center gap-0.5" style={{ fontSize: '0.6rem', color: seaUp ? UP : DOWN, ...TNUM }}>
+                <ChangeArrow up={seaUp} />{fmtPct(seaPct)}
+              </span>
+            </div>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p className="font-karla font-500" style={{ fontSize: '0.58rem', color: '#6a6764' }}>Next update</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0ede8' }}>{countdown}</p>
+            <p className="font-karla font-500" style={{ fontSize: '0.54rem', color: '#6a6764' }}>Next update</p>
+            <p className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', ...TNUM }}>{countdown}</p>
           </div>
         </div>
+
+        {/* ── Portfolio hero ── */}
+        {portfolio.length > 0 && (
+          <div style={{
+            background: 'linear-gradient(165deg, rgba(240,192,64,0.07) 0%, rgba(8,8,6,0.86) 55%)',
+            border: '1px solid rgba(240,192,64,0.22)', borderTop: '1px solid rgba(240,192,64,0.45)',
+            borderRadius: 16, padding: '1.1rem 1.15rem 0.95rem', overflow: 'hidden',
+          }}>
+            <p className="font-karla font-600 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: '#9a9488' }}>Hold Value</p>
+            <p className="font-karla font-700" style={{ fontSize: '2.4rem', color: '#fff', lineHeight: 1.05, ...TNUM }}>
+              {totalMarketValue.toLocaleString()} <span style={{ fontSize: '1.1rem', color: '#9a9488' }}>⟡</span>
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="font-karla font-700 flex items-center gap-1" style={{ fontSize: '0.82rem', color: heroUp ? UP : DOWN, ...TNUM }}>
+                <ChangeArrow up={heroUp} />{heroUp ? '+' : ''}{heroDelta.toLocaleString()} ⟡ ({fmtPct(heroPct)})
+              </span>
+              <span className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#6a6764' }}>vs last tick</span>
+            </div>
+            <div style={{ margin: '0.6rem -0.3rem 0.3rem' }}>
+              <Sparkline data={heroCurve} up={heroUp} height={56} fill />
+            </div>
+            <div className="flex items-center justify-between" style={{ paddingTop: '0.35rem' }}>
+              <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a9488', ...TNUM }}>
+                {totalCount} fish · {portfolio.length} species
+              </p>
+              {!liquidateConfirm ? (
+                <button onClick={() => setLiquidateConfirm(true)} disabled={liquidating}
+                  className="font-karla font-700 uppercase tracking-[0.08em]"
+                  style={{ fontSize: '0.56rem', padding: '0.4rem 0.7rem', borderRadius: 999, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', color: DOWN, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Liquidate all · 90%
+                </button>
+              ) : null}
+            </div>
+
+            {liquidateConfirm && (
+              <div style={{ marginTop: '0.7rem', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.7rem' }}>
+                <p className="font-karla font-400 mb-2" style={{ fontSize: '0.68rem', color: '#9a9488' }}>
+                  Sell all {totalCount} fish for <span className="font-700" style={{ color: DOWN, ...TNUM }}>{liquidateValue.toLocaleString()} ⟡</span> (90% of market, 3% fee)? Doubloons arrive in 1 hour.
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setLiquidateConfirm(false)} className="font-karla font-600 flex-1"
+                    style={{ fontSize: '0.66rem', padding: '0.55rem', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: '#9a9488', cursor: 'pointer' }}>
+                    Keep fishing
+                  </button>
+                  <button onClick={handleLiquidate} disabled={liquidating} className="font-karla font-700 uppercase tracking-[0.08em] flex-1"
+                    style={{ fontSize: '0.66rem', padding: '0.55rem', borderRadius: 9, background: 'rgba(239,68,68,0.15)', border: `1px solid rgba(239,68,68,0.4)`, color: DOWN, opacity: liquidating ? 0.5 : 1, cursor: liquidating ? 'default' : 'pointer', ...TNUM }}>
+                    {liquidating ? 'Selling…' : `Liquidate · ${liquidateValue.toLocaleString()} ⟡`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Pending Sales ── */}
         {pendingSales.length > 0 && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#bda05a' }}>
-              Pending Sales
-            </p>
-            <div style={{
-              background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)',
-              borderRadius: 12, padding: '0.6rem 0.85rem',
-              display: 'flex', flexDirection: 'column', gap: 6,
-            }}>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#bda05a' }}>Pending Sales</p>
+            <div style={{ background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.28)', borderRadius: 12, padding: '0.6rem 0.85rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {pendingSales.map(p => {
                 const minutes = Math.max(0, Math.ceil((new Date(p.settlesAt).getTime() - pendingNow) / 60_000))
-                const timeLabel = minutes < 60
-                  ? `${minutes}m`
-                  : `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`
+                const timeLabel = minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`
                 return (
                   <div key={p.id} className="flex items-center justify-between" style={{ padding: '0.25rem 0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                      <span style={{ fontSize: '0.85rem', lineHeight: 1, color: '#bda05a' }}>⏳</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bda05a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+                        <path d="M5 22h14M5 2h14M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2" />
+                      </svg>
                       <div style={{ minWidth: 0 }}>
-                        <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {p.reason}
-                        </p>
-                        <p className="font-karla font-300" style={{ fontSize: '0.6rem', color: '#8a7a4a' }}>
-                          settles in {timeLabel}
-                        </p>
+                        <p className="font-karla font-600 truncate" style={{ fontSize: '0.74rem', color: '#f0ede8', lineHeight: 1.2 }}>{p.reason}</p>
+                        <p className="font-karla font-300" style={{ fontSize: '0.6rem', color: '#8a7a4a' }}>settles in {timeLabel}</p>
                       </div>
                     </div>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f0c040', flexShrink: 0, marginLeft: 12 }}>
-                      +{p.amount.toLocaleString()} ⟡
-                    </p>
+                    <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: GOLD, flexShrink: 0, marginLeft: 12, ...TNUM }}>+{p.amount.toLocaleString()} ⟡</p>
                   </div>
                 )
               })}
@@ -432,153 +589,72 @@ export default function MarketClient({
           </div>
         )}
 
-        {/* ── Portfolio ── */}
+        {/* ── Holdings ── */}
         <div>
-          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>
-            My Portfolio
-          </p>
-
-          {portfolio.length > 0 && (
-            <div style={{
-              background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
-              borderRadius: 12, padding: '0.85rem 1rem', marginBottom: '0.75rem',
-            }}>
-              {/* Summary row */}
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Holdings</p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#c0bdb8' }}>
-                    {totalCount} fish · {portfolio.length} species
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Market value</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#f0c040' }}>
-                    {totalMarketValue.toLocaleString()} ⟡
-                  </p>
-                </div>
-              </div>
-
-              {/* Liquidate */}
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.75rem' }}>
-                {!liquidateConfirm ? (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Liquidate All · 90% market · 3% fee · 1h delay</p>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f87171' }}>
-                        {liquidateValue.toLocaleString()} ⟡
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setLiquidateConfirm(true)}
-                      disabled={liquidating}
-                      className="font-karla font-700 uppercase tracking-[0.1em]"
-                      style={{
-                        fontSize: '0.58rem', padding: '0.45rem 0.85rem', borderRadius: 8,
-                        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                        color: '#f87171', cursor: 'pointer', flexShrink: 0,
-                      }}>
-                      Liquidate
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="font-karla font-400 mb-2" style={{ fontSize: '0.65rem', color: '#9a9488' }}>
-                      Lock in {liquidateValue.toLocaleString()} ⟡ for {totalCount} fish? Doubloons arrive in 1 hour.
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setLiquidateConfirm(false)}
-                        className="font-karla font-600 flex-1"
-                        style={{
-                          fontSize: '0.62rem', padding: '0.55rem', borderRadius: 8,
-                          background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
-                          color: '#6a6764', cursor: 'pointer',
-                        }}>
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleLiquidate}
-                        disabled={liquidating}
-                        className="font-karla font-700 uppercase tracking-[0.1em] flex-1"
-                        style={{
-                          fontSize: '0.62rem', padding: '0.55rem', borderRadius: 8,
-                          background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
-                          color: '#f87171', opacity: liquidating ? 0.5 : 1, cursor: liquidating ? 'default' : 'pointer',
-                        }}>
-                        {liquidating ? 'Selling…' : 'Confirm'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
+          <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Holdings</p>
           {portfolio.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2.5rem 1rem',
-              background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#6a6764', marginBottom: '0.5rem' }}>
-                No fish in hold
-              </p>
-              <p className="font-karla font-400" style={{ fontSize: '0.8rem', color: '#4a4845', marginBottom: '1.25rem' }}>
-                Head to the docks to catch something worth selling.
-              </p>
-              <Link href="/fishing"
-                className="font-karla font-700 uppercase tracking-[0.1em]"
-                style={{
-                  fontSize: '0.7rem', padding: '0.6rem 1.4rem', borderRadius: '2rem',
-                  background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)',
-                  color: '#38bdf8', textDecoration: 'none',
-                }}>
+            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#6a6764', marginBottom: '0.5rem' }}>No fish in hold</p>
+              <p className="font-karla font-400" style={{ fontSize: '0.8rem', color: '#4a4845', marginBottom: '1.25rem' }}>Head to the docks to catch something worth selling.</p>
+              <Link href="/fishing" className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{ fontSize: '0.7rem', padding: '0.6rem 1.4rem', borderRadius: '2rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', textDecoration: 'none' }}>
                 Go Fishing
               </Link>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.85rem' }}>
               {portfolio.map(entry => (
-                <PortfolioCard
-                  key={entry.fish_id}
-                  entry={entry}
-                  onSell={handleSell}
-                  selling={selling === entry.fish_id}
-                  isPremium={isPremium}
-                />
+                <HoldingRow key={entry.fish_id} entry={entry} fee={fee} onOpen={setTradeFish} />
               ))}
-              <p className="font-karla font-400 text-center" style={{ fontSize: '0.62rem', color: '#4a4845' }}>
-                3% market fee applied to all sales
-              </p>
             </div>
           )}
         </div>
 
-        {/* ── All Market Prices ── */}
-        {browseAll.length > 0 && (
+        {/* ── Today's Movers ── */}
+        {(movers.riser || movers.faller) && (
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-1" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>
-              Market Prices
-            </p>
-            <p className="font-karla font-400 mb-3" style={{ fontSize: '0.7rem', color: '#7a7774' }}>
-              Species you&apos;ve discovered but aren&apos;t holding
-            </p>
-            <div style={{
-              background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
-              borderRadius: 12, padding: '0 0.75rem',
-            }}>
-              {browseList.map(entry => (
-                <BrowseRow key={entry.fish_id} entry={entry} />
-              ))}
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Today&apos;s Movers</p>
+            <div className="flex gap-2.5">
+              {movers.riser && <MoverCard entry={movers.riser} label="Top Riser" labelColor={UP} />}
+              {movers.faller && <MoverCard entry={movers.faller} label="Top Faller" labelColor={DOWN} />}
+            </div>
+          </div>
+        )}
+
+        {/* ── Market Prices (browse) ── */}
+        {allMarket.filter(e => !ownedIds.has(e.fish_id)).length > 0 && (
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.14em] mb-2" style={{ fontSize: '0.65rem', color: '#a0a09a' }}>Market Prices</p>
+
+            {/* sort + filter controls */}
+            <div className="flex items-center gap-2 mb-2" style={{ flexWrap: 'wrap' }}>
+              <div className="flex" style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.14)' }}>
+                {([['value', 'Value'], ['change', 'Change'], ['name', 'A–Z']] as const).map(([k, lbl], i) => (
+                  <button key={k} onClick={() => setSortKey(k)} className="font-karla font-700 uppercase tracking-[0.06em]"
+                    style={{ fontSize: '0.56rem', padding: '0.35rem 0.6rem', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.12)', background: sortKey === k ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.02)', color: sortKey === k ? GOLD : '#8a8784', cursor: 'pointer' }}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {habitatsPresent.length > 1 && (
+              <div className="flex gap-1.5 mb-2" style={{ flexWrap: 'wrap' }}>
+                <FilterChip label="All" active={habitatFilter === null} color="#9a9488" onClick={() => setHabitatFilter(null)} />
+                {habitatsPresent.map(h => (
+                  <FilterChip key={h} label={HABITAT_LABEL[h] ?? h} active={habitatFilter === h} color={HABITAT_COLOR[h] ?? '#9a9488'} onClick={() => setHabitatFilter(habitatFilter === h ? null : h)} />
+                ))}
+              </div>
+            )}
+
+            <div style={{ background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.75rem' }}>
+              {browseList.length === 0
+                ? <p className="font-karla font-400 text-center" style={{ fontSize: '0.72rem', color: '#6a6764', padding: '1.25rem 0' }}>No species match.</p>
+                : browseList.map(entry => <BrowseRow key={entry.fish_id} entry={entry} />)}
             </div>
             {browseAll.length > 10 && (
-              <button
-                onClick={() => setBrowseExpanded(v => !v)}
-                className="font-karla font-600 w-full mt-2"
-                style={{
-                  fontSize: '0.7rem', padding: '0.6rem', borderRadius: 10,
-                  background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.16)',
-                  color: '#7a7774', cursor: 'pointer',
-                }}>
-                {browseExpanded ? '↑ Show less' : `↓ Show all ${browseAll.length} species`}
+              <button onClick={() => setBrowseExpanded(v => !v)} className="font-karla font-600 w-full mt-2"
+                style={{ fontSize: '0.7rem', padding: '0.6rem', borderRadius: 10, background: 'rgba(8,8,6,0.82)', border: '1px solid rgba(255,255,255,0.14)', color: '#7a7774', cursor: 'pointer' }}>
+                {browseExpanded ? 'Show less' : `Show all ${browseAll.length} species`}
               </button>
             )}
           </div>
@@ -587,25 +663,43 @@ export default function MarketClient({
         {/* Wallet */}
         <div style={{ textAlign: 'center', paddingTop: 4 }}>
           <p className="font-karla font-400" style={{ fontSize: '0.65rem', color: '#6a6764' }}>Wallet</p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#f0c040' }}>
-            {doubloons.toLocaleString()} ⟡
-          </p>
+          <p className="font-karla font-700" style={{ fontSize: '1.2rem', color: GOLD, ...TNUM }}>{doubloons.toLocaleString()} ⟡</p>
         </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-          background: '#1c2030', border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: '2rem', padding: '0.5rem 1.25rem',
-          pointerEvents: 'none', zIndex: 50,
-        }}>
-          <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', whiteSpace: 'nowrap' }}>{toast}</p>
-        </div>
+      {/* Trade sheet */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {tradeFish && (
+            <TradeSheet
+              key={tradeFish.fish_id}
+              entry={tradeFish}
+              fee={fee}
+              selling={selling === tradeFish.fish_id}
+              onSell={handleSell}
+              onClose={() => setTradeFish(null)}
+            />
+          )}
+        </AnimatePresence>,
+        document.body
       )}
 
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#1c2030', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '2rem', padding: '0.5rem 1.25rem', pointerEvents: 'none', zIndex: 70 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', whiteSpace: 'nowrap', ...TNUM }}>{toast}</p>
+        </div>
+      )}
     </main>
+  )
+}
+
+function FilterChip({ label, active, color, onClick }: { label: string; active: boolean; color: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="font-karla font-700 uppercase tracking-[0.06em]"
+      style={{ fontSize: '0.54rem', padding: '0.3rem 0.6rem', borderRadius: 999, background: active ? `${color}1f` : 'rgba(255,255,255,0.03)', border: `1px solid ${active ? `${color}66` : 'rgba(255,255,255,0.1)'}`, color: active ? '#fff' : '#8a8784', cursor: 'pointer' }}>
+      {label}
+    </button>
   )
 }
 
