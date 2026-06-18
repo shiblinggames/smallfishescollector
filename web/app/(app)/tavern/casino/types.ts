@@ -16,6 +16,7 @@ export interface CasinoWallet {
   dailyCap: number            // effective daily cap = denDailyCap(puzzle_points)
   dailyRemaining: number      // dailyCap - dailyBoughtIn
   sessionNets: CasinoSessionNets   // per-game win/loss since the session started
+  isMember: boolean           // Captain? non-members are flat-capped → upsell
 }
 
 export interface CasinoBuyInResult {

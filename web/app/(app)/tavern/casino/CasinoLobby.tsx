@@ -10,14 +10,17 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { buyInCasino, cashOutCasino } from './actions'
 import type { CasinoWallet, CasinoSessionNets, DenTopEarner } from './types'
-import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX } from '../constants'
+import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, DEN_PURSE_TIERS } from '../constants'
 import BlackjackHubCard from '../BlackjackHubCard'
 import FishSlotsCard from '../FishSlotsCard'
 import RouletteHubCard from '../RouletteHubCard'
 import { useAnimatedNumber } from '../useAnimatedNumber'
 import { Avatar } from '@/app/(app)/leaderboard/boardUI'
+import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 
 const GOLD = '#f0c040'
+const MEMBER_START_CAP = DEN_PURSE_TIERS[0].cap
+const MEMBER_MAX_CAP = DEN_PURSE_TIERS[DEN_PURSE_TIERS.length - 1].cap
 
 export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
   initial: CasinoWallet
@@ -269,6 +272,17 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
             ? `${dailyRemaining.toLocaleString()} ⟡ of today's ${dailyCap.toLocaleString()} ⟡ buy-in cap left`
             : 'Daily buy-in cap reached, back tomorrow'}
         </p>
+
+        {/* Non-member cap upsell — Captains jump from the flat 2k to 5k+ and
+            climb to 10k with charting points. */}
+        {!initial.isMember && (
+          <div style={{ marginTop: 11, paddingTop: 11, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a89e86', textAlign: 'center', lineHeight: 1.45 }}>
+              Need a bigger cap? Captains start at <span className="font-700" style={{ color: GOLD }}>{MEMBER_START_CAP.toLocaleString()} ⟡</span>/day and climb to <span className="font-700" style={{ color: GOLD }}>{MEMBER_MAX_CAP.toLocaleString()} ⟡</span>.
+            </p>
+            <BecomeCaptainButton style={{ padding: '0.55rem 1.05rem', fontSize: '0.8rem' }} />
+          </div>
+        )}
 
         {error && (
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#f08a8a', textAlign: 'center', marginTop: 8 }}>{error}</p>

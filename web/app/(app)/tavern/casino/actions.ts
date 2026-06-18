@@ -42,7 +42,7 @@ export async function getCasinoState(): Promise<CasinoWallet> {
     return {
       chips: 0, doubloons: 0, sessionBuyIns: 0,
       dailyBoughtIn: 0, dailyCap: denDailyCap(0, false), dailyRemaining: denDailyCap(0, false),
-      sessionNets: { blackjack: 0, roulette: 0, slots: 0 },
+      sessionNets: { blackjack: 0, roulette: 0, slots: 0 }, isMember: false,
     }
   }
   const admin = createAdminClient()
@@ -53,8 +53,10 @@ export async function getCasinoState(): Promise<CasinoWallet> {
       .single(),
     getDailyBuyInTotal(user.id),
   ])
-  const dailyCap = denDailyCap((profile?.puzzle_points as number | null) ?? 0, isPremiumActive(profile))
+  const isMember = isPremiumActive(profile)
+  const dailyCap = denDailyCap((profile?.puzzle_points as number | null) ?? 0, isMember)
   return {
+    isMember,
     chips: (profile?.casino_chips as number | null) ?? 0,
     doubloons: (profile?.doubloons as number | null) ?? 0,
     sessionBuyIns: (profile?.casino_session_buy_ins as number | null) ?? 0,
