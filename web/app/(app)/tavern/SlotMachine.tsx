@@ -835,9 +835,14 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
                     <p className="font-cinzel font-700 mt-1" style={{ fontSize: '1.25rem', color: '#f0ede8' }}>
                       +{lastResult.net.toLocaleString()} ⟡
                     </p>
-                    <p className="font-karla font-400 text-[#b3ada2] text-xs mt-1">
-                      {SLOT_PAYOUTS[winSym]}× your bet
-                    </p>
+                    {/* catfish's multiplier is 0 (its triple normally pays the
+                        pot); only shown for the admin big-win fallback, so hide
+                        the misleading "0× your bet" line. */}
+                    {SLOT_PAYOUTS[winSym] > 0 && (
+                      <p className="font-karla font-400 text-[#b3ada2] text-xs mt-1">
+                        {SLOT_PAYOUTS[winSym]}× your bet
+                      </p>
+                    )}
                   </div>
                 ) : showResult && lastResult?.outcome === 'refund' ? (
                   <div style={{ animation: 'result-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', textAlign: 'center' }}>

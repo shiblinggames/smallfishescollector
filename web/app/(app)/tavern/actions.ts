@@ -105,12 +105,15 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('casino_chips, casino_session_buy_ins, slots_session_net, username')
+    .select('casino_chips, casino_session_buy_ins, slots_session_net, username, is_admin')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
   const chipsBefore = (profile.casino_chips as number | null) ?? 0
   if (chipsBefore < wager) return { error: 'Not enough chips' }
+  // Admins still spin + feed the pot, but can't TAKE the community jackpot —
+  // a catfish triple pays them a normal big win instead, pot left intact.
+  const isAdmin = (profile as { is_admin?: boolean | null }).is_admin === true
 
   const reels = slotRollReels()
   const [a, b, c] = reels
@@ -163,10 +166,13 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
     const [ba, bb, bc] = bonusReels
     const bonusAllSame = ba === bb && bb === bc
     const bonusPair = pairSymbol(bonusReels)
-    if (bonusAllSame && ba === 'catfish') {
+    if (bonusAllSame && ba === 'catfish' && !isAdmin) {
       const share = await claimJackpot()
       jackpotWin = share
       bonus = { reels: bonusReels, outcome: 'jackpot', payout: share }
+    } else if (bonusAllSame && ba === 'catfish') {
+      // Admin catfish triple → big win, no pot claim.
+      bonus = { reels: bonusReels, outcome: 'win', payout: wager * SLOT_PAYOUTS.legendary }
     } else if (bonusAllSame && ba !== 'anchor') {
       bonus = { reels: bonusReels, outcome: 'win', payout: wager * SLOT_PAYOUTS[ba] }
     } else if (bonusPair && SLOT_PAIR_PAYOUTS[bonusPair]) {
@@ -175,12 +181,16 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
       bonus = { reels: bonusReels, outcome: 'lose', payout: 0 }
     }
     payout = wager + bonus.payout
-  } else if (allSame && a === 'catfish') {
+  } else if (allSame && a === 'catfish' && !isAdmin) {
     // Natural 3 catfish → global jackpot, share proportional to wager
     outcome = 'jackpot'
     const share = await claimJackpot()
     jackpotWin = share
     payout = share
+  } else if (allSame && a === 'catfish') {
+    // Admin catfish triple → normal big win, the community pot is left alone.
+    outcome = 'win'
+    payout = wager * SLOT_PAYOUTS.legendary
   } else if (allSame) {
     // 3 of same fish → full win
     outcome = 'win'
