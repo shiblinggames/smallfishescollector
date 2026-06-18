@@ -53,9 +53,9 @@ export const MATCH_TOKENS: { img: string; emoji: string; color: string; clip: st
   { img: '/fish/blue-tang.png',     emoji: '🐟', color: '#2aa4ff', clip: 'polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%)' },                           // blue · diamond
   { img: '/fish/pufferfish.png',    emoji: '🐡', color: '#ffd028', clip: '' },                                                                    // yellow · rounded square
   { img: '/fish/lionfish.png',      emoji: '🦂', color: '#ff4631', clip: 'polygon(50% 1%, 94% 26%, 94% 74%, 50% 99%, 6% 74%, 6% 26%)' },          // red · hexagon
-  { img: '/fish/mahi-mahi.png',     emoji: '🐠', color: '#0fd886', clip: 'polygon(50% 4%, 97% 95%, 3% 95%)' },                                    // green · triangle
+  { img: '/fish/seahorse.png',      emoji: '🐠', color: '#0fd886', clip: 'polygon(50% 4%, 97% 95%, 3% 95%)' },                                    // green · triangle (seahorse — narrow fish fits the point)
   { img: '/fish/dumbo-octopus.png', emoji: '🐙', color: '#bb55ff', clip: 'polygon(30% 2%, 70% 2%, 98% 30%, 98% 70%, 70% 98%, 30% 98%, 2% 70%, 2% 30%)' }, // violet · octagon
-  { img: '/fish/seahorse.png',      emoji: '🌊', color: '#ff4f85', clip: 'polygon(50% 1%, 99% 39%, 80% 98%, 20% 98%, 1% 39%)' },                  // pink · pentagon (spare)
+  { img: '/fish/mahi-mahi.png',     emoji: '🌊', color: '#ff4f85', clip: 'polygon(50% 1%, 99% 39%, 80% 98%, 20% 98%, 1% 39%)' },                  // pink · pentagon (spare)
   { img: '/fish/manta-ray.png',     emoji: '🧭', color: '#29e0d2', clip: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }, // teal · star (spare)
 ]
 
@@ -70,15 +70,24 @@ export function shade(hex: string, amt: number): string {
   return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`
 }
 
-/** Faceted-gem surface for a token colour: a bright top-left highlight, a
- *  glossy diagonal sheen, a saturated body, and darker depth toward the
- *  bottom-right. Used by the board tiles + the door-card preview so a token
- *  reads as a cut gem, not a flat chip. */
+/** Faceted-gem surface for a token colour. Layers, top→bottom: a sharp specular
+ *  glint, a glossy diagonal sheen, translucent light/dark conic WEDGES that read
+ *  as cut facets radiating from the table, and a rounded body that sinks to a
+ *  deep bottom-right — so a token reads as a faceted 3-D gem, not a flat chip.
+ *  Used by the board tiles + the door-card preview. */
 export function gemSurface(color: string): string {
+  const lite = shade(color, 0.52)
+  const deep = shade(color, -0.46)
+  const deeper = shade(color, -0.64)
   return [
-    'radial-gradient(34% 30% at 27% 21%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%)',
-    'linear-gradient(157deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.06) 20%, rgba(255,255,255,0) 42%)',
-    `radial-gradient(125% 125% at 33% 26%, ${shade(color, 0.5)} 0%, ${color} 46%, ${shade(color, -0.42)} 100%)`,
+    // sharp specular glint (top-left)
+    'radial-gradient(20% 17% at 28% 19%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0) 100%)',
+    // glossy diagonal sheen across the top facets
+    'linear-gradient(152deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.08) 16%, rgba(255,255,255,0) 38%)',
+    // cut facets — translucent light/dark wedges fanning from the table
+    'conic-gradient(from 214deg at 50% 42%, rgba(255,255,255,0.13) 0deg, rgba(0,0,0,0.17) 52deg, rgba(255,255,255,0.17) 112deg, rgba(0,0,0,0.13) 176deg, rgba(255,255,255,0.07) 240deg, rgba(0,0,0,0.19) 304deg, rgba(255,255,255,0.13) 360deg)',
+    // rounded body sinking to a deep bottom-right for 3-D volume
+    `radial-gradient(128% 128% at 34% 25%, ${lite} 0%, ${color} 44%, ${deep} 82%, ${deeper} 100%)`,
   ].join(', ')
 }
 
