@@ -254,38 +254,38 @@ export default function TackleShopClient({
 
             return (
               <div key={bait.type} style={{
-                background: 'rgba(8,8,6,0.88)',
-                border: `1px solid ${bait.color}28`,
-                borderTop: `2px solid ${bait.color}88`,
-                borderRadius: 14,
-                padding: '0.75rem 0.75rem 0.7rem',
-                display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                ...tileSurface(bait.color, { owned: owned > 0 }),
+                padding: '0.8rem 0.8rem 0.75rem',
+                display: 'flex', flexDirection: 'column', gap: '0.55rem',
               }}>
+                <Sheen />
 
                 {/* Icon + name */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', position: 'relative' }}>
                   <div style={{
-                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                    background: `${bait.color}18`, border: `1px solid ${bait.color}38`,
+                    width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+                    background: `radial-gradient(circle at 38% 30%, ${bait.color}30 0%, ${bait.color}10 70%)`,
+                    border: `1px solid ${bait.color}45`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {bait.imageUrl
-                      ? <img src={bait.imageUrl} alt={bait.name} loading="lazy" decoding="async" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+                      ? <img src={bait.imageUrl} alt={bait.name} loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain', filter: `drop-shadow(0 2px 5px ${bait.color}55)` }} />
                       : <div style={{ width: 12, height: 12, borderRadius: 4, background: bait.color }} />
                     }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f4ecd8', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {bait.name}
                     </p>
                     {owned > 0 && (
-                      <p className="font-karla font-600" style={{ fontSize: '0.55rem', color: bait.color, marginTop: 1 }}>×{owned} owned</p>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'inline-block', marginTop: 3, fontSize: '0.5rem', color: bait.color, background: `${bait.color}1c`, border: `1px solid ${bait.color}45`, borderRadius: 999, padding: '0.1rem 0.4rem' }}>×{owned} in hold</span>
                     )}
                   </div>
                 </div>
 
                 {/* Effect chips */}
-                <div style={{ display: 'flex', gap: '0.28rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0.28rem', flexWrap: 'wrap', position: 'relative' }}>
                   {hasFasterBite && (
                     <span className="font-karla font-600" style={{
                       fontSize: '0.6rem', color: '#e8e4de',
@@ -318,40 +318,43 @@ export default function TackleShopClient({
 
                 {/* Buy buttons or earned badge */}
                 {bait.shopCost > 0 ? (
-                  <div style={{ display: 'flex', gap: '0.35rem', marginTop: 2 }}>
+                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: 'auto', position: 'relative' }}>
                     {([10, 25] as const).map(buyQty => {
                       const cost       = bait.shopCost * buyQty
                       const canAfford  = doubloons >= cost
                       const isBuying   = buyingBait === `${bait.type}-${buyQty}` && isPending
                       return (
-                        <button
+                        <motion.button
                           key={buyQty}
-                          onClick={() => handleBuyBait(bait.type, buyQty)}
+                          onClick={() => { if (canAfford && !isPending) handleBuyBait(bait.type, buyQty) }}
                           disabled={!canAfford || isPending}
+                          whileTap={canAfford && !isPending ? { scale: 0.95 } : undefined}
+                          transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                           style={{
                             flex: 1,
-                            borderRadius: 8, padding: '0.4rem 0.25rem',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                            background: canAfford ? `${bait.color}18` : 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${canAfford ? bait.color + '42' : 'rgba(255,255,255,0.08)'}`,
+                            borderRadius: 9, padding: '0.45rem 0.25rem',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                            background: canAfford ? `linear-gradient(180deg, ${bait.color}26 0%, ${bait.color}12 100%)` : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${canAfford ? bait.color + '55' : 'rgba(255,255,255,0.08)'}`,
                             color: canAfford ? bait.color : '#4a4845',
                             cursor: canAfford && !isPending ? 'pointer' : 'default',
-                            opacity: isBuying ? 0.5 : 1, transition: 'opacity 0.15s',
+                            opacity: isBuying ? 0.5 : 1,
+                            boxShadow: canAfford ? `inset 0 1px 0 rgba(255,255,255,0.08)` : 'none',
                           }}
                         >
-                          <span className="font-karla font-700" style={{ fontSize: '0.72rem', lineHeight: 1 }}>
+                          <span className="font-karla font-700" style={{ fontSize: '0.76rem', lineHeight: 1 }}>
                             {isBuying ? '…' : `×${buyQty}`}
                           </span>
-                          <span className="font-karla" style={{ fontSize: '0.52rem', color: canAfford ? 'rgba(255,255,255,0.55)' : '#f0c040', lineHeight: 1 }}>
+                          <span className="font-karla font-600" style={{ fontSize: '0.54rem', color: canAfford ? 'rgba(255,255,255,0.6)' : '#f0c040', lineHeight: 1 }}>
                             {cost.toLocaleString()} ⟡
                           </span>
-                        </button>
+                        </motion.button>
                       )
                     })}
                   </div>
                 ) : (
-                  <Link href="/expeditions" style={{ textDecoration: 'none', display: 'block', marginTop: 2, padding: '0.35rem 0.5rem', borderRadius: 8, background: `${bait.color}10`, border: `1px solid ${bait.color}28`, textAlign: 'center' }}>
-                    <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: bait.color }}>
+                  <Link href="/expeditions" style={{ textDecoration: 'none', display: 'block', marginTop: 'auto', padding: '0.45rem 0.5rem', borderRadius: 9, background: `${bait.color}12`, border: `1px solid ${bait.color}32`, textAlign: 'center', position: 'relative' }}>
+                    <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: bait.color }}>
                       Earned from voyages →
                     </span>
                   </Link>
@@ -365,14 +368,20 @@ export default function TackleShopClient({
       {/* ── Hooks ── */}
       {section === 'hook' && (
         <>
-          <div className="mb-5">
-            <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl ? HOOKS[previewTier]!.imageUrl!.replace(/\.png$/, '_thumb.png') : undefined} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} glowClass={HOOKS[previewTier] ? hookGlowClass(HOOKS[previewTier]) : undefined} />
-            <div className="flex items-center justify-center gap-2 mt-2.5">
-              <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.85rem', color: HOOKS[previewTier]?.color }}>
+          <div className="mb-5" style={{
+            ...tileSurface(HOOKS[previewTier]?.color ?? '#f0c040', { active: true }),
+            padding: '1rem 1rem 0.85rem',
+          }}>
+            <Sheen />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <HookViewer3D imageUrl={HOOKS[previewTier]?.imageUrl ? HOOKS[previewTier]!.imageUrl!.replace(/\.png$/, '_thumb.png') : undefined} color={HOOKS[previewTier]?.color ?? '#f0c040'} tier={previewTier} glowClass={HOOKS[previewTier] ? hookGlowClass(HOOKS[previewTier]) : undefined} />
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-2" style={{ position: 'relative' }}>
+              <p className="font-cinzel font-700 text-center" style={{ fontSize: '0.95rem', color: HOOKS[previewTier]?.color, textShadow: `0 0 14px ${HOOKS[previewTier]?.color ?? '#f0c040'}40` }}>
                 {HOOKS[previewTier]?.name}
               </p>
               {previewTier !== hookTier && (
-                <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.48rem', color: '#6a6764' }}>
+                <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: '#9a948a', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 999, padding: '0.12rem 0.4rem' }}>
                   preview
                 </span>
               )}
@@ -391,64 +400,67 @@ export default function TackleShopClient({
               const isPreviewing = previewTier === hook.tier && hook.tier !== hookTier
 
               return (
-                <div
+                <motion.div
                   key={hook.tier}
                   onClick={() => { setPreviewTier(hook.tier); if (clickable) handleBuyHook() }}
-                  className="p-3 sm:p-5"
+                  whileTap={{ scale: 0.985 }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   style={{
-                    background: 'rgba(8,8,6,0.82)',
-                    border: `1px solid ${owned ? `${c}55` : isPreviewing ? `${c}30` : isNext && canAffordHook ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
-                    boxShadow: isActive ? `0 0 16px ${c}18` : isPreviewing ? `0 0 10px ${c}10` : isNext && canAffordHook ? `0 0 12px ${c}12` : 'none',
-                    borderRadius: 12,
+                    ...tileSurface(c, { owned, active: isActive, ready: isNext && canAffordHook, locked }),
+                    ...(isPreviewing && !owned ? { boxShadow: `0 0 14px ${c}1a`, borderTop: `1.5px solid ${c}aa` } : null),
+                    padding: '0.85rem 0.9rem',
                     opacity: isPending && isNext ? 0.6 : 1,
                     cursor: 'pointer',
-                    transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
                   }}
                 >
-                  <div className="flex items-start gap-3 sm:gap-5">
+                  <Sheen />
+                  <div className="flex items-center gap-3 sm:gap-4" style={{ position: 'relative' }}>
                     <HookIcon tier={hook.tier} color={c} owned={owned} isActive={isActive} imageUrl={hook.imageUrl ? hook.imageUrl.replace(/\.png$/, '_thumb.png') : undefined} glowClass={hookGlowClass(hook)} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-cinzel font-700 text-sm sm:text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <p className="font-cinzel font-700 text-sm sm:text-base" style={{ color: owned ? '#f4ecd8' : '#7a756c' }}>
                           {hook.name}
                         </p>
-                        {isActive && (
-                          <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: c }}>Active</span>
-                        )}
-                        {owned && !isActive && (
-                          <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
-                        )}
+                        {isActive && <ShopStatusPill kind="active" />}
+                        {owned && !isActive && <ShopStatusPill kind="owned" />}
                         {locked && <ShopStatusPill kind="locked" />}
                       </div>
-                      <p className="font-karla font-300 text-[#6a6764] text-sm sm:text-base">{hook.description}</p>
+                      <p className="font-karla font-300 text-sm" style={{ color: owned ? '#9a958c' : '#6a655d' }}>{hook.description}</p>
 
-                      {hook.tier > 0 && (
-                        <span className="font-karla font-600 inline-block mt-1.5"
-                          style={{
-                            fontSize: '0.65rem',
-                            color: owned ? `${c}bb` : '#4a4845',
-                            background: owned ? `${c}14` : 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${owned ? `${c}30` : 'rgba(255,255,255,0.1)'}`,
-                            padding: '0.12rem 0.5rem', borderRadius: '2rem',
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {hook.tier > 0 && (
+                          <span className="font-karla font-600"
+                            style={{
+                              fontSize: '0.62rem',
+                              color: owned ? `${c}cc` : '#5a564e',
+                              background: owned ? `${c}16` : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${owned ? `${c}38` : 'rgba(255,255,255,0.1)'}`,
+                              padding: '0.12rem 0.5rem', borderRadius: '2rem',
+                            }}>
+                            +{hook.tier * 3}° catch zone
+                          </span>
+                        )}
+                        {isNext && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                            fontSize: '0.56rem',
+                            color: canAffordHook ? c : '#f0c040',
+                            background: canAffordHook ? `${c}1c` : 'rgba(240,192,64,0.1)',
+                            border: `1px solid ${canAffordHook ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
+                            padding: '0.14rem 0.5rem', borderRadius: 999,
                           }}>
-                          +{hook.tier * 3}° catch zone
-                        </span>
-                      )}
-
-                      {isNext && (
-                        <p className="font-karla font-600 mt-1 text-sm sm:text-base" style={{ color: canAffordHook ? c : '#f0c040' }}>
-                          {isPending ? 'Upgrading…' : canAffordHook ? '↑ Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
-                        </p>
-                      )}
+                            {isPending ? 'Upgrading…' : canAffordHook ? 'Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {!owned && (
-                      <p className="font-cinzel font-700 text-[#f0c040] shrink-0 text-base sm:text-lg">
+                      <p className="font-cinzel font-700 shrink-0 text-base sm:text-lg" style={{ color: canAffordHook ? c : '#f0c040', whiteSpace: 'nowrap' }}>
                         {hook.cost.toLocaleString()} ⟡
                       </p>
                     )}
                   </div>
-                </div>
+                </motion.div>
               )
             })}
           </div>
@@ -531,27 +543,25 @@ export default function TackleShopClient({
                   <div
                     key={rod.tier}
                     style={{
-                      background: 'rgba(8,8,6,0.82)',
-                      border: `1px solid ${isActive ? `${c}70` : owned ? `${c}55` : 'rgba(255,255,255,0.14)'}`,
-                      boxShadow: isActive ? `0 0 18px ${c}35` : owned ? `0 0 10px ${c}18` : 'none',
-                      borderRadius: 12,
+                      ...tileSurface(c, { owned, active: isActive }),
                       display: 'flex', flexDirection: 'column',
-                      overflow: 'hidden',
                     }}
                   >
-                    {/* Art — tall portrait header */}
+                    <Sheen />
+                    {/* Art — tall portrait header with a radial halo behind the rod */}
                     <div style={{
-                      height: 150,
+                      position: 'relative',
+                      height: 152,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `linear-gradient(160deg, ${c}20 0%, rgba(4,4,2,0.96) 100%)`,
-                      borderBottom: `1px solid ${c}22`,
+                      background: `radial-gradient(ellipse 80% 70% at 50% 42%, ${c}26 0%, transparent 70%), linear-gradient(165deg, ${c}14 0%, rgba(4,6,10,0.96) 100%)`,
+                      borderBottom: `1px solid ${c}26`,
                       padding: '0.75rem 0.5rem',
                     }}>
                       {(rod.slug || rod.imageUrl)
                         ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} loading="lazy" decoding="async" className={owned ? rodGlowClass(rod) : undefined} style={{
-                            height: '100%', maxWidth: '100%', objectFit: 'contain',
+                            height: '100%', maxWidth: '100%', objectFit: 'contain', position: 'relative',
                             ...(owned && rod.glow
                               ? { ['--rod-glow-color' as string]: rod.color }
                               : { filter: owned ? `drop-shadow(0 4px 18px ${c}60)` : 'grayscale(1) brightness(0.35)' }
@@ -561,15 +571,16 @@ export default function TackleShopClient({
                           <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${c}22`, border: `1px solid ${c}44` }} />
                         )
                       }
+                      {(isActive || (owned && !isActive)) && (
+                        <span style={{ position: 'absolute', top: 8, right: 8 }}>
+                          <ShopStatusPill kind={isActive ? 'equipped' : 'owned'} />
+                        </span>
+                      )}
                     </div>
 
                     {/* Content */}
-                    <div style={{ padding: '0.75rem 0.8rem', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                      <div>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: owned ? '#f0ede8' : '#6a6764', lineHeight: 1.25 }}>{rod.name}</p>
-                        {isActive && <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: c }}>Equipped</span>}
-                        {owned && !isActive && <span className="font-karla font-300 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#4ade80' }}>Owned</span>}
-                      </div>
+                    <div style={{ position: 'relative', padding: '0.8rem 0.8rem', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? '#f4ecd8' : '#7a756c', lineHeight: 1.25 }}>{rod.name}</p>
 
                       <div className="flex flex-wrap gap-1">
                         {rod.doubleCatchChance > 0 && pill(rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`)}
@@ -586,38 +597,44 @@ export default function TackleShopClient({
 
                       <div className="mt-auto pt-1">
                         {!owned && (
-                          <button
-                            onClick={() => { if (canAfford) handlePurchaseRod(rod.tier) }}
+                          <motion.button
+                            onClick={() => { if (canAfford && !isPending) handlePurchaseRod(rod.tier) }}
                             disabled={isPending}
-                            className="font-karla font-700 w-full"
+                            whileTap={canAfford && !isPending ? { scale: 0.96 } : undefined}
+                            transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                            className="font-karla font-700 uppercase tracking-[0.06em] w-full"
                             style={{
-                              fontSize: '0.68rem', padding: '0.38rem 0.5rem', borderRadius: 8,
-                              background: canAfford ? `${c}16` : 'rgba(255,255,255,0.06)',
-                              border: `1px solid ${canAfford ? c + '44' : 'rgba(255,255,255,0.14)'}`,
+                              fontSize: '0.66rem', padding: '0.5rem 0.5rem', borderRadius: 9,
+                              background: canAfford ? `linear-gradient(180deg, ${c}2c 0%, ${c}14 100%)` : 'rgba(255,255,255,0.05)',
+                              border: `1px solid ${canAfford ? c + '5a' : 'rgba(255,255,255,0.12)'}`,
                               color: canAfford ? c : '#f0c040',
                               cursor: canAfford && !isPending ? 'pointer' : 'default',
                               opacity: isBuying ? 0.5 : 1,
+                              boxShadow: canAfford ? `inset 0 1px 0 rgba(255,255,255,0.08)` : 'none',
                             }}
                           >
-                            {isBuying ? '…' : `Buy · ${rod.cost.toLocaleString()} ⟡`}
-                          </button>
+                            {isBuying ? '…' : canAfford ? `Buy · ${rod.cost.toLocaleString()} ⟡` : `Need ${(rod.cost - doubloons).toLocaleString()} ⟡`}
+                          </motion.button>
                         )}
                         {owned && !isActive && (
-                          <button
+                          <motion.button
                             onClick={() => handleEquipRod(rod.tier)}
                             disabled={isPending}
-                            className="font-karla font-700 w-full"
+                            whileTap={!isPending ? { scale: 0.96 } : undefined}
+                            transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                            className="font-karla font-700 uppercase tracking-[0.06em] w-full"
                             style={{
-                              fontSize: '0.68rem', padding: '0.38rem 0.5rem', borderRadius: 8,
-                              background: `${c}16`, border: `1px solid ${c}44`,
+                              fontSize: '0.66rem', padding: '0.5rem 0.5rem', borderRadius: 9,
+                              background: `linear-gradient(180deg, ${c}24 0%, ${c}10 100%)`, border: `1px solid ${c}55`,
                               color: c, cursor: isPending ? 'default' : 'pointer',
                               opacity: isEquipping ? 0.5 : 1,
+                              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08)`,
                             }}
                           >
                             {isEquipping ? '…' : 'Equip'}
-                          </button>
+                          </motion.button>
                         )}
-                        {isActive && <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: `${c}bb` }}><ShopStatusPill kind="active" label="In use" /></span>}
+                        {isActive && <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 2 }}><ShopStatusPill kind="active" label="In use" /></div>}
                       </div>
                     </div>
                   </div>
@@ -625,13 +642,11 @@ export default function TackleShopClient({
               })}
             </div>
 
-            {/* Completionist Rod — at the bottom */}
+            {/* Completionist Rod — the capstone trophy card at the bottom */}
             <div className="mb-4" style={{
+              ...tileSurface(c, { owned: compOwned, active: eligible, locked: !compOwned && !eligible }),
               padding: '1.1rem',
-              background: compOwned ? 'rgba(8,8,6,0.92)' : 'rgba(4,4,2,0.92)',
-              border: `1px solid ${compOwned ? `${c}55` : eligible ? `${c}50` : 'rgba(255,255,255,0.12)'}`,
-              boxShadow: compOwned ? `0 0 32px ${c}22` : eligible ? `0 0 20px ${c}18` : 'none',
-              borderRadius: 14,
+              boxShadow: compOwned ? `0 0 32px ${c}26, inset 0 1px 0 rgba(255,255,255,0.06)` : eligible ? `0 0 22px ${c}1f` : '0 2px 10px rgba(0,0,0,0.35)',
             }}>
               {compOwned ? (
                 <>
@@ -721,80 +736,64 @@ export default function TackleShopClient({
             const slowerPct = Math.round((1 - reel.needleSpeedMultiplier) * 100)
 
             return (
-              <div
+              <motion.div
                 key={reel.tier}
                 onClick={() => { if (isNext && canAffordReel && !isPending) handleBuyReel() }}
-                className="p-3 sm:p-5"
+                whileTap={isNext && canAffordReel && !isPending ? { scale: 0.985 } : undefined}
+                transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 style={{
-                  background: 'rgba(8,8,6,0.82)',
-                  border: `1px solid ${owned ? `${c}55` : isNext && canAffordReel ? `${c}40` : 'rgba(255,255,255,0.14)'}`,
-                  boxShadow: isActive ? `0 0 16px ${c}18` : isNext && canAffordReel ? `0 0 12px ${c}12` : 'none',
-                  borderRadius: 12,
+                  ...tileSurface(c, { owned, active: isActive, ready: isNext && canAffordReel, locked }),
+                  padding: '0.85rem 0.9rem',
                   opacity: isPending && isNext ? 0.6 : 1,
                   cursor: isNext && canAffordReel ? 'pointer' : 'default',
-                  transition: 'box-shadow 0.2s ease, opacity 0.15s ease',
                 }}
               >
-                <div className="flex items-start gap-3">
+                <Sheen />
+                <div className="flex items-center gap-3" style={{ position: 'relative' }}>
                   <ReelIcon color={c} owned={owned} isActive={isActive} imageUrl={reel.imageUrl ? reel.imageUrl.replace(/\.png$/, '_thumb.png') : undefined} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-cinzel font-700 text-sm" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <p className="font-cinzel font-700 text-sm sm:text-base" style={{ color: owned ? '#f4ecd8' : '#7a756c' }}>
                         {reel.name}
                       </p>
-                      {isActive && (
-                        <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: c }}>Active</span>
-                      )}
-                      {owned && !isActive && (
-                        <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
-                      )}
-                      {locked && (
-                        <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#5a5755' }}>🔒 Locked</span>
+                      {isActive && <ShopStatusPill kind="active" />}
+                      {owned && !isActive && <ShopStatusPill kind="owned" />}
+                      {locked && <ShopStatusPill kind="locked" />}
+                    </div>
+                    <p className="font-karla font-300 text-sm" style={{ color: owned ? '#9a958c' : '#6a655d' }}>{reel.description}</p>
+
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="font-karla font-600"
+                        style={{
+                          fontSize: '0.62rem',
+                          color: owned ? (slowerPct > 0 ? `${c}cc` : '#9a958c') : '#5a564e',
+                          background: owned && slowerPct > 0 ? `${c}16` : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${owned && slowerPct > 0 ? `${c}38` : 'rgba(255,255,255,0.1)'}`,
+                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
+                        }}>
+                        {slowerPct > 0 ? `Needle ${slowerPct}% slower` : 'Base speed'}
+                      </span>
+                      {isNext && (
+                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                          fontSize: '0.56rem',
+                          color: canAffordReel ? c : '#f0c040',
+                          background: canAffordReel ? `${c}1c` : 'rgba(240,192,64,0.1)',
+                          border: `1px solid ${canAffordReel ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
+                          padding: '0.14rem 0.5rem', borderRadius: 999,
+                        }}>
+                          {isPending ? 'Upgrading…' : canAffordReel ? 'Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
+                        </span>
                       )}
                     </div>
-                    <p className="font-karla font-300 text-[#6a6764] text-sm">{reel.description}</p>
-
-                    {/* Effect chip — always visible (muted color when not
-                        yet owned) so players can compare upgrades before
-                        buying, matching how hooks display their chips. */}
-                    {slowerPct > 0 ? (
-                      <span className="font-karla font-600 inline-block mt-1.5"
-                        style={{
-                          fontSize: '0.65rem',
-                          color: owned ? `${c}bb` : '#4a4845',
-                          background: owned ? `${c}14` : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${owned ? `${c}30` : 'rgba(255,255,255,0.1)'}`,
-                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
-                        }}>
-                        Needle {slowerPct}% slower
-                      </span>
-                    ) : (
-                      <span className="font-karla font-600 inline-block mt-1.5"
-                        style={{
-                          fontSize: '0.65rem',
-                          color: owned ? '#6a6764' : '#4a4845',
-                          background: 'rgba(255,255,255,0.04)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
-                        }}>
-                        Base speed
-                      </span>
-                    )}
-
-                    {isNext && (
-                      <p className="font-karla font-600 mt-1.5 text-sm" style={{ color: canAffordReel ? c : '#f0c040' }}>
-                        {isPending ? 'Upgrading…' : canAffordReel ? '↑ Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
-                      </p>
-                    )}
                   </div>
 
                   {!owned && (
-                    <p className="font-cinzel font-700 text-[#f0c040] text-base shrink-0">
+                    <p className="font-cinzel font-700 text-base shrink-0" style={{ color: canAffordReel ? c : '#f0c040', whiteSpace: 'nowrap' }}>
                       {reel.cost.toLocaleString()} ⟡
                     </p>
                   )}
                 </div>
-              </div>
+              </motion.div>
             )
           })}
           {reelTier >= REELS.length - 1 && (
@@ -808,61 +807,69 @@ export default function TackleShopClient({
       {/* ── Line ── */}
       {section === 'line' && (
         <div className="flex flex-col gap-2.5 mb-4">
-          <p className="font-karla font-300 text-center mb-1" style={{ fontSize: '0.82rem', color: '#6a6764' }}>
-            Lines are earned by catching unique species — no purchase needed.
-          </p>
+          <div style={{
+            ...tileSurface('#4ade80', {}),
+            padding: '0.7rem 0.9rem', marginBottom: 4,
+            display: 'flex', alignItems: 'center', gap: 9,
+          }}>
+            <Sheen />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, position: 'relative' }}>
+              <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+            </svg>
+            <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#9ab39c', lineHeight: 1.4, position: 'relative' }}>
+              Lines are earned by catching unique species — no purchase needed.
+            </p>
+          </div>
           {LINES.map(line => {
             const owned = line.tier <= lineTier
             const isActive = line.tier === lineTier
+            const locked = !owned && line.unlockAt > 0
             const c = line.color
             const smallerPct = Math.round((1 - line.penaltyMultiplier) * 100)
 
             return (
               <div
                 key={line.tier}
-                className="p-3 sm:p-5"
                 style={{
-                  background: 'rgba(8,8,6,0.82)',
-                  border: `1px solid ${owned ? `${c}55` : 'rgba(255,255,255,0.14)'}`,
-                  boxShadow: isActive ? `0 0 16px ${c}18` : 'none',
-                  borderRadius: 12,
+                  ...tileSurface(c, { owned, active: isActive, locked }),
+                  padding: '0.85rem 0.9rem',
                 }}
               >
-                <div className="flex items-start gap-3">
+                <Sheen />
+                <div className="flex items-center gap-3" style={{ position: 'relative' }}>
                   <LineIcon color={c} owned={owned} isActive={isActive} imageUrl={line.imageUrl} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-cinzel font-700 text-base" style={{ color: owned ? '#f0ede8' : '#6a6764' }}>
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <p className="font-cinzel font-700 text-base" style={{ color: owned ? '#f4ecd8' : '#7a756c' }}>
                         {line.name}
                       </p>
-                      {isActive && (
-                        <span className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: c }}>Active</span>
-                      )}
-                      {owned && !isActive && (
-                        <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
+                      {isActive && <ShopStatusPill kind="active" />}
+                      {owned && !isActive && <ShopStatusPill kind="owned" />}
+                      {locked && <ShopStatusPill kind="locked" />}
+                    </div>
+                    <p className="font-karla font-300 text-sm" style={{ color: owned ? '#9a958c' : '#6a655d' }}>{line.description}</p>
+
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="font-karla font-600"
+                        style={{
+                          fontSize: '0.62rem',
+                          color: owned ? (smallerPct > 0 ? `${c}cc` : '#9a958c') : '#5a564e',
+                          background: owned && smallerPct > 0 ? `${c}16` : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${owned && smallerPct > 0 ? `${c}38` : 'rgba(255,255,255,0.1)'}`,
+                          padding: '0.12rem 0.5rem', borderRadius: '2rem',
+                        }}>
+                        {smallerPct > 0 ? `Snag zones ${smallerPct}% smaller` : 'Standard snag zones'}
+                      </span>
+                      {locked && (
+                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
+                          fontSize: '0.56rem', color: '#9a8f6a',
+                          background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.25)',
+                          padding: '0.14rem 0.5rem', borderRadius: 999,
+                        }}>
+                          {line.unlockAt} species to unlock
+                        </span>
                       )}
                     </div>
-                    <p className="font-karla font-300 text-[#6a6764] text-sm">{line.description}</p>
-
-                    {/* Effect chip — always visible (muted color when not
-                        yet owned) so players can preview what unlocking
-                        the next line will give them, matching hooks. */}
-                    <span className="font-karla font-600 inline-block mt-1.5"
-                      style={{
-                        fontSize: '0.65rem',
-                        color: owned ? (smallerPct > 0 ? `${c}bb` : '#6a6764') : '#4a4845',
-                        background: owned && smallerPct > 0 ? `${c}14` : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${owned && smallerPct > 0 ? `${c}30` : 'rgba(255,255,255,0.1)'}`,
-                        padding: '0.12rem 0.5rem', borderRadius: '2rem',
-                      }}>
-                      {smallerPct > 0 ? `Snag zones ${smallerPct}% smaller` : 'Standard snag zones'}
-                    </span>
-
-                    {!owned && line.unlockAt > 0 && (
-                      <p className="font-karla font-400 mt-1" style={{ fontSize: '0.78rem', color: '#5a5956' }}>
-                        Catch {line.unlockAt} unique species to unlock
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
@@ -872,6 +879,36 @@ export default function TackleShopClient({
       )}
     </div>
   )
+}
+
+// ── Shared item-card chrome ──────────────────────────────────────────────
+// One surface recipe so every Tackle Shop section (bait/hook/rod/reel/line)
+// reads as the same family: an accent-tinted gradient body, a brighter accent
+// top-rim, soft depth, and state-driven emphasis (owned glows, ready gets a
+// gold-ready edge, locked goes flat/dim).
+type TileState = { owned?: boolean; active?: boolean; ready?: boolean; locked?: boolean }
+function tileSurface(c: string, s: TileState): React.CSSProperties {
+  const { owned, active, ready, locked } = s
+  const bodyAlpha = owned || active ? '20' : ready ? '15' : '0d'
+  return {
+    position: 'relative',
+    background: locked
+      ? 'rgba(7,10,15,0.72)'
+      : `linear-gradient(160deg, ${c}${bodyAlpha} 0%, rgba(7,11,17,0.95) 64%)`,
+    border: `1px solid ${active ? c + '7a' : owned ? c + '4a' : ready ? c + '4a' : locked ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.1)'}`,
+    borderTop: `1.5px solid ${active ? c : owned ? c + 'cc' : ready ? c + 'aa' : locked ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.18)'}`,
+    borderRadius: 15,
+    boxShadow: active
+      ? `0 0 22px ${c}26, inset 0 1px 0 rgba(255,255,255,0.06)`
+      : owned ? `0 2px 12px ${c}16`
+      : ready ? `0 0 16px ${c}16`
+      : '0 2px 10px rgba(0,0,0,0.35)',
+    overflow: 'hidden',
+  }
+}
+// Glossy top sheen — drop inside any tileSurface card as the first child.
+function Sheen() {
+  return <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 20%)', pointerEvents: 'none' }} />
 }
 
 function HookIcon({ tier, color, owned, isActive, imageUrl, glowClass }: { tier: number; color: string; owned: boolean; isActive: boolean; imageUrl?: string; glowClass?: string }) {
