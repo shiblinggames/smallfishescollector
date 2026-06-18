@@ -541,8 +541,14 @@ export default function TackleShopClient({
               </div>
             )}
 
-            {/* Rod grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="mb-4">
+            {/* Rod list — single column so each rod gets a wide, readable row:
+                a big neutral art panel on the left, name + plain effect chips +
+                buy on the right. The old 2-col cards flooded every card with the
+                rod's own colour (bg, halo, pills, button), turning the shop into
+                a distracting rainbow where the rods + effects were hard to read.
+                Each rod's colour now shows ONLY as its art glow + a small
+                identity dot; the card chrome + chips are neutral. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} className="mb-4">
               {[...RODS].filter(r => !r.earnedOnly).sort((a, b) => a.cost - b.cost).map(rod => {
                 const owned = (rod.cost === 0 && !rod.earnedOnly) || ownedRods.includes(rod.tier)
                 const isActive = rod.tier === equippedRod
@@ -552,89 +558,87 @@ export default function TackleShopClient({
                 const c = rod.color
                 const speedPct = Math.round((3800 - rod.biteIntervalMs) / 3800 * 100)
 
-                const pill = (label: string) => (
-                  <span key={label} className="font-karla font-600"
-                    style={{ fontSize: '0.62rem', color: `${c}bb`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>
-                    {label}
-                  </span>
-                )
+                const effects: string[] = []
+                if (rod.doubleCatchChance >= 1) effects.push('Always double catch')
+                else if (rod.doubleCatchChance > 0) effects.push(`${Math.round(rod.doubleCatchChance * 100)}% double catch`)
+                if (rod.retryOnMissChance > 0) effects.push(`${Math.round(rod.retryOnMissChance * 100)}% miss retry`)
+                if (rod.snagImmune) effects.push('Snag immune')
+                if (rod.perfectZoneBonus > 0) effects.push(`Perfect zone +${rod.perfectZoneBonus}°`)
+                if (rod.rarityBonus > 0) effects.push(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)
+                if ((rod.jackpotChance ?? 0) > 0) effects.push(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)
+                if (rod.wormhole) effects.push('Wormhole reroll')
+                if ((rod.instantBiteChance ?? 0) > 0) effects.push(`${Math.round(rod.instantBiteChance! * 100)}% instant bite`)
+                if (speedPct > 0) effects.push(`${speedPct}% faster bites`)
+                if (rod.catchZoneBonus > 0) effects.push(`+${rod.catchZoneBonus}° catch zone`)
+                if (effects.length === 0) effects.push('Standard rod')
 
                 return (
-                  <div
-                    key={rod.tier}
-                    style={{
-                      ...tileSurface(c, { owned, active: isActive }),
-                      display: 'flex', flexDirection: 'column',
-                    }}
-                  >
-                    <Sheen />
-                    {/* Art — tall portrait header with a radial halo behind the rod */}
+                  <div key={rod.tier} style={{
+                    display: 'flex', gap: 12, padding: 10,
+                    background: 'rgba(12,14,19,0.95)',
+                    border: `1px solid ${isActive ? 'rgba(240,192,64,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: 14,
+                    boxShadow: isActive ? '0 0 16px rgba(240,192,64,0.1)' : '0 2px 8px rgba(0,0,0,0.3)',
+                  }}>
+                    {/* Art panel — neutral box, big enough to actually see the rod */}
                     <div style={{
-                      position: 'relative',
-                      height: 152,
+                      flexShrink: 0, width: 104, alignSelf: 'stretch', minHeight: 104,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `radial-gradient(ellipse 80% 70% at 50% 42%, ${c}26 0%, transparent 70%), linear-gradient(165deg, ${c}14 0%, rgba(4,6,10,0.96) 100%)`,
-                      borderBottom: `1px solid ${c}26`,
-                      padding: '0.75rem 0.5rem',
+                      background: 'radial-gradient(ellipse at 50% 45%, rgba(255,255,255,0.05) 0%, transparent 70%), rgba(4,6,10,0.5)',
+                      border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: 8,
                     }}>
-                      {(rod.slug || rod.imageUrl)
-                        ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} loading="lazy" decoding="async" className={owned ? rodGlowClass(rod) : undefined} style={{
-                            height: '100%', maxWidth: '100%', objectFit: 'contain', position: 'relative',
+                      {(rod.slug || rod.imageUrl) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={rod.slug ? `/${rod.slug}_thumb.png` : rod.imageUrl} alt={rod.name} loading="lazy" decoding="async"
+                          className={owned ? rodGlowClass(rod) : undefined} style={{
+                            // Always show the rod in full colour — even unaffordable
+                            // ones — so players can see what they're saving up for.
+                            // Owned rods are set apart by their animated glow (glow
+                            // class) or a colour-matched drop-shadow; unowned rods
+                            // just get a soft neutral shadow.
+                            maxWidth: '100%', maxHeight: 92, objectFit: 'contain',
                             ...(owned && rod.glow
                               ? { ['--rod-glow-color' as string]: rod.color }
-                              : { filter: owned ? `drop-shadow(0 4px 18px ${c}60)` : 'grayscale(1) brightness(0.35)' }
+                              : { filter: `drop-shadow(0 3px 12px ${owned ? `${c}55` : 'rgba(0,0,0,0.55)'})` }
                             ),
                           } as React.CSSProperties} />
-                        ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${c}22`, border: `1px solid ${c}44` }} />
-                        )
-                      }
-                      {(isActive || (owned && !isActive)) && (
-                        <span style={{ position: 'absolute', top: 8, right: 8 }}>
-                          <ShopStatusPill kind={isActive ? 'equipped' : 'owned'} />
-                        </span>
-                      )}
+                      ) : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />}
                     </div>
 
-                    {/* Content */}
-                    <div style={{ position: 'relative', padding: '0.8rem 0.8rem', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: owned ? '#f4ecd8' : '#7a756c', lineHeight: 1.25 }}>{rod.name}</p>
-
-                      <div className="flex flex-wrap gap-1">
-                        {rod.doubleCatchChance > 0 && pill(rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`)}
-                        {rod.retryOnMissChance > 0 && pill(`${Math.round(rod.retryOnMissChance * 100)}% miss retry`)}
-                        {rod.snagImmune && pill('Snag immune')}
-                        {rod.perfectZoneBonus > 0 && pill(`Perfect zone +${rod.perfectZoneBonus}°`)}
-                        {rod.rarityBonus > 0 && pill(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)}
-                        {(rod.jackpotChance ?? 0) > 0 && pill(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)}
-                        {rod.wormhole && pill('Wormhole reroll')}
-                        {(rod.instantBiteChance ?? 0) > 0 && pill(`${Math.round(rod.instantBiteChance! * 100)}% instant bite`)}
-                        {speedPct > 0 && pill(`${speedPct}% faster bites`)}
-                        {rod.catchZoneBonus > 0 && pill(`+${rod.catchZoneBonus}° catch zone`)}
+                    {/* Right: name + effects + action */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: c, flexShrink: 0, boxShadow: `0 0 6px ${c}88` }} />
+                        <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.95rem', color: owned ? '#f4ecd8' : '#cfcabf', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rod.name}</p>
+                        {isActive ? <ShopStatusPill kind="equipped" /> : owned ? <ShopStatusPill kind="owned" /> : null}
                       </div>
 
-                      <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: '#6a6764', lineHeight: 1.45 }}>{rod.description}</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {effects.map(label => (
+                          <span key={label} className="font-karla font-600" style={{
+                            fontSize: '0.66rem', color: '#cdc8be',
+                            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)',
+                            padding: '0.16rem 0.5rem', borderRadius: 7, whiteSpace: 'nowrap',
+                          }}>{label}</span>
+                        ))}
+                      </div>
 
-                      <div className="mt-auto pt-1">
+                      <div style={{ marginTop: 'auto', paddingTop: 2 }}>
                         {!owned && (
                           <motion.button
                             onClick={() => { if (canAfford && !isPending) handlePurchaseRod(rod.tier) }}
                             disabled={isPending}
-                            whileTap={canAfford && !isPending ? { scale: 0.96 } : undefined}
+                            whileTap={canAfford && !isPending ? { scale: 0.97 } : undefined}
                             transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                            className="font-karla font-700 uppercase tracking-[0.06em] w-full"
+                            className="font-karla font-700 uppercase tracking-[0.08em]"
                             style={{
-                              fontSize: '0.66rem', padding: '0.5rem 0.5rem', borderRadius: 9,
-                              background: canAfford ? `linear-gradient(180deg, ${c}2c 0%, ${c}14 100%)` : 'rgba(255,255,255,0.05)',
-                              border: `1px solid ${canAfford ? c + '5a' : 'rgba(255,255,255,0.12)'}`,
-                              color: canAfford ? c : '#f0c040',
-                              cursor: canAfford && !isPending ? 'pointer' : 'default',
-                              opacity: isBuying ? 0.5 : 1,
-                              boxShadow: canAfford ? `inset 0 1px 0 rgba(255,255,255,0.08)` : 'none',
-                            }}
-                          >
+                              padding: '0.5rem 0.95rem', borderRadius: 9,
+                              background: canAfford ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.13) 100%)' : 'rgba(255,255,255,0.05)',
+                              border: `1px solid ${canAfford ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                              color: canAfford ? '#f0c040' : '#9a8f6a', fontSize: '0.66rem',
+                              cursor: canAfford && !isPending ? 'pointer' : 'default', opacity: isBuying ? 0.5 : 1,
+                              boxShadow: canAfford ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
+                            }}>
                             {isBuying ? '…' : canAfford ? `Buy · ${rod.cost.toLocaleString()} ⟡` : `Need ${(rod.cost - doubloons).toLocaleString()} ⟡`}
                           </motion.button>
                         )}
@@ -642,21 +646,17 @@ export default function TackleShopClient({
                           <motion.button
                             onClick={() => handleEquipRod(rod.tier)}
                             disabled={isPending}
-                            whileTap={!isPending ? { scale: 0.96 } : undefined}
+                            whileTap={!isPending ? { scale: 0.97 } : undefined}
                             transition={{ type: 'spring', stiffness: 600, damping: 22 }}
-                            className="font-karla font-700 uppercase tracking-[0.06em] w-full"
+                            className="font-karla font-700 uppercase tracking-[0.08em]"
                             style={{
-                              fontSize: '0.66rem', padding: '0.5rem 0.5rem', borderRadius: 9,
-                              background: `linear-gradient(180deg, ${c}24 0%, ${c}10 100%)`, border: `1px solid ${c}55`,
-                              color: c, cursor: isPending ? 'default' : 'pointer',
-                              opacity: isEquipping ? 0.5 : 1,
-                              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08)`,
-                            }}
-                          >
+                              padding: '0.5rem 0.95rem', borderRadius: 9,
+                              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)',
+                              color: '#e0ddd8', fontSize: '0.66rem', cursor: isPending ? 'default' : 'pointer', opacity: isEquipping ? 0.5 : 1,
+                            }}>
                             {isEquipping ? '…' : 'Equip'}
                           </motion.button>
                         )}
-                        {isActive && <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 2 }}><ShopStatusPill kind="active" label="In use" /></div>}
                       </div>
                     </div>
                   </div>
