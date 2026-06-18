@@ -12,7 +12,6 @@ const PROTECTED = [
   '/leaderboard',
   '/shipyard',
   '/social',
-  '/redeem',
 ]
 
 export async function proxy(request: NextRequest) {

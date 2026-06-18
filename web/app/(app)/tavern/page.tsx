@@ -9,6 +9,7 @@ import ChartRoomHubCard from './ChartRoomHubCard'
 import ContestsHubCard from './ContestsHubCard'
 import CasinoHubCard from './CasinoHubCard'
 import TavernLeaderboardsCard from './TavernLeaderboardsCard'
+import TavernPriceTicker from './TavernPriceTicker'
 import WelcomeModal from './WelcomeModal'
 import SetupModal from './SetupModal'
 import SupportStudioCard from '@/components/SupportStudioCard'
@@ -82,6 +83,12 @@ export default async function TavernPage() {
             <TavernLeaderboardsCard />
           </Suspense>
 
+          {/* Fish-market price ticker — a passive stock-ticker strip that
+              replaced the old Market tab. Tap → the full /tavern/market. */}
+          <Suspense fallback={<SkeletonBox height={44} radius={14} />}>
+            <TavernPriceTicker />
+          </Suspense>
+
           {/* Featured — Daily Bonus + Tide Run as standard compact
               cards. Daily Bonus took Recruit Crew's slot here on
               2026-06-11. */}
@@ -111,6 +118,11 @@ export default async function TavernPage() {
               <Link href="/contact" className="text-[#6a6764] hover:text-[#9a9488] transition-colors" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>
                 Contact us
               </Link>
+            </p>
+            <p className="font-karla text-[#4a4845] text-center" style={{ fontSize: '0.72rem', marginTop: -6 }}>
+              <a href="https://shiblingshop.com/products/small-fishes-seas-the-booty-strategy-card-game" target="_blank" rel="noopener noreferrer" className="text-[#6a6764] hover:text-[#9a9488] transition-colors" style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                Get the tabletop card game →
+              </a>
             </p>
           </div>
 

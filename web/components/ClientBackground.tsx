@@ -16,7 +16,6 @@ const ROUTE_BG: [string, BgConfig][] = [
   ['/tavern',                  { src: '/tavernbackground.jpg',     overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/marketplace/shipyard',    { src: `${SUPABASE_BG}/shipyardbackground.jpeg`,   overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
   ['/marketplace/tackle-shop', { src: `${SUPABASE_BG}/tackleshopbackground.jpg`, overlay: 'rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.88) 100%' }],
-  ['/marketplace',             { src: '/marketbackground.jpeg',                   overlay: 'rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.88) 100%' }],
 ]
 
 export default function ClientBackground() {

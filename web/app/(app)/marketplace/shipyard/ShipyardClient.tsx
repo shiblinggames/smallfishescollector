@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { SHIPS } from '@/lib/ships'
 import { buyShip, renameShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
@@ -9,6 +10,7 @@ import ShopBuyButton from '@/components/ShopBuyButton'
 import ShopStatusPill from '@/components/ShopStatusPill'
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons, shipName: initialShipName }: { shipTier: number; doubloons: number; shipName: string | null }) {
+  const router = useRouter()
   const [shipTier, setShipTier] = useState(initialTier)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
   const [shipName, setShipName] = useState(initialShipName)
@@ -49,7 +51,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 
   return (
     <div className="px-4 sm:px-6 max-w-md sm:max-w-2xl mx-auto pb-16">
-      <ShopHeader title="Shipyard" backLabel="Market" href="/marketplace" />
+      <ShopHeader title="Shipyard" backLabel="Back" onBack={() => router.back()} />
 
       {/* ── Active ship hero ─────────────────────────────────────────── */}
       <div style={{

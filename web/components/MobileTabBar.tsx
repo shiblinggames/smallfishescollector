@@ -9,7 +9,6 @@ const PAGE_TINTS: [string, string][] = [
   ['/tavern',      'rgba(180,120,30,0.10)'],
   ['/fishing',     'rgba(14,116,144,0.10)'],
   ['/expeditions', 'rgba(30,60,120,0.12)'],
-  ['/marketplace', 'rgba(120,80,180,0.08)'],
 ]
 
 // Order: tavern, fishing, expeditions, log, profile. "Log" (the

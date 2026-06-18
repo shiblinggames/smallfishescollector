@@ -1,7 +1,6 @@
 export const TAB_ORDER: Record<string, number> = {
   '/tavern':      0,
   '/packs':       1,
-  '/marketplace': 3,
 }
 
 export function getTabDirection(fromPath: string, toPath: string): number {

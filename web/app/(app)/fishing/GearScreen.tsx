@@ -22,12 +22,12 @@ type SlotKey = 'rod' | 'reel' | 'hook' | 'line' | 'special' | 'appearance' | 'ba
 // only place to touch when the pet system lands.
 type AppearanceTab = 'skin' | 'hat' | 'boat' | 'pet'
 
-function ShopLink({ href, label, color, onClick }: { href: string; label: string; color: string; onClick: () => void }) {
+function ShopLink({ href, label, sub, color, onClick }: { href: string; label: string; sub: string; color: string; onClick: () => void }) {
   return (
-    <Link href={href} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.9rem 1rem', borderRadius: 20, background: `${color}12`, border: `1px solid ${color}45`, textDecoration: 'none', marginTop: 6 }}>
+    <Link href={href} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.9rem 1rem', borderRadius: 20, background: `${color}12`, border: `1px solid ${color}45`, textDecoration: 'none' }}>
       <div style={{ flex: 1 }}>
         <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color }}>{label}</p>
-        <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: `${color}80`, marginTop: 2 }}>Tackle Shop</p>
+        <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: `${color}aa`, marginTop: 2 }}>{sub}</p>
       </div>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.75, flexShrink: 0 }}>
         <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -901,6 +901,11 @@ export default function GearScreen({
           )
         })()}
       </div>
+
+      {/* ── Tackle Shop — full upgrades catalog. Lives here (under your
+          current gear, above the loadout stats) now that the standalone
+          Market tab is gone. */}
+      <ShopLink href="/marketplace/tackle-shop" label="Tackle Shop" sub="Bait · hooks · rods · reels · line" color="#f0c040" onClick={onClose} />
 
       {/* ── Loadout stats ── */}
       <div style={{ background: 'rgba(4,10,20,0.75)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '0.9rem' }}>

@@ -13,7 +13,7 @@
 //
 // Fulfillment is ALWAYS the webhook (it flips is_premium); we never trust the
 // client. Embedded completion polls checkMembership inline; the hosted path
-// returns via /marketplace?membership=success which we detect below.
+// returns via /tavern?membership=success which we detect below.
 
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'

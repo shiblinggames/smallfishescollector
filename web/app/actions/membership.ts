@@ -69,7 +69,7 @@ export async function createEmbeddedCheckout(): Promise<{ clientSecret: string }
 
 /** Create a Stripe-HOSTED Checkout session and return its URL — the reliable
  *  fallback. The client navigates to Stripe's own page; on success Stripe
- *  returns them to /marketplace?membership=success. Same webhook fulfillment. */
+ *  returns them to /tavern?membership=success. Same webhook fulfillment. */
 export async function createHostedCheckout(): Promise<{ url: string } | { error: string }> {
   const built = await guardAndBuild()
   if ('error' in built) return built
@@ -77,8 +77,8 @@ export async function createHostedCheckout(): Promise<{ url: string } | { error:
   try {
     const session = await getStripe().checkout.sessions.create({
       mode: 'payment',
-      success_url: `${base}/marketplace?membership=success`,
-      cancel_url: `${base}/marketplace?membership=cancelled`,
+      success_url: `${base}/tavern?membership=success`,
+      cancel_url: `${base}/tavern?membership=cancelled`,
       line_items: built.line_items,
       client_reference_id: built.user.id,
       customer_email: built.user.email,

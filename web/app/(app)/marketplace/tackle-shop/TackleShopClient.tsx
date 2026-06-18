@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
 import { RODS, rodGlowClass } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
@@ -44,6 +45,7 @@ export default function TackleShopClient({
   uniqueSpeciesCaught: number
   totalSpecies: number
 }) {
+  const router = useRouter()
   const [section, setSection] = useState<Section>(null)
 
   useEffect(() => {
@@ -174,7 +176,7 @@ export default function TackleShopClient({
 
     return (
       <div className="px-4 sm:px-6 max-w-lg sm:max-w-2xl mx-auto pb-16">
-        <ShopHeader title="Tackle Shop" backLabel="Market" href="/marketplace" />
+        <ShopHeader title="Tackle Shop" backLabel="Back" onBack={() => router.back()} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
           {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => {
             const wide = key === 'line'
