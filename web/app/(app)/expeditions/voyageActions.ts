@@ -88,6 +88,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
 
   const admin = createAdminClient()
 
+  try {
   // Block if a voyage is already pending (at sea or ready to reveal)
   const { data: existing } = await admin
     .from('daily_voyages')
@@ -196,6 +197,13 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
 
   if (error || !voyage) return { error: 'Failed to send voyage' }
   return { ok: true, voyage: voyage as DailyVoyage }
+  } catch (e) {
+    // Any unexpected throw (crew resolution, the voyage engine, a DB hiccup)
+    // becomes a clean error instead of a rejected promise — otherwise the
+    // client's transition can hang on "Sending…" with nothing surfaced.
+    console.error('[sendDailyVoyage] threw:', e)
+    return { error: 'Could not set sail — something went wrong. Please try again.' }
+  }
 }
 
 export async function revealVoyageResults(voyageId: number): Promise<

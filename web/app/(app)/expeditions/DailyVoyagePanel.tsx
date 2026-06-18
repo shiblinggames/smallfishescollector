@@ -266,10 +266,17 @@ export default function DailyVoyagePanel({
     if (savedCrew.length === 0 || !selectedRoute) return
     setError(null)
     startTransition(async () => {
-      const res = await sendDailyVoyage(selectedRoute)
-      if ('error' in res) { setError(res.error); return }
-      setActiveVoyage(res.voyage)
-      setPanelState('away')
+      try {
+        const res = await sendDailyVoyage(selectedRoute)
+        if ('error' in res) { setError(res.error); return }
+        setActiveVoyage(res.voyage)
+        setPanelState('away')
+      } catch (e) {
+        // Never let a thrown action leave the button stuck on "Sending…"
+        // with no feedback — surface it and clear the pending state.
+        console.error('[voyage] set sail failed:', e)
+        setError('Could not set sail. Please try again.')
+      }
     })
   }, [savedCrew, selectedRoute])
 
@@ -277,6 +284,7 @@ export default function DailyVoyagePanel({
     if (!activeVoyage) return
     setError(null)
     startTransition(async () => {
+      try {
       const res = await revealVoyageResults(activeVoyage.id)
       if ('error' in res) { setError(res.error); return }
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
@@ -294,6 +302,10 @@ export default function DailyVoyagePanel({
       }
       setPanelState('done')
       router.refresh()
+      } catch (e) {
+        console.error('[voyage] claim failed:', e)
+        setError('Could not claim the voyage. Please try again.')
+      }
     })
   }, [activeVoyage, router])
 
