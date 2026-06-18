@@ -11,14 +11,11 @@ export default function Loading() {
         <SkeletonBox width={180} height={26} radius={7} style={{ marginBottom: 10 }} />
         <SkeletonBox width={240} height={11} radius={5} />
       </div>
-      <SkeletonBox width={64} height={11} radius={5} style={{ marginBottom: 12 }} />
       <SkeletonBox height={150} radius={14} style={{ marginBottom: 28 }} />
-      <SkeletonBox width={84} height={11} radius={5} style={{ marginBottom: 12 }} />
       <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 28 }}>
         <SkeletonBox height={132} radius={14} />
         <SkeletonBox height={132} radius={14} />
       </div>
-      <SkeletonBox width={48} height={11} radius={5} style={{ marginBottom: 12 }} />
       <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 28 }}>
         <SkeletonBox height={132} radius={14} />
         <SkeletonBox height={132} radius={14} />

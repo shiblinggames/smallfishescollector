@@ -34,29 +34,19 @@ export default async function MarketplacePage() {
           </p>
         </header>
 
-        {/* ── Market ── */}
-        <section>
-          <SectionLabel>Market</SectionLabel>
-          <MarketCard marlinUrl={marlinUrl} />
-        </section>
+        {/* Cards stand on their own — the section labels (Market / Upgrades /
+            Shop) read as redundant clutter above self-explanatory art cards. */}
+        <MarketCard marlinUrl={marlinUrl} />
 
-        {/* ── Upgrades ── */}
-        <section>
-          <SectionLabel>Upgrades</SectionLabel>
-          <div className="grid grid-cols-2 gap-3">
-            <TackleShopCard />
-            <ShipyardCard />
-          </div>
-        </section>
+        <div className="grid grid-cols-2 gap-3">
+          <TackleShopCard />
+          <ShipyardCard />
+        </div>
 
-        {/* ── Shop ── */}
-        <section>
-          <SectionLabel>Shop</SectionLabel>
-          <div className="grid grid-cols-2 gap-3">
-            <MembershipCard isPremium={isPremium} />
-            <BoardGameCard />
-          </div>
-        </section>
+        <div className="grid grid-cols-2 gap-3">
+          <MembershipCard isPremium={isPremium} />
+          <BoardGameCard />
+        </div>
 
         {/* Redeem — promoted from a tiny text link to a proper slim card so it
             reads as a real destination, matching the shop chrome. */}
@@ -64,19 +54,6 @@ export default async function MarketplacePage() {
 
       </div>
     </main>
-  )
-}
-
-// ── Section heading — gold tick + spaced caps (matches the Shipyard's
-//    SectionLabel so the hub and shop interiors share one heading voice). ──
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingLeft: 2 }}>
-      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: 'linear-gradient(180deg, #f0c040 0%, rgba(240,192,64,0.15) 100%)' }} />
-      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: '#d8d4cd' }}>
-        {children}
-      </p>
-    </div>
   )
 }
 
