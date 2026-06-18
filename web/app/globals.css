@@ -576,6 +576,57 @@ html, body {
 }
 .rod-glow-tech { animation: rod-glow-tech 2.8s ease-in-out infinite; }
 
+/* Galaxy — cosmic: deep violet base broken by two bright white-violet
+   starlight twinkles per cycle, like stars catching the rod across the void.
+   Matches the rod's #a78bfa colour (the gold "sparkle" glow clashed badly). */
+@keyframes rod-glow-galaxy {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 3px #c9b8ff)
+      drop-shadow(0 0 16px #7c5cff);
+  }
+  30% {
+    filter:
+      drop-shadow(0 0 11px #ffffff)
+      drop-shadow(0 0 40px #9b7cff);
+  }
+  36% {
+    filter:
+      drop-shadow(0 0 3px #c9b8ff)
+      drop-shadow(0 0 16px #7c5cff);
+  }
+  68% {
+    filter:
+      drop-shadow(0 0 9px #e8dcff)
+      drop-shadow(0 0 34px #8a6cff);
+  }
+  74% {
+    filter:
+      drop-shadow(0 0 3px #c9b8ff)
+      drop-shadow(0 0 16px #7c5cff);
+  }
+}
+.rod-glow-galaxy { animation: rod-glow-galaxy 6.5s ease-in-out infinite; }
+
+/* Lightsaber — saber: a white-hot core wrapped in a crimson energy bloom that
+   breathes gently (Darth Maul red). Unlike YOLO's "electric" lightning bursts,
+   the blade glows steadily — a humming energy weapon, not a spark. */
+@keyframes rod-glow-saber {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 4px #ffffff)
+      drop-shadow(0 0 13px #ff3344)
+      drop-shadow(0 0 26px #e00022);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 6px #ffffff)
+      drop-shadow(0 0 19px #ff5566)
+      drop-shadow(0 0 36px #ff1133);
+  }
+}
+.rod-glow-saber { animation: rod-glow-saber 2.2s ease-in-out infinite; }
+
 /* ── Hook glows (per-theme animated effects) ──
    Used by lib/hooks.ts via hookGlowClass(). chrome / gilded are very
    subtle so silver / gold hooks read as polished metal; arcane / cursed
