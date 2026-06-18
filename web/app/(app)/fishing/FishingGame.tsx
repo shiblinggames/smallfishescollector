@@ -3468,6 +3468,9 @@ export default function FishingGame({
   const [equippedSpecial, setEquippedSpecial] = useState<string | null>(initialEquippedSpecial)
   const [ownedAutoCaster, setOwnedAutoCaster] = useState(hasAutoCaster)
   const [ownedAutoCatcher, setOwnedAutoCatcher] = useState(hasAutoCatcher)
+  // Quick on/off for the equipped auto item, toggled from a chip under the XP
+  // bar — pauses auto-cast/catch without unequipping in the gear shop.
+  const [autoEnabled, setAutoEnabled] = useState(true)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -5053,7 +5056,7 @@ export default function FishingGame({
     // Both the Auto Caster and its upgrade (Auto Catcher) auto-cast.
     const autoCastActive = (equippedSpecial === 'auto_caster' && ownedAutoCaster)
       || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)
-    if (!autoCastActive) return
+    if (!autoCastActive || !autoEnabled) return
     if (phase !== 'result') return
     if (catchResult?.isShiny) return
 
@@ -5083,7 +5086,7 @@ export default function FishingGame({
     const t = setTimeout(() => { handleCastAgain() }, 1400)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCaster, ownedAutoCatcher, cratePhase, catchResult?.isShiny, crateResult])
+  }, [phase, equippedSpecial, ownedAutoCaster, ownedAutoCatcher, autoEnabled, cratePhase, catchResult?.isShiny, crateResult])
 
   // Auto Catcher: while a common/uncommon fish is on the dial, watch the
   // needle spin and "tap" the instant it's about to land in a green CATCH
@@ -5093,7 +5096,7 @@ export default function FishingGame({
   // gold Perfect sliver, never a miss/snag). Rare+ fish, crates, the Ancient
   // Deep, and active Finn challenges are left for the player's own hand.
   useEffect(() => {
-    if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher) return
+    if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher || !autoEnabled) return
     if (phase !== 'catching' || !hookedFish) return
     if (hookedFish.fishId === CRATE_FISH_ID) return
     if ((hookedFish.biteRarity ?? 1) > 2) return          // commons + uncommons only (tiers 1-2)
@@ -5122,7 +5125,7 @@ export default function FishingGame({
     raf = requestAnimationFrame(tick)
     return () => { done = true; cancelAnimationFrame(raf) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCatcher, hookedFish, selectedZone, finnChallenge])
+  }, [phase, equippedSpecial, ownedAutoCatcher, autoEnabled, hookedFish, selectedZone, finnChallenge])
 
   // Golden catches force a Sell-or-Mount decision via a modal. Both
   // resolve through this helper to clear the catch result back to the
@@ -6018,6 +6021,40 @@ export default function FishingGame({
                   <span style={{ opacity: 0.7 }}>· {tideTurnerSkipsLeft} left</span>
                 </motion.button>
               )}
+              {/* Auto Caster / Catcher — on/off toggle, always available while
+                  one is equipped so you can pause it without the gear shop. */}
+              {((equippedSpecial === 'auto_caster' && ownedAutoCaster) || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)) && (() => {
+                const isCatcher = equippedSpecial === 'auto_catcher'
+                const col = isCatcher ? '#46e0c0' : '#f0c040'
+                return (
+                  <motion.button
+                    key="auto-toggle"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.18 }}
+                    onClick={() => setAutoEnabled(v => !v)}
+                    className="font-karla font-700"
+                    style={{
+                      marginTop: '0.4rem',
+                      display: 'inline-flex', alignItems: 'center', gap: '0.55rem',
+                      background: autoEnabled ? `${col}1c` : 'rgba(14,12,8,0.85)',
+                      border: `1px solid ${autoEnabled ? `${col}88` : 'rgba(255,255,255,0.2)'}`,
+                      borderRadius: 999, padding: '0.32rem 0.75rem 0.32rem 0.8rem',
+                      fontSize: '0.64rem', cursor: 'pointer', letterSpacing: '0.05em',
+                    }}
+                  >
+                    <span style={{ textTransform: 'uppercase', color: autoEnabled ? `${col}cc` : 'rgba(255,255,255,0.4)', fontSize: '0.52rem', letterSpacing: '0.12em' }}>
+                      {isCatcher ? 'Auto Catcher' : 'Auto Caster'}
+                    </span>
+                    {/* switch */}
+                    <span aria-hidden style={{ width: 22, height: 12, borderRadius: 999, flexShrink: 0, position: 'relative', background: autoEnabled ? `${col}55` : 'rgba(255,255,255,0.12)', border: `1px solid ${autoEnabled ? col : 'rgba(255,255,255,0.22)'}` }}>
+                      <span style={{ position: 'absolute', top: 1, left: autoEnabled ? 11 : 1, width: 8, height: 8, borderRadius: '50%', background: autoEnabled ? col : '#7a7672', transition: 'left 0.15s, background 0.15s' }} />
+                    </span>
+                    <span style={{ color: autoEnabled ? '#f0ede8' : '#9a9488' }}>{autoEnabled ? 'On' : 'Off'}</span>
+                  </motion.button>
+                )
+              })()}
             </AnimatePresence>
           </div>
 
