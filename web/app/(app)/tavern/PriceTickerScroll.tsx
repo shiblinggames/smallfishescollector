@@ -20,7 +20,7 @@ function Arrow({ up }: { up: boolean }) {
 // scroll speed stays constant regardless of how many species are listed.
 export default function PriceTickerScroll({ items }: { items: TickerItem[] }) {
   if (items.length === 0) return null
-  const duration = Math.max(18, items.length * 3.2)
+  const duration = Math.max(40, items.length * 7)
   const row = (keyPrefix: string) => items.map((it, i) => {
     const up = it.pct >= 0
     return (
