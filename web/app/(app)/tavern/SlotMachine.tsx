@@ -326,15 +326,10 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
   const [potTease, setPotTease] = useState(false)
   const [potWon, setPotWon] = useState(false)
 
-  // Pull-lever + win-celebration juice
-  const [leverPulled, setLeverPulled] = useState(false)
+  // Win-celebration juice
   const [coins, setCoins] = useState<{ id: number; dx: number; delay: number }[]>([])
   const [edgeGlow, setEdgeGlow] = useState<{ key: number; big: boolean } | null>(null)
   const fxId = useRef(0)
-  function pullLever() {
-    setLeverPulled(true)
-    setTimeout(() => setLeverPulled(false), 240)
-  }
   // Coin spill + screen-edge glow, scaled by win tier.
   function celebrateWin(sym: SlotSymbolId) {
     const big = sym === 'catfish' || sym === 'legendary'
@@ -455,7 +450,6 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
 
   async function handleSpin() {
     if (!canSpin) return
-    pullLever()
     setError(null)
     setLastResult(null)
     setShowResult(false)
@@ -686,37 +680,8 @@ export default function SlotMachine({ chips: initialChips, doubloons: initialDou
         {/* ── Left: the machine ── */}
         <div
           className="flex flex-col items-center gap-5 flex-1 min-w-0"
-          style={{ position: 'relative', paddingRight: 30, animation: jackpotShake ? 'jackpot-shake 0.65s ease-out' : 'none' }}
+          style={{ animation: jackpotShake ? 'jackpot-shake 0.65s ease-out' : 'none' }}
         >
-
-          {/* ── Pull lever — sits in the right gutter, level with the reels.
-                Tap it (or the Spin button) and it yanks down, then springs
-                back, kicking off the spin. ── */}
-          <button
-            type="button"
-            onClick={() => { if (canSpin) handleSpin() }}
-            disabled={!canSpin}
-            aria-label="Pull to spin"
-            style={{
-              position: 'absolute', right: 0, top: 112, width: 30, height: 168, zIndex: 6,
-              background: 'none', border: 'none', padding: 0,
-              cursor: canSpin ? 'pointer' : 'default', opacity: canSpin ? 1 : 0.45,
-              touchAction: 'manipulation',
-            }}
-          >
-            {/* mounting track */}
-            <div style={{ position: 'absolute', left: '50%', top: 22, bottom: 8, width: 9, transform: 'translateX(-50%)', borderRadius: 6, background: `linear-gradient(180deg, ${WOOD_MID}, #120c06)`, border: `1px solid ${BRASS_DIM}`, boxShadow: 'inset 0 0 6px rgba(0,0,0,0.6)' }} />
-            {/* rod + ball knob — slides down when pulled */}
-            <div style={{
-              position: 'absolute', left: '50%', top: 0,
-              transform: `translateX(-50%) translateY(${leverPulled ? 60 : 0}px)`,
-              transition: 'transform 0.22s cubic-bezier(0.36,0.07,0.19,0.97)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-            }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'radial-gradient(circle at 36% 30%, #ff9a6a 0%, #c0392b 72%)', border: `2px solid ${BRASS}`, boxShadow: `0 3px 8px rgba(0,0,0,0.55), 0 0 10px ${BRASS}55` }} />
-              <div style={{ width: 7, height: 96, marginTop: -2, borderRadius: 4, background: `linear-gradient(90deg, #6e4f24, ${BRASS} 50%, #6e4f24)`, boxShadow: '0 0 4px rgba(0,0,0,0.4)' }} />
-            </div>
-          </button>
 
           {/* ── Cabinet ── */}
           <div
