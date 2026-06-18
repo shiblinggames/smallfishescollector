@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react'
 import { SHIPS } from '@/lib/ships'
 import { buyShip, renameShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
+import ShopHeader from '@/components/ShopHeader'
+import ShopBuyButton from '@/components/ShopBuyButton'
+import ShopStatusPill from '@/components/ShopStatusPill'
 
 export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons, shipName: initialShipName }: { shipTier: number; doubloons: number; shipName: string | null }) {
   const [shipTier, setShipTier] = useState(initialTier)
@@ -46,7 +49,7 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 
   return (
     <div className="px-4 sm:px-6 max-w-md sm:max-w-2xl mx-auto pb-16">
-      <SectionLabel>Shipyard</SectionLabel>
+      <ShopHeader title="Shipyard" backLabel="Market" href="/marketplace" />
 
       {/* ── Active ship hero ─────────────────────────────────────────── */}
       <div style={{
@@ -89,7 +92,10 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
             <span className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1, textShadow: `0 0 16px ${activeShip.color}40` }}>
               {shipName ?? activeShip.name}
             </span>
-            <span style={{ fontSize: '0.72rem', color: '#6a5840' }}>✎</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a724e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
           </button>
         )}
 
@@ -137,7 +143,6 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
           const isActive = ship.tier === shipTier
           const isNext = ship.tier === shipTier + 1
           const locked = ship.tier > shipTier + 1
-          const canAfford = doubloons >= ship.cost
           const c = ship.color
           const purchasing = buying === ship.tier && isPending
 
@@ -184,20 +189,8 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                   T{ship.tier}
                 </span>
                 {/* Status pill, overlaid */}
-                <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{
-                  position: 'absolute', bottom: 6, left: 10,
-                  fontSize: '0.5rem',
-                  ...(isActive
-                    ? { color: c, background: `${c}22`, border: `1px solid ${c}66` }
-                    : owned
-                      ? { color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.36)' }
-                      : isNext
-                        ? { color: '#f0c040', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.36)' }
-                        : { color: '#7a7775', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }
-                  ),
-                  borderRadius: 999, padding: '0.2rem 0.6rem',
-                }}>
-                  {isActive ? '⬤ Active' : owned ? '✓ Owned' : isNext ? 'Next Tier' : '🔒 Locked'}
+                <span style={{ position: 'absolute', bottom: 6, left: 10 }}>
+                  <ShopStatusPill kind={isActive ? 'active' : owned ? 'owned' : isNext ? 'next' : 'locked'} />
                 </span>
               </div>
 
@@ -229,29 +222,16 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
 
               {/* Buy button — only on the next purchasable tier */}
               {isNext && (
-                <button
+                <ShopBuyButton
+                  label="Upgrade"
+                  pendingLabel="Upgrading…"
+                  cost={ship.cost}
+                  balance={doubloons}
+                  pending={purchasing}
+                  busy={isPending && !purchasing}
+                  accent={c}
                   onClick={() => handleBuyShip(ship.tier)}
-                  disabled={!canAfford || isPending}
-                  className="font-karla font-700 uppercase tracking-[0.1em]"
-                  style={{
-                    width: '100%',
-                    padding: '0.72rem 0.5rem',
-                    borderRadius: 12,
-                    background: canAfford ? `${c}1f` : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${canAfford ? `${c}66` : 'rgba(255,255,255,0.1)'}`,
-                    color: canAfford ? c : '#f0c040',
-                    cursor: canAfford && !isPending ? 'pointer' : 'default',
-                    opacity: isPending ? 0.6 : 1,
-                    fontSize: '0.78rem',
-                  }}
-                >
-                  {purchasing
-                    ? 'Upgrading…'
-                    : canAfford
-                      ? <>Upgrade <span style={{ color: '#f0ede8' }}>·</span> {ship.cost.toLocaleString()} ⟡</>
-                      : <>Need {(ship.cost - doubloons).toLocaleString()} more ⟡</>
-                  }
-                </button>
+                />
               )}
             </div>
           )

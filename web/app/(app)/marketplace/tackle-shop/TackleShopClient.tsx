@@ -8,9 +8,12 @@ import { RODS, rodGlowClass } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
+import { motion } from 'framer-motion'
 import { buyHook } from '@/app/(app)/hooks/actions'
 import { buyBait, purchaseRod, equipRod, buyReel, claimCompletionistRod } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import ShopHeader from '@/components/ShopHeader'
+import ShopStatusPill from '@/components/ShopStatusPill'
 
 const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
@@ -157,34 +160,34 @@ export default function TackleShopClient({
   if (section === null) {
     return (
       <div className="px-4 sm:px-6 max-w-sm sm:max-w-2xl mx-auto pb-16">
-        <p className="font-karla font-700 uppercase tracking-[0.14em] text-[#8a8784] mb-4" style={{ fontSize: '0.72rem' }}>
-          Tackle Shop
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <ShopHeader title="Tackle Shop" backLabel="Market" href="/marketplace" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           {CATEGORIES.map(({ key, label, desc, color, imageUrl }) => (
-            <div
+            <motion.div
               key={key}
               onClick={() => { setSection(key); setError(null) }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 600, damping: 22 }}
               style={{
-                background: 'rgba(6,12,20,0.92)',
+                position: 'relative',
+                background: `linear-gradient(165deg, ${color}16 0%, rgba(6,12,20,0.94) 60%)`,
                 border: `1px solid ${color}30`,
-                borderTop: `1px solid ${color}55`,
-                borderRadius: 20,
-                padding: '1.3rem 1.4rem 1.25rem',
+                borderTop: `1px solid ${color}70`,
+                borderRadius: 18,
+                padding: '1.15rem 1.3rem',
                 cursor: 'pointer',
                 display: 'flex',
-                alignItems: 'stretch',
+                alignItems: 'center',
                 gap: '1rem',
-                transition: 'border-color 0.15s',
+                overflow: 'hidden',
+                boxShadow: `0 3px 12px rgba(0,0,0,0.4), 0 0 16px ${color}12`,
               }}
             >
+              {/* top sheen */}
+              <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 22%)', pointerEvents: 'none' }} />
               {/* Left: text */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-karla font-600 uppercase tracking-[0.12em]"
-                  style={{ fontSize: '0.56rem', color: color + 'cc', marginBottom: '0.4rem' }}>
-                  Tackle Shop
-                </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ffffff', lineHeight: 1.2, marginBottom: '0.4rem' }}>
+              <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#ffffff', lineHeight: 1.2, marginBottom: '0.35rem' }}>
                   {label}
                 </p>
                 <p className="font-karla font-400" style={{ fontSize: '0.74rem', color: '#b0ada8', lineHeight: 1.5 }}>
@@ -195,7 +198,7 @@ export default function TackleShopClient({
               {/* Right: image */}
               {imageUrl && (
                 <div style={{
-                  flexShrink: 0, width: 100,
+                  flexShrink: 0, width: 92, height: 92, position: 'relative',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -206,15 +209,19 @@ export default function TackleShopClient({
                     decoding="async"
                     style={{
                       maxWidth: '100%',
-                      maxHeight: 110,
+                      maxHeight: 92,
                       objectFit: 'contain',
-                      filter: `drop-shadow(0 4px 16px ${color}50)`,
-                      opacity: 0.92,
+                      filter: `drop-shadow(0 4px 16px ${color}55)`,
+                      opacity: 0.95,
                     }}
                   />
                 </div>
               )}
-            </div>
+              {/* chevron */}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={`${color}99`} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ position: 'relative', flexShrink: 0 }}>
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -226,18 +233,13 @@ export default function TackleShopClient({
   const sectionLabel = CATEGORIES.find(c => c.key === section)?.label ?? ''
 
   return (
-    <div className="px-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => { setSection(null); setError(null) }}
-          className="font-karla font-600"
-          style={{ fontSize: '0.85rem', color: '#6a6764' }}
-        >
-          ← Tackle Shop
-        </button>
-        <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: sectionColor }}>{sectionLabel}</p>
-      </div>
+    <div className="px-4 sm:px-6 max-w-4xl mx-auto">
+      <ShopHeader
+        title={sectionLabel}
+        backLabel="Tackle Shop"
+        onBack={() => { setSection(null); setError(null) }}
+        accent={sectionColor}
+      />
 
       {error && <p className="font-karla font-300 text-red-400 text-xs text-center mb-3">{error}</p>}
 
@@ -416,9 +418,7 @@ export default function TackleShopClient({
                         {owned && !isActive && (
                           <span className="font-karla font-300 uppercase tracking-[0.10em] text-[#4ade80]" style={{ fontSize: '0.65rem' }}>Owned</span>
                         )}
-                        {locked && (
-                          <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#5a5755' }}>🔒 Locked</span>
-                        )}
+                        {locked && <ShopStatusPill kind="locked" />}
                       </div>
                       <p className="font-karla font-300 text-[#6a6764] text-sm sm:text-base">{hook.description}</p>
 
@@ -504,7 +504,7 @@ export default function TackleShopClient({
                       Equip
                     </button>
                   )}
-                  {compActive && <p className="font-karla font-600 text-center" style={{ fontSize: '0.72rem', color: `${c}88` }}>✓ Currently equipped</p>}
+                  {compActive && <p className="font-karla font-600 text-center" style={{ fontSize: '0.72rem', color: `${c}88` }}>Currently equipped</p>}
                 </div>
               </div>
             )}
@@ -617,7 +617,7 @@ export default function TackleShopClient({
                             {isEquipping ? '…' : 'Equip'}
                           </button>
                         )}
-                        {isActive && <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: `${c}88` }}>✓ In use</span>}
+                        {isActive && <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: `${c}bb` }}><ShopStatusPill kind="active" label="In use" /></span>}
                       </div>
                     </div>
                   </div>
@@ -653,14 +653,24 @@ export default function TackleShopClient({
                         {equippingRod === 14 && isPending ? '…' : 'Equip'}
                       </button>
                     )}
-                    {compActive && <span className="font-karla font-600 flex-1 text-center" style={{ fontSize: '0.68rem', color: `${c}88`, paddingTop: '0.45rem' }}>✓ In use</span>}
+                    {compActive && <span className="flex-1 text-center" style={{ paddingTop: '0.4rem' }}><ShopStatusPill kind="active" label="In use" /></span>}
                   </div>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-1">
+                    {eligible ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill={c} stroke="none" aria-hidden style={{ flexShrink: 0, filter: `drop-shadow(0 0 6px ${c}88)` }}>
+                        <path d="M12 2l2.4 6.9L21.5 9l-5.7 4.3 2.2 7-6-4.4-6 4.4 2.2-7L2.5 9l7.1-.1z" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6a6764" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
+                        <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" />
+                        <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
+                      </svg>
+                    )}
                     <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: eligible ? '#f0ede8' : '#6a6764', letterSpacing: '0.08em' }}>
-                      {eligible ? '✦ Ready to Claim' : '🔒 Completionist Rod'}
+                      {eligible ? 'Ready to Claim' : 'Completionist Rod'}
                     </p>
                     <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.48rem', color: eligible ? c : '#4a4845', background: eligible ? `${c}18` : 'rgba(255,255,255,0.05)', border: `1px solid ${eligible ? `${c}35` : 'rgba(255,255,255,0.1)'}`, padding: '0.1rem 0.5rem', borderRadius: '2rem' }}>Mastery</span>
                   </div>
@@ -688,7 +698,7 @@ export default function TackleShopClient({
                   {eligible && (
                     <button onClick={handleClaimCompletionistRod} disabled={isPending} className="font-karla font-700 w-full"
                       style={{ fontSize: '0.75rem', padding: '0.5rem 1rem', borderRadius: 9, background: `${c}22`, border: `1px solid ${c}65`, color: c, cursor: isPending ? 'default' : 'pointer', opacity: isClaiming ? 0.5 : 1 }}>
-                      {isClaiming ? 'Claiming…' : '✦ Claim Your Reward'}
+                      {isClaiming ? 'Claiming…' : 'Claim Your Reward'}
                     </button>
                   )}
                 </>
