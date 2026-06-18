@@ -6034,21 +6034,24 @@ export default function FishingGame({
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.18 }}
                     onClick={() => setAutoEnabled(v => !v)}
+                    aria-label={`${isCatcher ? 'Auto Catcher' : 'Auto Caster'}: ${autoEnabled ? 'on' : 'off'}`}
                     className="font-karla font-700"
+                    // Matches the XP bar's panel (same dark fill so it reads over
+                    // the water); the equipped item's icon stands in for a label.
                     style={{
                       marginTop: '0.4rem',
-                      display: 'inline-flex', alignItems: 'center', gap: '0.55rem',
-                      background: autoEnabled ? `${col}1c` : 'rgba(14,12,8,0.85)',
-                      border: `1px solid ${autoEnabled ? `${col}88` : 'rgba(255,255,255,0.2)'}`,
-                      borderRadius: 999, padding: '0.32rem 0.75rem 0.32rem 0.8rem',
-                      fontSize: '0.64rem', cursor: 'pointer', letterSpacing: '0.05em',
+                      display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                      background: 'rgba(4,10,18,0.72)',
+                      border: `1px solid ${col}${autoEnabled ? '55' : '28'}`,
+                      borderRadius: 20, padding: '0.3rem 0.7rem',
+                      fontSize: '0.62rem', cursor: 'pointer', letterSpacing: '0.04em',
+                      boxShadow: autoEnabled ? `0 0 10px ${col}22` : 'none',
                     }}
                   >
-                    <span style={{ textTransform: 'uppercase', color: autoEnabled ? `${col}cc` : 'rgba(255,255,255,0.4)', fontSize: '0.52rem', letterSpacing: '0.12em' }}>
-                      {isCatcher ? 'Auto Catcher' : 'Auto Caster'}
-                    </span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/autocaster.png" alt="" style={{ width: 17, height: 17, objectFit: 'contain', flexShrink: 0, opacity: autoEnabled ? 1 : 0.45, filter: autoEnabled ? `drop-shadow(0 0 4px ${col}66)` : 'grayscale(1) brightness(0.8)' }} />
                     {/* switch */}
-                    <span aria-hidden style={{ width: 22, height: 12, borderRadius: 999, flexShrink: 0, position: 'relative', background: autoEnabled ? `${col}55` : 'rgba(255,255,255,0.12)', border: `1px solid ${autoEnabled ? col : 'rgba(255,255,255,0.22)'}` }}>
+                    <span aria-hidden style={{ width: 22, height: 12, borderRadius: 999, flexShrink: 0, position: 'relative', background: autoEnabled ? `${col}55` : 'rgba(255,255,255,0.1)', border: `1px solid ${autoEnabled ? col : 'rgba(255,255,255,0.22)'}` }}>
                       <span style={{ position: 'absolute', top: 1, left: autoEnabled ? 11 : 1, width: 8, height: 8, borderRadius: '50%', background: autoEnabled ? col : '#7a7672', transition: 'left 0.15s, background 0.15s' }} />
                     </span>
                     <span style={{ color: autoEnabled ? '#f0ede8' : '#9a9488' }}>{autoEnabled ? 'On' : 'Off'}</span>
