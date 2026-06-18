@@ -4504,7 +4504,7 @@ export default function FishingGame({
   }
 
   // Phase 2 — reel in
-  async function handleReelIn(auto = false) {
+  async function handleReelIn() {
     if (phase !== 'catching' || !hookedFishRef.current) return
     // Re-entrancy guard: phase stays 'catching' during the one-frame
     // yield below, so a double-tap would otherwise run the resolution
@@ -4536,37 +4536,6 @@ export default function FishingGame({
     // commit as the freeze, so "needle stops" and "needle flashes gold"
     // are literally the same frame. Routing the glow through React cost
     // two renders of this component before it reached the glass.
-    let zone: ZoneDef
-    if (auto) {
-      // ── Auto Catcher path ──────────────────────────────────────────────
-      // No player input, but it RESPECTS THE DIAL: it stops the needle on a
-      // green CATCH band (not the gold Perfect sliver, and never a miss/snag)
-      // and resolves there — so what lands IS the catch, just hands-free.
-      // Only ever fired for common/uncommon fish in non-Ancient zones, so we
-      // skip the boss mods. Downstream keys off `zone.type`, reusing the exact
-      // same resolution a hand-caught non-perfect would.
-      const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
-      const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
-      const eventCatchBonus = activeEventRef.current?.type === 'glassy' ? 12 : 0
-      const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus + eventCatchBonus, rod.perfectZoneBonus + 1)
-      // Aim for the middle of a green catch band (in zone space), then convert
-      // to a needle angle through the current board rotation.
-      const greens = zones.filter(z => z.type === 'catch')
-      const tgt = greens.length ? greens[Math.floor(Math.random() * greens.length)] : zones.find(z => z.type === 'catch')
-      const aTarget = tgt ? (tgt.from + tgt.to) / 2 : CATCH_CENTER
-      const deg = (((aTarget + zoneRotationRef.current) % 360) + 360) % 360
-      angleRef.current = deg
-      try { spinAnimRef.current?.cancel() } catch { /* no-op */ }
-      spinAnimRef.current = null
-      freezeNeedleAt(deg)
-      await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 0)))
-      reelLockPendingRef.current = false
-      setAngle(deg)
-      setSnapKey(k => k + 1)
-      setReelRippleKey(k => k + 1)
-      setTimeout(() => setReelRippleKey(0), 1800)
-      zone = getZone(zones, deg, zoneRotationRef.current)
-    } else {
     let resolveAngle: number
     if (spinAnimRef.current) {
       const lookaheadMs = 2 * frameDurRef.current
@@ -4591,7 +4560,7 @@ export default function FishingGame({
     // resolveAngle is the frozen rest angle — the visual and the
     // resolution are the same angle by construction, see the lock-in
     // protocol above.
-    zone = getZone(zones, resolveAngle, zoneRotationRef.current)
+    const zone = getZone(zones, resolveAngle, zoneRotationRef.current)
 
     // Instant perfect feedback — same JS tick as the input. Audio +
     // haptic fire now; the glow paints imperatively and lands on the
@@ -4615,7 +4584,6 @@ export default function FishingGame({
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
     setTimeout(() => setReelRippleKey(0), 1800)
-    }
 
     // Snag immune: treat penalty as miss — no extra bait lost
     const effectiveZoneType = (zone.type === 'penalty' && rod.snagImmune) ? 'miss' : zone.type
@@ -5117,10 +5085,13 @@ export default function FishingGame({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, equippedSpecial, ownedAutoCaster, ownedAutoCatcher, cratePhase, catchResult?.isShiny, crateResult])
 
-  // Auto Catcher: when a COMMON fish is on the dial, reel it in automatically
-  // as a normal (non-perfect) catch — no tap needed. Rare+ fish, crates, and
-  // the Ancient Deep are left for the player's own hand. A short beat lets the
-  // dial show before it locks so the catch still reads.
+  // Auto Catcher: while a common/uncommon fish is on the dial, watch the
+  // needle spin and "tap" the instant it's about to land in a green CATCH
+  // band — exactly like a player auto-tapping with perfect timing. It uses
+  // the SAME forward prediction handleReelIn resolves at, so the needle keeps
+  // its natural flow and the reel fires the moment it reaches green (never the
+  // gold Perfect sliver, never a miss/snag). Rare+ fish, crates, the Ancient
+  // Deep, and active Finn challenges are left for the player's own hand.
   useEffect(() => {
     if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher) return
     if (phase !== 'catching' || !hookedFish) return
@@ -5128,8 +5099,28 @@ export default function FishingGame({
     if ((hookedFish.biteRarity ?? 1) > 2) return          // commons + uncommons only (tiers 1-2)
     if (selectedZone === 'ancient_deep') return           // never the boss zone
     if (finnChallenge) return                             // don't auto-fail/skew a Finn challenge
-    const t = setTimeout(() => { void handleReelIn(true) }, 700)
-    return () => clearTimeout(t)
+    let raf = 0
+    let done = false
+    const startAt = performance.now()
+    const predictAngle = () => {
+      if (spinAnimRef.current) {
+        const lookaheadMs = 2 * frameDurRef.current
+        const a = spinAngleNow() + dirRef.current * speedRef.current * lookaheadMs / 1000
+        return (((a % 360) + 360) % 360)
+      }
+      return spinAngleNow()
+    }
+    const tick = () => {
+      if (done) return
+      // brief grace so the dial visibly spins before the first auto-tap
+      if (performance.now() - startAt >= 420) {
+        const z = getZone(catchingZonesRef.current, predictAngle(), zoneRotationRef.current)
+        if (z.type === 'catch') { done = true; void handleReelIn(); return }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => { done = true; cancelAnimationFrame(raf) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, equippedSpecial, ownedAutoCatcher, hookedFish, selectedZone, finnChallenge])
 
