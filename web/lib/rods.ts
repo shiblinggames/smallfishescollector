@@ -149,8 +149,8 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 15, name: 'YOLO Rod', cost: 1000000,
-    description: '10% chance to land 100 fish at once. The other 90%? Just a regular catch.',
-    color: '#60d9ff', rarityBonus: 0, biteIntervalMs: 3000, catchZoneBonus: 0,
+    description: '10% chance to land 100 fish at once (capped at 10 in the Ancient Deep). The other 90%? Just a regular catch.',
+    color: '#60d9ff', rarityBonus: 0, biteIntervalMs: 2850, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     jackpotChance: 0.10, jackpotMultiplier: 100,
     slug: 'rod_yolo', glow: true, glowType: 'electric',
@@ -180,7 +180,7 @@ export const RODS: RodDef[] = [
   {
     tier: 18, name: 'Galaxy Rod', cost: 300000,
     description: 'Spun from cosmic thread. After any catch, open a wormhole and reroll it into a different fish from the same waters — fortune or folly, you take what surfaces.',
-    color: '#a78bfa', rarityBonus: 0.40, biteIntervalMs: 2600, catchZoneBonus: 6,
+    color: '#a78bfa', rarityBonus: 0, biteIntervalMs: 2660, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     wormhole: true,
     slug: 'rod_galaxy', glow: true, glowType: 'galaxy',
@@ -188,7 +188,7 @@ export const RODS: RodDef[] = [
   {
     tier: 19, name: 'Lightsaber Rod', cost: 300000,
     description: 'A blade of pure energy. Fish are drawn to the light — most casts bite almost the instant your line touches the water.',
-    color: '#ff3b47', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 8,
+    color: '#ff3b47', rarityBonus: 0, biteIntervalMs: 2470, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     instantBiteChance: 0.35,
     slug: 'rod_lightsaber', glow: true, glowType: 'saber',

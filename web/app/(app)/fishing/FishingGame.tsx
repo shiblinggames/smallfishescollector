@@ -845,7 +845,7 @@ function UnifiedGearDrawer({
                     {ownedRodDefs.map(r => {
                       const isEquipped = r.tier === equippedRodTier
                       const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
-                      const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0 || r.wormhole || (r.instantBiteChance ?? 0) > 0
+                      const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0 || r.wormhole || (r.instantBiteChance ?? 0) > 0 || (r.crateChanceMult ?? 1) > 1 || (r.perfectXpMult ?? 1) > 1
                       return (
                         <div key={r.tier} style={{
                           display: 'flex', alignItems: 'center', gap: 10,
@@ -862,6 +862,8 @@ function UnifiedGearDrawer({
                               {r.perfectZoneBonus > 0 && <StatPill label={`Perfect zone +${r.perfectZoneBonus}°`} color={r.color} />}
                               {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
                               {(r.jackpotChance ?? 0) > 0 && <StatPill label={`${Math.round(r.jackpotChance! * 100)}% jackpot ×${r.jackpotMultiplier}`} color={r.color} />}
+                              {(r.crateChanceMult ?? 1) > 1 && <StatPill label={`${r.crateChanceMult}× crate odds`} color={r.color} />}
+                              {(r.perfectXpMult ?? 1) > 1 && <StatPill label={`${r.perfectXpMult}× perfect XP`} color={r.color} />}
                               {r.wormhole && <StatPill label="Wormhole reroll" color={r.color} />}
                               {(r.instantBiteChance ?? 0) > 0 && <StatPill label={`${Math.round(r.instantBiteChance! * 100)}% instant bite`} color={r.color} />}
                               {!hasSpecial && speedPct > 0 && <StatPill label={`${speedPct}% faster bites`} color={r.color} />}
@@ -4749,18 +4751,19 @@ export default function FishingGame({
 
     // Twin-Strike rod: 25% chance to catch 2 fish.
     // YOLO Rod: 10% chance to catch 100x fish.
-    // BOTH disabled in the Ancient Deep — the zone is balanced around
-    // single-fish catches with high per-fish value (lure scarcity +
-    // multi-phase reels + precision gate them already). Any ×N or ×100
-    // multiplier on top of that yields ~5-10× the intended hourly rate.
-    // Server-side reelIn enforces the same clamp so a manipulated
-    // client can't bypass.
+    // Twin-Strike's double STAYS disabled in the Ancient Deep (zone balanced
+    // around single high-value catches). The YOLO jackpot CAN trigger there
+    // now, but its haul is CAPPED at ×10 (vs ×100) so it doesn't blow out the
+    // zone's economy. Ancient trophies (the one-time bosses, sell_value 0)
+    // never multiply at all. Server-side reelIn enforces the same caps so a
+    // manipulated client can't bypass them.
     // Rolled HERE (before the Finn block) so a speed challenge can count
     // the full haul from the same roll that reelIn receives below.
-    const noMultipliersHere = selectedZone === 'ancient_deep'
-    const doubleCatch = !noMultipliersHere && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
-    const jackpotHit = !noMultipliersHere && !doubleCatch && (rod.jackpotChance ?? 0) > 0 && Math.random() < rod.jackpotChance!
-    const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
+    const inAncient = selectedZone === 'ancient_deep'
+    const ancientTrophy = inAncient && (allFishSpecies.find(f => f.id === hookedFishRef.current!.fishId)?.sell_value ?? 0) === 0
+    const doubleCatch = !inAncient && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
+    const jackpotHit = !doubleCatch && !ancientTrophy && (rod.jackpotChance ?? 0) > 0 && Math.random() < rod.jackpotChance!
+    const jackpotMultiplier = jackpotHit ? Math.min(rod.jackpotMultiplier ?? 1, inAncient ? 10 : Infinity) : 1
 
     // Finn challenge progression — replaces the old gem-challenge mechanic.
     // Perfect-streak: a non-perfect catch fails. Speed-catch: any catch

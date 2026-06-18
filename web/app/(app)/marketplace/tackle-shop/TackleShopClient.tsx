@@ -566,6 +566,8 @@ export default function TackleShopClient({
                 if (rod.perfectZoneBonus > 0) effects.push(`Perfect zone +${rod.perfectZoneBonus}°`)
                 if (rod.rarityBonus > 0) effects.push(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)
                 if ((rod.jackpotChance ?? 0) > 0) effects.push(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)
+                if ((rod.crateChanceMult ?? 1) > 1) effects.push(`${rod.crateChanceMult}× crate odds`)
+                if ((rod.perfectXpMult ?? 1) > 1) effects.push(`${rod.perfectXpMult}× perfect XP`)
                 if (rod.wormhole) effects.push('Wormhole reroll')
                 if ((rod.instantBiteChance ?? 0) > 0) effects.push(`${Math.round(rod.instantBiteChance! * 100)}% instant bite`)
                 if (speedPct > 0) effects.push(`${speedPct}% faster bites`)

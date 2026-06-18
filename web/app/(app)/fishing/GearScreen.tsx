@@ -48,6 +48,8 @@ function rodTagline(r: typeof RODS[number]): string {
   if (r.retryOnMissChance > 0)         parts.push(`${Math.round(r.retryOnMissChance * 100)}% retry`)
   if (r.perfectZoneBonus > 0)          parts.push(`+${r.perfectZoneBonus}° perfect`)
   if (r.rarityBonus > 0)               parts.push(`+${Math.round(r.rarityBonus * 100)}% rare`)
+  if ((r.crateChanceMult ?? 1) > 1)    parts.push(`${r.crateChanceMult}× crate odds`)
+  if ((r.perfectXpMult ?? 1) > 1)      parts.push(`${r.perfectXpMult}× perfect XP`)
   if (r.wormhole)                      parts.push('Wormhole reroll')
   if ((r.instantBiteChance ?? 0) > 0)  parts.push(`${Math.round(r.instantBiteChance! * 100)}% instant bite`)
   const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
