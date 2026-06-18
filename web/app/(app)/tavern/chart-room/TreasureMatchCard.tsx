@@ -44,8 +44,8 @@ export default function TreasureMatchCard({ status, reward }: { status: 'active'
                 background: gemSurface(tok.color),
                 filter: `drop-shadow(0 1px 1.5px rgba(0,0,0,0.5))`,
               }} />
-              <div aria-hidden style={{ position: 'absolute', left: '21%', top: '15%', width: '22%', height: '22%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)' }} />
-              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '66%', height: '66%', objectFit: 'contain' }} />
+              <div aria-hidden style={{ position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '15%', width: '22%', height: '22%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)' }} />
+              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '66%', height: '66%', objectFit: 'contain', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined }} />
             </motion.div>
           )
         })}

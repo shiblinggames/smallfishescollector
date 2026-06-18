@@ -48,15 +48,19 @@ export function nextMatchTier(score: number): { score: number; points: number } 
  *  six in play (0-5) read apart by shape AND colour AND art — fully
  *  colourblind-safe and instant even at thumbnail size. `clip` is a CSS
  *  clip-path; '' = the default rounded square. emoji is a fallback only. */
-export const MATCH_TOKENS: { img: string; emoji: string; color: string; clip: string }[] = [
+// `glint` overrides the cut-gem sparkle's position for shapes whose top-left
+// corner is empty (pointed-top silhouettes), so the highlight sits ON the gem.
+// `nudge` shifts the fish art down by N% of its height to centre it in the
+// visible part of the silhouette. Both default to the top-left glint / no nudge.
+export const MATCH_TOKENS: { img: string; emoji: string; color: string; clip: string; glint?: { left: string; top: string }; nudge?: number }[] = [
   { img: '/fish/clownfish.png',     emoji: '🐠', color: '#ff7e1c', clip: 'circle(49% at 50% 50%)' },                                              // orange · circle
-  { img: '/fish/blue-tang.png',     emoji: '🐟', color: '#2aa4ff', clip: 'polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%)' },                           // blue · diamond
+  { img: '/fish/blue-tang.png',     emoji: '🐟', color: '#2aa4ff', clip: 'polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%)', glint: { left: '40%', top: '25%' } },  // blue · diamond
   { img: '/fish/pufferfish.png',    emoji: '🐡', color: '#ffd028', clip: '' },                                                                    // yellow · rounded square
   { img: '/fish/lionfish.png',      emoji: '🦂', color: '#ff4631', clip: 'polygon(50% 1%, 94% 26%, 94% 74%, 50% 99%, 6% 74%, 6% 26%)' },          // red · hexagon
-  { img: '/fish/seahorse.png',      emoji: '🐠', color: '#0fd886', clip: 'polygon(50% 4%, 97% 95%, 3% 95%)' },                                    // green · triangle (seahorse — narrow fish fits the point)
+  { img: '/fish/seahorse.png',      emoji: '🐠', color: '#0fd886', clip: 'polygon(50% 4%, 97% 95%, 3% 95%)', glint: { left: '42%', top: '40%' }, nudge: 15 }, // green · triangle (seahorse — narrow fish fits the point)
   { img: '/fish/dumbo-octopus.png', emoji: '🐙', color: '#bb55ff', clip: 'polygon(30% 2%, 70% 2%, 98% 30%, 98% 70%, 70% 98%, 30% 98%, 2% 70%, 2% 30%)' }, // violet · octagon
-  { img: '/fish/mahi-mahi.png',     emoji: '🌊', color: '#ff4f85', clip: 'polygon(50% 1%, 99% 39%, 80% 98%, 20% 98%, 1% 39%)' },                  // pink · pentagon (spare)
-  { img: '/fish/manta-ray.png',     emoji: '🧭', color: '#29e0d2', clip: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }, // teal · star (spare)
+  { img: '/fish/mahi-mahi.png',     emoji: '🌊', color: '#ff4f85', clip: 'polygon(50% 1%, 99% 39%, 80% 98%, 20% 98%, 1% 39%)', glint: { left: '40%', top: '28%' } }, // pink · pentagon (spare)
+  { img: '/fish/manta-ray.png',     emoji: '🧭', color: '#29e0d2', clip: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', glint: { left: '42%', top: '30%' } }, // teal · star (spare)
 ]
 
 /** Lighten (amt > 0, toward white) or darken (amt < 0, toward black) a #rrggbb

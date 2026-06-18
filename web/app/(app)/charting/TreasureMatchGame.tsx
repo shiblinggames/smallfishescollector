@@ -389,14 +389,15 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 filter: gemGlow,
                 transition: 'filter 0.12s',
               }} />
-              {/* a crisp little sparkle, top-left, for cut-gem shine */}
+              {/* a crisp little sparkle for cut-gem shine — placed on the gem
+                  (pointed-top shapes move it off the empty corner via tok.glint) */}
               <div aria-hidden style={{
-                position: 'absolute', left: '21%', top: '16%', width: '20%', height: '20%', borderRadius: '50%',
+                position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '16%', width: '20%', height: '20%', borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)',
                 pointerEvents: 'none',
               }} />
-              {/* fish (on top, unclipped) */}
-              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
+              {/* fish (on top, unclipped) — nudged down on narrow silhouettes */}
+              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
             </div>
           )
         })}
