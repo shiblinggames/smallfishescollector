@@ -300,16 +300,20 @@ function SpecialIcon({ color }: { color: string }) {
 }
 
 function SpecialItemRow({
-  item, owned, isEquipped, tideTurnerSkipsLeft,
+  item, owned, isEquipped, tideTurnerSkipsLeft, lockReason,
   onEquip, onRequestBuy,
 }: {
   item: import('@/lib/specialItems').SpecialItemDef
   owned: boolean
   isEquipped: boolean
   tideTurnerSkipsLeft: number
+  /** When set (and not owned), the item is gated: shows a lock + this reason
+   *  instead of a Buy button. */
+  lockReason?: string | null
   onEquip: () => void
   onRequestBuy: () => void
 }) {
+  const locked = !owned && !!lockReason
   return (
     <div style={{
       background: isEquipped ? `${item.color}10` : 'rgba(255,255,255,0.03)',
@@ -363,7 +367,7 @@ function SpecialItemRow({
             {isEquipped ? 'Unequip' : 'Equip'}
           </button>
         )}
-        {!owned && item.shopCost && (
+        {!owned && item.shopCost && !locked && (
           <button
             onClick={onRequestBuy}
             style={{
@@ -381,7 +385,18 @@ function SpecialItemRow({
             <span style={{ fontSize: '0.58rem', color: '#f0c040', display: 'block', lineHeight: 1.3 }}>{item.shopCost.toLocaleString()}</span>
           </button>
         )}
+        {locked && (
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, padding: '0.3rem 0.55rem', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8f877a" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#9a907c' }}>{item.shopCost?.toLocaleString()} ⟡</span>
+          </div>
+        )}
       </div>
+      {locked && (
+        <p className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#caa05a', marginTop: 4, lineHeight: 1.4 }}>
+          {lockReason}
+        </p>
+      )}
       {owned && item.id === 'tide_turner' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, paddingTop: 6, borderTop: `1px solid ${item.color}18` }}>
           <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: `${item.color}88` }}>Skips today</p>
@@ -649,7 +664,7 @@ export default function GearScreen({
   equippedBoat, unlockedBoats, onEquipBoat, onBuyBoat, doubloons,
   equippedHat, unlockedHats, onEquipHat, onBuyHat,
   equippedPet, unlockedPets, onEquipPet,
-  hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasPerfectedSigil,
+  hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
   fishingLevel,
   showWaitTimer,
@@ -698,6 +713,8 @@ export default function GearScreen({
   tideTurnerSkipsLeft: number
   hasPhantomHook: boolean
   hasAutoCaster: boolean
+  hasAutoCatcher: boolean
+  gauntletDeepest: number
   hasPerfectedSigil: boolean
   equippedSpecial: string | null
   onEquipSpecial: (itemId: string | null) => void
@@ -1826,9 +1843,17 @@ export default function GearScreen({
                       const owned = item.id === 'tide_turner' ? hasTideTurner
                         : item.id === 'phantom_hook' ? hasPhantomHook
                         : item.id === 'auto_caster' ? hasAutoCaster
+                        : item.id === 'auto_catcher' ? hasAutoCatcher
                         : item.id === 'perfected_sigil' ? hasPerfectedSigil
                         : false
                       const isEquipped = equippedSpecial === item.id
+                      // Gate: Auto Catcher needs the Auto Caster owned + a deep
+                      // enough Gauntlet run before it can be bought.
+                      const lockReason = !owned && item.id === 'auto_catcher'
+                        ? (!hasAutoCaster ? 'Requires the Auto Caster'
+                          : gauntletDeepest < (item.requiresGauntletDepth ?? 0) ? `Reach depth ${item.requiresGauntletDepth} in Davy Jones' Gauntlet`
+                          : null)
+                        : null
                       return (
                         <SpecialItemRow
                           key={item.id}
@@ -1836,6 +1861,7 @@ export default function GearScreen({
                           owned={owned}
                           isEquipped={isEquipped}
                           tideTurnerSkipsLeft={tideTurnerSkipsLeft}
+                          lockReason={lockReason}
                           onEquip={() => onEquipSpecial(isEquipped ? null : item.id)}
                           onRequestBuy={() => {
                             if (!item.shopCost) return

@@ -112,6 +112,8 @@ export default async function FishingPage() {
   const tideTurnerSkipsLeft = hasTideTurner ? Math.max(0, 3 - usedToday) : 0
   const hasPhantomHook = profile?.has_phantom_hook ?? false
   const hasAutoCaster = profile?.has_auto_caster ?? false
+  const hasAutoCatcher = profile?.has_auto_catcher ?? false
+  const gauntletDeepest = profile?.gauntlet_deepest ?? 0
   const hasPerfectedSigil = profile?.has_perfected_sigil ?? false
   const characterColor = profile?.character_color ?? 'default'
 
@@ -191,6 +193,8 @@ export default async function FishingPage() {
           initialEquippedSpecial={(profile?.equipped_special as string | null) ?? null}
           hasPhantomHook={hasPhantomHook}
           hasAutoCaster={hasAutoCaster}
+          hasAutoCatcher={hasAutoCatcher}
+          gauntletDeepest={gauntletDeepest}
           hasPerfectedSigil={hasPerfectedSigil}
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
           trophyCatches={(profile?.trophy_catches as number[] | null) ?? []}

@@ -1320,6 +1320,7 @@ export async function buySpecialItem(itemId: string): Promise<{ ok: true } | { e
 
   const columnMap: Record<string, string> = {
     auto_caster: 'has_auto_caster',
+    auto_catcher: 'has_auto_catcher',
   }
   const column = columnMap[itemId]
   if (!column) return { error: 'Unknown item' }
@@ -1328,10 +1329,23 @@ export async function buySpecialItem(itemId: string): Promise<{ ok: true } | { e
   if (!def?.shopCost) return { error: 'Not for sale' }
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('doubloons, has_auto_caster').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles')
+    .select('doubloons, has_auto_caster, has_auto_catcher, gauntlet_deepest')
+    .eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
-  const alreadyOwned = column === 'has_auto_caster' ? profile.has_auto_caster : false
-  if (alreadyOwned) return { error: 'Already owned' }
+  const owned: Record<string, boolean> = {
+    has_auto_caster: !!profile.has_auto_caster,
+    has_auto_catcher: !!profile.has_auto_catcher,
+  }
+  if (owned[column]) return { error: 'Already owned' }
+  // Prerequisite item (e.g. Auto Catcher needs the Auto Caster first).
+  if (def.requiresItem && !owned[columnMap[def.requiresItem]]) {
+    return { error: 'Requires the Auto Caster first' }
+  }
+  // Gauntlet-depth unlock gate.
+  if (def.requiresGauntletDepth && ((profile.gauntlet_deepest as number | null) ?? 0) < def.requiresGauntletDepth) {
+    return { error: `Reach depth ${def.requiresGauntletDepth} in Davy Jones' Gauntlet first` }
+  }
   if ((profile.doubloons ?? 0) < def.shopCost) return { error: 'Not enough doubloons' }
 
   await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) - def.shopCost, [column]: true }).eq('id', user.id)

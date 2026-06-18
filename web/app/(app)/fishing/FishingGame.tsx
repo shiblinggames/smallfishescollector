@@ -2923,7 +2923,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
-  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasPerfectedSigil,
+  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
@@ -2973,6 +2973,8 @@ export default function FishingGame({
   initialEquippedSpecial: string | null
   hasPhantomHook: boolean
   hasAutoCaster: boolean
+  hasAutoCatcher: boolean
+  gauntletDeepest: number
   hasPerfectedSigil: boolean
   initialPrestigeLevels: Record<string, number>
   initialTrophyCatches: number[]
@@ -3465,6 +3467,7 @@ export default function FishingGame({
   const [tideTurnerSkipsLeft, setTideTurnerSkipsLeft] = useState(initialTideTurnerSkipsLeft)
   const [equippedSpecial, setEquippedSpecial] = useState<string | null>(initialEquippedSpecial)
   const [ownedAutoCaster, setOwnedAutoCaster] = useState(hasAutoCaster)
+  const [ownedAutoCatcher, setOwnedAutoCatcher] = useState(hasAutoCatcher)
   const [tourStep, setTourStep] = useState<number | null>(null)
   const [catchTourStep, setCatchTourStep] = useState<number | null>(null)
   const catchTourShownRef = useRef(false)
@@ -4501,7 +4504,7 @@ export default function FishingGame({
   }
 
   // Phase 2 — reel in
-  async function handleReelIn() {
+  async function handleReelIn(auto = false) {
     if (phase !== 'catching' || !hookedFishRef.current) return
     // Re-entrancy guard: phase stays 'catching' during the one-frame
     // yield below, so a double-tap would otherwise run the resolution
@@ -4533,6 +4536,27 @@ export default function FishingGame({
     // commit as the freeze, so "needle stops" and "needle flashes gold"
     // are literally the same frame. Routing the glow through React cost
     // two renders of this component before it reached the glass.
+    let zone: ZoneDef
+    if (auto) {
+      // ── Auto Catcher path ──────────────────────────────────────────────
+      // No player input: stop the spinning needle where it is and resolve a
+      // GUARANTEED non-perfect catch. Only ever invoked for common fish, so
+      // we never touch the manual lock-in physics below. Everything after
+      // this block keys off `zone.type`, so a synthetic 'catch' zone runs the
+      // exact same downstream resolution (XP / size / streak / reelIn) a
+      // hand-caught non-perfect would.
+      const restAngle = spinAngleNow()
+      angleRef.current = restAngle
+      try { spinAnimRef.current?.cancel() } catch { /* no-op */ }
+      spinAnimRef.current = null
+      freezeNeedleAt(restAngle)
+      await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 0)))
+      reelLockPendingRef.current = false
+      setAngle(restAngle)
+      setReelRippleKey(k => k + 1)
+      setTimeout(() => setReelRippleKey(0), 1800)
+      zone = { from: 0, to: 1, type: 'catch', label: 'Catch', color: '#8fd0a0' }
+    } else {
     let resolveAngle: number
     if (spinAnimRef.current) {
       const lookaheadMs = 2 * frameDurRef.current
@@ -4557,7 +4581,7 @@ export default function FishingGame({
     // resolveAngle is the frozen rest angle — the visual and the
     // resolution are the same angle by construction, see the lock-in
     // protocol above.
-    const zone  = getZone(zones, resolveAngle, zoneRotationRef.current)
+    zone = getZone(zones, resolveAngle, zoneRotationRef.current)
 
     // Instant perfect feedback — same JS tick as the input. Audio +
     // haptic fire now; the glow paints imperatively and lands on the
@@ -4581,6 +4605,7 @@ export default function FishingGame({
     setSnapKey(k => k + 1)
     setReelRippleKey(k => k + 1)
     setTimeout(() => setReelRippleKey(0), 1800)
+    }
 
     // Snag immune: treat penalty as miss — no extra bait lost
     const effectiveZoneType = (zone.type === 'penalty' && rod.snagImmune) ? 'miss' : zone.type
@@ -5047,7 +5072,10 @@ export default function FishingGame({
   //     the player to consciously claim it; muscle-memory recast
   //     would blow past it.
   useEffect(() => {
-    if (equippedSpecial !== 'auto_caster' || !ownedAutoCaster) return
+    // Both the Auto Caster and its upgrade (Auto Catcher) auto-cast.
+    const autoCastActive = (equippedSpecial === 'auto_caster' && ownedAutoCaster)
+      || (equippedSpecial === 'auto_catcher' && ownedAutoCatcher)
+    if (!autoCastActive) return
     if (phase !== 'result') return
     if (catchResult?.isShiny) return
 
@@ -5076,7 +5104,23 @@ export default function FishingGame({
     const t = setTimeout(() => { handleCastAgain() }, 1000)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCaster, cratePhase, catchResult?.isShiny, crateResult])
+  }, [phase, equippedSpecial, ownedAutoCaster, ownedAutoCatcher, cratePhase, catchResult?.isShiny, crateResult])
+
+  // Auto Catcher: when a COMMON fish is on the dial, reel it in automatically
+  // as a normal (non-perfect) catch — no tap needed. Rare+ fish, crates, and
+  // the Ancient Deep are left for the player's own hand. A short beat lets the
+  // dial show before it locks so the catch still reads.
+  useEffect(() => {
+    if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher) return
+    if (phase !== 'catching' || !hookedFish) return
+    if (hookedFish.fishId === CRATE_FISH_ID) return
+    if ((hookedFish.biteRarity ?? 1) !== 1) return        // commons only
+    if (selectedZone === 'ancient_deep') return           // never the boss zone
+    if (finnChallenge) return                             // don't auto-fail/skew a Finn challenge
+    const t = setTimeout(() => { void handleReelIn(true) }, 700)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, equippedSpecial, ownedAutoCatcher, hookedFish, selectedZone, finnChallenge])
 
   // Golden catches force a Sell-or-Mount decision via a modal. Both
   // resolve through this helper to clear the catch result back to the
@@ -8384,6 +8428,8 @@ export default function FishingGame({
               tideTurnerSkipsLeft={tideTurnerSkipsLeft}
               hasPhantomHook={hasPhantomHook}
               hasAutoCaster={ownedAutoCaster}
+              hasAutoCatcher={ownedAutoCatcher}
+              gauntletDeepest={gauntletDeepest}
               hasPerfectedSigil={hasPerfectedSigil}
               fishingLevel={fishingLevel}
               equippedSpecial={equippedSpecial}
@@ -8394,10 +8440,12 @@ export default function FishingGame({
               onBuySpecialItem={async (itemId) => {
                 const res = await buySpecialItem(itemId)
                 if ('ok' in res) {
-                  if (itemId === 'auto_caster') {
-                    setOwnedAutoCaster(true)
+                  if (itemId === 'auto_caster' || itemId === 'auto_catcher') {
+                    if (itemId === 'auto_caster') setOwnedAutoCaster(true)
+                    else setOwnedAutoCatcher(true)
+                    const spent = itemId === 'auto_caster' ? 5000 : 25000
                     setDoubloons(d => {
-                      const next = d - 5000
+                      const next = d - spent
                       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: next }))
                       return next
                     })

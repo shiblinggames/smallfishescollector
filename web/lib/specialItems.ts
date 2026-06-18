@@ -1,4 +1,4 @@
-export type SpecialItemId = 'tide_turner' | 'phantom_hook' | 'auto_caster' | 'perfected_sigil'
+export type SpecialItemId = 'tide_turner' | 'phantom_hook' | 'auto_caster' | 'auto_catcher' | 'perfected_sigil'
 
 export type SpecialItemDef = {
   id: SpecialItemId
@@ -9,6 +9,10 @@ export type SpecialItemDef = {
   effectLabel: string
   obtainedFrom?: string
   shopCost?: number
+  /** Other special item that must be owned before this one can be bought. */
+  requiresItem?: SpecialItemId
+  /** Minimum Davy Jones' Gauntlet depth required to unlock the purchase. */
+  requiresGauntletDepth?: number
 }
 
 export const SPECIAL_ITEMS: SpecialItemDef[] = [
@@ -38,6 +42,17 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     description: 'Snaps a new cast every half-second after each catch, and auto-opens & claims any crates along the way. Stops when your hold is full or you run out of bait.',
     effectLabel: 'Auto cast',
     shopCost: 5000,
+  },
+  {
+    id: 'auto_catcher',
+    name: 'Auto Catcher',
+    color: '#46e0c0',
+    image: '/autocaster.png',
+    description: 'Everything the Auto Caster does, plus it reels in common fish on its own — no dial needed. Rare and bigger fish still wait for your hand. Stops when your hold is full or your bait runs out.',
+    effectLabel: 'Auto cast + catch commons',
+    shopCost: 25000,
+    requiresItem: 'auto_caster',
+    requiresGauntletDepth: 20,
   },
   {
     id: 'perfected_sigil',
