@@ -177,6 +177,16 @@ function BenchIconSvg({ size = 14, color = 'currentColor' }: { size?: number; co
     </svg>
   )
 }
+// Trawl net / creel — used on the assignment pip when a crew is away on a
+// trawl (so it reads as a net, not the voyage anchor or raid swords).
+function NetIconSvg({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 5h16l-2.3 13a3 3 0 0 1-3 2.5H9.3a3 3 0 0 1-3-2.5L4 5Z" />
+      <path d="M9 5l.8 15M15 5l-.8 15M4.7 11h14.6M5.6 16h12.8" />
+    </svg>
+  )
+}
 
 // ── Countdown to the next UTC midnight (free board refresh) ──────────────────
 function FreeRollCountdown() {
@@ -366,10 +376,15 @@ function CrewPanel({
             can hang at the top corners without being clipped by the
             niche's arch + overflow:hidden. Tucked just outside the niche
             border so they read as decals attached to the portrait. */}
-        {assignment && assignment !== 'bench' && (() => {
-          const accent  = assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
-          const label   = (isCaptain ? 'Captain · ' : '') + (assignment === 'voyage' ? 'On Voyage' : 'On Raid')
-          const Icon    = assignment === 'voyage' ? AnchorIconSvg : CrossedSwordsIconSvg
+        {/* A trawling crew still holds its standing voyage/raid slot, so the
+            pip would otherwise read "On Voyage/On Raid" while they're actually
+            away on a trawl. Override it to a teal net pip so it never lies
+            about where they are; the slot reappears when the trawl returns. */}
+        {(lockKind === 'trawl' || (assignment && assignment !== 'bench')) && (() => {
+          const isTrawl = lockKind === 'trawl'
+          const accent  = isTrawl ? '#3fc8aa' : assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
+          const label   = isTrawl ? 'Out on a trawl' : (isCaptain ? 'Captain · ' : '') + (assignment === 'voyage' ? 'On Voyage' : 'On Raid')
+          const Icon    = isTrawl ? NetIconSvg : assignment === 'voyage' ? AnchorIconSvg : CrossedSwordsIconSvg
           return (
             <>
               <div
@@ -391,7 +406,7 @@ function CrewPanel({
               {/* Captain crown sits above the assignment pip — tiny gold
                   silhouette so the player can tell at a glance who's
                   going to anchor the slot-0 captain seat on this track. */}
-              {isCaptain && (
+              {isCaptain && !isTrawl && (
                 <div
                   aria-hidden
                   style={{
@@ -480,18 +495,6 @@ function CrewPanel({
               </span>
             )}
           </p>
-          {/* Visible "at sea" caption — the lock badge alone reads as a
-              generic padlock, so spell out WHY they can't be assigned and
-              colour-match the badge (teal trawl / amber voyage). */}
-          {locked && (
-            <p className="font-cinzel font-700" style={{
-              fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase',
-              marginTop: 4, color: lockKind === 'trawl' ? '#5fd9bd' : '#ffb45a',
-              textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-            }}>
-              {lockKind === 'trawl' ? 'Out on a trawl' : 'At sea on a voyage'}
-            </p>
-          )}
         </div>
 
         {/* Engraved stats — three stat blocks left-aligned. */}
