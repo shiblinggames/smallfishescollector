@@ -102,10 +102,13 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
           The Den
         </p>
+        {/* Live chip purse — the Nav already shows doubloons, so this slot
+            carries CHIPS instead (replaces the old giant counter below). */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672', whiteSpace: 'nowrap' }}>
-            {doubloons.toLocaleString()} ⟡
-          </span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.28rem 0.55rem 0.28rem 0.6rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(196,169,106,0.42)', whiteSpace: 'nowrap' }}>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#a68a4a' }}>Chips</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: GOLD, lineHeight: 1 }}>{animatedChips.toLocaleString()} ⟡</span>
+          </div>
         </div>
       </div>
 
@@ -118,27 +121,22 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
         padding: '0.7rem 0.85rem 0.7rem',
         boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10 }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a68a4a' }}>Chips</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.35rem', color: GOLD, lineHeight: 1.05 }}>
-              {animatedChips.toLocaleString()} ⟡
-            </p>
-          </div>
-          <div style={{ textAlign: 'center', minWidth: 80 }}>
+        {/* Chips live in the header pill now — this row just carries the
+            session tally (mid-play) + Cash Out. Hidden entirely on a fresh
+            empty purse so the buy-in leads. */}
+        {(chips > 0 || sessionBuyIns > 0) && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: sessionBuyIns > 0 ? 'space-between' : 'flex-end', gap: 10, marginBottom: 9 }}>
             {sessionBuyIns > 0 && (() => {
               const color = animatedTally === 0 ? '#8a8478' : animatedTally > 0 ? '#7fd49a' : '#e07070'
               return (
-                <>
-                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a68a4a' }}>Session</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color, lineHeight: 1.05 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.52rem', color: '#a68a4a' }}>Session</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '1rem', color, lineHeight: 1 }}>
                     {animatedTally > 0 ? '+' : ''}{animatedTally.toLocaleString()} ⟡
-                  </p>
-                </>
+                  </span>
+                </div>
               )
             })()}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             {chips > 0 && (
               <button
                 type="button"
@@ -146,7 +144,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
                 onClick={doCashOut}
                 className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
-                  padding: '0.5rem 0.85rem', borderRadius: 999,
+                  padding: '0.45rem 0.85rem', borderRadius: 999,
                   background: 'rgba(196,169,106,0.1)',
                   border: '1px solid rgba(196,169,106,0.45)',
                   color: '#c4a96a',
@@ -158,7 +156,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
               </button>
             )}
           </div>
-        </div>
+        )}
 
         {/* Per-game session breakdown — only once a session is live. */}
         {sessionBuyIns > 0 && (
