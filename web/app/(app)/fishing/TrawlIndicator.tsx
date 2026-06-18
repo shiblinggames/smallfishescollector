@@ -388,12 +388,15 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const glow = ready ? GOLD : running ? theme.accent : flashing ? theme.accent : undefined
                 const cardState: 'locked' | 'ready' | 'running' | 'sendable' | 'noslot' =
                   !z.unlocked ? 'locked' : ready ? 'ready' : running ? 'running' : sendable ? 'sendable' : 'noslot'
-                const strip = {
-                  ready:    { c: GOLD,         bg: `${GOLD}30`,              label: 'Ready · Tap to collect' },
-                  running:  { c: theme.accent, bg: `${theme.accent}26`,     label: `Fishing · ${fmtCountdown(ms)}` },
-                  sendable: { c: theme.accent, bg: `${theme.accent}22`,     label: 'Tap to send crew' },
-                  noslot:   { c: '#c8bea4',    bg: 'rgba(255,255,255,0.09)', label: 'No free slot' },
-                  locked:   { c: '#9a8f72',    bg: 'rgba(255,255,255,0.05)', label: `Locked · Lv ${z.minLevel}` },
+                // State reads from a small status PILL in the card body (dark
+                // plate for legibility; filled gold for the standout Ready), not
+                // a full-width bordered header bar.
+                const status = {
+                  ready:    { c: GOLD,         label: 'Tap to collect',                filled: true,  dot: false },
+                  running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
+                  sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
+                  noslot:   { c: '#9a958c',    label: 'No free slot',                  filled: false, dot: false },
+                  locked:   { c: '#8f877a',    label: `Locked · Lv ${z.minLevel}`,     filled: false, dot: false },
                 }[cardState]
                 const zoneArt = getProfileBackground(z.key)?.src
                 // Per-zone DEPTH gradient over the art, so each zone reads as a
@@ -402,10 +405,14 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // Locked / no-slot cards are dead ends right now — render them as
                 // obviously inert: a flat neutral gradient, no zone colour.
                 const inert = cardState === 'locked' || cardState === 'noslot'
-                const topBand = flashing ? `${theme.accent}54` : ready ? `${GOLD}44` : running ? `${theme.accent}3c` : theme.top
+                const topBand = flashing ? `${theme.accent}54` : running ? `${theme.accent}3c` : theme.top
+                // Ready ditches the zone colour entirely for a warm GOLD wash so
+                // "come collect me" stands apart from every other card at a glance.
                 const scrim = inert
                   ? 'linear-gradient(180deg, rgba(40,42,46,0.62) 0%, rgba(20,22,26,0.86) 55%, rgba(11,12,15,0.96) 100%)'
-                  : `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
+                  : ready
+                    ? 'linear-gradient(180deg, rgba(245,196,66,0.52) 0%, rgba(166,118,32,0.5) 50%, rgba(48,33,8,0.93) 100%)'
+                    : `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
                 const cardStyle: React.CSSProperties = {
                   position: 'relative',
                   borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
@@ -435,16 +442,8 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   ...(actionable ? { whileTap: { scale: 0.96 } } : {}),
                   onClick: onTapCard,
                 }
-                const stateStrip = (
-                  <div style={{ position: 'relative', zIndex: 2, width: '100%', padding: '0.3rem 0.4rem', background: strip.bg, borderBottom: `1px solid ${strip.c}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexShrink: 0 }}>
-                    {(cardState === 'ready' || cardState === 'running') && (
-                      <motion.span animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 6, height: 6, borderRadius: '50%', background: strip.c, boxShadow: `0 0 6px ${strip.c}`, flexShrink: 0 }} />
-                    )}
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.08em', color: strip.c, textShadow: '0 1px 2px rgba(0,0,0,0.6)', whiteSpace: 'nowrap' }}>{strip.label}</span>
-                  </div>
-                )
                 const body = (portraitSize: number, barMaxW?: number) => (
-                  <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.7rem 0.55rem 0.75rem', width: '100%' }}>
+                  <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.85rem 0.55rem 0.9rem', width: '100%' }}>
                     {/* Crew bobs on the water while at sea / ready to collect. */}
                     <motion.div
                       animate={(running || ready) ? { y: [0, -3, 0], rotate: [-1.5, 1.5, -1.5] } : { y: 0, rotate: 0 }}
@@ -453,13 +452,24 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       <Portrait crew={t?.crew ?? null} size={portraitSize} glow={glow} />
                     </motion.div>
                     <div style={{ width: '100%', minWidth: 0, textAlign: 'center' }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f4ecd8', textShadow: '0 1px 4px rgba(0,0,0,0.85)', lineHeight: 1.15 }}>{z.label}</p>
-                      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#cbc2ad', textShadow: '0 1px 3px rgba(0,0,0,0.85)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#fbf4e2', textShadow: '0 1px 5px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)', lineHeight: 1.15 }}>{z.label}</p>
+                      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#ded5c0', textShadow: '0 1px 4px rgba(0,0,0,0.95)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {t ? t.crew.name : `${fmtTrawlDuration(z.key)} cycle`}
                       </p>
                     </div>
+                    {/* Status pill — dark plate keeps it readable over any water. */}
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2,
+                      padding: '0.24rem 0.62rem', borderRadius: 999,
+                      background: status.filled ? `${status.c}2a` : 'rgba(0,0,0,0.5)',
+                      border: `1px solid ${status.c}${status.filled ? 'c0' : '55'}`,
+                      boxShadow: status.filled ? `0 0 12px ${status.c}66` : 'none',
+                    }}>
+                      {status.dot && <motion.span animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 5, height: 5, borderRadius: '50%', background: status.c, boxShadow: `0 0 6px ${status.c}`, flexShrink: 0 }} />}
+                      <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.07em', color: status.filled ? '#ffe7ad' : status.c, textShadow: '0 1px 2px rgba(0,0,0,0.8)', whiteSpace: 'nowrap' }}>{status.label}</span>
+                    </div>
                     {running && (
-                      <div style={{ width: '100%', maxWidth: barMaxW, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', marginTop: 1 }}>
+                      <div style={{ width: '100%', maxWidth: barMaxW, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', marginTop: 2 }}>
                         <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${theme.accent}, ${theme.accent}aa)`, boxShadow: `0 0 8px ${theme.accent}99`, transition: 'width 1s linear' }} />
                       </div>
                     )}
@@ -471,7 +481,6 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   return (
                     <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1' }}>
                       {fx}
-                      {stateStrip}
                       {body(50, 260)}
                     </motion.div>
                   )
@@ -479,7 +488,6 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 return (
                   <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, minHeight: 134 }}>
                     {fx}
-                    {stateStrip}
                     {body(46)}
                   </motion.div>
                 )
