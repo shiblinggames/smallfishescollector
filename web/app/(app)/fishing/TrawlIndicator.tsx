@@ -35,7 +35,7 @@ const DEPTH_THEMES: Record<TrawlZoneKey, { accent: string; top: string; mid: str
   open_waters:  { accent: '#43a8f4', top: 'rgba(67,168,244,0.30)',  mid: 'rgba(10,40,74,0.74)', deep: 'rgba(5,18,42,0.94)' },
   deep:         { accent: '#6274ee', top: 'rgba(98,116,238,0.28)',  mid: 'rgba(15,22,62,0.78)', deep: 'rgba(6,10,36,0.95)' },
   abyss:        { accent: '#a06ff2', top: 'rgba(160,111,242,0.28)', mid: 'rgba(30,15,55,0.80)', deep: 'rgba(11,6,30,0.96)' },
-  ancient_deep: { accent: '#5fe6a0', top: 'rgba(95,230,160,0.26)',  mid: 'rgba(9,42,33,0.80)',  deep: 'rgba(4,18,16,0.96)' },
+  ancient_deep: { accent: '#caa05a', top: 'rgba(150,112,52,0.30)',  mid: 'rgba(48,33,15,0.83)', deep: 'rgba(19,12,5,0.96)' }, // dark ancient sepia
 }
 
 // Rising bubbles over a running trawl card — the crew's down there working.
@@ -608,20 +608,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD }}>Haul secured.</p>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#dccba6', marginTop: 4 }}>{reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.</p>
 
-            {reveal.fish.length > 0 && (
-              <div style={{ margin: '14px 0' }}>
-                {/* Flavor only — the actual reward is the XP + doubloons below.
-                    Label it so players don't read these as caught fish items. */}
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.18em', color: '#8a8068', marginBottom: 7 }}>Trawled up</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-                  {reveal.fish.map((f, i) => (
-                    <motion.span key={i} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.15 + i * 0.1, type: 'spring', stiffness: 320 }}
-                      className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#cfc6b0', padding: '0.25rem 0.6rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>{f}</motion.span>
-                  ))}
-                </div>
-              </div>
-            )}
-
+            <div style={{ marginTop: 14 }} />
             <CountUp to={reveal.xpGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: GREEN, display: 'block', marginTop: 6 }} />
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: '#7fae8f' }}>fishing xp</p>
 
@@ -652,7 +639,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             <CountUp to={reveal.doubloonsGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: GOLD, display: 'block', marginTop: 14 }} />
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: '#bca27a' }}>doubloons → purse</p>
 
-            <motion.button onClick={() => setReveal(null)} whileTap={{ scale: 0.92 }} className="font-karla font-700 uppercase" style={{ marginTop: 20, padding: '0.65rem 1.8rem', borderRadius: 10, letterSpacing: '0.1em', fontSize: '0.74rem', background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.4)', color: '#bcd4ff', cursor: 'pointer' }}>Nice</motion.button>
+            <motion.button onClick={() => setReveal(null)} whileTap={{ scale: 0.92 }} className="font-cinzel font-700 uppercase" style={{ marginTop: 20, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.78rem', background: `${GOLD}22`, border: `1px solid ${GOLD}7a`, color: '#f4ecd8', boxShadow: `0 0 14px ${GOLD}22`, cursor: 'pointer' }}>Stow it</motion.button>
           </motion.div>
         </motion.div>
       )}
