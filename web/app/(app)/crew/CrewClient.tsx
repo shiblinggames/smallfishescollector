@@ -210,7 +210,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // manifest line: arched portrait in a carved frame, name + class + quirks
 // laid out beside it on aged wood.
 function CrewPanel({
-  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
+  name, filename, rarity, base, effects, xp = 0, slug = '', assignment, isCaptain = false, locked = false, lockKind = 'voyage', lockLabel = 'This crew is currently at sea on a voyage.', hasLevelUp = false, dimmed, hint, frameAccent = '#5c5c63',
   bg = RECRUIT_PANEL_BG, border = RECRUIT_PANEL_BORDER, onClick, children,
 }: {
   name: string
@@ -234,6 +234,10 @@ function CrewPanel({
   /** True when this crew is at sea (voyage OR trawl) and can't be reassigned.
    *  Greys the card out and disables the toggle buttons. */
   locked?: boolean
+  /** Which kind of lock this is — drives the badge colour + the visible
+   *  "at sea" / "on a trawl" caption so the two read apart at a glance
+   *  (the tooltip alone is invisible on mobile). */
+  lockKind?: 'voyage' | 'trawl'
   /** Tooltip on the lock badge — distinguishes voyage vs trawl. */
   lockLabel?: string
   /** True when the crew has leveled up since the player last opened it.
@@ -414,13 +418,15 @@ function CrewPanel({
               width: 26, height: 26, borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'rgba(7,5,3,0.94)',
-              border: '1.5px solid rgba(255,180,90,0.7)',
-              boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(255,180,90,0.4)',
+              border: `1.5px solid ${lockKind === 'trawl' ? 'rgba(70,200,170,0.78)' : 'rgba(255,180,90,0.7)'}`,
+              boxShadow: lockKind === 'trawl'
+                ? '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(70,200,170,0.42)'
+                : '0 2px 7px rgba(0,0,0,0.6), 0 0 10px rgba(255,180,90,0.4)',
               pointerEvents: 'none',
               zIndex: 2,
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffd8a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={lockKind === 'trawl' ? '#9fe6d4' : '#ffd8a3'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <rect x="4.5" y="11" width="15" height="9.5" rx="1.5" />
               <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
             </svg>
@@ -474,6 +480,18 @@ function CrewPanel({
               </span>
             )}
           </p>
+          {/* Visible "at sea" caption — the lock badge alone reads as a
+              generic padlock, so spell out WHY they can't be assigned and
+              colour-match the badge (teal trawl / amber voyage). */}
+          {locked && (
+            <p className="font-cinzel font-700" style={{
+              fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase',
+              marginTop: 4, color: lockKind === 'trawl' ? '#5fd9bd' : '#ffb45a',
+              textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+            }}>
+              {lockKind === 'trawl' ? 'Out on a trawl' : 'At sea on a voyage'}
+            </p>
+          )}
         </div>
 
         {/* Engraved stats — three stat blocks left-aligned. */}
@@ -1538,6 +1556,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         assignment={crewAssignment(m)}
                         isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
                         locked={state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)}
+                        lockKind={state.trawlingCrewIds.includes(m.id) ? 'trawl' : 'voyage'}
                         lockLabel={state.trawlingCrewIds.includes(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
                         hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
                         hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
