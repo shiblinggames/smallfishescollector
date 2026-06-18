@@ -24,27 +24,23 @@ import { SkeletonBox } from '@/components/Skeleton'
 // ── Sections ────────────────────────────────────────────────────────────────
 
 function GamesSection() {
-  // The Den + The Parlor share one row — both are hub doors into
-  // multi-game rooms (casino tables / trivia games). The Den was a
-  // full-width Arcade hero until 2026-06-11; demoted to a half card
-  // when Recruit Crew left the tavern (crew now lives solely in the
-  // Expeditions flow) and Daily Bonus moved up to the features row.
+  // The Den + Tide Run share this row (layout reshuffle 2026-06-18: Tide Run
+  // took the Parlor's old slot; the Parlor moved down to the Charting row).
   return (
     <div className="grid grid-cols-2 gap-3">
       <CasinoHubCard />
-      <TriviaHubCard />
+      <TideRunCard />
     </div>
   )
 }
 
-// Top-of-page features grid: Daily Bonus + Tide Run sit alongside each
-// other as standard compact cards. Daily Bonus took Recruit Crew's
-// slot on 2026-06-11 when crew recruiting moved out of the tavern.
+// Top-of-page features grid: Login Bonus + Contests (Contests took Tide Run's
+// old slot here on 2026-06-18).
 function FeaturesSection() {
   return (
     <div className="grid grid-cols-2 gap-3">
       <DailyBonusCard />
-      <TideRunCard />
+      <ContestsHubCard />
     </div>
   )
 }
@@ -101,13 +97,11 @@ export default async function TavernPage() {
           </div>
 
           {/* The Chart Room + Contests share a row — both are destination
-              doors (Chart Room's puzzles; Contests tracks the active
-              community races + their winners). Chart Room dropped its
-              full-width hero treatment when Contests joined it here
-              (2026-06-17). */}
+              doors. Bottom row = Charting (puzzles) + the Parlor (trivia games)
+              after the 2026-06-18 reshuffle. */}
           <div className="grid grid-cols-2 gap-3">
             <ChartRoomHubCard />
-            <ContestsHubCard />
+            <TriviaHubCard />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

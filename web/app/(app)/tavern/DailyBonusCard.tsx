@@ -11,7 +11,7 @@ export default function DailyBonusCard() {
   return (
     <ScenicCard
       href="/tavern/daily-bonus"
-      title="Daily Bonus"
+      title="Login Bonus"
       gradient={['#3a2a0e', '#1f160a', '#0e0a06']}
       accent="#f0c040"
     >
