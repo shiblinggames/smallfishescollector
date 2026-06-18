@@ -17,6 +17,7 @@ import RouletteHubCard from '../RouletteHubCard'
 import { useAnimatedNumber } from '../useAnimatedNumber'
 import { Avatar } from '@/app/(app)/leaderboard/boardUI'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
+import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
 const MEMBER_START_CAP = DEN_PURSE_TIERS[0].cap
@@ -96,9 +97,7 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
           the true center regardless of the link/balance widths. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            ← Tavern
-          </Link>
+          <BackButton href="/tavern" label="Tavern" />
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
           The Den

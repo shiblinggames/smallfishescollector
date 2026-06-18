@@ -5,12 +5,12 @@
 // Quartermaster's Hold (daily sudoku) is live; Charting lives here too
 // now (moved off the tavern home 2026-06-13).
 
-import Link from 'next/link'
 import HoldCard from './HoldCard'
 import TreasureMatchCard from './TreasureMatchCard'
 import RiggingCard from './RiggingCard'
 import { DEN_PURSE_TIERS, DEN_CAP_NONMEMBER } from '../constants'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
+import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
 
@@ -37,12 +37,10 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       {/* Header — side rails get equal flex so the title sits centered. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            ← Tavern
-          </Link>
+          <BackButton href="/tavern" label="Tavern" />
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          The Chart Room
+          Charting
         </p>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
           <span className="font-karla" style={{ fontSize: '0.58rem', color: '#7a7672', whiteSpace: 'nowrap' }}>

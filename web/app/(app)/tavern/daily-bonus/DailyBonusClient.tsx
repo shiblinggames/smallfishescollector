@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions/dailyBonus'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import SpinReel from '@/components/SpinReel'
+import BackButton from '@/components/BackButton'
 
 const GEM = '#a78bfa'
 const BAIT = '#4ade80'
@@ -104,7 +104,7 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
     <div>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none' }}>← Tavern</Link>
+        <BackButton href="/tavern" label="Tavern" />
         {isPremium && (
           <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.5rem', color: GOLD, background: `${GOLD}16`, border: `1px solid ${GOLD}44`, borderRadius: 999, padding: '0.2rem 0.5rem' }}>Captain</span>
         )}

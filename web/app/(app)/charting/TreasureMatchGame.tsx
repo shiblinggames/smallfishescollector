@@ -15,6 +15,7 @@ import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent } from './treasureMatch'
 import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, GEM_BEVEL, type MatchState } from './constants'
 import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
+import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
@@ -287,9 +288,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href="/tavern/chart-room" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            ← Chart Room
-          </Link>
+          <BackButton href="/tavern/chart-room" label="Charting" />
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>Treasure Match</p>
         <div style={{ flex: 1, minWidth: 0 }} />
@@ -527,7 +526,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                     </button>
                   )}
                   <Link href="/tavern/chart-room" className="font-karla font-700 uppercase" style={{ flex: 1, padding: '0.65rem 0.6rem', borderRadius: 10, letterSpacing: '0.08em', fontSize: '0.66rem', background: 'rgba(47,111,214,0.18)', border: '1px solid rgba(120,170,255,0.4)', color: '#bcd4ff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    Chart Room
+                    Charting
                   </Link>
                 </div>
               </motion.div>

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getWeeklyBounties } from '@/app/(app)/packs/bountyActions'
+import BackButton from '@/components/BackButton'
 import { daysUntilReset } from '@/lib/weekStart'
 import BountyClaimClient from './BountyClaimClient'
 
@@ -25,13 +26,7 @@ export default async function BountiesPage() {
     <>
       <main className="min-h-screen px-6 pb-24 sm:pb-12 max-w-lg mx-auto">
         <div className="pt-8 pb-6">
-          <Link
-            href="/tavern"
-            className="font-karla font-600 uppercase tracking-[0.1em] text-[#4a4845] hover:text-[#6a6764] transition-colors"
-            style={{ fontSize: '0.6rem' }}
-          >
-            ← Tavern
-          </Link>
+          <BackButton href="/tavern" label="Tavern" />
           <h1 className="font-cinzel font-700 text-[#f0ede8] mt-3 leading-tight" style={{ fontSize: 'clamp(1.8rem, 5vw, 2.5rem)' }}>
             Weekly Bounties
           </h1>

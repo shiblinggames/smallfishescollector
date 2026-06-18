@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import type { ReactNode } from 'react'
+import BackButton from '@/components/BackButton'
 
 // Uniform back-nav for the three Den games — same row shape as the Den
 // lobby's own header: "← The Den" link left, Cinzel game title center,
@@ -9,13 +9,7 @@ import type { ReactNode } from 'react'
 export default function DenNav({ title, right }: { title: string; right?: ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-      <Link
-        href="/tavern/casino"
-        className="font-karla font-700 uppercase"
-        style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none', whiteSpace: 'nowrap' }}
-      >
-        ← The Den
-      </Link>
+      <BackButton href="/tavern/casino" label="The Den" />
       <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', flex: 1 }}>
         {title}
       </p>

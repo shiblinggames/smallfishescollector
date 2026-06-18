@@ -14,7 +14,7 @@ export default function ChartRoomHubCard() {
   return (
     <ScenicCard
       href="/tavern/chart-room"
-      title="The Chart Room"
+      title="Charting"
       gradient={['#3a2c14', '#221a0c', '#0f0a05']}
       accent={GOLD}
     >

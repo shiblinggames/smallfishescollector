@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { saveRiggingPaths, submitRigging } from './actions'
 import { isSolved, neighborsOf } from './rigging'
@@ -188,9 +188,7 @@ export default function RiggingGame({ initial }: { initial: RiggingState }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href="/tavern/chart-room" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            ← Chart Room
-          </Link>
+          <BackButton href="/tavern/chart-room" label="Charting" />
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>
           Lay the Rigging

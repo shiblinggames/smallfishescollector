@@ -4,9 +4,9 @@
 // skeleton as the Den lobby. The Captain's Board and Pirate King are
 // live; Spin the Capstan is chalked up as coming soon.
 
-import Link from 'next/link'
 import { motion } from 'framer-motion'
 import ScenicCard from '../ScenicCard'
+import BackButton from '@/components/BackButton'
 import { TRIVIA_CATEGORIES, PIRATE_KING_RUNGS, type PirateKingStatus } from './constants'
 
 const GOLD = '#f0c040'
@@ -35,9 +35,7 @@ export default function TriviaLobby({ doubloons, boardPlayedToday, boardPlayedTh
           the true center regardless of the link/balance widths. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href="/tavern" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#a89878', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            ← Tavern
-          </Link>
+          <BackButton href="/tavern" label="Tavern" />
         </div>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0e8d0', textAlign: 'center', whiteSpace: 'nowrap' }}>
           The Parlor

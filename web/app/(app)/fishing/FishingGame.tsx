@@ -391,7 +391,7 @@ const GENERAL_TIPS = [
   "Tip: every catch rolls a size. Land a Large or a Trophy and it earns a place in your records.",
   // New doubloon-earning rooms in the tavern.
   "Tip: the Parlor's daily trivia and weekly Pirate King ladder pay straight doubloons. Easy gold between casts.",
-  "Tip: the Chart Room hides daily puzzles that bank doubloons for the patient. Good for a break between casts.",
+  "Tip: Charting hides daily puzzles that bank doubloons for the patient. Good for a break between casts.",
 ]
 
 type TipContext = { hasTideTurner: boolean; hasPhantomHook: boolean; hasAutoCaster: boolean }

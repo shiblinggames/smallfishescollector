@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 import { motion, AnimatePresence } from 'framer-motion'
 import BalanceTicker from '../../trivia/BalanceTicker'
 import { lockHold, saveHoldProgress, tallyHold, submitHold } from './actions'
@@ -256,11 +256,9 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href="/tavern/chart-room" className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#b6a98c', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            ← Chart Room
-          </Link>
+          <BackButton href="/tavern/chart-room" label="Charting" />
         </div>
-        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8', textAlign: 'center', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
           The Hold
         </p>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
@@ -268,21 +266,23 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
         </div>
       </div>
 
-      {/* Puzzle-points / Den purse perk readout */}
+      {/* Puzzle-points / Den purse perk readout — solid panel so it reads
+          over the painted background. */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
-        padding: '0.5rem 0.7rem', borderRadius: 10,
-        background: 'rgba(196,169,106,0.08)', border: '1px solid rgba(196,169,106,0.22)',
+        padding: '0.55rem 0.8rem', borderRadius: 11,
+        background: 'linear-gradient(180deg, rgba(40,32,16,0.92), rgba(18,14,8,0.94))', border: '1px solid rgba(196,169,106,0.45)',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.45)',
       }}>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#e6d8b4' }}>
+        <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#f0e2bd' }}>
           {puzzlePoints} charting pts
         </span>
-        <span style={{ color: '#6a6258' }}>·</span>
-        <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: GOLD }}>
+        <span style={{ color: '#8a8068' }}>·</span>
+        <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: GOLD }}>
           Den purse {denCap.toLocaleString()} ⟡/day
         </span>
         {initial.nextTier && puzzlePoints < initial.nextTier.points && (
-          <span className="font-karla" style={{ fontSize: '0.62rem', color: '#9a9078' }}>
+          <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#b3a886' }}>
             ({initial.nextTier.points - puzzlePoints} pts → {initial.nextTier.cap.toLocaleString()} ⟡)
           </span>
         )}
@@ -291,7 +291,7 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
       {/* ── No hold locked: choose today's ── */}
       {!locked ? (
         <>
-          <p className="font-karla" style={{ fontSize: '0.78rem', color: '#cfc6b0', lineHeight: 1.55, textAlign: 'center' }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#dccfb4', lineHeight: 1.55, textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
             Choose one hold to stow this week. The other two close till Monday — harder holds pay more doubloons and more charting points.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -304,8 +304,9 @@ export default function QuartermastersHold({ initial, doubloons }: { initial: Ho
                   onClick={() => setPendingChoice(sel ? null : d)}
                   style={{
                     textAlign: 'left', padding: '0.85rem 1rem', borderRadius: 14, cursor: 'pointer',
-                    background: sel ? `${meta.accent}1f` : 'rgba(255,255,255,0.035)',
-                    border: `1.5px solid ${sel ? meta.accent : 'rgba(196,169,106,0.22)'}`,
+                    background: sel ? `${meta.accent}26` : 'linear-gradient(180deg, rgba(34,27,14,0.88), rgba(16,12,7,0.9))',
+                    border: `1.5px solid ${sel ? meta.accent : 'rgba(196,169,106,0.38)'}`,
+                    boxShadow: '0 2px 9px rgba(0,0,0,0.4)',
                     display: 'flex', alignItems: 'center', gap: 12,
                   }}
                 >
