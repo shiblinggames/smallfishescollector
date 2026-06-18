@@ -4539,23 +4539,33 @@ export default function FishingGame({
     let zone: ZoneDef
     if (auto) {
       // ── Auto Catcher path ──────────────────────────────────────────────
-      // No player input: stop the spinning needle where it is and resolve a
-      // GUARANTEED non-perfect catch. Only ever invoked for common fish, so
-      // we never touch the manual lock-in physics below. Everything after
-      // this block keys off `zone.type`, so a synthetic 'catch' zone runs the
-      // exact same downstream resolution (XP / size / streak / reelIn) a
-      // hand-caught non-perfect would.
-      const restAngle = spinAngleNow()
-      angleRef.current = restAngle
+      // No player input, but it RESPECTS THE DIAL: it stops the needle on a
+      // green CATCH band (not the gold Perfect sliver, and never a miss/snag)
+      // and resolves there — so what lands IS the catch, just hands-free.
+      // Only ever fired for common/uncommon fish in non-Ancient zones, so we
+      // skip the boss mods. Downstream keys off `zone.type`, reusing the exact
+      // same resolution a hand-caught non-perfect would.
+      const zoneDiff2 = ZONE_DIFFICULTY[selectedZone] ?? ZONE_DIFFICULTY.shallows
+      const baitBonus = getBait(selectedBaitRef.current).catchZoneBonus
+      const eventCatchBonus = activeEventRef.current?.type === 'glassy' ? 12 : 0
+      const zones = buildFishZones(hookedFishRef.current.catchDifficulty, hookTier, line.penaltyMultiplier, zoneDiff2.catchMultiplier, levelBonus + baitBonus + rod.catchZoneBonus + eventCatchBonus, rod.perfectZoneBonus + 1)
+      // Aim for the middle of a green catch band (in zone space), then convert
+      // to a needle angle through the current board rotation.
+      const greens = zones.filter(z => z.type === 'catch')
+      const tgt = greens.length ? greens[Math.floor(Math.random() * greens.length)] : zones.find(z => z.type === 'catch')
+      const aTarget = tgt ? (tgt.from + tgt.to) / 2 : CATCH_CENTER
+      const deg = (((aTarget + zoneRotationRef.current) % 360) + 360) % 360
+      angleRef.current = deg
       try { spinAnimRef.current?.cancel() } catch { /* no-op */ }
       spinAnimRef.current = null
-      freezeNeedleAt(restAngle)
+      freezeNeedleAt(deg)
       await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 0)))
       reelLockPendingRef.current = false
-      setAngle(restAngle)
+      setAngle(deg)
+      setSnapKey(k => k + 1)
       setReelRippleKey(k => k + 1)
       setTimeout(() => setReelRippleKey(0), 1800)
-      zone = { from: 0, to: 1, type: 'catch', label: 'Catch', color: '#8fd0a0' }
+      zone = getZone(zones, deg, zoneRotationRef.current)
     } else {
     let resolveAngle: number
     if (spinAnimRef.current) {
@@ -5097,11 +5107,12 @@ export default function FishingGame({
       }
     }
 
-    // Regular auto-cast — bait + hold check, then snappy recast.
+    // Regular auto-cast — bait + hold check, then recast (a touch slower than
+    // before so the result has a beat to read before the next cast snaps).
     const currentBaitQty = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
     const currentHoldCount = inventory.reduce((s, i) => s + i.quantity, 0)
     if (currentBaitQty <= 0 || currentHoldCount >= holdCapacity) return
-    const t = setTimeout(() => { handleCastAgain() }, 1000)
+    const t = setTimeout(() => { handleCastAgain() }, 1400)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, equippedSpecial, ownedAutoCaster, ownedAutoCatcher, cratePhase, catchResult?.isShiny, crateResult])
@@ -5114,7 +5125,7 @@ export default function FishingGame({
     if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher) return
     if (phase !== 'catching' || !hookedFish) return
     if (hookedFish.fishId === CRATE_FISH_ID) return
-    if ((hookedFish.biteRarity ?? 1) !== 1) return        // commons only
+    if ((hookedFish.biteRarity ?? 1) > 2) return          // commons + uncommons only (tiers 1-2)
     if (selectedZone === 'ancient_deep') return           // never the boss zone
     if (finnChallenge) return                             // don't auto-fail/skew a Finn challenge
     const t = setTimeout(() => { void handleReelIn(true) }, 700)
