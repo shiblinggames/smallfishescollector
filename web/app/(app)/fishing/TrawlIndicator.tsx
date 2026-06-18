@@ -23,9 +23,56 @@ const artSrc = (f?: string) => (f ? `${SUPA}/storage/v1/object/public/card-arts/
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 const BLUE = '#9fc0ef'
-const TEAL = '#5fd0c4'  // "at sea / in progress" accent
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
+
+// Per-zone DEPTH palette so the zones read as distinct waters at a glance —
+// bright aqua shallows sinking to a violet abyss and a phosphorescent ancient
+// deep — instead of five identical blue tiles. `accent` drives the running /
+// sendable state colour for that zone; top→mid→deep paints the card's water.
+const DEPTH_THEMES: Record<TrawlZoneKey, { accent: string; top: string; mid: string; deep: string }> = {
+  shallows:     { accent: '#46e0c0', top: 'rgba(70,224,192,0.32)',  mid: 'rgba(13,62,64,0.72)', deep: 'rgba(6,28,32,0.93)' },
+  open_waters:  { accent: '#43a8f4', top: 'rgba(67,168,244,0.30)',  mid: 'rgba(10,40,74,0.74)', deep: 'rgba(5,18,42,0.94)' },
+  deep:         { accent: '#6274ee', top: 'rgba(98,116,238,0.28)',  mid: 'rgba(15,22,62,0.78)', deep: 'rgba(6,10,36,0.95)' },
+  abyss:        { accent: '#a06ff2', top: 'rgba(160,111,242,0.28)', mid: 'rgba(30,15,55,0.80)', deep: 'rgba(11,6,30,0.96)' },
+  ancient_deep: { accent: '#5fe6a0', top: 'rgba(95,230,160,0.26)',  mid: 'rgba(9,42,33,0.80)',  deep: 'rgba(4,18,16,0.96)' },
+}
+
+// Rising bubbles over a running trawl card — the crew's down there working.
+function Bubbles({ color }: { color: string }) {
+  const seeds = [
+    { l: 19, d: 0.0, s: 5,   dur: 3.6 },
+    { l: 43, d: 1.3, s: 3.5, dur: 4.3 },
+    { l: 63, d: 0.6, s: 4,   dur: 3.1 },
+    { l: 82, d: 2.0, s: 3,   dur: 3.9 },
+  ]
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: 14 }}>
+      {seeds.map((b, i) => (
+        <motion.div key={i}
+          initial={{ y: '70%', opacity: 0 }}
+          animate={{ y: '-180%', opacity: [0, 0.6, 0] }}
+          transition={{ duration: b.dur, delay: b.d, repeat: Infinity, ease: 'easeIn' }}
+          style={{ position: 'absolute', left: `${b.l}%`, bottom: 0, width: b.s, height: b.s, borderRadius: '50%', background: `radial-gradient(circle at 35% 30%, #ffffffcc, ${color}55)`, boxShadow: `0 0 5px ${color}55` }} />
+      ))}
+    </div>
+  )
+}
+
+// Expanding ripple rings — the splash when a crew is sent to the water.
+function SplashRings({ color }: { color: string }) {
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', pointerEvents: 'none' }}>
+      {[0, 0.16].map((d, i) => (
+        <motion.div key={i}
+          initial={{ width: 14, height: 14, opacity: 0.7 }}
+          animate={{ width: 180, height: 180, opacity: 0 }}
+          transition={{ duration: 0.85, delay: d, ease: 'easeOut' }}
+          style={{ position: 'absolute', borderRadius: '50%', border: `2px solid ${color}` }} />
+      ))}
+    </div>
+  )
+}
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return 'Ready'
@@ -342,28 +389,30 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const sendable = z.unlocked && !t && freeSlots > 0
                 const actionable = ready || sendable
                 const onTapCard = ready ? () => doCollect(z.key) : sendable ? () => { haptic(10); setPicking(z.key) } : undefined
-                const glow = ready ? GOLD : running ? TEAL : flashing ? GREEN : undefined
-                // The zone art (same blue-ocean paintings as the profile picker)
-                // makes every card look alike, so STATE is carried by a bold,
-                // color-coded top strip + per-state treatment, not the bg colour.
+                const theme = DEPTH_THEMES[z.key]
+                const glow = ready ? GOLD : running ? theme.accent : flashing ? theme.accent : undefined
                 const cardState: 'locked' | 'ready' | 'running' | 'sendable' | 'noslot' =
                   !z.unlocked ? 'locked' : ready ? 'ready' : running ? 'running' : sendable ? 'sendable' : 'noslot'
                 const strip = {
-                  ready:    { c: GOLD,      bg: `${GOLD}30`,              label: 'Ready · Tap to collect' },
-                  running:  { c: TEAL,      bg: `${TEAL}26`,              label: `Fishing · ${fmtCountdown(ms)}` },
-                  sendable: { c: BLUE,      bg: `${BLUE}26`,              label: 'Tap to send crew' },
-                  noslot:   { c: '#c8bea4', bg: 'rgba(255,255,255,0.09)', label: 'No free slot' },
-                  locked:   { c: '#9a8f72', bg: 'rgba(255,255,255,0.05)', label: `Locked · Lv ${z.minLevel}` },
+                  ready:    { c: GOLD,         bg: `${GOLD}30`,              label: 'Ready · Tap to collect' },
+                  running:  { c: theme.accent, bg: `${theme.accent}26`,     label: `Fishing · ${fmtCountdown(ms)}` },
+                  sendable: { c: theme.accent, bg: `${theme.accent}22`,     label: 'Tap to send crew' },
+                  noslot:   { c: '#c8bea4',    bg: 'rgba(255,255,255,0.09)', label: 'No free slot' },
+                  locked:   { c: '#9a8f72',    bg: 'rgba(255,255,255,0.05)', label: `Locked · Lv ${z.minLevel}` },
                 }[cardState]
                 const zoneArt = getProfileBackground(z.key)?.src
-                const scrimTop = flashing ? `${GREEN}46` : ready ? `${GOLD}40` : running ? `${TEAL}30` : 'rgba(8,10,16,0.46)'
-                const scrim = `linear-gradient(180deg, ${scrimTop} 0%, rgba(8,10,16,0.74) 56%, rgba(8,10,16,0.92) 100%)`
+                // Per-zone DEPTH gradient over the art, so each zone reads as a
+                // different water. State (flash / ready / running) brightens the
+                // top band; the body always sinks to that zone's deep colour.
+                const topBand = flashing ? `${theme.accent}54` : ready ? `${GOLD}44` : running ? `${theme.accent}3c` : theme.top
+                const scrim = `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
                 const cardStyle: React.CSSProperties = {
+                  position: 'relative',
                   borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
                   backgroundColor: '#0c1018',
                   background: zoneArt ? `${scrim}, url(${zoneArt}) center / cover` : scrim,
-                  border: `1.5px solid ${flashing ? `${GREEN}88` : ready ? GOLD : running ? `${TEAL}88` : sendable ? `${BLUE}99` : 'rgba(255,255,255,0.13)'}`,
-                  boxShadow: flashing ? `0 0 16px ${GREEN}55` : sendable ? `0 0 10px ${BLUE}22` : 'none',
+                  border: `1.5px solid ${flashing ? `${theme.accent}cc` : ready ? GOLD : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.13)'}`,
+                  boxShadow: flashing ? `0 0 18px ${theme.accent}66` : sendable ? `0 0 10px ${theme.accent}33` : running ? `0 0 12px ${theme.accent}22` : 'none',
                   // Running cards dim a touch (busy); no-slot/locked dim more so
                   // they clearly read as "you can't act here right now".
                   opacity: !z.unlocked ? 0.5 : cardState === 'noslot' ? 0.62 : 1,
@@ -386,7 +435,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   onClick: onTapCard,
                 }
                 const stateStrip = (
-                  <div style={{ width: '100%', padding: '0.3rem 0.4rem', background: strip.bg, borderBottom: `1px solid ${strip.c}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexShrink: 0 }}>
+                  <div style={{ position: 'relative', zIndex: 2, width: '100%', padding: '0.3rem 0.4rem', background: strip.bg, borderBottom: `1px solid ${strip.c}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexShrink: 0 }}>
                     {(cardState === 'ready' || cardState === 'running') && (
                       <motion.span animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 6, height: 6, borderRadius: '50%', background: strip.c, boxShadow: `0 0 6px ${strip.c}`, flexShrink: 0 }} />
                     )}
@@ -394,8 +443,14 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   </div>
                 )
                 const body = (portraitSize: number, barMaxW?: number) => (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.7rem 0.55rem 0.75rem', width: '100%' }}>
-                    <Portrait crew={t?.crew ?? null} size={portraitSize} glow={glow} />
+                  <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.7rem 0.55rem 0.75rem', width: '100%' }}>
+                    {/* Crew bobs on the water while at sea / ready to collect. */}
+                    <motion.div
+                      animate={(running || ready) ? { y: [0, -3, 0], rotate: [-1.5, 1.5, -1.5] } : { y: 0, rotate: 0 }}
+                      transition={(running || ready) ? { duration: 2.8, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
+                    >
+                      <Portrait crew={t?.crew ?? null} size={portraitSize} glow={glow} />
+                    </motion.div>
                     <div style={{ width: '100%', minWidth: 0, textAlign: 'center' }}>
                       <p className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f4ecd8', textShadow: '0 1px 4px rgba(0,0,0,0.85)', lineHeight: 1.15 }}>{z.label}</p>
                       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#cbc2ad', textShadow: '0 1px 3px rgba(0,0,0,0.85)', lineHeight: 1.35, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -403,16 +458,18 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                       </p>
                     </div>
                     {running && (
-                      <div style={{ width: '100%', maxWidth: barMaxW, height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.45)', overflow: 'hidden', marginTop: 1 }}>
-                        <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${TEAL}, ${BLUE})`, transition: 'width 1s linear' }} />
+                      <div style={{ width: '100%', maxWidth: barMaxW, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', marginTop: 1 }}>
+                        <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${theme.accent}, ${theme.accent}aa)`, boxShadow: `0 0 8px ${theme.accent}99`, transition: 'width 1s linear' }} />
                       </div>
                     )}
                   </div>
                 )
+                const fx = (<>{running && <Bubbles color={theme.accent} />}{flashing && <SplashRings color={theme.accent} />}</>)
 
                 if (wide) {
                   return (
                     <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, gridColumn: '1 / -1' }}>
+                      {fx}
                       {stateStrip}
                       {body(50, 260)}
                     </motion.div>
@@ -420,6 +477,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 }
                 return (
                   <motion.div key={z.key} {...motionProps} style={{ ...cardStyle, minHeight: 134 }}>
+                    {fx}
                     {stateStrip}
                     {body(46)}
                   </motion.div>
