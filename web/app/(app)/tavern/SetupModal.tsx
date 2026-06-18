@@ -8,7 +8,6 @@ import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { AVATAR_PALETTE, NONE_VALUE } from '@/lib/avatarColors'
 import CharacterAvatar from '@/components/CharacterAvatar'
 import WelcomeModal from './WelcomeModal'
-import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 
 type Step = 'username' | 'color' | 'avatar'
 
@@ -415,7 +414,8 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               })}
             </div>
 
-            {/* Lock toast + premium link slot */}
+            {/* Lock toast slot — no membership upsell here; new players
+                shouldn't get pitched mid-setup. */}
             <div style={{ minHeight: 22, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {avatarLockMsg ? (
                 <p className="font-karla font-700" style={{
@@ -427,8 +427,6 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                 }}>
                   {avatarLockMsg}
                 </p>
-              ) : !isPremium ? (
-                <BecomeCaptainButton label="Unlock more as a Captain" style={{ padding: '0.55rem 1rem', fontSize: '0.78rem' }} />
               ) : null}
             </div>
 
