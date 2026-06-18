@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
 import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent } from './treasureMatch'
-import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, type MatchState } from './constants'
+import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, GEM_BEVEL, type MatchState } from './constants'
 import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 
 const GOLD = '#f0c040'
@@ -362,11 +362,13 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           // it stays whole. Glows use filter:drop-shadow (which follows the
           // clipped shape) — box-shadow would get clipped away.
           const gemBg = isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
+          // GEM_BEVEL (rim-light + grounding shadow) is on every state so the
+          // gem always reads as a 3-D cut stone; state adds glow/brightness.
           const gemGlow = isCommit
-            ? `drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
-            : isSel ? `drop-shadow(0 0 9px ${tok.color}) drop-shadow(0 1px 2px rgba(0,0,0,0.5)) brightness(1.1)`
-            : isInvalid ? `drop-shadow(0 0 7px #d6392a)`
-            : `drop-shadow(0 1.5px 2.5px rgba(0,0,0,0.55))`
+            ? `${GEM_BEVEL} drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
+            : isSel ? `${GEM_BEVEL} drop-shadow(0 0 9px ${tok.color}) brightness(1.1)`
+            : isInvalid ? `${GEM_BEVEL} drop-shadow(0 0 7px #d6392a)`
+            : GEM_BEVEL
           return (
             <div
               key={i}
