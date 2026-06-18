@@ -79,6 +79,18 @@ function traitTier(group: number): string {
   return group <= 1 ? 'Common' : group === 2 ? 'Rare' : 'Legendary'
 }
 
+/** user_crew ids currently out on a trawl — they're locked from voyages
+ *  (loadDeployedParty drops them server-side), so the panel uses this to stop
+ *  counting them and to explain why a slotted crew can't sail. */
+export async function getTrawlingCrewIds(): Promise<number[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const admin = createAdminClient()
+  const { data } = await admin.from('trawls').select('crew_id').eq('user_id', user.id)
+  return ((data ?? []) as { crew_id: number }[]).map(r => r.crew_id)
+}
+
 export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   { ok: true; voyage: DailyVoyage } | { error: string }
 > {

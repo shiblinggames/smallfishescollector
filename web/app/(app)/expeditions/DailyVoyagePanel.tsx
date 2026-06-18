@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useCallback, useEffect, useRef } from 'react'
+import { useState, useTransition, useCallback, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { EXPEDITION_SHIP_STATS } from '@/lib/expeditions'
@@ -11,7 +11,7 @@ import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES, effectiveCrewLossChance, type VoyageRoute } from '@/lib/voyageRoutes'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
-import { sendDailyVoyage, revealVoyageResults, type DailyVoyage } from './voyageActions'
+import { sendDailyVoyage, revealVoyageResults, getTrawlingCrewIds, type DailyVoyage } from './voyageActions'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
@@ -218,6 +218,19 @@ export default function DailyVoyagePanel({
     return () => window.removeEventListener('crew-changed', handler)
   }, [])
 
+  // Crew out on a trawl are locked from voyages (the server drops them). Track
+  // them so the panel stops counting them and can say WHY a slotted crew can't
+  // sail — otherwise Set Sail looked like it did nothing.
+  const [trawlingIds, setTrawlingIds] = useState<number[]>([])
+  useEffect(() => {
+    let alive = true
+    const load = () => { getTrawlingCrewIds().then(ids => { if (alive) setTrawlingIds(ids) }).catch(() => {}) }
+    load()
+    window.addEventListener('crew-changed', load)
+    return () => { alive = false; window.removeEventListener('crew-changed', load) }
+  }, [])
+  const trawlingSet = useMemo(() => new Set(trawlingIds), [trawlingIds])
+
   const returnTime = activeVoyage
     ? new Date(activeVoyage.created_at).getTime() + (activeVoyage.duration_ms ?? BASE_VOYAGE_MS)
     : null
@@ -243,8 +256,16 @@ export default function DailyVoyagePanel({
   // need a real party of two.
   const minCrew = selectedRoute === 'coastal' ? 1 : Math.min(2, shipStats.crewSlots)
   const byId = knownCrew.current
-  const savedCrew: CrewMember[] = liveCrewIds
-    .slice(0, shipStats.crewSlots)
+  // A slotted crew that's out on a trawl can't sail — drop it from the
+  // deployable party (so the count is honest) and name it below so the player
+  // isn't left wondering why Set Sail does nothing.
+  const slottedIds = liveCrewIds.slice(0, shipStats.crewSlots)
+  const savedCrew: CrewMember[] = slottedIds
+    .filter(id => !trawlingSet.has(id))
+    .map(id => byId.get(id))
+    .filter(Boolean) as CrewMember[]
+  const trawlingAssigned: CrewMember[] = slottedIds
+    .filter(id => trawlingSet.has(id))
     .map(id => byId.get(id))
     .filter(Boolean) as CrewMember[]
 
@@ -528,6 +549,13 @@ export default function DailyVoyagePanel({
                                   ⏳ {formatDuration(estMs)}
                                 </span>
                               </div>
+                            )}
+                            {/* A slotted crew that's away on a trawl can't sail —
+                                say so explicitly so Set Sail never feels broken. */}
+                            {trawlingAssigned.length > 0 && (
+                              <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#46c0a0', lineHeight: 1.4 }}>
+                                {trawlingAssigned.map(c => c.name).join(', ')} {trawlingAssigned.length === 1 ? 'is' : 'are'} out on a trawl and can&apos;t sail until {trawlingAssigned.length === 1 ? 'it returns' : 'they return'}. Swap in another crew or collect the trawl first.
+                              </span>
                             )}
                             {/* Crew risk / crew count */}
                             {savedCrew.length < minCrew ? (
