@@ -370,11 +370,6 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             </p>
 
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#8a8068', margin: '16px 0 8px' }}>Fishing zones</p>
-            {freeSlots <= 0 && state.zones.some(z => z.unlocked && !z.trawl) && (
-              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#d2b878', lineHeight: 1.45, margin: '-2px 0 9px', background: 'rgba(210,184,120,0.08)', border: '1px solid rgba(210,184,120,0.22)', borderRadius: 9, padding: '0.45rem 0.6rem' }}>
-                All {state.unlockedSlots} trawl slot{state.unlockedSlots === 1 ? '' : 's'} are busy. Collect a finished haul or wait for a crew to return to open one up.
-              </p>
-            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {state.zones.map((z, i) => {
                 const t = z.trawl
