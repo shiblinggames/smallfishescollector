@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { castLine, reelIn, reelCrate, quickSellAllFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import TrawlIndicator from './TrawlIndicator'
@@ -845,7 +845,7 @@ function UnifiedGearDrawer({
                     {ownedRodDefs.map(r => {
                       const isEquipped = r.tier === equippedRodTier
                       const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
-                      const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0
+                      const hasSpecial = r.doubleCatchChance > 0 || r.retryOnMissChance > 0 || r.snagImmune || r.perfectZoneBonus > 0 || r.rarityBonus > 0 || (r.jackpotChance ?? 0) > 0 || r.wormhole || (r.instantBiteChance ?? 0) > 0
                       return (
                         <div key={r.tier} style={{
                           display: 'flex', alignItems: 'center', gap: 10,
@@ -862,6 +862,8 @@ function UnifiedGearDrawer({
                               {r.perfectZoneBonus > 0 && <StatPill label={`Perfect zone +${r.perfectZoneBonus}°`} color={r.color} />}
                               {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
                               {(r.jackpotChance ?? 0) > 0 && <StatPill label={`${Math.round(r.jackpotChance! * 100)}% jackpot ×${r.jackpotMultiplier}`} color={r.color} />}
+                              {r.wormhole && <StatPill label="Wormhole reroll" color={r.color} />}
+                              {(r.instantBiteChance ?? 0) > 0 && <StatPill label={`${Math.round(r.instantBiteChance! * 100)}% instant bite`} color={r.color} />}
                               {!hasSpecial && speedPct > 0 && <StatPill label={`${speedPct}% faster bites`} color={r.color} />}
                               {!hasSpecial && speedPct <= 0 && r.catchZoneBonus > 0 && <StatPill label={`+${r.catchZoneBonus}° catch zone`} color={r.color} />}
                               {!hasSpecial && speedPct <= 0 && r.catchZoneBonus === 0 && <StatPill label="Base rod" muted />}
@@ -3374,7 +3376,11 @@ export default function FishingGame({
     shinyId?: number
     /** Already mounted this species before? Disables the Mount option. */
     alreadyMounted?: boolean
+    /** Galaxy Rod — this catch can be rerolled once through the Wormhole.
+     *  Cleared the moment the player uses it (one-shot). */
+    wormhole?: boolean
   } | null>(null)
+  const [rerollingWormhole, setRerollingWormhole] = useState(false)
   // Lock-out for golden catches. The card's entrance + burst + ring waves
   // run for ~1.8s — the reveal lock holds the button slot empty for the
   // full cinematic, then a "Claim Trophy" button slides into the action
@@ -4896,6 +4902,7 @@ export default function FishingGame({
           isShiny: (res as { isShiny?: boolean }).isShiny ?? false,
           shinyId: (res as { shinyId?: number }).shinyId,
           alreadyMounted: (res as { alreadyMounted?: boolean }).alreadyMounted ?? false,
+          wormhole: (res as { wormhole?: boolean }).wormhole ?? false,
         })
         // YOLO Rod jackpot — fire the full-screen celebration overlay on top
         // of the result card. Renders particles + a slamming "JACKPOT"
@@ -5196,6 +5203,45 @@ export default function FishingGame({
       setTimeout(() => setShinyResolveToast(null), 2200)
       setShinyChoiceLoading(null)
       dismissCatchResultToReady()
+    }
+  }
+
+  // Galaxy Rod — "Wormhole": one-shot reroll of the just-landed catch into a
+  // different fish from the same zone. The server swapped the hold; here we
+  // morph the result card to the new fish + reconcile the local hold.
+  async function handleWormholeReroll() {
+    if (!catchResult?.wormhole || rerollingWormhole) return
+    setRerollingWormhole(true)
+    const oldId = catchResult.fish.id
+    try {
+      const res = await rerollWormhole()
+      if ('error' in res) return
+      setInventory(prev => {
+        const trimmed = prev
+          .map(i => i.fish_id === oldId ? { ...i, quantity: i.quantity - res.qty } : i)
+          .filter(i => i.quantity > 0)
+        const existing = trimmed.find(i => i.fish_id === res.fish.id)
+        if (existing) return trimmed.map(i => i.fish_id === res.fish.id ? { ...i, quantity: i.quantity + res.qty } : i)
+        return [...trimmed, { fish_id: res.fish.id, quantity: res.qty, fish_species: res.fish }]
+      })
+      if (res.isPB && res.sizeIn > 0) setPersonalBests(prev => ({ ...prev, [res.fish.id]: res.sizeIn }))
+      setCatchResult(prev => prev ? {
+        ...prev,
+        fish: res.fish,
+        isNewSpecies: res.isNewSpecies,
+        sizeIn: res.sizeIn,
+        sizeMin: res.sizeMin,
+        sizeMax: res.sizeMax,
+        sizeTier: res.sizeTier,
+        isPB: res.isPB,
+        previousBest: res.previousBest,
+        // The reroll never produces a multi-catch or shiny, and is one-shot.
+        doubleCatch: false,
+        jackpotMultiplier: undefined,
+        wormhole: false,
+      } : prev)
+    } finally {
+      setRerollingWormhole(false)
     }
   }
 
@@ -6537,6 +6583,7 @@ export default function FishingGame({
                       </div>
                     </motion.div>
                   ) : catchResult ? (
+                    <>
                     <ResultCard
                       fish={catchResult.fish}
                       baitSaved={catchResult.baitSaved}
@@ -6558,6 +6605,35 @@ export default function FishingGame({
                       previousBest={catchResult.previousBest}
                       isShiny={catchResult.isShiny}
                     />
+                    {/* Galaxy Rod — Wormhole reroll. One-shot, opt-in gamble. */}
+                    {catchResult.wormhole && !catchResult.isShiny && (
+                      <motion.button
+                        type="button"
+                        onPointerDown={(e) => { e.preventDefault(); handleWormholeReroll() }}
+                        disabled={rerollingWormhole}
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        whileTap={rerollingWormhole ? undefined : { scale: 0.96 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 24 }}
+                        className="font-karla font-700 uppercase tracking-[0.1em]"
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          margin: '0.6rem auto 0', padding: '0.55rem 1.1rem', borderRadius: 999,
+                          background: 'linear-gradient(180deg, rgba(167,139,250,0.26) 0%, rgba(124,92,255,0.14) 100%)',
+                          border: '1px solid rgba(167,139,250,0.6)',
+                          color: '#c9b8ff', fontSize: '0.62rem', cursor: rerollingWormhole ? 'default' : 'pointer',
+                          opacity: rerollingWormhole ? 0.6 : 1,
+                          boxShadow: '0 2px 14px rgba(124,92,255,0.22), inset 0 1px 0 rgba(255,255,255,0.1)',
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9b8ff" strokeWidth="1.8" aria-hidden>
+                          <ellipse cx="12" cy="12" rx="10" ry="4.5" />
+                          <ellipse cx="12" cy="12" rx="6" ry="2.6" opacity="0.7" />
+                          <circle cx="12" cy="12" r="1.4" fill="#c9b8ff" stroke="none" />
+                        </svg>
+                        {rerollingWormhole ? 'Folding space…' : 'Wormhole · reroll this catch'}
+                      </motion.button>
+                    )}
+                    </>
                   ) : missResult ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
                       <p className="font-cinzel font-700 mb-1"

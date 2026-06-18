@@ -609,6 +609,8 @@ export default function TackleShopClient({
                         {rod.perfectZoneBonus > 0 && pill(`Perfect zone +${rod.perfectZoneBonus}°`)}
                         {rod.rarityBonus > 0 && pill(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)}
                         {(rod.jackpotChance ?? 0) > 0 && pill(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)}
+                        {rod.wormhole && pill('Wormhole reroll')}
+                        {(rod.instantBiteChance ?? 0) > 0 && pill(`${Math.round(rod.instantBiteChance! * 100)}% instant bite`)}
                         {speedPct > 0 && pill(`${speedPct}% faster bites`)}
                         {rod.catchZoneBonus > 0 && pill(`+${rod.catchZoneBonus}° catch zone`)}
                       </div>

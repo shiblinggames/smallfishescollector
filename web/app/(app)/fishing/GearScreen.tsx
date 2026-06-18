@@ -48,6 +48,8 @@ function rodTagline(r: typeof RODS[number]): string {
   if (r.retryOnMissChance > 0)         parts.push(`${Math.round(r.retryOnMissChance * 100)}% retry`)
   if (r.perfectZoneBonus > 0)          parts.push(`+${r.perfectZoneBonus}° perfect`)
   if (r.rarityBonus > 0)               parts.push(`+${Math.round(r.rarityBonus * 100)}% rare`)
+  if (r.wormhole)                      parts.push('Wormhole reroll')
+  if ((r.instantBiteChance ?? 0) > 0)  parts.push(`${Math.round(r.instantBiteChance! * 100)}% instant bite`)
   const speedPct = Math.round((3800 - r.biteIntervalMs) / 3800 * 100)
   if (speedPct > 0)                    parts.push(`${speedPct}% faster`)
   if (r.catchZoneBonus > 0)            parts.push(`+${r.catchZoneBonus}° zone`)
@@ -153,6 +155,12 @@ function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: str
   }
   if ((r.perfectXpMult ?? 1) > 1) {
     lines.push({ title: 'Perfect XP', value: `× ${r.perfectXpMult}`, help: 'Perfect catches grant double XP' })
+  }
+  if (r.wormhole) {
+    lines.push({ title: 'Wormhole', value: 'Reroll', help: 'reroll any catch into another fish from the same zone — better or worse' })
+  }
+  if ((r.instantBiteChance ?? 0) > 0) {
+    lines.push({ title: 'Lightspeed', value: `${Math.round(r.instantBiteChance! * 100)}%`, help: 'chance a bite comes almost instantly' })
   }
   if (lines.length === 0) {
     lines.push({ title: 'Base Rod', value: '—', help: 'standard rod — no bonuses' })

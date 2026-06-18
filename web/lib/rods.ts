@@ -17,6 +17,17 @@ export interface RodDef {
   crateChanceMult?: number   // multiplies the per-cast crate spawn chance (default 1)
   perfectXpMult?: number     // multiplies XP on a *perfect* catch — incl. the
                              // streak bonus, so it scales with streaks (default 1)
+  // ── Galaxy Rod — "Wormhole" ──
+  // After any normal catch, the player may fold space and reroll the catch
+  // into a DIFFERENT random fish from the same zone (weighted by normal rarity
+  // odds — can come back better or worse). One-shot per catch, opt-in. Server
+  // enforces single-use via profiles.pending_reroll. See rerollWormhole().
+  wormhole?: boolean
+  // ── Lightsaber Rod — "Lightspeed" ──
+  // Chance (0–1) that a cast bites almost instantly — the fish are drawn to the
+  // blade. Applied server-side in castLine by clamping waitMs. This is the only
+  // rod stat that actually changes bite timing (biteIntervalMs is display-only).
+  instantBiteChance?: number
   // 3-pose sprite slug. Loads /{slug}_rest.png / _wait.png / _cast.png.
   // Every rod's source sheet is sliced into raw quadrants by web/slice-rod.mjs
   // so a single CHAR_ROD_OVERLAY position applies to all of them.
@@ -165,6 +176,22 @@ export const RODS: RodDef[] = [
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     perfectXpMult: 2,
     slug: 'rod_perfect', glow: true, glowType: 'moon',
+  },
+  {
+    tier: 18, name: 'Galaxy Rod', cost: 300000,
+    description: 'Spun from cosmic thread. After any catch, open a wormhole and reroll it into a different fish from the same waters — fortune or folly, you take what surfaces.',
+    color: '#a78bfa', rarityBonus: 0.40, biteIntervalMs: 2600, catchZoneBonus: 6,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    wormhole: true,
+    imageUrl: '/rod_galaxy.png', glow: true, glowType: 'sparkle',
+  },
+  {
+    tier: 19, name: 'Lightsaber Rod', cost: 300000,
+    description: 'A blade of pure energy. Fish are drawn to the light — most casts bite almost the instant your line touches the water.',
+    color: '#5fd0ff', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 8,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
+    instantBiteChance: 0.35,
+    imageUrl: '/rod_lightsaber.png', glow: true, glowType: 'electric',
   },
 ]
 

@@ -282,7 +282,14 @@ export async function castLine(baitType: string, habitat: string): Promise<
   }
 
   const fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
-  const waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
+  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
+
+  // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
+  // the only rod stat that actually changes the bite wait (biteIntervalMs is
+  // display-only), so the fast-bite fantasy is real, not cosmetic.
+  if ((rod.instantBiteChance ?? 0) > 0 && Math.random() < rod.instantBiteChance!) {
+    waitMs = Math.min(waitMs, 700)
+  }
 
   return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
 }
@@ -342,6 +349,10 @@ export async function reelIn(
        *  otherwise. The new running doubloons total is in newDoubloons. */
       sigilBonus?: number
       newDoubloons?: number
+      /** Galaxy Rod — true when this catch can be rerolled through the
+       *  Wormhole (rod has the effect, catch is eligible: real fish, not
+       *  shiny, not ancient). The client shows a one-shot reroll button. */
+      wormhole?: boolean
       /** True if THIS catch claimed the global "first Ancient Deep catch"
        *  contest. Only the first player to land an ancient_deep fish
        *  ever sees this — everyone else gets undefined/false. Triggers
@@ -606,8 +617,19 @@ export async function reelIn(
     : 0
   const newDoubloons = (profile.doubloons ?? 0) + sigilBonus
 
+  // Galaxy Rod — "Wormhole": this catch is rerollable if the equipped rod has
+  // the effect and the catch is a normal landable fish (ancient_deep already
+  // short-circuited above; shinies live in shiny_catches, not the hold). We
+  // stash the catch on profiles.pending_reroll; its presence is the single-use
+  // guard. Non-wormhole catches clear any stale pending reroll.
+  const rodDef = getRod(profile.rod_tier ?? 0)
+  const wormholeAvail = !!rodDef.wormhole && !isShiny && catchQty > 0
+
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
-  const profileUpdates: Record<string, unknown> = { fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false }
+  const profileUpdates: Record<string, unknown> = {
+    fishing_abyss_streak: newAbyssStreak, fishing_xp: newXP, current_perfect_streak: newPerfectStreak, catch_pending: false,
+    pending_reroll: wormholeAvail ? { fishId, qty: catchQty, habitat: fish.habitat } : null,
+  }
   if (sigilBonus > 0) profileUpdates.doubloons = newDoubloons
   if (result === 'perfect') profileUpdates.total_perfects = (profile.total_perfects ?? 0) + 1
   if (newPerfectStreak > (profile.highest_perfect_streak ?? 0)) {
@@ -798,6 +820,93 @@ export async function reelIn(
     alreadyMounted,
     sigilBonus,
     newDoubloons: sigilBonus > 0 ? newDoubloons : undefined,
+    wormhole: wormholeAvail,
+  }
+}
+
+/** Galaxy Rod — "Wormhole" reroll. Consumes the single-use pending_reroll set
+ *  by reelIn and replaces the just-caught fish in the player's hold with a
+ *  DIFFERENT random fish from the same zone (weighted by normal rarity odds via
+ *  the Galaxy Rod's rarity bias — can be better OR worse). One-shot per catch:
+ *  pending_reroll is cleared whether or not a better fish surfaces. */
+export async function rerollWormhole(): Promise<
+  | { ok: true; fish: FishSpecies; qty: number; isNewSpecies: boolean; sizeIn: number; sizeMin?: number; sizeMax?: number; sizeTier?: FishSizeTier; isPB: boolean; previousBest: number | null }
+  | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const admin = createAdminClient()
+
+  const { data: profile } = await admin.from('profiles').select('rod_tier, pending_reroll').eq('id', user.id).single()
+  const pending = (profile?.pending_reroll ?? null) as { fishId: number; qty: number; habitat: string } | null
+  if (!pending) return { error: 'No catch to reroll.' }
+
+  // Clear the token immediately so this is strictly one-shot even if the player
+  // double-taps — the swap below is keyed off the captured `pending` values.
+  await admin.from('profiles').update({ pending_reroll: null }).eq('id', user.id)
+
+  const { fishId: origId, qty, habitat } = pending
+  const { data: candidates } = await admin
+    .from('fish_species')
+    .select('id, catch_difficulty, catch_score, bite_rarity, sell_value')
+    .eq('habitat', habitat)
+  // A wormhole sends you somewhere ELSE — exclude the original so the reroll
+  // always lands on a different fish. Trophies (sell_value 0) never apply here
+  // since ancient_deep is ineligible for the wormhole.
+  const pool = (candidates ?? []).filter(f => f.id !== origId)
+  if (pool.length === 0) return { error: 'The wormhole found nothing new.' }
+
+  const rod = getRod(profile?.rod_tier ?? 0)
+  const picked = tierWeightedPick(pool, habitat, rod.rarityBonus)
+  const { data: newFish } = await admin.from('fish_species').select('*').eq('id', picked.id).single()
+  if (!newFish) return { error: 'The wormhole collapsed.' }
+
+  // Hold swap — remove the original stack, add the new one (qty-neutral).
+  const { data: origRow } = await admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', origId).single()
+  if (origRow) {
+    const left = Math.max(0, origRow.quantity - qty)
+    if (left === 0) await admin.from('fish_inventory').delete().eq('user_id', user.id).eq('fish_id', origId)
+    else await admin.from('fish_inventory').update({ quantity: left }).eq('user_id', user.id).eq('fish_id', origId)
+  }
+  const { data: newRow } = await admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', newFish.id).single()
+  if (newRow) await admin.from('fish_inventory').update({ quantity: newRow.quantity + qty }).eq('user_id', user.id).eq('fish_id', newFish.id)
+  else await admin.from('fish_inventory').insert({ user_id: user.id, fish_id: newFish.id, quantity: qty })
+
+  // Bestiary — the new fish counts as discovered/caught (you did pull it in).
+  const { data: collRow } = await admin.from('fish_collection').select('catch_count').eq('user_id', user.id).eq('fish_id', newFish.id).maybeSingle()
+  const isNewSpecies = !collRow
+  if (isNewSpecies) await admin.from('fish_collection').insert({ user_id: user.id, fish_id: newFish.id, catch_count: qty })
+  else await admin.from('fish_collection').update({ catch_count: collRow.catch_count + qty, last_caught_at: new Date().toISOString() }).eq('user_id', user.id).eq('fish_id', newFish.id)
+
+  // Size + PB for the new fish (mirrors the catch path; ancients excluded).
+  const sizeMinIn = newFish.length_min_in == null ? null : Number(newFish.length_min_in)
+  const sizeMaxIn = newFish.length_max_in == null ? null : Number(newFish.length_max_in)
+  let sizeIn = 0
+  let sizeTier: FishSizeTier | undefined
+  let isPB = false
+  let previousBest: number | null = null
+  if (sizeMinIn != null && sizeMaxIn != null) {
+    const roll = rollFishSize(sizeMinIn, sizeMaxIn)
+    sizeIn = roll.lengthIn
+    sizeTier = roll.tier
+    const { data: pbRow } = await admin.from('fish_personal_bests').select('best_length_in').eq('user_id', user.id).eq('fish_id', newFish.id).maybeSingle()
+    previousBest = pbRow ? Number(pbRow.best_length_in) : null
+    isPB = previousBest == null || sizeIn > previousBest
+    if (isPB) await admin.from('fish_personal_bests').upsert({ user_id: user.id, fish_id: newFish.id, best_length_in: sizeIn, caught_at: new Date().toISOString() }, { onConflict: 'user_id,fish_id' })
+  }
+
+  return {
+    ok: true,
+    fish: newFish as FishSpecies,
+    qty,
+    isNewSpecies,
+    sizeIn,
+    sizeMin: sizeMinIn ?? undefined,
+    sizeMax: sizeMaxIn ?? undefined,
+    sizeTier,
+    isPB,
+    previousBest,
   }
 }
 
