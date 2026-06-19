@@ -1738,6 +1738,14 @@ html, body {
   80%  { transform: translateY(-3%); }
   100% { transform: translateY(0); }
 }
+/* Distance-aware fall: each tile starts `--tmf` cell-heights up (its real fall
+   distance) and slides to rest with a soft landing — reads as gravity, not a
+   uniform pop-in. */
+@keyframes tmSlide {
+  0%   { transform: translateY(calc(var(--tmf, 1) * -100%)); }
+  82%  { transform: translateY(4%); }
+  100% { transform: translateY(0); }
+}
 /* Board-wide light pulse on a clear — brightness scales with combo via
    the inline --tm-flash opacity the component sets. */
 @keyframes tmBoardFlash {

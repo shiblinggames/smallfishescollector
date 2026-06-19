@@ -7,7 +7,7 @@
 // One seeded board a week (shared puzzle), unlimited retries. Engine runs
 // client-side; the server tiers the score + banks the delta authoritatively.
 
-import { memo, useMemo, useRef, useState, useEffect } from 'react'
+import { memo, useMemo, useRef, useState, useEffect, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -35,8 +35,8 @@ interface RunResult { score: number; best: number; tier: number; pointsWon: numb
 // stacked drop-shadows every setState). No `transition: filter` either — those
 // re-rasterize the drop-shadows every frame; the glow snaps in instead.
 type Tok = typeof MATCH_TOKENS[number]
-const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, isInvalid }: {
-  tok: Tok; isWild: boolean; isSel: boolean; isPop: boolean; isDrop: boolean; isCommit: boolean; isInvalid: boolean
+const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, isInvalid, fall }: {
+  tok: Tok; isWild: boolean; isSel: boolean; isPop: boolean; isDrop: boolean; isCommit: boolean; isInvalid: boolean; fall: number
 }) {
   const gemBg = isWild ? WILD_RAINBOW : isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
   const gemGlow = isWild
@@ -52,9 +52,19 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
       zIndex: isCommit ? 2 : undefined,
+      // Promote actively-animating tiles to their own GPU layer so the
+      // transform animations don't re-rasterize the gem's drop-shadows each
+      // frame (the main source of cascade jank on mobile).
+      willChange: (isPop || isDrop || isCommit) ? 'transform' : undefined,
       transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1)',
-      animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : isWild ? 'tmWildPulse 1.8s ease-in-out infinite' : undefined,
-    }}>
+      // `--tmf` = how many cells this tile actually fell, so tmSlide starts it
+      // at the right height.
+      ['--tmf' as string]: isDrop ? String(fall) : undefined,
+      animation: isPop ? 'tmPop 0.24s ease forwards'
+        : isDrop ? 'tmSlide 0.26s cubic-bezier(.2,.7,.4,1)'
+        : isWild ? 'tmWildPulse 1.8s ease-in-out infinite'
+        : undefined,
+    } as CSSProperties}>
       <div aria-hidden style={{
         position: 'absolute', inset: 0,
         clipPath: tok.clip || undefined, borderRadius: tok.clip ? 0 : '24%',
@@ -74,6 +84,26 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
     </div>
   )
 })
+
+// Per-result-cell fall distance (in cell-heights) for a clear, so each tile
+// slides from where it actually was. Survivors fall by the cleared cells below
+// them; new tiles drop in from above by the column's cleared count.
+function computeFall(cleared: Set<number>, cols: number, rows: number): number[] {
+  const fall = new Array(cols * rows).fill(0)
+  for (let c = 0; c < cols; c++) {
+    let numNew = 0
+    for (let r = 0; r < rows; r++) if (cleared.has(r * cols + c)) numNew++
+    if (numNew === 0) continue
+    const survivors: number[] = []
+    for (let r = rows - 1; r >= 0; r--) if (!cleared.has(r * cols + c)) survivors.push(r)
+    for (let j = 0; j < survivors.length; j++) {
+      const resultRow = rows - 1 - j
+      fall[resultRow * cols + c] = resultRow - survivors[j]
+    }
+    for (let k = 0; k < numNew; k++) fall[k * cols + c] = numNew
+  }
+  return fall
+}
 
 export default function TreasureMatchGame({ initial }: { initial: MatchState }) {
   const { cols, rows, types, target, seed } = initial
@@ -100,6 +130,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   const [bomb, setBomb] = useState<{ key: number } | null>(null)
   const [tierUp, setTierUp] = useState<{ points: number; key: number } | null>(null)
   const [dropping, setDropping] = useState<Set<number>>(new Set())
+  const [dropFall, setDropFall] = useState<number[]>([])
   const [flash, setFlash] = useState<{ key: number; intensity: number } | null>(null)
   const [scoreFloat, setScoreFloat] = useState<{ amount: number; key: number } | null>(null)
   const [scorePulse, setScorePulse] = useState(0)
@@ -169,7 +200,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     scoreRef.current = 0; setScore(0)
     movesRef.current = initial.moves; setMovesLeft(initial.moves)
     shownTierRef.current = banked
-    setSelected(null); setPopping(new Set()); setCommitted(null); setDropping(new Set())
+    setSelected(null); setPopping(new Set()); setCommitted(null); setDropping(new Set()); setDropFall([])
     setCombo(null); setBomb(null); setTierUp(null); setFlash(null); setResult(null); setMessage(null); setParticles([])
   }
 
@@ -206,9 +237,9 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     // haptic so the move reads as *committed* before anything pops.
     setCommitted([a, b]); haptic(22)
     boardRef.current = res.swapped; setBoard(res.swapped)
-    await wait(210)
+    await wait(150)
     setCommitted(null)
-    await wait(70)
+    await wait(45)
 
     let localScore = scoreRef.current
     for (let s = 0; s < res.steps.length; s++) {
@@ -222,21 +253,23 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       if (cascade >= 2) { setCombo({ level: cascade, key: pid.current++ }); haptic([0, 18, 50, 18 + cascade * 6]) }
       else haptic(step.cleared.length >= 5 ? 22 : 12)
       setScoreFloat({ amount: step.gained, key: pid.current++ })
-      // Dopamine delay: each successive cascade holds longer so the chain
-      // builds weight instead of machine-gunning by. Big clears linger too.
-      const big = step.cleared.length >= 5 ? 70 : 0
-      await wait(300 + (cascade - 1) * 110 + big)
-      // 2) swap in the settled board and let the changed tiles DROP in.
+      // Hold for the pop, with a SMALL, CAPPED per-cascade lengthening so a
+      // chain has a touch more weight without the old 4-second deep-chain drag.
+      const big = step.cleared.length >= 5 ? 50 : 0
+      await wait(230 + Math.min(cascade - 1, 3) * 30 + big)
+      // 2) swap in the settled board; changed tiles slide down from their real
+      //    fall height (tmSlide + per-tile --tmf).
       const before = boardRef.current
       setPopping(new Set())
       const fell = new Set<number>()
       for (let i = 0; i < step.resultBoard.length; i++) if (before[i] !== step.resultBoard[i]) fell.add(i)
       boardRef.current = step.resultBoard; setBoard(step.resultBoard)
+      setDropFall(computeFall(new Set(step.cleared), cols, rows))
       setDropping(fell)
       localScore += step.gained; scoreRef.current = localScore; setScore(localScore)
       setScorePulse(p => p + 1)
-      // settle beat before the next link in the chain (lets the drop land)
-      await wait(190 + (cascade - 1) * 70)
+      // settle beat — long enough for the slide (0.26s) to land, capped growth.
+      await wait(265 + Math.min(cascade - 1, 3) * 15)
       setDropping(new Set())
     }
     setFlash(null); setParticles([]) // combo clears on the next move so its burst can finish
@@ -423,6 +456,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
               isSel={selected === i}
               isPop={popping.has(i)}
               isDrop={dropping.has(i)}
+              fall={dropping.has(i) ? (dropFall[i] ?? 0) : 0}
               isCommit={committed !== null && (committed[0] === i || committed[1] === i)}
               isInvalid={!!invalid && (invalid[0] === i || invalid[1] === i)}
             />
