@@ -1118,91 +1118,90 @@ export default function ShipHero({
                   modals (Campaign / Voyages hub cards) where the decision
                   to launch actually happens — that's where they belong. */}
 
-              {/* Two-column hero — ship image on the left; the right column
-                  stacks name (with inline rename), the current class, and the
-                  upgrade-ship button, one per row. Far tighter than the old
-                  full-width centered preview. */}
-              <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'center', marginBottom: '1.4rem' }}>
-                <div style={{ flexShrink: 0, width: '40%', maxWidth: 160 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={shipImgSrc}
-                    alt={shipName ?? shipStats.name}
-                    loading="lazy"
-                    decoding="async"
-                    style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: skinFilter, transition: 'filter 0.3s ease' }}
-                  />
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                  {/* Row 1 — name + edit (icon implies rename; no helper text) */}
-                  {editingName ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <input
-                        autoFocus
-                        value={nameInput}
-                        onChange={e => setNameInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
-                        maxLength={32}
-                        placeholder={shipStats.name}
-                        style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 8, padding: '0.38rem 0.55rem', color: '#f0ede8', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none' }}
+              {/* Hero — large centered ship image with the Upgrade action as a
+                  gold pill floating ON the image; name (inline rename) and the
+                  current class sit tidily beneath. */}
+              {(() => {
+                const shipTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
+                const shipAtMax = shipTier + 1 >= SHIPS.length
+                const picks = Object.values(shipClasses)
+                  .map(id => getShipClass(id))
+                  .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
+                return (
+                  <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ position: 'relative', display: 'inline-block', width: '78%', maxWidth: 230 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={shipImgSrc}
+                        alt={shipName ?? shipStats.name}
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: skinFilter, transition: 'filter 0.3s ease' }}
                       />
-                      <button onClick={submitRename} aria-label="Save" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'rgba(240,192,64,0.2)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                      </button>
-                      <button onClick={() => setEditingName(false)} aria-label="Cancel" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                      </button>
+                      {!shipAtMax && (
+                        <button
+                          type="button"
+                          onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
+                          aria-label="Upgrade ship"
+                          className="font-karla font-700 uppercase tracking-[0.08em]"
+                          style={{ position: 'absolute', right: 0, bottom: 4, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.36rem 0.66rem', borderRadius: 999, background: 'linear-gradient(180deg, #f4c84e, #d4a017)', color: '#1a1206', border: '1px solid rgba(0,0,0,0.3)', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', fontSize: '0.62rem', cursor: 'pointer' }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                          Upgrade
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', minWidth: 0 }}
-                    >
-                      <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.2rem', color: '#f0ede8', minWidth: 0 }}>{shipName ?? shipStats.name}</p>
-                      <span style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z" />
-                        </svg>
-                      </span>
-                    </button>
-                  )}
 
-                  {/* Row 2 — current class, compact chips (details live in the
-                      Captain's Choice picker, not here). */}
-                  {(() => {
-                    const picks = Object.values(shipClasses)
-                      .map(id => getShipClass(id))
-                      .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
-                    if (picks.length === 0) return (
-                      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a6764' }}>No class chosen yet</span>
-                    )
-                    return (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                        {picks.map(cls => (
-                          <span key={cls.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${cls.color}18`, border: `1px solid ${cls.color}55`, borderRadius: 999, padding: '0.2rem 0.5rem', minWidth: 0 }}>
-                            <span style={{ fontSize: '0.8rem', lineHeight: 1, color: cls.color }}>{cls.emoji}</span>
-                            <span className="font-cinzel font-700 truncate" style={{ fontSize: '0.7rem', color: '#f0ede8' }}>{cls.name}</span>
+                    {/* Name + inline rename (pencil implies it; no helper text). */}
+                    <div style={{ marginTop: '0.65rem' }}>
+                      {editingName ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                          <input
+                            autoFocus
+                            value={nameInput}
+                            onChange={e => setNameInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
+                            maxLength={32}
+                            placeholder={shipStats.name}
+                            style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 8, padding: '0.4rem 0.7rem', color: '#f0ede8', fontSize: '1rem', fontFamily: 'inherit', outline: 'none', textAlign: 'center', width: 180 }}
+                          />
+                          <button onClick={submitRename} aria-label="Save" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 8, background: 'rgba(240,192,64,0.2)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                          </button>
+                          <button onClick={() => setEditingName(false)} aria-label="Cancel" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, maxWidth: '100%' }}
+                        >
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.35rem', color: '#f0ede8', minWidth: 0 }}>{shipName ?? shipStats.name}</p>
+                          <span style={{ width: 25, height: 25, borderRadius: '50%', flexShrink: 0, background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z" />
+                            </svg>
                           </span>
-                        ))}
-                      </div>
-                    )
-                  })()}
+                        </button>
+                      )}
+                    </div>
 
-                  {/* Row 3 — upgrade ship (modal previews the next tier). */}
-                  <button
-                    type="button"
-                    onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
-                    className="font-karla font-700 uppercase tracking-[0.08em]"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: '0.55rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#dfe3e8', fontSize: '0.7rem', cursor: 'pointer' }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
-                      <path d="M12 19V5M5 12l7-7 7 7"/>
-                    </svg>
-                    Upgrade Ship
-                  </button>
-                </div>
-              </div>
+                    {/* Current class — compact chips, centered (details live in
+                        the Captain's Choice picker). */}
+                    <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                      {picks.length === 0 ? (
+                        <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6a6764' }}>No class chosen yet</span>
+                      ) : picks.map(cls => (
+                        <span key={cls.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${cls.color}18`, border: `1px solid ${cls.color}55`, borderRadius: 999, padding: '0.22rem 0.55rem' }}>
+                          <span style={{ fontSize: '0.82rem', lineHeight: 1, color: cls.color }}>{cls.emoji}</span>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>{cls.name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* ── Section tabs ── Items first (the key loadout call),
                   cosmetics (Skins) last. Subtle styling, no loud fill. */}
@@ -1342,16 +1341,29 @@ export default function ShipHero({
                     <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
                       Fired from the Special action in combat. Once per battle, costs the turn.
                     </p>
-                    <div style={{
-                      background: `${accent}14`, border: `1px solid ${accent}55`,
-                      borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: next ? '0.6rem' : '1.5rem',
-                      display: 'flex', alignItems: 'center', gap: '0.8rem',
-                    }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}55` }}>
-                        {kit.image
-                          // eslint-disable-next-line @next/next/no-img-element
-                          ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                          : <WrenchGlyph color={accent} />}
+                    {/* The whole card is the tap target; the gold badge on the kit
+                        icon is the "upgrade available" affordance (mirrors the
+                        ship's on-image Upgrade pill). */}
+                    <div
+                      onClick={next ? () => { setKitErr(null); setKitOpen(true) } : undefined}
+                      style={{
+                        background: `${accent}14`, border: `1px solid ${accent}55`,
+                        borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: '1.5rem',
+                        display: 'flex', alignItems: 'center', gap: '0.85rem',
+                        cursor: next ? 'pointer' : 'default',
+                      }}>
+                      <div style={{ position: 'relative', flexShrink: 0, width: 48, height: 48 }}>
+                        <div style={{ width: '100%', height: '100%', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}55` }}>
+                          {kit.image
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+                            : <WrenchGlyph color={accent} />}
+                        </div>
+                        {next && (
+                          <span aria-hidden style={{ position: 'absolute', right: -6, bottom: -6, width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(180deg, #f4c84e, #d4a017)', border: '2px solid #14110d', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)', zIndex: 2 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                          </span>
+                        )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
@@ -1362,17 +1374,12 @@ export default function ShipHero({
                           {kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()} Fortune scales the max ({range.max - kit.baseMax > 0 ? `+${range.max - kit.baseMax}` : 'no'} bonus from your {ratedFortune} Fortune).
                         </p>
                       </div>
+                      {next ? (
+                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: '#f0c040', flexShrink: 0, whiteSpace: 'nowrap' }}>Upgrade ›</span>
+                      ) : (
+                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: '#7a7674', flexShrink: 0 }}>Max</span>
+                      )}
                     </div>
-                    {next ? (
-                      <button type="button" onClick={() => { setKitErr(null); setKitOpen(true) }}
-                        className="font-karla font-700 uppercase tracking-[0.08em]"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '0.7rem', borderRadius: 10, marginBottom: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#dfe3e8', fontSize: '0.74rem', cursor: 'pointer' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}><path d="M12 19V5M5 12l7-7 7 7" /></svg>
-                        Upgrade Kit
-                      </button>
-                    ) : (
-                      <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#7a7674', marginBottom: '1.5rem', textAlign: 'center' }}>Fully upgraded — the Ironclad Kit is yours.</p>
-                    )}
                   </>
                 )
               })()}
