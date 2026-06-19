@@ -149,7 +149,7 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 15, name: 'YOLO Rod', cost: 1000000,
-    description: '10% chance to land 100 fish at once (capped at 10 in the Ancient Deep). The other 90%? Just a regular catch.',
+    description: 'Roll the dice every cast for a 100-fish haul — and the odds climb the shallower you fish. The rest of the time? Just a regular catch.',
     color: '#60d9ff', rarityBonus: 0, biteIntervalMs: 2850, catchZoneBonus: 0,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: false, perfectZoneBonus: 0,
     jackpotChance: 0.10, jackpotMultiplier: 100,
@@ -197,4 +197,26 @@ export const RODS: RodDef[] = [
 
 export function getRod(tier: number): RodDef {
   return RODS.find(r => r.tier === tier) ?? RODS[0]
+}
+
+// ── YOLO Rod — per-zone jackpot odds ─────────────────────────────────────────
+// The jackpot pays its full ×100 in every zone; the CHANCE is scaled per zone
+// so the expected haul lands ~150k doubloons/hr everywhere instead of spiking
+// in the richest zone. Richer zones earn more per catch, so they need a smaller
+// chance to hit the same ceiling (and it kills the old "farm the Abyss to dodge
+// the Ancient Deep cap" loophole). Tuned 2026-06-19 against live fish values +
+// endgame catch rates; retune here if zone values change.
+export const ZONE_JACKPOT_CHANCE: Record<string, number> = {
+  shallows:     0.172,
+  open_waters:  0.131,
+  deep:         0.087,
+  abyss:        0.042,
+  ancient_deep: 0.013,
+}
+
+/** Jackpot chance for a rod in a given zone. 0 unless the rod actually has a
+ *  jackpot. Falls back to the rod's flat chance for any unlisted zone. */
+export function jackpotChanceForZone(rod: RodDef, habitat: string): number {
+  if (!rod.jackpotChance) return 0
+  return ZONE_JACKPOT_CHANCE[habitat] ?? rod.jackpotChance
 }

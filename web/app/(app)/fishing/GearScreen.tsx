@@ -44,7 +44,7 @@ function rodTagline(r: typeof RODS[number]): string {
   const parts: string[] = []
   if (r.doubleCatchChance >= 1)        parts.push('Always double')
   else if (r.doubleCatchChance > 0)    parts.push(`${Math.round(r.doubleCatchChance * 100)}% double`)
-  if ((r.jackpotChance ?? 0) > 0)      parts.push(`${Math.round(r.jackpotChance! * 100)}% jackpot`)
+  if ((r.jackpotChance ?? 0) > 0)      parts.push(`×${r.jackpotMultiplier} jackpot`)
   if (r.snagImmune)                    parts.push('Snag immune')
   if (r.retryOnMissChance > 0)         parts.push(`${Math.round(r.retryOnMissChance * 100)}% retry`)
   if (r.perfectZoneBonus > 0)          parts.push(`+${r.perfectZoneBonus}° perfect`)
@@ -151,7 +151,7 @@ function rodStatLines(r: typeof RODS[number]): Array<{ title: string; value: str
     lines.push({ title: 'Snag Immune', value: 'Yes', help: 'red zones cost no extra bait' })
   }
   if ((r.jackpotChance ?? 0) > 0) {
-    lines.push({ title: 'Jackpot', value: `${Math.round(r.jackpotChance! * 100)}% × ${r.jackpotMultiplier}`, help: 'rare chance of a huge haul' })
+    lines.push({ title: 'Jackpot', value: `×${r.jackpotMultiplier}`, help: 'rare chance at a huge haul — odds rise in shallower zones' })
   }
   if ((r.crateChanceMult ?? 1) > 1) {
     lines.push({ title: 'Crate Lure', value: `× ${r.crateChanceMult}`, help: 'more treasure crates per cast' })
@@ -818,7 +818,7 @@ export default function GearScreen({
   if (rod.doubleCatchChance > 0) specialBonuses.push({ label: rod.doubleCatchChance >= 1 ? 'Always double catch' : `${Math.round(rod.doubleCatchChance * 100)}% double catch`, color: rod.color })
   if (rod.retryOnMissChance > 0) specialBonuses.push({ label: `${Math.round(rod.retryOnMissChance * 100)}% retry on miss`, color: rod.color })
   if (rod.snagImmune) specialBonuses.push({ label: 'Snag immune', color: rod.color })
-  if ((rod.jackpotChance ?? 0) > 0) specialBonuses.push({ label: `${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`, color: rod.color })
+  if ((rod.jackpotChance ?? 0) > 0) specialBonuses.push({ label: `×${rod.jackpotMultiplier} jackpot · odds rise in shallows`, color: rod.color })
   if (rod.rarityBonus > 0) specialBonuses.push({ label: `+${Math.round(rod.rarityBonus * 100)}% rare fish`, color: rod.color })
   const levelBiteBonus = Math.round(((fishingLevel - 1) / 99) * 33)
   const baitBiteEffect = bait ? Math.round((1 - bait.waitMult) * 100) : 0

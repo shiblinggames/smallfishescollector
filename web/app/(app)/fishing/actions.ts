@@ -541,16 +541,17 @@ export async function reelIn(
   // double-catch / jackpot multiplier on the same cast is consumed by
   // the rare moment. This keeps daily-challenge counters from crediting
   // ghost regular fish that never landed anywhere.
-  // Ancient Deep balancing: the zone is built around single high-value
-  // catches, so Twin-Strike's double STAYS disabled here. The YOLO jackpot is
-  // allowed but CAPPED at ×10 (vs ×100) — a big-but-bounded haul instead of
-  // one that blows out the zone's economy. Server-side enforcement so a
-  // manipulated client can't bypass the matching caps in
-  // FishingGame.handleReelIn. (Ancient trophies, sell_value 0, short-circuit
-  // far above — these caps only ever touch the sellable regulars.)
-  const noMultipliers = fish.habitat === 'ancient_deep'
-  const effectiveDoubleCatch = doubleCatch && !noMultipliers
-  const effectiveJackpotMult = noMultipliers ? Math.min(jackpotMultiplier, 10) : jackpotMultiplier
+  // Ancient Deep balancing: Twin-Strike / Millionaire's double-catch STAYS
+  // disabled here (the zone is built around single high-value catches). The
+  // YOLO jackpot now pays its full ×100 in EVERY zone — its odds are scaled
+  // per zone instead (ZONE_JACKPOT_CHANCE in lib/rods) so its ~150k/hr ceiling
+  // holds everywhere, with no separate Ancient Deep haul cap. The clamp below
+  // is just a sanity rail so a manipulated client can't claim more than the
+  // rod's max. (Ancient trophies, sell_value 0, short-circuit far above — this
+  // only ever touches sellable fish.)
+  const noDoubleCatch = fish.habitat === 'ancient_deep'
+  const effectiveDoubleCatch = doubleCatch && !noDoubleCatch
+  const effectiveJackpotMult = Math.min(jackpotMultiplier, 100)
   const holdCapacity = getFishHold(profile.fish_hold_tier ?? 0).capacity
   const currentHoldCount = (holdRows ?? []).reduce((s: number, r: { quantity: number }) => s + (r.quantity ?? 0), 0)
   const desired = isShiny ? 1 : (effectiveDoubleCatch ? 2 : effectiveJackpotMult)

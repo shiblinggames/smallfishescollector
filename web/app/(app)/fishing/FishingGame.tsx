@@ -58,7 +58,7 @@ import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierShowsPill, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, RODS, rodGlowClass, type RodDef } from '@/lib/rods'
+import { getRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
@@ -863,7 +863,7 @@ function UnifiedGearDrawer({
                               {r.snagImmune && <StatPill label="Snag immune" color={r.color} />}
                               {r.perfectZoneBonus > 0 && <StatPill label={`Perfect zone +${r.perfectZoneBonus}°`} color={r.color} />}
                               {r.rarityBonus > 0 && <StatPill label={`+${Math.round(r.rarityBonus * 100)}% rare bias`} color={r.color} />}
-                              {(r.jackpotChance ?? 0) > 0 && <StatPill label={`${Math.round(r.jackpotChance! * 100)}% jackpot ×${r.jackpotMultiplier}`} color={r.color} />}
+                              {(r.jackpotChance ?? 0) > 0 && <StatPill label={`×${r.jackpotMultiplier} jackpot · odds rise in shallows`} color={r.color} />}
                               {(r.crateChanceMult ?? 1) > 1 && <StatPill label={`${r.crateChanceMult}× crate odds`} color={r.color} />}
                               {(r.perfectXpMult ?? 1) > 1 && <StatPill label={`${r.perfectXpMult}× perfect XP`} color={r.color} />}
                               {r.wormhole && <StatPill label="Wormhole reroll" color={r.color} />}
@@ -4786,20 +4786,21 @@ export default function FishingGame({
     if (!wasPerfect && hookedFishRef.current!.fishId !== CRATE_FISH_ID) setPerfectStreak(0)
 
     // Twin-Strike rod: 25% chance to catch 2 fish.
-    // YOLO Rod: 10% chance to catch 100x fish.
-    // Twin-Strike's double STAYS disabled in the Ancient Deep (zone balanced
-    // around single high-value catches). The YOLO jackpot CAN trigger there
-    // now, but its haul is CAPPED at ×10 (vs ×100) so it doesn't blow out the
-    // zone's economy. Ancient trophies (the one-time bosses, sell_value 0)
-    // never multiply at all. Server-side reelIn enforces the same caps so a
-    // manipulated client can't bypass them.
+    // YOLO Rod: chance to catch 100x fish — odds scale per zone
+    // (jackpotChanceForZone) so its ~150k/hr ceiling holds in every zone, and
+    // the full ×100 now pays in the Ancient Deep too. Twin-Strike / Millionaire's
+    // double STAYS disabled in the Ancient Deep (zone balanced around single
+    // high-value catches). Ancient trophies (one-time bosses, sell_value 0)
+    // never multiply. Server-side reelIn re-clamps so a manipulated client
+    // can't claim more than the rod's max.
     // Rolled HERE (before the Finn block) so a speed challenge can count
     // the full haul from the same roll that reelIn receives below.
     const inAncient = selectedZone === 'ancient_deep'
     const ancientTrophy = inAncient && (allFishSpecies.find(f => f.id === hookedFishRef.current!.fishId)?.sell_value ?? 0) === 0
     const doubleCatch = !inAncient && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
-    const jackpotHit = !doubleCatch && !ancientTrophy && (rod.jackpotChance ?? 0) > 0 && Math.random() < rod.jackpotChance!
-    const jackpotMultiplier = jackpotHit ? Math.min(rod.jackpotMultiplier ?? 1, inAncient ? 10 : Infinity) : 1
+    const zoneJackpotChance = jackpotChanceForZone(rod, selectedZone)
+    const jackpotHit = !doubleCatch && !ancientTrophy && zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
+    const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
 
     // Finn challenge progression — replaces the old gem-challenge mechanic.
     // Perfect-streak: a non-perfect catch fails. Speed-catch: any catch

@@ -574,7 +574,7 @@ export default function TackleShopClient({
                 if (rod.snagImmune) effects.push('Snag immune')
                 if (rod.perfectZoneBonus > 0) effects.push(`Perfect zone +${rod.perfectZoneBonus}°`)
                 if (rod.rarityBonus > 0) effects.push(`+${Math.round(rod.rarityBonus * 100)}% rare bias`)
-                if ((rod.jackpotChance ?? 0) > 0) effects.push(`${Math.round(rod.jackpotChance! * 100)}% jackpot ×${rod.jackpotMultiplier}`)
+                if ((rod.jackpotChance ?? 0) > 0) effects.push(`×${rod.jackpotMultiplier} jackpot · odds rise in shallows`)
                 if ((rod.crateChanceMult ?? 1) > 1) effects.push(`${rod.crateChanceMult}× crate odds`)
                 if ((rod.perfectXpMult ?? 1) > 1) effects.push(`${rod.perfectXpMult}× perfect XP`)
                 if (rod.wormhole) effects.push('Wormhole reroll')
