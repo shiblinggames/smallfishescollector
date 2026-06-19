@@ -1118,90 +1118,91 @@ export default function ShipHero({
                   modals (Campaign / Voyages hub cards) where the decision
                   to launch actually happens — that's where they belong. */}
 
-              {/* Ship preview with skin + rename — large hero image fills
-                  the upper area of the drawer. */}
-              <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={shipImgSrc}
-                  alt={shipName ?? shipStats.name}
-                  loading="lazy"
-                  decoding="async"
-                  style={{
-                    width: '100%', maxWidth: 220, height: 'auto',
-                    objectFit: 'contain', display: 'block', margin: '0 auto 0.85rem',
-                    filter: skinFilter,
-                    transition: 'filter 0.3s ease',
-                  }}
-                />
-                {editingName ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    <input
-                      autoFocus
-                      value={nameInput}
-                      onChange={e => setNameInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
-                      maxLength={32}
-                      placeholder={shipStats.name}
-                      style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 8, padding: '0.4rem 0.7rem', color: '#f0ede8', fontSize: '1rem', fontFamily: 'inherit', outline: 'none', textAlign: 'center', width: 190 }}
-                    />
-                    <button onClick={submitRename} style={{ background: 'rgba(240,192,64,0.2)', border: '1px solid rgba(240,192,64,0.5)', borderRadius: 8, padding: '0.45rem 0.85rem', color: '#f0c040', cursor: 'pointer', fontSize: '0.78rem' }} className="font-karla font-700">Save</button>
+              {/* Two-column hero — ship image on the left; the right column
+                  stacks name (with inline rename), the current class, and the
+                  upgrade-ship button, one per row. Far tighter than the old
+                  full-width centered preview. */}
+              <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'center', marginBottom: '1.4rem' }}>
+                <div style={{ flexShrink: 0, width: '40%', maxWidth: 160 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={shipImgSrc}
+                    alt={shipName ?? shipStats.name}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: skinFilter, transition: 'filter 0.3s ease' }}
+                  />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                  {/* Row 1 — name + edit (icon implies rename; no helper text) */}
+                  {editingName ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <input
+                        autoFocus
+                        value={nameInput}
+                        onChange={e => setNameInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setEditingName(false) }}
+                        maxLength={32}
+                        placeholder={shipStats.name}
+                        style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 8, padding: '0.38rem 0.55rem', color: '#f0ede8', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none' }}
+                      />
+                      <button onClick={submitRename} aria-label="Save" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'rgba(240,192,64,0.2)', border: '1px solid rgba(240,192,64,0.5)', color: '#f0c040', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      </button>
+                      <button onClick={() => setEditingName(false)} aria-label="Cancel" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => setEditingName(false)}
-                      aria-label="Cancel"
-                      style={{
-                        flexShrink: 0, width: 30, height: 30, borderRadius: '50%', padding: 0,
-                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
-                        color: '#cfcabf', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}
+                      onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', minWidth: 0 }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => { setNameInput(shipName ?? ''); setEditingName(true) }}
-                    style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem' }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f0ede8' }}>{shipName ?? shipStats.name}</p>
-                      <span style={{
-                        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                        background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.2rem', color: '#f0ede8', minWidth: 0 }}>{shipName ?? shipStats.name}</p>
+                      <span style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z" />
                         </svg>
                       </span>
-                    </span>
-                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: 'rgba(240,192,64,0.72)' }}>
-                      Tap to rename your ship
-                    </span>
-                  </button>
-                )}
-              </div>
+                    </button>
+                  )}
 
-              {/* Upgrade ship — opens an inline modal with the NEXT tier's
-                  preview, stats, and cost. The full shipyard page is still
-                  reachable from inside that modal as a secondary link. */}
-              <button
-                type="button"
-                onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
-                className="font-karla font-700 uppercase tracking-[0.08em]"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%',
-                  padding: '0.7rem', borderRadius: 10, marginBottom: '1.4rem',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)',
-                  color: '#dfe3e8', fontSize: '0.74rem', cursor: 'pointer',
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
-                  <path d="M12 19V5M5 12l7-7 7 7"/>
-                </svg>
-                Upgrade Ship
-              </button>
+                  {/* Row 2 — current class, compact chips (details live in the
+                      Captain's Choice picker, not here). */}
+                  {(() => {
+                    const picks = Object.values(shipClasses)
+                      .map(id => getShipClass(id))
+                      .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
+                    if (picks.length === 0) return (
+                      <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.58rem', color: '#6a6764' }}>No class chosen yet</span>
+                    )
+                    return (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {picks.map(cls => (
+                          <span key={cls.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${cls.color}18`, border: `1px solid ${cls.color}55`, borderRadius: 999, padding: '0.2rem 0.5rem', minWidth: 0 }}>
+                            <span style={{ fontSize: '0.8rem', lineHeight: 1, color: cls.color }}>{cls.emoji}</span>
+                            <span className="font-cinzel font-700 truncate" style={{ fontSize: '0.7rem', color: '#f0ede8' }}>{cls.name}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )
+                  })()}
+
+                  {/* Row 3 — upgrade ship (modal previews the next tier). */}
+                  <button
+                    type="button"
+                    onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
+                    className="font-karla font-700 uppercase tracking-[0.08em]"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: '0.55rem', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#dfe3e8', fontSize: '0.7rem', cursor: 'pointer' }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+                      <path d="M12 19V5M5 12l7-7 7 7"/>
+                    </svg>
+                    Upgrade Ship
+                  </button>
+                </div>
+              </div>
 
               {/* ── Section tabs ── Items first (the key loadout call),
                   cosmetics (Skins) last. Subtle styling, no loud fill. */}
@@ -1376,57 +1377,7 @@ export default function ShipHero({
                 )
               })()}
 
-              {/* ── Classes ──
-                  Read-only summary of chapter-end class picks. Picks
-                  happen in the Captain's Choice node (raid map);
-                  surfacing them here lets the player see what's
-                  buffing their next raid right next to the rest of
-                  their loadout. Each pick shows the same glyph +
-                  name + bullets used in the picker for consistency.
-              */}
-              {(() => {
-                const picks = Object.values(shipClasses)
-                  .map(id => getShipClass(id))
-                  .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
-                if (picks.length === 0) return null
-                return (
-                  <>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Classes</p>
-                    <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
-                      Permanent picks from Captain&apos;s Choice nodes. Effects apply in raids and stack with raid items.
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1.5rem' }}>
-                      {picks.map(cls => (
-                        <div key={cls.id} style={{
-                          display: 'flex', alignItems: 'center', gap: '0.85rem',
-                          background: `${cls.color}14`, border: `1px solid ${cls.color}40`,
-                          borderRadius: 12, padding: '0.75rem 0.9rem',
-                        }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${cls.color}1a`, border: `1px solid ${cls.color}40`, fontSize: '1.4rem', color: cls.color, lineHeight: 1 }}>
-                            {cls.emoji}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 4 }}>
-                              {cls.bullets.map((b, i) => (
-                                <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
-                                  fontSize: '0.6rem',
-                                  color: b.positive ? '#7adf9a' : '#f08a8a',
-                                  background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-                                  border: `1px solid ${b.positive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
-                                  borderRadius: 5, padding: '0.2rem 0.45rem',
-                                }}>{b.label}</span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )
-              })()}
-
-              {/* ── Raid Items ──
+              {/* ── Equipment ──
                   Inventory-first: the whole owned collection is laid out
                   here and tapping a row toggles equip/unequip directly.
                   Effects stack regardless of position, so there are no typed
@@ -1434,7 +1385,7 @@ export default function ShipHero({
                   hull). Equipped rows light up with a check; once the hull
                   is full the unequipped rows grey out until one is freed. */}
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Raid Items</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Equipment</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#8a8480' }}>{equippedItems.length}/{raidItemSlots}</span>
                   <div style={{ display: 'flex', gap: 4 }}>
@@ -1445,7 +1396,7 @@ export default function ShipHero({
                 </div>
               </div>
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                Tap to equip up to {raidItemSlots} item{raidItemSlots === 1 ? '' : 's'} (bigger hulls hold more). Effects only apply in raids, not voyages.
+                Tap to equip up to {raidItemSlots} item{raidItemSlots === 1 ? '' : 's'} (bigger hulls hold more).
               </p>
 
               {ownedRaidItems.length === 0 ? (
@@ -1482,15 +1433,19 @@ export default function ShipHero({
                           transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
                         }}
                       >
-                        <div style={{ position: 'relative', flexShrink: 0, width: 46, height: 46, borderRadius: 10, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                          {def.image ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
-                          ) : (
-                            <span style={{ fontSize: '1.55rem', lineHeight: 1 }}>{def.emoji}</span>
-                          )}
+                        <div style={{ position: 'relative', flexShrink: 0, width: 46, height: 46 }}>
+                          {/* Inner box clips the art to rounded corners; the check
+                              badge lives on the OUTER box so overflow doesn't cut it. */}
+                          <div style={{ width: '100%', height: '100%', borderRadius: 10, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            {def.image ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
+                            ) : (
+                              <span style={{ fontSize: '1.55rem', lineHeight: 1 }}>{def.emoji}</span>
+                            )}
+                          </div>
                           {equipped && (
-                            <div style={{ position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #14110d' }}>
+                            <div style={{ position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #14110d', zIndex: 2 }}>
                               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#14110d" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                             </div>
                           )}
