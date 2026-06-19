@@ -1143,11 +1143,9 @@ export default function ShipHero({
                           type="button"
                           onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
                           aria-label="Upgrade ship"
-                          className="font-karla font-700 uppercase tracking-[0.08em]"
-                          style={{ position: 'absolute', right: 0, bottom: 4, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.36rem 0.66rem', borderRadius: 999, background: 'linear-gradient(180deg, #f4c84e, #d4a017)', color: '#1a1206', border: '1px solid rgba(0,0,0,0.3)', boxShadow: '0 3px 10px rgba(0,0,0,0.5)', fontSize: '0.62rem', cursor: 'pointer' }}
+                          style={{ position: 'absolute', right: 6, bottom: 6, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'linear-gradient(180deg, #f4c84e, #d4a017)', border: '2px solid #14110d', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)', cursor: 'pointer' }}
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                          Upgrade
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
                         </button>
                       )}
                     </div>
