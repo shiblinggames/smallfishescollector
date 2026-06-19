@@ -96,7 +96,7 @@ export async function createShipBattle(opponentUsername: string): Promise<{ id: 
     .single()
   if (error || !inserted) return { error: 'Could not start the duel.' }
 
-  await sendMail(admin, foe.id, `${me.username} challenged you to a duel`, `${me.username} has called you out to a ship battle. Head to the Crew page to accept or decline.`)
+  await sendMail(admin, foe.id, `${me.username} challenged you to a duel`, `${me.username} has called you out to a ship battle. Open Broadsides on the Expeditions page to accept or decline.`)
   revalidatePath('/social')
   return { id: inserted.id }
 }
@@ -129,7 +129,7 @@ export async function acceptShipBattle(id: string): Promise<{ ok: true } | { err
   }).eq('id', id).eq('status', 'pending').select('id').single()
   if (error) return { error: 'Could not start the duel.' }
 
-  await sendMail(admin, b.challenger_id, `${b.opponent_username} accepted your duel`, `The cannons are loaded. It’s your move — open the duel from the Crew page.`)
+  await sendMail(admin, b.challenger_id, `${b.opponent_username} accepted your duel`, `The cannons are loaded. It’s your move — open Broadsides on the Expeditions page.`)
   revalidatePath('/social')
   return { ok: true }
 }
