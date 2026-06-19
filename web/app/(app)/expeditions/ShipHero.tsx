@@ -10,8 +10,8 @@ import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRank
 import { getShipClass } from '@/lib/shipClasses'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
-import { getRepairKit, repairKitRange, nextRepairKit, REPAIR_KITS } from '@/lib/repairKits'
-import { buyRepairKit, equipRepairKit } from './repairKitActions'
+import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
+import { buyRepairKit } from './repairKitActions'
 import { equipShipSkin, saveEquippedRaidItems } from './actions'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
@@ -359,33 +359,27 @@ export default function ShipHero({
     setEquippedItems(initialEquippedRaidItems)
   }, [initialEquippedRaidItems])
 
-  // Repair-kit ladder state. Buy/equip mutate the server; mirror locally for
-  // instant feedback, then router.refresh() reconciles (resync effects below).
+  // Repair-kit ladder state. Buying auto-equips the new (strictly better) kit,
+  // so there's no manual equip — it mirrors Upgrade Ship: compact current kit +
+  // a modal that previews just the NEXT tier. Mirror locally for instant
+  // feedback, then router.refresh() reconciles (resync effects below).
   const [kitEquipped, setKitEquipped] = useState(initialEquippedRepairKit)
   const [kitsOwned, setKitsOwned] = useState<string[]>(initialOwnedRepairKits)
   useEffect(() => { setKitEquipped(initialEquippedRepairKit) }, [initialEquippedRepairKit])
   useEffect(() => { setKitsOwned(initialOwnedRepairKits) }, [initialOwnedRepairKits])
-  const [kitBusy, startKit] = useTransition()
+  const [kitOpen, setKitOpen] = useState(false)
+  const [kitBusy, setKitBusy] = useState(false)
   const [kitErr, setKitErr] = useState<string | null>(null)
-  function doBuyKit() {
-    setKitErr(null)
-    startKit(async () => {
+  async function doBuyKit() {
+    setKitBusy(true); setKitErr(null)
+    try {
       const res = await buyRepairKit()
       if ('error' in res) { setKitErr(res.error); return }
       setKitEquipped(res.equippedRepairKit); setKitsOwned(res.ownedRepairKits)
       window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+      setKitOpen(false)
       router.refresh()
-    })
-  }
-  function doEquipKit(id: string) {
-    if (id === kitEquipped || kitBusy) return
-    setKitErr(null)
-    setKitEquipped(id) // optimistic
-    startKit(async () => {
-      const res = await equipRepairKit(id)
-      if ('error' in res) { setKitErr(res.error); setKitEquipped(initialEquippedRepairKit); return }
-      router.refresh()
-    })
+    } finally { setKitBusy(false) }
   }
 
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
@@ -1331,82 +1325,53 @@ export default function ShipHero({
               </>)}
 
               {loadoutTab === 'items' && (<>
-              {/* ── Repair Kits ── once-per-battle hull patch in the Special
-                  action slot. Doubloon-bought, Nav-gated upgrade ladder (buy in
-                  tier order; equip your best). Heal floor = baseMin; max scales
-                  with Fortune (FORTUNE_HEAL_SCALE in lib/repairKits). */}
+              {/* ── Repair Kit ── once-per-battle hull patch in the Special
+                  action slot. Shows only the EQUIPPED kit; the upgrade ladder
+                  (doubloon-bought, Nav-gated, next tier only) lives behind the
+                  Upgrade Kit modal so it doesn't clog the loadout — same shape
+                  as Upgrade Ship. */}
               {(() => {
-                const navLevel = xpProgress.level
+                const kit = getRepairKit(kitEquipped) ?? getRepairKit('basic_repair_kit')!
+                const range = repairKitRange(kit, ratedFortune)
+                const accent = kitRarityColor(kit.rarity)
                 const next = nextRepairKit(kitsOwned)
                 return (
                   <>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Repair Kits</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Repair Kit</p>
                     <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
-                      Fired from the Special action in combat. Once per battle, costs the turn. Buy upgrades in order, equip your best.
+                      Fired from the Special action in combat. Once per battle, costs the turn.
                     </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: kitErr ? 6 : '1.5rem' }}>
-                      {REPAIR_KITS.map(kit => {
-                        const range = repairKitRange(kit, ratedFortune)
-                        const owned = kitsOwned.includes(kit.id)
-                        const equipped = kit.id === kitEquipped
-                        const isNext = next?.id === kit.id
-                        const navOk = navLevel >= kit.navLevelReq
-                        const affordable = doubloons >= kit.cost
-                        const accent = kitRarityColor(kit.rarity)
-                        const clickable = owned && !equipped && !kitBusy
-                        return (
-                          <div key={kit.id}
-                            onClick={clickable ? () => doEquipKit(kit.id) : undefined}
-                            style={{
-                              background: equipped ? `${accent}1a` : owned ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.025)',
-                              border: `1px solid ${equipped ? accent + '99' : owned ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)'}`,
-                              borderRadius: 14, padding: '0.75rem 0.85rem',
-                              display: 'flex', alignItems: 'center', gap: '0.75rem',
-                              opacity: owned || isNext ? 1 : 0.55,
-                              cursor: clickable ? 'pointer' : 'default',
-                            }}>
-                            <div style={{ width: 42, height: 42, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}55` }}>
-                              {kit.image
-                                // eslint-disable-next-line @next/next/no-img-element
-                                ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain', filter: owned ? 'none' : 'grayscale(0.6)' }} />
-                                : <WrenchGlyph color={accent} />}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 2, flexWrap: 'wrap' }}>
-                                <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: owned ? '#f0ede8' : '#cdc7c1' }}>{kit.name}</p>
-                                <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#4ade80' }}>+{range.min}-{range.max} HP</p>
-                              </div>
-                              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', lineHeight: 1.35 }}>
-                                {equipped ? 'Equipped. Patches the hull mid-fight.'
-                                  : owned ? 'Owned. Tap to equip.'
-                                  : !navOk ? `Reach Nav Lv ${kit.navLevelReq} to unlock.`
-                                  : isNext ? kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()
-                                  : `Buy the ${getRepairKit(next?.id)?.name ?? 'previous kit'} first.`}
-                              </p>
-                            </div>
-                            <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                              {equipped ? (
-                                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: accent }}>✓ Equipped</span>
-                              ) : owned ? (
-                                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#4ade80' }}>Equip</span>
-                              ) : isNext && navOk ? (
-                                <button onClick={(e) => { e.stopPropagation(); if (affordable && !kitBusy) doBuyKit() }} disabled={!affordable || kitBusy}
-                                  className="font-karla font-700"
-                                  style={{ padding: '0.4rem 0.7rem', borderRadius: 10, border: `1px solid ${affordable ? accent + '99' : 'rgba(255,255,255,0.15)'}`, background: affordable ? `${accent}26` : 'rgba(255,255,255,0.04)', color: affordable ? accent : '#7a7674', fontSize: '0.66rem', cursor: affordable && !kitBusy ? 'pointer' : 'default', whiteSpace: 'nowrap' }}>
-                                  {kitBusy ? '…' : `⟡ ${kit.cost.toLocaleString()}`}
-                                </button>
-                              ) : (
-                                <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#7a7674', whiteSpace: 'nowrap' }}>⟡ {kit.cost.toLocaleString()}</span>
-                              )}
-                              {!owned && (
-                                <p className="font-karla font-600 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.06em', color: navOk ? '#6a6764' : '#c08a4a', marginTop: 3 }}>Nav Lv {kit.navLevelReq}</p>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
+                    <div style={{
+                      background: `${accent}14`, border: `1px solid ${accent}55`,
+                      borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: next ? '0.6rem' : '1.5rem',
+                      display: 'flex', alignItems: 'center', gap: '0.8rem',
+                    }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}55` }}>
+                        {kit.image
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                          : <WrenchGlyph color={accent} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{kit.name}</p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#4ade80' }}>+{range.min}-{range.max} HP</p>
+                        </div>
+                        <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8480', lineHeight: 1.4 }}>
+                          {kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()} Fortune scales the max ({range.max - kit.baseMax > 0 ? `+${range.max - kit.baseMax}` : 'no'} bonus from your {ratedFortune} Fortune).
+                        </p>
+                      </div>
                     </div>
-                    {kitErr && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#f87171', marginBottom: '1.3rem' }}>{kitErr}</p>}
+                    {next ? (
+                      <button type="button" onClick={() => { setKitErr(null); setKitOpen(true) }}
+                        className="font-karla font-700 uppercase tracking-[0.08em]"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '0.7rem', borderRadius: 10, marginBottom: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#dfe3e8', fontSize: '0.74rem', cursor: 'pointer' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+                        Upgrade Kit
+                      </button>
+                    ) : (
+                      <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#7a7674', marginBottom: '1.5rem', textAlign: 'center' }}>Fully upgraded — the Ironclad Kit is yours.</p>
+                    )}
                   </>
                 )
               })()}
@@ -1894,6 +1859,28 @@ export default function ShipHero({
           />
         </motion.div>
       </PopupShell>
+
+      <PopupShell open={kitOpen} onClose={() => { setKitOpen(false); setKitErr(null) }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 4 }}
+          transition={{ duration: 0.18 }}
+          style={{ margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 18, padding: '1.1rem 1rem 1.25rem' }}
+        >
+          <UpgradeRepairKitPanel
+            equippedKit={kitEquipped}
+            ownedKits={kitsOwned}
+            ratedFortune={ratedFortune}
+            doubloons={doubloons}
+            navLevel={xpProgress.level}
+            busy={kitBusy}
+            error={kitErr}
+            onBuy={doBuyKit}
+            onClose={() => { setKitOpen(false); setKitErr(null) }}
+          />
+        </motion.div>
+      </PopupShell>
     </>
   )
 }
@@ -2048,6 +2035,88 @@ function StatDelta({ label, cur, next }: { label: string; cur: number; next: num
       <span className="font-karla font-600" style={{ color: diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#6a6764', textAlign: 'right', minWidth: 32 }}>
         {diff === 0 ? '—' : `${sign}${diff}`}
       </span>
+    </>
+  )
+}
+
+// ── Upgrade repair kit panel ────────────────────────────────────────────────
+// Mirror of UpgradeShipPanel for the repair-kit ladder: previews ONLY the next
+// tier (heal vs the current kit, cost, Nav gate) with a one-tap buy that
+// auto-equips. Kept out of the loadout drawer so the kit section stays compact.
+function UpgradeRepairKitPanel({
+  equippedKit, ownedKits, ratedFortune, doubloons, navLevel, busy, error, onBuy, onClose,
+}: {
+  equippedKit: string
+  ownedKits: string[]
+  ratedFortune: number
+  doubloons: number
+  navLevel: number
+  busy: boolean
+  error: string | null
+  onBuy: () => void
+  onClose: () => void
+}) {
+  const current = getRepairKit(equippedKit) ?? getRepairKit('basic_repair_kit')!
+  const next = nextRepairKit(ownedKits)
+  const accent = next ? kitRarityColor(next.rarity) : '#9ca3af'
+  const curRange = repairKitRange(current, ratedFortune)
+  const nextRange = next ? repairKitRange(next, ratedFortune) : null
+  const navOk = !!next && navLevel >= next.navLevelReq
+  const canAfford = !!next && doubloons >= next.cost
+
+  return (
+    <>
+      <div className="flex items-center justify-between" style={{ marginBottom: '0.85rem' }}>
+        <p className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Upgrade Kit</p>
+        <button type="button" onClick={onClose} className="font-karla font-700" style={{ fontSize: '1.2rem', color: '#7a7674', lineHeight: 1 }} aria-label="Close">✕</button>
+      </div>
+
+      {!next || !nextRange ? (
+        <p className="font-karla font-600" style={{ fontSize: '0.78rem', color: '#9a948a', textAlign: 'center', padding: '1rem 0' }}>Every repair kit is yours. The Ironclad Kit is equipped.</p>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <div style={{ width: 72, height: 72, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}66` }}>
+              {next.image
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={next.image} alt={next.name} loading="lazy" decoding="async" style={{ width: 48, height: 48, objectFit: 'contain' }} />
+                : <div style={{ transform: 'scale(1.9)' }}><WrenchGlyph color={accent} /></div>}
+            </div>
+          </div>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: accent, textAlign: 'center', lineHeight: 1, marginBottom: 4 }}>{next.name}</p>
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', lineHeight: 1.4, marginBottom: 12, padding: '0 0.5rem' }}>
+            {next.description.replace(/\s*Once per battle\.\s*$/i, '').trim()}
+          </p>
+
+          {/* Heal delta: current kit → next kit */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto 1fr auto', gap: '6px 10px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '0.7rem 0.85rem', marginBottom: 12, fontSize: '0.72rem' }}>
+            <StatDelta label="Heal floor" cur={curRange.min} next={nextRange.min} />
+            <StatDelta label="Heal max" cur={curRange.max} next={nextRange.max} />
+          </div>
+
+          {!navOk && (
+            <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#e0a44a', textAlign: 'center', marginBottom: 10 }}>
+              Reach Nav Lv {next.navLevelReq} to unlock this kit.
+            </p>
+          )}
+          {error && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#f87171', textAlign: 'center', marginBottom: 10 }}>{error}</p>}
+
+          <button type="button" onClick={onBuy} disabled={busy || !navOk || !canAfford}
+            className="font-cinzel font-700 uppercase tracking-[0.08em]"
+            style={{
+              width: '100%', padding: '0.8rem', borderRadius: 12, border: 'none',
+              background: navOk && canAfford ? `linear-gradient(180deg, ${accent}, ${accent}cc)` : 'rgba(255,255,255,0.06)',
+              color: navOk && canAfford ? '#0a1016' : '#7a7674',
+              fontSize: '0.85rem', cursor: busy || !navOk || !canAfford ? 'default' : 'pointer',
+              boxShadow: navOk && canAfford ? `0 4px 14px ${accent}40` : 'none',
+            }}>
+            {busy ? 'Buying…'
+              : !navOk ? `Locked · Nav Lv ${next.navLevelReq}`
+              : canAfford ? `Upgrade for ${next.cost.toLocaleString()} ⟡`
+              : `Need ${(next.cost - doubloons).toLocaleString()} more ⟡`}
+          </button>
+        </>
+      )}
     </>
   )
 }

@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getRepairKit, nextRepairKit } from '@/lib/repairKits'
+import { nextRepairKit } from '@/lib/repairKits'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 
 interface KitResult {
@@ -54,20 +54,4 @@ export async function buyRepairKit(): Promise<KitResult | { error: string }> {
   if (error) return { error: 'Could not complete the purchase.' }
 
   return { ok: true, equippedRepairKit: next.id, ownedRepairKits: newOwned, doubloons: newDoubloons }
-}
-
-export async function equipRepairKit(id: string): Promise<{ ok: true; equippedRepairKit: string } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-  if (!getRepairKit(id)) return { error: 'No such repair kit.' }
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('owned_repair_kits').eq('id', user.id).single()
-  const owned = (profile?.owned_repair_kits as string[] | null) ?? ['basic_repair_kit']
-  if (!owned.includes(id)) return { error: 'You don’t own that kit.' }
-
-  const { error } = await admin.from('profiles').update({ equipped_repair_kit: id }).eq('id', user.id)
-  if (error) return { error: 'Could not equip the kit.' }
-  return { ok: true, equippedRepairKit: id }
 }
