@@ -2,6 +2,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { navLevelBonuses } from '@/lib/expeditionLevel'
+import { shipsUnlockedBetween } from '@/lib/gearUnlocks'
+import GearUnlockRow from '@/components/GearUnlockRow'
 
 // Reusable Nav-level level-up celebration. Same visual language as the
 // fishing level-up (ring bursts + sparkles + big level number) but with a
@@ -22,6 +24,7 @@ interface Props {
 
 export default function NavLevelUpOverlay({ info, onDismiss }: Props) {
   const deltas = info ? diffBonuses(info.fromLevel, info.toLevel) : null
+  const shipUnlocks = info ? shipsUnlockedBetween(info.fromLevel, info.toLevel) : []
   return (
     <AnimatePresence>
       {info && deltas && (
@@ -114,6 +117,9 @@ export default function NavLevelUpOverlay({ info, onDismiss }: Props) {
               {deltas.navigation > 0 && <StatDeltaLine label="Savvy"      delta={deltas.navigation} />}
               {deltas.fortune    > 0 && <StatDeltaLine label="Fortune"    delta={deltas.fortune} />}
             </motion.div>
+
+            {/* Ships that just cleared their Nav-Level buy gate. */}
+            <GearUnlockRow items={shipUnlocks} delay={0.5} />
 
             <motion.p
               className="font-karla font-400"

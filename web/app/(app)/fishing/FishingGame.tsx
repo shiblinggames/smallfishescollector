@@ -53,6 +53,8 @@ import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
+import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
+import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, tierShowsPill, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
@@ -9307,6 +9309,7 @@ export default function FishingGame({
         {levelUpNotif && (() => {
           const perks = fishingLevelPerks(levelUpNotif.to)
           const zoneUnlocks = zonesUnlockedBetween(levelUpNotif.from, levelUpNotif.to)
+          const gearUnlocks = fishingGearUnlockedBetween(levelUpNotif.from, levelUpNotif.to)
           // Crew Trawls (passive crew fishing) unlock at Fishing 25 — call it
           // out here so the level-up actually announces it; the dedicated
           // Trawls celebration then fires once this overlay is dismissed.
@@ -9449,6 +9452,9 @@ export default function FishingGame({
                   </span>
                 </motion.div>
               )}
+
+              {/* Gear that just cleared its Fishing-Level buy gate. */}
+              <GearUnlockRow items={gearUnlocks} delay={0.62} />
 
               <motion.p
                 className="font-karla font-400"
