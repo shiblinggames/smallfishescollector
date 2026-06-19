@@ -47,8 +47,6 @@ export async function GET(req: NextRequest) {
     }
     const winnerId = (cMoved ? b.challenger_id : b.opponent_id) as string
     const loserId = (cMoved ? b.opponent_id : b.challenger_id) as string
-    const winnerName = (cMoved ? b.challenger_username : b.opponent_username) as string
-    const loserName = (cMoved ? b.opponent_username : b.challenger_username) as string
     const { data: done } = await admin
       .from('ship_battles')
       .update({ status: 'complete', winner_id: winnerId, completed_at: nowIso })
@@ -59,8 +57,6 @@ export async function GET(req: NextRequest) {
       await Promise.all([
         admin.rpc('bump_pvp_stats', { uid: winnerId, wins: 1, losses: 0 }),
         admin.rpc('bump_pvp_stats', { uid: loserId, wins: 0, losses: 1 }),
-        admin.from('mail_messages').insert({ subject: `${loserName} forfeited`, body: `${loserName} never returned fire. The duel is yours by default.`, sender_label: 'The Duelist’s Ledger', target_user_id: winnerId }).then(() => {}, () => {}),
-        admin.from('mail_messages').insert({ subject: `Duel forfeited to ${winnerName}`, body: `You didn’t make your move in time and forfeited the duel to ${winnerName}.`, sender_label: 'The Duelist’s Ledger', target_user_id: loserId }).then(() => {}, () => {}),
       ])
     }
   }

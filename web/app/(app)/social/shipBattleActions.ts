@@ -49,10 +49,6 @@ async function authUser() {
   return user
 }
 
-async function sendMail(admin: ReturnType<typeof createAdminClient>, targetUserId: string, subject: string, body: string) {
-  await admin.from('mail_messages').insert({ subject, body, sender_label: 'The Duelist’s Ledger', target_user_id: targetUserId }).then(() => {}, () => {})
-}
-
 // ── Create ────────────────────────────────────────────────────────────────
 export async function createShipBattle(opponentUsername: string): Promise<{ id: string } | { error: string }> {
   const user = await authUser()
@@ -96,7 +92,6 @@ export async function createShipBattle(opponentUsername: string): Promise<{ id: 
     .single()
   if (error || !inserted) return { error: 'Could not start the duel.' }
 
-  await sendMail(admin, foe.id, `${me.username} challenged you to a duel`, `${me.username} has called you out to a ship battle. Open Broadsides on the Expeditions page to accept or decline.`)
   revalidatePath('/social')
   return { id: inserted.id }
 }
@@ -129,7 +124,6 @@ export async function acceptShipBattle(id: string): Promise<{ ok: true } | { err
   }).eq('id', id).eq('status', 'pending').select('id').single()
   if (error) return { error: 'Could not start the duel.' }
 
-  await sendMail(admin, b.challenger_id, `${b.opponent_username} accepted your duel`, `The cannons are loaded. It’s your move — open Broadsides on the Expeditions page.`)
   revalidatePath('/social')
   return { ok: true }
 }
@@ -144,7 +138,6 @@ export async function declineShipBattle(id: string): Promise<{ ok: true } | { er
   if (b.opponent_id !== user.id || b.status !== 'pending') return { error: 'Cannot decline this duel.' }
 
   await admin.from('ship_battles').update({ status: 'declined' }).eq('id', id).eq('status', 'pending')
-  await sendMail(admin, b.challenger_id, `${b.opponent_username} declined your duel`, 'They weren’t ready for the fight. Challenge someone else!')
   revalidatePath('/social')
   return { ok: true }
 }
@@ -213,13 +206,9 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
     .select('id')
   if (committed && committed.length > 0 && winnerId) {
     const loserId = winnerId === fresh.challenger_id ? fresh.opponent_id : fresh.challenger_id
-    const winnerName = winnerId === fresh.challenger_id ? fresh.challenger_username : fresh.opponent_username
-    const loserName = winnerId === fresh.challenger_id ? fresh.opponent_username : fresh.challenger_username
     await Promise.all([
       admin.rpc('bump_pvp_stats', { uid: winnerId, wins: 1, losses: 0 }),
       admin.rpc('bump_pvp_stats', { uid: loserId, wins: 0, losses: 1 }),
-      sendMail(admin, winnerId, `Victory over ${loserName}!`, `You sank ${loserName}’s ship. The sea remembers your name.`),
-      sendMail(admin, loserId, `Defeated by ${winnerName}`, `${winnerName} sent you to the depths this time. Rebuild and call them out again.`),
     ])
   }
 

@@ -5,21 +5,36 @@
 // crew as quick-challenge targets, keeps active duels actionable, and tucks the
 // W/L history behind a collapsible so it never grows into a wall of rows.
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
-import { createShipBattle, acceptShipBattle, declineShipBattle, type ShipBattleSummary } from '@/app/(app)/social/shipBattleActions'
+import { createShipBattle, acceptShipBattle, declineShipBattle, getShipBattles, type ShipBattleSummary } from '@/app/(app)/social/shipBattleActions'
 import type { CrewMember } from '@/app/(app)/social/actions'
 
 const ACCENT = '#f0c040'
 
-export default function ShipDuels({ battles, wins, losses, friends }: { battles: ShipBattleSummary[]; wins: number; losses: number; friends: CrewMember[] }) {
+export default function ShipDuels({ battles: initialBattles, wins: initialWins, losses: initialLosses, friends }: { battles: ShipBattleSummary[]; wins: number; losses: number; friends: CrewMember[] }) {
   const router = useRouter()
+  const [battles, setBattles] = useState(initialBattles)
+  const [wins, setWins] = useState(initialWins)
+  const [losses, setLosses] = useState(initialLosses)
   const [error, setError] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+
+  // Poll so duel state (a challenge accepted, the opponent's move, a result)
+  // reflects in near-real-time while you sit on the Expeditions page — no tab
+  // switch needed. The app has no websockets; this matches its polling model.
+  const refresh = useCallback(async () => {
+    const r = await getShipBattles()
+    setBattles(r.battles); setWins(r.wins); setLosses(r.losses)
+  }, [])
+  useEffect(() => {
+    const t = setInterval(refresh, 5000)
+    return () => clearInterval(t)
+  }, [refresh])
 
   const incoming = battles.filter(b => b.status === 'pending' && !b.isChallenger)
   const sent = battles.filter(b => b.status === 'pending' && b.isChallenger)
@@ -35,14 +50,14 @@ export default function ShipDuels({ battles, wins, losses, friends }: { battles:
       const res = await createShipBattle(username.trim())
       if ('error' in res) { setError(res.error); return }
       setPickerOpen(false)
-      router.refresh()
+      await refresh()
     })
   }
   function act(fn: () => Promise<{ ok: true } | { error: string }>) {
     startTransition(async () => {
       const res = await fn()
       if ('error' in res) { setError(res.error); return }
-      router.refresh()
+      await refresh()
     })
   }
 
