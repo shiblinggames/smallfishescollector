@@ -188,6 +188,41 @@ function NetIconSvg({ size = 14, color = 'currentColor' }: { size?: number; colo
   )
 }
 
+// ── Station group header — the labelled "who's where" sections that replaced
+//    the old All/Raid/Voyage/Bench filter chips. Icon + name + count so a
+//    casual player reads the whole picture without tab-switching. ─────────────
+function StationHeader({ Icon, label, color, count, max, sub }: {
+  Icon: (p: { size?: number; color?: string }) => React.JSX.Element
+  label: string; color: string; count: number; max?: number; sub?: string
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
+      <span style={{ display: 'inline-flex', width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', background: `${color}22`, border: `1px solid ${color}59`, flexShrink: 0 }}>
+        <Icon size={14} color={color} />
+      </span>
+      <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8' }}>{label}</span>
+      <span className="font-karla font-700" style={{ fontSize: '0.74rem', color }}>{max != null ? `${count}/${max}` : count}</span>
+      {sub && <span className="font-karla font-500" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', marginLeft: 'auto', textAlign: 'right' }}>{sub}</span>}
+    </div>
+  )
+}
+
+// Dashed "open seat" tile shown in the Raid / Voyage parties so capacity (and
+// the way to fill it) is obvious. Tapping jumps to the Available crew below.
+function EmptySlotTile({ color, onClick }: { color: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="font-karla font-600" style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      minHeight: 78, borderRadius: 14, cursor: 'pointer', width: '100%',
+      background: 'rgba(255,255,255,0.02)', border: `1.5px dashed ${color}55`, color: `${color}cc`,
+      fontSize: '0.72rem', letterSpacing: '0.04em',
+    }}>
+      <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
+      <span>Open seat — add crew</span>
+    </button>
+  )
+}
+
 // ── Countdown to the next UTC midnight (free board refresh) ──────────────────
 function FreeRollCountdown() {
   const [label, setLabel] = useState('')
@@ -816,20 +851,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
     const t = searchParams?.get('tab')
     return t === 'recruits' || t === 'graveyard' || t === 'roster' ? t : 'roster'
   })() as 'roster' | 'recruits' | 'graveyard'
-  const initialFilter = (() => {
-    const f = searchParams?.get('filter')
-    return f === 'raid' || f === 'voyage' || f === 'bench' || f === 'all' ? f : 'all'
-  })() as 'all' | 'raid' | 'voyage' | 'bench'
   const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard'>(initialTab)
-  // Roster sub-filter — Full shows everything, Raid shows just the raid
-  // party, Voyage shows just the voyage party, Bench shows unassigned
-  // crew (neither track). Raid leads because raids take precedence over
-  // voyages in the player's loadout decisions.
-  const [rosterFilter, setRosterFilter] = useState<'all' | 'raid' | 'voyage' | 'bench'>(initialFilter)
   const [graveyard, setGraveyard] = useState<FallenCrew[] | null>(null)
   const [graveyardLoading, setGraveyardLoading] = useState(false)
   const reveal = useReveal()
   const crewSectionRef = useRef<HTMLDivElement>(null)
+  const availableRef = useRef<HTMLDivElement>(null)
+  const scrollToAvailable = () => availableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
   useEffect(() => {
     if (activeTab !== 'graveyard' || graveyard !== null || graveyardLoading) return
@@ -1464,109 +1492,92 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           {/* Active panel */}
           {!isGraveyard ? (
             <>
-              {/* Roster sub-filter — Full / Raid / Voyage. Raid sits FIRST
-                  because raids take precedence over voyages in the player's
-                  loadout decisions, mirroring the toggle button order. */}
-              {state.roster.length > 0 && (() => {
-                const counts = {
-                  all:    state.roster.length,
-                  raid:   state.roster.filter(c => c.raidSlot   !== null).length,
-                  voyage: state.roster.filter(c => c.voyageSlot !== null).length,
-                  bench:  state.roster.filter(c => c.raidSlot === null && c.voyageSlot === null && !state.trawlingCrewIds.includes(c.id)).length,
-                }
-                const filters = [
-                  { id: 'all'    as const, label: 'All',     accent: SECTION_ROSTER },
-                  { id: 'raid'   as const, label: 'Raid',    accent: ASSIGN_RAID    },
-                  { id: 'voyage' as const, label: 'Voyage',  accent: ASSIGN_VOYAGE  },
-                  { id: 'bench'  as const, label: 'Bench',   accent: ASSIGN_BENCH   },
-                ]
-                return (
-                  <div role="tablist" className="flex items-center" style={{
-                    gap: 3, padding: 3, borderRadius: 8,
-                    background: 'rgba(0,0,0,0.22)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    marginBottom: '0.7rem',
-                    flexWrap: 'nowrap',
-                    overflowX: 'auto',
-                  }}>
-                    {filters.map(f => {
-                      const active = rosterFilter === f.id
-                      return (
-                        <button
-                          key={f.id}
-                          role="tab"
-                          aria-selected={active}
-                          onClick={() => setRosterFilter(f.id)}
-                          className="font-cinzel font-700 uppercase"
-                          style={{
-                            flex: '1 1 0',
-                            minWidth: 0,
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                            padding: '0.34rem 0.32rem', borderRadius: 6,
-                            fontSize: '0.6rem', letterSpacing: '0.06em',
-                            background: active ? `${f.accent}26` : 'transparent',
-                            border: `1px solid ${active ? `${f.accent}88` : 'transparent'}`,
-                            color: active ? f.accent : 'rgba(255,255,255,0.5)',
-                            cursor: 'pointer', transition: 'all 0.18s',
-                            whiteSpace: 'nowrap',
-                          }}>
-                          <span>{f.label}</span>
-                          <span style={{
-                            fontSize: '0.56rem',
-                            color: active ? `${f.accent}cc` : 'rgba(255,255,255,0.4)',
-                            opacity: 0.9,
-                          }}>· {counts[f.id]}</span>
-                        </button>
-                      )
-                    })}
+              {/* Stations board — crew grouped by what they're actually doing
+                  (Raid party / Voyage party / Out trawling / Available) so a
+                  casual player reads "who's where" at a glance with no
+                  filtering. Replaced the All/Raid/Voyage/Bench filter chips. */}
+              {state.roster.length === 0 ? (
+                <div style={{ padding: '1.2rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                  <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+                    No crew yet. Sign your first hands from the Recruit board.
+                  </p>
+                  <button onClick={() => setActiveTab('recruits')} className="font-cinzel font-700 uppercase tracking-[0.1em]"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0.7rem 1.4rem', borderRadius: 12, background: 'linear-gradient(180deg, rgba(76,196,131,0.18), rgba(46,154,92,0.09))', border: '1px solid rgba(76,196,131,0.45)', color: '#7fdca6', fontSize: '0.74rem', cursor: 'pointer' }}>
+                    <AnchorIcon /> Recruit Crew
+                  </button>
+                </div>
+              ) : (() => {
+                const maxSlots = state.shipCrewSlots
+                const trawlSet = new Set(state.trawlingCrewIds)
+                const voyageLockSet = new Set(state.lockedCrewIds)
+                const raidParty   = state.roster.filter(c => c.raidSlot   != null).sort((a, b) => (a.raidSlot!   - b.raidSlot!))
+                const voyageParty = state.roster.filter(c => c.voyageSlot != null).sort((a, b) => (a.voyageSlot! - b.voyageSlot!))
+                const trawling    = state.roster.filter(c => trawlSet.has(c.id) && c.raidSlot == null && c.voyageSlot == null)
+                const available   = state.roster.filter(c => c.raidSlot == null && c.voyageSlot == null && !trawlSet.has(c.id))
+                const voyageAtSea = voyageParty.some(c => voyageLockSet.has(c.id))
+
+                const card = (m: CrewMember) => (
+                  <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity}
+                    bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
+                    base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
+                    assignment={crewAssignment(m)}
+                    isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
+                    locked={voyageLockSet.has(m.id) || trawlSet.has(m.id)}
+                    lockKind={trawlSet.has(m.id) ? 'trawl' : 'voyage'}
+                    lockLabel={trawlSet.has(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
+                    hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
+                    hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
+                    onClick={() => openDetail('roster', m)}>
+                    {renderAction('roster', m, { round: true })}
+                  </CrewPanel>
+                )
+                const grid = (members: CrewMember[], empties: number, accent: string) => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.7rem' }}>
+                    {members.map(card)}
+                    {Array.from({ length: Math.max(0, empties) }).map((_, i) => (
+                      <EmptySlotTile key={`empty-${i}`} color={accent} onClick={scrollToAvailable} />
+                    ))}
                   </div>
                 )
-              })()}
-              {/* Slot-unlock cadence tip ('every 10 Nav levels') was here
-                  but added a line of muted text new players had to read
-                  before reaching the actual roster grid. Dropped — players
-                  see the bump organically when they level up. */}
-              {state.roster.length === 0 ? (
-                <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>
-                  No crew yet. Recruit from the board.
-                </p>
-              ) : (() => {
-                const visibleRoster = state.roster.filter(c =>
-                  rosterFilter === 'all'    ? true :
-                  rosterFilter === 'raid'   ? c.raidSlot   !== null :
-                  rosterFilter === 'voyage' ? c.voyageSlot !== null :
-                                              c.raidSlot === null && c.voyageSlot === null && !state.trawlingCrewIds.includes(c.id)
-                )
-                if (visibleRoster.length === 0) {
-                  const label =
-                    rosterFilter === 'raid'   ? 'raid loadout' :
-                    rosterFilter === 'voyage' ? 'voyage party' :
-                                                'bench'
-                  return (
-                    <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', padding: '1rem 0' }}>
-                      {rosterFilter === 'bench'
-                        ? 'No unassigned crew — everyone\'s out there earning their keep.'
-                        : `No crew in your ${label}. Use the toggle on a card to assign them.`}
-                    </p>
-                  )
-                }
+
                 return (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
-                    {visibleRoster.map((m: CrewMember) => (
-                      <CrewPanel key={m.id} name={m.name} filename={m.filename} rarity={m.rarity}
-                        bg={ROSTER_PANEL_BG} border={ROSTER_PANEL_BORDER}
-                        base={{ power: m.power, dodge: m.dodge, fortune: m.fortune }} effects={m.effects} xp={m.xp} slug={m.slug}
-                        assignment={crewAssignment(m)}
-                        isCaptain={m.voyageSlot === 0 || m.raidSlot === 0}
-                        locked={state.lockedCrewIds.includes(m.id) || state.trawlingCrewIds.includes(m.id)}
-                        lockKind={state.trawlingCrewIds.includes(m.id) ? 'trawl' : 'voyage'}
-                        lockLabel={state.trawlingCrewIds.includes(m.id) ? 'This crew is out on a trawl. Collect it to free them up.' : 'This crew is currently at sea on a voyage.'}
-                        hasLevelUp={(seenLevels[m.id] ?? crewLevelFromXP(m.xp)) < crewLevelFromXP(m.xp)}
-                        hint={m.effects.length > 0 && !viewed.has(`roster:${m.id}`)}
-                        onClick={() => openDetail('roster', m)}>
-                        {renderAction('roster', m, { round: true })}
-                      </CrewPanel>
-                    ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.45rem' }}>
+                    <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1.45, marginTop: -2 }}>
+                      Each crew holds one post at a time — Raid, Voyage, or resting. Tap a card to move them.
+                    </p>
+
+                    <div>
+                      <StationHeader Icon={CrossedSwordsIconSvg} label="Raid Party" color={ASSIGN_RAID} count={raidParty.length} max={maxSlots} sub="fights at your side" />
+                      {grid(raidParty, maxSlots - raidParty.length, ASSIGN_RAID)}
+                    </div>
+
+                    <div>
+                      <StationHeader Icon={AnchorIconSvg} label="Voyage Party" color={ASSIGN_VOYAGE} count={voyageParty.length} max={maxSlots} sub={voyageAtSea ? 'at sea now' : 'sails for loot'} />
+                      {grid(voyageParty, maxSlots - voyageParty.length, ASSIGN_VOYAGE)}
+                    </div>
+
+                    {trawling.length > 0 && (
+                      <div>
+                        <StationHeader Icon={NetIconSvg} label="Out Trawling" color="#3fc8aa" count={trawling.length} sub="fishing — back soon" />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.7rem' }}>
+                          {trawling.map(card)}
+                        </div>
+                      </div>
+                    )}
+
+                    <div ref={availableRef} style={{ scrollMarginTop: 80 }}>
+                      <StationHeader Icon={BenchIconSvg} label="Available" color={SECTION_ROSTER} count={available.length} sub="ready to assign" />
+                      {available.length === 0 ? (
+                        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', padding: '0.2rem 0 0.5rem' }}>
+                          Every crew has a post. Recruit more to grow your fleet.
+                        </p>
+                      ) : grid(available, 0, SECTION_ROSTER)}
+                    </div>
+
+                    <button onClick={() => setActiveTab('recruits')} className="font-cinzel font-700 uppercase tracking-[0.1em]"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0.8rem', borderRadius: 12, background: 'linear-gradient(180deg, rgba(76,196,131,0.16), rgba(46,154,92,0.08))', border: '1px solid rgba(76,196,131,0.4)', color: '#7fdca6', fontSize: '0.72rem', cursor: 'pointer' }}>
+                      <AnchorIcon /> Recruit New Crew
+                    </button>
                   </div>
                 )
               })()}
