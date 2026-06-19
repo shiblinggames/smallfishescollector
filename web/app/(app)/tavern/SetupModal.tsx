@@ -341,7 +341,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                     key={`bg-${c.id}`}
                     type="button"
                     onClick={() => {
-                      if (locked) { flashLockMsg('Requires Premium membership'); return }
+                      if (locked) { flashLockMsg('Become a Captain to unlock this'); return }
                       setAvatarBg(c.hex === NONE_VALUE ? null : c.hex)
                     }}
                     aria-label={`Background ${c.label}${locked ? ' (premium)' : ''}`}
@@ -384,7 +384,7 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
                     key={`bd-${c.id}`}
                     type="button"
                     onClick={() => {
-                      if (locked) { flashLockMsg('Requires Premium membership'); return }
+                      if (locked) { flashLockMsg('Become a Captain to unlock this'); return }
                       setAvatarBorder(c.hex === NONE_VALUE ? null : c.hex)
                     }}
                     aria-label={`Border ${c.label}${locked ? ' (premium)' : ''}`}

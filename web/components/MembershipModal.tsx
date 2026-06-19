@@ -156,7 +156,7 @@ export default function MembershipModal() {
               </button>
             )}
             <div>
-              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>Captain&apos;s Commission</p>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${GOLD}cc` }}>The Full Experience</p>
               <h2 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f5ecd6', lineHeight: 1.1 }}>Become a Captain</h2>
             </div>
           </div>
@@ -171,7 +171,7 @@ export default function MembershipModal() {
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
             </div>
             <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: GOLD }}>Welcome aboard, Captain!</p>
-            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a89e86', marginTop: 6, lineHeight: 1.5 }}>Your perks are unlocking now.</p>
+            <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a89e86', marginTop: 6, lineHeight: 1.5 }}>The full game is yours now.</p>
             <button onClick={close} className="font-cinzel font-700 uppercase tracking-[0.08em]" style={{ marginTop: 18, padding: '0.7rem 1.8rem', borderRadius: 12, background: `${GOLD}26`, border: `1px solid ${GOLD}66`, color: GOLD, fontSize: '0.78rem', cursor: 'pointer' }}>Set sail</button>
           </div>
         ) : error ? (
@@ -197,7 +197,7 @@ export default function MembershipModal() {
           /* STEP 1 — the perks, then the CTA. */
           <>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b3a98f', lineHeight: 1.5, margin: '8px 0 14px' }}>
-              Everything below, yours for life — for less than a sandwich.
+              Becoming a Captain opens up the full game. Every reward below is yours for life, for less than a sandwich.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
               {PERKS.map(([perk, sub]) => (
@@ -205,7 +205,7 @@ export default function MembershipModal() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, alignSelf: 'center' }}><path d="M20 6L9 17l-5-5" /></svg>
                   <span className="font-karla" style={{ fontSize: '0.82rem', color: '#e6dcc4' }}>
                     <span className="font-700">{perk}</span>
-                    <span style={{ color: '#8a8270' }}> — {sub}</span>
+                    <span style={{ color: '#8a8270' }}> · {sub}</span>
                   </span>
                 </div>
               ))}
