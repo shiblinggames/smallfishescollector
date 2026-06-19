@@ -15,6 +15,16 @@ import { resolveRound, lastActionOf, type BattleLoadout, type BattleMove, type B
 
 type Side = 'challenger' | 'opponent'
 
+// Presence: a captain counts as "online" if they pinged a duel surface within
+// this window. Polling IS the ping (touchPresence), so it stays fresh.
+const ONLINE_WINDOW_MS = 40_000
+function isOnline(lastActiveAt: string | null | undefined): boolean {
+  return !!lastActiveAt && Date.now() - new Date(lastActiveAt).getTime() < ONLINE_WINDOW_MS
+}
+function touchPresence(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  void admin.from('profiles').update({ last_active_at: new Date().toISOString() }).eq('id', userId).then(() => {}, () => {})
+}
+
 // Private-testing gate — returns the username when allowed, else null.
 async function testerName(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<string | null> {
   const { data } = await admin.from('profiles').select('username').eq('id', userId).single()
@@ -231,6 +241,8 @@ export interface ShipBattleSummary {
   /** Whose move the round is waiting on, from THIS player's POV. */
   myTurn: boolean
   iWon: boolean | null
+  /** Opponent pinged a duel surface in the last ~40s. */
+  foeOnline: boolean
   createdAt: string
 }
 
@@ -238,6 +250,7 @@ export async function getShipBattles(): Promise<{ battles: ShipBattleSummary[]; 
   const user = await authUser()
   if (!user) return { battles: [], wins: 0, losses: 0 }
   const admin = createAdminClient()
+  touchPresence(admin, user.id)
   const [{ data: rows }, { data: profile }] = await Promise.all([
     admin.from('ship_battles')
       .select('id, status, challenger_id, opponent_id, challenger_username, opponent_username, round, challenger_move, opponent_move, winner_id, created_at')
@@ -246,9 +259,18 @@ export async function getShipBattles(): Promise<{ battles: ShipBattleSummary[]; 
       .limit(30),
     admin.from('profiles').select('pvp_wins, pvp_losses').eq('id', user.id).single(),
   ])
+  // Presence for the opponents in live (pending/active) duels only.
+  const liveRows = ((rows ?? []) as Array<Record<string, unknown>>).filter(r => r.status === 'pending' || r.status === 'active')
+  const foeIds = [...new Set(liveRows.map(r => (r.challenger_id === user.id ? r.opponent_id : r.challenger_id) as string))]
+  const presence: Record<string, string | null> = {}
+  if (foeIds.length) {
+    const { data: foes } = await admin.from('profiles').select('id, last_active_at').in('id', foeIds)
+    for (const f of (foes ?? []) as Array<{ id: string; last_active_at: string | null }>) presence[f.id] = f.last_active_at
+  }
   const battles: ShipBattleSummary[] = ((rows ?? []) as Array<Record<string, unknown>>).map(r => {
     const isChallenger = r.challenger_id === user.id
     const myMove = isChallenger ? r.challenger_move : r.opponent_move
+    const foeId = (isChallenger ? r.opponent_id : r.challenger_id) as string
     return {
       id: r.id as string,
       status: r.status as string,
@@ -257,6 +279,7 @@ export async function getShipBattles(): Promise<{ battles: ShipBattleSummary[]; 
       round: r.round as number,
       myTurn: r.status === 'active' && myMove == null,
       iWon: r.winner_id == null ? null : r.winner_id === user.id,
+      foeOnline: isOnline(presence[foeId]),
       createdAt: r.created_at as string,
     }
   })
@@ -329,6 +352,7 @@ export interface ShipBattleSync {
   foeHp: number
   myCharges: number
   foeCharges: number
+  foeOnline: boolean
 }
 export async function getShipBattleSync(id: string): Promise<ShipBattleSync | { error: string }> {
   const user = await authUser()
@@ -340,6 +364,9 @@ export async function getShipBattleSync(id: string): Promise<ShipBattleSync | { 
   if (!b) return { error: 'Duel not found.' }
   const isC = b.challenger_id === user.id
   if (!isC && b.opponent_id !== user.id) return { error: 'Not your duel.' }
+  const foeId = (isC ? b.opponent_id : b.challenger_id) as string
+  touchPresence(admin, user.id)
+  const { data: foe } = await admin.from('profiles').select('last_active_at').eq('id', foeId).single()
   return {
     status: b.status as string,
     round: b.round as number,
@@ -349,5 +376,6 @@ export async function getShipBattleSync(id: string): Promise<ShipBattleSync | { 
     foeHp: (isC ? b.opponent_hp : b.challenger_hp) as number,
     myCharges: (isC ? b.challenger_charges : b.opponent_charges) as number,
     foeCharges: (isC ? b.opponent_charges : b.challenger_charges) as number,
+    foeOnline: isOnline(foe?.last_active_at as string | null | undefined),
   }
 }

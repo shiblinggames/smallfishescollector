@@ -80,13 +80,13 @@ export default function ShipDuels({ battles: initialBattles, wins: initialWins, 
       {(incoming.length + active.length + sent.length) > 0 && (
         <div className="flex flex-col gap-1.5 mb-3">
           {incoming.map(b => (
-            <Row key={b.id} accent="#fbbf24" label={`${b.opponentUsername} challenges you`}>
+            <Row key={b.id} accent={b.foeOnline ? '#4ade80' : '#fbbf24'} label={`${b.opponentUsername} challenges you`} sub={b.foeOnline ? 'Online now — accept for a live duel' : undefined}>
               <SmallBtn label="Accept" color="#4ade80" disabled={pending} onClick={() => act(() => acceptShipBattle(b.id))} />
               <SmallBtn label="Decline" color="#9a948a" disabled={pending} onClick={() => act(() => declineShipBattle(b.id))} />
             </Row>
           ))}
           {active.map(b => (
-            <Row key={b.id} accent={b.myTurn ? '#4ade80' : '#94a3b8'} label={`${b.opponentUsername} · round ${b.round}`} sub={b.myTurn ? 'Your move' : 'Waiting on them'}>
+            <Row key={b.id} accent={b.foeOnline ? '#4ade80' : b.myTurn ? '#fbbf24' : '#94a3b8'} label={`${b.opponentUsername} · round ${b.round}`} sub={`${b.foeOnline ? 'Online · ' : ''}${b.myTurn ? 'Your move' : 'Waiting on them'}`}>
               <SmallBtn label={b.myTurn ? 'Play →' : 'View'} color={ACCENT} disabled={pending} onClick={() => router.push(`/social/shipbattle/${b.id}`)} />
             </Row>
           ))}

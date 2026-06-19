@@ -45,6 +45,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [critFlash, setCritFlash] = useState(false)
   const [aimBadge, setAimBadge] = useState<ShotResult | null>(null)
   const [statsFor, setStatsFor] = useState<{ load: BattleLoadout; hp: number; you: boolean } | null>(null)
+  const [foeOnline, setFoeOnline] = useState(false)
   const [myLastAction, setMyLastAction] = useState<BattleAction | null>(lastActionOf(initial.rounds, initial.side))
   // Highest round NUMBER animated (not array length — the rounds log is tail-
   // capped server-side, so length isn't monotonic).
@@ -55,6 +56,8 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
 
   const initialPhase: UIPhase = initial.status !== 'active' ? 'over' : initial.myMoveIn ? 'waiting' : 'await_input'
   const [phase, setPhase] = useState<UIPhase>(initialPhase)
+  const phaseRef = useRef(phase)
+  useEffect(() => { phaseRef.current = phase }, [phase])
   const isChallenger = initial.side === 'challenger'
 
   const flashBar = useCallback((color: string) => {
@@ -116,23 +119,30 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     else { setPhase('await_input'); pushLog(`Round ${state.round} — your move.`) }
   }, [isChallenger, myShip, foeShip, pushLog, foe.username])
 
-  // ── Poll while waiting on the opponent ──
-  // Light sync tick; only pull the heavy state (loadouts + round log) when a
-  // round has actually resolved (round number advanced).
+  // ── Single 3s tick (all phases) ──
+  // Doubles as the presence ping (calling getShipBattleSync bumps my
+  // last_active_at server-side) AND the resolve poll. Light sync only; the
+  // heavy state (loadouts + round log) is pulled ONLY when a round resolved.
+  // Runs every phase so my "online" stays fresh even while I'm choosing.
   useEffect(() => {
-    if (phase !== 'waiting') return
     let alive = true
-    const t = setInterval(async () => {
+    const tick = async () => {
+      if (phaseRef.current === 'over') return
       const sync = await getShipBattleSync(id)
       if (!alive || 'error' in sync) return
-      if (sync.round - 1 > playedRef.current) {
-        const full = await getShipBattleState(id)
-        if (!alive || 'error' in full) return
-        await animateFrom(full)
-      } else if (sync.status !== 'active') { setStatus(sync.status); setIWon(sync.iWon); setPhase('over') }
-    }, 4000)
+      setFoeOnline(sync.foeOnline)
+      if (phaseRef.current === 'waiting') {
+        if (sync.round - 1 > playedRef.current) {
+          const full = await getShipBattleState(id)
+          if (!alive || 'error' in full) return
+          await animateFrom(full)
+        } else if (sync.status !== 'active') { setStatus(sync.status); setIWon(sync.iWon); setPhase('over') }
+      }
+    }
+    void tick()
+    const t = setInterval(tick, 3000)
     return () => { alive = false; clearInterval(t) }
-  }, [phase, id, animateFrom])
+  }, [id, animateFrom])
 
   async function submit(action: BattleAction, aimResult?: ShotResult) {
     if (busy) return
@@ -231,7 +241,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         <Link href="/expeditions" className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.1em', color: '#9a948a' }}>← Expeditions</Link>
       </div>
 
-      <ShipPanel load={foe} hp={foeHp} charges={foeCharges} accent="#f87171" top ctrl={foeShip} splat={splat?.who === 'foe' ? splat : null} onTap={() => setStatsFor({ load: foe, hp: foeHp, you: false })} />
+      <ShipPanel load={foe} hp={foeHp} charges={foeCharges} accent="#f87171" top ctrl={foeShip} splat={splat?.who === 'foe' ? splat : null} onTap={() => setStatsFor({ load: foe, hp: foeHp, you: false })} online={foeOnline} />
 
       {/* Center: fixed combat log — last events scroll up like the raid log. */}
       <div className="px-4" style={{ marginTop: 8 }}>
@@ -249,7 +259,9 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         ) : phase === 'waiting' ? (
           <div className="text-center" style={{ padding: '0.5rem 0' }}>
             <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }} className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#c0bdb8' }}>Waiting for {foe.username}…</motion.div>
-            <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#6a6764', marginTop: 4 }}>Your move is locked. Check back when they’ve fired.</p>
+            <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: foeOnline ? '#7fe0a0' : '#6a6764', marginTop: 4 }}>
+              {foeOnline ? 'They’re online — choosing their move now.' : 'They’re away. The duel will continue when they return.'}
+            </p>
           </div>
         ) : phase === 'aiming' ? (
           <>
@@ -307,11 +319,12 @@ function LogBox({ lines }: { lines: { id: number; text: string }[] }) {
   )
 }
 
-function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap }: {
+function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, online }: {
   load: BattleLoadout; you?: boolean; hp: number; charges: number; accent: string; top?: boolean
   ctrl: ReturnType<typeof useAnimation>
   splat: { dmg: number; crit: boolean; dodged: boolean } | null
   onTap: () => void
+  online?: boolean
 }) {
   const hpMax = load.hpMax
   const pct = Math.max(0, Math.min(100, (hp / Math.max(1, hpMax)) * 100))
@@ -323,6 +336,12 @@ function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap }: 
             <CharacterAvatar characterColor={load.characterColor ?? null} equippedHat={load.equippedHat ?? null} size={26} ringColor={load.avatarBorderColor ?? undefined} bgColor={load.avatarBgColor ?? undefined} />
             <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f4ecd8' }}>{you ? `${load.username} (you)` : load.username}</p>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={`${accent}aa`} strokeWidth="2" aria-hidden style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+            {online !== undefined && (
+              <span className="flex items-center gap-1 flex-shrink-0" style={{ marginLeft: 2 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: online ? '#4ade80' : '#6a6764', boxShadow: online ? '0 0 6px #4ade80' : 'none' }} />
+                <span className="font-karla font-600 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: online ? '#7fe0a0' : '#6a6764' }}>{online ? 'online' : 'away'}</span>
+              </span>
+            )}
           </div>
           <div className="flex gap-1 flex-shrink-0">
             {[0, 1, 2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i < charges ? accent : 'rgba(255,255,255,0.12)', boxShadow: i < charges ? `0 0 6px ${accent}` : 'none' }} />)}
