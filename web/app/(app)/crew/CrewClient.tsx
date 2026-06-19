@@ -207,18 +207,28 @@ function StationHeader({ Icon, label, color, count, max, sub }: {
   )
 }
 
-// Dashed "open seat" tile shown in the Raid / Voyage parties so capacity (and
-// the way to fill it) is obvious. Tapping jumps to the Available crew below.
+// Bright dashed "open seat" tile in the Raid / Voyage parties so capacity (and
+// the way to fill it) reads at a glance. A gentle pulse draws the eye; tapping
+// jumps to the Available crew below.
 function EmptySlotTile({ color, onClick }: { color: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="font-karla font-600" style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      minHeight: 78, borderRadius: 14, cursor: 'pointer', width: '100%',
-      background: 'rgba(255,255,255,0.02)', border: `1.5px dashed ${color}55`, color: `${color}cc`,
-      fontSize: '0.72rem', letterSpacing: '0.04em',
+    <button onClick={onClick} className="font-karla font-700" style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
+      minHeight: 92, borderRadius: 14, cursor: 'pointer', width: '100%',
+      background: `linear-gradient(180deg, ${color}24 0%, ${color}0d 100%)`,
+      border: `2px dashed ${color}b0`,
+      boxShadow: `inset 0 0 22px ${color}24, 0 0 14px ${color}22`,
+      color,
+      letterSpacing: '0.06em',
+      animation: 'crewSeatPulse 2.2s ease-in-out infinite',
     }}>
-      <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
-      <span>Open seat — add crew</span>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 30, height: 30, borderRadius: '50%',
+        background: `${color}33`, border: `1.5px solid ${color}`,
+        fontSize: '1.3rem', lineHeight: 1,
+      }}>+</span>
+      <span className="uppercase" style={{ fontSize: '0.62rem' }}>Open seat · tap to add</span>
     </button>
   )
 }

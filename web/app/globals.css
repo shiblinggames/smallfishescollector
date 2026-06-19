@@ -1731,6 +1731,11 @@ html, body {
   0%, 100% { transform: scale(1); }
   50%      { transform: scale(1.07); }
 }
+/* Open crew seat — soft breathe so empty party slots are easy to spot. */
+@keyframes crewSeatPulse {
+  0%, 100% { transform: scale(1);     opacity: 0.9; }
+  50%      { transform: scale(1.015); opacity: 1; }
+}
 /* New / dropped-in tokens fall in with a little overshoot bounce. */
 @keyframes tmDrop {
   0%   { transform: translateY(-58%); opacity: 0; }
