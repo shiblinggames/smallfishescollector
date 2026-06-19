@@ -11,7 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { snapshotLoadout } from '@/lib/shipBattle/loadout'
 import { isPvpTester } from '@/lib/shipBattle/access'
-import { resolveRound, type BattleLoadout, type BattleMove, type BattleAction, type ShotResult, type RoundStep } from '@/lib/shipBattle/resolver'
+import { resolveRound, lastActionOf, type BattleLoadout, type BattleMove, type BattleAction, type ShotResult, type RoundStep } from '@/lib/shipBattle/resolver'
 
 type Side = 'challenger' | 'opponent'
 
@@ -155,6 +155,8 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
   const side: Side | null = b.challenger_id === user.id ? 'challenger' : b.opponent_id === user.id ? 'opponent' : null
   if (!side) return { error: 'Not your duel.' }
   if ((action === 'fire' || action === 'volley') && !aimResult) return { error: 'Missing aim.' }
+  // Raid rule: can't dodge two turns in a row.
+  if (action === 'dodge' && lastActionOf(b.rounds, side) === 'dodge') return { error: 'You can’t dodge two turns running.' }
 
   const move: BattleMove = { action, aimResult }
   const moveCol = side === 'challenger' ? 'challenger_move' : 'opponent_move'
@@ -181,7 +183,10 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
     { hp: fresh.opponent_hp, charges: fresh.opponent_charges },
     fresh.challenger_move, fresh.opponent_move,
   )
-  const newRounds = [...(fresh.rounds ?? []), { round: fresh.round, steps: r.steps }]
+  // Keep only the recent rounds on the row — the clients animate by round
+  // NUMBER (not array length), so trimming the tail keeps the JSONB bounded
+  // without breaking new-round detection.
+  const newRounds = [...(fresh.rounds ?? []), { round: fresh.round, steps: r.steps }].slice(-12)
   const winnerId = r.winner === 'challenger' ? fresh.challenger_id : r.winner === 'opponent' ? fresh.opponent_id : null
 
   // Commit guarded by both-moves-still-present so a concurrent resolver can't
@@ -308,5 +313,41 @@ export async function getShipBattleState(id: string): Promise<ShipBattleState | 
     foeMoveIn: (isC ? b.opponent_move : b.challenger_move) != null,
     rounds: b.rounds ?? [],
     iWon: b.winner_id == null ? null : b.winner_id === user.id,
+  }
+}
+
+// Lightweight poll — status + round number + hp/charges only (no loadouts, no
+// rounds log). The battle client polls THIS every few seconds and only fetches
+// the heavy getShipBattleState when the round number advances (a round
+// resolved), so the big JSONB isn't shipped on every tick.
+export interface ShipBattleSync {
+  status: string
+  round: number
+  myMoveIn: boolean
+  iWon: boolean | null
+  myHp: number
+  foeHp: number
+  myCharges: number
+  foeCharges: number
+}
+export async function getShipBattleSync(id: string): Promise<ShipBattleSync | { error: string }> {
+  const user = await authUser()
+  if (!user) return { error: 'Unauthorized' }
+  const admin = createAdminClient()
+  const { data: b } = await admin.from('ship_battles')
+    .select('challenger_id, opponent_id, status, round, challenger_move, opponent_move, challenger_hp, opponent_hp, challenger_charges, opponent_charges, winner_id')
+    .eq('id', id).single()
+  if (!b) return { error: 'Duel not found.' }
+  const isC = b.challenger_id === user.id
+  if (!isC && b.opponent_id !== user.id) return { error: 'Not your duel.' }
+  return {
+    status: b.status as string,
+    round: b.round as number,
+    myMoveIn: (isC ? b.challenger_move : b.opponent_move) != null,
+    iWon: b.winner_id == null ? null : b.winner_id === user.id,
+    myHp: (isC ? b.challenger_hp : b.opponent_hp) as number,
+    foeHp: (isC ? b.opponent_hp : b.challenger_hp) as number,
+    myCharges: (isC ? b.challenger_charges : b.opponent_charges) as number,
+    foeCharges: (isC ? b.opponent_charges : b.challenger_charges) as number,
   }
 }

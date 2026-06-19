@@ -90,6 +90,16 @@ export interface ResolvedRound {
   winner: 'challenger' | 'opponent' | null
 }
 
+/** The side's action in the most recent round it acted — used to enforce the
+ *  raid's "no dodge two turns in a row" rule. Null on round 1. */
+export function lastActionOf(rounds: { steps: RoundStep[] }[], side: 'challenger' | 'opponent'): BattleAction | null {
+  for (let i = rounds.length - 1; i >= 0; i--) {
+    const step = rounds[i].steps.find(s => s.actor === side)
+    if (step) return step.action
+  }
+  return null
+}
+
 const d = (n: number) => Math.floor(Math.random() * n) + 1
 const d20 = () => d(20)
 

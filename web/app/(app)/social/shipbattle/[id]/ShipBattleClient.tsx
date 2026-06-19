@@ -14,17 +14,10 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import { raidDamageProfile } from '@/lib/expeditions'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipClass } from '@/lib/shipClasses'
-import { submitBattleMove, getShipBattleState, type ShipBattleState } from '@/app/(app)/social/shipBattleActions'
-import type { BattleAction, ShotResult, RoundStep, BattleLoadout } from '@/lib/shipBattle/resolver'
+import { submitBattleMove, getShipBattleState, getShipBattleSync, type ShipBattleState } from '@/app/(app)/social/shipBattleActions'
+import { lastActionOf, type BattleAction, type ShotResult, type RoundStep, type BattleLoadout } from '@/lib/shipBattle/resolver'
+import { GRAZE_W, HIT_W, CRIT_W, INDICATOR_SPEED, getShotResult } from '@/lib/shipBattle/aim'
 
-// Aim-bar geometry — verbatim from RaidCombat so the skill window is identical.
-const GRAZE_W = 0.038, HIT_W = 0.06, CRIT_W = 0.012, INDICATOR_SPEED = 0.006
-function getShotResult(pos: number, zoneCenter: number): ShotResult {
-  if (pos >= zoneCenter - CRIT_W && pos <= zoneCenter + CRIT_W) return 'critical'
-  if (pos >= zoneCenter - HIT_W && pos <= zoneCenter + HIT_W) return 'hit'
-  if (pos >= zoneCenter - HIT_W - GRAZE_W && pos <= zoneCenter + HIT_W + GRAZE_W) return 'graze'
-  return 'miss'
-}
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 const vibrate = (p: number | number[]) => { if (typeof navigator !== 'undefined' && 'vibrate' in navigator) { try { navigator.vibrate(p) } catch {} } }
 
@@ -52,7 +45,10 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [critFlash, setCritFlash] = useState(false)
   const [aimBadge, setAimBadge] = useState<ShotResult | null>(null)
   const [statsFor, setStatsFor] = useState<{ load: BattleLoadout; hp: number; you: boolean } | null>(null)
-  const playedRef = useRef(initial.rounds.length)
+  const [myLastAction, setMyLastAction] = useState<BattleAction | null>(lastActionOf(initial.rounds, initial.side))
+  // Highest round NUMBER animated (not array length — the rounds log is tail-
+  // capped server-side, so length isn't monotonic).
+  const playedRef = useRef(initial.round - 1)
 
   const myShip = useAnimation()
   const foeShip = useAnimation()
@@ -73,12 +69,13 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     })
   }, [])
 
-  // ── Animate any resolved round(s) we haven't shown ──
+  // ── Animate any resolved round(s) we haven't shown (by round number) ──
   const animateFrom = useCallback(async (state: ShipBattleState) => {
-    if (state.rounds.length <= playedRef.current) return
-    setPhase('animating')
-    for (let i = playedRef.current; i < state.rounds.length; i++) {
-      for (const s of state.rounds[i].steps) {
+    const mySide = isChallenger ? 'challenger' : 'opponent'
+    const fresh = state.rounds.filter(r => r.round > playedRef.current).sort((a, b) => a.round - b.round)
+    if (fresh.length > 0) setPhase('animating')
+    for (const entry of fresh) {
+      for (const s of entry.steps) {
         pushLog(s.log)
         const actorIsMe = (s.actor === 'challenger') === isChallenger
         const targetMyHp = isChallenger ? s.challengerHp : s.opponentHp
@@ -105,8 +102,13 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         setSplat(null)
         await sleep(160)
       }
+      playedRef.current = entry.round
     }
-    playedRef.current = state.rounds.length
+    // Reconcile to the authoritative state — covers the rare case where rounds
+    // were tail-capped and we couldn't animate every step.
+    playedRef.current = Math.max(playedRef.current, state.round - 1)
+    setMyHp(state.myHp); setFoeHp(state.foeHp); setMyCharges(state.myCharges); setFoeCharges(state.foeCharges)
+    setMyLastAction(lastActionOf(state.rounds, mySide))
     if (state.status !== 'active') {
       setStatus(state.status); setIWon(state.iWon); setPhase('over')
       pushLog(state.status === 'expired' ? 'The duel timed out.' : state.iWon ? 'Victory — their ship is sunk!' : 'Your ship is sunk.')
@@ -115,14 +117,19 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   }, [isChallenger, myShip, foeShip, pushLog, foe.username])
 
   // ── Poll while waiting on the opponent ──
+  // Light sync tick; only pull the heavy state (loadouts + round log) when a
+  // round has actually resolved (round number advanced).
   useEffect(() => {
     if (phase !== 'waiting') return
     let alive = true
     const t = setInterval(async () => {
-      const s = await getShipBattleState(id)
-      if (!alive || 'error' in s) return
-      if (s.rounds.length > playedRef.current) await animateFrom(s)
-      else if (s.status !== 'active') { setStatus(s.status); setIWon(s.iWon); setPhase('over') }
+      const sync = await getShipBattleSync(id)
+      if (!alive || 'error' in sync) return
+      if (sync.round - 1 > playedRef.current) {
+        const full = await getShipBattleState(id)
+        if (!alive || 'error' in full) return
+        await animateFrom(full)
+      } else if (sync.status !== 'active') { setStatus(sync.status); setIWon(sync.iWon); setPhase('over') }
     }, 4000)
     return () => { alive = false; clearInterval(t) }
   }, [phase, id, animateFrom])
@@ -135,7 +142,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     if ('error' in res) { pushLog(res.error); return }
     const s = await getShipBattleState(id)
     if ('error' in s) return
-    if (s.rounds.length > playedRef.current) await animateFrom(s)
+    if (s.rounds.some(r => r.round > playedRef.current)) await animateFrom(s)
     else { setPhase('waiting'); pushLog(`Waiting for ${foe.username} to fire…`) }
   }
 
@@ -273,7 +280,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         ) : myTurn ? (
           <div className="grid grid-cols-2 gap-2">
             <ActionBtn label="Reload" sub="+1 charge" color="#60a5fa" disabled={busy || myCharges >= 3} onClick={() => submit('reload')} />
-            <ActionBtn label="Dodge" sub="evade their shot" color="#a78bfa" disabled={busy} onClick={() => submit('dodge')} />
+            <ActionBtn label="Dodge" sub={myLastAction === 'dodge' ? 'on cooldown' : 'evade their shot'} color="#a78bfa" disabled={busy || myLastAction === 'dodge'} onClick={() => submit('dodge')} />
             <ActionBtn label="Fire" sub={canFire ? 'aim · 1 charge' : 'no charge'} color="#f0c040" disabled={busy || !canFire} onClick={() => { setPendingAction('fire'); setPhase('aiming') }} />
             <ActionBtn label="Volley" sub={canVolley ? 'aim · 3 · 2×' : 'need 3'} color="#fb923c" disabled={busy || !canVolley} onClick={() => { setPendingAction('volley'); setPhase('aiming') }} />
           </div>
