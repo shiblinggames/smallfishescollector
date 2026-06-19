@@ -125,6 +125,72 @@ export interface ResolveResult {
 /** Attempt a swap. Returns null if the swap makes no match (invalid —
  *  the UI swaps back). Otherwise resolves all cascades and returns the
  *  animation steps + score. */
+/** Maximal horizontal/vertical runs of 3+ same-type (non-wild) cells. Used to
+ *  spot a 4-of-a-kind so we can leave a Compass behind. */
+export function findRuns(board: number[], cols: number, rows: number): number[][] {
+  const runs: number[][] = []
+  for (let r = 0; r < rows; r++) {
+    let runStart = 0
+    for (let c = 1; c <= cols; c++) {
+      const same = c < cols && board[ix(r, c, cols)] === board[ix(r, runStart, cols)] && board[ix(r, c, cols)] >= 0
+      if (!same) {
+        if (c - runStart >= 3) { const cells: number[] = []; for (let k = runStart; k < c; k++) cells.push(ix(r, k, cols)); runs.push(cells) }
+        runStart = c
+      }
+    }
+  }
+  for (let c = 0; c < cols; c++) {
+    let runStart = 0
+    for (let r = 1; r <= rows; r++) {
+      const same = r < rows && board[ix(r, c, cols)] === board[ix(runStart, c, cols)] && board[ix(r, c, cols)] >= 0
+      if (!same) {
+        if (r - runStart >= 3) { const cells: number[] = []; for (let k = runStart; k < r; k++) cells.push(ix(k, c, cols)); runs.push(cells) }
+        runStart = r
+      }
+    }
+  }
+  return runs
+}
+
+// Where a 4+ run leaves its Compass — prefer a swapped cell (so it appears
+// where the player acted), else the run's middle.
+function pickSpawn(run: number[], a: number, b: number): number {
+  if (run.includes(a)) return a
+  if (run.includes(b)) return b
+  return run[Math.floor(run.length / 2)]
+}
+
+// The match → clear → collapse loop. Every run of 4+ leaves ONE cell behind as
+// a Compass instead of clearing it. a/b bias the spawn toward the swapped cells
+// on the first pass.
+function runCascades(
+  start: number[], cols: number, rows: number, nTypes: number, rng: () => number,
+  wildChance: number, a: number, b: number, startCascade: number,
+): { steps: ResolveStep[]; totalGained: number; finalBoard: number[] } {
+  const steps: ResolveStep[] = []
+  let totalGained = 0
+  let cur = start
+  let cascade = startCascade
+  while (true) {
+    const matched = findMatches(cur, cols, rows)
+    if (matched.length === 0) break
+    const spawns = new Set<number>()
+    for (const run of findRuns(cur, cols, rows)) {
+      if (run.length >= 4) spawns.add(pickSpawn(run, cascade === startCascade ? a : -1, cascade === startCascade ? b : -1))
+    }
+    const cleared = matched.filter(i => !spawns.has(i))
+    const gained = cleared.length * 10 * cascade
+    totalGained += gained
+    const withWilds = cur.slice()
+    for (const s of spawns) withWilds[s] = WILD // a 4-of-a-kind leaves a Compass
+    const resultBoard = collapseAndRefill(withWilds, cleared, cols, rows, rng, nTypes, wildChance)
+    steps.push({ cleared, gained, resultBoard })
+    cur = resultBoard
+    cascade++
+  }
+  return { steps, totalGained, finalBoard: cur }
+}
+
 export function resolveSwap(
   board: number[], a: number, b: number,
   cols: number, rows: number, nTypes: number, rng: () => number,
@@ -134,8 +200,8 @@ export function resolveSwap(
 
   // ── Compass wildcard detonation ──
   // Swapping a Compass against a normal gem clears EVERY gem of that gem's
-  // colour (plus the Compass), then cascades like any other clear. Two
-  // Compasses have no colour to lock onto → treated as an invalid swap.
+  // colour (plus the Compass), then cascades. Two Compasses have no colour to
+  // lock onto → treated as an invalid swap.
   const aWild = board[a] === WILD, bWild = board[b] === WILD
   if (aWild || bWild) {
     if (aWild && bWild) return null
@@ -144,40 +210,21 @@ export function resolveSwap(
     const detonated: number[] = []
     for (let i = 0; i < board.length; i++) if (board[i] === target) detonated.push(i)
     detonated.push(aWild ? a : b) // the Compass pops too
-    const steps: ResolveStep[] = []
-    let totalGained = 0
-    let cur = board
-    let cleared = detonated
-    let cascade = 1
-    while (cleared.length > 0) {
-      const gained = cleared.length * 10 * cascade
-      totalGained += gained
-      const resultBoard = collapseAndRefill(cur, cleared, cols, rows, rng, nTypes, wildChance)
-      steps.push({ cleared, gained, resultBoard })
-      cur = resultBoard
-      cascade++
-      cleared = findMatches(cur, cols, rows)
+    const result0 = collapseAndRefill(board, detonated, cols, rows, rng, nTypes, wildChance)
+    const gained0 = detonated.length * 10
+    const rest = runCascades(result0, cols, rows, nTypes, rng, wildChance, -1, -1, 2)
+    return {
+      swapped: board,
+      steps: [{ cleared: detonated, gained: gained0, resultBoard: result0 }, ...rest.steps],
+      totalGained: gained0 + rest.totalGained,
+      finalBoard: rest.finalBoard,
     }
-    return { swapped: board, steps, totalGained, finalBoard: cur }
   }
 
   const swapped = swap(board, a, b)
-  let cur = swapped
-  let cascade = 1
-  let totalGained = 0
-  const steps: ResolveStep[] = []
-  while (true) {
-    const m = findMatches(cur, cols, rows)
-    if (m.length === 0) break
-    const gained = m.length * 10 * cascade
-    totalGained += gained
-    const resultBoard = collapseAndRefill(cur, m, cols, rows, rng, nTypes, wildChance)
-    steps.push({ cleared: m, gained, resultBoard })
-    cur = resultBoard
-    cascade++
-  }
-  if (steps.length === 0) return null // no match → invalid move
-  return { swapped, steps, totalGained, finalBoard: cur }
+  const r = runCascades(swapped, cols, rows, nTypes, rng, wildChance, a, b, 1)
+  if (r.steps.length === 0) return null // no match → invalid move
+  return { swapped, steps: r.steps, totalGained: r.totalGained, finalBoard: r.finalBoard }
 }
 
 /** Is there any swap that would create a match? Used to detect a dead

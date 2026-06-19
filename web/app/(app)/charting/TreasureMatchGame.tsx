@@ -19,10 +19,10 @@ import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
-// Chance a freshly-dropped tile is a Compass wildcard. Rare on purpose — a
-// treat that supercharges a chain, not a constant. Seeded, so a given run is
-// the same for everyone. The Compass clears a whole colour when swapped.
-const WILD_DROP_CHANCE = 0.03
+// The main way to earn a Compass is now a 4-of-a-kind match (handled in the
+// engine). This is just a small extra chance a freshly-dropped tile is a
+// Compass — a touch of luck on top, kept low so wilds don't flood the board.
+const WILD_DROP_CHANCE = 0.01
 const WILD_RAINBOW = 'conic-gradient(from 210deg at 50% 50%, #ff7e1c, #ffd028, #0fd886, #2aa4ff, #bb55ff, #ff4631, #ff7e1c)'
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
@@ -97,6 +97,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   // Juice
   const [particles, setParticles] = useState<Particle[]>([])
   const [combo, setCombo] = useState<{ level: number; key: number } | null>(null)
+  const [bomb, setBomb] = useState<{ key: number } | null>(null)
   const [tierUp, setTierUp] = useState<{ points: number; key: number } | null>(null)
   const [dropping, setDropping] = useState<Set<number>>(new Set())
   const [flash, setFlash] = useState<{ key: number; intensity: number } | null>(null)
@@ -161,7 +162,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     movesRef.current = initial.moves; setMovesLeft(initial.moves)
     shownTierRef.current = banked
     setSelected(null); setPopping(new Set()); setCommitted(null); setDropping(new Set())
-    setCombo(null); setTierUp(null); setFlash(null); setResult(null); setMessage(null); setParticles([])
+    setCombo(null); setBomb(null); setTierUp(null); setFlash(null); setResult(null); setMessage(null); setParticles([])
   }
 
   // Run ended (out of moves, or hit the top tier). Server tiers the best
@@ -182,12 +183,14 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   async function attemptSwap(a: number, b: number) {
     if (busyRef.current) return
     const cur = boardRef.current
+    const isDetonation = cur[a] === WILD || cur[b] === WILD
     const res = resolveSwap(cur, a, b, cols, rows, types, rngRef.current, WILD_DROP_CHANCE)
     setSelected(null)
     if (!res) { setInvalid([a, b]); haptic(10); await wait(230); setInvalid(null); return }
 
     busyRef.current = true
-    setCombo(null); setTierUp(null) // reset last move's callouts so this move restarts clean
+    setCombo(null); setBomb(null); setTierUp(null) // reset last move's callouts so this move restarts clean
+    if (isDetonation) { setBomb({ key: pid.current++ }); haptic([0, 45, 35, 70]) }
     const newMoves = movesRef.current - 1
     movesRef.current = newMoves; setMovesLeft(newMoves)
 
@@ -467,6 +470,28 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                   {combo.level >= 5 ? 'Plundered!' : 'Chain!'}
                 </span>
               )}
+            </div>
+          </div>
+        ) : null,
+        document.body,
+      )}
+
+      {/* Compass detonation burst — fires when a wildcard clears a whole colour. */}
+      {mounted && createPortal(
+        bomb ? (
+          <div key={bomb.key} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8800, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', width: 'min(135vw, 760px)', height: 'min(135vw, 760px)', borderRadius: '50%', animation: 'tmComboFlash 0.9s ease-out forwards', background: 'radial-gradient(circle, rgba(255,255,255,0.32) 0%, rgba(240,192,64,0.2) 34%, transparent 66%)' }} />
+            <div style={{ position: 'absolute', width: 'min(120vw, 680px)', height: 'min(120vw, 680px)', borderRadius: '50%', animation: 'tmComboBurst 0.9s cubic-bezier(.2,.8,.3,1) forwards', background: WILD_RAINBOW, opacity: 0.5, mixBlendMode: 'screen' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'tmComboBurst 0.9s cubic-bezier(.2,.8,.3,1) forwards', transformOrigin: 'center' }}>
+              <span className="font-cinzel font-700" style={{
+                fontSize: 'clamp(3rem, 19vw, 7rem)', lineHeight: 0.9, color: '#fff', letterSpacing: '0.01em',
+                textShadow: `0 0 22px ${GOLD}, 0 0 50px ${GOLD}cc, 0 4px 12px rgba(0,0,0,0.9)`, WebkitTextStroke: `1.5px ${GOLD}`,
+              }}>
+                COMPASS
+              </span>
+              <span className="font-karla font-700 uppercase" style={{ marginTop: 6, fontSize: 'clamp(0.85rem, 4.6vw, 1.4rem)', letterSpacing: '0.26em', color: '#fff', textShadow: `0 0 14px ${GOLD}, 0 2px 6px rgba(0,0,0,0.9)` }}>
+                Colour bomb!
+              </span>
             </div>
           </div>
         ) : null,
