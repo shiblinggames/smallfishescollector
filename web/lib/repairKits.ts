@@ -36,10 +36,9 @@ export const BASIC_REPAIR_KIT_ID = 'basic_repair_kit'
 // ── Upgrade ladder ───────────────────────────────────────────────────────────
 // Doubloon-bought, in tier order, each gated behind a Nav level so kit power
 // tracks expedition progress (and can't be rushed straight to the top). Heals
-// are flat HP (Fortune scales the ceiling via repairKitRange) and tuned against
-// endgame hulls (Brigantine 60 → Man-o-War 125 durability): Basic is a token
-// patch, the Drydock Kit mends roughly half a Galleon. Consumed once per battle
-// from the Special action.
+// are flat HP (Fortune scales the ceiling via repairKitRange) and deliberately
+// modest — a sustain tool, not a full reset — climbing 1-10 → 15-30 across the
+// five tiers. Consumed once per battle from the Special action.
 export const REPAIR_KITS: RepairKitDef[] = [
   {
     id: BASIC_REPAIR_KIT_ID,
@@ -60,10 +59,10 @@ export const REPAIR_KITS: RepairKitDef[] = [
     tier: 1,
     name: 'Reinforced Repair Kit',
     description: 'Bolted iron plates and tar-soaked canvas. Holds a hull together far better than nails alone. Once per battle.',
-    baseMin: 8,
-    baseMax: 20,
-    cost: 6_000,
-    navLevelReq: 8,
+    baseMin: 5,
+    baseMax: 15,
+    cost: 4_000,
+    navLevelReq: 6,
     emoji: '🛠️',
     image: null,
     rarity: 'uncommon',
@@ -74,10 +73,10 @@ export const REPAIR_KITS: RepairKitDef[] = [
     tier: 2,
     name: 'Shipwright’s Kit',
     description: 'A master shipwright’s satchel of clamps, oakum and copper sheeting. Serious repairs in the thick of a fight. Once per battle.',
-    baseMin: 16,
-    baseMax: 36,
-    cost: 24_000,
-    navLevelReq: 18,
+    baseMin: 8,
+    baseMax: 20,
+    cost: 12_000,
+    navLevelReq: 12,
     emoji: '🛠️',
     image: null,
     rarity: 'rare',
@@ -87,14 +86,28 @@ export const REPAIR_KITS: RepairKitDef[] = [
     id: 'drydock_kit',
     tier: 3,
     name: 'Drydock Kit',
-    description: 'A full drydock’s worth of timber and iron, somehow crammed into a chest. Rebuilds a shattered hull on the open sea. Once per battle.',
-    baseMin: 30,
-    baseMax: 60,
-    cost: 75_000,
-    navLevelReq: 30,
+    description: 'A full drydock’s worth of timber and iron, somehow crammed into a chest. Mends deep hull wounds on the open sea. Once per battle.',
+    baseMin: 12,
+    baseMax: 25,
+    cost: 30_000,
+    navLevelReq: 20,
     emoji: '🛠️',
     image: null,
     rarity: 'epic',
+    source: 'Bought at the shipyard.',
+  },
+  {
+    id: 'ironclad_kit',
+    tier: 4,
+    name: 'Ironclad Kit',
+    description: 'Plated iron and a master’s forge, hauled aboard in a single chest. The sturdiest patch on the seven seas. Once per battle.',
+    baseMin: 15,
+    baseMax: 30,
+    cost: 65_000,
+    navLevelReq: 30,
+    emoji: '🛠️',
+    image: null,
+    rarity: 'legendary',
     source: 'Bought at the shipyard.',
   },
 ]
