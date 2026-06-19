@@ -1,8 +1,9 @@
 'use client'
 
-// Pronounced "support the studio" banner for the tavern home. A full-width,
-// clearly-tappable card — crown badge, headline, value line, and a gold "Join"
-// pill — that opens the membership popup. Members instead see a small thanks.
+// Pronounced Become-a-Captain banner for the tavern home. A full-width,
+// clearly-tappable card (Captain portrait, headline, value line, and a gold
+// "Unlock" pill) framed around unlocking the full game; opens the purchase
+// popup. Members instead see a small thanks.
 
 import { motion } from 'framer-motion'
 import { openMembership } from './MembershipModal'
@@ -56,7 +57,7 @@ export default function SupportStudioCard({ isPremium }: { isPremium: boolean })
           Become a Captain
         </p>
         <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b3a98f', lineHeight: 1.35, marginTop: 2 }}>
-          Support our indie studio · <span className="font-700" style={{ color: GOLD }}>$9.99</span> once, perks for life
+          Unlock the full game · <span className="font-700" style={{ color: GOLD }}>$9.99</span> once, yours forever
         </p>
       </div>
 
@@ -68,7 +69,7 @@ export default function SupportStudioCard({ isPremium }: { isPremium: boolean })
         border: `1px solid ${GOLD}88`, color: '#f0d695', fontSize: '0.7rem',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
       }}>
-        Join
+        Unlock
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </span>
     </motion.button>
