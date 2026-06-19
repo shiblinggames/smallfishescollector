@@ -27,7 +27,7 @@ const WILD_RAINBOW = 'conic-gradient(from 210deg at 50% 50%, #ff7e1c, #ffd028, #
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 
-interface Particle { id: number; x: number; y: number; dx: number; dy: number; color: string }
+interface Particle { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number }
 interface RunResult { score: number; best: number; tier: number; pointsWon: number; maxed: boolean; capUp: number | null }
 
 // One board cell, memoized so a cascade tick only re-renders the handful of
@@ -139,16 +139,24 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   }
   function spawnBurst(cells: number[]) {
     const out: Particle[] = []
-    const sample = cells.length > 8 ? cells.filter((_, k) => k % 2 === 0) : cells
+    const sample = cells.length > 10 ? cells.filter((_, k) => k % 2 === 0) : cells
     for (const i of sample) {
       const ctr = cellCenter(i)
       if (!ctr) continue
       const color = (MATCH_TOKENS[boardRef.current[i]] ?? MATCH_TOKENS[0]).color
-      const n = 3
+      const n = 5
       for (let k = 0; k < n; k++) {
-        const ang = (k / n) * Math.PI * 2 + Math.random()
-        const dist = 26 + Math.random() * 30
-        out.push({ id: pid.current++, x: ctr.x, y: ctr.y, dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist - 12, color })
+        const ang = (k / n) * Math.PI * 2 + Math.random() * 0.9
+        const dist = 36 + Math.random() * 52
+        // Alternate bright white sparks with bigger coloured shards; an upward
+        // bias so the burst arcs up before gravity (in the render) drops it.
+        const spark = k % 2 === 0
+        out.push({
+          id: pid.current++, x: ctr.x, y: ctr.y,
+          dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist - 22,
+          color: spark ? '#fff' : color,
+          size: spark ? 5 + Math.random() * 4 : 9 + Math.random() * 7,
+        })
       }
     }
     setParticles(out)
@@ -522,11 +530,11 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           <AnimatePresence>
             {particles.map(p => (
               <motion.div key={p.id}
-                initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
-                animate={{ x: p.x + p.dx, y: p.y + p.dy, opacity: 0, scale: 0.2 }}
+                initial={{ x: p.x, y: p.y, opacity: 1, scale: 0.6 }}
+                animate={{ x: p.x + p.dx, y: [p.y, p.y + p.dy, p.y + p.dy + 72], opacity: [1, 1, 0], scale: [1.15, 1.1, 0.1] }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.55, ease: 'easeOut' }}
-                style={{ position: 'absolute', left: -5, top: -5, width: 10, height: 10, borderRadius: '50%', background: p.color, boxShadow: `0 0 8px ${p.color}` }}
+                transition={{ duration: 0.72, ease: 'easeOut', times: [0, 0.42, 1] }}
+                style={{ position: 'absolute', left: -p.size / 2, top: -p.size / 2, width: p.size, height: p.size, borderRadius: '50%', background: p.color, boxShadow: `0 0 ${Math.round(p.size * 0.9)}px ${p.color}` }}
               />
             ))}
           </AnimatePresence>
