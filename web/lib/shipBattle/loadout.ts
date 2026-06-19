@@ -39,5 +39,12 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
     noncritDamageMult: prod('noncrit_damage_mult'),
     incomingDamageMult: prod('incoming_damage_mult'),
     navSpeedBonusPct: sum('speed_roll_nav_pct'),
+    // Display-only.
+    characterColor: stats.characterColor,
+    equippedHat: stats.equippedHat,
+    avatarBgColor: stats.avatarBgColor,
+    avatarBorderColor: stats.avatarBorderColor,
+    equippedRaidItems: stats.equippedRaidItems,
+    shipClasses: stats.shipClasses,
   }
 }

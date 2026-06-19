@@ -39,6 +39,15 @@ export interface BattleLoadout {
   noncritDamageMult: number   // product of noncrit_damage_mult raid items
   incomingDamageMult: number  // product of incoming_damage_mult raid items (defense)
   navSpeedBonusPct: number    // Navigator's Compass speed_roll_nav_pct
+  // ── Cosmetic / display only (resolver ignores these) — drives the
+  //    tap-to-view stats popup: avatar, equipped items, class picks. Optional
+  //    so battles snapshotted before these were added still resolve. ──
+  characterColor?: string | null
+  equippedHat?: string | null
+  avatarBgColor?: string | null
+  avatarBorderColor?: string | null
+  equippedRaidItems?: string[]
+  shipClasses?: Record<string, string>
 }
 
 /** A player's choice for one round. aimResult is required for fire/volley. */

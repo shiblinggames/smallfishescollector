@@ -10,8 +10,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
+import CharacterAvatar from '@/components/CharacterAvatar'
+import { raidDamageProfile } from '@/lib/expeditions'
+import { getRaidItem } from '@/lib/raidItems'
+import { getShipClass } from '@/lib/shipClasses'
 import { submitBattleMove, getShipBattleState, type ShipBattleState } from '@/app/(app)/social/shipBattleActions'
-import type { BattleAction, ShotResult, RoundStep } from '@/lib/shipBattle/resolver'
+import type { BattleAction, ShotResult, RoundStep, BattleLoadout } from '@/lib/shipBattle/resolver'
 
 // Aim-bar geometry — verbatim from RaidCombat so the skill window is identical.
 const GRAZE_W = 0.038, HIT_W = 0.06, CRIT_W = 0.012, INDICATOR_SPEED = 0.006
@@ -46,6 +50,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [busy, setBusy] = useState(false)
   const [critFlash, setCritFlash] = useState(false)
   const [aimBadge, setAimBadge] = useState<ShotResult | null>(null)
+  const [statsFor, setStatsFor] = useState<{ load: BattleLoadout; hp: number; you: boolean } | null>(null)
   const playedRef = useRef(initial.rounds.length)
 
   const myShip = useAnimation()
@@ -207,11 +212,16 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         )}
       </AnimatePresence>
 
+      {/* Tap-a-ship stats popup */}
+      <AnimatePresence>
+        {statsFor && <StatsPopup info={statsFor} onClose={() => setStatsFor(null)} />}
+      </AnimatePresence>
+
       <div className="px-4 pt-4">
         <Link href="/expeditions" className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.1em', color: '#9a948a' }}>← Expeditions</Link>
       </div>
 
-      <ShipPanel name={foe.username} hp={foeHp} hpMax={foe.hpMax} charges={foeCharges} img={foe.shipImageUrl} accent="#f87171" top ctrl={foeShip} splat={splat?.who === 'foe' ? splat : null} />
+      <ShipPanel load={foe} hp={foeHp} charges={foeCharges} accent="#f87171" top ctrl={foeShip} splat={splat?.who === 'foe' ? splat : null} onTap={() => setStatsFor({ load: foe, hp: foeHp, you: false })} />
 
       {/* Center: round / log / result */}
       <div style={{ minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 1rem' }}>
@@ -224,7 +234,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
           ) : <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e6e1d6', textAlign: 'center', minHeight: 22 }}>{logLine || `Round ${round} — choose your move`}</p>}
       </div>
 
-      <ShipPanel name={`${me.username} (you)`} hp={myHp} hpMax={me.hpMax} charges={myCharges} img={me.shipImageUrl} accent="#5fd6ff" ctrl={myShip} splat={splat?.who === 'me' ? splat : null} />
+      <ShipPanel load={me} you hp={myHp} charges={myCharges} accent="#5fd6ff" ctrl={myShip} splat={splat?.who === 'me' ? splat : null} onTap={() => setStatsFor({ load: me, hp: myHp, you: true })} />
 
       {/* Bottom slot: action menu OR aim bar + Lock button */}
       <div className="px-4 mt-3">
@@ -267,25 +277,31 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   )
 }
 
-function ShipPanel({ name, hp, hpMax, charges, img, accent, top, ctrl, splat }: {
-  name: string; hp: number; hpMax: number; charges: number; img: string; accent: string; top?: boolean
+function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap }: {
+  load: BattleLoadout; you?: boolean; hp: number; charges: number; accent: string; top?: boolean
   ctrl: ReturnType<typeof useAnimation>
   splat: { dmg: number; crit: boolean; dodged: boolean } | null
+  onTap: () => void
 }) {
+  const hpMax = load.hpMax
   const pct = Math.max(0, Math.min(100, (hp / Math.max(1, hpMax)) * 100))
   return (
     <div className="px-4" style={{ paddingTop: top ? 8 : 0 }}>
-      <div style={{ position: 'relative', background: 'rgba(11,14,20,0.9)', border: `1px solid ${accent}40`, borderRadius: 14, padding: '0.7rem 0.9rem' }}>
+      <div onClick={onTap} style={{ position: 'relative', background: 'rgba(11,14,20,0.9)', border: `1px solid ${accent}40`, borderRadius: 14, padding: '0.7rem 0.9rem', cursor: 'pointer' }}>
         <div className="flex items-center justify-between mb-1.5">
-          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f4ecd8', maxWidth: '60%' }}>{name}</p>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+            <CharacterAvatar characterColor={load.characterColor ?? null} equippedHat={load.equippedHat ?? null} size={26} ringColor={load.avatarBorderColor ?? undefined} bgColor={load.avatarBgColor ?? undefined} />
+            <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f4ecd8' }}>{you ? `${load.username} (you)` : load.username}</p>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={`${accent}aa`} strokeWidth="2" aria-hidden style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+          </div>
+          <div className="flex gap-1 flex-shrink-0">
             {[0, 1, 2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i < charges ? accent : 'rgba(255,255,255,0.12)', boxShadow: i < charges ? `0 0 6px ${accent}` : 'none' }} />)}
           </div>
         </div>
         <div className="flex items-center gap-3">
           <motion.div animate={ctrl} style={{ flexShrink: 0 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img} alt="" style={{ width: 84, height: 60, objectFit: 'contain', filter: `drop-shadow(0 3px 10px ${accent}55)` }} />
+            <img src={load.shipImageUrl} alt="" style={{ width: 84, height: 60, objectFit: 'contain', filter: `drop-shadow(0 3px 10px ${accent}55)` }} />
           </motion.div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ height: 12, borderRadius: 6, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -315,6 +331,73 @@ function ActionBtn({ label, sub, color, disabled, onClick }: { label: string; su
       <div style={{ fontSize: '0.8rem' }}>{label}</div>
       <div className="font-karla font-400" style={{ fontSize: '0.54rem', color: disabled ? '#4a4845' : `${color}cc`, marginTop: 2, letterSpacing: '0.04em' }}>{sub}</div>
     </motion.button>
+  )
+}
+
+function StatsPopup({ info, onClose }: { info: { load: BattleLoadout; hp: number; you: boolean }; onClose: () => void }) {
+  const l = info.load
+  const { hitMin, powerMax, critMax } = raidDamageProfile(l.totalPower, l.shipMinDamage, l.damagePct)
+  const critMin = l.shipMinDamage * 2
+  const speed = l.shipSpeed + l.navigation
+  const defensePct = Math.round((1 - l.incomingDamageMult) * 100)
+  const items = (l.equippedRaidItems ?? []).map(getRaidItem).filter((i): i is NonNullable<ReturnType<typeof getRaidItem>> => !!i)
+  const classNames = Object.values(l.shipClasses ?? {}).map(c => getShipClass(c)?.name).filter((n): n is string => !!n)
+  const rows: { label: string; value: string; color: string }[] = [
+    { label: 'Hull', value: `${info.hp} / ${l.hpMax}`, color: '#4ade80' },
+    { label: 'Damage', value: `${hitMin}–${powerMax}`, color: '#f87171' },
+    { label: 'Crit Damage', value: `${critMin}–${critMax}`, color: '#fbbf24' },
+    { label: 'Speed', value: String(speed), color: '#60a5fa' },
+  ]
+  if (defensePct > 0) rows.push({ label: 'Defense', value: `${defensePct}% less taken`, color: '#a78bfa' })
+  if (l.critPct > 0) rows.push({ label: 'Crit Chance', value: `+${Math.round(l.critPct)}%`, color: '#fbbf24' })
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+      <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }}
+        style={{ width: '100%', maxWidth: 360, background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: 20, padding: '1.1rem 1rem', boxShadow: '0 18px 60px rgba(0,0,0,0.55)', maxHeight: 'calc(100dvh - 4rem)', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <CharacterAvatar characterColor={l.characterColor ?? null} equippedHat={l.equippedHat ?? null} size={52} ringColor={l.avatarBorderColor ?? undefined} bgColor={l.avatarBgColor ?? undefined} />
+          <div style={{ minWidth: 0 }}>
+            <p className="font-cinzel font-700 truncate" style={{ fontSize: '1.15rem', color: '#f4ecd8' }}>{l.username}{info.you ? ' (you)' : ''}</p>
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={l.shipImageUrl} alt="" style={{ width: 40, height: 28, objectFit: 'contain' }} />
+              <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a8aa0' }}>Tier {l.shipTier} hull</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {rows.map(r => (
+            <div key={r.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.55rem 0.7rem' }}>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: '#7a8aa0' }}>{r.label}</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: r.color, fontVariantNumeric: 'tabular-nums' }}>{r.value}</p>
+            </div>
+          ))}
+        </div>
+        {classNames.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7a8aa0', marginBottom: 5 }}>Ship Classes</p>
+            <div className="flex flex-wrap gap-1.5">
+              {classNames.map((n, i) => <span key={i} className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#bfe3ff', background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 999, padding: '0.14rem 0.5rem' }}>{n}</span>)}
+            </div>
+          </div>
+        )}
+        {items.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7a8aa0', marginBottom: 5 }}>Equipped Items</p>
+            <div className="flex flex-col gap-1.5">
+              {items.map(it => (
+                <div key={it.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.45rem 0.65rem' }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8' }}>{it.name}</p>
+                  <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#8a93a3', lineHeight: 1.4 }}>{it.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
   )
 }
 
