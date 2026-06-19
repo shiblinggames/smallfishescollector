@@ -20,6 +20,11 @@ export function makeRng(seed: number): () => number {
 
 const ix = (r: number, c: number, cols: number) => r * cols + c
 
+// Compass wildcard sentinel. Sits OUTSIDE the 0..nTypes-1 range and below 0 so
+// the `>= 0` guards in findMatches treat it as inert (it never forms a natural
+// match); it only does something when swapped (resolveSwap detonates a colour).
+export const WILD = -2
+
 function randType(rng: () => number, nTypes: number): number {
   return Math.floor(rng() * nTypes)
 }
@@ -87,7 +92,7 @@ export function swap(board: number[], a: number, b: number): number[] {
 
 /** Clear the given cells, drop everything above down, refill the top
  *  from the rng. Returns a new board. */
-export function collapseAndRefill(board: number[], cleared: number[], cols: number, rows: number, rng: () => number, nTypes: number): number[] {
+export function collapseAndRefill(board: number[], cleared: number[], cols: number, rows: number, rng: () => number, nTypes: number, wildChance = 0): number[] {
   const clearedSet = new Set(cleared)
   const next = new Array(cols * rows).fill(-1)
   for (let c = 0; c < cols; c++) {
@@ -96,7 +101,9 @@ export function collapseAndRefill(board: number[], cleared: number[], cols: numb
       const i = ix(r, c, cols)
       if (!clearedSet.has(i)) stack.push(board[i]) // surviving, bottom-up
     }
-    while (stack.length < rows) stack.push(randType(rng, nTypes)) // new from above
+    // New tiles drop from above. Each has a small chance to be a Compass
+    // wildcard (so wilds only ever DROP IN after a clear, never on the board).
+    while (stack.length < rows) stack.push(rng() < wildChance ? WILD : randType(rng, nTypes))
     for (let k = 0; k < rows; k++) next[ix(rows - 1 - k, c, cols)] = stack[k]
   }
   return next
@@ -121,8 +128,39 @@ export interface ResolveResult {
 export function resolveSwap(
   board: number[], a: number, b: number,
   cols: number, rows: number, nTypes: number, rng: () => number,
+  wildChance = 0,
 ): ResolveResult | null {
   if (!areAdjacent(a, b, cols)) return null
+
+  // ── Compass wildcard detonation ──
+  // Swapping a Compass against a normal gem clears EVERY gem of that gem's
+  // colour (plus the Compass), then cascades like any other clear. Two
+  // Compasses have no colour to lock onto → treated as an invalid swap.
+  const aWild = board[a] === WILD, bWild = board[b] === WILD
+  if (aWild || bWild) {
+    if (aWild && bWild) return null
+    const target = aWild ? board[b] : board[a]
+    if (target < 0) return null
+    const detonated: number[] = []
+    for (let i = 0; i < board.length; i++) if (board[i] === target) detonated.push(i)
+    detonated.push(aWild ? a : b) // the Compass pops too
+    const steps: ResolveStep[] = []
+    let totalGained = 0
+    let cur = board
+    let cleared = detonated
+    let cascade = 1
+    while (cleared.length > 0) {
+      const gained = cleared.length * 10 * cascade
+      totalGained += gained
+      const resultBoard = collapseAndRefill(cur, cleared, cols, rows, rng, nTypes, wildChance)
+      steps.push({ cleared, gained, resultBoard })
+      cur = resultBoard
+      cascade++
+      cleared = findMatches(cur, cols, rows)
+    }
+    return { swapped: board, steps, totalGained, finalBoard: cur }
+  }
+
   const swapped = swap(board, a, b)
   let cur = swapped
   let cascade = 1
@@ -133,7 +171,7 @@ export function resolveSwap(
     if (m.length === 0) break
     const gained = m.length * 10 * cascade
     totalGained += gained
-    const resultBoard = collapseAndRefill(cur, m, cols, rows, rng, nTypes)
+    const resultBoard = collapseAndRefill(cur, m, cols, rows, rng, nTypes, wildChance)
     steps.push({ cleared: m, gained, resultBoard })
     cur = resultBoard
     cascade++
@@ -145,6 +183,7 @@ export function resolveSwap(
 /** Is there any swap that would create a match? Used to detect a dead
  *  board so it can be reshuffled. */
 export function hasValidMove(board: number[], cols: number, rows: number): boolean {
+  if (board.includes(WILD)) return true // a Compass can always be detonated
   for (let i = 0; i < board.length; i++) {
     const r = Math.floor(i / cols), c = i % cols
     if (c < cols - 1) { const s = swap(board, i, i + 1); if (findMatches(s, cols, rows).length) return true }

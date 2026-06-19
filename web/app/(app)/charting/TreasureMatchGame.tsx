@@ -12,13 +12,18 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { submitMatch } from './actions'
-import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent } from './treasureMatch'
+import { makeRng, initialBoard, resolveSwap, hasValidMove, reshuffle, areAdjacent, WILD } from './treasureMatch'
 import { MATCH_TOKENS, MATCH_TIERS, MATCH_MAX_POINTS, pointsForScore, nextMatchTier, gemSurface, GEM_BEVEL, type MatchState } from './constants'
 import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
 import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
+// Chance a freshly-dropped tile is a Compass wildcard. Rare on purpose — a
+// treat that supercharges a chain, not a constant. Seeded, so a given run is
+// the same for everyone. The Compass clears a whole colour when swapped.
+const WILD_DROP_CHANCE = 0.03
+const WILD_RAINBOW = 'conic-gradient(from 210deg at 50% 50%, #ff7e1c, #ffd028, #0fd886, #2aa4ff, #bb55ff, #ff4631, #ff7e1c)'
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 
@@ -30,11 +35,13 @@ interface RunResult { score: number; best: number; tier: number; pointsWon: numb
 // stacked drop-shadows every setState). No `transition: filter` either — those
 // re-rasterize the drop-shadows every frame; the glow snaps in instead.
 type Tok = typeof MATCH_TOKENS[number]
-const Tile = memo(function Tile({ tok, isSel, isPop, isDrop, isCommit, isInvalid }: {
-  tok: Tok; isSel: boolean; isPop: boolean; isDrop: boolean; isCommit: boolean; isInvalid: boolean
+const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, isInvalid }: {
+  tok: Tok; isWild: boolean; isSel: boolean; isPop: boolean; isDrop: boolean; isCommit: boolean; isInvalid: boolean
 }) {
-  const gemBg = isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
-  const gemGlow = isCommit
+  const gemBg = isWild ? WILD_RAINBOW : isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
+  const gemGlow = isWild
+    ? `${GEM_BEVEL} drop-shadow(0 0 9px #fff) drop-shadow(0 0 16px ${GOLD}) brightness(1.08) saturate(1.12)`
+    : isCommit
     ? `${GEM_BEVEL} drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
     : isSel ? `${GEM_BEVEL} drop-shadow(0 0 9px ${tok.color}) brightness(1.1)`
     : isInvalid ? `${GEM_BEVEL} drop-shadow(0 0 7px #d6392a)`
@@ -46,7 +53,7 @@ const Tile = memo(function Tile({ tok, isSel, isPop, isDrop, isCommit, isInvalid
       transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
       zIndex: isCommit ? 2 : undefined,
       transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1)',
-      animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : undefined,
+      animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : isWild ? 'tmWildPulse 1.8s ease-in-out infinite' : undefined,
     }}>
       <div aria-hidden style={{
         position: 'absolute', inset: 0,
@@ -57,7 +64,13 @@ const Tile = memo(function Tile({ tok, isSel, isPop, isDrop, isCommit, isInvalid
         position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '16%', width: '20%', height: '20%', borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)', pointerEvents: 'none',
       }} />
-      <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
+      {/* The Compass shows the rainbow star alone (no fish) so it reads as the
+          "any colour" wildcard; normal tiles carry their fish sprite. */}
+      {isWild ? (
+        <div aria-hidden style={{ position: 'absolute', inset: '30%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, transparent 72%)', pointerEvents: 'none' }} />
+      ) : (
+        <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
+      )}
     </div>
   )
 })
@@ -169,7 +182,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
   async function attemptSwap(a: number, b: number) {
     if (busyRef.current) return
     const cur = boardRef.current
-    const res = resolveSwap(cur, a, b, cols, rows, types, rngRef.current)
+    const res = resolveSwap(cur, a, b, cols, rows, types, rngRef.current, WILD_DROP_CHANCE)
     setSelected(null)
     if (!res) { setInvalid([a, b]); haptic(10); await wait(230); setInvalid(null); return }
 
@@ -387,17 +400,23 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           border: '2px solid rgba(196,169,106,0.34)', boxShadow: '0 8px 22px rgba(0,0,0,0.5), inset 0 0 22px rgba(0,0,0,0.4)',
         }}
       >
-        {board.map((t, i) => (
-          <Tile
-            key={i}
-            tok={MATCH_TOKENS[t] ?? MATCH_TOKENS[0]}
-            isSel={selected === i}
-            isPop={popping.has(i)}
-            isDrop={dropping.has(i)}
-            isCommit={committed !== null && (committed[0] === i || committed[1] === i)}
-            isInvalid={!!invalid && (invalid[0] === i || invalid[1] === i)}
-          />
-        ))}
+        {board.map((t, i) => {
+          const isWild = t === WILD
+          return (
+            <Tile
+              key={i}
+              // Compass borrows the star silhouette (token 7); its rainbow fill +
+              // pulse are applied via isWild.
+              tok={isWild ? MATCH_TOKENS[7] : (MATCH_TOKENS[t] ?? MATCH_TOKENS[0])}
+              isWild={isWild}
+              isSel={selected === i}
+              isPop={popping.has(i)}
+              isDrop={dropping.has(i)}
+              isCommit={committed !== null && (committed[0] === i || committed[1] === i)}
+              isInvalid={!!invalid && (invalid[0] === i || invalid[1] === i)}
+            />
+          )
+        })}
 
         {/* Board-wide light pulse on every clear — brightens with the combo.
             Keyed so it remounts (and the CSS animation restarts) each clear. */}
@@ -411,6 +430,11 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
 
       </div>
 
+      {!cleared && board.includes(WILD) && (
+        <p className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: GOLD, textAlign: 'center', textShadow: `0 0 10px ${GOLD}66`, animation: 'tmWildPulse 1.8s ease-in-out infinite' }}>
+          ✦ A Compass dropped in — swap it onto any treasure to clear that whole colour.
+        </p>
+      )}
       <p className="font-karla" style={{ fontSize: '0.62rem', color: '#8f8672', textAlign: 'center' }}>
         {cleared
           ? `Maxed ${MATCH_MAX_POINTS}/5 this week — fresh board Monday.`

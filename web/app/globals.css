@@ -1725,6 +1725,11 @@ html, body {
   55%  { transform: scale(1.5); filter: brightness(3); box-shadow: 0 0 22px #fff, 0 0 36px currentColor; }
   100% { transform: scale(0.15); filter: brightness(2.6); opacity: 0; }
 }
+/* Compass wildcard — a gentle breathing pulse so it draws the eye on the board. */
+@keyframes tmWildPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.07); }
+}
 /* New / dropped-in tokens fall in with a little overshoot bounce. */
 @keyframes tmDrop {
   0%   { transform: translateY(-58%); opacity: 0; }
