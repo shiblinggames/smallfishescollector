@@ -13,6 +13,8 @@ export const FISH_HOLD_TIERS: FishHoldTier[] = [
   { tier: 4, name: 'Deep Hold',      capacity: 120, cost: 20_000  },
   { tier: 5, name: 'Grand Hold',     capacity: 180, cost: 50_000  },
   { tier: 6, name: 'Titan Hold',     capacity: 250, cost: 100_000 },
+  { tier: 7, name: 'Leviathan Hold', capacity: 350, cost: 250_000 },
+  { tier: 8, name: 'Kraken Hold',    capacity: 500, cost: 600_000 },
 ]
 
 export function getFishHold(tier: number): FishHoldTier {
