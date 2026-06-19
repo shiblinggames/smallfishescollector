@@ -52,10 +52,11 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
       zIndex: isCommit ? 2 : undefined,
-      // Promote actively-animating tiles to their own GPU layer so the
-      // transform animations don't re-rasterize the gem's drop-shadows each
-      // frame (the main source of cascade jank on mobile).
-      willChange: (isPop || isDrop || isCommit) ? 'transform' : undefined,
+      // NB: no `will-change` here — promoting a tile to its own GPU layer the
+      // instant it drops made the gem bevel's white top rim-light render as a
+      // sharp line in the gap ("white lines before they hop"). Transform-only
+      // animations are GPU-composited regardless, so we lose ~nothing by
+      // letting the browser promote them itself.
       transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1)',
       // `--tmf` = how many cells this tile actually fell, so tmSlide starts it
       // at the right height.
