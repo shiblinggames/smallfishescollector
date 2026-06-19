@@ -16,6 +16,9 @@ import { getRaidMapView } from './raidMapActions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
+import { isPvpTester } from '@/lib/shipBattle/access'
+import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
+import ShipDuels from './ShipDuels'
 
 // Streaming pattern: the page paints its shell + Nav as soon as the profile
 // fetch returns (one fast query), then each heavy section streams in
@@ -246,6 +249,13 @@ async function ExpeditionHub() {
   )
 }
 
+// Ship Duels (PvP) — private testing only, gated to the PVP_TESTERS allowlist.
+// Rendered just below the hub cards for the testers; invisible to everyone else.
+async function ShipDuelsSection() {
+  const { battles, wins, losses } = await getShipBattles()
+  return <ShipDuels battles={battles} wins={wins} losses={losses} />
+}
+
 async function RaidsMapSection() {
   const [profile, raidMap, topRaidProgress] = await Promise.all([
     getCurrentProfile(),
@@ -318,6 +328,13 @@ export default async function ExpeditionsPage() {
             <Suspense fallback={<SkeletonBox height={150} radius={18} style={{ marginBottom: '1.2rem' }} />}>
               <ExpeditionHub />
             </Suspense>
+
+            {/* Ship Duels (PvP) — only the test allowlist sees this section. */}
+            {isPvpTester(profile?.username) && (
+              <Suspense fallback={<SkeletonBox height={120} radius={16} style={{ marginBottom: '1.2rem' }} />}>
+                <ShipDuelsSection />
+              </Suspense>
+            )}
 
             {/* DailyVoyagePanel moved into the Voyages hub-card modal —
                 no longer rendered as a standalone section. Tapping the

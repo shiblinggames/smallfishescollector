@@ -10,9 +10,16 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { snapshotLoadout } from '@/lib/shipBattle/loadout'
+import { isPvpTester } from '@/lib/shipBattle/access'
 import { resolveRound, type BattleLoadout, type BattleMove, type BattleAction, type ShotResult, type RoundStep } from '@/lib/shipBattle/resolver'
 
 type Side = 'challenger' | 'opponent'
+
+// Private-testing gate — returns the username when allowed, else null.
+async function testerName(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<string | null> {
+  const { data } = await admin.from('profiles').select('username').eq('id', userId).single()
+  return isPvpTester(data?.username) ? (data?.username as string) : null
+}
 
 interface BattleRow {
   id: string
@@ -62,6 +69,8 @@ export async function createShipBattle(opponentUsername: string): Promise<{ id: 
   if (!me?.username) return { error: 'Set a username first.' }
   if (!foe?.id) return { error: 'No captain by that name.' }
   if (foe.id === user.id) return { error: 'You can’t duel yourself.' }
+  if (!isPvpTester(me.username)) return { error: 'Ship duels are in limited testing.' }
+  if (!isPvpTester(foe.username)) return { error: 'That captain isn’t in the duel test yet.' }
 
   // One live duel per pair at a time (either direction).
   const { data: existing } = await admin
@@ -97,6 +106,7 @@ export async function acceptShipBattle(id: string): Promise<{ ok: true } | { err
   const user = await authUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
+  if (!await testerName(admin, user.id)) return { error: 'Ship duels are in limited testing.' }
 
   const { data: b } = await admin.from('ship_battles').select('*').eq('id', id).single<BattleRow>()
   if (!b) return { error: 'Duel not found.' }
@@ -144,6 +154,7 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
   const user = await authUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
+  if (!await testerName(admin, user.id)) return { error: 'Ship duels are in limited testing.' }
 
   const { data: b } = await admin.from('ship_battles').select('*').eq('id', id).single<BattleRow>()
   if (!b) return { error: 'Duel not found.' }
