@@ -4797,7 +4797,11 @@ export default function FishingGame({
     // the full haul from the same roll that reelIn receives below.
     const inAncient = selectedZone === 'ancient_deep'
     const ancientTrophy = inAncient && (allFishSpecies.find(f => f.id === hookedFishRef.current!.fishId)?.sell_value ?? 0) === 0
-    const doubleCatch = !inAncient && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
+    // Always-double rods (Millionaire's) double in the Ancient Deep too;
+    // partial-double rods (Twin-Strike) stay single-catch there. Trophies never
+    // multiply. Server re-checks the rod so a manipulated client can't sneak it.
+    const canDoubleHere = !inAncient || rod.doubleCatchChance >= 1
+    const doubleCatch = !ancientTrophy && canDoubleHere && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
     const zoneJackpotChance = jackpotChanceForZone(rod, selectedZone)
     const jackpotHit = !doubleCatch && !ancientTrophy && zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
     const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1

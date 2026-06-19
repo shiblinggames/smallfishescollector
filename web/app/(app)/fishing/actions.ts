@@ -549,7 +549,11 @@ export async function reelIn(
   // is just a sanity rail so a manipulated client can't claim more than the
   // rod's max. (Ancient trophies, sell_value 0, short-circuit far above — this
   // only ever touches sellable fish.)
-  const noDoubleCatch = fish.habitat === 'ancient_deep'
+  // Ancient Deep: only ALWAYS-double rods (Millionaire's, doubleCatchChance >= 1)
+  // double here — Twin-Strike's partial double stays single-catch. Trophies
+  // (sell_value 0) never multiply; they short-circuit far above.
+  const reelRod = getRod(profile.rod_tier ?? 0)
+  const noDoubleCatch = fish.habitat === 'ancient_deep' && (reelRod.doubleCatchChance ?? 0) < 1
   const effectiveDoubleCatch = doubleCatch && !noDoubleCatch
   const effectiveJackpotMult = Math.min(jackpotMultiplier, 100)
   const holdCapacity = getFishHold(profile.fish_hold_tier ?? 0).capacity
