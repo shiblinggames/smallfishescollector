@@ -13,6 +13,7 @@ import { motion } from 'framer-motion'
 import { buyHook } from '@/app/(app)/hooks/actions'
 import { buyBait, purchaseRod, equipRod, buyReel, claimCompletionistRod } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { fishingLevelReqForCost } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopStatusPill from '@/components/ShopStatusPill'
 
@@ -70,6 +71,8 @@ export default function TackleShopClient({
   const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
   const totalBait = Object.values(baitMap).reduce((a, b) => a + b, 0)
   const shopBaits = BAITS
+  // Fishing-level gate on buying gear (rod / reel / hook). Server-enforced too.
+  const fishingLevel = getLevelFromXP(fishingXP)
 
   function broadcastDoubloons(amount: number) {
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: amount }))
@@ -415,8 +418,11 @@ export default function TackleShopClient({
               const locked = hook.tier > hookTier + 1
               const c = hook.color
               const isNext = hook.tier === hookTier + 1
+              const hookReq = fishingLevelReqForCost(hook.cost)
+              const hookLevelMet = fishingLevel >= hookReq
               const canAffordHook = isNext && doubloons >= hook.cost
-              const clickable = isNext && canAffordHook && !isPending
+              const hookReady = canAffordHook && hookLevelMet
+              const clickable = isNext && hookReady && !isPending
               const isPreviewing = previewTier === hook.tier && hook.tier !== hookTier
 
               return (
@@ -426,7 +432,7 @@ export default function TackleShopClient({
                   whileTap={{ scale: 0.985 }}
                   transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                   style={{
-                    ...tileSurface(c, { owned, active: isActive, ready: isNext && canAffordHook, locked }),
+                    ...tileSurface(c, { owned, active: isActive, ready: isNext && hookReady, locked }),
                     ...(isPreviewing && !owned ? { boxShadow: `0 0 14px ${c}1a`, borderTop: `1.5px solid ${c}aa` } : null),
                     padding: '0.85rem 0.9rem',
                     opacity: isPending && isNext ? 0.6 : 1,
@@ -463,19 +469,19 @@ export default function TackleShopClient({
                         {isNext && (
                           <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
                             fontSize: '0.56rem',
-                            color: canAffordHook ? c : '#f0c040',
-                            background: canAffordHook ? `${c}1c` : 'rgba(240,192,64,0.1)',
-                            border: `1px solid ${canAffordHook ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
+                            color: hookReady ? c : '#f0c040',
+                            background: hookReady ? `${c}1c` : 'rgba(240,192,64,0.1)',
+                            border: `1px solid ${hookReady ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
                             padding: '0.14rem 0.5rem', borderRadius: 999,
                           }}>
-                            {isPending ? 'Upgrading…' : canAffordHook ? 'Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
+                            {isPending ? 'Upgrading…' : !hookLevelMet ? `Fishing Lv ${hookReq}` : canAffordHook ? 'Tap to upgrade' : `${(hook.cost - doubloons).toLocaleString()} ⟡ short`}
                           </span>
                         )}
                       </div>
                     </div>
 
                     {!owned && (
-                      <p className="font-cinzel font-700 shrink-0 text-base sm:text-lg" style={{ color: canAffordHook ? c : '#f0c040', whiteSpace: 'nowrap' }}>
+                      <p className="font-cinzel font-700 shrink-0 text-base sm:text-lg" style={{ color: hookReady ? c : '#f0c040', whiteSpace: 'nowrap' }}>
                         {hook.cost.toLocaleString()} ⟡
                       </p>
                     )}
@@ -553,6 +559,9 @@ export default function TackleShopClient({
                 const owned = (rod.cost === 0 && !rod.earnedOnly) || ownedRods.includes(rod.tier)
                 const isActive = rod.tier === equippedRod
                 const canAfford = doubloons >= rod.cost
+                const rodReq = fishingLevelReqForCost(rod.cost)
+                const rodLevelMet = fishingLevel >= rodReq
+                const rodBuyable = canAfford && rodLevelMet
                 const isBuying = buyingRod === rod.tier && isPending
                 const isEquipping = equippingRod === rod.tier && isPending
                 const c = rod.color
@@ -628,20 +637,20 @@ export default function TackleShopClient({
                       <div style={{ marginTop: 'auto', paddingTop: 2 }}>
                         {!owned && (
                           <motion.button
-                            onClick={() => { if (canAfford && !isPending) handlePurchaseRod(rod.tier) }}
+                            onClick={() => { if (rodBuyable && !isPending) handlePurchaseRod(rod.tier) }}
                             disabled={isPending}
-                            whileTap={canAfford && !isPending ? { scale: 0.97 } : undefined}
+                            whileTap={rodBuyable && !isPending ? { scale: 0.97 } : undefined}
                             transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                             className="font-karla font-700 uppercase tracking-[0.08em]"
                             style={{
                               padding: '0.5rem 0.95rem', borderRadius: 9,
-                              background: canAfford ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.13) 100%)' : 'rgba(255,255,255,0.05)',
-                              border: `1px solid ${canAfford ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                              color: canAfford ? '#f0c040' : '#9a8f6a', fontSize: '0.66rem',
-                              cursor: canAfford && !isPending ? 'pointer' : 'default', opacity: isBuying ? 0.5 : 1,
-                              boxShadow: canAfford ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
+                              background: rodBuyable ? 'linear-gradient(180deg, rgba(240,192,64,0.26) 0%, rgba(240,192,64,0.13) 100%)' : 'rgba(255,255,255,0.05)',
+                              border: `1px solid ${rodBuyable ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                              color: rodBuyable ? '#f0c040' : '#9a8f6a', fontSize: '0.66rem',
+                              cursor: rodBuyable && !isPending ? 'pointer' : 'default', opacity: isBuying ? 0.5 : 1,
+                              boxShadow: rodBuyable ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
                             }}>
-                            {isBuying ? '…' : canAfford ? `Buy · ${rod.cost.toLocaleString()} ⟡` : `Need ${(rod.cost - doubloons).toLocaleString()} ⟡`}
+                            {isBuying ? '…' : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? `Buy · ${rod.cost.toLocaleString()} ⟡` : `Need ${(rod.cost - doubloons).toLocaleString()} ⟡`}
                           </motion.button>
                         )}
                         {owned && !isActive && (
@@ -755,21 +764,24 @@ export default function TackleShopClient({
             const isActive = reel.tier === reelTier
             const locked = reel.tier > reelTier + 1
             const isNext = reel.tier === reelTier + 1
+            const reelReq = fishingLevelReqForCost(reel.cost)
+            const reelLevelMet = fishingLevel >= reelReq
             const canAffordReel = isNext && doubloons >= reel.cost
+            const reelReady = canAffordReel && reelLevelMet
             const c = reel.color
             const slowerPct = Math.round((1 - reel.needleSpeedMultiplier) * 100)
 
             return (
               <motion.div
                 key={reel.tier}
-                onClick={() => { if (isNext && canAffordReel && !isPending) handleBuyReel() }}
-                whileTap={isNext && canAffordReel && !isPending ? { scale: 0.985 } : undefined}
+                onClick={() => { if (isNext && reelReady && !isPending) handleBuyReel() }}
+                whileTap={isNext && reelReady && !isPending ? { scale: 0.985 } : undefined}
                 transition={{ type: 'spring', stiffness: 600, damping: 22 }}
                 style={{
-                  ...tileSurface(c, { owned, active: isActive, ready: isNext && canAffordReel, locked }),
+                  ...tileSurface(c, { owned, active: isActive, ready: isNext && reelReady, locked }),
                   padding: '0.85rem 0.9rem',
                   opacity: isPending && isNext ? 0.6 : 1,
-                  cursor: isNext && canAffordReel ? 'pointer' : 'default',
+                  cursor: isNext && reelReady ? 'pointer' : 'default',
                 }}
               >
                 <Sheen />
@@ -800,19 +812,19 @@ export default function TackleShopClient({
                       {isNext && (
                         <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{
                           fontSize: '0.56rem',
-                          color: canAffordReel ? c : '#f0c040',
-                          background: canAffordReel ? `${c}1c` : 'rgba(240,192,64,0.1)',
-                          border: `1px solid ${canAffordReel ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
+                          color: reelReady ? c : '#f0c040',
+                          background: reelReady ? `${c}1c` : 'rgba(240,192,64,0.1)',
+                          border: `1px solid ${reelReady ? `${c}55` : 'rgba(240,192,64,0.32)'}`,
                           padding: '0.14rem 0.5rem', borderRadius: 999,
                         }}>
-                          {isPending ? 'Upgrading…' : canAffordReel ? 'Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
+                          {isPending ? 'Upgrading…' : !reelLevelMet ? `Fishing Lv ${reelReq}` : canAffordReel ? 'Tap to upgrade' : `${(reel.cost - doubloons).toLocaleString()} ⟡ short`}
                         </span>
                       )}
                     </div>
                   </div>
 
                   {!owned && (
-                    <p className="font-cinzel font-700 text-base shrink-0" style={{ color: canAffordReel ? c : '#f0c040', whiteSpace: 'nowrap' }}>
+                    <p className="font-cinzel font-700 text-base shrink-0" style={{ color: reelReady ? c : '#f0c040', whiteSpace: 'nowrap' }}>
                       {reel.cost.toLocaleString()} ⟡
                     </p>
                   )}

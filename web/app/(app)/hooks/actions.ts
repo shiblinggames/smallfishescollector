@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { HOOKS } from '@/lib/hooks'
+import { getLevelFromXP } from '@/lib/fishingLevel'
+import { fishingLevelReqForCost } from '@/lib/gearGating'
 import { revalidatePath } from 'next/cache'
 
 export async function buyHook(): Promise<{ hookTier: number; doubloons: number } | { error: string }> {
@@ -13,7 +15,7 @@ export async function buyHook(): Promise<{ hookTier: number; doubloons: number }
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('hook_tier, doubloons')
+    .select('hook_tier, doubloons, fishing_xp')
     .eq('id', user.id)
     .single()
 
@@ -25,6 +27,8 @@ export async function buyHook(): Promise<{ hookTier: number; doubloons: number }
   if (nextTier >= HOOKS.length) return { error: 'Already at max tier' }
 
   const cost = HOOKS[nextTier].cost
+  const hookReq = fishingLevelReqForCost(cost)
+  if (getLevelFromXP(profile.fishing_xp ?? 0) < hookReq) return { error: `Reach Fishing Lv ${hookReq} to buy the ${HOOKS[nextTier].name}` }
   if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
 
   const newDoubloons = profile.doubloons - cost

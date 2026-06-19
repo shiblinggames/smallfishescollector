@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getLevelFromXP } from '@/lib/expeditionLevel'
 import ShipyardClient from './ShipyardClient'
 
 export default async function ShipyardPage() {
@@ -9,7 +10,7 @@ export default async function ShipyardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('ship_tier, doubloons, packs_available, gems, ship_name')
+    .select('ship_tier, doubloons, packs_available, gems, ship_name, expedition_xp')
     .eq('id', user.id)
     .single()
 
@@ -19,6 +20,7 @@ export default async function ShipyardPage() {
         <ShipyardClient
           shipTier={profile?.ship_tier ?? 0}
           doubloons={profile?.doubloons ?? 0}
+          navLevel={getLevelFromXP(profile?.expedition_xp ?? 0)}
           shipName={profile?.ship_name ?? null} />
       </main>
     </>

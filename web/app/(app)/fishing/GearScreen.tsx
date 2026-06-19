@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
+import { fishingLevelReqForCost } from '@/lib/gearGating'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
@@ -791,6 +792,9 @@ export default function GearScreen({
     /** When false, the dialog still shows the item's info but the CTA is a
      *  disabled "Need X more" instead of a Buy button. Omitted = affordable. */
     affordable?: boolean
+    /** Reason the CTA is locked beyond price (e.g. a level gate) — shown on
+     *  the disabled CTA in place of "Need X more". */
+    lockedNote?: string
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -1376,6 +1380,8 @@ export default function GearScreen({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {unownedRodDefs.map(r => {
                               const canAfford = doubloons >= r.cost
+                              const rodReq = fishingLevelReqForCost(r.cost)
+                              const rodLevelMet = fishingLevel >= rodReq
                               const onTap = () => {
                                 // Open the detail view either way — players can read
                                 // a rod's stats before they can afford it; the dialog
@@ -1387,7 +1393,8 @@ export default function GearScreen({
                                 const deltas = rodStatDeltas(rod, r)
                                 const fallbackLines = deltas.length === 0 ? rodStatLines(r) : null
                                 setPendingPurchase({
-                                  name: r.name, color: r.color, cost: r.cost, affordable: canAfford,
+                                  name: r.name, color: r.color, cost: r.cost, affordable: canAfford && rodLevelMet,
+                                  lockedNote: rodLevelMet ? undefined : `Reach Fishing Lv ${rodReq} to buy this rod.`,
                                   onConfirm: async () => { flashPurchase(r.name, r.color, r.cost, 'rod'); await onBuyRod(r.tier) },
                                   details: (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1495,8 +1502,8 @@ export default function GearScreen({
                                       gap: 2, flexShrink: 0,
                                     }}>
                                       <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                                        style={{ fontSize: '0.56rem', color: canAfford ? r.color : '#f87171' }}>
-                                        {canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
+                                        style={{ fontSize: '0.56rem', color: !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
+                                        {!rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
                                       </span>
                                       <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
                                         {r.cost.toLocaleString()} ⟡
@@ -1536,6 +1543,9 @@ export default function GearScreen({
               {openSlot === 'reel' && (() => {
                 const nextReel = REELS[reelTier + 1]
                 const canAffordReel = nextReel ? doubloons >= nextReel.cost : false
+                const reelReq = nextReel ? fishingLevelReqForCost(nextReel.cost) : 0
+                const reelLevelMet = !nextReel || fishingLevel >= reelReq
+                const reelBuyable = canAffordReel && reelLevelMet
                 const nextSlowPct = nextReel ? Math.round((1 - nextReel.needleSpeedMultiplier) * 100) : 0
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1600,13 +1610,13 @@ export default function GearScreen({
                     {nextReel ? (
                       <button
                         onClick={() => {
-                          if (!canAffordReel) return
+                          if (!reelBuyable) return
                           setPendingPurchase({
                             name: nextReel.name, color: nextReel.color, cost: nextReel.cost,
                             onConfirm: async () => { flashPurchase(nextReel.name, nextReel.color, nextReel.cost, 'reel'); await onBuyReel() },
                           })
                         }}
-                        disabled={!canAffordReel}
+                        disabled={!reelBuyable}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 12,
                           padding: '0.75rem 0.9rem', marginTop: 2,
@@ -1641,8 +1651,8 @@ export default function GearScreen({
                             <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: canAffordReel ? nextReel.color : '#a09890', lineHeight: 1.1 }}>
                               {nextReel.name}
                             </p>
-                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: `${nextReel.color}aa`, background: `${nextReel.color}14`, border: `1px solid ${nextReel.color}30`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
-                              Upgrade
+                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: reelLevelMet ? `${nextReel.color}aa` : '#e0a44a', background: reelLevelMet ? `${nextReel.color}14` : 'rgba(224,164,74,0.12)', border: `1px solid ${reelLevelMet ? `${nextReel.color}30` : 'rgba(224,164,74,0.4)'}`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
+                              {reelLevelMet ? 'Upgrade' : `Fishing Lv ${reelReq}`}
                             </span>
                           </div>
                           {nextSlowPct > 0 && (
@@ -1668,6 +1678,9 @@ export default function GearScreen({
               {openSlot === 'hook' && (() => {
                 const nextHook = HOOKS[hookTier + 1]
                 const canAffordHook = nextHook ? doubloons >= nextHook.cost : false
+                const hookReq = nextHook ? fishingLevelReqForCost(nextHook.cost) : 0
+                const hookLevelMet = !nextHook || fishingLevel >= hookReq
+                const hookBuyable = canAffordHook && hookLevelMet
                 const nextZoneBonus = nextHook ? nextHook.tier * 3 : 0
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1748,13 +1761,13 @@ export default function GearScreen({
                     {nextHook ? (
                       <button
                         onClick={() => {
-                          if (!canAffordHook) return
+                          if (!hookBuyable) return
                           setPendingPurchase({
                             name: nextHook.name, color: nextHook.color, cost: nextHook.cost,
                             onConfirm: async () => { flashPurchase(nextHook.name, nextHook.color, nextHook.cost, 'hook'); await onBuyHook() },
                           })
                         }}
-                        disabled={!canAffordHook}
+                        disabled={!hookBuyable}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 12,
                           padding: '0.75rem 0.9rem', marginTop: 2,
@@ -1788,8 +1801,8 @@ export default function GearScreen({
                             <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: canAffordHook ? nextHook.color : '#a09890', lineHeight: 1.1 }}>
                               {nextHook.name}
                             </p>
-                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: `${nextHook.color}aa`, background: `${nextHook.color}14`, border: `1px solid ${nextHook.color}30`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
-                              Upgrade
+                            <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: hookLevelMet ? `${nextHook.color}aa` : '#e0a44a', background: hookLevelMet ? `${nextHook.color}14` : 'rgba(224,164,74,0.12)', border: `1px solid ${hookLevelMet ? `${nextHook.color}30` : 'rgba(224,164,74,0.4)'}`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>
+                              {hookLevelMet ? 'Upgrade' : `Fishing Lv ${hookReq}`}
                             </span>
                           </div>
                           <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${nextHook.color}cc` }}>
@@ -2570,7 +2583,7 @@ export default function GearScreen({
                           opacity: confirming ? 0.65 : 1,
                         }}
                       >
-                        {unaffordable ? `Need ${need.toLocaleString()} ⟡ more` : (confirming ? verbing : verbLabel)}
+                        {unaffordable ? (pendingPurchase.lockedNote ?? `Need ${need.toLocaleString()} ⟡ more`) : (confirming ? verbing : verbLabel)}
                       </button>
                     </div>
                   </>

@@ -6,6 +6,7 @@ import { getBait } from '@/lib/bait'
 import { RODS } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { fishingLevelReqForCost } from '@/lib/gearGating'
 import { revalidatePath } from 'next/cache'
 
 export async function buyBait(
@@ -78,12 +79,14 @@ export async function purchaseRod(
   const admin = createAdminClient()
 
   const [{ data: profile }, { data: alreadyOwned }] = await Promise.all([
-    admin.from('profiles').select('doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_xp').eq('id', user.id).single(),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', rodTier).maybeSingle(),
   ])
 
   if (!profile) return { error: 'Profile not found' }
   if (alreadyOwned) return { error: 'Already owned' }
+  const levelReq = fishingLevelReqForCost(rod.cost)
+  if (getLevelFromXP(profile.fishing_xp ?? 0) < levelReq) return { error: `Reach Fishing Lv ${levelReq} to buy the ${rod.name}` }
   if (profile.doubloons < rod.cost) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
 
   const newDoubloons = profile.doubloons - rod.cost
@@ -234,7 +237,7 @@ export async function buyReel(): Promise<{ reelTier: number; doubloons: number }
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('reel_tier, doubloons')
+    .select('reel_tier, doubloons, fishing_xp')
     .eq('id', user.id)
     .single()
 
@@ -246,6 +249,8 @@ export async function buyReel(): Promise<{ reelTier: number; doubloons: number }
   if (nextTier >= REELS.length) return { error: 'Already at max tier' }
 
   const cost = REELS[nextTier].cost
+  const reelReq = fishingLevelReqForCost(cost)
+  if (getLevelFromXP(profile.fishing_xp ?? 0) < reelReq) return { error: `Reach Fishing Lv ${reelReq} to buy the ${REELS[nextTier].name}` }
   if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
 
   const newDoubloons = profile.doubloons - cost

@@ -8,6 +8,7 @@ import { motion, AnimatePresence, useDragControls, type DragControls } from 'fra
 import type { ShipStats } from '@/lib/expeditions'
 import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getShipClass } from '@/lib/shipClasses'
+import { navLevelReqForShip } from '@/lib/gearGating'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
@@ -1801,6 +1802,7 @@ export default function ShipHero({
         >
           <UpgradeShipPanel
             shipStats={shipStats}
+            navLevel={xpProgress.level}
             doubloons={doubloons}
             busy={upgradeBusy}
             error={upgradeError}
@@ -1857,9 +1859,10 @@ export default function ShipHero({
 // affordability state), a side-by-side stat delta vs the current ship, and a
 // secondary link to the full shipyard for browsing/skins/lower tiers.
 function UpgradeShipPanel({
-  shipStats, doubloons, busy, error, onBuy, onClose,
+  shipStats, navLevel, doubloons, busy, error, onBuy, onClose,
 }: {
   shipStats: ShipStats
+  navLevel: number
   doubloons: number
   busy: boolean
   error: string | null
@@ -1872,7 +1875,10 @@ function UpgradeShipPanel({
   const nextShip = atMax ? null : SHIPS[nextTier]
   const nextCombat = atMax ? null : EXPEDITION_SHIP_STATS[nextTier]
   const currentShip = SHIPS[currentTier]
+  const navReq = nextShip ? navLevelReqForShip(nextShip.cost) : 0
+  const navMet = navLevel >= navReq
   const canAfford = !!nextShip && doubloons >= nextShip.cost
+  const canBuy = canAfford && navMet
 
   return (
     <>
@@ -1954,22 +1960,24 @@ function UpgradeShipPanel({
           <button
             type="button"
             onClick={onBuy}
-            disabled={busy || !canAfford}
+            disabled={busy || !canBuy}
             className="font-karla font-700 uppercase tracking-[0.08em]"
             style={{
               width: '100%', padding: '0.85rem', borderRadius: 12, marginBottom: '0.55rem',
-              fontSize: '0.82rem', cursor: busy ? 'wait' : canAfford ? 'pointer' : 'not-allowed',
-              background: canAfford ? 'rgba(240,192,64,0.18)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${canAfford ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.12)'}`,
-              color: canAfford ? '#f0c040' : '#6a6764',
+              fontSize: '0.82rem', cursor: busy ? 'wait' : canBuy ? 'pointer' : 'not-allowed',
+              background: canBuy ? 'rgba(240,192,64,0.18)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${canBuy ? 'rgba(240,192,64,0.5)' : 'rgba(255,255,255,0.12)'}`,
+              color: canBuy ? '#f0c040' : '#6a6764',
               opacity: busy ? 0.7 : 1,
             }}
           >
             {busy
               ? 'Buying…'
-              : canAfford
-                ? <>Upgrade for {nextShip.cost.toLocaleString()} ⟡</>
-                : <>Need {(nextShip.cost - doubloons).toLocaleString()} more ⟡</>}
+              : !navMet
+                ? <>Reach Nav Lv {navReq} to unlock</>
+                : canAfford
+                  ? <>Upgrade for {nextShip.cost.toLocaleString()} ⟡</>
+                  : <>Need {(nextShip.cost - doubloons).toLocaleString()} more ⟡</>}
           </button>
 
           {/* Secondary: full shipyard (browsing skins, lower tiers, etc.) */}

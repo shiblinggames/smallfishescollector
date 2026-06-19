@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { SHIPS } from '@/lib/ships'
 import { buyShip, renameShip } from '@/app/shipyard/actions'
 import { EXPEDITION_SHIP_STATS, raidItemSlotsForTier } from '@/lib/expeditions'
+import { navLevelReqForShip } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopBuyButton from '@/components/ShopBuyButton'
 import ShopStatusPill from '@/components/ShopStatusPill'
 
-export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons, shipName: initialShipName }: { shipTier: number; doubloons: number; shipName: string | null }) {
+export default function ShipyardClient({ shipTier: initialTier, doubloons: initialDoubloons, navLevel, shipName: initialShipName }: { shipTier: number; doubloons: number; navLevel: number; shipName: string | null }) {
   const router = useRouter()
   const [shipTier, setShipTier] = useState(initialTier)
   const [doubloons, setDoubloons] = useState(initialDoubloons)
@@ -226,8 +227,8 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                 <StatChip label="Items" value={raidItemSlotsForTier(ship.tier)} accent="#a78bfa" owned={owned} />
               </div>
 
-              {/* Buy button — only on the next purchasable tier */}
-              {isNext && (
+              {/* Buy button — only on the next purchasable tier, gated by Nav level */}
+              {isNext && (navLevel >= navLevelReqForShip(ship.cost) ? (
                 <ShopBuyButton
                   label="Upgrade"
                   pendingLabel="Upgrading…"
@@ -238,7 +239,11 @@ export default function ShipyardClient({ shipTier: initialTier, doubloons: initi
                   accent={c}
                   onClick={() => handleBuyShip(ship.tier)}
                 />
-              )}
+              ) : (
+                <div className="font-karla font-700 uppercase tracking-[0.08em]" style={{ textAlign: 'center', padding: '0.7rem', borderRadius: 12, background: 'rgba(224,164,74,0.1)', border: '1px solid rgba(224,164,74,0.4)', color: '#e0a44a', fontSize: '0.72rem' }}>
+                  Reach Nav Lv {navLevelReqForShip(ship.cost)} to unlock
+                </div>
+              ))}
             </div>
           )
             })}

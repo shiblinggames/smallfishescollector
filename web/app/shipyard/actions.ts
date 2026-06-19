@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SHIPS } from '@/lib/ships'
+import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
+import { navLevelReqForShip } from '@/lib/gearGating'
 import { revalidatePath } from 'next/cache'
 
 export async function buyShip(): Promise<{ shipTier: number; doubloons: number } | { error: string }> {
@@ -13,7 +15,7 @@ export async function buyShip(): Promise<{ shipTier: number; doubloons: number }
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, doubloons')
+    .select('ship_tier, doubloons, expedition_xp')
     .eq('id', user.id)
     .single()
 
@@ -25,6 +27,9 @@ export async function buyShip(): Promise<{ shipTier: number; doubloons: number }
   if (nextTier >= SHIPS.length) return { error: 'Already at max tier' }
 
   const cost = SHIPS[nextTier].cost
+  const navLevel = navLevelFromXP(profile.expedition_xp ?? 0)
+  const navReq = navLevelReqForShip(cost)
+  if (navLevel < navReq) return { error: `Reach Nav Lv ${navReq} to buy the ${SHIPS[nextTier].name}` }
   if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
 
   const newDoubloons = profile.doubloons - cost
