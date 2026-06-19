@@ -7,7 +7,7 @@
 // One seeded board a week (shared puzzle), unlimited retries. Engine runs
 // client-side; the server tiers the score + banks the delta authoritatively.
 
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { memo, useMemo, useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +24,43 @@ function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefine
 
 interface Particle { id: number; x: number; y: number; dx: number; dy: number; color: string }
 interface RunResult { score: number; best: number; tier: number; pointsWon: number; maxed: boolean; capUp: number | null }
+
+// One board cell, memoized so a cascade tick only re-renders the handful of
+// tiles whose state actually changed (was: all 49 reconciling + repainting
+// stacked drop-shadows every setState). No `transition: filter` either — those
+// re-rasterize the drop-shadows every frame; the glow snaps in instead.
+type Tok = typeof MATCH_TOKENS[number]
+const Tile = memo(function Tile({ tok, isSel, isPop, isDrop, isCommit, isInvalid }: {
+  tok: Tok; isSel: boolean; isPop: boolean; isDrop: boolean; isCommit: boolean; isInvalid: boolean
+}) {
+  const gemBg = isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
+  const gemGlow = isCommit
+    ? `${GEM_BEVEL} drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
+    : isSel ? `${GEM_BEVEL} drop-shadow(0 0 9px ${tok.color}) brightness(1.1)`
+    : isInvalid ? `${GEM_BEVEL} drop-shadow(0 0 7px #d6392a)`
+    : GEM_BEVEL
+  return (
+    <div style={{
+      pointerEvents: 'none', position: 'relative', aspectRatio: '1 / 1',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
+      zIndex: isCommit ? 2 : undefined,
+      transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1)',
+      animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : undefined,
+    }}>
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0,
+        clipPath: tok.clip || undefined, borderRadius: tok.clip ? 0 : '24%',
+        background: gemBg, filter: gemGlow,
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '16%', width: '20%', height: '20%', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)', pointerEvents: 'none',
+      }} />
+      <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
+    </div>
+  )
+})
 
 export default function TreasureMatchGame({ initial }: { initial: MatchState }) {
   const { cols, rows, types, target, seed } = initial
@@ -350,59 +387,17 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
           border: '2px solid rgba(196,169,106,0.34)', boxShadow: '0 8px 22px rgba(0,0,0,0.5), inset 0 0 22px rgba(0,0,0,0.4)',
         }}
       >
-        {board.map((t, i) => {
-          const tok = MATCH_TOKENS[t] ?? MATCH_TOKENS[0]
-          const isSel = selected === i
-          const isPop = popping.has(i)
-          const isDrop = dropping.has(i)
-          const isCommit = committed !== null && (committed[0] === i || committed[1] === i)
-          const isInvalid = invalid && (invalid[0] === i || invalid[1] === i)
-          // Each token has its own silhouette (tok.clip). A faceted gem sits as
-          // a back layer carrying the shape; the fish floats ON TOP unclipped so
-          // it stays whole. Glows use filter:drop-shadow (which follows the
-          // clipped shape) — box-shadow would get clipped away.
-          const gemBg = isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
-          // GEM_BEVEL (rim-light + grounding shadow) is on every state so the
-          // gem always reads as a 3-D cut stone; state adds glow/brightness.
-          const gemGlow = isCommit
-            ? `${GEM_BEVEL} drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
-            : isSel ? `${GEM_BEVEL} drop-shadow(0 0 9px ${tok.color}) brightness(1.1)`
-            : isInvalid ? `${GEM_BEVEL} drop-shadow(0 0 7px #d6392a)`
-            : GEM_BEVEL
-          return (
-            <div
-              key={i}
-              style={{
-                pointerEvents: 'none', position: 'relative',
-                aspectRatio: '1 / 1',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transform: isCommit ? 'scale(1.16)' : isSel ? 'scale(1.08)' : 'scale(1)',
-                zIndex: isCommit ? 2 : undefined,
-                transition: 'transform 0.13s cubic-bezier(.34,1.56,.64,1)',
-                animation: isPop ? 'tmPop 0.3s ease forwards' : isDrop ? 'tmDrop 0.34s cubic-bezier(.34,1.4,.64,1)' : undefined,
-              }}
-            >
-              {/* shaped faceted gem (back layer) */}
-              <div aria-hidden style={{
-                position: 'absolute', inset: 0,
-                clipPath: tok.clip || undefined,
-                borderRadius: tok.clip ? 0 : '24%',
-                background: gemBg,
-                filter: gemGlow,
-                transition: 'filter 0.12s',
-              }} />
-              {/* a crisp little sparkle for cut-gem shine — placed on the gem
-                  (pointed-top shapes move it off the empty corner via tok.glint) */}
-              <div aria-hidden style={{
-                position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '16%', width: '20%', height: '20%', borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)',
-                pointerEvents: 'none',
-              }} />
-              {/* fish (on top, unclipped) — nudged down on narrow silhouettes */}
-              <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
-            </div>
-          )
-        })}
+        {board.map((t, i) => (
+          <Tile
+            key={i}
+            tok={MATCH_TOKENS[t] ?? MATCH_TOKENS[0]}
+            isSel={selected === i}
+            isPop={popping.has(i)}
+            isDrop={dropping.has(i)}
+            isCommit={committed !== null && (committed[0] === i || committed[1] === i)}
+            isInvalid={!!invalid && (invalid[0] === i || invalid[1] === i)}
+          />
+        ))}
 
         {/* Board-wide light pulse on every clear — brightens with the combo.
             Keyed so it remounts (and the CSS animation restarts) each clear. */}
