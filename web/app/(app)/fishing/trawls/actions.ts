@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidatePath } from 'next/cache'
 import { getLevelFromXP as fishingLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { applyLevelBonuses, crewLevelFromXP } from '@/lib/crewLevel'
@@ -148,6 +149,13 @@ export async function deployTrawl(zone: string, crewId: number): Promise<TrawlSt
     ends_at: new Date(Date.now() + trawlDurationMs(zone)).toISOString(),
   })
   if (error) return { error: 'Could not send the trawl' }
+
+  // Free their standing voyage/raid slot so they aren't stranded in a party
+  // spot while at sea (and don't linger in the bench). The slot reopens for
+  // someone else; the trawl row is what reserves them now.
+  await admin.from('user_crew').update({ voyage_slot: null, raid_slot: null }).eq('id', crewId).eq('user_id', user.id)
+  revalidatePath('/crew')
+  revalidatePath('/expeditions')
 
   return buildTrawlState(admin, user.id)
 }

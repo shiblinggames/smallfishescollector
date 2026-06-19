@@ -376,10 +376,10 @@ function CrewPanel({
             can hang at the top corners without being clipped by the
             niche's arch + overflow:hidden. Tucked just outside the niche
             border so they read as decals attached to the portrait. */}
-        {/* A trawling crew still holds its standing voyage/raid slot, so the
-            pip would otherwise read "On Voyage/On Raid" while they're actually
-            away on a trawl. Override it to a teal net pip so it never lies
-            about where they are; the slot reappears when the trawl returns. */}
+        {/* A trawling crew has its voyage/raid slot freed on deploy, so it
+            reads as benched — but it's actually away at sea. Show a teal net
+            pip (lockKind === 'trawl') so an at-sea crew never looks idle; the
+            voyage/raid pip still draws for crew genuinely in a party. */}
         {(lockKind === 'trawl' || (assignment && assignment !== 'bench')) && (() => {
           const isTrawl = lockKind === 'trawl'
           const accent  = isTrawl ? '#3fc8aa' : assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
@@ -1472,7 +1472,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   all:    state.roster.length,
                   raid:   state.roster.filter(c => c.raidSlot   !== null).length,
                   voyage: state.roster.filter(c => c.voyageSlot !== null).length,
-                  bench:  state.roster.filter(c => c.raidSlot === null && c.voyageSlot === null).length,
+                  bench:  state.roster.filter(c => c.raidSlot === null && c.voyageSlot === null && !state.trawlingCrewIds.includes(c.id)).length,
                 }
                 const filters = [
                   { id: 'all'    as const, label: 'All',     accent: SECTION_ROSTER },
@@ -1535,7 +1535,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   rosterFilter === 'all'    ? true :
                   rosterFilter === 'raid'   ? c.raidSlot   !== null :
                   rosterFilter === 'voyage' ? c.voyageSlot !== null :
-                                              c.raidSlot === null && c.voyageSlot === null
+                                              c.raidSlot === null && c.voyageSlot === null && !state.trawlingCrewIds.includes(c.id)
                 )
                 if (visibleRoster.length === 0) {
                   const label =
