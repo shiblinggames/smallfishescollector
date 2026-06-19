@@ -18,6 +18,7 @@ import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import { isPvpTester } from '@/lib/shipBattle/access'
 import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
+import { getCrew } from '@/app/(app)/social/actions'
 import ShipDuels from './ShipDuels'
 
 // Streaming pattern: the page paints its shell + Nav as soon as the profile
@@ -252,8 +253,8 @@ async function ExpeditionHub() {
 // Ship Duels (PvP) — private testing only, gated to the PVP_TESTERS allowlist.
 // Rendered just below the hub cards for the testers; invisible to everyone else.
 async function ShipDuelsSection() {
-  const { battles, wins, losses } = await getShipBattles()
-  return <ShipDuels battles={battles} wins={wins} losses={losses} />
+  const [{ battles, wins, losses }, friends] = await Promise.all([getShipBattles(), getCrew()])
+  return <ShipDuels battles={battles} wins={wins} losses={losses} friends={friends} />
 }
 
 async function RaidsMapSection() {

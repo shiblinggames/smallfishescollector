@@ -44,9 +44,10 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [foeHp, setFoeHp] = useState(initial.foeHp)
   const [myCharges, setMyCharges] = useState(initial.myCharges)
   const [foeCharges, setFoeCharges] = useState(initial.foeCharges)
-  const [round, setRound] = useState(initial.round)
   const [splat, setSplat] = useState<{ who: 'me' | 'foe'; dmg: number; crit: boolean; dodged: boolean } | null>(null)
-  const [logLine, setLogLine] = useState('')
+  const [log, setLog] = useState<{ id: number; text: string }[]>([{ id: 0, text: 'The duel begins.' }])
+  const logId = useRef(1)
+  const pushLog = useCallback((text: string) => setLog(prev => [...prev, { id: logId.current++, text }].slice(-24)), [])
   const [busy, setBusy] = useState(false)
   const [critFlash, setCritFlash] = useState(false)
   const [aimBadge, setAimBadge] = useState<ShotResult | null>(null)
@@ -78,7 +79,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     setPhase('animating')
     for (let i = playedRef.current; i < state.rounds.length; i++) {
       for (const s of state.rounds[i].steps) {
-        setLogLine(s.log)
+        pushLog(s.log)
         const actorIsMe = (s.actor === 'challenger') === isChallenger
         const targetMyHp = isChallenger ? s.challengerHp : s.opponentHp
         const targetFoeHp = isChallenger ? s.opponentHp : s.challengerHp
@@ -106,11 +107,12 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
       }
     }
     playedRef.current = state.rounds.length
-    setRound(state.round)
-    setLogLine('')
-    if (state.status !== 'active') { setStatus(state.status); setIWon(state.iWon); setPhase('over') }
-    else setPhase(state.myMoveIn ? 'waiting' : 'await_input')
-  }, [isChallenger, myShip, foeShip])
+    if (state.status !== 'active') {
+      setStatus(state.status); setIWon(state.iWon); setPhase('over')
+      pushLog(state.status === 'expired' ? 'The duel timed out.' : state.iWon ? 'Victory — their ship is sunk!' : 'Your ship is sunk.')
+    } else if (state.myMoveIn) { setPhase('waiting'); pushLog(`Waiting for ${foe.username} to fire…`) }
+    else { setPhase('await_input'); pushLog(`Round ${state.round} — your move.`) }
+  }, [isChallenger, myShip, foeShip, pushLog, foe.username])
 
   // ── Poll while waiting on the opponent ──
   useEffect(() => {
@@ -130,11 +132,11 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     setBusy(true)
     const res = await submitBattleMove(id, action, aimResult)
     setBusy(false)
-    if ('error' in res) { setLogLine(res.error); return }
+    if ('error' in res) { pushLog(res.error); return }
     const s = await getShipBattleState(id)
     if ('error' in s) return
     if (s.rounds.length > playedRef.current) await animateFrom(s)
-    else setPhase('waiting')
+    else { setPhase('waiting'); pushLog(`Waiting for ${foe.username} to fire…`) }
   }
 
   // ── Aim bar RAF ──
@@ -183,6 +185,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     const res = getShotResult(fireRef.current, zoneRef.current)
     const action = pendingAction
     setPendingAction(null)
+    pushLog(`You ${action === 'volley' ? 'load a volley' : 'fire'} — ${res === 'miss' ? 'a miss' : res === 'critical' ? 'CRITICAL aim!' : res}.`)
     setAimBadge(res)
     flashBar(res === 'critical' ? 'rgba(251,191,36,0.9)' : res === 'hit' ? 'rgba(74,222,128,0.8)' : 'rgba(255,255,255,0.6)')
     if (res === 'critical') { setCritFlash(true); vibrate([40, 60, 80]); setTimeout(() => setCritFlash(false), 380) }
@@ -223,22 +226,25 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
 
       <ShipPanel load={foe} hp={foeHp} charges={foeCharges} accent="#f87171" top ctrl={foeShip} splat={splat?.who === 'foe' ? splat : null} onTap={() => setStatsFor({ load: foe, hp: foeHp, you: false })} />
 
-      {/* Center: round / log / result */}
-      <div style={{ minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 1rem' }}>
-        {phase === 'over' ? <Result iWon={iWon} status={status} foe={foe.username} />
-          : phase === 'waiting' ? (
-            <div className="text-center">
-              <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }} className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#c0bdb8' }}>Waiting for {foe.username}…</motion.div>
-              <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#6a6764', marginTop: 4 }}>Your move is locked. Check back when they’ve fired.</p>
-            </div>
-          ) : <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#e6e1d6', textAlign: 'center', minHeight: 22 }}>{logLine || `Round ${round} — choose your move`}</p>}
+      {/* Center: fixed combat log — last events scroll up like the raid log. */}
+      <div className="px-4" style={{ marginTop: 8 }}>
+        <LogBox lines={log} />
       </div>
 
-      <ShipPanel load={me} you hp={myHp} charges={myCharges} accent="#5fd6ff" ctrl={myShip} splat={splat?.who === 'me' ? splat : null} onTap={() => setStatsFor({ load: me, hp: myHp, you: true })} />
+      <div style={{ marginTop: 8 }}>
+        <ShipPanel load={me} you hp={myHp} charges={myCharges} accent="#5fd6ff" ctrl={myShip} splat={splat?.who === 'me' ? splat : null} onTap={() => setStatsFor({ load: me, hp: myHp, you: true })} />
+      </div>
 
-      {/* Bottom slot: action menu OR aim bar + Lock button */}
+      {/* Bottom slot: action menu / aim bar+Lock / waiting / result */}
       <div className="px-4 mt-3">
-        {phase === 'aiming' ? (
+        {phase === 'over' ? (
+          <Result iWon={iWon} status={status} foe={foe.username} />
+        ) : phase === 'waiting' ? (
+          <div className="text-center" style={{ padding: '0.5rem 0' }}>
+            <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }} className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#c0bdb8' }}>Waiting for {foe.username}…</motion.div>
+            <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#6a6764', marginTop: 4 }}>Your move is locked. Check back when they’ve fired.</p>
+          </div>
+        ) : phase === 'aiming' ? (
           <>
             {/* Aim bar — raid AimBarInline */}
             <div style={{ background: '#04080e', border: '1px solid #1f2e42', borderRadius: 12, padding: '0.65rem 0.85rem', marginBottom: 10 }}>
@@ -277,6 +283,23 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   )
 }
 
+// Fixed-height combat log — newest line at the bottom, older lines scroll up
+// and fade out the top, exactly like the raid log. Never flexes the layout.
+function LogBox({ lines }: { lines: { id: number; text: string }[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight }, [lines])
+  return (
+    <div ref={ref} style={{ height: 108, overflow: 'hidden', background: '#04080e', border: '1px solid #1f2e42', borderRadius: 12, padding: '0.6rem 0.85rem', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 22px)', maskImage: 'linear-gradient(to bottom, transparent 0, #000 22px)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: '100%', gap: 5 }}>
+        {lines.map(l => (
+          <motion.p key={l.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}
+            className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#cdd6e2', lineHeight: 1.3 }}>{l.text}</motion.p>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap }: {
   load: BattleLoadout; you?: boolean; hp: number; charges: number; accent: string; top?: boolean
   ctrl: ReturnType<typeof useAnimation>
@@ -299,10 +322,28 @@ function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap }: 
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <motion.div animate={ctrl} style={{ flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={load.shipImageUrl} alt="" style={{ width: 84, height: 60, objectFit: 'contain', filter: `drop-shadow(0 3px 10px ${accent}55)` }} />
-          </motion.div>
+          <div style={{ position: 'relative', flexShrink: 0, width: 96, height: 66 }}>
+            <motion.div animate={ctrl} style={{ width: '100%', height: '100%' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={load.shipImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 3px 10px ${accent}55)` }} />
+            </motion.div>
+            {/* Damage splat — large, centered ON the ship, like the raid hitsplats. */}
+            <AnimatePresence>
+              {splat && (
+                <motion.div key={`${splat.dmg}-${splat.crit}-${splat.dodged}`}
+                  initial={{ opacity: 0, scale: 0.5, y: 4 }} animate={{ opacity: 1, scale: 1, y: -8 }} exit={{ opacity: 0, scale: 1.25, y: -16 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 16 }}
+                  className="font-cinzel font-700"
+                  style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 3,
+                    fontSize: splat.dodged ? '1.05rem' : splat.crit ? '2.1rem' : '1.6rem',
+                    color: splat.dodged ? '#cbd5e1' : splat.crit ? '#fde047' : '#ffffff',
+                    WebkitTextStroke: splat.dodged ? undefined : '1.5px rgba(150,12,12,0.95)',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 14px rgba(0,0,0,0.6)' }}>
+                  {splat.dodged ? 'MISS' : `-${splat.dmg}${splat.crit ? '!' : ''}`}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ height: 12, borderRadius: 6, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
               <motion.div animate={{ width: `${pct}%` }} transition={{ type: 'spring', stiffness: 200, damping: 28 }} style={{ height: '100%', background: pct > 50 ? '#4ade80' : pct > 22 ? '#fbbf24' : '#f87171' }} />
@@ -310,14 +351,6 @@ function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap }: 
             <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#9a948a', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>{hp} / {hpMax} hull</p>
           </div>
         </div>
-        <AnimatePresence>
-          {splat && (
-            <motion.div key={`${splat.dmg}-${splat.crit}-${splat.dodged}`} initial={{ opacity: 0, y: 0, scale: 0.6 }} animate={{ opacity: 1, y: -22, scale: 1 }} exit={{ opacity: 0 }}
-              className="font-cinzel font-700" style={{ position: 'absolute', right: 22, top: '34%', fontSize: splat.crit ? '1.7rem' : '1.25rem', color: splat.dodged ? '#94a3b8' : splat.crit ? '#fbbf24' : '#f87171', textShadow: '0 2px 8px rgba(0,0,0,0.75)' }}>
-              {splat.dodged ? 'evaded' : `-${splat.dmg}${splat.crit ? '!' : ''}`}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   )
