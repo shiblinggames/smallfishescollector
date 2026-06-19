@@ -33,6 +33,16 @@ const cachedCrewRoster = cache(() => getCrewRoster())
 const cachedDailyVoyageState = cache(() => getDailyVoyageState())
 const cachedRaidMap = cache(() => getRaidMapView())
 
+// Crew currently out on a trawl — excluded from the ship loadout crew picker
+// (they're reserved at sea; the server would reject the assignment anyway).
+const cachedTrawlingCrewIds = cache(async (): Promise<number[]> => {
+  const user = await getCurrentUser()
+  if (!user) return []
+  const admin = createAdminClient()
+  const { data } = await admin.from('trawls').select('crew_id').eq('user_id', user.id)
+  return ((data ?? []) as { crew_id: number }[]).map(r => r.crew_id)
+})
+
 const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
   const user = await getCurrentUser()
   if (!user) return []
@@ -51,9 +61,10 @@ const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
 //    in when ready. Shared loaders are deduped by React.cache.
 
 async function ShipHeroSection() {
-  const [profile, roster] = await Promise.all([
+  const [profile, roster, trawlingCrewIds] = await Promise.all([
     getCurrentProfile(),
     cachedCrewRoster(),
+    cachedTrawlingCrewIds(),
   ])
   const shipTier = profile?.ship_tier ?? 0
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
@@ -65,6 +76,7 @@ async function ShipHeroSection() {
       equippedShipSkin={(profile?.equipped_ship_skin as string | null) ?? null}
       shipSkins={(profile?.ship_skins as string[] | null) ?? []}
       roster={roster}
+      trawlingCrewIds={trawlingCrewIds}
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
       equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
       equippedRepairKit={(profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit'}

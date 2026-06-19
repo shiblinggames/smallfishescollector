@@ -181,6 +181,8 @@ interface Props {
   equippedShipSkin: string | null
   shipSkins: string[]
   roster: RosterCrew[]
+  /** Crew ids currently out on a trawl — hidden from the crew picker. */
+  trawlingCrewIds?: number[]
   ownedRaidItems: string[]
   equippedRaidItems: string[]
   equippedRepairKit: string
@@ -256,6 +258,7 @@ export default function ShipHero({
   shipStats, shipName: initialShipName, expeditionXP,
   equippedShipSkin: initialEquippedSkin, shipSkins: ownedSkins,
   roster,
+  trawlingCrewIds = [],
   ownedRaidItems, equippedRaidItems: initialEquippedRaidItems,
   equippedRepairKit: initialEquippedRepairKit,
   ownedRepairKits: initialOwnedRepairKits,
@@ -655,7 +658,9 @@ export default function ShipHero({
     const inThisSlot = slots[pickerSlot]?.id
     // Cards already aboard in OTHER slots — block picking a second of the same.
     const otherCardIds = new Set(slots.filter((c, idx) => c && idx !== pickerSlot).map(c => c!.cardId))
-    const list = roster.filter(c => (!assignedIds.has(c.id) || c.id === inThisSlot) && !otherCardIds.has(c.cardId))
+    // Crew out on a trawl are reserved at sea — keep them out of the picker.
+    const trawlingSet = new Set(trawlingCrewIds)
+    const list = roster.filter(c => (!assignedIds.has(c.id) || c.id === inThisSlot) && !otherCardIds.has(c.cardId) && !trawlingSet.has(c.id))
     const score = (c: RosterCrew) => {
       const e = effStats(c)
       return sortBy ? e[sortBy] : e.power + e.dodge + e.fortune
