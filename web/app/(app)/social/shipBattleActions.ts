@@ -11,7 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { snapshotLoadout } from '@/lib/shipBattle/loadout'
 import { isPvpTester } from '@/lib/shipBattle/access'
-import { resolveRound, lastActionOf, type BattleLoadout, type BattleMove, type BattleAction, type ShotResult, type RoundStep } from '@/lib/shipBattle/resolver'
+import { resolveRound, lastActionOf, defaultFx, type BattleLoadout, type BattleMove, type BattleAbility, type BattleFx, type BattleAction, type ShotResult, type RoundStep } from '@/lib/shipBattle/resolver'
 
 type Side = 'challenger' | 'opponent'
 
@@ -47,6 +47,8 @@ interface BattleRow {
   round: number
   challenger_move: BattleMove | null
   opponent_move: BattleMove | null
+  challenger_fx: BattleFx | null
+  opponent_fx: BattleFx | null
   rounds: { round: number; steps: RoundStep[] }[]
   current_round_started_at: string | null
   winner_id: string | null
@@ -153,7 +155,7 @@ export async function declineShipBattle(id: string): Promise<{ ok: true } | { er
 }
 
 // ── Submit a move (resolves the round when both are in) ──────────────────────
-export async function submitBattleMove(id: string, action: BattleAction, aimResult?: ShotResult): Promise<{ ok: true; resolved: boolean } | { error: string }> {
+export async function submitBattleMove(id: string, action: BattleAction, aimResult?: ShotResult, ability?: BattleAbility): Promise<{ ok: true; resolved: boolean } | { error: string }> {
   const user = await authUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
@@ -168,7 +170,23 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
   // Raid rule: can't dodge two turns in a row.
   if (action === 'dodge' && lastActionOf(b.rounds, side) === 'dodge') return { error: 'You can’t dodge two turns running.' }
 
-  const move: BattleMove = { action, aimResult }
+  // Validate the optional free Special against the frozen loadout + used state.
+  if (ability) {
+    const myLoad = side === 'challenger' ? b.challenger_loadout : b.opponent_loadout
+    const myFx = (side === 'challenger' ? b.challenger_fx : b.opponent_fx) ?? defaultFx()
+    if (ability.kind === 'repair') {
+      if (!myLoad?.repairKit) return { error: 'No repair kit equipped.' }
+      if (myFx.usedRepair) return { error: 'Repair kit already spent.' }
+    } else if (ability.kind === 'crew') {
+      const crew = (myLoad?.crew ?? []).find(c => c.id === ability.crewId)
+      if (!crew) return { error: 'That crew can’t act here.' }
+      if ((myFx.used ?? []).includes(ability.crewId)) return { error: 'That ability is spent.' }
+    } else {
+      return { error: 'Unknown ability.' }
+    }
+  }
+
+  const move: BattleMove = { action, aimResult, ability }
   const moveCol = side === 'challenger' ? 'challenger_move' : 'opponent_move'
 
   // Atomic claim: only succeeds if this side hasn't moved this round yet.
@@ -192,6 +210,7 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
     { hp: fresh.challenger_hp, charges: fresh.challenger_charges },
     { hp: fresh.opponent_hp, charges: fresh.opponent_charges },
     fresh.challenger_move, fresh.opponent_move,
+    fresh.challenger_fx, fresh.opponent_fx,
   )
   // Keep only the recent rounds on the row — the clients animate by round
   // NUMBER (not array length), so trimming the tail keeps the JSONB bounded
@@ -208,6 +227,8 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
       opponent_hp: r.opponent.hp,
       challenger_charges: r.challenger.charges,
       opponent_charges: r.opponent.charges,
+      challenger_fx: r.challengerFx,
+      opponent_fx: r.opponentFx,
       challenger_move: null,
       opponent_move: null,
       rounds: newRounds,
@@ -300,6 +321,8 @@ export interface ShipBattleState {
   myMoveIn: boolean
   foeMoveIn: boolean
   rounds: { round: number; steps: RoundStep[] }[]
+  /** This player's spent Specials (grey out the chooser). */
+  myFx: { used: number[]; usedRepair: boolean }
   iWon: boolean | null
 }
 
@@ -320,6 +343,7 @@ export async function getShipBattleState(id: string): Promise<ShipBattleState | 
       foe: (isC ? b.opponent_loadout : b.challenger_loadout)!,
       myHp: 0, foeHp: 0, myCharges: 0, foeCharges: 0, round: b.round,
       myMoveIn: false, foeMoveIn: false, rounds: b.rounds ?? [],
+      myFx: fxView(isC ? b.challenger_fx : b.opponent_fx),
       iWon: b.winner_id == null ? null : b.winner_id === user.id,
     }
   }
@@ -335,8 +359,13 @@ export async function getShipBattleState(id: string): Promise<ShipBattleState | 
     myMoveIn: (isC ? b.challenger_move : b.opponent_move) != null,
     foeMoveIn: (isC ? b.opponent_move : b.challenger_move) != null,
     rounds: b.rounds ?? [],
+    myFx: fxView(isC ? b.challenger_fx : b.opponent_fx),
     iWon: b.winner_id == null ? null : b.winner_id === user.id,
   }
+}
+
+function fxView(fx: BattleFx | null): { used: number[]; usedRepair: boolean } {
+  return { used: fx?.used ?? [], usedRepair: fx?.usedRepair ?? false }
 }
 
 // Lightweight poll — status + round number + hp/charges only (no loadouts, no

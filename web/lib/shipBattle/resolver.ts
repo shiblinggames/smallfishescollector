@@ -9,11 +9,18 @@
 // stake, matching the [[project-ship-pvp-decision]] "don't over-engineer
 // anti-cheat" call.
 //
-// v1 scope: reload / fire / volley / dodge + the aim crit + speed order +
+// Scope: reload / fire / volley / dodge + the aim crit + speed order +
 // raidDamageProfile, with ship/crew/class/item stats pre-baked into the frozen
-// loadout snapshot. No active abilities / tides / affixes / phase-2 / procs.
+// loadout snapshot. Plus the crew-ability "Specials" slice (the 5 base classes:
+// Mender / Sharpshot / Snare / Anchor / Navigator) + a once-per-duel repair kit
+// — mirroring how Specials work in the PvE raids, but applied here on the
+// server. No tides / affixes / phase-2 / procs / legendary signatures.
 
 import { raidDamageProfile } from '@/lib/expeditions'
+import {
+  CLASSES, currentMilestone, type CrewClass,
+  type MenderMilestone, type NavigatorMilestone, type SnareMilestone, type AnchorMilestone,
+} from '@/lib/crewClasses'
 
 export const MAX_CHARGES = 3
 
@@ -39,6 +46,13 @@ export interface BattleLoadout {
   noncritDamageMult: number   // product of noncrit_damage_mult raid items
   incomingDamageMult: number  // product of incoming_damage_mult raid items (defense)
   navSpeedBonusPct: number    // Navigator's Compass speed_roll_nav_pct
+  // ── Crew Specials slice — the firing player's usable abilities, frozen at
+  //    accept-time. Only crew mapping to one of the 5 base classes AND already
+  //    Lv 10+ (ability unlocked) are listed. repairKit is the equipped kit's
+  //    Fortune-baked heal range; null = none equipped. Optional so battles
+  //    snapshotted before this shipped still resolve (no abilities). ──
+  crew?: BattleCrew[]
+  repairKit?: { name: string; healMin: number; healMax: number } | null
   // ── Cosmetic / display only (resolver ignores these) — drives the
   //    tap-to-view stats popup: avatar, equipped items, class picks. Optional
   //    so battles snapshotted before these were added still resolve. ──
@@ -50,10 +64,53 @@ export interface BattleLoadout {
   shipClasses?: Record<string, string>
 }
 
-/** A player's choice for one round. aimResult is required for fire/volley. */
+/** One firing player's crew ability card (one of the 5 base classes). The
+ *  milestone is re-derived from `level` at resolve via currentMilestone(). */
+export interface BattleCrew {
+  id: number
+  name: string
+  classId: CrewClass
+  level: number
+}
+
+/** A free crew/repair ability fired alongside a move (at most one per round). */
+export type BattleAbility =
+  | { kind: 'crew'; crewId: number }
+  | { kind: 'repair' }
+
+/** A player's choice for one round. aimResult is required for fire/volley;
+ *  `ability` is an optional free Special on top of the cannon action. */
 export interface BattleMove {
   action: BattleAction
   aimResult?: ShotResult
+  ability?: BattleAbility
+}
+
+/** Per-side ability/status state carried on the battle row (JSONB). */
+export interface BattleFx {
+  /** Crew ids whose ability has fired (once per duel). */
+  used: number[]
+  /** Repair kit already spent this duel. */
+  usedRepair: boolean
+  /** This side's dodge is jammed (Snare) for this many more rounds. */
+  dodgeJammed: number
+  /** This side's pending next-incoming-hit reduction (Anchor brace), 0–1. */
+  anchorPct: number
+  /** The pending brace also soaks crits (Anchor Lv 100). */
+  anchorAbsorbsCrit?: boolean
+}
+
+export function defaultFx(): BattleFx {
+  return { used: [], usedRepair: false, dodgeJammed: 0, anchorPct: 0, anchorAbsorbsCrit: false }
+}
+function normFx(fx: Partial<BattleFx> | null | undefined): BattleFx {
+  return {
+    used: fx?.used ?? [],
+    usedRepair: fx?.usedRepair ?? false,
+    dodgeJammed: fx?.dodgeJammed ?? 0,
+    anchorPct: fx?.anchorPct ?? 0,
+    anchorAbsorbsCrit: fx?.anchorAbsorbsCrit ?? false,
+  }
 }
 
 /** Live HP + charges carried between rounds (lives on the battle row). */
@@ -74,6 +131,10 @@ export interface RoundStep {
   dodged: boolean
   /** Shot landed as a critical (after the crit-upgrade roll). */
   crit: boolean
+  /** This step is a free crew/repair Special cast, not a cannon action. */
+  ability?: boolean
+  /** HP restored by a heal Special (drives the green heal splat). */
+  heal?: number
   /** Resulting HP/charges AFTER this step, for both sides. */
   challengerHp: number
   opponentHp: number
@@ -86,6 +147,9 @@ export interface ResolvedRound {
   steps: RoundStep[]
   challenger: BattleSide
   opponent: BattleSide
+  /** Updated ability/status state to persist on the row. */
+  challengerFx: BattleFx
+  opponentFx: BattleFx
   /** 'challenger' | 'opponent' when someone hit 0 HP this round, else null. */
   winner: 'challenger' | 'opponent' | null
 }
@@ -141,11 +205,14 @@ export function resolveRound(
   oState: BattleSide,
   cMove: BattleMove,
   oMove: BattleMove,
+  cFx?: Partial<BattleFx> | null,
+  oFx?: Partial<BattleFx> | null,
 ): ResolvedRound {
   const sides = {
     challenger: { l: challenger, s: { ...cState }, m: cMove },
     opponent:   { l: opponent,   s: { ...oState }, m: oMove },
   }
+  const fx = { challenger: normFx(cFx), opponent: normFx(oFx) }
   type Who = 'challenger' | 'opponent'
   const other = (w: Who): Who => (w === 'challenger' ? 'opponent' : 'challenger')
 
@@ -164,11 +231,80 @@ export function resolveRound(
     log: '', ...over,
   })
 
+  // ── Pass 1: free Specials (heal / charges / snare / brace / steady aim) ──
+  // Applied BEFORE any cannon fire so a brace soaks this round's incoming hit
+  // and a snare jams this round's dodge. At most one per side (the move carries
+  // a single `ability`). Mirrors the raid "abilities are free actions" rule.
+  for (const who of order) {
+    const me = sides[who]
+    const ab = me.m.ability
+    if (!ab) continue
+    const meFx = fx[who]
+    const foeWho2 = other(who)
+    const foe2 = sides[foeWho2]
+    const foeFx = fx[foeWho2]
+
+    if (ab.kind === 'repair') {
+      if (!me.l.repairKit || meFx.usedRepair) continue
+      const { healMin, healMax } = me.l.repairKit
+      const heal = Math.min(me.l.hpMax - me.s.hp, healMin + Math.floor(Math.random() * (healMax - healMin + 1)))
+      me.s.hp += Math.max(0, heal)
+      meFx.usedRepair = true
+      steps.push(snapshot({ actor: who, ability: true, heal: Math.max(0, heal), log: `${me.l.username} patches the hull (+${Math.max(0, heal)} HP).` }))
+      continue
+    }
+
+    const crew = (me.l.crew ?? []).find(c => c.id === ab.crewId)
+    if (!crew || meFx.used.includes(crew.id)) continue
+    const def = CLASSES[crew.classId]
+    const m = currentMilestone(def, crew.level)
+    if (!m) continue
+    meFx.used.push(crew.id)
+
+    switch (crew.classId) {
+      case 'mender': {
+        const heal = Math.min(me.l.hpMax - me.s.hp, Math.floor((m as MenderMilestone).pctMaxHp * me.l.hpMax))
+        me.s.hp += Math.max(0, heal)
+        steps.push(snapshot({ actor: who, ability: true, heal: Math.max(0, heal), log: `${crew.name} mends the hull (+${Math.max(0, heal)} HP).` }))
+        break
+      }
+      case 'navigator': {
+        const mm = m as NavigatorMilestone
+        let gain = 0
+        if (Math.random() < mm.oneChargeChance) gain = 1
+        if (Math.random() < mm.twoChargeChance) gain = 2
+        me.s.charges = Math.min(MAX_CHARGES, me.s.charges + gain)
+        steps.push(snapshot({ actor: who, ability: true, log: gain > 0 ? `${crew.name} works the reload — +${gain} charge${gain > 1 ? 's' : ''}.` : `${crew.name} works the reload, but the powder won't catch.` }))
+        break
+      }
+      case 'snare': {
+        const turns = (m as SnareMilestone).disableDodgeTurns
+        foeFx.dodgeJammed = turns === 'rest_of_fight' ? 999 : turns
+        steps.push(snapshot({ actor: who, ability: true, log: `${crew.name} fouls ${foe2.l.username}'s helm — their dodge is jammed.` }))
+        break
+      }
+      case 'anchor': {
+        const mm = m as AnchorMilestone
+        meFx.anchorPct = mm.pctReduction
+        meFx.anchorAbsorbsCrit = !!mm.absorbsCrits
+        steps.push(snapshot({ actor: who, ability: true, log: `${crew.name} braces the hull for the next blow.` }))
+        break
+      }
+      case 'sharpshot': {
+        // Effect is client-side (the firing player's crit zone widens on their
+        // shot this round); the server just records the cast for the log.
+        steps.push(snapshot({ actor: who, ability: true, log: `${crew.name} steadies the gunners' aim.` }))
+        break
+      }
+    }
+  }
+
   for (const who of order) {
     if (winner) break
     const me = sides[who]
     const foeWho = other(who)
     const foe = sides[foeWho]
+    const foeFx = fx[foeWho]
     if (me.s.hp <= 0) continue // killed earlier this round — forfeits their action
 
     const action = me.m.action
@@ -202,38 +338,62 @@ export function resolveRound(
       crit = true
     }
 
-    // Defender dodging? full dodge on success, 50% on a failed evade.
+    // Defender dodging? full dodge on success, 50% on a failed evade — unless
+    // their dodge is jammed by a Snare, in which case it fails outright.
     let dodged = false
     let dodgeMult = 1
+    let dodgeJammed = false
     if (foe.m.action === 'dodge' && result !== 'miss') {
-      const def = rollDodge(foe.l.shipSpeed, foe.l.navigation)
-      const atk = rollAttackerVsDodge(me.l.shipSpeed)
-      if (def >= atk) { dodged = true; dodgeMult = 0 }
-      else dodgeMult = 0.5
+      if (foeFx.dodgeJammed > 0) {
+        dodgeJammed = true // jammed — no evasion, full damage
+      } else {
+        const def = rollDodge(foe.l.shipSpeed, foe.l.navigation)
+        const atk = rollAttackerVsDodge(me.l.shipSpeed)
+        if (def >= atk) { dodged = true; dodgeMult = 0 }
+        else dodgeMult = 0.5
+      }
     }
 
     const itemMult = crit ? me.l.critDamageMult : me.l.noncritDamageMult
     const volleyMult = action === 'volley' ? 2 : 1
     const raw = rollShotDamage(result, me.l.shipMinDamage, me.l.totalPower, me.l.damagePct)
-    const dmg = Math.floor(raw * volleyMult * me.l.classDamageMult * itemMult * foe.l.incomingDamageMult * dodgeMult)
+    let dmg = Math.floor(raw * volleyMult * me.l.classDamageMult * itemMult * foe.l.incomingDamageMult * dodgeMult)
+
+    // Brace (Anchor): soak the next incoming hit. Crits bypass unless the
+    // brace is the Lv 100 crit-absorbing tier. Consumed on use.
+    let braced = false
+    if (dmg > 0 && foeFx.anchorPct > 0 && (!crit || foeFx.anchorAbsorbsCrit)) {
+      dmg = Math.floor(dmg * (1 - foeFx.anchorPct))
+      foeFx.anchorPct = 0
+      foeFx.anchorAbsorbsCrit = false
+      braced = true
+    }
 
     foe.s.hp = Math.max(0, foe.s.hp - dmg)
 
     const verb = action === 'volley' ? 'unloads a volley' : 'fires'
     const log = dodged
       ? `${me.l.username} ${verb} — ${foe.l.username} evades!`
-      : result === 'miss'
-        ? `${me.l.username} ${verb} and misses.`
-        : `${me.l.username} ${verb} for ${dmg}${crit ? ' (critical!)' : ''}.`
+      : dodgeJammed
+        ? `${me.l.username} ${verb} for ${dmg} — ${foe.l.username}'s dodge is jammed!`
+        : result === 'miss'
+          ? `${me.l.username} ${verb} and misses.`
+          : `${me.l.username} ${verb} for ${dmg}${crit ? ' (critical!)' : ''}${braced ? ' — braced!' : ''}.`
     steps.push(snapshot({ actor: who, action, aimResult: result, damage: dmg, dodged, crit, log }))
 
     if (foe.s.hp <= 0) winner = who
   }
 
+  // Snare ticks down at round end (the round it was cast counts as turn 1).
+  fx.challenger.dodgeJammed = Math.max(0, fx.challenger.dodgeJammed - 1)
+  fx.opponent.dodgeJammed = Math.max(0, fx.opponent.dodgeJammed - 1)
+
   return {
     steps,
     challenger: sides.challenger.s,
     opponent: sides.opponent.s,
+    challengerFx: fx.challenger,
+    opponentFx: fx.opponent,
     winner,
   }
 }

@@ -9,7 +9,14 @@ import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveEffects } from '@/lib/raidItems'
 import { raidItemSlotsForTier } from '@/lib/expeditions'
-import type { BattleLoadout } from './resolver'
+import { classForSlug, CLASS_UNLOCK_LEVEL } from '@/lib/crewClasses'
+import { crewLevelFromXP } from '@/lib/crewLevel'
+import { getRepairKit, repairKitRange } from '@/lib/repairKits'
+import type { BattleLoadout, BattleCrew } from './resolver'
+
+// The duel Specials slice covers the 5 base crew classes; the legendary
+// signatures (Leviathan / Apex / Tidecaller) are deferred.
+const PVP_BASE_CLASSES = new Set(['mender', 'sharpshot', 'snare', 'anchor', 'navigator'])
 
 export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
   const stats = await getRaidPlayerStats(userId)
@@ -22,6 +29,17 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
   const effects = getActiveEffects(items)
   const prod = (type: string) => effects.filter(e => e.type === type).reduce((a, e) => a * e.value, 1)
   const sum  = (type: string) => effects.filter(e => e.type === type).reduce((a, e) => a + e.value, 0)
+
+  // Crew Specials — only base-class crew that have already unlocked their
+  // ability (Lv 10+). Capped at 6 so the chooser stays tight.
+  const crew: BattleCrew[] = stats.crewMembers
+    .map(c => ({ id: c.id, name: c.name, classId: classForSlug(c.slug), level: crewLevelFromXP(c.xp) }))
+    .filter((c): c is BattleCrew => !!c.classId && PVP_BASE_CLASSES.has(c.classId) && c.level >= CLASS_UNLOCK_LEVEL)
+    .slice(0, 6)
+
+  const kit = getRepairKit(stats.equippedRepairKit)
+  const kitRange = kit ? repairKitRange(kit, stats.totalFortune) : null
+  const repairKit = kit && kitRange ? { name: kit.name, healMin: kitRange.min, healMax: kitRange.max } : null
 
   return {
     username: stats.username ?? 'Captain',
@@ -39,6 +57,8 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
     noncritDamageMult: prod('noncrit_damage_mult'),
     incomingDamageMult: prod('incoming_damage_mult'),
     navSpeedBonusPct: sum('speed_roll_nav_pct'),
+    crew,
+    repairKit,
     // Display-only.
     characterColor: stats.characterColor,
     equippedHat: stats.equippedHat,

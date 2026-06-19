@@ -15,8 +15,15 @@ import { raidDamageProfile } from '@/lib/expeditions'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipClass } from '@/lib/shipClasses'
 import { submitBattleMove, getShipBattleState, getShipBattleSync, type ShipBattleState } from '@/app/(app)/social/shipBattleActions'
-import { lastActionOf, type BattleAction, type ShotResult, type RoundStep, type BattleLoadout } from '@/lib/shipBattle/resolver'
+import { lastActionOf, type BattleAction, type ShotResult, type RoundStep, type BattleLoadout, type BattleAbility, type BattleCrew } from '@/lib/shipBattle/resolver'
 import { GRAZE_W, HIT_W, CRIT_W, INDICATOR_SPEED, getShotResult } from '@/lib/shipBattle/aim'
+import { CLASSES, currentMilestone, type CrewClass } from '@/lib/crewClasses'
+
+// One armed free Special (crew ability or repair kit). critMult > 1 only for
+// Sharpshot (it widens the firing player's crit zone on their next shot).
+type Armed =
+  | { kind: 'crew'; crewId: number; classId: CrewClass; label: string; critMult: number }
+  | { kind: 'repair'; label: string }
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 const vibrate = (p: number | number[]) => { if (typeof navigator !== 'undefined' && 'vibrate' in navigator) { try { navigator.vibrate(p) } catch {} } }
@@ -37,7 +44,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [foeHp, setFoeHp] = useState(initial.foeHp)
   const [myCharges, setMyCharges] = useState(initial.myCharges)
   const [foeCharges, setFoeCharges] = useState(initial.foeCharges)
-  const [splat, setSplat] = useState<{ who: 'me' | 'foe'; dmg: number; crit: boolean; dodged: boolean } | null>(null)
+  const [splat, setSplat] = useState<{ who: 'me' | 'foe'; dmg: number; crit: boolean; dodged: boolean; heal?: number } | null>(null)
   const [log, setLog] = useState<{ id: number; text: string }[]>([{ id: 0, text: 'The duel begins.' }])
   const logId = useRef(1)
   const pushLog = useCallback((text: string) => setLog(prev => [...prev, { id: logId.current++, text }].slice(-24)), [])
@@ -47,6 +54,15 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [statsFor, setStatsFor] = useState<{ load: BattleLoadout; hp: number; you: boolean } | null>(null)
   const [foeOnline, setFoeOnline] = useState(false)
   const [myLastAction, setMyLastAction] = useState<BattleAction | null>(lastActionOf(initial.rounds, initial.side))
+  // ── Specials slice — spent state, armed slot, chooser, Sharpshot aim widen ──
+  const [myFx, setMyFx] = useState(initial.myFx)
+  const [armed, setArmedState] = useState<Armed | null>(null)
+  const armedRef = useRef<Armed | null>(null)
+  const setArmed = useCallback((a: Armed | null) => { armedRef.current = a; setArmedState(a) }, [])
+  const [chooserOpen, setChooserOpen] = useState(false)
+  const [aimCritMult, setAimCritMult] = useState(1)
+  const critMultRef = useRef(1)
+  const hasSpecials = (me.crew?.length ?? 0) > 0 || !!me.repairKit
   // Highest round NUMBER animated (not array length — the rounds log is tail-
   // capped server-side, so length isn't monotonic).
   const playedRef = useRef(initial.round - 1)
@@ -85,6 +101,15 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         const targetFoeHp = isChallenger ? s.opponentHp : s.challengerHp
         const targetMyCh = isChallenger ? s.challengerCharges : s.opponentCharges
         const targetFoeCh = isChallenger ? s.opponentCharges : s.challengerCharges
+        if (s.ability) {
+          // Free Special cast — gentle beat, green heal splat if it healed.
+          if (s.heal && s.heal > 0) setSplat({ who: actorIsMe ? 'me' : 'foe', dmg: 0, crit: false, dodged: false, heal: s.heal })
+          setMyHp(targetMyHp); setFoeHp(targetFoeHp); setMyCharges(targetMyCh); setFoeCharges(targetFoeCh)
+          await sleep(700)
+          setSplat(null)
+          await sleep(150)
+          continue
+        }
         if (s.action === 'fire' || s.action === 'volley') {
           // Firing ship recoils immediately; the impact lands a beat later.
           ;(actorIsMe ? myShip : foeShip).start(RECOIL)
@@ -111,6 +136,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     // were tail-capped and we couldn't animate every step.
     playedRef.current = Math.max(playedRef.current, state.round - 1)
     setMyHp(state.myHp); setFoeHp(state.foeHp); setMyCharges(state.myCharges); setFoeCharges(state.foeCharges)
+    setMyFx(state.myFx)
     setMyLastAction(lastActionOf(state.rounds, mySide))
     if (state.status !== 'active') {
       setStatus(state.status); setIWon(state.iWon); setPhase('over')
@@ -146,10 +172,23 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
 
   async function submit(action: BattleAction, aimResult?: ShotResult) {
     if (busy) return
+    // Resolve the armed free Special. Sharpshot only rides a fired shot; on a
+    // reload/dodge it stays armed for a later turn. Others ride any action.
+    const a = armedRef.current
+    let ability: BattleAbility | undefined
+    if (a?.kind === 'repair') ability = { kind: 'repair' }
+    else if (a?.kind === 'crew' && !(a.classId === 'sharpshot' && action !== 'fire' && action !== 'volley')) ability = { kind: 'crew', crewId: a.crewId }
+
     setBusy(true)
-    const res = await submitBattleMove(id, action, aimResult)
+    const res = await submitBattleMove(id, action, aimResult, ability)
     setBusy(false)
     if ('error' in res) { pushLog(res.error); return }
+    if (ability) {
+      // Optimistically spend it (server-confirmed on the next resolve).
+      if (ability.kind === 'repair') { setMyFx(f => ({ ...f, usedRepair: true })) }
+      else { const crewId = ability.crewId; setMyFx(f => ({ ...f, used: [...f.used, crewId] })) }
+      setArmed(null)
+    }
     const s = await getShipBattleState(id)
     if ('error' in s) return
     if (s.rounds.some(r => r.round > playedRef.current)) await animateFrom(s)
@@ -183,7 +222,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
       if (zoneRef.current <= HIT_W + GRAZE_W) { zoneRef.current = HIT_W + GRAZE_W; zoneDir.current = 1 }
       if (indicatorEl.current) {
         indicatorEl.current.style.left = `calc(${fireRef.current * 100}% - 2px)`
-        const z = getShotResult(fireRef.current, zoneRef.current)
+        const z = getShotResult(fireRef.current, zoneRef.current, critMultRef.current)
         indicatorEl.current.style.background = z === 'critical' ? '#fbbf24' : z === 'hit' ? '#4ade80' : z === 'graze' ? '#94a3b8' : '#fff'
       }
       if (zoneElRef.current) {
@@ -199,7 +238,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   function lock() {
     if (phase !== 'aiming' || freezeRef.current || !pendingAction) return
     freezeRef.current = true // WYSIWYG: judge the frozen frame
-    const res = getShotResult(fireRef.current, zoneRef.current)
+    const res = getShotResult(fireRef.current, zoneRef.current, critMultRef.current)
     const action = pendingAction
     setPendingAction(null)
     pushLog(`You ${action === 'volley' ? 'load a volley' : 'fire'} — ${res === 'miss' ? 'a miss' : res === 'critical' ? 'CRITICAL aim!' : res}.`)
@@ -213,7 +252,17 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
 
   const myTurn = phase === 'await_input'
   const canFire = myCharges >= 1, canVolley = myCharges >= 3
-  const critBandPct = (CRIT_W / (HIT_W + GRAZE_W)) * 100
+  const critBandPct = (CRIT_W * aimCritMult / (HIT_W + GRAZE_W)) * 100
+
+  // Enter the aim phase, applying the Sharpshot crit-zone widen if armed.
+  const beginAim = (action: 'fire' | 'volley') => {
+    const a = armedRef.current
+    const mult = a?.kind === 'crew' && a.classId === 'sharpshot' ? a.critMult : 1
+    critMultRef.current = mult
+    setAimCritMult(mult)
+    setPendingAction(action)
+    setPhase('aiming')
+  }
 
   return (
     <main className="min-h-screen pb-20" style={{ maxWidth: 520, margin: '0 auto', position: 'relative' }}>
@@ -235,6 +284,12 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
       {/* Tap-a-ship stats popup */}
       <AnimatePresence>
         {statsFor && <StatsPopup info={statsFor} onClose={() => setStatsFor(null)} />}
+      </AnimatePresence>
+
+      {/* Specials chooser */}
+      <AnimatePresence>
+        {chooserOpen && <SpecialChooser crew={me.crew ?? []} repairKit={me.repairKit ?? null} myFx={myFx}
+          onPick={(a) => { setArmed(a); setChooserOpen(false) }} onClose={() => setChooserOpen(false)} />}
       </AnimatePresence>
 
       <div className="px-4 pt-4">
@@ -290,12 +345,30 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
             </motion.button>
           </>
         ) : myTurn ? (
-          <div className="grid grid-cols-2 gap-2">
-            <ActionBtn label="Reload" sub="+1 charge" color="#60a5fa" disabled={busy || myCharges >= 3} onClick={() => submit('reload')} />
-            <ActionBtn label="Dodge" sub={myLastAction === 'dodge' ? 'on cooldown' : 'evade their shot'} color="#a78bfa" disabled={busy || myLastAction === 'dodge'} onClick={() => submit('dodge')} />
-            <ActionBtn label="Fire" sub={canFire ? 'aim · 1 charge' : 'no charge'} color="#f0c040" disabled={busy || !canFire} onClick={() => { setPendingAction('fire'); setPhase('aiming') }} />
-            <ActionBtn label="Volley" sub={canVolley ? 'aim · 3 · 2×' : 'need 3'} color="#fb923c" disabled={busy || !canVolley} onClick={() => { setPendingAction('volley'); setPhase('aiming') }} />
-          </div>
+          <>
+            {hasSpecials && (
+              <div className="flex items-center gap-2 mb-2">
+                {armed ? (
+                  <div className="flex items-center gap-2 flex-1" style={{ minWidth: 0, background: 'rgba(94,234,212,0.1)', border: '1px solid rgba(94,234,212,0.4)', borderRadius: 12, padding: '0.5rem 0.7rem' }}>
+                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.1em', color: '#5eead4' }}>Special</span>
+                    <span className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color: '#d6fff7' }}>{armed.label}</span>
+                    <button onClick={() => setArmed(null)} className="ml-auto font-karla font-700" style={{ fontSize: '0.9rem', color: '#7fcabb', lineHeight: 1, padding: '0 0.2rem' }} aria-label="Clear special">✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setChooserOpen(true)} disabled={busy} className="font-karla font-700 uppercase tracking-[0.1em] flex items-center justify-center gap-1.5 flex-1"
+                    style={{ padding: '0.55rem', borderRadius: 12, background: 'linear-gradient(180deg, rgba(94,234,212,0.16), rgba(94,234,212,0.07))', border: '1px solid rgba(94,234,212,0.4)', color: '#5eead4', fontSize: '0.66rem', cursor: 'pointer' }}>
+                    <span style={{ fontSize: '0.85rem', lineHeight: 1 }}>✦</span> Specials
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <ActionBtn label="Reload" sub="+1 charge" color="#60a5fa" disabled={busy || myCharges >= 3} onClick={() => submit('reload')} />
+              <ActionBtn label="Dodge" sub={myLastAction === 'dodge' ? 'on cooldown' : 'evade their shot'} color="#a78bfa" disabled={busy || myLastAction === 'dodge'} onClick={() => submit('dodge')} />
+              <ActionBtn label="Fire" sub={canFire ? (armed?.kind === 'crew' && armed.critMult > 1 ? 'aim · wide crit' : 'aim · 1 charge') : 'no charge'} color="#f0c040" disabled={busy || !canFire} onClick={() => beginAim('fire')} />
+              <ActionBtn label="Volley" sub={canVolley ? 'aim · 3 · 2×' : 'need 3'} color="#fb923c" disabled={busy || !canVolley} onClick={() => beginAim('volley')} />
+            </div>
+          </>
         ) : null}
       </div>
     </main>
@@ -322,7 +395,7 @@ function LogBox({ lines }: { lines: { id: number; text: string }[] }) {
 function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, online }: {
   load: BattleLoadout; you?: boolean; hp: number; charges: number; accent: string; top?: boolean
   ctrl: ReturnType<typeof useAnimation>
-  splat: { dmg: number; crit: boolean; dodged: boolean } | null
+  splat: { dmg: number; crit: boolean; dodged: boolean; heal?: number } | null
   onTap: () => void
   online?: boolean
 }) {
@@ -356,16 +429,16 @@ function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, on
             {/* Damage splat — large, centered ON the ship, like the raid hitsplats. */}
             <AnimatePresence>
               {splat && (
-                <motion.div key={`${splat.dmg}-${splat.crit}-${splat.dodged}`}
+                <motion.div key={`${splat.dmg}-${splat.crit}-${splat.dodged}-${splat.heal ?? 0}`}
                   initial={{ opacity: 0, scale: 0.5, y: 4 }} animate={{ opacity: 1, scale: 1, y: -8 }} exit={{ opacity: 0, scale: 1.25, y: -16 }}
                   transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                   className="font-cinzel font-700"
                   style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 3,
-                    fontSize: splat.dodged ? '1.05rem' : splat.crit ? '2.1rem' : '1.6rem',
-                    color: splat.dodged ? '#cbd5e1' : splat.crit ? '#fde047' : '#ffffff',
-                    WebkitTextStroke: splat.dodged ? undefined : '1.5px rgba(150,12,12,0.95)',
+                    fontSize: splat.heal ? '1.5rem' : splat.dodged ? '1.05rem' : splat.crit ? '2.1rem' : '1.6rem',
+                    color: splat.heal ? '#4ade80' : splat.dodged ? '#cbd5e1' : splat.crit ? '#fde047' : '#ffffff',
+                    WebkitTextStroke: splat.heal ? '1.5px rgba(6,78,38,0.9)' : splat.dodged ? undefined : '1.5px rgba(150,12,12,0.95)',
                     textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 14px rgba(0,0,0,0.6)' }}>
-                  {splat.dodged ? 'MISS' : `-${splat.dmg}${splat.crit ? '!' : ''}`}
+                  {splat.heal ? `+${splat.heal}` : splat.dodged ? 'MISS' : `-${splat.dmg}${splat.crit ? '!' : ''}`}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -455,6 +528,74 @@ function StatsPopup({ info, onClose }: { info: { load: BattleLoadout; hp: number
             </div>
           </div>
         )}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// Crew Specials + repair-kit chooser — mirrors the raid Special picker. Tap a
+// card to ARM it; it fires on your next move (free, once per duel). Sharpshot
+// only rides a shot; the rest ride any action.
+function SpecialChooser({ crew, repairKit, myFx, onPick, onClose }: {
+  crew: BattleCrew[]
+  repairKit: { name: string; healMin: number; healMax: number } | null
+  myFx: { used: number[]; usedRepair: boolean }
+  onPick: (a: Armed) => void
+  onClose: () => void
+}) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 92, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem' }}>
+      <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+        style={{ width: '100%', maxWidth: 460, background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)', border: '1px solid rgba(94,234,212,0.22)', borderRadius: 20, padding: '1rem', boxShadow: '0 18px 60px rgba(0,0,0,0.6)', maxHeight: 'calc(100dvh - 5rem)', overflowY: 'auto' }}>
+        <div className="flex items-center justify-between mb-2.5">
+          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#d6fff7' }}>Crew Specials</p>
+          <button onClick={onClose} className="font-karla font-700" style={{ fontSize: '1.1rem', color: '#7fcabb', lineHeight: 1 }} aria-label="Close">✕</button>
+        </div>
+        <p className="font-karla font-400 mb-3" style={{ fontSize: '0.64rem', color: '#7a8aa0', lineHeight: 1.4 }}>One free Special per round, once each per duel. It fires alongside your move.</p>
+
+        <div className="flex flex-col gap-2">
+          {crew.map(c => {
+            const def = CLASSES[c.classId]
+            const m = currentMilestone(def, c.level)
+            const spent = myFx.used.includes(c.id)
+            const critMult = m && 'critZoneMultiplier' in m ? 1 + m.critZoneMultiplier : 1
+            return (
+              <button key={c.id} disabled={spent || !m}
+                onClick={() => m && onPick({ kind: 'crew', crewId: c.id, classId: c.classId, label: def.shortLabel, critMult })}
+                className="text-left flex items-center gap-3"
+                style={{ background: spent ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)', border: `1px solid ${spent ? 'rgba(255,255,255,0.08)' : def.color + '4d'}`, borderRadius: 12, padding: '0.6rem 0.75rem', cursor: spent ? 'default' : 'pointer', opacity: spent ? 0.5 : 1 }}>
+                <span style={{ fontSize: '1.35rem', lineHeight: 1, flexShrink: 0, filter: spent ? 'grayscale(1)' : 'none' }}>{def.emoji}</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.84rem', color: '#f0ede8' }}>{c.name}</p>
+                    <span className="font-karla font-700 uppercase flex-shrink-0" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: def.color, background: def.color + '1f', borderRadius: 999, padding: '0.08rem 0.4rem' }}>{def.shortLabel}</span>
+                  </div>
+                  <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9aa3b2', lineHeight: 1.35, marginTop: 1 }}>{m?.desc ?? 'Locked.'}</p>
+                </div>
+                {spent && <span className="font-karla font-700 uppercase flex-shrink-0" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#6a6764' }}>Spent</span>}
+              </button>
+            )
+          })}
+
+          {repairKit && (
+            <button disabled={myFx.usedRepair}
+              onClick={() => onPick({ kind: 'repair', label: 'Repair Kit' })}
+              className="text-left flex items-center gap-3"
+              style={{ background: myFx.usedRepair ? 'rgba(255,255,255,0.02)' : 'rgba(74,222,128,0.06)', border: `1px solid ${myFx.usedRepair ? 'rgba(255,255,255,0.08)' : 'rgba(74,222,128,0.4)'}`, borderRadius: 12, padding: '0.6rem 0.75rem', cursor: myFx.usedRepair ? 'default' : 'pointer', opacity: myFx.usedRepair ? 0.5 : 1 }}>
+              <span style={{ fontSize: '1.35rem', lineHeight: 1, flexShrink: 0, filter: myFx.usedRepair ? 'grayscale(1)' : 'none' }}>🛠️</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.84rem', color: '#f0ede8' }}>{repairKit.name}</p>
+                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#9aa3b2', lineHeight: 1.35, marginTop: 1 }}>Patch the hull for {repairKit.healMin}–{repairKit.healMax} HP. Once per duel.</p>
+              </div>
+              {myFx.usedRepair && <span className="font-karla font-700 uppercase flex-shrink-0" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#6a6764' }}>Spent</span>}
+            </button>
+          )}
+
+          {crew.length === 0 && !repairKit && (
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.7rem', color: '#7a8aa0', padding: '0.5rem 0' }}>No Specials available. Level crew to 10+ to unlock their ability.</p>
+          )}
+        </div>
       </motion.div>
     </motion.div>
   )
