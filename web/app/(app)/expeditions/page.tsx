@@ -68,6 +68,7 @@ async function ShipHeroSection() {
       ownedRaidItems={(profile?.raid_items as string[] | null) ?? []}
       equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
       equippedRepairKit={(profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit'}
+      ownedRepairKits={(profile?.owned_repair_kits as string[] | null) ?? ['basic_repair_kit']}
       raidRepairOwed={profile?.raid_repair_owed ?? 0}
       doubloons={profile?.doubloons ?? 0}
       shipClasses={(profile?.ship_classes as Record<string, string> | null) ?? {}}

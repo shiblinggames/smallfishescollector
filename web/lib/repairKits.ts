@@ -1,18 +1,25 @@
 // Ship Repair Kits — per-battle consumable healing used from the
 // Special action button. Distinct from `raid_items`: single-equip,
-// consumed once per battle, everyone owns the Basic kit by default,
-// and upgrades will be granted later. Heal range is `[baseMin,
-// baseMax + floor(totalFortune * FORTUNE_HEAL_SCALE)]`, so the kit
-// sets the floor + base ceiling and Fortune luck-scales the ceiling.
+// consumed once per battle, everyone owns the Basic kit by default.
+// Upgrades are a doubloon-bought, Nav-gated ladder (buy in tier order).
+// Heal range is `[baseMin, baseMax + floor(totalFortune *
+// FORTUNE_HEAL_SCALE)]`, so the kit sets the floor + base ceiling and
+// Fortune luck-scales the ceiling.
 
 export interface RepairKitDef {
   id: string
+  /** Upgrade-ladder position. Kits must be bought in tier order. */
+  tier: number
   name: string
   description: string
   /** Roll floor — heals never drop below this. */
   baseMin: number
   /** Base ceiling before Fortune adds to it. */
   baseMax: number
+  /** Doubloons to buy. 0 = granted free (the Basic kit). */
+  cost: number
+  /** Nav level required to buy. 0 = no gate. */
+  navLevelReq: number
   emoji: string
   image: string | null
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
@@ -26,23 +33,82 @@ export const FORTUNE_HEAL_SCALE = 0.25
 
 export const BASIC_REPAIR_KIT_ID = 'basic_repair_kit'
 
+// ── Upgrade ladder ───────────────────────────────────────────────────────────
+// Doubloon-bought, in tier order, each gated behind a Nav level so kit power
+// tracks expedition progress (and can't be rushed straight to the top). Heals
+// are flat HP (Fortune scales the ceiling via repairKitRange) and tuned against
+// endgame hulls (Brigantine 60 → Man-o-War 125 durability): Basic is a token
+// patch, the Drydock Kit mends roughly half a Galleon. Consumed once per battle
+// from the Special action.
 export const REPAIR_KITS: RepairKitDef[] = [
   {
     id: BASIC_REPAIR_KIT_ID,
+    tier: 0,
     name: 'Basic Repair Kit',
-    description: 'Hammer, nails, a roll of pitch. Patches the hull for 1 to 10 HP, more with Fortune. Once per battle.',
+    description: 'Hammer, nails, a roll of pitch. The patch every captain learns to make. Once per battle.',
     baseMin: 1,
     baseMax: 10,
+    cost: 0,
+    navLevelReq: 0,
     emoji: '🛠️',
     image: '/basicrepair.png',
     rarity: 'common',
     source: 'Every captain starts with one.',
+  },
+  {
+    id: 'reinforced_repair_kit',
+    tier: 1,
+    name: 'Reinforced Repair Kit',
+    description: 'Bolted iron plates and tar-soaked canvas. Holds a hull together far better than nails alone. Once per battle.',
+    baseMin: 8,
+    baseMax: 20,
+    cost: 6_000,
+    navLevelReq: 8,
+    emoji: '🛠️',
+    image: null,
+    rarity: 'uncommon',
+    source: 'Bought at the shipyard.',
+  },
+  {
+    id: 'shipwrights_kit',
+    tier: 2,
+    name: 'Shipwright’s Kit',
+    description: 'A master shipwright’s satchel of clamps, oakum and copper sheeting. Serious repairs in the thick of a fight. Once per battle.',
+    baseMin: 16,
+    baseMax: 36,
+    cost: 24_000,
+    navLevelReq: 18,
+    emoji: '🛠️',
+    image: null,
+    rarity: 'rare',
+    source: 'Bought at the shipyard.',
+  },
+  {
+    id: 'drydock_kit',
+    tier: 3,
+    name: 'Drydock Kit',
+    description: 'A full drydock’s worth of timber and iron, somehow crammed into a chest. Rebuilds a shattered hull on the open sea. Once per battle.',
+    baseMin: 30,
+    baseMax: 60,
+    cost: 75_000,
+    navLevelReq: 30,
+    emoji: '🛠️',
+    image: null,
+    rarity: 'epic',
+    source: 'Bought at the shipyard.',
   },
 ]
 
 export function getRepairKit(id: string | null | undefined): RepairKitDef | undefined {
   if (!id) return undefined
   return REPAIR_KITS.find(k => k.id === id)
+}
+
+/** The next kit on the upgrade path — lowest tier the player doesn't own yet.
+ *  Returns undefined once every kit is owned. */
+export function nextRepairKit(owned: string[] | null | undefined): RepairKitDef | undefined {
+  const have = new Set(owned ?? [])
+  return [...REPAIR_KITS].sort((a, b) => a.tier - b.tier).find(k => !have.has(k.id))
 }
 
 /** Resolve the effective heal range for a kit given the player's
