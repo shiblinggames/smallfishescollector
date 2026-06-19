@@ -1192,7 +1192,7 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, isShiny = false }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, isShiny = false }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1203,6 +1203,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   perfectStreak?: number
   streakBonusXP?: number
   jackpotMultiplier?: number
+  perfectXpMult?: number
   ancientCount?: number
   ancientTotal?: number
   // ── Per-catch size variance (lib/fishSize) ──
@@ -1487,6 +1488,27 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               </div>
             )
           })()}
+
+          {/* Perfect Rod — ×N XP callout so the doubled-XP bonus is visible
+              (only shows on a Perfect, which is the only time it applies). */}
+          {isPerfect && perfectXpMult > 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+              className="font-karla font-700 uppercase"
+              style={{
+                background: 'linear-gradient(180deg, rgba(147,197,253,0.22) 0%, rgba(147,197,253,0.06) 100%), #0a1020',
+                border: '1px solid rgba(147,197,253,0.5)',
+                borderTop: '1px solid rgba(147,197,253,0.8)',
+                borderRadius: 999, padding: '0.36rem 0.72rem', fontSize: '0.62rem',
+                letterSpacing: '0.12em', color: '#bfe3ff',
+                display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                boxShadow: '0 0 12px rgba(147,197,253,0.28)',
+              }}
+            >
+              ×{perfectXpMult} XP
+            </motion.div>
+          )}
 
           {doubleCatch && (
             <motion.div
@@ -3365,6 +3387,9 @@ export default function FishingGame({
     perfectStreak: number
     streakBonusXP: number
     jackpotMultiplier?: number
+    /** Perfect Rod — the perfect-XP multiplier that applied (>1 shows a
+     *  "×N XP" pill on the result card). */
+    perfectXpMult?: number
     // Per-catch size (lib/fishSize). Ancients have sizeIn but no min/max/tier.
     sizeIn: number
     sizeMin?: number
@@ -3498,6 +3523,9 @@ export default function FishingGame({
     void persistShowWaitTimer(next).catch(() => { /* best-effort */ })
   }
   const [retryFlash, setRetryFlash] = useState(false)
+  // Lightsaber "Lightspeed" — brief red blade-flash cue when a near-instant
+  // bite fires (server sets res.instantBite). Cleared on a timer.
+  const [instantBiteFlash, setInstantBiteFlash] = useState(false)
   const [missResult, setMissResult] = useState<ZoneType | null>(null)
 
   // Fresh-catch hook — pulses the header Logbook button (top right) for
@@ -4207,6 +4235,12 @@ export default function FishingGame({
 
       setHookedFish({ fishId: res.fishId, catchDifficulty: res.catchDifficulty, biteRarity: res.biteRarity, crateTier: res.crateTier })
 
+      // Lightsaber Lightspeed cue — the blade flashed the fish onto the line.
+      if (res.instantBite) {
+        setInstantBiteFlash(true)
+        setTimeout(() => setInstantBiteFlash(false), 1100)
+      }
+
       // Decode-ahead: fetch + decode the result card's fish art NOW, off
       // the main thread, while the player is watching the hooked beat and
       // spinning the dial. Without this the image loads when the result
@@ -4896,6 +4930,7 @@ export default function FishingGame({
           perfectStreak: res.perfectStreak ?? perfectStreak,
           streakBonusXP: res.streakBonusXP ?? 0,
           jackpotMultiplier: jackpotHit && actualQty > 1 ? actualQty : undefined,
+          perfectXpMult: wasPerfect ? (rod.perfectXpMult ?? 1) : 1,
           sizeIn: res.sizeIn,
           sizeMin: res.sizeMin,
           sizeMax: res.sizeMax,
@@ -6598,6 +6633,7 @@ export default function FishingGame({
                       perfectStreak={catchResult.perfectStreak}
                       streakBonusXP={catchResult.streakBonusXP}
                       jackpotMultiplier={catchResult.jackpotMultiplier}
+                      perfectXpMult={catchResult.perfectXpMult}
                       ancientCount={trophyCatches.size}
                       ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6}
                       sizeIn={catchResult.sizeIn}
@@ -6656,6 +6692,35 @@ export default function FishingGame({
 
             </AnimatePresence>
 
+            {/* Lightsaber "Lightspeed" cue — a brief red blade-flash pill when
+                a near-instant bite fires. Localized at the top of the stage so
+                it reads as the rod's doing without a screen-wide flash. The
+                steady x:-50% keeps it centred while opacity/scale animate. */}
+            <AnimatePresence>
+              {instantBiteFlash && (
+                <motion.div
+                  key="instant-bite"
+                  initial={{ opacity: 0, scale: 0.7, x: '-50%' }}
+                  animate={{ opacity: 1, scale: 1, x: '-50%' }}
+                  exit={{ opacity: 0, scale: 0.9, x: '-50%' }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                  style={{
+                    position: 'absolute', top: 14, left: '50%', zIndex: 30, pointerEvents: 'none',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '0.32rem 0.72rem', borderRadius: 999,
+                    background: 'linear-gradient(180deg, rgba(255,59,71,0.32) 0%, rgba(224,0,34,0.18) 100%)',
+                    border: '1px solid rgba(255,90,100,0.7)',
+                    boxShadow: '0 0 18px rgba(255,40,60,0.5), inset 0 0 8px rgba(255,255,255,0.22)',
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden style={{ filter: 'drop-shadow(0 0 4px #ff3344)' }}>
+                    <path d="M13 2L3 14h7l-1 8 11-13h-7z" />
+                  </svg>
+                  <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#fff', textShadow: '0 0 8px rgba(255,60,70,0.85)' }}>Instant Bite</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* HOOKED banner — its OWN AnimatePresence, absolutely overlaid
                 so its enter/exit is fully independent of the catching
                 transition. Was producing a ghost re-render of the bite text
@@ -6698,6 +6763,15 @@ export default function FishingGame({
                       <p className="font-karla font-400" style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.65)' }}>
                         Something heavy... and square?
                       </p>
+                      {/* Treasure Rod — flag that the rod boosted this find. */}
+                      {(rod.crateChanceMult ?? 1) > 1 && (
+                        <div className="flex items-center justify-center gap-1.5" style={{ marginTop: 7 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e8b54a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ filter: 'drop-shadow(0 0 4px rgba(232,181,74,0.6))' }}>
+                            <rect x="3" y="8" width="18" height="12" rx="1.5" /><path d="M3 12h18M12 8v12" /><path d="M8 8V6a4 4 0 0 1 8 0v2" />
+                          </svg>
+                          <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#e8b54a', textShadow: '0 0 8px rgba(232,181,74,0.5)' }}>Treasure Rod find</span>
+                        </div>
+                      )}
                       <div style={{
                         position: 'absolute', bottom: -7, left: '50%',
                         transform: 'translateX(-50%) rotate(45deg)',

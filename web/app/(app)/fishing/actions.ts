@@ -165,7 +165,7 @@ function rollCrateTier(habitat: string): CrateTier {
 }
 
 export async function castLine(baitType: string, habitat: string): Promise<
-  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number }
+  | { fishId: number; catchDifficulty: number; biteRarity: number; waitMs: number; crateTier?: CrateTier; baitRemaining?: number; instantBite?: boolean }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -286,12 +286,15 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
   // the only rod stat that actually changes the bite wait (biteIntervalMs is
-  // display-only), so the fast-bite fantasy is real, not cosmetic.
+  // display-only), so the fast-bite fantasy is real, not cosmetic. The flag
+  // drives the red blade-flash cue client-side so the player feels it land.
+  let instantBite = false
   if ((rod.instantBiteChance ?? 0) > 0 && Math.random() < rod.instantBiteChance!) {
     waitMs = Math.min(waitMs, 700)
+    instantBite = true
   }
 
-  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined }
+  return { fishId: fish.id, catchDifficulty: fish.catch_difficulty, biteRarity: fish.bite_rarity, waitMs, baitRemaining: !noBait && baitRow ? baitRow.quantity - 1 : undefined, instantBite }
 }
 
 const CRATE_FISH_ID = -1
