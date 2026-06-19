@@ -16,9 +16,9 @@ const ACCENT = '#f0c040'
 
 export default function ShipDuels({ battles, wins, losses, friends }: { battles: ShipBattleSummary[]; wins: number; losses: number; friends: CrewMember[] }) {
   const router = useRouter()
-  const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const incoming = battles.filter(b => b.status === 'pending' && !b.isChallenger)
@@ -34,7 +34,7 @@ export default function ShipDuels({ battles, wins, losses, friends }: { battles:
     startTransition(async () => {
       const res = await createShipBattle(username.trim())
       if ('error' in res) { setError(res.error); return }
-      setName('')
+      setPickerOpen(false)
       router.refresh()
     })
   }
@@ -81,33 +81,21 @@ export default function ShipDuels({ battles, wins, losses, friends }: { battles:
         </div>
       )}
 
-      {/* Challenge a friend */}
-      <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#7a7774', marginBottom: 6 }}>Challenge a captain</p>
-      {challengeable.length > 0 ? (
-        <div className="flex flex-col gap-1.5 mb-2">
-          {challengeable.slice(0, 6).map(f => (
-            <div key={f.username} className="flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.4rem 0.55rem' }}>
-              <CharacterAvatar characterColor={f.characterColor} equippedHat={f.equippedHat} size={26} ringColor={f.avatarBorder ?? undefined} bgColor={f.avatarBg ?? undefined} />
-              <p className="font-cinzel font-700 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.82rem', color: '#f0ede8' }}>{f.username}</p>
-              <SmallBtn label="Challenge" color={ACCENT} disabled={pending} onClick={() => challenge(f.username)} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#6a6764', marginBottom: 6 }}>Follow captains on the Crew page to quick-challenge them, or call one out by name.</p>
-      )}
+      {/* One compact button — the picker (search + scrollable friend list)
+          opens in a modal so the section never grows with the friend count. */}
+      <motion.button onClick={() => { setError(null); setPickerOpen(true) }} whileTap={{ scale: 0.98 }}
+        className="font-karla font-700 uppercase tracking-[0.1em] w-full flex items-center justify-center gap-2"
+        style={{ padding: '0.6rem', borderRadius: 11, background: `linear-gradient(180deg, ${ACCENT}24, ${ACCENT}10)`, border: `1px solid ${ACCENT}55`, color: ACCENT, fontSize: '0.68rem', cursor: 'pointer' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        Challenge a Captain
+      </motion.button>
+      {error && !pickerOpen && <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#f87171', marginTop: 6 }}>{error}</p>}
 
-      {/* Search by name */}
-      <div className="flex gap-2">
-        <input value={name} onChange={e => { setName(e.target.value); setError(null) }} onKeyDown={e => e.key === 'Enter' && challenge(name)}
-          placeholder="…or challenge by name" spellCheck={false}
-          className="font-karla font-600" style={{ flex: 1, minWidth: 0, padding: '0.5rem 0.7rem', borderRadius: 10, background: 'rgba(4,7,12,0.7)', border: '1px solid rgba(255,255,255,0.14)', color: '#f0ede8', fontSize: '0.78rem', outline: 'none' }} />
-        <motion.button onClick={() => challenge(name)} disabled={pending || !name.trim()} whileTap={pending || !name.trim() ? undefined : { scale: 0.96 }}
-          className="font-karla font-700 uppercase tracking-[0.08em]" style={{ padding: '0.5rem 0.9rem', borderRadius: 10, background: name.trim() ? `linear-gradient(180deg, ${ACCENT}2c, ${ACCENT}14)` : 'rgba(255,255,255,0.05)', border: `1px solid ${name.trim() ? `${ACCENT}5a` : 'rgba(255,255,255,0.12)'}`, color: name.trim() ? ACCENT : '#6a6764', fontSize: '0.62rem', cursor: pending || !name.trim() ? 'default' : 'pointer' }}>
-          {pending ? '…' : 'Go'}
-        </motion.button>
-      </div>
-      {error && <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#f87171', marginTop: 6 }}>{error}</p>}
+      <AnimatePresence>
+        {pickerOpen && (
+          <ChallengePicker friends={challengeable} pending={pending} error={error} onPick={challenge} onClose={() => { setPickerOpen(false); setError(null) }} />
+        )}
+      </AnimatePresence>
 
       {/* Record & history — collapsible, so it never grows into a wall of rows */}
       {results.length > 0 && (
@@ -131,6 +119,52 @@ export default function ShipDuels({ battles, wins, losses, friends }: { battles:
         </div>
       )}
     </div>
+  )
+}
+
+function ChallengePicker({ friends, pending, error, onPick, onClose }: {
+  friends: CrewMember[]; pending: boolean; error: string | null; onPick: (username: string) => void; onClose: () => void
+}) {
+  const [q, setQ] = useState('')
+  const query = q.trim().toLowerCase()
+  const shown = query ? friends.filter(f => f.username.toLowerCase().includes(query)) : friends
+  // Let the typed name be challenged directly even if they aren't in your crew.
+  const exactInList = friends.some(f => f.username.toLowerCase() === query)
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+      <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }}
+        style={{ width: '100%', maxWidth: 380, background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)', border: `1px solid ${ACCENT}33`, borderRadius: 18, padding: '1rem', boxShadow: '0 18px 60px rgba(0,0,0,0.55)' }}>
+        <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8', marginBottom: 10 }}>Challenge a Captain</p>
+        <input autoFocus value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && query && !exactInList) onPick(q.trim()) }}
+          placeholder="Search your crew or type a name" spellCheck={false}
+          className="font-karla font-600" style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: 10, background: 'rgba(4,7,12,0.7)', border: '1px solid rgba(255,255,255,0.14)', color: '#f0ede8', fontSize: '0.82rem', outline: 'none', marginBottom: 10 }} />
+
+        <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {/* Direct "challenge this exact name" option when the typed name isn't a listed friend */}
+          {query && !exactInList && (
+            <button onClick={() => onPick(q.trim())} disabled={pending} className="flex items-center gap-2"
+              style={{ background: `${ACCENT}14`, border: `1px solid ${ACCENT}44`, borderRadius: 10, padding: '0.5rem 0.6rem', cursor: pending ? 'default' : 'pointer', textAlign: 'left' }}>
+              <span style={{ width: 26, height: 26, borderRadius: '50%', background: `${ACCENT}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACCENT, fontSize: '0.8rem', flexShrink: 0 }}>@</span>
+              <p className="font-cinzel font-700 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.82rem', color: '#f0ede8' }}>Challenge “{q.trim()}”</p>
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', color: ACCENT }}>Go →</span>
+            </button>
+          )}
+          {shown.map(f => (
+            <button key={f.username} onClick={() => onPick(f.username)} disabled={pending} className="flex items-center gap-2"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.4rem 0.55rem', cursor: pending ? 'default' : 'pointer', textAlign: 'left' }}>
+              <CharacterAvatar characterColor={f.characterColor} equippedHat={f.equippedHat} size={28} ringColor={f.avatarBorder ?? undefined} bgColor={f.avatarBg ?? undefined} />
+              <p className="font-cinzel font-700 truncate" style={{ flex: 1, minWidth: 0, fontSize: '0.84rem', color: '#f0ede8' }}>{f.username}</p>
+              <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.56rem', color: ACCENT, background: `${ACCENT}1c`, border: `1px solid ${ACCENT}55`, borderRadius: 8, padding: '0.3rem 0.6rem' }}>Challenge</span>
+            </button>
+          ))}
+          {shown.length === 0 && !query && (
+            <p className="font-karla font-400 text-center" style={{ fontSize: '0.72rem', color: '#6a6764', padding: '1rem 0' }}>Follow captains on the Crew page to see them here, or type a name above.</p>
+          )}
+        </div>
+        {error && <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: '#f87171', marginTop: 8 }}>{error}</p>}
+      </motion.div>
+    </motion.div>
   )
 }
 
