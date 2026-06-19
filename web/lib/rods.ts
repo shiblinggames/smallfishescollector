@@ -1,3 +1,5 @@
+import { fishingLevelReqForCost } from './gearGating'
+
 export interface RodDef {
   tier: number
   name: string
@@ -197,6 +199,15 @@ export const RODS: RodDef[] = [
 
 export function getRod(tier: number): RodDef {
   return RODS.find(r => r.tier === tier) ?? RODS[0]
+}
+
+// ── Captain-only rods ────────────────────────────────────────────────────────
+// The top end of the catalogue (anything gated at Fishing Lv 70+, i.e. cost
+// >= 200k) is reserved for Captains. Derived from the same price→level gate as
+// everything else, so it tracks automatically as rods are added/repriced.
+export const CAPTAIN_ROD_MIN_LEVEL = 70
+export function isCaptainRod(rod: RodDef): boolean {
+  return !rod.earnedOnly && rod.cost > 0 && fishingLevelReqForCost(rod.cost) >= CAPTAIN_ROD_MIN_LEVEL
 }
 
 // ── YOLO Rod — per-zone jackpot odds ─────────────────────────────────────────

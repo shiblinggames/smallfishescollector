@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, RODS, rodGlowClass } from '@/lib/rods'
+import { getRod, RODS, rodGlowClass, isCaptainRod } from '@/lib/rods'
+import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingLevelReqForCost } from '@/lib/gearGating'
 import { getLine } from '@/lib/lines'
@@ -678,6 +679,7 @@ export default function GearScreen({
   hasTideTurner, tideTurnerSkipsLeft, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
   equippedSpecial, onEquipSpecial, onBuySpecialItem,
   fishingLevel,
+  isPremium,
   showWaitTimer,
   onToggleShowWaitTimer,
   onClose,
@@ -731,6 +733,7 @@ export default function GearScreen({
   onEquipSpecial: (itemId: string | null) => void
   onBuySpecialItem: (itemId: string) => Promise<void>
   fishingLevel: number
+  isPremium: boolean
   showWaitTimer: boolean
   onToggleShowWaitTimer: (next: boolean) => void
   onClose: () => void
@@ -1382,7 +1385,9 @@ export default function GearScreen({
                               const canAfford = doubloons >= r.cost
                               const rodReq = fishingLevelReqForCost(r.cost)
                               const rodLevelMet = fishingLevel >= rodReq
+                              const captainLocked = isCaptainRod(r) && !isPremium
                               const onTap = () => {
+                                if (captainLocked) { openMembership(); return }
                                 // Open the detail view either way — players can read
                                 // a rod's stats before they can afford it; the dialog
                                 // just shows a disabled "Need X more" CTA.
@@ -1502,8 +1507,8 @@ export default function GearScreen({
                                       gap: 2, flexShrink: 0,
                                     }}>
                                       <span className="font-karla font-700 uppercase tracking-[0.1em]"
-                                        style={{ fontSize: '0.56rem', color: !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
-                                        {!rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
+                                        style={{ fontSize: '0.56rem', color: captainLocked ? '#f0c040' : !rodLevelMet ? '#e0a44a' : canAfford ? r.color : '#f87171' }}>
+                                        {captainLocked ? '⚓ Captain only' : !rodLevelMet ? `Fishing Lv ${rodReq}` : canAfford ? 'Tap to Buy' : `Need ${need.toLocaleString()}`}
                                       </span>
                                       <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: canAfford ? '#f0c040' : '#f0c04088' }}>
                                         {r.cost.toLocaleString()} ⟡

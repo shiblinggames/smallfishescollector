@@ -8634,6 +8634,7 @@ export default function FishingGame({
               gauntletDeepest={gauntletDeepest}
               hasPerfectedSigil={hasPerfectedSigil}
               fishingLevel={fishingLevel}
+              isPremium={isPremium}
               equippedSpecial={equippedSpecial}
               onEquipSpecial={async (itemId) => {
                 setEquippedSpecial(itemId)

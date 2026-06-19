@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { HOOKS, hookGlowClass } from '@/lib/hooks'
-import { RODS, rodGlowClass } from '@/lib/rods'
+import { RODS, rodGlowClass, isCaptainRod } from '@/lib/rods'
+import { openMembership } from '@/components/MembershipModal'
 import { REELS } from '@/lib/reels'
 import { LINES } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
@@ -32,6 +33,7 @@ export default function TackleShopClient({
   doubloons: initialDoubloons,
   baitInventory: initialBait,
   fishingXP,
+  isPremium,
   uniqueSpeciesCaught,
   totalSpecies,
 }: {
@@ -43,6 +45,7 @@ export default function TackleShopClient({
   doubloons: number
   baitInventory: BaitInventoryItem[]
   fishingXP: number
+  isPremium: boolean
   uniqueSpeciesCaught: number
   totalSpecies: number
 }) {
@@ -562,6 +565,7 @@ export default function TackleShopClient({
                 const rodReq = fishingLevelReqForCost(rod.cost)
                 const rodLevelMet = fishingLevel >= rodReq
                 const rodBuyable = canAfford && rodLevelMet
+                const captainLocked = isCaptainRod(rod) && !isPremium
                 const isBuying = buyingRod === rod.tier && isPending
                 const isEquipping = equippingRod === rod.tier && isPending
                 const c = rod.color
@@ -635,7 +639,22 @@ export default function TackleShopClient({
                       </div>
 
                       <div style={{ marginTop: 'auto', paddingTop: 2 }}>
-                        {!owned && (
+                        {!owned && captainLocked ? (
+                          <motion.button
+                            onClick={openMembership}
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ type: 'spring', stiffness: 600, damping: 22 }}
+                            className="font-karla font-700 uppercase tracking-[0.08em]"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              padding: '0.5rem 0.95rem', borderRadius: 9,
+                              background: 'linear-gradient(180deg, rgba(240,192,64,0.24) 0%, rgba(196,169,106,0.11) 100%)',
+                              border: '1px solid rgba(240,192,64,0.5)', color: '#f0d695', fontSize: '0.66rem', cursor: 'pointer',
+                            }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 1 1 8 0v4"/></svg>
+                            Captain only
+                          </motion.button>
+                        ) : !owned && (
                           <motion.button
                             onClick={() => { if (rodBuyable && !isPending) handlePurchaseRod(rod.tier) }}
                             disabled={isPending}

@@ -3,10 +3,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
-import { RODS } from '@/lib/rods'
+import { RODS, isCaptainRod } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingLevelReqForCost } from '@/lib/gearGating'
+import { isPremiumActive } from '@/lib/premium'
 import { revalidatePath } from 'next/cache'
 
 export async function buyBait(
@@ -79,12 +80,13 @@ export async function purchaseRod(
   const admin = createAdminClient()
 
   const [{ data: profile }, { data: alreadyOwned }] = await Promise.all([
-    admin.from('profiles').select('doubloons, fishing_xp').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_xp, is_premium, premium_expires_at').eq('id', user.id).single(),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id).eq('rod_tier', rodTier).maybeSingle(),
   ])
 
   if (!profile) return { error: 'Profile not found' }
   if (alreadyOwned) return { error: 'Already owned' }
+  if (isCaptainRod(rod) && !isPremiumActive(profile)) return { error: `The ${rod.name} is a Captain's rod — become a Captain to wield it.` }
   const levelReq = fishingLevelReqForCost(rod.cost)
   if (getLevelFromXP(profile.fishing_xp ?? 0) < levelReq) return { error: `Reach Fishing Lv ${levelReq} to buy the ${rod.name}` }
   if (profile.doubloons < rod.cost) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
