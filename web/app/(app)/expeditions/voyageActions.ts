@@ -19,7 +19,7 @@ function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-const BASE_VOYAGE_MS = 6 * 60 * 60 * 1000 // 6 hours baseline
+const BASE_VOYAGE_MS = 3 * 60 * 60 * 1000 // 3 hours baseline (halved from 6)
 
 function computeVoyageDuration(expeditionLevel: number, totalNav: number): number {
   const levelReductionMs = 90 * Math.pow(expeditionLevel / 100, 2) * 60 * 1000
