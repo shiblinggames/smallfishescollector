@@ -2277,16 +2277,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             </motion.div>
           )}
 
-          {/* Flavor — fun fact normally, but a captain's-log style
-              shiny message on shiny catches. The shiny copy is bigger,
-              italic serif, warm cream colour, framed with quote marks
-              so it reads as a moment-of-record rather than a fact pill. */}
-          {isShiny ? (
+          {/* A captain's-log style message ONLY on shiny catches — a
+              moment-of-record. The fun fact used to show here for normal
+              catches, but nobody read it; it now lives in the collection log
+              (each fish's Captain's Note), which keeps this card compact. */}
+          {isShiny && (
             <p className="text-center" style={{
               fontFamily: 'Georgia, "Times New Roman", serif',
-              // Trimmed from 0.82rem to 0.74rem + tighter line-height so
-              // 3-line shiny messages don't push the card past the bottom
-              // of smaller phone viewports.
               fontSize: '0.74rem',
               fontStyle: 'italic',
               fontWeight: 500,
@@ -2296,10 +2293,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               textShadow: '0 0 12px rgba(245,205,110,0.25)',
             }}>
               &ldquo;{shinyMessage}&rdquo;
-            </p>
-          ) : (
-            <p className="font-karla font-400 text-center" style={{ fontSize: '0.7rem', color: '#7a7670', lineHeight: 1.4 }}>
-              {fish.fun_fact}
             </p>
           )}
         </div>
