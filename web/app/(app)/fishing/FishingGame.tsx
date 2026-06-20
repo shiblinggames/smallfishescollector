@@ -1320,7 +1320,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   // that the player called out as the best-looking gold treatment.
   const cardBg = isShiny
     ? 'radial-gradient(circle at 50% 45%, #fde68a 0%, #b45309 55%, #4a2007 100%)'
-    : 'rgba(6,16,26,0.96)'
+    : 'rgba(6,16,26,0.82)'
   // Subtle warm inset glow only around the edges — gives the gold
   // border a soft "framed" depth like polished metal catching light.
   // Kept low-alpha so it doesn't reach the centre and wash out the
@@ -1344,7 +1344,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
   )
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', width: '100%', maxWidth: 330, margin: '0 auto' }}>
 
       {/* Ancient One discovery banner */}
       {isAncient && (
@@ -1727,6 +1727,9 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             : `1px solid ${r.color}${borderOpMap[rarity] ?? '55'}`,
           borderRadius: isShiny ? '2.5rem' : undefined,
           background: cardBg,
+          // Non-shiny cards are translucent; a light frosted blur keeps the
+          // text crisp over the fishing scene behind.
+          ...(isShiny ? {} : { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }),
           position: 'relative', zIndex: 1,
           // Shiny → its own gold inset glow; everything else → the
           // rarity-tiered inset halo (replaces the prior outer halo
