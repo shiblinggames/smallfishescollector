@@ -1821,7 +1821,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               // Shiny hugs the fish — no minHeight padding, tighter
               // marginBottom — so the bigger sprite fills the card chrome
               // without empty halo space around it.
-              marginBottom: isShiny ? '0.05rem' : '0.25rem',
+              marginBottom: isShiny ? '0.05rem' : '0.1rem',
             }}
           >
             {/* DOPAMINE-SHOT v2 — layered burst sequence on entry. */}
@@ -2017,7 +2017,10 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                     // card width and stands taller as the hero art.
                     width: isShiny ? '88%' : '86%',
                     maxWidth: isShiny ? 240 : 250,
-                    height: isShiny ? 138 : 124,
+                    // Box height hugs the (wide) art so there's no dead
+                    // vertical space above/below — width is the constraint at
+                    // this size, so trimming height doesn't shrink the fish.
+                    height: isShiny ? 138 : 104,
                     objectFit: 'contain',
                     // Shiny stacks the gold filter (lib/shiny.ts) on top
                     // of a warm drop-shadow for the "hovering metal" feel.
