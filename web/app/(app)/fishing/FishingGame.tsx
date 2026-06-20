@@ -2132,18 +2132,34 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               transition={{ duration: 0.24, delay: 0.1 }}
               style={{ textAlign: 'center', marginBottom: '0.5rem' }}
             >
-              {/* Sell ⟡ flanks the length on the left, XP on the right — the
-                  three headline numbers share one line so the card stays
-                  compact. Ancients show only the length (no sale, no XP). */}
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 14 }}>
-                {!isAncient && (
-                  <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 9px rgba(240,192,64,0.3)', fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap' }}>
-                    {fish.sell_value.toLocaleString()}<span style={{ fontSize: '0.72rem', marginLeft: 2 }}>⟡</span>
+              {/* Sell ⟡ + XP are the headline row now (skipped for ancients —
+                  trophies have no sale). The catch length drops down into the
+                  range labels under the bar so it reads in the context of the
+                  species's min/max. */}
+              {!isAncient && (
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 12 }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 11px rgba(240,192,64,0.32)', fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap' }}>
+                    {fish.sell_value.toLocaleString()}<span style={{ fontSize: '0.95rem', marginLeft: 3 }}>⟡</span>
                   </span>
-                )}
+                  {xpGained > 0 && (
+                    <>
+                      <span style={{ color: '#3a3835', fontSize: '0.8rem' }}>·</span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.95rem', color: '#86efac', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                        +{xpGained} XP
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Length stands alone (centered) only when there's no range bar
+                  to host it — ancients and any fish without a real range. */}
+              {!showRange && (
                 <span
                   className="font-cinzel font-700"
                   style={{
+                    display: 'inline-block',
+                    marginTop: isAncient ? 0 : '0.35rem',
                     fontSize: '1.85rem', lineHeight: 1,
                     color: '#f0ede8',
                     textShadow: '0 0 12px rgba(255,255,255,0.18)',
@@ -2153,12 +2169,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 >
                   {formatFishLength(displaySize)}
                 </span>
-                {!isAncient && xpGained > 0 && (
-                  <span className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#86efac', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                    +{xpGained} XP
-                  </span>
-                )}
-              </div>
+              )}
 
               {/* Range bar — only when there's a real range. Slim track with
                   a glowing needle at the catch's percentile. Labels at the
@@ -2189,11 +2200,13 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                       }}
                     />
                   </div>
-                  {/* End-of-range labels only. Tier label is redundant with
-                      the colored pill above + the needle's own tier color. */}
-                  <div className="flex justify-between" style={{ marginTop: 4, fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-                    <span>{formatFishLength(sizeMin!)}</span>
-                    <span>{formatFishLength(sizeMax!)}</span>
+                  {/* Min — the caught length (the hero, brighter & larger) —
+                      max. Putting the catch between its bounds, right under
+                      the needle, reads in context of where it landed. */}
+                  <div className="flex justify-between items-baseline" style={{ marginTop: 5 }}>
+                    <span style={{ fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{formatFishLength(sizeMin!)}</span>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1, textShadow: '0 0 10px rgba(255,255,255,0.18)', fontFeatureSettings: '"tnum"' }}>{formatFishLength(displaySize)}</span>
+                    <span style={{ fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{formatFishLength(sizeMax!)}</span>
                   </div>
                 </div>
               )}
