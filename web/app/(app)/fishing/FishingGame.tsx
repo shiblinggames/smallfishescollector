@@ -2203,7 +2203,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                   {/* Min — the caught length (the hero, brighter & larger) —
                       max. Putting the catch between its bounds, right under
                       the needle, reads in context of where it landed. */}
-                  <div className="flex justify-between items-baseline" style={{ marginTop: 5 }}>
+                  <div className="flex justify-between items-baseline" style={{ marginTop: 9 }}>
                     <span style={{ fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{formatFishLength(sizeMin!)}</span>
                     <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1, textShadow: '0 0 10px rgba(255,255,255,0.18)', fontFeatureSettings: '"tnum"' }}>{formatFishLength(displaySize)}</span>
                     <span style={{ fontSize: '0.5rem', color: '#5a5856', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{formatFishLength(sizeMax!)}</span>
