@@ -55,7 +55,7 @@ import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 import GearUnlockRow from '@/components/GearUnlockRow'
-import { formatFishLength, tierShowsPill, type FishSizeTier } from '@/lib/fishSize'
+import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
@@ -1194,7 +1194,7 @@ function FishImg({ name, style }: { name: string; style?: React.CSSProperties })
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, sizeTier, isPB, previousBest, isShiny = false }: {
+function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, doubleCatch, gemEarned, perfectStreak = 1, streakBonusXP = 0, jackpotMultiplier, perfectXpMult = 1, ancientCount = 0, ancientTotal = 6, sizeIn, sizeMin, sizeMax, isPB, previousBest, isShiny = false }: {
   fish: FishSpecies
   baitSaved: boolean
   isNewSpecies: boolean
@@ -1262,7 +1262,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
     return () => cancelAnimationFrame(raf)
   }, [sizeIn, hasSize])
   const sizePercentile = showRange ? Math.max(0, Math.min(1, (sizeIn - sizeMin!) / (sizeMax! - sizeMin!))) : 0.5
-  const showTrophyPill = !isAncient && !isShiny && sizeTier != null && tierShowsPill(sizeTier)
   const isPBMoment = !isAncient && !isShiny && isPB
   // Shiny copy — picked once per catch (memoised on fish.id) so it
   // doesn't reshuffle on every re-render. Empty string when not shiny.
@@ -1402,42 +1401,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
           accent chrome as before, just at ~32px tall instead of ~80px.
           Size-tier pills (Trophy / Large) and the PB pill render first so
           they catch the eye on the dopamine moments. */}
-      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned || showTrophyPill) && (
+      {(isPerfect || (jackpotMultiplier && jackpotMultiplier > 1) || doubleCatch || gemEarned) && (
         <div className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
-          {/* Trophy / Large pill — top size tiers. Trophy = gold sparkle,
-              Large = cool blue, same gradient + top-accent chrome shape.
-              (PB used to live here too; moved onto the size hero on the
-              card itself so the celebration sits next to the number it's
-              celebrating, and uses plain-English copy instead of "PB".) */}
-          {showTrophyPill && (() => {
-            const trophy = sizeTier === 'trophy'
-            const accent = trophy ? '#fbbf24' : '#60a5fa'
-            const accentRgb = trophy ? '251,191,36' : '96,165,250'
-            return (
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 360, damping: 18 }}
-                className="font-karla font-700 uppercase"
-                style={{
-                  background: `linear-gradient(180deg, rgba(${accentRgb},0.24) 0%, rgba(${accentRgb},0.06) 100%), #110a04`,
-                  border: `1px solid rgba(${accentRgb},0.55)`,
-                  borderTop: `1px solid rgba(${accentRgb},0.85)`,
-                  borderRadius: 999,
-                  boxShadow: `0 0 ${trophy ? 16 : 12}px rgba(${accentRgb},${trophy ? 0.38 : 0.28})`,
-                  padding: '0.36rem 0.72rem',
-                  fontSize: '0.62rem',
-                  letterSpacing: '0.14em',
-                  color: accent,
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span>{trophy ? '🏆' : '📏'}</span>
-                <span>{trophy ? 'Trophy' : 'Large'}</span>
-              </motion.div>
-            )
-          })()}
-
           {isPerfect && (() => {
             const isOnFire = perfectStreak >= 3
             const isIgnition = perfectStreak === 3
@@ -2109,6 +2074,32 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 </AnimatePresence>
               </div>
             )}
+
+            {/* Doubloon + XP value — overlaid as a compact tag tucked at the
+                bottom of the fish art so it no longer needs its own row. */}
+            {!isAncient && (
+              <div style={{
+                position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
+                zIndex: 6, pointerEvents: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '0.2rem 0.62rem', borderRadius: 999,
+                background: 'rgba(8,16,24,0.7)',
+                backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                whiteSpace: 'nowrap',
+              }}>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 8px rgba(240,192,64,0.3)' }}>
+                  {(isShiny ? fish.sell_value * SHINY_SELL_MULT : fish.sell_value).toLocaleString()}<span style={{ fontSize: '0.66rem', marginLeft: 2 }}>⟡</span>
+                </span>
+                {xpGained > 0 && (
+                  <>
+                    <span style={{ color: '#4a4845', fontSize: '0.62rem' }}>·</span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#86efac' }}>+{xpGained} XP</span>
+                  </>
+                )}
+              </div>
+            )}
           </motion.div>
 
           {/* Name. Shiny gets bigger, more ornate Cinzel + a wide
@@ -2167,12 +2158,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                 className="font-cinzel font-700"
                 style={{
                   fontSize: '1.85rem', lineHeight: 1,
-                  color: sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#93c5fd' : '#f0ede8',
-                  textShadow: sizeTier === 'trophy'
-                    ? '0 0 22px rgba(251,191,36,0.7), 0 0 44px rgba(251,191,36,0.35)'
-                    : sizeTier === 'large'
-                    ? '0 0 18px rgba(96,165,250,0.55)'
-                    : '0 0 12px rgba(255,255,255,0.18)',
+                  color: '#f0ede8',
+                  textShadow: '0 0 12px rgba(255,255,255,0.18)',
                   fontFeatureSettings: '"tnum"',
                   letterSpacing: '0.01em',
                 }}
@@ -2191,11 +2178,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                     <div style={{
                       position: 'absolute', left: 0, top: 0, bottom: 0,
                       width: `${sizePercentile * 100}%`,
-                      background: sizeTier === 'trophy'
-                        ? 'linear-gradient(90deg, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.7) 100%)'
-                        : sizeTier === 'large'
-                        ? 'linear-gradient(90deg, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.7) 100%)'
-                        : 'linear-gradient(90deg, rgba(176,141,79,0.12) 0%, rgba(176,141,79,0.55) 100%)',
+                      background: 'linear-gradient(90deg, rgba(176,141,79,0.12) 0%, rgba(176,141,79,0.55) 100%)',
                       borderRadius: 3,
                     }} />
                     {/* Needle */}
@@ -2208,12 +2191,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                         width: 3, height: 14,
                         marginLeft: -1.5, marginTop: -7,
                         borderRadius: 2,
-                        background: sizeTier === 'trophy' ? '#fbbf24' : sizeTier === 'large' ? '#60a5fa' : '#f0ede8',
-                        boxShadow: sizeTier === 'trophy'
-                          ? '0 0 10px rgba(251,191,36,0.85)'
-                          : sizeTier === 'large'
-                          ? '0 0 8px rgba(96,165,250,0.7)'
-                          : '0 0 6px rgba(255,255,255,0.35)',
+                        background: '#f0ede8',
+                        boxShadow: '0 0 6px rgba(255,255,255,0.35)',
                       }}
                     />
                   </div>
@@ -2231,32 +2210,8 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             </motion.div>
           )}
 
-          {/* Sell value + XP chip — demoted from hero status to a secondary
-              metrics row. Size is the new headline; the sell number is the
-              follow-up info you check on your way to the next cast. */}
-          {!isAncient && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, delay: 0.18 }}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                marginBottom: '0.45rem',
-              }}
-            >
-              <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 10px rgba(240,192,64,0.32)' }}>
-                {(isShiny ? fish.sell_value * SHINY_SELL_MULT : fish.sell_value).toLocaleString()}<span style={{ fontSize: '0.78rem', marginLeft: 3 }}>⟡</span>
-              </span>
-              {xpGained > 0 && (
-                <>
-                  <span style={{ color: '#3a3835', fontSize: '0.7rem' }}>·</span>
-                  <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#86efac', letterSpacing: '0.04em' }}>
-                    +{xpGained} XP
-                  </span>
-                </>
-              )}
-            </motion.div>
-          )}
+          {/* Sell value + XP now ride a compact tag on the fish art (above) so
+              the catch metrics no longer claim their own row. */}
 
           {/* Trophy badge — ancient catches go on display, no sell price. */}
           {isAncient && (
