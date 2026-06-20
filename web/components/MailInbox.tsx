@@ -13,7 +13,8 @@
 // visible to every authenticated player). Admin compose happens
 // service-role-side; the inbox just renders + claims.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   getInbox,
@@ -39,6 +40,39 @@ function relativeTime(iso: string): string {
   const d = Math.round(h / 24)
   if (d < 7) return `${d}d ago`
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+// Lightweight inline markup for mail bodies — just **bold** and
+// [label](url) links so announcements can have section headers and a real
+// tappable link (e.g. to the Tackle Shop). Everything else stays plain text,
+// and the surrounding <p> keeps whiteSpace:pre-wrap so newlines survive.
+// Internal links (starting with "/") route via Next and close the tray;
+// external links open in a new tab.
+const MAIL_LINK_STYLE = { color: ACCENT, textDecoration: 'underline', textUnderlineOffset: 2, fontWeight: 700 } as const
+
+function renderMailBody(body: string, onNavigate: () => void): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)/g
+  let last = 0
+  let key = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(body)) !== null) {
+    if (m.index > last) nodes.push(body.slice(last, m.index))
+    if (m[1] != null) {
+      nodes.push(<strong key={`b${key++}`} style={{ color: '#f3ead0', fontWeight: 700 }}>{m[1]}</strong>)
+    } else {
+      const label = m[2]
+      const href = m[3]
+      nodes.push(
+        href.startsWith('/')
+          ? <Link key={`l${key++}`} href={href} onClick={onNavigate} style={MAIL_LINK_STYLE}>{label}</Link>
+          : <a key={`l${key++}`} href={href} target="_blank" rel="noopener noreferrer" style={MAIL_LINK_STYLE}>{label}</a>
+      )
+    }
+    last = re.lastIndex
+  }
+  if (last < body.length) nodes.push(body.slice(last))
+  return nodes
 }
 
 export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: number }) {
@@ -461,7 +495,7 @@ export default function MailInbox({ initialUnreadCount }: { initialUnreadCount: 
                                 marginTop: '0.6rem',
                                 whiteSpace: 'pre-wrap',
                               }}>
-                                {msg.body}
+                                {renderMailBody(msg.body, () => setOpen(false))}
                               </p>
                               {hasAttach && (
                                 <button
