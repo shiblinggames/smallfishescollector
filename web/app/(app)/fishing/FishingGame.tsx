@@ -1805,7 +1805,7 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             without scrolling. Tight top/bottom padding + a shrunken image
             keep the whole result block in view even with the Ancient
             banner + 4 pills above on a small phone. */}
-        <div style={{ position: 'relative', zIndex: 2, padding: isShiny ? '0.35rem 0.85rem 0.55rem' : '0.55rem 1rem 0.7rem' }}>
+        <div style={{ position: 'relative', zIndex: 2, padding: isShiny ? '0.35rem 0.85rem 0.55rem' : '0.5rem 0.6rem 0.65rem' }}>
           {/* Fish image — entrance bounce so it FEELS like a reveal.
               Wrapped in a position:relative so the transient PB ribbon can
               overlay directly on top of the fish (auto-dismisses ~2.6s
@@ -2012,9 +2012,12 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
                     // up to 138px with the surrounding container hugging
                     // tight (no minHeight padding) so the bigger sprite
                     // gains presence without the card itself growing.
-                    width: isShiny ? '88%' : '62%',
-                    maxWidth: isShiny ? 240 : 170,
-                    height: isShiny ? 138 : 92,
+                    // Normal catches got bumped too (was 62%/170/92) — the
+                    // fish was swimming in empty padding; now it fills the
+                    // card width and stands taller as the hero art.
+                    width: isShiny ? '88%' : '86%',
+                    maxWidth: isShiny ? 240 : 250,
+                    height: isShiny ? 138 : 124,
                     objectFit: 'contain',
                     // Shiny stacks the gold filter (lib/shiny.ts) on top
                     // of a warm drop-shadow for the "hovering metal" feel.
@@ -2075,31 +2078,6 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               </div>
             )}
 
-            {/* Doubloon + XP value — overlaid as a compact tag tucked at the
-                bottom of the fish art so it no longer needs its own row. */}
-            {!isAncient && (
-              <div style={{
-                position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
-                zIndex: 6, pointerEvents: 'none',
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '0.2rem 0.62rem', borderRadius: 999,
-                background: 'rgba(8,16,24,0.7)',
-                backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-                whiteSpace: 'nowrap',
-              }}>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 8px rgba(240,192,64,0.3)' }}>
-                  {(isShiny ? fish.sell_value * SHINY_SELL_MULT : fish.sell_value).toLocaleString()}<span style={{ fontSize: '0.66rem', marginLeft: 2 }}>⟡</span>
-                </span>
-                {xpGained > 0 && (
-                  <>
-                    <span style={{ color: '#4a4845', fontSize: '0.62rem' }}>·</span>
-                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#86efac' }}>+{xpGained} XP</span>
-                  </>
-                )}
-              </div>
-            )}
           </motion.div>
 
           {/* Name. Shiny gets bigger, more ornate Cinzel + a wide
@@ -2154,18 +2132,33 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
               transition={{ duration: 0.24, delay: 0.1 }}
               style={{ textAlign: 'center', marginBottom: '0.5rem' }}
             >
-              <span
-                className="font-cinzel font-700"
-                style={{
-                  fontSize: '1.85rem', lineHeight: 1,
-                  color: '#f0ede8',
-                  textShadow: '0 0 12px rgba(255,255,255,0.18)',
-                  fontFeatureSettings: '"tnum"',
-                  letterSpacing: '0.01em',
-                }}
-              >
-                {formatFishLength(displaySize)}
-              </span>
+              {/* Sell ⟡ flanks the length on the left, XP on the right — the
+                  three headline numbers share one line so the card stays
+                  compact. Ancients show only the length (no sale, no XP). */}
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 14 }}>
+                {!isAncient && (
+                  <span className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 9px rgba(240,192,64,0.3)', fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap' }}>
+                    {fish.sell_value.toLocaleString()}<span style={{ fontSize: '0.72rem', marginLeft: 2 }}>⟡</span>
+                  </span>
+                )}
+                <span
+                  className="font-cinzel font-700"
+                  style={{
+                    fontSize: '1.85rem', lineHeight: 1,
+                    color: '#f0ede8',
+                    textShadow: '0 0 12px rgba(255,255,255,0.18)',
+                    fontFeatureSettings: '"tnum"',
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  {formatFishLength(displaySize)}
+                </span>
+                {!isAncient && xpGained > 0 && (
+                  <span className="font-karla font-700" style={{ fontSize: '0.86rem', color: '#86efac', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    +{xpGained} XP
+                  </span>
+                )}
+              </div>
 
               {/* Range bar — only when there's a real range. Slim track with
                   a glowing needle at the catch's percentile. Labels at the
@@ -2210,8 +2203,21 @@ function ResultCard({ fish, baitSaved, isNewSpecies, isPerfect, xpGained, double
             </motion.div>
           )}
 
-          {/* Sell value + XP now ride a compact tag on the fish art (above) so
-              the catch metrics no longer claim their own row. */}
+          {/* Shiny (and any sizeless catch) skips the flanked length row, so
+              its sale + XP show on a compact centered line here instead. */}
+          {!isAncient && (isShiny || !hasSize) && (
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 12, marginBottom: '0.5rem' }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0c040', lineHeight: 1, textShadow: '0 0 10px rgba(240,192,64,0.32)' }}>
+                {(isShiny ? fish.sell_value * SHINY_SELL_MULT : fish.sell_value).toLocaleString()}<span style={{ fontSize: '0.78rem', marginLeft: 3 }}>⟡</span>
+              </span>
+              {xpGained > 0 && (
+                <>
+                  <span style={{ color: '#3a3835', fontSize: '0.7rem' }}>·</span>
+                  <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#86efac' }}>+{xpGained} XP</span>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Trophy badge — ancient catches go on display, no sell price. */}
           {isAncient && (
