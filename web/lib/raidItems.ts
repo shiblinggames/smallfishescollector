@@ -246,12 +246,28 @@ export const RAID_ITEMS: RaidItemDef[] = [
   },
 ]
 
-/** Forge recipe: own BOTH components → can forge the result, which sacrifices
- *  them. Used by the Manage Ship forge UI + the forgeGrandCannon server action. */
-export const DAVY_FORGE = {
-  components: ['davys_heavy_cannon', 'davys_hand_cannon'] as const,
-  result: 'davys_grand_cannon' as const,
+// ── Forge recipes ─────────────────────────────────────────────────────────────
+// Own EVERY component → can forge the result, which sacrifices the components.
+// Generic so any future item can be made forgeable: just add a recipe here (and
+// the result + component items above). The Manage Ship forge UI maps over this
+// list and the forgeRaidItem server action validates against it.
+export interface ForgeRecipe {
+  /** Item ids consumed by the forge (all required). */
+  components: string[]
+  /** Item id produced. */
+  result: string
 }
+
+export const FORGE_RECIPES: ForgeRecipe[] = [
+  { components: ['davys_heavy_cannon', 'davys_hand_cannon'], result: 'davys_grand_cannon' },
+]
+
+export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
+  return FORGE_RECIPES.find(r => r.result === resultId)
+}
+
+/** The Davy recipe — its components double as the Gauntlet chest drop pool. */
+export const DAVY_FORGE = FORGE_RECIPES[0]
 
 export function getRaidItem(id: string): RaidItemDef | undefined {
   return RAID_ITEMS.find(i => i.id === id)

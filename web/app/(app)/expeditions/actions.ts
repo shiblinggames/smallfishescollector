@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
-import { DAVY_FORGE } from '@/lib/raidItems'
+import { getForgeRecipe } from '@/lib/raidItems'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -125,13 +125,17 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
 }
 
-/** Forge Davy's Grand Cannon by sacrificing the Heavy + Hand cannons. Mirrors
- *  the completionist-rod forge: consumes both components and mints the combined
- *  item. Server-validated so a tampered client can't forge without both. */
-export async function forgeGrandCannon(): Promise<{ ok: true; raidItems: string[] } | { error: string }> {
+/** Forge a raid item from a recipe (FORGE_RECIPES) by sacrificing its
+ *  components. Generic so any future forgeable item works without new code.
+ *  Mirrors the completionist-rod forge; server-validated against the recipe so a
+ *  tampered client can't forge without owning every component. */
+export async function forgeRaidItem(resultId: string): Promise<{ ok: true; raidItems: string[] } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
+  const recipe = getForgeRecipe(resultId)
+  if (!recipe) return { error: 'Unknown recipe' }
+
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
@@ -139,14 +143,13 @@ export async function forgeGrandCannon(): Promise<{ ok: true; raidItems: string[
     .eq('id', user.id)
     .single()
   const owned = (profile?.raid_items as string[] | null) ?? []
-  const [a, b] = DAVY_FORGE.components
-  if (owned.includes(DAVY_FORGE.result)) return { error: 'Already forged.' }
-  if (!owned.includes(a) || !owned.includes(b)) return { error: 'You need both Davy cannons to forge.' }
+  if (owned.includes(recipe.result)) return { error: 'Already forged.' }
+  if (!recipe.components.every(id => owned.includes(id))) return { error: 'You don\'t own every component yet.' }
 
-  // Sacrifice the two components, mint the Grand Cannon, and drop the consumed
-  // components from the equipped loadout (they no longer exist).
-  const newOwned = [...owned.filter(id => id !== a && id !== b), DAVY_FORGE.result]
-  const equipped = ((profile?.equipped_raid_items as string[] | null) ?? []).filter(id => id !== a && id !== b)
+  // Sacrifice the components, mint the result, and drop the consumed components
+  // from the equipped loadout (they no longer exist).
+  const newOwned = [...owned.filter(id => !recipe.components.includes(id)), recipe.result]
+  const equipped = ((profile?.equipped_raid_items as string[] | null) ?? []).filter(id => !recipe.components.includes(id))
   await admin.from('profiles').update({ raid_items: newOwned, equipped_raid_items: equipped }).eq('id', user.id)
   return { ok: true, raidItems: newOwned }
 }

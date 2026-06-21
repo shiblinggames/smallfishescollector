@@ -13,13 +13,13 @@ import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems, forgeGrandCannon } from './actions'
+import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem } from './actions'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, DAVY_FORGE } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -612,22 +612,23 @@ export default function ShipHero({
     startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
   }
 
-  // Davy's Grand Cannon forge — available once both component cannons are owned
-  // and not yet forged. Two-tap confirm since it sacrifices both items.
-  const [forging, setForging] = useState(false)
-  const [forgeArmed, setForgeArmed] = useState(false)
-  const canForgeGrand =
-    ownedRaidItems.includes(DAVY_FORGE.components[0]) &&
-    ownedRaidItems.includes(DAVY_FORGE.components[1]) &&
-    !ownedRaidItems.includes(DAVY_FORGE.result)
-  function onForgeTap() {
+  // Generic raid-item forge (FORGE_RECIPES). `forging` / `forgeArmed` hold the
+  // result id of the recipe mid-forge / armed for the two-tap destructive
+  // confirm (the forge sacrifices the components).
+  const [forging, setForging] = useState<string | null>(null)
+  const [forgeArmed, setForgeArmed] = useState<string | null>(null)
+  function onForgeTap(resultId: string) {
     if (forging) return
-    if (!forgeArmed) { setForgeArmed(true); setTimeout(() => setForgeArmed(false), 3000); return }
-    setForgeArmed(false)
-    setForging(true)
+    if (forgeArmed !== resultId) {
+      setForgeArmed(resultId)
+      setTimeout(() => setForgeArmed(a => (a === resultId ? null : a)), 3000)
+      return
+    }
+    setForgeArmed(null)
+    setForging(resultId)
     startTransition(async () => {
-      const res = await forgeGrandCannon()
-      setForging(false)
+      const res = await forgeRaidItem(resultId)
+      setForging(null)
       if ('error' in res) return
       router.refresh()
     })
@@ -1431,37 +1432,70 @@ export default function ShipHero({
                 Tap to equip up to {raidItemSlots} item{raidItemSlots === 1 ? '' : 's'} (bigger hulls hold more).
               </p>
 
-              {/* Davy's Grand Cannon forge — appears once both component cannons
-                  are owned. Sacrifices both for the combined item. */}
-              {canForgeGrand && (() => {
-                const grand = getRaidItem(DAVY_FORGE.result)
-                const heavy = getRaidItem(DAVY_FORGE.components[0])
-                const hand = getRaidItem(DAVY_FORGE.components[1])
+              {/* Forge recipes — each is always visible (until forged) so the
+                  result reads as a goal to chase. Shows a component checklist;
+                  the forge button only unlocks once every component is owned.
+                  Generic over FORGE_RECIPES, so new forgeable items just appear. */}
+              {FORGE_RECIPES.filter(recipe => !ownedRaidItems.includes(recipe.result)).map(recipe => {
+                const result = getRaidItem(recipe.result)
+                if (!result) return null
+                const comps = recipe.components.map(id => ({ def: getRaidItem(id), owned: ownedRaidItems.includes(id) }))
+                const haveAll = comps.every(c => c.owned)
+                const armed = forgeArmed === recipe.result
+                const busy = forging === recipe.result
                 return (
-                  <div className="app-card app-card-gold" style={{ padding: '0.8rem 0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#e8c879' }}>Forge Available</p>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6', lineHeight: 1.1 }}>{grand?.name}</p>
-                    <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.4 }}>
-                      Sacrifice <span style={{ color: '#e8c879' }}>{heavy?.name}</span> + <span style={{ color: '#e8c879' }}>{hand?.name}</span> to forge it. {grand?.description}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={onForgeTap}
-                      disabled={forging}
-                      className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                      style={{
-                        width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem',
-                        background: forgeArmed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
-                        border: `1px solid ${forgeArmed ? 'rgba(248,140,90,0.7)' : 'rgba(232,200,121,0.6)'}`,
-                        color: forgeArmed ? '#ffd0b0' : '#f0d695',
-                        cursor: forging ? 'default' : 'pointer',
-                      }}
-                    >
-                      {forging ? 'Forging…' : forgeArmed ? 'Sacrifice both — tap to confirm' : 'Forge the Grand Cannon →'}
-                    </button>
+                  <div key={recipe.result} className="app-card app-card-gold" style={{ padding: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 9, opacity: haveAll ? 1 : 0.92 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: haveAll ? '#e8c879' : '#9a8a5a' }}>{haveAll ? 'Forge Available' : 'Forge · Locked'}</p>
+                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a8a5a' }}>{comps.filter(c => c.owned).length}/{comps.length}</span>
+                    </div>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6', lineHeight: 1.1 }}>{result.name}</p>
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.4 }}>{result.description}</p>
+
+                    {/* Component checklist */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.2rem 0' }}>
+                      {comps.map((c, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{
+                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: c.owned ? 'rgba(127,212,154,0.18)' : 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${c.owned ? 'rgba(127,212,154,0.6)' : 'rgba(255,255,255,0.18)'}`,
+                          }}>
+                            {c.owned
+                              ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7fd49a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                              : null}
+                          </span>
+                          <span className="font-karla font-700" style={{ flex: 1, fontSize: '0.72rem', color: c.owned ? '#e0dccc' : '#8a8480' }}>{c.def?.name}</span>
+                          <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: c.owned ? '#7fd49a' : '#7a7470' }}>{c.owned ? 'Owned' : 'Needed'}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {haveAll ? (
+                      <button
+                        type="button"
+                        onClick={() => onForgeTap(recipe.result)}
+                        disabled={busy}
+                        className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+                        style={{
+                          width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem',
+                          background: armed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
+                          border: `1px solid ${armed ? 'rgba(248,140,90,0.7)' : 'rgba(232,200,121,0.6)'}`,
+                          color: armed ? '#ffd0b0' : '#f0d695',
+                          cursor: busy ? 'default' : 'pointer',
+                        }}
+                      >
+                        {busy ? 'Forging…' : armed ? 'Sacrifice components — tap to confirm' : `Forge ${result.name} →`}
+                      </button>
+                    ) : (
+                      <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', lineHeight: 1.4, fontStyle: 'italic' }}>
+                        Collect every component, then forge them here. The forge sacrifices them.
+                      </p>
+                    )}
                   </div>
                 )
-              })()}
+              })}
 
               {ownedRaidItems.length === 0 ? (
                 <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', marginBottom: '1.5rem' }}>
