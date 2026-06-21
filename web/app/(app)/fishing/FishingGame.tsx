@@ -968,14 +968,13 @@ function UnifiedGearDrawer({
 
 // ─── BaitSelector ─────────────────────────────────────────────────────────────
 
-function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, doubloons, buyingType }: {
+function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, buyingType }: {
   baitInventory: BaitItem[]
   selectedBait: string
   onSelect: (type: string) => void
-  /** When provided, each purchasable bait shows a direct Buy button (buys a
-   *  full bundle at the flat price) — like buying a rod from the gear screen. */
+  /** When provided, each purchasable bait shows a Buy button that opens the
+   *  quantity-confirm modal. */
   onBuy?: (type: string) => void
-  doubloons?: number
   buyingType?: string | null
 }) {
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
@@ -990,89 +989,83 @@ function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, doubloons,
     : BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
 
   if (list.length === 0) return (
-    <p className="font-karla font-600 text-center py-4" style={{ fontSize: '0.68rem', color: '#4a4845' }}>
+    <p className="font-karla font-600 text-center py-4" style={{ fontSize: '0.8rem', color: '#6a6764' }}>
       No bait in inventory
     </p>
   )
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       {list.map(bait => {
         const qty = inventoryMap[bait.type] ?? 0
         const isSelected = bait.type === selectedBait
         const c = bait.color
         const buyable = !!onBuy && bait.shopCost > 0
-        const price = bait.shopCost * bait.bundleSize
-        const canAfford = (doubloons ?? 0) >= price
         const isBuying = buyingType === bait.type
         return (
-          <div key={bait.type} style={{ display: 'flex', alignItems: 'stretch', gap: 7 }}>
+          <div key={bait.type} style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
             <button
               onClick={() => onSelect(bait.type)}
               className="tap"
               style={{
                 flex: 1, minWidth: 0,
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '0.55rem 0.7rem', borderRadius: 10,
-                background: isSelected ? `${c}12` : 'rgba(4,10,18,0.72)',
-                border: `1px solid ${isSelected ? c + '50' : 'rgba(255,255,255,0.09)'}`,
+                display: 'flex', alignItems: 'center', gap: 11,
+                padding: '0.6rem 0.75rem', borderRadius: 11,
+                background: isSelected ? `${c}14` : 'rgba(4,10,18,0.72)',
+                border: `1px solid ${isSelected ? c + '55' : 'rgba(255,255,255,0.1)'}`,
                 textAlign: 'left',
               }}
             >
               {bait.imageUrl
-                ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.4, flexShrink: 0 }} />
-                : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0, opacity: qty > 0 ? 1 : 0.4 }} />
+                ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 28, height: 28, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.45, flexShrink: 0 }} />
+                : <div style={{ width: 10, height: 10, borderRadius: '50%', background: c, flexShrink: 0, opacity: qty > 0 ? 1 : 0.45 }} />
               }
               <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#9a9488' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: qty > 0 ? '#f0ede8' : '#b0aaa2' }}>
                   {bait.name}
                 </p>
-                <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
                   {bait.catchZoneBonus > 0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: `${c}dd`, background: `${c}16`, border: `1px solid ${c}34`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>
                       +{bait.catchZoneBonus}° zone
                     </span>
                   )}
                   {bait.waitMult < 1.0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: `${c}dd`, background: `${c}16`, border: `1px solid ${c}34`, padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>
                       {Math.round((1 - bait.waitMult) * 100)}% faster
                     </span>
                   )}
                   {!bait.catchZoneBonus && bait.waitMult === 1.0 && (
-                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a6764', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                    <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a7672', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', padding: '0.12rem 0.45rem', borderRadius: '2rem' }}>
                       No bonus
                     </span>
                   )}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: qty > 0 ? '#f0ede8' : '#6a6764' }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: qty > 0 ? '#f0ede8' : '#7a7672' }}>
                   ×{qty}
                 </p>
                 {isSelected && (
-                  <p className="font-karla font-600" style={{ fontSize: '0.44rem', color: c }}>selected</p>
+                  <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: c }}>using</p>
                 )}
               </div>
             </button>
 
             {buyable && (
               <button
-                disabled={!canAfford || isBuying}
+                disabled={isBuying}
                 onClick={() => onBuy!(bait.type)}
-                className="font-karla font-700 tap"
+                className="font-karla font-700 uppercase tracking-[0.06em] tap"
                 style={{
-                  flexShrink: 0, width: 62, borderRadius: 10,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-                  background: canAfford ? `${c}16` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${canAfford ? c + '4a' : 'rgba(255,255,255,0.08)'}`,
-                  color: canAfford ? c : '#5a5654',
-                  cursor: canAfford && !isBuying ? 'pointer' : 'not-allowed',
+                  flexShrink: 0, width: 64, borderRadius: 11,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: `${c}18`, border: `1px solid ${c}50`,
+                  color: c, fontSize: '0.74rem',
+                  cursor: isBuying ? 'default' : 'pointer', opacity: isBuying ? 0.5 : 1,
                 }}
               >
-                <span style={{ fontSize: '0.54rem', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.85 }}>
-                  {isBuying ? '…' : `+${bait.bundleSize}`}
-                </span>
-                <span style={{ fontSize: '0.66rem' }}>{price} ⟡</span>
+                {isBuying ? '…' : 'Buy'}
               </button>
             )}
           </div>
@@ -3376,14 +3369,17 @@ export default function FishingGame({
   // open at a time so the drawer stays tidy. Fish Market isn't in this
   // set — tapping it just navigates.
   const [expandedSellLane, setExpandedSellLane] = useState<null | 'quick' | 'liquidate'>(null)
-  // Direct bait buying from the bait modal — which bait type is mid-purchase.
+  // Direct bait buying from the bait modal. `confirmBait` opens the quantity
+  // confirm modal; `buyingBait` flags the in-flight purchase.
   const [buyingBait, setBuyingBait] = useState<string | null>(null)
-  async function handleBuyBait(type: string) {
+  const [confirmBait, setConfirmBait] = useState<string | null>(null)
+  const [confirmQty, setConfirmQty] = useState(10)
+  async function handleBuyBait(type: string, qty: number) {
     if (buyingBait) return
     const bait = getBait(type)
-    if (!bait || bait.shopCost <= 0) return
+    if (!bait || bait.shopCost <= 0 || qty <= 0) return
     setBuyingBait(type)
-    const res = await buyBait(type, bait.bundleSize)
+    const res = await buyBait(type, qty)
     setBuyingBait(null)
     if ('error' in res) return
     setBaitInventory(prev =>
@@ -3393,6 +3389,7 @@ export default function FishingGame({
     )
     setDoubloons(res.doubloons)
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+    setConfirmBait(null)
   }
   // Low-bait warning — fires once when the player's total bait crosses
   // BELOW the threshold so they aren't ambushed by an "out of bait"
@@ -8810,16 +8807,114 @@ export default function FishingGame({
               baitInventory={baitInventory}
               selectedBait={selectedBait}
               onSelect={setSelectedBait}
-              onBuy={handleBuyBait}
-              doubloons={doubloons}
+              onBuy={(type) => { setConfirmQty(10); setConfirmBait(type) }}
               buyingType={buyingBait}
             />
-            <p className="font-karla font-600 text-center" style={{ fontSize: '0.56rem', color: '#5a5654', marginTop: 8 }}>
-              Tap a bait to use it · buy any at the shop price (×10 per purchase)
+            <p className="font-karla font-600 text-center" style={{ fontSize: '0.66rem', color: '#6a6764', marginTop: 10 }}>
+              Tap a bait to use it · tap Buy to purchase any amount
             </p>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Bait purchase confirm modal ── pick a quantity, see the total,
+          confirm. Portaled above the bait panel. */}
+      {confirmBait && typeof document !== 'undefined' && (() => {
+        const bait = getBait(confirmBait)
+        const total = bait.shopCost * confirmQty
+        const canAfford = doubloons >= total
+        const isBuying = buyingBait === confirmBait
+        const QTYS = [10, 25, 50, 100]
+        return createPortal(
+          <div
+            onClick={() => { if (!isBuying) setConfirmBait(null) }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100001,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem',
+              background: 'rgba(2,6,12,0.72)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: 320, borderRadius: 18,
+                background: 'linear-gradient(180deg, rgba(12,20,30,0.98) 0%, rgba(6,12,20,0.98) 100%)',
+                border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                padding: '1.15rem 1.15rem 1rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                {bait.imageUrl
+                  ? <img src={bait.imageUrl} alt="" style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0 }} />
+                  : <div style={{ width: 16, height: 16, borderRadius: '50%', background: bait.color, flexShrink: 0 }} />
+                }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.08rem', color: '#f0ede8', lineHeight: 1.1 }}>{bait.name}</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a8680' }}>{bait.shopCost} ⟡ each</p>
+                </div>
+              </div>
+
+              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: '#7a7672', marginBottom: 8 }}>How many?</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
+                {QTYS.map(q => {
+                  const sel = confirmQty === q
+                  return (
+                    <button
+                      key={q}
+                      onClick={() => setConfirmQty(q)}
+                      className="font-karla font-700 tap"
+                      style={{
+                        padding: '0.6rem 0', borderRadius: 10, fontSize: '0.86rem',
+                        background: sel ? `${bait.color}22` : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${sel ? bait.color : 'rgba(255,255,255,0.12)'}`,
+                        color: sel ? bait.color : '#c8c4be', cursor: 'pointer',
+                      }}
+                    >
+                      ×{q}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: canAfford ? 16 : 8 }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#9a9690' }}>Total</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: canAfford ? '#f0c040' : '#d07a7a' }}>{total.toLocaleString()} ⟡</span>
+              </div>
+              {!canAfford && (
+                <p className="font-karla font-600 text-center" style={{ fontSize: '0.7rem', color: '#d07a7a', marginBottom: 12 }}>
+                  Not enough doubloons for that many.
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setConfirmBait(null)}
+                  disabled={isBuying}
+                  className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                  style={{ flex: 1, padding: '0.72rem 0', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#c8c4be', fontSize: '0.76rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleBuyBait(confirmBait, confirmQty)}
+                  disabled={!canAfford || isBuying}
+                  className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                  style={{
+                    flex: 1.4, padding: '0.72rem 0', borderRadius: 12, fontSize: '0.76rem',
+                    background: canAfford ? 'linear-gradient(180deg, rgba(96,165,250,0.34) 0%, rgba(59,130,246,0.18) 100%)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${canAfford ? 'rgba(96,165,250,0.7)' : 'rgba(255,255,255,0.1)'}`,
+                    color: canAfford ? '#bfdbff' : '#5a5654',
+                    cursor: canAfford && !isBuying ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  {isBuying ? 'Buying…' : `Buy ×${confirmQty}`}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      })()}
 
       {/* ── Daily challenge drawer ── */}
       <AnimatePresence>
