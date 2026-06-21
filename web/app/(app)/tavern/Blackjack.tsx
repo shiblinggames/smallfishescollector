@@ -10,6 +10,7 @@ import {
 } from './blackjack/actions'
 import { buyInCasino, cashOutCasino } from './casino/actions'
 import DenNav from './casino/DenNav'
+import { vibrate } from '@/lib/haptics'
 import { handValue, type Card, type Rank } from '@/lib/blackjack'
 import { pickFishForRank, type FishArtPool } from '@/lib/blackjackFishArt'
 import WagerCircle from './WagerCircle'
@@ -82,14 +83,6 @@ function CountUp({ value, duration = 750, prefix = '' }: { value: number; durati
 function TickingTotal({ value, duration = 350 }: { value: number; duration?: number }) {
   const animated = useAnimatedNumber(value, duration)
   return <>{animated}</>
-}
-
-/** Tiny haptic on supported devices. Web Vibration API: iOS Safari
- *  silently no-ops, Android Chrome buzzes for real. Patterns chosen so
- *  blackjack feels noticeably stronger than a regular win. */
-function vibrate(pattern: number | number[]) {
-  if (typeof navigator === 'undefined' || !navigator.vibrate) return
-  try { navigator.vibrate(pattern) } catch { /* ignore — some browsers refuse */ }
 }
 
 /** Sparkle particles that drift up + fade. Pure CSS via framer-motion;

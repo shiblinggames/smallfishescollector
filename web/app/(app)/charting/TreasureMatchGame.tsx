@@ -8,6 +8,7 @@
 // client-side; the server tiers the score + banks the delta authoritatively.
 
 import { memo, useMemo, useRef, useState, useEffect, type CSSProperties } from 'react'
+import { vibrate as haptic } from '@/lib/haptics'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -25,7 +26,6 @@ const GREEN = '#7bf0b0'
 const WILD_DROP_CHANCE = 0.01
 const WILD_RAINBOW = 'conic-gradient(from 210deg at 50% 50%, #ff7e1c, #ffd028, #0fd886, #2aa4ff, #bb55ff, #ff4631, #ff7e1c)'
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
-function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 
 interface Particle { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number }
 interface RunResult { score: number; best: number; tier: number; pointsWon: number; maxed: boolean; capUp: number | null }

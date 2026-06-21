@@ -17,13 +17,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RaidPuzzle } from '@/lib/raidMap'
+import { vibrate } from '@/lib/haptics'
 
 const LIT = '#e8c879'   // an aligned seal
 const DARK = '#3c4654'  // an unaligned seal
-
-function vibrate(p: number | number[]) {
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(p)
-}
 
 // Turn dial i one step: also turns its immediate neighbours (endpoints couple
 // only the one neighbour they have).

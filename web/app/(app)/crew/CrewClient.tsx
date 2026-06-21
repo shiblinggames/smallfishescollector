@@ -17,6 +17,7 @@ import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef } from '@/lib/crewClasses'
+import { vibrate } from '@/lib/haptics'
 // TickingNumber + the local Stat helper were used by the removed
 // gems/nav/roster pill row in the header. Dropped along with them.
 
@@ -798,7 +799,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         setHallUpgradeOpen(false)
         // Keep the Nav-bar doubloon total in sync (same pattern as repair).
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.state.doubloons }))
-        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate([18, 50, 26])
+        vibrate([18, 50, 26])
         setHallCelebrate({ name: def.name, startLevel: def.startLevel, accent: def.accent })
       }
       setHallBusy(false)
@@ -907,7 +908,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       const m = item as CrewMember
       markCrewSeen(m.id, crewLevelFromXP(m.xp))
     }
-    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(8)
+    vibrate(8)
     setDetail({ kind, item })
   }
 
@@ -929,7 +930,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   function handleReroll() {
     if (pending || reveal.revealing) return // no re-roll mid-action or mid-reveal
     setErr(null)
-    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(14)
+    vibrate(14)
     setBusyId('reroll')
     startTransition(async () => {
       const res = await rerollBoard()
@@ -954,7 +955,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       const c = item as BoardCandidate
       const recruit = (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(14)
+        vibrate(14)
         run(() => recruitCrew(c.id), c.id, onDone)
       }
       if (round) {

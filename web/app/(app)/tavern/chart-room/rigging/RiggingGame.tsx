@@ -18,12 +18,9 @@ import { saveRiggingPaths, submitRigging } from './actions'
 import { isSolved, neighborsOf } from './rigging'
 import { RIGGING_PALETTE, type RiggingState } from './constants'
 import { denDailyCap, nextDenTier } from '@/app/(app)/tavern/constants'
+import { vibrate as haptic } from '@/lib/haptics'
 
 const GOLD = '#f0c040'
-
-function haptic(pattern: number | number[]) {
-  try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern) } catch { /* no-op */ }
-}
 
 export default function RiggingGame({ initial }: { initial: RiggingState }) {
   const { cols, rows, pairs } = initial

@@ -10,6 +10,7 @@ import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import { getLine } from '@/lib/lines'
 import { playForgeSfx } from '@/lib/fishingMusic'
+import { vibrate } from '@/lib/haptics'
 import ForgeRodEmblem from './ForgeRodEmblem'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
@@ -828,7 +829,7 @@ export default function GearScreen({
     if (dir === 'in') setForgeAccent(color)
     try {
       playForgeSfx(dir === 'out')
-      if ('vibrate' in navigator) navigator.vibrate(dir === 'in' ? [12, 28, 22] : 14)
+      vibrate(dir === 'in' ? [12, 28, 22] : 14)
     } catch {}
     onCompletionistEffectsChange(next)
   }

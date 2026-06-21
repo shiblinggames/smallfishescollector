@@ -8,6 +8,7 @@ import { markTideRunTourSeen } from './tideRunTourAction'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import PodiumToast, { type PodiumNotif } from '@/components/PodiumToast'
 import { prefetchTideRunAudio, unlockTideRunAudio, teardownTideRunAudio, playBeaconCatchSfx, playBeaconCrashSfx, playSplashSfx, playCrashSfx, getTideRunMuted, setTideRunMuted } from '@/lib/tideRunAudio'
+import { vibrate } from '@/lib/haptics'
 
 // ── Tunable constants ────────────────────────────────────────────────────────
 const SHIP_X_RATIO    = 0.13   // boat sits ~13% from the left, giving ~87% lookahead
@@ -1203,9 +1204,7 @@ export default function TideRunGame({ initialBestDistance = 0, hasSeenTour = fal
           // Micro-freeze: the world stops dead for a beat, then the debris
           // erupts as motion resumes — that snap is what sells the hit.
           g.hitstopUntil = nowMs + HITSTOP_MS
-          if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-            navigator.vibrate(40)
-          }
+          vibrate(40)
         }
       }
     }

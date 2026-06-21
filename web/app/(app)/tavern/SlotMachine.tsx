@@ -8,16 +8,10 @@ import DenNav from './casino/DenNav'
 import { SLOT_SYMBOLS_LIST, SLOT_PAYOUTS, SLOT_PAIR_PAYOUTS, SLOTS_MIN_BET, SLOTS_MAX_BET, CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MIN, CASINO_BUY_IN_MAX } from './constants'
 import type { SlotSymbolId } from './constants'
 import { useAnimatedNumber } from './useAnimatedNumber'
+import { vibrate as haptic } from '@/lib/haptics'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const ALL_IDS: SlotSymbolId[] = SLOT_SYMBOLS_LIST.map((s) => s.id)
-
-// Light wrapper around the Vibration API. Real haptic on Android +
-// Android PWAs; silent no-op on iOS (Apple has never shipped this,
-// so iOS players just don't feel anything here — no harm).
-function haptic(pattern: number | number[]) {
-  if (typeof navigator !== 'undefined') navigator.vibrate?.(pattern)
-}
 
 const WIN_LABEL: Record<SlotSymbolId, string> = {
   common:    'Full School!',

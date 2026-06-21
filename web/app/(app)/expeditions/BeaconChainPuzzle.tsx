@@ -13,13 +13,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RaidPuzzle } from '@/lib/raidMap'
+import { vibrate } from '@/lib/haptics'
 
 const LIT = '#e8c879'    // a burning beacon
 const DARK = '#3c4654'   // a dark lantern
-
-function vibrate(p: number | number[]) {
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(p)
-}
 
 // Tap i: flip the beacon and its orthogonal neighbours.
 function toggleAt(state: boolean[], cols: number, rows: number, i: number): boolean[] {

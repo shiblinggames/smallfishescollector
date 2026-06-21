@@ -17,13 +17,13 @@ import {
 } from './trawls/constants'
 import { getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
+import { vibrate as haptic } from '@/lib/haptics'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f?: string) => (f ? `${SUPA}/storage/v1/object/public/card-arts/${f}` : '')
 const GOLD = '#f0c040'
 const GREEN = '#7bf0b0'
 const BLUE = '#9fc0ef'
-function haptic(p: number | number[]) { try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(p) } catch { /* no-op */ } }
 const lastCrewKey = (z: string) => `trawl_last_crew_${z}`
 
 // Per-zone DEPTH palette so the zones read as distinct waters at a glance —

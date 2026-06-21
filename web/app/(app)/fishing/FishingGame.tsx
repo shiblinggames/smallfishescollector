@@ -61,6 +61,7 @@ import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } fro
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
 import ForgeRodEmblem from './ForgeRodEmblem'
+import { vibrate } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
@@ -4604,7 +4605,7 @@ export default function FishingGame({
     // after the hop (they're decorative chasers, not the tactile hit).
     if (zone.type === 'perfect') {
       playPerfectSfx()
-      if ('vibrate' in navigator) navigator.vibrate([40, 60, 80])
+      vibrate([40, 60, 80])
       paintNeedleGlow()
     }
 

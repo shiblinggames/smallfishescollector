@@ -12,14 +12,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { RaidDice, RaidDiceOption } from '@/lib/raidMap'
 import { rollDiceNode } from './raidMapActions'
+import { vibrate } from '@/lib/haptics'
 
 const GOLD = '#e8c879'
 const GREEN = '#4ade80'
 const RED = '#f87171'
-
-function vibrate(p: number | number[]) {
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(p)
-}
 
 // P(d20 + bonus >= dc): the count of faces 1..20 that clear the line, /20.
 function successPct(dc: number, bonus: number): number {

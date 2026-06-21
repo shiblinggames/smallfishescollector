@@ -18,6 +18,7 @@ import { submitBattleMove, getShipBattleState, getShipBattleSync, type ShipBattl
 import { lastActionOf, type BattleAction, type ShotResult, type RoundStep, type BattleLoadout, type BattleAbility, type BattleCrew } from '@/lib/shipBattle/resolver'
 import { GRAZE_W, HIT_W, CRIT_W, INDICATOR_SPEED, getShotResult } from '@/lib/shipBattle/aim'
 import { CLASSES, currentMilestone, type CrewClass } from '@/lib/crewClasses'
+import { vibrate } from '@/lib/haptics'
 
 // One armed free Special (crew ability or repair kit). critMult > 1 only for
 // Sharpshot (it widens the firing player's crit zone on their next shot).
@@ -26,7 +27,6 @@ type Armed =
   | { kind: 'repair'; label: string }
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-const vibrate = (p: number | number[]) => { if (typeof navigator !== 'undefined' && 'vibrate' in navigator) { try { navigator.vibrate(p) } catch {} } }
 
 // Ship shake / recoil keyframes — matched to the raid.
 const CRIT_SHAKE = { x: [0, -10, 10, -8, 8, -4, 4, -2, 0], rotate: [0, -1.5, 1.5, -1, 1, -0.5, 0.3, 0, 0], transition: { duration: 0.6 } }

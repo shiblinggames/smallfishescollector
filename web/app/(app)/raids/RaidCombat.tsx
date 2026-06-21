@@ -30,6 +30,7 @@ import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass } from '@/lib/shipClasses'
+import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
@@ -1168,13 +1169,9 @@ export default function RaidCombat({
     if (res === 'critical') {
       setCritFlash(true)
       setTimeout(() => setCritFlash(false), 380)
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        try { navigator.vibrate([40, 60, 80]) } catch {}
-      }
+      vibrate([40, 60, 80])
     } else if (res === 'hit') {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        try { navigator.vibrate([30]) } catch {}
-      }
+      vibrate([30])
     }
 
     setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!, res) }, dur)
