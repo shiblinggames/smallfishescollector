@@ -275,8 +275,13 @@ export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig = {
   // stats scaled back up by the challenge HP/dmg multipliers.
   sequence: ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair'],
 }
-export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig =
-  withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST, KRUST_CHALLENGE_LOOT), 'krust', KRUST_PHASE2)
+export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig = {
+  ...withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST, KRUST_CHALLENGE_LOOT), 'krust', KRUST_PHASE2),
+  // Hard mode keeps the original 8-mob gauntlet — only the NORMAL raid was
+  // trimmed to 6 (2026-06-20). Challenge enemies still get the eased base
+  // stats scaled up by the challenge HP/dmg multipliers.
+  sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'brute', 'elite', 'elite'],
+}
 export const THE_CARTOGRAPHER_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_CARTOGRAPHER, CARTOGRAPHER_CHALLENGE_LOOT)
 

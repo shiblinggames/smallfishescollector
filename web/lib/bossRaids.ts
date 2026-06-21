@@ -362,7 +362,10 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
       damageReduction: 0.20, abilityName: 'Carapace',
     },
   },
-  sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'brute', 'elite', 'elite'],
+  // Trimmed to 6 mobs (was 8: dropped a Hull Breaker + an Overseer) so the run
+  // isn't a marathon. Still ramps scout → reg → brute → elite → boss. The
+  // Challenge variant pins itself back to the original 8 for hard mode.
+  sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'elite'],
   bossId: 'krust',
   // Mirror Pete's two-tier structure. Krust's Carapace is the
   // standard plate (Epic, -10%); Captain's Carapace is Krust's own
