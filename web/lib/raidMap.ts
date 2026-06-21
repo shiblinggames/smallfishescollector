@@ -1144,7 +1144,7 @@ export const RAID_MAP: RaidNode[] = [
     sideBranch: { parentId: 'chapter_2_class' },
     detail: {
       description:
-        "Fight down through the deep. Every win drags up a harder ship from the crews you've already faced, and the loot piles into one pot. After each fight you choose: cash out and bank it, or push on for a bigger haul. The deeper you go the fatter it gets, but if your ship sinks the whole pot goes down with it. One run a day.",
+        "Fight down through the deep. Every win drags up a harder ship from the crews you've already faced, and the loot piles into one pot. After each fight you choose: cash out and bank it, or push on for a bigger haul. The deeper you go the fatter it gets, but if your ship sinks the whole pot goes down with it. A short cooldown between runs.",
       dropsNote: 'Doubloons, Nav XP, and a depth-scaled chest on cash-out. Push deeper for a richer chest. Nothing if you sink.',
       ctaLabel: 'Enter the Gauntlet',
     },

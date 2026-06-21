@@ -14,11 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, MAX_GAUNTLET_DEPTH } from '@/lib/gauntlet'
-
-function today(): string {
-  return new Date().toISOString().split('T')[0]
-}
+import { maxPotForDepth, chestForDepth, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS } from '@/lib/gauntlet'
 
 /** The single deepest run across all captains + this player's own deepest.
  *  Surfaced on the gauntlet map node. */
@@ -59,52 +55,59 @@ export async function getGauntletLeaderboard(): Promise<{
   }
 }
 
-/** Whether the player can start a run today + their lifetime deepest. */
-export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number }> {
+/** Whether the player can start a run now (cooldown elapsed) + their lifetime
+ *  deepest + when the next run unlocks (ISO, null when available now). */
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; nextAt: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0 }
+  if (!user) return { available: false, deepest: 0, nextAt: null }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_date, gauntlet_deepest, is_admin')
+    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin')
     .eq('id', user.id)
     .single()
 
   // Admins can run it as often as they like (testing the curve).
   const isAdmin = profile?.is_admin === true
+  const lastRunAt = profile?.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
+  const nextMs = lastRunAt + GAUNTLET_COOLDOWN_MS
+  const available = isAdmin || Date.now() >= nextMs
 
   return {
-    available: isAdmin || (profile?.gauntlet_last_date as string | null) !== today(),
+    available,
     deepest: (profile?.gauntlet_deepest as number | null) ?? 0,
+    nextAt: available ? null : new Date(nextMs).toISOString(),
   }
 }
 
-/** Consume the daily attempt and open a run. Starting (not finishing) spends
- *  the day. */
-export async function startGauntletRun(): Promise<{ started: boolean; reason?: 'used'; deepest: number }> {
+/** Consume the run attempt (start the cooldown) and open a run. Starting (not
+ *  finishing) spends it, so a quit-retry can't reroll a bad opener. */
+export async function startGauntletRun(): Promise<{ started: boolean; reason?: 'cooldown'; deepest: number; nextAt?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { started: false, reason: 'used', deepest: 0 }
+  if (!user) return { started: false, reason: 'cooldown', deepest: 0 }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_date, gauntlet_deepest, is_admin')
+    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin')
     .eq('id', user.id)
     .single()
 
   const deepest = (profile?.gauntlet_deepest as number | null) ?? 0
   const isAdmin = profile?.is_admin === true
-  // Admins bypass the once-a-day gate so they can run it repeatedly to test.
-  if (!isAdmin && (profile?.gauntlet_last_date as string | null) === today()) {
-    return { started: false, reason: 'used', deepest }
+  const lastRunAt = profile?.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
+  const nextMs = lastRunAt + GAUNTLET_COOLDOWN_MS
+  // Admins bypass the cooldown so they can run it repeatedly to test.
+  if (!isAdmin && Date.now() < nextMs) {
+    return { started: false, reason: 'cooldown', deepest, nextAt: new Date(nextMs).toISOString() }
   }
 
   await admin
     .from('profiles')
-    .update({ gauntlet_last_date: today(), gauntlet_run_open: true })
+    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true })
     .eq('id', user.id)
 
   return { started: true, deepest }

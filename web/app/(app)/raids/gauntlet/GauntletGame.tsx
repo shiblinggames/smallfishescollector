@@ -56,6 +56,8 @@ export interface GauntletGameProps {
   raidMods: RaidMods
   deepest: number
   available: boolean
+  /** ISO time the next run unlocks (cooldown), or null when available now. */
+  nextAt: string | null
 }
 
 export default function GauntletGame(props: GauntletGameProps) {
@@ -64,6 +66,16 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   const [phase, setPhase] = useState<Phase>(props.available ? 'intro' : 'usedup')
   const [starting, setStarting] = useState(false)
+  // When the next run unlocks (cooldown). Set from props, or refreshed if a
+  // start attempt races the cooldown.
+  const [cooldownUntil, setCooldownUntil] = useState<string | null>(props.nextAt)
+  // Ticks the cooldown countdown on the locked screen (every 30s is plenty).
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    if (phase !== 'usedup') return
+    const t = setInterval(() => setNowTick(Date.now()), 30000)
+    return () => clearInterval(t)
+  }, [phase])
 
   // Run state
   const [playerHP, setPlayerHP] = useState(props.playerHPMax)
@@ -98,7 +110,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (starting) return
     setStarting(true)
     startGauntletRun().then(res => {
-      if (!res.started) { setPhase('usedup'); setStarting(false); return }
+      if (!res.started) { if (res.nextAt) setCooldownUntil(res.nextAt); setPhase('usedup'); setStarting(false); return }
       // Fresh run.
       rollStateRef.current = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
       roundsSinceTideRef.current = 0
@@ -189,13 +201,34 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   if (phase === 'usedup') {
+    const untilMs = cooldownUntil ? new Date(cooldownUntil).getTime() : 0
+    const remMs = Math.max(0, untilMs - nowTick)
+    const h = Math.floor(remMs / 3_600_000)
+    const m = Math.floor((remMs % 3_600_000) / 60_000)
+    const remLabel = h > 0 ? `${h}h ${m}m` : `${Math.max(1, m)}m`
+    const ready = remMs <= 0
     return (
       <Shell>
-        <Title sub="The sea only takes you once a day.">Already Down There</Title>
+        <Title sub={ready ? 'The deep is ready for you again.' : 'The Locker won’t take you again so soon.'}>
+          {ready ? 'Back to the Brink' : 'Catch Your Breath'}
+        </Title>
         <p className="font-karla" style={{ fontSize: '0.85rem', color: '#c9c3b8', lineHeight: 1.5 }}>
-          You have already braved the Locker today. Come back tomorrow for another run. Deepest so far: depth {props.deepest}.
+          {ready
+            ? <>The sea has settled. Drop in again whenever you’re ready. Deepest so far: depth {props.deepest}.</>
+            : <>You braved the Locker recently. Another descent unlocks in <strong style={{ color: '#e8c879' }}>{remLabel}</strong>. Deepest so far: depth {props.deepest}.</>
+          }
         </p>
-        <BackLink router={router} label="Back to the map" primary />
+        {ready ? (
+          <button
+            onClick={begin}
+            disabled={starting}
+            className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+            style={{ width: '100%', padding: '0.9rem', borderRadius: 12, fontSize: '1rem', background: 'rgba(232,200,121,0.2)', border: '1px solid rgba(232,200,121,0.55)', color: '#e8c879', cursor: 'pointer' }}
+          >
+            {starting ? 'Descending…' : 'Descend Again →'}
+          </button>
+        ) : null}
+        <BackLink router={router} label="Back to the map" primary={!ready} />
       </Shell>
     )
   }

@@ -35,6 +35,12 @@ export const POT_BASE = 80
 export const POT_GROWTH = 50
 export const BOSS_POT_MULT = 3
 
+// Cooldown between Gauntlet runs (replaces the old once-a-day gate). Measured
+// from when a run STARTS (consume-on-start), so a quit-retry can't dodge it.
+// Tune here to make the Gauntlet more or less farmable.
+export const GAUNTLET_COOLDOWN_HOURS = 4
+export const GAUNTLET_COOLDOWN_MS = GAUNTLET_COOLDOWN_HOURS * 60 * 60 * 1000
+
 /** ⟡ (== XP) a single cleared round at this depth adds to the pot. */
 export function roundContribution(depth: number, isBoss: boolean): number {
   const base = POT_BASE + POT_GROWTH * depth

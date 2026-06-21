@@ -53,6 +53,7 @@ export default async function GauntletPage() {
           raidMods={stats.raidMods}
           deepest={daily.deepest}
           available={daily.available}
+          nextAt={daily.nextAt}
         />
       </div>
     </main>
