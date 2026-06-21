@@ -489,8 +489,8 @@ export const RAID_MAP: RaidNode[] = [
     image: CORSAIRS_RECKONING.enemies.pete.portrait,
     detail: {
       description:
-        "Pete's whole campaign in one sitting: six ship battles back to back, each one nastier than the last, no time to bail the bilge between them, and the old corsair waiting at the end. Win the run and his loot crate finally cracks open. It's the only place his contraband ever sees the sun.",
-      enemies: ['Reef Raider ×2', "Crow's Nest Marksman ×2", 'Saltwater Corsair ×2', 'Barnacle Pete'],
+        "Pete's whole campaign in one sitting: four ship battles back to back, each one nastier than the last, no time to bail the bilge between them, and the old corsair waiting at the end. Win the run and his loot crate finally cracks open. It's the only place his contraband ever sees the sun.",
+      enemies: ['Reef Raider ×2', "Crow's Nest Marksman", 'Saltwater Corsair', 'Barnacle Pete'],
       drops: lootDrops(CORSAIRS_RECKONING.loot),
       clearReward: clearPayout(CORSAIRS_RECKONING),
       dropsNote: 'One crate per Pete clear, rolled once and scaled by your Fortune. Every kill along the way also pays gold + Nav XP.',
