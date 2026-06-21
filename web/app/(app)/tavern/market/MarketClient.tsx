@@ -118,46 +118,68 @@ function portfolioCurve(portfolio: MarketFishEntry[], fee: number): number[] {
   return pts
 }
 
-// ── Light holding row (tap to open the trade sheet) ──────────────────────
-function HoldingRow({ entry, fee, onOpen }: { entry: MarketFishEntry; fee: number; onOpen: (e: MarketFishEntry) => void }) {
+// ── Light holding row ──
+// Tap the info to open the trade sheet (custom quantity / detail); the inline
+// "Sell" button on the right sells the WHOLE stack of that species at the
+// current market price in one tap — brought back per player feedback that the
+// per-fish quick-sell went missing when the market replaced the old hold.
+function HoldingRow({ entry, fee, onOpen, onQuickSell, selling }: {
+  entry: MarketFishEntry
+  fee: number
+  onOpen: (e: MarketFishEntry) => void
+  onQuickSell: (e: MarketFishEntry) => void
+  selling: boolean
+}) {
   const pct = pctOf(entry.multiplier, entry.prev_multiplier)
   const up = pct >= 0
   const priceEach = Math.floor(entry.sell_value * entry.multiplier * fee)
   const value = priceEach * entry.quantity
   const rColor = RARITY_COLOR[entry.bite_rarity] ?? '#9ca3af'
   return (
-    <motion.button
-      type="button"
-      onClick={() => onOpen(entry)}
-      whileTap={{ scale: 0.99 }}
-      transition={{ type: 'spring', stiffness: 600, damping: 24 }}
-      className="w-full"
-      style={{
-        display: 'flex', alignItems: 'center', gap: 11,
-        padding: '0.7rem 0.25rem', background: 'none', border: 'none',
-        borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', textAlign: 'left',
-      }}
-    >
-      <span style={{ width: 8, height: 8, borderRadius: '50%', background: rColor, flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{entry.name}</p>
-        <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7774', ...TNUM }}>
-          ×{entry.quantity} · {value.toLocaleString()} ⟡
-        </p>
-      </div>
-      <div style={{ width: 54, flexShrink: 0 }}>
-        <Sparkline data={[...entry.history, entry.multiplier]} up={up} height={26} />
-      </div>
-      <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 74 }}>
-        <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: '#fff', ...TNUM }}>{priceEach.toLocaleString()} ⟡</p>
-        <p className="font-karla font-700 flex items-center justify-end gap-1" style={{ fontSize: '0.66rem', color: up ? UP : DOWN, ...TNUM }}>
-          <ChangeArrow up={up} />{fmtPct(pct)}
-        </p>
-      </div>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5a5654" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
-        <path d="M9 6l6 6-6 6" />
-      </svg>
-    </motion.button>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <button
+        type="button"
+        onClick={() => onOpen(entry)}
+        className="tap"
+        style={{
+          flex: 1, minWidth: 0,
+          display: 'flex', alignItems: 'center', gap: 11,
+          padding: '0.7rem 0.25rem', background: 'none', border: 'none', textAlign: 'left',
+        }}
+      >
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: rColor, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{entry.name}</p>
+          <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7774', ...TNUM }}>
+            ×{entry.quantity} · {value.toLocaleString()} ⟡
+          </p>
+        </div>
+        <div style={{ width: 50, flexShrink: 0 }}>
+          <Sparkline data={[...entry.history, entry.multiplier]} up={up} height={26} />
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 70 }}>
+          <p className="font-karla font-700" style={{ fontSize: '0.9rem', color: '#fff', ...TNUM }}>{priceEach.toLocaleString()} ⟡</p>
+          <p className="font-karla font-700 flex items-center justify-end gap-1" style={{ fontSize: '0.64rem', color: up ? UP : DOWN, ...TNUM }}>
+            <ChangeArrow up={up} />{fmtPct(pct)}
+          </p>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        disabled={selling}
+        onClick={() => onQuickSell(entry)}
+        className="font-karla font-700 uppercase tracking-[0.05em] tap"
+        style={{
+          flexShrink: 0, padding: '0.42rem 0.6rem', borderRadius: 8,
+          background: 'rgba(127,212,154,0.10)', border: '1px solid rgba(127,212,154,0.34)',
+          color: selling ? '#5a6a60' : '#7fd49a', fontSize: '0.6rem',
+          cursor: selling ? 'default' : 'pointer', whiteSpace: 'nowrap',
+        }}
+      >
+        Sell
+      </button>
+    </div>
   )
 }
 
@@ -604,7 +626,14 @@ export default function MarketClient({
           ) : (
             <div style={{ background: 'rgba(11,13,18,0.96)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 12, padding: '0 0.85rem' }}>
               {portfolio.map(entry => (
-                <HoldingRow key={entry.fish_id} entry={entry} fee={fee} onOpen={setTradeFish} />
+                <HoldingRow
+                  key={entry.fish_id}
+                  entry={entry}
+                  fee={fee}
+                  onOpen={setTradeFish}
+                  onQuickSell={(e) => handleSell(e.fish_id, e.quantity)}
+                  selling={selling !== null}
+                />
               ))}
             </div>
           )}
