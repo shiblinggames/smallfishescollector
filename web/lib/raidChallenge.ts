@@ -268,8 +268,13 @@ const CARTOGRAPHER_CHALLENGE_LOOT: typeof THE_CARTOGRAPHER['loot'] = (() => {
 // The Cartographer skips phase 2 for now — Riposte is already a unique
 // second threat layer on top of the crew-wide Mist Veil, and adding a
 // phase 2 would stack three signature mechanics into one fight.
-export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig =
-  withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING, PETE_CHALLENGE_LOOT), 'pete', PETE_PHASE2)
+export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig = {
+  ...withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING, PETE_CHALLENGE_LOOT), 'pete', PETE_PHASE2),
+  // Hard mode keeps the original 6-mob grind — only the NORMAL entry raid was
+  // shortened to 4 (2026-06-20). Challenge enemies still get the eased base
+  // stats scaled back up by the challenge HP/dmg multipliers.
+  sequence: ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair'],
+}
 export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig =
   withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST, KRUST_CHALLENGE_LOOT), 'krust', KRUST_PHASE2)
 export const THE_CARTOGRAPHER_CHALLENGE: BossRaidConfig =

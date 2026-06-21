@@ -168,7 +168,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
     // punishment lands in the FIRST few turns of each cycle so it still
     // matters in short mob fights.
     brute: {
-      id: 'brute', name: 'Reef Raider', hpBase: 25, minDmg: 2, maxDmg: 5,
+      id: 'brute', name: 'Reef Raider', hpBase: 20, minDmg: 2, maxDmg: 5,
       shipSpeed: 4, actionMs: 4500,
       // 4-turn loop. Pure trade — no surprises, no punishment turns.
       // Brutes are the cannon fodder of the raid; the player can mash
@@ -180,7 +180,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       portrait: ENEMY_IMG_BASE + 'reefraider.png',
     },
     sniper: {
-      id: 'sniper', name: "Crow's Nest Marksman", hpBase: 30, minDmg: 2, maxDmg: 10,
+      id: 'sniper', name: "Crow's Nest Marksman", hpBase: 25, minDmg: 2, maxDmg: 8,
       shipSpeed: 3, actionMs: 5500,
       // 7-turn loop with TWO early punish turns:
       //   T2 dodge   → wastes the player's first charged shot
@@ -193,7 +193,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       portrait: ENEMY_IMG_BASE + 'crowsnestmarksman.png',
     },
     corsair: {
-      id: 'corsair', name: 'Saltwater Corsair', hpBase: 38, minDmg: 6, maxDmg: 9,
+      id: 'corsair', name: 'Saltwater Corsair', hpBase: 32, minDmg: 5, maxDmg: 8,
       shipSpeed: 7, actionMs: 3500,
       // 9-turn loop. Punishes start at T4:
       //   T2 mutual fire trade (corsair is the only mob that opens with one)
@@ -209,7 +209,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       portrait: ENEMY_IMG_BASE + 'saltwatercorsair.png',
     },
     pete: {
-      id: 'pete', name: 'Barnacle Pete', hpBase: 55, minDmg: 8, maxDmg: 15,
+      id: 'pete', name: 'Barnacle Pete', hpBase: 46, minDmg: 7, maxDmg: 12,
       shipSpeed: 6, actionMs: 4500,
       // 13-turn loop, boss-grade threat. Brutal opener: three reload-dodge
       // pairs in a row (T2, T4, T6) all land on the player's autopilot
@@ -223,9 +223,10 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       //   T7 VOLLEY → free 2× hit
       //   T9 fire   → free hit
       //   T13 VOLLEY → free 2× hit
-      // Six punish turns per cycle. 8–15 × 2 × 1.5 crit = up to 45-dmg
-      // single shots; the only safe play is reading the pattern and
-      // defending (or breaking rhythm with extra reloads).
+      // Six punish turns per cycle. Eased 2026-06-20 (entry-raid pacing):
+      // 7–12 × 2 × 1.5 crit = up to ~36-dmg single shots (was 45); the only
+      // safe play is still reading the pattern and defending (or breaking
+      // rhythm with extra reloads).
       // Charges: 0→1→1→2→2→3→3→0→1→0→1→2→3→0
       pattern: ['reload', 'dodge', 'reload', 'dodge', 'reload', 'dodge', 'volley', 'reload', 'fire', 'reload', 'reload', 'reload', 'volley'],
       critChance: 0.075,
@@ -233,7 +234,10 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
       portrait: ENEMY_IMG_BASE + 'barnacle_pete.png',
     },
   },
-  sequence: ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair'],
+  // Eased to 4 mobs (was 6: dropped a sniper + a corsair) so the very first
+  // raid players ever fight isn't a 7-fight war of attrition with a Rowboat.
+  // Still ramps brute → sniper → corsair → boss.
+  sequence: ['brute', 'brute', 'sniper', 'corsair'],
   bossId: 'pete',
   // Weights total 100 for clean percentage reads. Normal raid drops
   // both Corsair Cannons (the weak +10% Epic and the Prime +20%
