@@ -86,7 +86,10 @@ export const SLOTS_JACKPOT_FEED_PCT = 0.05
 // the cap; cash-out converts everything back to doubloons and ends the
 // session (per-game session nets reset). Per-game WAGER bands stay below.
 export const CASINO_DAILY_CAP = 5000   // base doubloons/day; raised by puzzle points (denDailyCap)
-export const CASINO_BUY_IN_PRESETS = [100, 250, 500, 1000, 2500, 5000] as const
+// Smaller-increment buy-in ladder (was 100→5000). Lower entries for casual
+// top-ups; the lobby's Max button covers "buy my whole remaining limit" so the
+// presets don't need to climb all the way to the cap.
+export const CASINO_BUY_IN_PRESETS = [25, 50, 100, 250, 500, 1000] as const
 export const CASINO_BUY_IN_MIN = 10
 
 // Puzzle-points → Den daily buy-in cap. Cumulative points from solving

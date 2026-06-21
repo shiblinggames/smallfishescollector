@@ -222,6 +222,32 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
                   )
                 })}
               </div>
+
+              {/* Max — jump straight to the whole remaining buy-in limit
+                  (min of the purse cap, your doubloons, and today's cap). */}
+              {(() => {
+                const maxSelected = buyInAmount === buyInCap && buyInCap > 0
+                const maxDisabled = buyInCap <= 0 || isPending
+                return (
+                  <button
+                    type="button"
+                    disabled={maxDisabled}
+                    onClick={() => setBuyInAmount(buyInCap)}
+                    className="font-karla font-700 uppercase tracking-[0.08em]"
+                    style={{
+                      padding: '0.45rem 0', borderRadius: 9,
+                      background: maxSelected ? 'rgba(240,192,64,0.14)' : 'rgba(4,10,20,0.5)',
+                      border: `1px solid ${maxSelected ? GOLD : 'rgba(255,255,255,0.12)'}`,
+                      color: buyInCap <= 0 ? '#3a3835' : maxSelected ? GOLD : '#c8a85a',
+                      fontSize: '0.64rem', letterSpacing: '0.07em',
+                      cursor: maxDisabled ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {buyInCap > 0 ? `Max · ${buyInCap.toLocaleString()} ⟡` : 'Max'}
+                  </button>
+                )
+              })()}
+
               <motion.button
                 type="button"
                 disabled={!canBuyIn}
