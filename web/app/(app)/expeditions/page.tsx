@@ -16,10 +16,8 @@ import { getRaidMapView } from './raidMapActions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
-import { isPvpTester } from '@/lib/shipBattle/access'
 import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
 import { getCrew } from '@/app/(app)/social/actions'
-import ShipDuels from './ShipDuels'
 
 // Streaming pattern: the page paints its shell + Nav as soon as the profile
 // fetch returns (one fast query), then each heavy section streams in
@@ -190,6 +188,17 @@ async function ExpeditionHub() {
     cachedVoyageHistory(),
   ])
 
+  // PvP + Gauntlets hub cards are admin-only for now (released to public but
+  // locked as "Coming Soon"). Only fetch the PvP duel state when the viewer
+  // is an admin — non-admins never open it.
+  const isAdmin = profile?.is_admin === true
+  const pvp = isAdmin
+    ? await (async () => {
+        const [{ battles, wins, losses }, friends] = await Promise.all([getShipBattles(), getCrew()])
+        return { battles, wins, losses, friends }
+      })()
+    : null
+
   const shipTier = profile?.ship_tier ?? 0
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
   // Next main-chain node: first non-cleared, non-sideBranch view.
@@ -259,15 +268,10 @@ async function ExpeditionHub() {
       readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
       expeditionXP={profile?.expedition_xp ?? 0}
       voyageHistory={voyageHistory}
+      isAdmin={isAdmin}
+      pvp={pvp}
     />
   )
-}
-
-// Ship Duels (PvP) — private testing only, gated to the PVP_TESTERS allowlist.
-// Rendered just below the hub cards for the testers; invisible to everyone else.
-async function ShipDuelsSection() {
-  const [{ battles, wins, losses }, friends] = await Promise.all([getShipBattles(), getCrew()])
-  return <ShipDuels battles={battles} wins={wins} losses={losses} friends={friends} />
 }
 
 async function RaidsMapSection() {
@@ -343,12 +347,8 @@ export default async function ExpeditionsPage() {
               <ExpeditionHub />
             </Suspense>
 
-            {/* Ship Duels (PvP) — only the test allowlist sees this section. */}
-            {isPvpTester(profile?.username) && (
-              <Suspense fallback={<SkeletonBox height={120} radius={16} style={{ marginBottom: '1.2rem' }} />}>
-                <ShipDuelsSection />
-              </Suspense>
-            )}
+            {/* PvP (Ship Duels) moved into the PvP hub card above — it's no
+                longer a standalone section. Admin-only for now. */}
 
             {/* DailyVoyagePanel moved into the Voyages hub-card modal —
                 no longer rendered as a standalone section. Tapping the

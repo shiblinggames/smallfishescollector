@@ -1128,27 +1128,10 @@ export const RAID_MAP: RaidNode[] = [
       ctaLabel: 'Pick a class',
     },
   },
-  {
-    // Chapter 2.5 — the optional "halfway" detour. A daily push-your-luck
-    // gauntlet that pulls depth-scaled ships from every crew you've fought
-    // (Raids 1-4). Never marked cleared (no raidId, not in raid_node_progress)
-    // so it stays available forever; the once-a-day limit lives in the route's
-    // server actions. Sits as a side branch off the chapter-2 close.
-    id: 'davy_jones_gauntlet',    type: 'gauntlet',
-    label: 'The Davy Jones Gauntlet',
-    flavor: "An open hole in the seabed past the Gullet, colder than the rest of the deep. Ships you have already sunk come crawling back up it, meaner each time, and what you haul out is only yours if you climb back into the light.",
-    requiresNode: 'chapter_2_class',
-    requiresNavLevel: 45,
-    route: '/raids/gauntlet',
-    adminOnly: true,
-    sideBranch: { parentId: 'chapter_2_class' },
-    detail: {
-      description:
-        "Fight down through the deep. Every win drags up a harder ship from the crews you've already faced, and the loot piles into one pot. After each fight you choose: cash out and bank it, or push on for a bigger haul. The deeper you go the fatter it gets, but if your ship sinks the whole pot goes down with it. A short cooldown between runs.",
-      dropsNote: 'Doubloons, Nav XP, and a depth-scaled chest on cash-out. Push deeper for a richer chest. Nothing if you sink.',
-      ctaLabel: 'Enter the Gauntlet',
-    },
-  },
+  // The Davy Jones Gauntlet used to sit here as a chapter-2 side branch.
+  // It's now a permanent top-level entry point — the "Gauntlets" hub card
+  // on the Expeditions page (HubCards.tsx) — so it no longer lives in the
+  // story map. The /raids/gauntlet route + its server actions are unchanged.
 ]
 
 export type RaidNodeStatus = 'locked' | 'available' | 'cleared'

@@ -14,6 +14,9 @@ import { repairShip } from '@/app/(app)/raids/actions'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import DailyVoyagePanel from './DailyVoyagePanel'
+import ShipDuels from './ShipDuels'
+import type { ShipBattleSummary } from '@/app/(app)/social/shipBattleActions'
+import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 
 const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
 import type { DailyVoyage } from './voyageActions'
@@ -65,6 +68,11 @@ interface Props {
   readyVoyage: DailyVoyage | null
   expeditionXP: number
   voyageHistory: VoyageHistoryEntry[]
+  // Admin unlocks the two "coming soon" entry points (PvP + Gauntlets);
+  // everyone else sees them locked. PvP data is only fetched + passed when
+  // the viewer is an admin (null otherwise).
+  isAdmin: boolean
+  pvp: { battles: ShipBattleSummary[]; wins: number; losses: number; friends: SocialCrewMember[] } | null
 }
 
 const VOYAGE_ACCENT: Record<VoyageStatus, { fg: string; bg: string; bd: string }> = {
@@ -176,12 +184,68 @@ function HubCrewStrip({
   )
 }
 
+// Second-row hub card (PvP / Gauntlets). Smaller than the Campaign /
+// Voyages cards — art + title + one line + a status footer. When `locked`
+// it dims, drops its tap handler, and shows a "Coming Soon" lock instead of
+// the open affordance.
+function SideHubCard({ accent, image, title, desc, locked, onClick }: {
+  accent: string
+  image: string
+  title: string
+  desc: string
+  locked: boolean
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={locked ? undefined : onClick}
+      disabled={locked}
+      style={{
+        position: 'relative', overflow: 'hidden',
+        background: 'rgba(6,12,20,0.92)',
+        border: `1px solid ${accent}${locked ? '22' : '30'}`,
+        borderTop: `1px solid ${accent}${locked ? '38' : '55'}`,
+        borderRadius: 18, padding: '0.85rem 0.85rem 0.9rem',
+        cursor: locked ? 'default' : 'pointer', textAlign: 'left',
+        display: 'flex', flexDirection: 'column',
+        opacity: locked ? 0.92 : 1,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 56, marginBottom: 8 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt="" loading="lazy" decoding="async"
+          style={{ width: '100%', height: 54, objectFit: 'contain', filter: `drop-shadow(0 4px 14px ${accent}40)${locked ? ' grayscale(0.55)' : ''}`, opacity: locked ? 0.7 : 1 }} />
+      </div>
+      <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.1, marginBottom: 6 }}>{title}</p>
+      <p className="font-karla font-500" style={{ fontSize: '0.72rem', color: '#b8b0a0', lineHeight: 1.4, marginBottom: 10 }}>
+        {desc}
+      </p>
+      <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: `1px solid ${accent}1c` }}>
+        {locked ? (
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.6rem', color: '#8a8680' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Coming Soon
+          </p>
+        ) : (
+          <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: accent }}>
+            Open ›
+          </p>
+        )}
+      </div>
+    </button>
+  )
+}
+
 export default function HubCards({
   campaign, voyages, doubloons,
   ownedRaidItems, equippedRaidItems, raidItemSlots,
   roster, shipCrewSlots,
   shipStats, raidScore,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
+  isAdmin, pvp,
 }: Props) {
   const router = useRouter()
   // Compute each track's party once. Filtering by voyage_slot / raid_slot
@@ -192,7 +256,7 @@ export default function HubCards({
   const voyageParty = roster
     .filter(c => c.voyageSlot !== null)
     .sort((a, b) => (a.voyageSlot as number) - (b.voyageSlot as number))
-  const [modal, setModal] = useState<null | 'campaign' | 'voyages'>(null)
+  const [modal, setModal] = useState<null | 'campaign' | 'voyages' | 'pvp' | 'gauntlets'>(null)
   const [, startTransition] = useTransition()
 
   // Esc closes the open prep modal. (Used to also handle a nested items
@@ -218,6 +282,8 @@ export default function HubCards({
 
   const campaignAccent = '#c4a96a'
   const vAcc = VOYAGE_ACCENT[voyages.status]
+  const pvpAccent = '#d0716a'
+  const gauntletAccent = '#7a8fc9'
 
   // Item equip / unequip used to live here as an optimistic toggle backing
   // the nested 'Equip items' modal. Both were removed when the prep modal
@@ -351,6 +417,26 @@ export default function HubCards({
             </div>
           )}
         </button>
+
+        {/* ── Row 2: PvP (under Campaign) + Gauntlets (under Voyages).
+            Both are admin-only for now; everyone else sees a "Coming Soon"
+            lock and the card doesn't open. ─────────────────────────────── */}
+        <SideHubCard
+          accent={pvpAccent}
+          image="/reefraider.png"
+          title="PvP"
+          desc="Trade broadsides with other captains. Climb the duelist ladder."
+          locked={!isAdmin}
+          onClick={isAdmin ? () => setModal('pvp') : undefined}
+        />
+        <SideHubCard
+          accent={gauntletAccent}
+          image="/raid4_gulletmaw.png"
+          title="Gauntlets"
+          desc="Push your luck down a gauntlet for one swelling pot. Bank it or sink."
+          locked={!isAdmin}
+          onClick={isAdmin ? () => setModal('gauntlets') : undefined}
+        />
       </div>
 
       {/* ── Campaign prep modal ────────────────────────────────────── */}
@@ -561,6 +647,78 @@ export default function HubCards({
               voyages={voyageHistory}
             />
           </div>
+        </div>
+      </PopupShell>
+
+      {/* ── PvP modal — the old "Broadsides" section, now opened from the
+          PvP hub card. Admin-only; pvp data is only passed when admin. ──── */}
+      <PopupShell open={modal === 'pvp'} onClose={() => setModal(null)}>
+        <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+          style={{
+            margin: 'auto', width: '100%', maxWidth: 440,
+            background: 'linear-gradient(180deg, #1a0e0c 0%, #0a0807 100%)',
+            border: `1px solid ${pvpAccent}55`,
+            borderRadius: 20, padding: '0.4rem 0.4rem 0.5rem',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.7rem 0.3rem' }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>PvP</p>
+            <button type="button" onClick={() => setModal(null)} aria-label="Close"
+              style={{ width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+          {pvp && (
+            <ShipDuels battles={pvp.battles} wins={pvp.wins} losses={pvp.losses} friends={pvp.friends} />
+          )}
+        </div>
+      </PopupShell>
+
+      {/* ── Gauntlets modal — entry hub for the push-your-luck gauntlets.
+          Davy Jones is the first; more slot in later. Admin-only for now. ── */}
+      <PopupShell open={modal === 'gauntlets'} onClose={() => setModal(null)}>
+        <div role="dialog" aria-modal onClick={e => e.stopPropagation()}
+          style={{
+            margin: 'auto', width: '100%', maxWidth: 420,
+            background: 'linear-gradient(180deg, #0c1222 0%, #06080f 100%)',
+            border: `1px solid ${gauntletAccent}55`,
+            borderRadius: 20, padding: '1rem',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: `${gauntletAccent}aa` }}>Push your luck</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Gauntlets</p>
+            </div>
+            <button type="button" onClick={() => setModal(null)} aria-label="Close"
+              style={{ width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <button type="button"
+            onClick={() => { setModal(null); router.push('/raids/gauntlet') }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+              padding: '0.75rem', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+              background: `linear-gradient(180deg, ${gauntletAccent}1c, rgba(0,0,0,0.2))`,
+              border: `1px solid ${gauntletAccent}55`,
+            }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/raid4_gulletmaw.png" alt="" loading="lazy" decoding="async"
+              style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 10px ${gauntletAccent}55)` }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>The Davy Jones Gauntlet</p>
+              <p className="font-karla font-500" style={{ fontSize: '0.66rem', color: '#a8b0c4', lineHeight: 1.35, marginTop: 2 }}>
+                Fight down the deep. Every win fattens one pot; cash out or sink with it.
+              </p>
+            </div>
+            <span aria-hidden className="font-karla font-700" style={{ flexShrink: 0, color: gauntletAccent, fontSize: '1rem' }}>›</span>
+          </button>
+          <p className="font-karla font-500" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: 10 }}>
+            More gauntlets are on the way.
+          </p>
         </div>
       </PopupShell>
 

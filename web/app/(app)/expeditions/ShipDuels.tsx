@@ -1,9 +1,10 @@
 'use client'
 
-// Broadsides — private-testing ship PvP entry point on the Expeditions page
-// (gated to PVP_TESTERS server-side + by the section render). Auto-lists your
-// crew as quick-challenge targets, keeps active duels actionable, and tucks the
-// W/L history behind a collapsible so it never grows into a wall of rows.
+// PvP (ship duels) — opens inside the PvP hub-card modal on the Expeditions
+// page. Admin-only for now (released to public but locked as "Coming Soon").
+// Auto-lists your crew as quick-challenge targets, keeps active duels
+// actionable, and tucks the W/L history behind a collapsible so it never
+// grows into a wall of rows.
 
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -62,15 +63,11 @@ export default function ShipDuels({ battles: initialBattles, wins: initialWins, 
   }
 
   return (
-    <div style={{ background: 'rgba(8,12,18,0.78)', border: `1px solid ${ACCENT}33`, borderRadius: 16, padding: '1rem', marginBottom: '1.2rem' }}>
+    <div style={{ padding: '0.5rem 0.7rem 0.7rem' }}>
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="M9.5 17.5 21 6V3h-3L6.5 14.5" /><path d="m11 19-6-6" /><path d="m8 16-4 4" />
-          </svg>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Broadsides</p>
-          <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: ACCENT, background: `${ACCENT}1c`, border: `1px solid ${ACCENT}44`, borderRadius: 999, padding: '0.12rem 0.42rem' }}>Testing</span>
-        </div>
+        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#9a948a' }}>
+          Your record
+        </p>
         <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#9a948a', fontVariantNumeric: 'tabular-nums' }}>
           <span style={{ color: '#4ade80' }}>{wins}W</span> · <span style={{ color: '#f87171' }}>{losses}L</span>
         </p>
@@ -147,7 +144,7 @@ function ChallengePicker({ friends, pending, error, onPick, onClose }: {
   const exactInList = friends.some(f => f.username.toLowerCase() === query)
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 130, background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
       <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }}
         style={{ width: '100%', maxWidth: 380, background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)', border: `1px solid ${ACCENT}33`, borderRadius: 18, padding: '1rem', boxShadow: '0 18px 60px rgba(0,0,0,0.55)' }}>
         <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f4ecd8', marginBottom: 10 }}>Challenge a Captain</p>
