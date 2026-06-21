@@ -922,6 +922,7 @@ export default function DailyVoyagePanel({
   // ── Done: reward confirmed ────────────────────────────────────────────────
   if (panelState === 'done' && activeVoyage) {
     const earned = activeVoyage.total_doubloons
+    const doneRoute = activeVoyage.route ? ROUTE_CONFIGS[activeVoyage.route as VoyageRoute] : null
     const lostCards = activeVoyage.crew_lost
       .map(id => byId.get(id))
       .filter(Boolean) as CrewMember[]
@@ -934,9 +935,12 @@ export default function DailyVoyagePanel({
           {/* Loot-hero header */}
           <div style={{ textAlign: 'center' }}>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#c8aa6a' }}>
-              Voyage complete
+              Voyage Complete
             </p>
-            <div style={{ height: 1, margin: '0.9rem 0', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
+            {doneRoute && (
+              <p className="font-karla" style={{ fontSize: '0.66rem', color: doneRoute.color, marginTop: 3 }}>{doneRoute.name}</p>
+            )}
+            <div style={{ height: 1, margin: '0.7rem 0 0.85rem', background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent)' }} />
             {earned > 0 || activeVoyage.total_gems > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                 {earned > 0 && (
@@ -955,259 +959,54 @@ export default function DailyVoyagePanel({
             )}
           </div>
 
-          {/* Crew XP gained — survivor payouts. Surfaces level-up moments
-              inline so the player sees "Doby +180 XP · Lv 12 → 14" right
-              next to the doubloon hero. Same gold tone as the level
-              chips on roster cards so it reads as one visual system. */}
-          {crewXP.length > 0 && (
-            <div style={{
-              background: 'rgba(240,192,64,0.06)',
-              border: '1px solid rgba(240,192,64,0.22)',
-              borderRadius: 8, padding: '0.55rem 0.8rem',
-            }}>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#f0c040', marginBottom: '0.3rem' }}>
-                Crew earned XP
-              </p>
+          {/* Rewards summary — Nav XP, crew XP, and recovered bait as one
+              consistent label↔value list. Replaces the old trio of separate,
+              differently-styled blocks so the screen reads at a glance. */}
+          {(xpEarned > 0 || crewXP.length > 0 || claimedBait.length > 0) && (
+            <div className="app-card" style={{ padding: '0.5rem 0.9rem' }}>
+              {xpEarned > 0 && (
+                <VoyageSummaryRow
+                  label="Navigation"
+                  value={`+${xpEarned.toLocaleString()} XP`}
+                  sub={levelUp ? `Lv ${levelUp.from} → ${levelUp.to}` : undefined}
+                  valueColor="#7fa0d0"
+                  strong={!!levelUp}
+                />
+              )}
               {crewXP.map(c => {
                 const leveled = c.newLevel > c.oldLevel
                 return (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginTop: '0.2rem' }}>
-                    <p className="font-pirata" style={{ fontSize: '0.85rem', color: '#ecdcbd', lineHeight: 1.2 }}>
-                      {c.name}
-                    </p>
-                    <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: leveled ? '#f0c040' : '#a78a5a', lineHeight: 1.2, textShadow: leveled ? '0 0 8px rgba(240,192,64,0.5)' : 'none' }}>
-                      +{(c.newXP - c.oldXP).toLocaleString()} XP
-                      {leveled && <span style={{ marginLeft: 6 }}>· Lv {c.oldLevel} → {c.newLevel}</span>}
-                    </p>
-                  </div>
+                  <VoyageSummaryRow
+                    key={c.id}
+                    label={c.name}
+                    value={`+${(c.newXP - c.oldXP).toLocaleString()} XP`}
+                    sub={leveled ? `Lv ${c.oldLevel} → ${c.newLevel}` : undefined}
+                    valueColor={leveled ? '#f0c040' : '#a78a5a'}
+                    strong={leveled}
+                  />
                 )
               })}
-            </div>
-          )}
-
-          {claimedBait.length > 0 && (
-            <div style={{
-              background: 'rgba(74,222,128,0.05)',
-              border: '1px solid rgba(74,222,128,0.2)',
-              borderRadius: 8, padding: '0.55rem 0.8rem',
-            }}>
-              <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.44rem', color: '#4ade80', marginBottom: '0.3rem' }}>
-                Bait recovered
-              </p>
               {claimedBait.map(({ type, qty }) => (
-                <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: type === 'golden' ? '#fde68a' : '#4ade80', flexShrink: 0 }} />
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.75rem', color: type === 'golden' ? '#fde68a' : '#4ade80', lineHeight: 1.3 }}>
-                    {type === 'golden' ? 'Golden Lure' : 'Luminous Lure'} ×{qty}
-                  </p>
-                </div>
+                <VoyageSummaryRow
+                  key={type}
+                  label="Bait recovered"
+                  value={`${type === 'golden' ? 'Golden Lure' : 'Luminous Lure'} ×${qty}`}
+                  valueColor={type === 'golden' ? '#fde68a' : '#7bdca0'}
+                />
               ))}
             </div>
           )}
 
           {claimedTideTurner && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.88, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
-              style={{
-                position: 'relative', overflow: 'hidden',
-                background: 'linear-gradient(135deg, rgba(109,40,217,0.22) 0%, rgba(139,92,246,0.12) 60%, rgba(76,29,149,0.18) 100%)',
-                border: '1px solid rgba(167,139,250,0.5)',
-                borderRadius: 16,
-                padding: '1.1rem 1.1rem 1rem',
-                boxShadow: '0 0 32px rgba(139,92,246,0.25), inset 0 1px 0 rgba(255,255,255,0.07)',
-              }}
-            >
-              {/* Background glow orb */}
-              <div style={{
-                position: 'absolute', top: -30, right: -20,
-                width: 120, height: 120, borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, transparent 70%)',
-                pointerEvents: 'none',
-              }} />
-
-              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#c4b5fd', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
-                ✦ Rare find ✦
-              </p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <motion.img
-                  src="/tideturner.png"
-                  alt="Tide Turner"
-                  initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
-                  style={{
-                    width: 64, height: 64, objectFit: 'contain', flexShrink: 0,
-                    filter: 'drop-shadow(0 0 16px rgba(167,139,250,0.8)) drop-shadow(0 0 32px rgba(139,92,246,0.5))',
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <motion.p
-                    className="font-cinzel font-700"
-                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    style={{ fontSize: '1.05rem', color: '#e9d5ff', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(167,139,250,0.6)' }}
-                  >
-                    Tide Turner
-                  </motion.p>
-                  <motion.p
-                    className="font-karla font-300"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 0.55 }}
-                    style={{ fontSize: '0.7rem', color: '#a78bfa', lineHeight: 1.45 }}
-                  >
-                    Skip a hooked fish during the catch phase without breaking your perfect streak. Grants 3 skips per day.
-                  </motion.p>
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    style={{ marginTop: 6 }}
-                  >
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#7c3aed', background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
-                      Permanent · Equip from gear
-                    </span>
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
+            <VoyageItemRow img="/tideturner.png" accent="#a78bfa" name="Tide Turner" desc="Skip a hooked fish without breaking your perfect streak. 3 a day." />
           )}
 
           {claimedPhantomHook && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.88, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
-              style={{
-                position: 'relative', overflow: 'hidden',
-                background: 'linear-gradient(135deg, rgba(13,100,96,0.22) 0%, rgba(45,212,191,0.10) 60%, rgba(6,78,59,0.18) 100%)',
-                border: '1px solid rgba(45,212,191,0.45)',
-                borderRadius: 16,
-                padding: '1.1rem 1.1rem 1rem',
-                boxShadow: '0 0 32px rgba(45,212,191,0.20), inset 0 1px 0 rgba(255,255,255,0.07)',
-              }}
-            >
-              <div style={{
-                position: 'absolute', top: -30, right: -20,
-                width: 120, height: 120, borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(45,212,191,0.28) 0%, transparent 70%)',
-                pointerEvents: 'none',
-              }} />
-
-              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#5eead4', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
-                ✦ Rare find ✦
-              </p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <motion.img
-                  src="/phantomhook.png"
-                  alt="Phantom Hook"
-                  initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
-                  style={{
-                    width: 64, height: 64, objectFit: 'contain', flexShrink: 0,
-                    filter: 'drop-shadow(0 0 16px rgba(45,212,191,0.8)) drop-shadow(0 0 32px rgba(13,188,155,0.5))',
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <motion.p
-                    className="font-cinzel font-700"
-                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    style={{ fontSize: '1.05rem', color: '#ccfbf1', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(45,212,191,0.5)' }}
-                  >
-                    Phantom Hook
-                  </motion.p>
-                  <motion.p
-                    className="font-karla font-300"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 0.55 }}
-                    style={{ fontSize: '0.7rem', color: '#5eead4', lineHeight: 1.45 }}
-                  >
-                    25% chance to save your bait on every cast. Stacks with perfect-catch saves.
-                  </motion.p>
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    style={{ marginTop: 6 }}
-                  >
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#0d9488', background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.28)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
-                      Permanent · Equip from gear
-                    </span>
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
+            <VoyageItemRow img="/phantomhook.png" accent="#5eead4" name="Phantom Hook" desc="25% chance to save your bait on every cast." />
           )}
 
           {claimedPerfectedSigil && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.88, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
-              style={{
-                position: 'relative', overflow: 'hidden',
-                background: 'linear-gradient(135deg, rgba(71,85,105,0.30) 0%, rgba(148,163,184,0.12) 60%, rgba(30,41,59,0.22) 100%)',
-                border: '1px solid rgba(148,163,184,0.45)',
-                borderRadius: 16,
-                padding: '1.1rem 1.1rem 1rem',
-                boxShadow: '0 0 32px rgba(148,163,184,0.22), inset 0 1px 0 rgba(255,255,255,0.07)',
-              }}
-            >
-              <div style={{
-                position: 'absolute', top: -30, right: -20,
-                width: 120, height: 120, borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(148,163,184,0.30) 0%, transparent 70%)',
-                pointerEvents: 'none',
-              }} />
-
-              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#cbd5e1', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
-                ✦ Rare find ✦
-              </p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <motion.img
-                  src="/perfectedsigil.png"
-                  alt="Perfected Sigil"
-                  initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
-                  style={{
-                    width: 64, height: 64, objectFit: 'contain', flexShrink: 0,
-                    filter: 'drop-shadow(0 0 16px rgba(148,163,184,0.8)) drop-shadow(0 0 32px rgba(100,116,139,0.5))',
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <motion.p
-                    className="font-cinzel font-700"
-                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    style={{ fontSize: '1.05rem', color: '#e2e8f0', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(148,163,184,0.5)' }}
-                  >
-                    Perfected Sigil
-                  </motion.p>
-                  <motion.p
-                    className="font-karla font-300"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 0.55 }}
-                    style={{ fontSize: '0.7rem', color: '#cbd5e1', lineHeight: 1.45 }}
-                  >
-                    Each Perfect catch pays you a bonus 10 ⟡, credited the moment you reel it in.
-                  </motion.p>
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    style={{ marginTop: 6 }}
-                  >
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.54rem', color: '#475569', background: 'rgba(148,163,184,0.14)', border: '1px solid rgba(148,163,184,0.30)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
-                      Permanent · Equip from gear
-                    </span>
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
+            <VoyageItemRow img="/perfectedsigil.png" accent="#cbd5e1" name="Perfected Sigil" desc="A bonus +10 ⟡ on every Perfect catch." />
           )}
 
           {claimedSkinId && (() => {
@@ -1215,121 +1014,45 @@ export default function DailyVoyagePanel({
             const skinName = SKIN_NAMES[claimedSkinId] ?? claimedSkinId
             const prefix = claimedSkinId === 'default' ? 'fishing' : `fishing_${claimedSkinId}`
             return (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.88, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.15 }}
-                style={{
-                  position: 'relative', overflow: 'hidden',
-                  background: 'linear-gradient(135deg, rgba(6,16,26,0.95) 0%, rgba(20,83,45,0.22) 100%)',
-                  border: '1px solid rgba(74,222,128,0.4)',
-                  borderRadius: 16,
-                  padding: '1.1rem 1.1rem 1rem',
-                  boxShadow: '0 0 32px rgba(74,222,128,0.18), inset 0 1px 0 rgba(255,255,255,0.07)',
-                }}
-              >
-                <div style={{
-                  position: 'absolute', top: -30, right: -20,
-                  width: 120, height: 120, borderRadius: '50%',
-                  background: 'radial-gradient(circle, rgba(74,222,128,0.28) 0%, transparent 70%)',
-                  pointerEvents: 'none',
-                }} />
-                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: '#4ade80', marginBottom: '0.65rem', letterSpacing: '0.2em' }}>
-                  ✦ Skin Unlocked ✦
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <motion.div
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.3 }}
-                    style={{
-                      width: 64, height: 64, borderRadius: 12, flexShrink: 0,
-                      backgroundImage: `url(/${prefix}_rest.png)`,
-                      backgroundSize: '420% auto', backgroundPosition: '60% 68%',
-                      backgroundRepeat: 'no-repeat',
-                      border: '2px solid rgba(74,222,128,0.4)',
-                      boxShadow: '0 0 20px rgba(74,222,128,0.3)',
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <motion.p
-                      className="font-cinzel font-700"
-                      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 }}
-                      style={{ fontSize: '1.05rem', color: '#4ade80', lineHeight: 1.1, marginBottom: 4, textShadow: '0 0 20px rgba(74,222,128,0.5)' }}
-                    >
-                      {skinName}
-                    </motion.p>
-                    <motion.p
-                      className="font-karla font-300"
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      transition={{ delay: 0.55 }}
-                      style={{ fontSize: '0.7rem', color: 'rgba(74,222,128,0.7)', lineHeight: 1.45 }}
-                    >
-                      New character color unlocked. Equip it from your profile.
-                    </motion.p>
-                  </div>
-                </div>
-              </motion.div>
+              <VoyageItemRow
+                spriteBg={`url(/${prefix}_rest.png)`}
+                accent="#4ade80"
+                name={`${skinName} skin`}
+                desc="New character color unlocked."
+                tag="Skin unlocked · equip from profile"
+              />
             )
           })()}
 
-          {/* XP earned */}
-          {xpEarned > 0 && (() => {
-            const newXP = expeditionXP + xpEarned
-            const currentLevel = getLevelFromXP(newXP)
-            return (
-              <div style={{
-                background: 'rgba(70,90,140,0.10)', border: '1px solid rgba(112,144,192,0.22)',
-                borderRadius: 8, padding: '0.6rem 0.8rem',
-                display: 'flex', alignItems: 'center', gap: '0.6rem',
-              }}>
-                <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.1rem', color: '#7090c0', lineHeight: 1 }}>{currentLevel}</p>
-                  <p className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.42rem', color: '#4a5a7a', marginTop: 1 }}>Nav</p>
-                </div>
-                <div style={{ flex: 1 }}>
-                  {levelUp && (
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#7090c0', marginBottom: 3 }}>
-                      Level up! {levelUp.from} → {levelUp.to}
-                    </p>
-                  )}
-                  <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#5a7aaa' }}>+{xpEarned} expedition XP</p>
-                </div>
-              </div>
-            )
-          })()}
-
+          {/* Crew lost — clear red callout (Nav XP now lives in the summary
+              card above, so the old standalone XP block is gone). */}
           {lostCards.length > 0 && (
             <div style={{
-              background: 'rgba(20,10,10,0.60)',
-              border: '1px solid rgba(180,40,40,0.22)',
-              borderRadius: 8, padding: '0.55rem 0.8rem',
-              display: 'flex', alignItems: 'center', gap: '0.6rem',
+              background: 'rgba(30,12,12,0.55)',
+              border: '1px solid rgba(192,80,80,0.30)',
+              borderRadius: 12, padding: '0.55rem 0.9rem',
             }}>
-              <div>
-                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.46rem', color: '#9a4848', marginBottom: '0.2rem' }}>
-                  Lost at sea
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#d07a7a', marginBottom: '0.25rem' }}>
+                Lost at sea
+              </p>
+              {lostCards.map(c => (
+                <p key={c.id} className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#e08a8a', lineHeight: 1.4 }}>
+                  {c.name}
                 </p>
-                {lostCards.map(c => (
-                  <p key={c.id} className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#c06060', lineHeight: 1.3 }}>
-                    {c.name}
-                  </p>
-                ))}
-              </div>
+              ))}
             </div>
           )}
 
           {/* Done — full-width footer action */}
           <button
             onClick={() => setPanelState('idle')}
-            className="font-karla font-700 uppercase tracking-[0.12em]"
+            className="font-karla font-700 uppercase tracking-[0.12em] tap"
             style={{
               width: '100%',
-              background: 'rgba(240,192,64,0.10)',
-              border: '1px solid rgba(240,192,64,0.30)',
-              borderRadius: 10, padding: '0.75rem 1rem',
-              color: '#d8b870', cursor: 'pointer', fontSize: '0.72rem',
+              background: 'rgba(240,192,64,0.12)',
+              border: '1px solid rgba(240,192,64,0.35)',
+              borderRadius: 11, padding: '0.8rem 1rem',
+              color: '#e0c078', cursor: 'pointer', fontSize: '0.74rem',
             }}
           >
             Done
@@ -1341,4 +1064,64 @@ export default function DailyVoyagePanel({
   }
 
   return null
+}
+
+// ── Voyage-result helpers ─────────────────────────────────────────────────────
+// One consistent label↔value row for the rewards summary (Nav XP, crew XP,
+// bait) so the result screen reads at a glance instead of as a stack of
+// differently-styled blocks.
+function VoyageSummaryRow({ label, value, sub, valueColor, strong = false }: {
+  label: string
+  value: string
+  sub?: string
+  valueColor: string
+  strong?: boolean
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0.34rem 0' }}>
+      <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#9aa0ac', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexShrink: 0 }}>
+        {sub && (
+          <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: strong ? '#f0c040' : '#6a7280', textShadow: strong ? '0 0 8px rgba(240,192,64,0.45)' : 'none' }}>{sub}</span>
+        )}
+        <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: valueColor }}>{value}</span>
+      </span>
+    </div>
+  )
+}
+
+// A compact accent-tinted card for a rare permanent drop (Tide Turner, Phantom
+// Hook, Perfected Sigil) or an unlocked skin — replaces the old full-height
+// ornate cards so several can stack without dominating the screen.
+function VoyageItemRow({ accent, name, desc, img, spriteBg, tag = 'Rare find · equip from gear' }: {
+  accent: string
+  name: string
+  desc: string
+  img?: string
+  spriteBg?: string
+  tag?: string
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 11,
+      background: `${accent}10`, border: `1px solid ${accent}44`,
+      borderRadius: 12, padding: '0.6rem 0.75rem',
+    }}>
+      <div style={{
+        width: 42, height: 42, flexShrink: 0, borderRadius: 10,
+        border: `1px solid ${accent}55`, boxShadow: `0 0 12px ${accent}33`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        ...(spriteBg
+          ? { backgroundImage: spriteBg, backgroundSize: '420% auto', backgroundPosition: '60% 68%', backgroundRepeat: 'no-repeat' }
+          : { background: 'rgba(0,0,0,0.25)' }),
+      }}>
+        {img && <img src={img} alt="" style={{ width: 32, height: 32, objectFit: 'contain', filter: `drop-shadow(0 0 6px ${accent}99)` }} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.46rem', color: accent, marginBottom: 1 }}>{tag}</p>
+        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8', lineHeight: 1.1 }}>{name}</p>
+        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9aa0ac', lineHeight: 1.35, marginTop: 1 }}>{desc}</p>
+      </div>
+    </div>
+  )
 }
