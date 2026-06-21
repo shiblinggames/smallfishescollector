@@ -9,7 +9,7 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { buyInCasino, cashOutCasino } from './actions'
-import type { CasinoWallet, CasinoSessionNets, DenTopEarner } from './types'
+import type { CasinoWallet, CasinoSessionNets, DenLeaderboards } from './types'
 import { CASINO_BUY_IN_PRESETS, CASINO_BUY_IN_MAX, DEN_PURSE_TIERS } from '../constants'
 import BlackjackHubCard from '../BlackjackHubCard'
 import FishSlotsCard from '../FishSlotsCard'
@@ -23,15 +23,24 @@ const GOLD = '#f0c040'
 const MEMBER_START_CAP = DEN_PURSE_TIERS[0].cap
 const MEMBER_MAX_CAP = DEN_PURSE_TIERS[DEN_PURSE_TIERS.length - 1].cap
 
-export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
+const DEN_TABS = [
+  { key: 'overall',   label: 'Overall' },
+  { key: 'blackjack', label: 'Blackjack' },
+  { key: 'roulette',  label: 'Roulette' },
+  { key: 'slots',     label: 'Slots' },
+] as const
+type DenTabKey = typeof DEN_TABS[number]['key']
+
+export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
   initial: CasinoWallet
   jackpotPot: number
-  topEarners: DenTopEarner[]
+  denBoards: DenLeaderboards
 }) {
   const [chips, setChips] = useState(initial.chips)
   const [doubloons, setDoubloons] = useState(initial.doubloons)
   const [sessionBuyIns, setSessionBuyIns] = useState(initial.sessionBuyIns)
   const [dailyBoughtIn, setDailyBoughtIn] = useState(initial.dailyBoughtIn)
+  const [denTab, setDenTab] = useState<DenTabKey>('overall')
   const [dailyCap, setDailyCap] = useState(initial.dailyCap)
   const [nets, setNets] = useState<CasinoSessionNets>(initial.sessionNets)
   const [buyInAmount, setBuyInAmount] = useState(500)
@@ -292,49 +301,85 @@ export default function CasinoLobby({ initial, jackpotPot, topEarners }: {
         <RouletteHubCard />
       </div>
 
-      {/* High Rollers — top 3 combined lifetime earners across every
-          Den game. Rows link to profiles like the leaderboard proper. */}
-      {topEarners.length > 0 && (
-        <div style={{
-          background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
-          border: '1px solid rgba(196,169,106,0.25)',
-          borderRadius: 16,
-          padding: '0.85rem 1rem 0.75rem',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
-        }}>
-          <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
-            High Rollers
-          </p>
-          {topEarners.map((e, i) => (
-            <Link
-              key={e.userId}
-              href={`/u/${e.username}`}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '0.45rem 0.2rem',
-                borderBottom: i < topEarners.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                textDecoration: 'none',
-              }}
-            >
-              <span style={{ fontSize: i === 0 ? '1.05rem' : '0.9rem', lineHeight: 1, flexShrink: 0 }}>{['🥇', '🥈', '🥉'][i]}</span>
-              <Avatar
-                username={e.username}
-                size={i === 0 ? 30 : 26}
-                characterColor={e.characterColor}
-                equippedHat={e.equippedHat}
-                avatarBg={e.avatarBg}
-                avatarBorder={e.avatarBorder}
-              />
-              <p className="flex-1 font-karla font-700 truncate" style={{ fontSize: '0.78rem', color: '#c8c8c2', minWidth: 0 }}>
-                {e.username}
+      {/* High Rollers — tabbed: Overall (combined Den net) + top 3 of each
+          game. Rows link to profiles like the leaderboard proper. Shows only
+          once anyone's been net-up in the Den at all. */}
+      {denBoards.overall.length > 0 && (() => {
+        const rows = denBoards[denTab]
+        return (
+          <div style={{
+            background: 'linear-gradient(180deg, #1a1410 0%, #0b0908 100%)',
+            border: '1px solid rgba(196,169,106,0.25)',
+            borderRadius: 16,
+            padding: '0.85rem 1rem 0.75rem',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+          }}>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.55rem', color: '#a68a4a', textAlign: 'center', marginBottom: 8 }}>
+              High Rollers
+            </p>
+
+            {/* Tab strip — Overall first, then each game. */}
+            <div style={{
+              display: 'flex', gap: 3, padding: 3, marginBottom: 8,
+              background: 'rgba(0,0,0,0.35)', borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              {DEN_TABS.map(t => {
+                const active = denTab === t.key
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => setDenTab(t.key)}
+                    className="font-karla font-700 uppercase tracking-[0.06em] tap"
+                    style={{
+                      flex: 1, padding: '0.42rem 0.15rem', borderRadius: 8,
+                      fontSize: '0.56rem', lineHeight: 1,
+                      border: `1px solid ${active ? 'rgba(196,169,106,0.55)' : 'transparent'}`,
+                      background: active ? 'linear-gradient(180deg, rgba(240,192,64,0.22) 0%, rgba(196,169,106,0.08) 100%)' : 'transparent',
+                      color: active ? '#f0d695' : '#7a7468',
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {rows.length === 0 ? (
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#6a6258', textAlign: 'center', padding: '0.7rem 0 0.4rem' }}>
+                No high rollers at this table yet.
               </p>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#7fd49a', flexShrink: 0 }}>
-                +{e.score.toLocaleString()} ⟡
-              </p>
-            </Link>
-          ))}
-        </div>
-      )}
+            ) : rows.map((e, i) => (
+              <Link
+                key={e.userId}
+                href={`/u/${e.username}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '0.45rem 0.2rem',
+                  borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  textDecoration: 'none',
+                }}
+              >
+                <span style={{ fontSize: i === 0 ? '1.05rem' : '0.9rem', lineHeight: 1, flexShrink: 0 }}>{['🥇', '🥈', '🥉'][i]}</span>
+                <Avatar
+                  username={e.username}
+                  size={i === 0 ? 30 : 26}
+                  characterColor={e.characterColor}
+                  equippedHat={e.equippedHat}
+                  avatarBg={e.avatarBg}
+                  avatarBorder={e.avatarBorder}
+                />
+                <p className="flex-1 font-karla font-700 truncate" style={{ fontSize: '0.78rem', color: '#c8c8c2', minWidth: 0 }}>
+                  {e.username}
+                </p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#7fd49a', flexShrink: 0 }}>
+                  +{e.score.toLocaleString()} ⟡
+                </p>
+              </Link>
+            ))}
+          </div>
+        )
+      })()}
 
       <p className="font-karla" style={{ fontSize: '0.6rem', color: '#5a5248', textAlign: 'center', lineHeight: 1.5 }}>
         One purse, every table. Session winnings track per game until you cash out.

@@ -33,8 +33,8 @@ export interface CasinoCashOutResult {
   cashedOut: number
 }
 
-/** One row of the lobby's High Rollers strip — top combined lifetime
- *  net across all three Den games (leaderboard_den view). */
+/** One row of the lobby's High Rollers strip — a player's lifetime net for
+ *  whichever board is showing. */
 export interface DenTopEarner {
   userId: string
   username: string
@@ -43,4 +43,13 @@ export interface DenTopEarner {
   equippedHat: string | null
   avatarBg: string | null
   avatarBorder: string | null
+}
+
+/** The tabbed High Rollers data: the combined board (overall) plus the
+ *  top 3 of each individual Den game. */
+export interface DenLeaderboards {
+  overall: DenTopEarner[]
+  blackjack: DenTopEarner[]
+  roulette: DenTopEarner[]
+  slots: DenTopEarner[]
 }
