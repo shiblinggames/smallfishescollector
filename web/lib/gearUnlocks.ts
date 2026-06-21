@@ -6,7 +6,7 @@ import { RODS } from './rods'
 import { REELS } from './reels'
 import { HOOKS } from './hooks'
 import { SHIPS } from './ships'
-import { fishingLevelReqForCost, navLevelReqForShip } from './gearGating'
+import { fishingGearLevelReq, navLevelReqForShip } from './gearGating'
 
 export interface UnlockedGear {
   name: string
@@ -22,17 +22,17 @@ export function fishingGearUnlockedBetween(from: number, to: number): UnlockedGe
   const out: UnlockedGear[] = []
   for (const r of RODS) {
     if (r.earnedOnly || r.cost <= 0) continue
-    const req = fishingLevelReqForCost(r.cost)
+    const req = fishingGearLevelReq(r)
     if (req > from && req <= to) out.push({ name: r.name, image: r.slug ? `/${r.slug}_thumb.png` : toThumb(r.imageUrl) })
   }
   for (const reel of REELS) {
     if (reel.cost <= 0) continue
-    const req = fishingLevelReqForCost(reel.cost)
+    const req = fishingGearLevelReq(reel)
     if (req > from && req <= to) out.push({ name: reel.name, image: toThumb(reel.imageUrl) })
   }
   for (const h of HOOKS) {
     if (h.cost <= 0) continue
-    const req = fishingLevelReqForCost(h.cost)
+    const req = fishingGearLevelReq(h)
     if (req > from && req <= to) out.push({ name: h.name, image: toThumb(h.imageUrl) })
   }
   return out

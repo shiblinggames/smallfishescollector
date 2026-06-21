@@ -6,7 +6,7 @@ import { getBait } from '@/lib/bait'
 import { RODS, isCaptainRod } from '@/lib/rods'
 import { REELS } from '@/lib/reels'
 import { getLevelFromXP } from '@/lib/fishingLevel'
-import { fishingLevelReqForCost } from '@/lib/gearGating'
+import { fishingGearLevelReq } from '@/lib/gearGating'
 import { isPremiumActive } from '@/lib/premium'
 import { revalidatePath } from 'next/cache'
 
@@ -87,7 +87,7 @@ export async function purchaseRod(
   if (!profile) return { error: 'Profile not found' }
   if (alreadyOwned) return { error: 'Already owned' }
   if (isCaptainRod(rod) && !isPremiumActive(profile)) return { error: `The ${rod.name} is a Captain's rod — become a Captain to wield it.` }
-  const levelReq = fishingLevelReqForCost(rod.cost)
+  const levelReq = fishingGearLevelReq(rod)
   if (getLevelFromXP(profile.fishing_xp ?? 0) < levelReq) return { error: `Reach Fishing Lv ${levelReq} to buy the ${rod.name}` }
   if (profile.doubloons < rod.cost) return { error: `Need ${rod.cost.toLocaleString()} ⟡` }
 
@@ -251,7 +251,7 @@ export async function buyReel(): Promise<{ reelTier: number; doubloons: number }
   if (nextTier >= REELS.length) return { error: 'Already at max tier' }
 
   const cost = REELS[nextTier].cost
-  const reelReq = fishingLevelReqForCost(cost)
+  const reelReq = fishingGearLevelReq(REELS[nextTier])
   if (getLevelFromXP(profile.fishing_xp ?? 0) < reelReq) return { error: `Reach Fishing Lv ${reelReq} to buy the ${REELS[nextTier].name}` }
   if (profile.doubloons < cost) return { error: 'Not enough doubloons' }
 

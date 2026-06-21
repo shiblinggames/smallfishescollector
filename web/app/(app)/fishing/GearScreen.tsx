@@ -7,7 +7,7 @@ import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, RODS, rodGlowClass, isCaptainRod } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
-import { fishingLevelReqForCost } from '@/lib/gearGating'
+import { fishingGearLevelReq } from '@/lib/gearGating'
 import { getLine } from '@/lib/lines'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
@@ -1383,7 +1383,7 @@ export default function GearScreen({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {unownedRodDefs.map(r => {
                               const canAfford = doubloons >= r.cost
-                              const rodReq = fishingLevelReqForCost(r.cost)
+                              const rodReq = fishingGearLevelReq(r)
                               const rodLevelMet = fishingLevel >= rodReq
                               const captainLocked = isCaptainRod(r) && !isPremium
                               const onTap = () => {
@@ -1548,7 +1548,7 @@ export default function GearScreen({
               {openSlot === 'reel' && (() => {
                 const nextReel = REELS[reelTier + 1]
                 const canAffordReel = nextReel ? doubloons >= nextReel.cost : false
-                const reelReq = nextReel ? fishingLevelReqForCost(nextReel.cost) : 0
+                const reelReq = nextReel ? fishingGearLevelReq(nextReel) : 0
                 const reelLevelMet = !nextReel || fishingLevel >= reelReq
                 const reelBuyable = canAffordReel && reelLevelMet
                 const nextSlowPct = nextReel ? Math.round((1 - nextReel.needleSpeedMultiplier) * 100) : 0
@@ -1683,7 +1683,7 @@ export default function GearScreen({
               {openSlot === 'hook' && (() => {
                 const nextHook = HOOKS[hookTier + 1]
                 const canAffordHook = nextHook ? doubloons >= nextHook.cost : false
-                const hookReq = nextHook ? fishingLevelReqForCost(nextHook.cost) : 0
+                const hookReq = nextHook ? fishingGearLevelReq(nextHook) : 0
                 const hookLevelMet = !nextHook || fishingLevel >= hookReq
                 const hookBuyable = canAffordHook && hookLevelMet
                 const nextZoneBonus = nextHook ? nextHook.tier * 3 : 0

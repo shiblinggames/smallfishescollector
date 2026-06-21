@@ -14,7 +14,7 @@ import { motion } from 'framer-motion'
 import { buyHook } from '@/app/(app)/hooks/actions'
 import { buyBait, purchaseRod, equipRod, buyReel, claimCompletionistRod } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
-import { fishingLevelReqForCost } from '@/lib/gearGating'
+import { fishingGearLevelReq } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopStatusPill from '@/components/ShopStatusPill'
 
@@ -421,7 +421,7 @@ export default function TackleShopClient({
               const locked = hook.tier > hookTier + 1
               const c = hook.color
               const isNext = hook.tier === hookTier + 1
-              const hookReq = fishingLevelReqForCost(hook.cost)
+              const hookReq = fishingGearLevelReq(hook)
               const hookLevelMet = fishingLevel >= hookReq
               const canAffordHook = isNext && doubloons >= hook.cost
               const hookReady = canAffordHook && hookLevelMet
@@ -562,7 +562,7 @@ export default function TackleShopClient({
                 const owned = (rod.cost === 0 && !rod.earnedOnly) || ownedRods.includes(rod.tier)
                 const isActive = rod.tier === equippedRod
                 const canAfford = doubloons >= rod.cost
-                const rodReq = fishingLevelReqForCost(rod.cost)
+                const rodReq = fishingGearLevelReq(rod)
                 const rodLevelMet = fishingLevel >= rodReq
                 const rodBuyable = canAfford && rodLevelMet
                 const captainLocked = isCaptainRod(rod) && !isPremium
@@ -783,7 +783,7 @@ export default function TackleShopClient({
             const isActive = reel.tier === reelTier
             const locked = reel.tier > reelTier + 1
             const isNext = reel.tier === reelTier + 1
-            const reelReq = fishingLevelReqForCost(reel.cost)
+            const reelReq = fishingGearLevelReq(reel)
             const reelLevelMet = fishingLevel >= reelReq
             const canAffordReel = isNext && doubloons >= reel.cost
             const reelReady = canAffordReel && reelLevelMet
