@@ -305,8 +305,10 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
             : 'Daily buy-in cap reached, back tomorrow'}
         </p>
 
-        {/* Non-member cap upsell — compact: one line + the button. */}
-        {!initial.isMember && (
+        {/* Non-member cap upsell — only once they've actually HIT today's
+            buy-in cap (not before). At that moment "Captains play more" is a
+            relevant offer, not an aggressive sell on every visit. */}
+        {!initial.isMember && dailyRemaining <= 0 && (
           <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className="font-karla" style={{ fontSize: '0.6rem', color: '#9a907c', textAlign: 'center' }}>
               Captains play up to <span className="font-700" style={{ color: GOLD }}>{MEMBER_MAX_CAP.toLocaleString()} ⟡</span>/day
