@@ -13,13 +13,13 @@ import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems } from './actions'
+import { equipShipSkin, saveEquippedRaidItems, forgeGrandCannon } from './actions'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, DAVY_FORGE } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -610,6 +610,27 @@ export default function ShipHero({
     // ready-check (server-rendered from profile.equipped_raid_items)
     // reflects the new state too.
     startTransition(async () => { await saveEquippedRaidItems(next); router.refresh() })
+  }
+
+  // Davy's Grand Cannon forge — available once both component cannons are owned
+  // and not yet forged. Two-tap confirm since it sacrifices both items.
+  const [forging, setForging] = useState(false)
+  const [forgeArmed, setForgeArmed] = useState(false)
+  const canForgeGrand =
+    ownedRaidItems.includes(DAVY_FORGE.components[0]) &&
+    ownedRaidItems.includes(DAVY_FORGE.components[1]) &&
+    !ownedRaidItems.includes(DAVY_FORGE.result)
+  function onForgeTap() {
+    if (forging) return
+    if (!forgeArmed) { setForgeArmed(true); setTimeout(() => setForgeArmed(false), 3000); return }
+    setForgeArmed(false)
+    setForging(true)
+    startTransition(async () => {
+      const res = await forgeGrandCannon()
+      setForging(false)
+      if ('error' in res) return
+      router.refresh()
+    })
   }
 
   // Live scores via the same resolver the server uses (passive/aura/conditional
@@ -1409,6 +1430,38 @@ export default function ShipHero({
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
                 Tap to equip up to {raidItemSlots} item{raidItemSlots === 1 ? '' : 's'} (bigger hulls hold more).
               </p>
+
+              {/* Davy's Grand Cannon forge — appears once both component cannons
+                  are owned. Sacrifices both for the combined item. */}
+              {canForgeGrand && (() => {
+                const grand = getRaidItem(DAVY_FORGE.result)
+                const heavy = getRaidItem(DAVY_FORGE.components[0])
+                const hand = getRaidItem(DAVY_FORGE.components[1])
+                return (
+                  <div className="app-card app-card-gold" style={{ padding: '0.8rem 0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#e8c879' }}>Forge Available</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6', lineHeight: 1.1 }}>{grand?.name}</p>
+                    <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.4 }}>
+                      Sacrifice <span style={{ color: '#e8c879' }}>{heavy?.name}</span> + <span style={{ color: '#e8c879' }}>{hand?.name}</span> to forge it. {grand?.description}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onForgeTap}
+                      disabled={forging}
+                      className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+                      style={{
+                        width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem',
+                        background: forgeArmed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
+                        border: `1px solid ${forgeArmed ? 'rgba(248,140,90,0.7)' : 'rgba(232,200,121,0.6)'}`,
+                        color: forgeArmed ? '#ffd0b0' : '#f0d695',
+                        cursor: forging ? 'default' : 'pointer',
+                      }}
+                    >
+                      {forging ? 'Forging…' : forgeArmed ? 'Sacrifice both — tap to confirm' : 'Forge the Grand Cannon →'}
+                    </button>
+                  </div>
+                )
+              })()}
 
               {ownedRaidItems.length === 0 ? (
                 <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', marginBottom: '1.5rem' }}>

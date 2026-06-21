@@ -14,7 +14,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS } from '@/lib/gauntlet'
+import { DAVY_FORGE } from '@/lib/raidItems'
 
 /** The single deepest run across all captains + this player's own deepest.
  *  Surfaced on the gauntlet map node. */
@@ -128,6 +129,8 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
       newExpeditionXP: number
       deepest: number
       crewXP: CrewXPGrant[]
+      /** Davy cannons that dropped this cash-out (chest chase items). */
+      droppedItems: string[]
     }
 > {
   const supabase = await createClient()
@@ -137,7 +140,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, expedition_xp, doubloons, gems, ship_classes')
+    .select('gauntlet_run_open, gauntlet_deepest, expedition_xp, doubloons, gems, ship_classes, raid_items')
     .eq('id', user.id)
     .single()
 
@@ -152,6 +155,19 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 
   const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(d)))
   const chest = chestForDepth(d)
+
+  // Davy cannon chest drops — each component rolls independently at the chest
+  // tier's chance, only for cannons not yet owned, and never once the player
+  // has forged them into the Grand Cannon.
+  const ownedItems = (profile.raid_items as string[] | null) ?? []
+  const dropChance = chestCannonDropChance(chest.tier)
+  const droppedItems: string[] = []
+  if (!ownedItems.includes(DAVY_FORGE.result)) {
+    for (const cannon of DAVY_FORGE.components) {
+      if (!ownedItems.includes(cannon) && Math.random() < dropChance) droppedItems.push(cannon)
+    }
+  }
+  const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
   const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
@@ -172,6 +188,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
       expedition_xp: newExpeditionXP,
       gauntlet_run_open: false,
       gauntlet_deepest: deepest,
+      raid_items: newRaidItems,
     }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
@@ -192,6 +209,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
     newExpeditionXP,
     deepest,
     crewXP,
+    droppedItems,
   }
 }
 

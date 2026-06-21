@@ -195,10 +195,10 @@ export function shouldFireTide(state: TideRollState): boolean {
 export { TIDE_HEAL_HP_PCT }
 
 // ── Cash-out chest ───────────────────────────────────────────────────────────
-// Depth-tiered. The multiplier rides on the banked pot; the gem bonus + item
-// odds are the chase. Item / cosmetic slots are PLACEHOLDERS for now (the
-// chest pays the multiplied pot + gems today; named items + cosmetics drop in
-// later, same as the Sunken Cache kit).
+// Depth-tiered. The multiplier rides on the banked pot; the gem bonus is the
+// flat chase. The chest also rolls the two Davy cannons (chestCannonDropChance,
+// odds climbing up the ladder) — the named-item chase. Cosmetic drops are still
+// a TODO.
 export interface ChestTier {
   tier: number
   label: string
@@ -219,4 +219,19 @@ export function chestForDepth(depth: number): ChestTier {
   let chest = CHEST_TIERS[0]
   for (const c of CHEST_TIERS) if (depth >= c.minDepth) chest = c
   return chest
+}
+
+// Per-chest-tier drop chance for EACH of Davy's two chest cannons (rolled
+// independently, only for cannons you don't already own). Super low at the
+// shallow chests — possible only if you're very lucky — climbing steeply up the
+// ladder so deep runs are the real way to chase them.
+const CHEST_CANNON_ODDS: Record<number, number> = {
+  1: 0.005, // Waterlogged Chest
+  2: 0.015, // Barnacled Strongbox
+  3: 0.03,  // Drowned Hoard
+  4: 0.06,  // Leviathan's Cache
+  5: 0.11,  // Davy Jones' Locker
+}
+export function chestCannonDropChance(chestTier: number): number {
+  return CHEST_CANNON_ODDS[chestTier] ?? 0
 }

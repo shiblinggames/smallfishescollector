@@ -1409,7 +1409,16 @@ export default function RaidCombat({
           const tideBossMult = isBoss
             ? tide.bossDmgMult * (isVolley ? tide.bossVolMult : 1)
             : 1
-          const mult = (isVolley ? 2 : 1) * bossMult * aimItemMult * classDamageMult
+          // Davy's Hand Cannon: +% damage vs NON-boss enemies (mobs / elites).
+          const nonbossMult = isBoss
+            ? 1
+            : getActiveEffects(equippedRaidItems).filter(e => e.type === 'nonboss_damage_mult').reduce((a, e) => a * e.value, 1)
+          // Davy's Heavy Cannon: damage ramps +value each turn this fight
+          // (turn 1 = base; resets per enemy via turnRef reset in the encounter
+          // effect). Sums if multiple ramp items are somehow equipped.
+          const rampPerTurn = getActiveEffects(equippedRaidItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0)
+          const rampMult = 1 + rampPerTurn * Math.max(0, turnRef.current - 1)
+          const mult = (isVolley ? 2 : 1) * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
                        * tide.dmgMult * tideActionMult * tideBossMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every

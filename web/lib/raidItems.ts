@@ -11,6 +11,8 @@ export type RaidEffectType =
   | 'burn_chance'           // value = 0-1 chance, each player hit, to set the enemy ablaze (DoT, see RaidCombat BURN_*)
   | 'freeze_chance'         // value = 0-1 chance, each player hit, to freeze the enemy (it loses a turn)
   | 'start_charge_chance'   // value = 0-1 chance to open each raid fight with 1 cannonball already loaded (the player-side "First Cut")
+  | 'nonboss_damage_mult'   // value = damage multiplier vs NON-boss enemies (mobs / elites). Mirror of boss_damage_mult.
+  | 'ramp_damage_per_turn'  // value = extra damage fraction PER TURN elapsed this fight (resets each enemy). turn 1 = +0, turn 2 = +value, …
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -204,7 +206,52 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: "The Cartographer's Survey",
   },
+  // ── Davy Jones Gauntlet chest cannons ──────────────────────────────────────
+  // Two rare chest-only drops + the forged combination. Odds climb up the
+  // chest ladder (see lib/gauntlet chestCannonDropChance). Collect BOTH and the
+  // forge (in the Manage Ship loadout drawer) sacrifices them for the Grand
+  // Cannon — recipe in DAVY_FORGE below. Art is a cannon placeholder for now.
+  {
+    id: 'davys_heavy_cannon',
+    name: "Davy's Heavy Cannon",
+    description: 'Your damage climbs +5% every turn of a fight (resets when the next enemy draws alongside). Long fights end ugly for them.',
+    image: '/corsairsprimecannon.png',
+    emoji: '💣',
+    rarity: 'legendary',
+    effects: [{ type: 'ramp_damage_per_turn', value: 0.05 }],
+    source: 'The Davy Jones Gauntlet',
+  },
+  {
+    id: 'davys_hand_cannon',
+    name: "Davy's Hand Cannon",
+    description: '+20% damage to non-boss enemies. Tears through a crew before the captain ever shows his colours.',
+    image: '/corsaircannon-v2.png',
+    emoji: '💥',
+    rarity: 'legendary',
+    effects: [{ type: 'nonboss_damage_mult', value: 1.20 }],
+    source: 'The Davy Jones Gauntlet',
+  },
+  {
+    id: 'davys_grand_cannon',
+    name: "Davy's Grand Cannon",
+    description: 'Both Davy cannons forged into one: damage climbs +5% each turn of a fight AND +20% damage to non-boss enemies.',
+    image: '/corsairsprimecannon.png',
+    emoji: '☠️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'ramp_damage_per_turn', value: 0.05 },
+      { type: 'nonboss_damage_mult',  value: 1.20 },
+    ],
+    source: "Forged from Davy's Heavy + Hand Cannon",
+  },
 ]
+
+/** Forge recipe: own BOTH components → can forge the result, which sacrifices
+ *  them. Used by the Manage Ship forge UI + the forgeGrandCannon server action. */
+export const DAVY_FORGE = {
+  components: ['davys_heavy_cannon', 'davys_hand_cannon'] as const,
+  result: 'davys_grand_cannon' as const,
+}
 
 export function getRaidItem(id: string): RaidItemDef | undefined {
   return RAID_ITEMS.find(i => i.id === id)

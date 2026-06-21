@@ -22,6 +22,7 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath } from './actions'
+import { getRaidItem } from '@/lib/raidItems'
 
 type Phase = 'intro' | 'usedup' | 'fighting' | 'tide' | 'between' | 'reward' | 'dead'
 
@@ -261,6 +262,28 @@ export default function GauntletGame(props: GauntletGameProps) {
               New deepest run: depth {r.depth}.
             </p>
           )}
+          {/* Davy cannon chest drops — the rare chase. */}
+          {r.droppedItems.map(id => {
+            const item = getRaidItem(id)
+            if (!item) return null
+            return (
+              <div key={id} style={{
+                display: 'flex', alignItems: 'center', gap: 11, marginTop: 4,
+                padding: '0.7rem 0.8rem', borderRadius: 12,
+                background: 'rgba(232,200,121,0.10)', border: '1px solid rgba(232,200,121,0.55)',
+                boxShadow: '0 0 22px rgba(232,200,121,0.18)',
+              }}>
+                {item.image
+                  ? <img src={item.image} alt="" style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0 }} />
+                  : null}
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#e8c879' }}>Rare drop · equip from Manage Ship</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f5ecd6', lineHeight: 1.1 }}>{item.name}</p>
+                  <p className="font-karla" style={{ fontSize: '0.66rem', color: '#b0aaa0', lineHeight: 1.35, marginTop: 1 }}>{item.description}</p>
+                </div>
+              </div>
+            )
+          })}
         </div>
         <BackLink router={router} label="Back to the map" primary />
       </Shell>

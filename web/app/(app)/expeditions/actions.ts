@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
+import { DAVY_FORGE } from '@/lib/raidItems'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -122,6 +123,32 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   const slots = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
   const valid = itemIds.filter(id => owned.includes(id)).slice(0, slots)
   await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
+}
+
+/** Forge Davy's Grand Cannon by sacrificing the Heavy + Hand cannons. Mirrors
+ *  the completionist-rod forge: consumes both components and mints the combined
+ *  item. Server-validated so a tampered client can't forge without both. */
+export async function forgeGrandCannon(): Promise<{ ok: true; raidItems: string[] } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('raid_items, equipped_raid_items')
+    .eq('id', user.id)
+    .single()
+  const owned = (profile?.raid_items as string[] | null) ?? []
+  const [a, b] = DAVY_FORGE.components
+  if (owned.includes(DAVY_FORGE.result)) return { error: 'Already forged.' }
+  if (!owned.includes(a) || !owned.includes(b)) return { error: 'You need both Davy cannons to forge.' }
+
+  // Sacrifice the two components, mint the Grand Cannon, and drop the consumed
+  // components from the equipped loadout (they no longer exist).
+  const newOwned = [...owned.filter(id => id !== a && id !== b), DAVY_FORGE.result]
+  const equipped = ((profile?.equipped_raid_items as string[] | null) ?? []).filter(id => id !== a && id !== b)
+  await admin.from('profiles').update({ raid_items: newOwned, equipped_raid_items: equipped }).eq('id', user.id)
+  return { ok: true, raidItems: newOwned }
 }
 
 export async function equipShipSkin(skinId: string | null): Promise<void> {
