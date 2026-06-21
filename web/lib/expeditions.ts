@@ -50,14 +50,22 @@ export interface RunBuff {
 // +15, +25, +40. Galleon (+42% HP vs Brigantine) and Man-o-War (+47% HP vs
 // Galleon) are the headline endgame jumps. Early game (Rowboat → Schooner)
 // is unchanged.
+//
+// minDamage curve steepened to match (tuned 2026-06-20): it feeds the raid
+// damage base (shipMin + 2 + power/4) AND floors hitMin, but at endgame crew
+// power it was a rounding error — Man-o-War out-damaged a Brigantine by only
+// ~9%, so hulls had no firepower identity. The high tiers now accelerate
+// (steps +1/+2/+3/+5/+6) so the 200k hull reads as real guns (~29% over a
+// Brigantine at 120 crew power) without inflating the early raids, where the
+// low tiers barely move. Crew power is still the dominant scaler.
 const EXPEDITION_COMBAT_STATS: Record<number, Omit<ShipStats, 'name' | 'image'>> = {
   0: { durability:  20, speed: 2,  crewSlots: 1, minDamage: 1  },
   1: { durability:  27, speed: 3,  crewSlots: 1, minDamage: 2  },
-  2: { durability:  35, speed: 4,  crewSlots: 2, minDamage: 3  },
-  3: { durability:  45, speed: 5,  crewSlots: 2, minDamage: 4  },
-  4: { durability:  60, speed: 6,  crewSlots: 3, minDamage: 6  },
-  5: { durability:  85, speed: 8,  crewSlots: 4, minDamage: 8  },
-  6: { durability: 125, speed: 11, crewSlots: 5, minDamage: 11 },
+  2: { durability:  35, speed: 4,  crewSlots: 2, minDamage: 4  },
+  3: { durability:  45, speed: 5,  crewSlots: 2, minDamage: 6  },
+  4: { durability:  60, speed: 6,  crewSlots: 3, minDamage: 9  },
+  5: { durability:  85, speed: 8,  crewSlots: 4, minDamage: 14 },
+  6: { durability: 125, speed: 11, crewSlots: 5, minDamage: 20 },
 }
 
 export const EXPEDITION_SHIP_STATS: Record<number, ShipStats> = Object.fromEntries(
