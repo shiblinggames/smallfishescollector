@@ -158,6 +158,41 @@ html, body {
 .btn-ghost:active { border-color: #f0ede8; transform: scale(0.97); opacity: 0.85; transition-duration: 0.06s; }
 .btn-ghost:disabled { opacity: 0.45; pointer-events: none; }
 
+/* ── iOS material card ──
+   The shared "frosted glass" card surface. Depth comes from light + shadow,
+   NOT a painted background image: a top inner highlight (light catching the
+   edge), a hairline border, a soft drop shadow, and a backdrop blur so the
+   themed sea background shows through — the single biggest "this is iOS" cue.
+   Use via <Card> (components/Card.tsx) or the class directly. */
+.app-card {
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.015) 42%, rgba(0,0,0,0.05) 100%),
+    rgba(10,16,24,0.72);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.07);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+}
+/* Warm gold variant for premium / hero panels. Apply alongside .app-card. */
+.app-card-gold {
+  border-color: rgba(232,200,74,0.40);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 22px rgba(232,200,74,0.10);
+}
+
+/* ── Tactile press utility ──
+   Add to ANY tappable element that isn't a .btn-* (tiles, list rows, icon
+   buttons) for the iOS depress-on-touch. cursor:pointer is what makes :active
+   fire on tap in iOS Safari, so no JS enabler is needed. Don't put .tap on an
+   element that already owns a transform (framer-motion / translate centering)
+   — use whileTap there instead, or the scales fight. */
+.tap {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.09s ease, opacity 0.09s ease;
+}
+.tap:active:not([disabled]):not([aria-disabled="true"]) { transform: scale(0.96); opacity: 0.92; }
+
 /* Tactile press for the expedition hub's Manage Crew / Manage Ship
    columns. The whole column (art + label) dips on press so a tap
    anywhere on the image acknowledges instantly — on touch, :hover
