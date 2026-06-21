@@ -64,7 +64,7 @@ import ForgeRodEmblem from './ForgeRodEmblem'
 import { vibrate } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
-import { BAITS, getBait, BAIT_UNIT_COST } from '@/lib/bait'
+import { BAITS, getBait } from '@/lib/bait'
 import GearScreen from './GearScreen'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -8815,7 +8815,7 @@ export default function FishingGame({
               buyingType={buyingBait}
             />
             <p className="font-karla font-600 text-center" style={{ fontSize: '0.56rem', color: '#5a5654', marginTop: 8 }}>
-              Tap a bait to use it · any bait is {BAIT_UNIT_COST * 10} ⟡ for ×10
+              Tap a bait to use it · buy any at the shop price (×10 per purchase)
             </p>
           </motion.div>
         )}
