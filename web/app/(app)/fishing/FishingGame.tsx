@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -59,6 +60,7 @@ import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
+import ForgeRodEmblem from './ForgeRodEmblem'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
@@ -3026,6 +3028,14 @@ export default function FishingGame({
   // Resolved into the rod's effective stats below via getEffectiveRod. The
   // forge UI in GearScreen updates this optimistically + persists server-side.
   const [completionistEffects, setCompletionistEffects] = useState<number[]>(initialCompletionistEffects)
+  // One-time "Rod Forged" flourish — fires the first time the player ever fuses
+  // an effect (server returns firstForge off the has_seen_forge_flourish flag).
+  const [forgeFlourish, setForgeFlourish] = useState(false)
+  useEffect(() => {
+    if (!forgeFlourish) return
+    const t = setTimeout(() => setForgeFlourish(false), 4800)
+    return () => clearTimeout(t)
+  }, [forgeFlourish])
   const [reelTier, setReelTier] = useState(initialReelTier)
   const [hookTier, setHookTier] = useState(initialHookTier)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
@@ -8488,6 +8498,7 @@ export default function FishingGame({
                 const res = await saveCompletionistEffects(tiers)
                 if ('error' in res) { setCompletionistEffects(prev); return }
                 setCompletionistEffects(res.completionistEffects)
+                if (res.firstForge) setForgeFlourish(true)
               }}
               rodHasAffordable={rodHasAffordable}
               reelHasAffordable={reelHasAffordable}
@@ -8649,6 +8660,74 @@ export default function FishingGame({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── First-forge flourish ──
+          A one-time celebration the first time the player ever fuses an effect
+          into the Completionist. Portaled to body so it sits above the gear
+          screen; auto-dismisses (timer above) or on tap. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {forgeFlourish && (
+            <motion.div
+              key="forge-flourish"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={() => setForgeFlourish(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 100000,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                background: 'radial-gradient(ellipse at center, rgba(22,15,4,0.88) 0%, rgba(4,6,10,0.95) 100%)',
+                backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+                padding: '2rem', textAlign: 'center', cursor: 'pointer',
+              }}
+            >
+              {/* Expanding gold rings behind the rod. */}
+              {[0, 0.12, 0.24].map((d, i) => (
+                <motion.div key={i} aria-hidden
+                  initial={{ scale: 0, opacity: 0.85 }}
+                  animate={{ scale: 4.2, opacity: 0 }}
+                  transition={{ duration: 1.3, ease: 'easeOut', delay: 0.15 + d }}
+                  style={{ position: 'absolute', width: 120, height: 120, borderRadius: '50%', border: '2px solid rgba(243,217,138,0.7)', boxShadow: '0 0 22px rgba(243,217,138,0.6)' }}
+                />
+              ))}
+              <motion.div
+                initial={{ scale: 0, opacity: 0, rotate: -12 }}
+                animate={{ scale: [0, 1.2, 1], opacity: 1, rotate: 0 }}
+                transition={{ duration: 0.7, ease: 'easeOut', times: [0, 0.6, 1] }}
+                style={{ position: 'relative', marginBottom: '1.1rem' }}
+              >
+                <ForgeRodEmblem size={220} power={1} />
+              </motion.div>
+              <motion.p className="font-cinzel font-700"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+                style={{
+                  fontSize: '1.85rem', lineHeight: 1.1, marginBottom: '0.6rem',
+                  background: 'linear-gradient(180deg, #fff6d8 0%, #e6b85a 55%, #a87a2e 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  filter: 'drop-shadow(0 0 18px rgba(245,205,110,0.5))',
+                }}
+              >
+                Rod Forged
+              </motion.p>
+              <motion.p className="font-karla"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+                style={{ fontSize: '0.86rem', color: '#cdbfa0', maxWidth: 320, lineHeight: 1.5, marginBottom: '1.4rem' }}
+              >
+                Your Completionist Rod takes in its first borrowed gift. Fold in up to three, swap them however the seas demand, and the rod is never the worse for it.
+              </motion.p>
+              <motion.span className="font-karla font-700 uppercase"
+                initial={{ opacity: 0 }} animate={{ opacity: 0.55 }} transition={{ delay: 1.15 }}
+                style={{ fontSize: '0.64rem', letterSpacing: '0.2em', color: '#8a7a55' }}
+              >
+                Tap to continue
+              </motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
 
       {/* ── Bait panel ── */}
       <AnimatePresence>

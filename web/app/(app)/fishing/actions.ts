@@ -1697,14 +1697,16 @@ export async function mountGoldenTrophy(
 // single source the gameplay paths trust.
 export async function setCompletionistEffects(
   tiers: number[],
-): Promise<{ completionistEffects: number[] } | { error: string }> {
+): Promise<{ completionistEffects: number[]; firstForge: boolean } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
 
-  const { data: ownedRows } = await admin
-    .from('rod_inventory').select('rod_tier').eq('user_id', user.id)
+  const [{ data: ownedRows }, { data: prof }] = await Promise.all([
+    admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
+    admin.from('profiles').select('has_seen_forge_flourish').eq('id', user.id).single(),
+  ])
   const owned = new Set((ownedRows ?? []).map(r => r.rod_tier as number))
   if (!owned.has(COMPLETIONIST_TIER)) return { error: "You haven't earned the Completionist Rod yet." }
 
@@ -1719,7 +1721,13 @@ export async function setCompletionistEffects(
     clean.push(t)
   }
 
-  await admin.from('profiles').update({ completionist_effects: clean }).eq('id', user.id)
-  return { completionistEffects: clean }
+  // First-forge flourish fires the first time an actual effect lands (not on an
+  // empty loadout / clear). One-time via the has_seen_forge_flourish flag.
+  const firstForge = clean.length > 0 && !prof?.has_seen_forge_flourish
+  const update: Record<string, unknown> = { completionist_effects: clean }
+  if (firstForge) update.has_seen_forge_flourish = true
+
+  await admin.from('profiles').update(update).eq('id', user.id)
+  return { completionistEffects: clean, firstForge }
 }
 

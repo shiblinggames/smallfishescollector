@@ -10,6 +10,7 @@ import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import { getLine } from '@/lib/lines'
 import { playForgeSfx } from '@/lib/fishingMusic'
+import ForgeRodEmblem from './ForgeRodEmblem'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
@@ -812,6 +813,10 @@ export default function GearScreen({
   // SFX + haptic. Forging the 100%-reward rod is a rare, ceremonial act, so a
   // dramatic localized moment is warranted (unlike frequent-action effects).
   const [forgeBurst, setForgeBurst] = useState<{ id: number; color: string; dir: 'in' | 'out' } | null>(null)
+  // Bumped on every forge so the rod emblem replays its recoil pulse.
+  const [forgePulse, setForgePulse] = useState(0)
+  // Last-forged colour tints the emblem's tip glow.
+  const [forgeAccent, setForgeAccent] = useState('#f3d98a')
   function triggerForge(tier: number, color: string) {
     const selected = completionistEffects.includes(tier)
     const next = selected
@@ -819,6 +824,8 @@ export default function GearScreen({
       : [...completionistEffects, tier]
     const dir: 'in' | 'out' = selected ? 'out' : 'in'
     setForgeBurst({ id: Date.now(), color, dir })
+    setForgePulse(p => p + 1)
+    if (dir === 'in') setForgeAccent(color)
     try {
       playForgeSfx(dir === 'out')
       if ('vibrate' in navigator) navigator.vibrate(dir === 'in' ? [12, 28, 22] : 14)
@@ -1168,6 +1175,19 @@ export default function GearScreen({
                             {filled}/{COMPLETIONIST_MAX_EFFECTS}
                           </span>
                         </div>
+
+                        {/* ── Rod preview ── the Completionist itself, lighting up
+                            as effects are forged in. Keyed to forgePulse so it
+                            recoils on every fuse. */}
+                        <motion.div
+                          key={forgePulse}
+                          initial={forgePulse === 0 ? false : { scale: 1 }}
+                          animate={{ scale: [1, 1.12, 1], rotate: [0, -3, 2, 0] }}
+                          transition={{ duration: 0.5, ease: 'easeOut' }}
+                          style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 2 }}
+                        >
+                          <ForgeRodEmblem size={150} power={auraT} accent={forgeAccent} />
+                        </motion.div>
 
                         {/* ── Power sockets ── one gem per slot. Filled gems glow
                             in the donor rod's colour; the spark ring bursts here
