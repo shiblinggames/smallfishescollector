@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import TrawlIndicator from './TrawlIndicator'
@@ -49,7 +49,7 @@ import AncientBgEffect from '@/components/AncientBgEffect'
 import PopupShell from '@/components/PopupShell'
 import SpinReel from '@/components/SpinReel'
 import { finishSession, type ActiveSession } from '@/app/(app)/social/challengeActions'
-import { equipRod, purchaseRod, sellRod, buyReel } from '@/app/(app)/marketplace/tackle-shop/actions'
+import { equipRod, purchaseRod, sellRod, buyReel, buyBait } from '@/app/(app)/marketplace/tackle-shop/actions'
 import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
@@ -64,7 +64,7 @@ import ForgeRodEmblem from './ForgeRodEmblem'
 import { vibrate } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
-import { BAITS, getBait } from '@/lib/bait'
+import { BAITS, getBait, BAIT_UNIT_COST } from '@/lib/bait'
 import GearScreen from './GearScreen'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -968,15 +968,28 @@ function UnifiedGearDrawer({
 
 // ─── BaitSelector ─────────────────────────────────────────────────────────────
 
-function BaitSelector({ baitInventory, selectedBait, onSelect }: {
+function BaitSelector({ baitInventory, selectedBait, onSelect, onBuy, doubloons, buyingType }: {
   baitInventory: BaitItem[]
   selectedBait: string
   onSelect: (type: string) => void
+  /** When provided, each purchasable bait shows a direct Buy button (buys a
+   *  full bundle at the flat price) — like buying a rod from the gear screen. */
+  onBuy?: (type: string) => void
+  doubloons?: number
+  buyingType?: string | null
 }) {
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
-  const ownedBaits = BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
+  // Show EVERY purchasable bait (so any can be bought directly) plus any
+  // earned-only lure you actually own. Without onBuy (legacy callers) fall
+  // back to just the owned list.
+  const list = onBuy
+    ? [
+        ...BAITS.filter(b => b.shopCost > 0),
+        ...BAITS.filter(b => b.shopCost === 0 && ((inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)),
+      ]
+    : BAITS.filter(b => (inventoryMap[b.type] ?? 0) > 0 || b.type === selectedBait)
 
-  if (ownedBaits.length === 0) return (
+  if (list.length === 0) return (
     <p className="font-karla font-600 text-center py-4" style={{ fontSize: '0.68rem', color: '#4a4845' }}>
       No bait in inventory
     </p>
@@ -984,61 +997,85 @@ function BaitSelector({ baitInventory, selectedBait, onSelect }: {
 
   return (
     <div className="flex flex-col gap-1.5">
-      {ownedBaits.map(bait => {
+      {list.map(bait => {
         const qty = inventoryMap[bait.type] ?? 0
         const isSelected = bait.type === selectedBait
         const c = bait.color
+        const buyable = !!onBuy && bait.shopCost > 0
+        const price = bait.shopCost * bait.bundleSize
+        const canAfford = (doubloons ?? 0) >= price
+        const isBuying = buyingType === bait.type
         return (
-          <button key={bait.type}
-            onClick={() => onSelect(bait.type)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '0.55rem 0.7rem', borderRadius: 10, width: '100%',
-              background: isSelected ? `${c}12` : 'rgba(4,10,18,0.72)',
-              border: `1px solid ${isSelected ? c + '50' : 'rgba(255,255,255,0.09)'}`,
-              cursor: 'pointer', transition: 'border-color 0.12s',
-            }}
-          >
-            {bait.imageUrl
-              ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.3, flexShrink: 0 }} />
-              : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0, opacity: qty > 0 ? 1 : 0.3 }} />
-            }
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>
-                {bait.name}
-              </p>
-              <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
-                {bait.catchZoneBonus > 0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    +{bait.catchZoneBonus}° zone
-                  </span>
-                )}
-                {bait.waitMult < 1.0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    {Math.round((1 - bait.waitMult) * 100)}% faster
-                  </span>
-                )}
-                {bait.waitMult > 1.0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: 'rgba(248,113,113,0.8)', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    {Math.round((bait.waitMult - 1) * 100)}% slower
-                  </span>
-                )}
-                {!bait.catchZoneBonus && bait.waitMult === 1.0 && (
-                  <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#4a4845', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
-                    No bonus
-                  </span>
+          <div key={bait.type} style={{ display: 'flex', alignItems: 'stretch', gap: 7 }}>
+            <button
+              onClick={() => onSelect(bait.type)}
+              className="tap"
+              style={{
+                flex: 1, minWidth: 0,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '0.55rem 0.7rem', borderRadius: 10,
+                background: isSelected ? `${c}12` : 'rgba(4,10,18,0.72)',
+                border: `1px solid ${isSelected ? c + '50' : 'rgba(255,255,255,0.09)'}`,
+                textAlign: 'left',
+              }}
+            >
+              {bait.imageUrl
+                ? <img src={bait.imageUrl} alt={bait.name} style={{ width: 22, height: 22, objectFit: 'contain', opacity: qty > 0 ? 1 : 0.4, flexShrink: 0 }} />
+                : <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0, opacity: qty > 0 ? 1 : 0.4 }} />
+              }
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: qty > 0 ? '#f0ede8' : '#9a9488' }}>
+                  {bait.name}
+                </p>
+                <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
+                  {bait.catchZoneBonus > 0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                      +{bait.catchZoneBonus}° zone
+                    </span>
+                  )}
+                  {bait.waitMult < 1.0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: `${c}cc`, background: `${c}14`, border: `1px solid ${c}30`, padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                      {Math.round((1 - bait.waitMult) * 100)}% faster
+                    </span>
+                  )}
+                  {!bait.catchZoneBonus && bait.waitMult === 1.0 && (
+                    <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#6a6764', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '2rem' }}>
+                      No bonus
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: qty > 0 ? '#f0ede8' : '#6a6764' }}>
+                  ×{qty}
+                </p>
+                {isSelected && (
+                  <p className="font-karla font-600" style={{ fontSize: '0.44rem', color: c }}>selected</p>
                 )}
               </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-              <p className="font-karla font-700" style={{ fontSize: '0.65rem', color: qty > 0 ? '#f0ede8' : '#4a4845' }}>
-                ×{qty}
-              </p>
-              {isSelected && (
-                <p className="font-karla font-600" style={{ fontSize: '0.44rem', color: c }}>selected</p>
-              )}
-            </div>
-          </button>
+            </button>
+
+            {buyable && (
+              <button
+                disabled={!canAfford || isBuying}
+                onClick={() => onBuy!(bait.type)}
+                className="font-karla font-700 tap"
+                style={{
+                  flexShrink: 0, width: 62, borderRadius: 10,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+                  background: canAfford ? `${c}16` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${canAfford ? c + '4a' : 'rgba(255,255,255,0.08)'}`,
+                  color: canAfford ? c : '#5a5654',
+                  cursor: canAfford && !isBuying ? 'pointer' : 'not-allowed',
+                }}
+              >
+                <span style={{ fontSize: '0.54rem', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.85 }}>
+                  {isBuying ? '…' : `+${bait.bundleSize}`}
+                </span>
+                <span style={{ fontSize: '0.66rem' }}>{price} ⟡</span>
+              </button>
+            )}
+          </div>
         )
       })}
     </div>
@@ -3339,8 +3376,24 @@ export default function FishingGame({
   // open at a time so the drawer stays tidy. Fish Market isn't in this
   // set — tapping it just navigates.
   const [expandedSellLane, setExpandedSellLane] = useState<null | 'quick' | 'liquidate'>(null)
-  const [buyingWorms, setBuyingWorms] = useState(false)
-  const [wormBuyMsg, setWormBuyMsg] = useState<string | null>(null)
+  // Direct bait buying from the bait modal — which bait type is mid-purchase.
+  const [buyingBait, setBuyingBait] = useState<string | null>(null)
+  async function handleBuyBait(type: string) {
+    if (buyingBait) return
+    const bait = getBait(type)
+    if (!bait || bait.shopCost <= 0) return
+    setBuyingBait(type)
+    const res = await buyBait(type, bait.bundleSize)
+    setBuyingBait(null)
+    if ('error' in res) return
+    setBaitInventory(prev =>
+      prev.some(b => b.bait_type === type)
+        ? prev.map(b => b.bait_type === type ? { ...b, quantity: res.newQty } : b)
+        : [...prev, { bait_type: type, quantity: res.newQty }]
+    )
+    setDoubloons(res.doubloons)
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+  }
   // Low-bait warning — fires once when the player's total bait crosses
   // BELOW the threshold so they aren't ambushed by an "out of bait"
   // modal. Auto-dismiss after 2.5s. Tracked via ref-of-prev-total so
@@ -8757,60 +8810,13 @@ export default function FishingGame({
               baitInventory={baitInventory}
               selectedBait={selectedBait}
               onSelect={setSelectedBait}
+              onBuy={handleBuyBait}
+              doubloons={doubloons}
+              buyingType={buyingBait}
             />
-            {/* Quick-buy worms */}
-            {(() => {
-              const canAfford = doubloons >= 200
-              return (
-                <button
-                  disabled={buyingWorms || !canAfford}
-                  onClick={async () => {
-                    setBuyingWorms(true)
-                    setWormBuyMsg(null)
-                    const res = await quickBuyWorms()
-                    if ('error' in res) {
-                      setWormBuyMsg(res.error)
-                    } else {
-                      setBaitInventory(prev =>
-                        prev.some(b => b.bait_type === 'worm')
-                          ? prev.map(b => b.bait_type === 'worm' ? { ...b, quantity: b.quantity + res.qty } : b)
-                          : [...prev, { bait_type: 'worm', quantity: res.qty }]
-                      )
-                      setDoubloons(res.doubloons)
-                      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-                      setWormBuyMsg('+10 worms')
-                    }
-                    setBuyingWorms(false)
-                    setTimeout(() => setWormBuyMsg(null), 2000)
-                  }}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-3 w-full"
-                  style={{
-                    background: canAfford ? 'rgba(160,120,80,0.08)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${canAfford ? 'rgba(160,120,80,0.28)' : 'rgba(255,255,255,0.07)'}`,
-                    cursor: canAfford && !buyingWorms ? 'pointer' : 'not-allowed',
-                    opacity: buyingWorms ? 0.6 : 1,
-                  }}
-                >
-                  <div style={{ textAlign: 'left' }}>
-                    <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: canAfford ? '#d4a96a' : 'rgba(255,255,255,0.25)' }}>
-                      Quick-buy Worms
-                    </span>
-                    <span className="font-karla font-400" style={{ fontSize: '0.58rem', color: canAfford ? 'rgba(212,169,106,0.55)' : 'rgba(255,255,255,0.15)', marginLeft: 6 }}>
-                      ×10 · 2× price
-                    </span>
-                  </div>
-                  <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: wormBuyMsg ? (wormBuyMsg.startsWith('+') ? '#4ade80' : '#f87171') : (canAfford ? '#d4a96a' : '#f0c040') }}>
-                    {wormBuyMsg ?? '200 ⟡'}
-                  </span>
-                </button>
-              )
-            })()}
-            <Link href="/marketplace/tackle-shop#bait" onClick={() => setBaitOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl mt-2"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}>
-              <span className="font-karla font-700" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Buy more bait</span>
-              <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#5a5956' }}>Tackle Shop ↗</span>
-            </Link>
+            <p className="font-karla font-600 text-center" style={{ fontSize: '0.56rem', color: '#5a5654', marginTop: 8 }}>
+              Tap a bait to use it · any bait is {BAIT_UNIT_COST * 10} ⟡ for ×10
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

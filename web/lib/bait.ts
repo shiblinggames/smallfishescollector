@@ -11,6 +11,13 @@ export interface BaitDef {
   bundleSize: number      // units per shop purchase
 }
 
+// Flat bait pricing (2026): every purchasable bait costs the same per unit
+// (BAIT_UNIT_COST), so you buy whichever bait you want at one price directly in
+// the fishing bait modal — like buying a rod. Earned-only lures (Luminous /
+// Golden, shopCost 0) stay out of the shop so voyage drops keep their value.
+// Tune the single number here.
+export const BAIT_UNIT_COST = 20
+
 export const BAITS: BaitDef[] = [
   {
     type: 'worm',
@@ -21,7 +28,7 @@ export const BAITS: BaitDef[] = [
     waitMult: 1.0,
     catchZoneBonus: 0,
     acquisition: ['shop', 'daily'],
-    shopCost: 10,
+    shopCost: BAIT_UNIT_COST,
     bundleSize: 10,
   },
   {
@@ -33,7 +40,7 @@ export const BAITS: BaitDef[] = [
     waitMult: 0.90,
     catchZoneBonus: 0,
     acquisition: ['shop'],
-    shopCost: 30,
+    shopCost: BAIT_UNIT_COST,
     bundleSize: 10,
   },
   {
@@ -45,7 +52,7 @@ export const BAITS: BaitDef[] = [
     waitMult: 0.85,
     catchZoneBonus: 4,
     acquisition: ['shop'],
-    shopCost: 50,
+    shopCost: BAIT_UNIT_COST,
     bundleSize: 10,
   },
   {
@@ -57,7 +64,7 @@ export const BAITS: BaitDef[] = [
     waitMult: 0.75,
     catchZoneBonus: 0,
     acquisition: ['shop'],
-    shopCost: 100,
+    shopCost: BAIT_UNIT_COST,
     bundleSize: 10,
   },
   {
@@ -69,7 +76,7 @@ export const BAITS: BaitDef[] = [
     waitMult: 0.65,
     catchZoneBonus: 8,
     acquisition: ['shop'],
-    shopCost: 180,
+    shopCost: BAIT_UNIT_COST,
     bundleSize: 10,
   },
   {
