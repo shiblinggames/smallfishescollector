@@ -169,6 +169,7 @@ export default async function FishingPage() {
           uniqueSpeciesCaught={uniqueSpeciesCaught ?? 0}
           zoneStats={zoneStats}
           ownedRods={ownedRods}
+          initialCompletionistEffects={(profile?.completionist_effects as number[] | null) ?? []}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
           caughtFishIds={caughtFishIds}
           mountedFishIds={mountedFishIds}

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
-import { getRod } from '@/lib/rods'
+import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, rodHasUniqueEffect } from '@/lib/rods'
 import { getFishHold } from '@/lib/fishHold'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
@@ -176,7 +176,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event, catch_pending')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event, catch_pending')
     .eq('id', user.id)
     .single()
 
@@ -242,7 +242,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
     if (pool.length === 0) return { error: 'You have caught every Ancient Deep species available with this bait!' }
   }
 
-  const rod = getRod(profile.rod_tier ?? 0)
+  const rod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
 
   // Crate encounter: 2% chance (× rod.crateChanceMult — Treasure Rod = 2×).
   // Rolled up-front so the in-flight flag below can skip crates — they're
@@ -401,7 +401,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -552,7 +552,7 @@ export async function reelIn(
   // Ancient Deep: only ALWAYS-double rods (Millionaire's, doubleCatchChance >= 1)
   // double here — Twin-Strike's partial double stays single-catch. Trophies
   // (sell_value 0) never multiply; they short-circuit far above.
-  const reelRod = getRod(profile.rod_tier ?? 0)
+  const reelRod = getEffectiveRod(profile.rod_tier ?? 0, profile.completionist_effects as number[] | null)
   const noDoubleCatch = fish.habitat === 'ancient_deep' && (reelRod.doubleCatchChance ?? 0) < 1
   const effectiveDoubleCatch = doubleCatch && !noDoubleCatch
   const effectiveJackpotMult = Math.min(jackpotMultiplier, 100)
@@ -603,7 +603,7 @@ export async function reelIn(
   const prestigeXPMult = 1 + zonePrestige * 0.10
   // Perfect Rod doubles XP on perfect catches (incl. the streak bonus, so
   // it scales with streaks). Non-perfect catches are unaffected.
-  const perfectXpMult = result === 'perfect' ? (getRod(profile.rod_tier ?? 0).perfectXpMult ?? 1) : 1
+  const perfectXpMult = result === 'perfect' ? (reelRod.perfectXpMult ?? 1) : 1
   // Perfect streak — server-authoritative. We compute the streak + its XP bonus
   // ourselves from the stored value; the client-supplied number is ignored, so
   // it can't be inflated to mint XP.
@@ -632,7 +632,7 @@ export async function reelIn(
   // short-circuited above; shinies live in shiny_catches, not the hold). We
   // stash the catch on profiles.pending_reroll; its presence is the single-use
   // guard. Non-wormhole catches clear any stale pending reroll.
-  const rodDef = getRod(profile.rod_tier ?? 0)
+  const rodDef = reelRod
   const wormholeAvail = !!rodDef.wormhole && !isShiny && catchQty > 0
 
   // Fishing-level skin unlocks: Forest @ 50, Ice @ 75
@@ -848,7 +848,7 @@ export async function rerollWormhole(): Promise<
   if (!user) return { error: 'Unauthorized' }
   const admin = createAdminClient()
 
-  const { data: profile } = await admin.from('profiles').select('rod_tier, pending_reroll').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('rod_tier, completionist_effects, pending_reroll').eq('id', user.id).single()
   const pending = (profile?.pending_reroll ?? null) as { fishId: number; qty: number; habitat: string } | null
   if (!pending) return { error: 'No catch to reroll.' }
 
@@ -867,7 +867,7 @@ export async function rerollWormhole(): Promise<
   const pool = (candidates ?? []).filter(f => f.id !== origId)
   if (pool.length === 0) return { error: 'The wormhole found nothing new.' }
 
-  const rod = getRod(profile?.rod_tier ?? 0)
+  const rod = getEffectiveRod(profile?.rod_tier ?? 0, profile?.completionist_effects as number[] | null)
   const picked = tierWeightedPick(pool, habitat, rod.rarityBonus)
   const { data: newFish } = await admin.from('fish_species').select('*').eq('id', picked.id).single()
   if (!newFish) return { error: 'The wormhole collapsed.' }
@@ -1686,5 +1686,40 @@ export async function mountGoldenTrophy(
       .eq('fish_id', row.fish_id),
   ])
   return { ok: true, fishId: row.fish_id }
+}
+
+// ── Completionist Rod forge ───────────────────────────────────────────────────
+// Set which (up to 3) owned rods' unique effects are folded into the
+// Completionist. Reconfigurable, non-destructive — the donor rods stay in the
+// inventory. Server-validated so a tampered client can't inject effects from
+// rods it doesn't own or that have no unique effect. The resolved stats are
+// derived from this on every cast/reel via getEffectiveRod, so this is the
+// single source the gameplay paths trust.
+export async function setCompletionistEffects(
+  tiers: number[],
+): Promise<{ completionistEffects: number[] } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const admin = createAdminClient()
+
+  const { data: ownedRows } = await admin
+    .from('rod_inventory').select('rod_tier').eq('user_id', user.id)
+  const owned = new Set((ownedRows ?? []).map(r => r.rod_tier as number))
+  if (!owned.has(COMPLETIONIST_TIER)) return { error: "You haven't earned the Completionist Rod yet." }
+
+  // Dedupe, drop the Completionist itself, validate ownership + that each rod
+  // actually has an effect, then cap at the slot limit.
+  const clean: number[] = []
+  for (const t of Array.from(new Set((tiers ?? []).filter(t => Number.isInteger(t))))) {
+    if (clean.length >= COMPLETIONIST_MAX_EFFECTS) break
+    if (t === COMPLETIONIST_TIER) continue
+    if (!owned.has(t)) return { error: 'You can only forge in rods you own.' }
+    if (!rodHasUniqueEffect(getRod(t))) return { error: 'That rod has no unique effect to forge.' }
+    clean.push(t)
+  }
+
+  await admin.from('profiles').update({ completionist_effects: clean }).eq('id', user.id)
+  return { completionistEffects: clean }
 }
 

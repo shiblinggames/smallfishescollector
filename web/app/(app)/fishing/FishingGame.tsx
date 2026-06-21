@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useTransition, useMemo, useCallback
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
+import { castLine, reelIn, reelCrate, rerollWormhole, quickSellAllFish, quickBuyWorms, markFishingTourSeen, markFishingCatchTourSeen, markFirstCatchCelebrationSeen, checkLeaderboardPosition, claimZoneReward, equipBoat, buyBoat, equipHat, buyHat, equipPet, equipSpecialItem, buySpecialItem, useTideTurnerSkip, prestigeZone, activateEvent, sellGoldenTrophy, mountGoldenTrophy, setCompletionistEffects as saveCompletionistEffects, setShowWaitTimer as persistShowWaitTimer, type FishSpecies } from './actions'
 import { recordFinnEncounter, settleFinnChallenge, recordFinnPass, markFinnRevealSeen } from './finnActions'
 import FinnEncounter from './FinnEncounter'
 import TrawlIndicator from './TrawlIndicator'
@@ -58,7 +58,7 @@ import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
+import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
 import { BAITS, getBait } from '@/lib/bait'
@@ -2918,6 +2918,7 @@ export default function FishingGame({
   initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory,
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
+  initialCompletionistEffects,
   allFishSpecies, initialCaughtFishIds, initialMountedFishIds,
   initialPersonalBests,
   initialHighestPerfectStreak, initialPerfectStreak,
@@ -2943,6 +2944,7 @@ export default function FishingGame({
   uniqueSpeciesCaught: number
   fishHoldTier: number
   ownedRods: number[]
+  initialCompletionistEffects: number[]
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
   /** Species the player has mounted as golden in the Logbook. Used to
@@ -3020,6 +3022,10 @@ export default function FishingGame({
 
   const [equippedRodTier, setEquippedRodTier] = useState(rodTier)
   const [ownedRods, setOwnedRods] = useState(initialOwnedRods)
+  // Completionist Rod forge: which (up to 3) owned rods' effects are folded in.
+  // Resolved into the rod's effective stats below via getEffectiveRod. The
+  // forge UI in GearScreen updates this optimistically + persists server-side.
+  const [completionistEffects, setCompletionistEffects] = useState<number[]>(initialCompletionistEffects)
   const [reelTier, setReelTier] = useState(initialReelTier)
   const [hookTier, setHookTier] = useState(initialHookTier)
   const [caughtFishIds, setCaughtFishIds] = useState(() => new Set(initialCaughtFishIds))
@@ -3031,7 +3037,7 @@ export default function FishingGame({
   // state when a new PB lands so the drawer reflects it without a page
   // refresh.
   const [personalBests, setPersonalBests] = useState<Record<number, number>>(initialPersonalBests)
-  const rod  = getRod(equippedRodTier)
+  const rod  = getEffectiveRod(equippedRodTier, completionistEffects)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
@@ -8475,6 +8481,14 @@ export default function FishingGame({
               equippedRodTier={equippedRodTier}
               ownedRods={ownedRods}
               onEquipRod={handleEquipRod}
+              completionistEffects={completionistEffects}
+              onCompletionistEffectsChange={async (tiers) => {
+                const prev = completionistEffects
+                setCompletionistEffects(tiers) // optimistic
+                const res = await saveCompletionistEffects(tiers)
+                if ('error' in res) { setCompletionistEffects(prev); return }
+                setCompletionistEffects(res.completionistEffects)
+              }}
               rodHasAffordable={rodHasAffordable}
               reelHasAffordable={reelHasAffordable}
               hookHasAffordable={hookHasAffordable}

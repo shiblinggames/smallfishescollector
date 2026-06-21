@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getRod, RODS, rodGlowClass, isCaptainRod } from '@/lib/rods'
+import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -670,6 +670,7 @@ function AppearanceSlot({
 export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
   equippedRodTier, ownedRods, onEquipRod, onBuyRod, onSellRod,
+  completionistEffects, onCompletionistEffectsChange,
   reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
   rodHasAffordable, reelHasAffordable, hookHasAffordable,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
@@ -695,6 +696,11 @@ export default function GearScreen({
    *  cost. Server returns the new doubloon total + the updated owned
    *  list so the parent can patch state in one call. */
   onSellRod: (tier: number) => Promise<void>
+  /** Completionist forge: rod tiers whose unique effects are folded into
+   *  the Completionist (up to COMPLETIONIST_MAX_EFFECTS). */
+  completionistEffects: number[]
+  /** Persist a new forge loadout (validated server-side). */
+  onCompletionistEffectsChange: (tiers: number[]) => void | Promise<void>
   reelTier: number
   hookTier: number
   lineTier: number
@@ -801,7 +807,7 @@ export default function GearScreen({
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
-  const rod  = getRod(equippedRodTier)
+  const rod  = getEffectiveRod(equippedRodTier, completionistEffects)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
   const line = getLine(lineTier)
@@ -809,6 +815,11 @@ export default function GearScreen({
 
   const inventoryMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
   const ownedRodDefs = RODS.filter(r => (r.cost === 0 && !r.earnedOnly) || ownedRods.includes(r.tier))
+
+  // Completionist forge: does the player own it, and which of their owned rods
+  // can donate a unique effect. Drives the forge panel rendered in the rod tab.
+  const ownsCompletionist = ownedRods.includes(COMPLETIONIST_TIER)
+  const forgeableRods = ownedRodDefs.filter(rodHasUniqueEffect)
 
   const dragPct    = Math.round((1 - reel.needleSpeedMultiplier) * 100)
   const snagRedPct = Math.round((1 - line.penaltyMultiplier) * 100)
@@ -1099,6 +1110,77 @@ export default function GearScreen({
                         </motion.div>
                       )}
                     </AnimatePresence>
+
+                    {/* ── Completionist Forge ──
+                        Only for the player who's earned the Completionist Rod.
+                        Fold up to 3 of their owned rods' unique effects into it;
+                        reconfigurable, non-destructive. Tapping a rod toggles it
+                        in/out of the loadout (capped at COMPLETIONIST_MAX_EFFECTS)
+                        and persists via onCompletionistEffectsChange. */}
+                    {ownsCompletionist && (
+                      <div style={{
+                        borderRadius: 12,
+                        border: '1px solid rgba(232,200,74,0.45)',
+                        background: 'linear-gradient(180deg, rgba(232,200,74,0.10) 0%, rgba(232,200,74,0.03) 100%)',
+                        padding: '0.7rem 0.75rem',
+                        display: 'flex', flexDirection: 'column', gap: 8,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#e8c84a', letterSpacing: '0.02em' }}>Completionist Forge</span>
+                          <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: completionistEffects.length >= COMPLETIONIST_MAX_EFFECTS ? '#e8c84a' : '#7a8aa0' }}>
+                            {completionistEffects.length}/{COMPLETIONIST_MAX_EFFECTS}
+                          </span>
+                        </div>
+                        <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9aa6b2', lineHeight: 1.45 }}>
+                          Fold up to three of your rods&rsquo; effects into the Completionist. Re-forge whenever you like, your rods are never consumed.
+                        </p>
+                        {forgeableRods.length === 0 ? (
+                          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6a7888', fontStyle: 'italic' }}>
+                            Buy or earn rods with special effects (Twin-Strike, Galaxy, YOLO and the like) to forge them in.
+                          </p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {forgeableRods.map(fr => {
+                              const selected = completionistEffects.includes(fr.tier)
+                              const full = !selected && completionistEffects.length >= COMPLETIONIST_MAX_EFFECTS
+                              return (
+                                <button
+                                  key={fr.tier}
+                                  disabled={full}
+                                  onClick={() => {
+                                    const next = selected
+                                      ? completionistEffects.filter(t => t !== fr.tier)
+                                      : [...completionistEffects, fr.tier]
+                                    onCompletionistEffectsChange(next)
+                                  }}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 9,
+                                    padding: '0.5rem 0.6rem', borderRadius: 9,
+                                    textAlign: 'left', width: '100%',
+                                    cursor: full ? 'default' : 'pointer',
+                                    opacity: full ? 0.4 : 1,
+                                    background: selected ? `${fr.color}1f` : 'rgba(255,255,255,0.03)',
+                                    border: `1px solid ${selected ? fr.color + 'aa' : 'rgba(255,255,255,0.08)'}`,
+                                  }}
+                                >
+                                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: fr.color, boxShadow: `0 0 7px ${fr.color}99`, flexShrink: 0 }} />
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#f0ede8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fr.name}</div>
+                                    <div className="font-karla" style={{ fontSize: '0.64rem', color: fr.color }}>{rodEffectLabel(fr)}</div>
+                                  </div>
+                                  <span className="font-karla font-700" style={{
+                                    fontSize: '0.7rem', flexShrink: 0,
+                                    color: selected ? fr.color : full ? '#4a5562' : '#7a8aa0',
+                                  }}>
+                                    {selected ? '✓ Forged' : full ? 'Full' : '+ Forge'}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Owned / Shop tabs — split the panel so the player
                         sees a focused view at a time. Owned defaults so

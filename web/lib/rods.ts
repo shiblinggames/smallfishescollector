@@ -163,9 +163,13 @@ export const RODS: RodDef[] = [
   },
   {
     tier: 14, name: 'Completionist Rod', cost: 0, earnedOnly: true,
-    description: 'Forged from the soul of every species in the sea. Every advantage, no compromises.',
-    color: '#e8c84a', rarityBonus: 0.50, biteIntervalMs: 1000, catchZoneBonus: 16,
-    doubleCatchChance: 1.0, retryOnMissChance: 0.50, snagImmune: true, perfectZoneBonus: 5,
+    description: "Forged from the soul of every species in the sea. A master's tool on its own, and a vessel besides: fit up to three rods you own into it to carry their gifts, and re-forge whenever you like.",
+    // Base "master tool" — fast bites, a wide window, snag-immune, no gimmick
+    // procs. The unique effects come from the rods socketed into it (see
+    // resolveCompletionistRod). Earlier this rod hard-coded every proc maxed;
+    // now it's a build-your-own capstone.
+    color: '#e8c84a', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 16,
+    doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: true, perfectZoneBonus: 3,
   },
   {
     tier: 16, name: 'Treasure Rod', cost: 200000, minLevel: 64,
@@ -203,6 +207,81 @@ export const RODS: RodDef[] = [
 
 export function getRod(tier: number): RodDef {
   return RODS.find(r => r.tier === tier) ?? RODS[0]
+}
+
+// ── Completionist Rod forge ───────────────────────────────────────────────────
+// The Completionist (the 100%-completion reward) is a plain master-tool base;
+// the player sockets up to 3 of their OWNED rods' unique effects into it,
+// reconfigurable at will (rods are not consumed). The absorbed rod tiers live
+// in profiles.completionist_effects; resolveCompletionistRod merges them.
+export const COMPLETIONIST_TIER = 14
+export const COMPLETIONIST_MAX_EFFECTS = 3
+
+/** A rod carries a "unique effect" worth absorbing if it has any proc beyond
+ *  plain speed / catch-zone. The forge only accepts these (Bamboo, Graphite,
+ *  etc. have nothing to give). The Completionist itself is never absorbable. */
+export function rodHasUniqueEffect(rod: RodDef): boolean {
+  if (rod.tier === COMPLETIONIST_TIER) return false
+  return (rod.rarityBonus ?? 0) > 0
+    || (rod.doubleCatchChance ?? 0) > 0
+    || (rod.retryOnMissChance ?? 0) > 0
+    || (rod.jackpotChance ?? 0) > 0
+    || (rod.crateChanceMult ?? 1) > 1
+    || (rod.perfectXpMult ?? 1) > 1
+    || !!rod.wormhole
+    || (rod.instantBiteChance ?? 0) > 0
+}
+
+/** Short label for a rod's signature effect — drives the forge UI. */
+export function rodEffectLabel(rod: RodDef): string {
+  if ((rod.doubleCatchChance ?? 0) >= 1)    return 'Always double catch'
+  if ((rod.doubleCatchChance ?? 0) > 0)     return `${Math.round(rod.doubleCatchChance! * 100)}% double catch`
+  if ((rod.jackpotChance ?? 0) > 0)         return `×${rod.jackpotMultiplier} jackpot haul`
+  if ((rod.rarityBonus ?? 0) >= 1)          return 'Strong rare bias'
+  if ((rod.rarityBonus ?? 0) > 0)           return 'Rare bias'
+  if ((rod.retryOnMissChance ?? 0) > 0)     return `${Math.round(rod.retryOnMissChance! * 100)}% retry on miss`
+  if ((rod.crateChanceMult ?? 1) > 1)       return `${rod.crateChanceMult}× crate odds`
+  if ((rod.perfectXpMult ?? 1) > 1)         return `${rod.perfectXpMult}× perfect XP`
+  if (rod.wormhole)                         return 'Wormhole reroll'
+  if ((rod.instantBiteChance ?? 0) > 0)     return `${Math.round(rod.instantBiteChance! * 100)}% instant bite`
+  return ''
+}
+
+/** Resolve the Completionist's effective stats from absorbed rod tiers. Starts
+ *  from its plain master-tool base and folds in each donor rod's unique proc(s);
+ *  overlapping numerics take the stronger value. Caps at COMPLETIONIST_MAX_EFFECTS
+ *  and ignores unknown / non-unique / duplicate tiers, so bad/forged data can
+ *  never over-power the rod. Returns a fresh object (never mutates the def). */
+export function resolveCompletionistRod(effectTiers: number[]): RodDef {
+  const base = { ...getRod(COMPLETIONIST_TIER) }
+  const seen = new Set<number>()
+  for (const tier of effectTiers ?? []) {
+    if (seen.has(tier) || seen.size >= COMPLETIONIST_MAX_EFFECTS || tier === COMPLETIONIST_TIER) continue
+    const donor = RODS.find(r => r.tier === tier)
+    if (!donor || !rodHasUniqueEffect(donor)) continue
+    seen.add(tier)
+    base.rarityBonus       = Math.max(base.rarityBonus ?? 0, donor.rarityBonus ?? 0)
+    base.doubleCatchChance = Math.max(base.doubleCatchChance ?? 0, donor.doubleCatchChance ?? 0)
+    base.retryOnMissChance = Math.max(base.retryOnMissChance ?? 0, donor.retryOnMissChance ?? 0)
+    base.crateChanceMult   = Math.max(base.crateChanceMult ?? 1, donor.crateChanceMult ?? 1)
+    base.perfectXpMult     = Math.max(base.perfectXpMult ?? 1, donor.perfectXpMult ?? 1)
+    if ((donor.jackpotChance ?? 0) > (base.jackpotChance ?? 0)) {
+      base.jackpotChance = donor.jackpotChance
+      base.jackpotMultiplier = donor.jackpotMultiplier
+    }
+    if (donor.wormhole) base.wormhole = true
+    if ((donor.instantBiteChance ?? 0) > (base.instantBiteChance ?? 0)) base.instantBiteChance = donor.instantBiteChance
+  }
+  return base
+}
+
+/** Effective rod def for a player: identical to getRod EXCEPT the Completionist,
+ *  whose stats resolve from the player's absorbed effect tiers. Use this
+ *  everywhere gameplay or display reads the equipped rod's stats — pass the
+ *  player's profiles.completionist_effects. */
+export function getEffectiveRod(tier: number, completionistEffects: number[] | null | undefined): RodDef {
+  if (tier !== COMPLETIONIST_TIER) return getRod(tier)
+  return resolveCompletionistRod(completionistEffects ?? [])
 }
 
 // ── Captain-only rods ────────────────────────────────────────────────────────

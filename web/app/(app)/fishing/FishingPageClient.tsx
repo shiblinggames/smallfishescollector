@@ -46,7 +46,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
-  fishHoldTier, ownedRods, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
+  fishHoldTier, ownedRods, initialCompletionistEffects, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
@@ -64,6 +64,7 @@ export default function FishingPageClient({
   zoneStats: Record<string, ZoneStat>
   fishHoldTier: number
   ownedRods: number[]
+  initialCompletionistEffects: number[]
   allFishSpecies: FishSpeciesBasic[]
   caughtFishIds: number[]
   mountedFishIds: number[]
@@ -225,6 +226,7 @@ export default function FishingPageClient({
       fishHoldTier={fishHoldTier}
       unlockedBadges={unlockedBadges}
       ownedRods={ownedRods}
+      initialCompletionistEffects={initialCompletionistEffects}
       allFishSpecies={allFishSpecies}
       initialCaughtFishIds={caughtFishIds}
       initialMountedFishIds={mountedFishIds}
