@@ -9,6 +9,7 @@ import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import { getLine } from '@/lib/lines'
+import { playForgeSfx } from '@/lib/fishingMusic'
 import { BAITS } from '@/lib/bait'
 import { BOATS, DEFAULT_BOAT_COLOR, boatGlowClass, BOAT_ASH_DARKEN } from '@/lib/boats'
 import { HATS } from '@/lib/hats'
@@ -807,6 +808,24 @@ export default function GearScreen({
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
+  // Forge juice — a spark burst keyed to the last fused/removed effect, plus
+  // SFX + haptic. Forging the 100%-reward rod is a rare, ceremonial act, so a
+  // dramatic localized moment is warranted (unlike frequent-action effects).
+  const [forgeBurst, setForgeBurst] = useState<{ id: number; color: string; dir: 'in' | 'out' } | null>(null)
+  function triggerForge(tier: number, color: string) {
+    const selected = completionistEffects.includes(tier)
+    const next = selected
+      ? completionistEffects.filter(t => t !== tier)
+      : [...completionistEffects, tier]
+    const dir: 'in' | 'out' = selected ? 'out' : 'in'
+    setForgeBurst({ id: Date.now(), color, dir })
+    try {
+      playForgeSfx(dir === 'out')
+      if ('vibrate' in navigator) navigator.vibrate(dir === 'in' ? [12, 28, 22] : 14)
+    } catch {}
+    onCompletionistEffectsChange(next)
+  }
+
   const rod  = getEffectiveRod(equippedRodTier, completionistEffects)
   const reel = getReel(reelTier)
   const hook = getHook(hookTier)
@@ -1117,50 +1136,123 @@ export default function GearScreen({
                         reconfigurable, non-destructive. Tapping a rod toggles it
                         in/out of the loadout (capped at COMPLETIONIST_MAX_EFFECTS)
                         and persists via onCompletionistEffectsChange. */}
-                    {ownsCompletionist && (
+                    {ownsCompletionist && (() => {
+                      const filled = completionistEffects.length
+                      const auraT = filled / COMPLETIONIST_MAX_EFFECTS // 0..1 power level
+                      return (
                       <div style={{
+                        position: 'relative', overflow: 'hidden',
                         borderRadius: 12,
-                        border: '1px solid rgba(232,200,74,0.45)',
+                        border: `1px solid rgba(232,200,74,${0.4 + auraT * 0.4})`,
                         background: 'linear-gradient(180deg, rgba(232,200,74,0.10) 0%, rgba(232,200,74,0.03) 100%)',
-                        padding: '0.7rem 0.75rem',
-                        display: 'flex', flexDirection: 'column', gap: 8,
+                        padding: '0.75rem 0.8rem',
+                        display: 'flex', flexDirection: 'column', gap: 9,
+                        boxShadow: `inset 0 0 ${10 + auraT * 34}px rgba(232,200,74,${0.06 + auraT * 0.16})`,
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                          <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#e8c84a', letterSpacing: '0.02em' }}>Completionist Forge</span>
-                          <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: completionistEffects.length >= COMPLETIONIST_MAX_EFFECTS ? '#e8c84a' : '#7a8aa0' }}>
-                            {completionistEffects.length}/{COMPLETIONIST_MAX_EFFECTS}
+                        {/* Aura — a soft gold bloom behind the sockets that
+                            intensifies as the rod fills up. Visible power growth. */}
+                        <motion.div aria-hidden
+                          animate={{ opacity: 0.18 + auraT * 0.5 }}
+                          transition={{ duration: 0.5 }}
+                          style={{
+                            position: 'absolute', top: -30, left: '50%', width: 220, height: 120,
+                            transform: 'translateX(-50%)', pointerEvents: 'none',
+                            background: 'radial-gradient(ellipse at center, rgba(245,210,110,0.9) 0%, transparent 70%)',
+                            filter: 'blur(8px)',
+                          }}
+                        />
+
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f3d98a', letterSpacing: '0.02em', textShadow: `0 0 ${6 + auraT * 12}px rgba(240,200,90,${0.3 + auraT * 0.4})` }}>Completionist Forge</span>
+                          <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: filled >= COMPLETIONIST_MAX_EFFECTS ? '#f3d98a' : '#7a8aa0' }}>
+                            {filled}/{COMPLETIONIST_MAX_EFFECTS}
                           </span>
                         </div>
-                        <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9aa6b2', lineHeight: 1.45 }}>
+
+                        {/* ── Power sockets ── one gem per slot. Filled gems glow
+                            in the donor rod's colour; the spark ring bursts here
+                            on every fuse / un-fuse. */}
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, padding: '0.35rem 0 0.15rem' }}>
+                          {/* Spark burst — re-keyed on each forge so it restarts. */}
+                          {forgeBurst && (
+                            <motion.div
+                              key={forgeBurst.id}
+                              initial={{ scale: 0.25, opacity: 0.85 }}
+                              animate={{ scale: forgeBurst.dir === 'in' ? 3 : 1.7, opacity: 0 }}
+                              transition={{ duration: forgeBurst.dir === 'in' ? 0.7 : 0.45, ease: 'easeOut' }}
+                              onAnimationComplete={() => setForgeBurst(null)}
+                              style={{
+                                position: 'absolute', left: '50%', top: '50%',
+                                width: 54, height: 54, marginLeft: -27, marginTop: -27,
+                                borderRadius: '50%', pointerEvents: 'none',
+                                border: `2px solid ${forgeBurst.color}`,
+                                boxShadow: `0 0 20px ${forgeBurst.color}, inset 0 0 12px ${forgeBurst.color}`,
+                              }}
+                            />
+                          )}
+                          {Array.from({ length: COMPLETIONIST_MAX_EFFECTS }).map((_, i) => {
+                            const tier = completionistEffects[i]
+                            const donor = tier != null ? RODS.find(r => r.tier === tier) : undefined
+                            return (
+                              <div key={i} style={{
+                                position: 'relative',
+                                width: 26, height: 26, borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: donor ? `1.5px solid ${donor.color}` : '1.5px dashed rgba(255,255,255,0.18)',
+                                background: donor ? `${donor.color}22` : 'rgba(255,255,255,0.02)',
+                              }}>
+                                <AnimatePresence>
+                                  {donor && (
+                                    <motion.div
+                                      key={donor.tier}
+                                      initial={{ scale: 0.2, opacity: 0 }}
+                                      animate={{ scale: [0.2, 1.25, 1], opacity: 1 }}
+                                      exit={{ scale: 0.2, opacity: 0 }}
+                                      transition={{ duration: 0.4, times: [0, 0.6, 1], ease: 'easeOut' }}
+                                      style={{
+                                        width: 13, height: 13, borderRadius: '50%',
+                                        background: donor.color,
+                                        boxShadow: `0 0 9px ${donor.color}, 0 0 16px ${donor.color}88`,
+                                      }}
+                                    />
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        <p className="font-karla" style={{ position: 'relative', fontSize: '0.68rem', color: '#9aa6b2', lineHeight: 1.45 }}>
                           Fold up to three of your rods&rsquo; effects into the Completionist. Re-forge whenever you like, your rods are never consumed.
                         </p>
                         {forgeableRods.length === 0 ? (
-                          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#6a7888', fontStyle: 'italic' }}>
+                          <p className="font-karla" style={{ position: 'relative', fontSize: '0.66rem', color: '#6a7888', fontStyle: 'italic' }}>
                             Buy or earn rods with special effects (Twin-Strike, Galaxy, YOLO and the like) to forge them in.
                           </p>
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 5 }}>
                             {forgeableRods.map(fr => {
                               const selected = completionistEffects.includes(fr.tier)
                               const full = !selected && completionistEffects.length >= COMPLETIONIST_MAX_EFFECTS
                               return (
-                                <button
+                                <motion.button
                                   key={fr.tier}
                                   disabled={full}
-                                  onClick={() => {
-                                    const next = selected
-                                      ? completionistEffects.filter(t => t !== fr.tier)
-                                      : [...completionistEffects, fr.tier]
-                                    onCompletionistEffectsChange(next)
+                                  whileTap={full ? undefined : { scale: 0.97 }}
+                                  onClick={() => triggerForge(fr.tier, fr.color)}
+                                  animate={{
+                                    background: selected ? `${fr.color}24` : 'rgba(255,255,255,0.03)',
+                                    borderColor: selected ? `${fr.color}cc` : 'rgba(255,255,255,0.08)',
+                                    opacity: full ? 0.4 : 1,
                                   }}
+                                  transition={{ duration: 0.25 }}
                                   style={{
                                     display: 'flex', alignItems: 'center', gap: 9,
                                     padding: '0.5rem 0.6rem', borderRadius: 9,
                                     textAlign: 'left', width: '100%',
                                     cursor: full ? 'default' : 'pointer',
-                                    opacity: full ? 0.4 : 1,
-                                    background: selected ? `${fr.color}1f` : 'rgba(255,255,255,0.03)',
-                                    border: `1px solid ${selected ? fr.color + 'aa' : 'rgba(255,255,255,0.08)'}`,
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    boxShadow: selected ? `0 0 12px ${fr.color}33` : 'none',
                                   }}
                                 >
                                   <span style={{ width: 9, height: 9, borderRadius: '50%', background: fr.color, boxShadow: `0 0 7px ${fr.color}99`, flexShrink: 0 }} />
@@ -1174,13 +1266,14 @@ export default function GearScreen({
                                   }}>
                                     {selected ? '✓ Forged' : full ? 'Full' : '+ Forge'}
                                   </span>
-                                </button>
+                                </motion.button>
                               )
                             })}
                           </div>
                         )}
                       </div>
-                    )}
+                      )
+                    })()}
 
                     {/* Owned / Shop tabs — split the panel so the player
                         sees a focused view at a time. Owned defaults so

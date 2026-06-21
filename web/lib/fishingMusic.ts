@@ -654,6 +654,49 @@ export function playCast2Sfx(): void {
   } catch {}
 }
 
+/** Forge SFX — a bright metallic shimmer for fusing a rod's effect into the
+ *  Completionist Rod. Fully synthesized (no asset): a struck-bell triad with a
+ *  short noise "spark" at the front. Pass descend=true for a softer, falling
+ *  variant when un-forging. Routed through sfxOut so the SFX mute applies. */
+export function playForgeSfx(descend = false): void {
+  if (!audioCtx) return
+  const out = sfxOut(); if (!out) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const ctx = audioCtx
+    const t0 = ctx.currentTime
+    const root = descend ? 523.25 : 659.25            // C5 (un-forge) vs E5 (forge)
+    const partials = descend ? [1, 0.75, 0.5] : [1, 1.5, 2] // falling vs rising triad
+    partials.forEach((mult, i) => {
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = i === 0 ? 'triangle' : 'sine'
+      osc.frequency.value = root * mult
+      const peak = (descend ? 0.16 : 0.26) / (i + 1)
+      const start = t0 + i * 0.045
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(peak, start + 0.012)
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.5)
+      osc.connect(g).connect(out)
+      osc.start(start)
+      osc.stop(start + 0.55)
+    })
+    // Front spark — short band-passed noise burst for the metallic "ting".
+    const noise = ctx.createBufferSource()
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.08), ctx.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+    noise.buffer = buf
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'; bp.frequency.value = descend ? 2200 : 3600; bp.Q.value = 0.8
+    const ng = ctx.createGain()
+    ng.gain.setValueAtTime(descend ? 0.07 : 0.13, t0)
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09)
+    noise.connect(bp).connect(ng).connect(out)
+    noise.start(t0); noise.stop(t0 + 0.1)
+  } catch {}
+}
+
 /** Mute/unmute SFX independently of the music. Persisted to localStorage. */
 export function getFishingSfxMuted(): boolean { return sfxMuted }
 export function setFishingSfxMuted(muted: boolean): void {
