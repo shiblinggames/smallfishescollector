@@ -364,6 +364,16 @@ export default function RaidCombat({
       enemyHpScaleMult, enemyChargesDelta,
     }
   }, [tideEffects, isBoss])
+  // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
+  // charges) so the enemy-RESET effect below — which has intentionally tight
+  // deps so it doesn't refire mid-fight — reads the CURRENT values. Without
+  // this the reset reverts the enemy to full hpBase, silently dropping a
+  // "next enemy starts at half HP" tide. Updated during render so the value
+  // is committed before the post-commit reset effect runs.
+  const enemyHpScaleMultRef = useRef(tide.enemyHpScaleMult)
+  enemyHpScaleMultRef.current = tide.enemyHpScaleMult
+  const enemyChargesDeltaRef = useRef(tide.enemyChargesDelta)
+  enemyChargesDeltaRef.current = tide.enemyChargesDelta
   // Anchor save can fire at most once per RaidCombat mount (the parent
   // tracks the per-run charge across encounter remounts via onAnchorSave).
   const anchorUsedRef = useRef(false)
@@ -457,7 +467,7 @@ export default function RaidCombat({
     Math.max(0, Math.min(MAX_CHARGES, tide.chargesStart))
   )
   const [enemyCharges, setEnemyCharges]   = useState(() =>
-    Math.max(0, Math.min(MAX_CHARGES, tide.enemyChargesDelta))
+    Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + tide.enemyChargesDelta))
   )
   const [subPhase, setSubPhase]       = useState<SubPhase>('await_input')
   const [playerAction, setPlayerAction] = useState<EnemyAction | null>(null)
@@ -747,7 +757,11 @@ export default function RaidCombat({
   // staggered (~600ms apart) so the player reads the intro, then the prompt
   // appears below — same rhythm as the in-fight action log.
   useEffect(() => {
-    setEnemyHp(enemy.hpBase); enemyHpRef.current = enemy.hpBase
+    // Apply the next-fight tide HP scale here too — NOT just in the useState
+    // initializer — since this reset runs on every encounter switch and the
+    // enemyHpScale tide always targets a LATER enemy.
+    const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
+    setEnemyHp(scaledHp); enemyHpRef.current = scaledHp
     enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; snareBlockedRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
@@ -758,7 +772,8 @@ export default function RaidCombat({
       .filter(e => e.type === 'start_charge_chance')
       .reduce((a, e) => Math.max(a, e.value), 0)
     const playerStartCharges = startChargeChance > 0 && Math.random() < startChargeChance ? 1 : 0
-    setPlayerCharges(playerStartCharges); setEnemyCharges(enemy.startCharges ?? 0)
+    setPlayerCharges(playerStartCharges)
+    setEnemyCharges(Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + enemyChargesDeltaRef.current)))
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
     setLastPlayerAction(null)
