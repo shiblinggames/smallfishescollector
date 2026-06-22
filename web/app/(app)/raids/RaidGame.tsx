@@ -548,12 +548,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   const [clearReady, setClearReady]     = useState(false)
   const [lootAmount, setLootAmount]     = useState(0)
   const [lootBase, setLootBase]         = useState(0)
-  const [lootOpened, setLootOpened]     = useState(false)
   const [lootClaimed, setLootClaimed]   = useState(false)
-  const [slotDisplay, setSlotDisplay] = useState(0)
-  const [slotLanded, setSlotLanded]   = useState(false)
+  // Pre-rolled loot index (set at boss kill), shown directly by RaidLootStage.
   const [slotFinal, setSlotFinal]     = useState(0)
-  const slotIntervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
   const [pHitsplat, setPHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [eHitsplat, setEHitsplat]       = useState({ key: 0, text: '', color: '', big: false })
   const [enemyMinDmg, setEnemyMinDmg]   = useState(2)
@@ -682,7 +679,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     setDodgePrimePct(1); setDodgeFlash(false); setDodgeShake(false); setShowDodgeVFX(false)
     setRoundDisplay(1); setEnemySinking(false)
     setShowCannonShot(false); setClearReady(false)
-    setLootAmount(0); setLootBase(0); setLootOpened(false); setLootClaimed(false)
+    setLootAmount(0); setLootBase(0); setLootClaimed(false)
     // Tides: roll the run's drawn set on raid start. Effects + tokens
     // start empty (each retry rolls fresh). Pete + Krust have no
     // tides config so drawTides returns []; the modal never fires.
@@ -925,42 +922,6 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     return () => cancelAnimationFrame(rafRef.current)
     */
   }, [phase, dodgeCooldownUse, playerActionMs])
-
-  // Slot machine spin — triggers when loot crate is opened
-  useEffect(() => {
-    if (!lootOpened) return
-    const final = rollLootIndex(config.loot, ownedUniqueIds)
-    setSlotFinal(final)
-    setSlotLanded(false)
-
-    const tick = () => setSlotDisplay(prev => (prev + 1) % config.loot.length)
-
-    // Three phases: fast → medium → slow, then snap to result
-    const fast = setInterval(tick, 70)
-    slotIntervalsRef.current = [fast]
-
-    const t1 = setTimeout(() => {
-      clearInterval(fast)
-      const med = setInterval(tick, 140)
-      slotIntervalsRef.current = [med]
-
-      const t2 = setTimeout(() => {
-        clearInterval(med)
-        const slow = setInterval(tick, 280)
-        slotIntervalsRef.current = [slow]
-
-        const t3 = setTimeout(() => {
-          clearInterval(slow)
-          setSlotDisplay(final)
-          setSlotLanded(true)
-        }, 900)
-        return () => clearTimeout(t3)
-      }, 900)
-      return () => clearTimeout(t2)
-    }, 1400)
-
-    return () => { clearTimeout(t1); slotIntervalsRef.current.forEach(clearInterval) }
-  }, [lootOpened])
 
   // (Removed: 5-minute raid timer + time-expired loot screen. Pete no longer
   //  has a time limit. raidStartTimeRef is still set in startGame so the
@@ -1657,29 +1618,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         <div style={{ width: '100%', flexShrink: 0 }}>
           <NavLevelBar xp={navXP} />
         </div>
-        {bonusCallout != null && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.94 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="font-cinzel font-700 uppercase tracking-[0.08em]"
-            style={{
-              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
-              fontSize: '0.64rem', color: '#a9c8f0',
-              background: 'rgba(112,144,192,0.16)', border: '1px solid rgba(138,176,224,0.5)',
-              borderRadius: 999, padding: '0.32rem 0.8rem',
-              boxShadow: '0 0 16px rgba(112,144,192,0.32)',
-            }}
-          >
-            <span aria-hidden style={{ fontSize: '0.8rem' }}>⚓</span>
-            Full Raid Clear · +{bonusCallout.toLocaleString()} Nav XP
-          </motion.div>
-        )}
         <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           <RaidLootStage
             boss={bossEnemy}
             killGold={winGold}
             killXP={winXP}
+            clearBonusXp={bonusCallout ?? 0}
             crewXP={Array.from(crewXPAccumRef.current.values())}
             loot={config.loot}
             slotFinal={slotFinal}
