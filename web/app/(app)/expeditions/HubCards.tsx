@@ -431,7 +431,7 @@ export default function HubCards({
         />
         <SideHubCard
           accent={gauntletAccent}
-          image="/raid4_gulletmaw.png"
+          image="/davyjones.png"
           title="Gauntlets"
           desc="Push your luck down a gauntlet for one swelling pot. Bank it or sink."
           locked={!isAdmin}
@@ -706,7 +706,7 @@ export default function HubCards({
               border: `1px solid ${gauntletAccent}55`,
             }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/raid4_gulletmaw.png" alt="" loading="lazy" decoding="async"
+            <img src="/davyjones.png" alt="" loading="lazy" decoding="async"
               style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 10px ${gauntletAccent}55)` }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>The Davy Jones Gauntlet</p>
