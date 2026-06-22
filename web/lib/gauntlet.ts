@@ -57,6 +57,15 @@ export function maxPotForDepth(depth: number): number {
   return total
 }
 
+/** Honest floor estimate of the pot a run reaching `depth` banks: every
+ *  cleared round at its non-boss contribution. Real runs land higher (bosses
+ *  multiply), so this reads as a conservative "about" for the intro preview. */
+export function estimatePotForDepth(depth: number): number {
+  let total = 0
+  for (let d = 1; d <= depth; d++) total += roundContribution(d, false)
+  return total
+}
+
 /** Hard sanity cap on reported depth (no legit run reaches this; it just
  *  bounds an obviously-forged value). */
 export const MAX_GAUNTLET_DEPTH = 60

@@ -20,6 +20,7 @@ import {
   CURSE_DEPTHS, drawCurse, BOON_DEPTHS, drawBoons,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT,
+  CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
   type GauntletFight, type GauntletRollState, type GauntletCurse, type GauntletBoon,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
@@ -384,6 +385,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a766e', marginTop: 10 }}>
             Starting begins the cooldown before your next.
           </p>
+
+          {/* What's actually down there — chest ladder, haul estimate, the chase. */}
+          <HaulPreview deepest={props.deepest} doubloonMult={props.classDoubloonMult} />
 
           {/* Permanent perks bought with what you haul up. */}
           <button onClick={() => setUpgradesOpen(true)} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
@@ -1105,6 +1109,96 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
         )}
       </div>
     </>
+  )
+}
+
+// ── Haul preview ──────────────────────────────────────────────────────────────
+// "What's down there" — a collapsible on the intro so a player can see the chest
+// ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
+// BEFORE committing a descent (and burning the cooldown).
+function HaulPreview({ deepest, doubloonMult }: { deepest: number; doubloonMult: number }) {
+  const [open, setOpen] = useState(false)
+  // Estimate against the depth they've actually reached; before any run, point
+  // at a realistic first goal so the number isn't zero.
+  const target = deepest > 0 ? deepest : 8
+  const chest = chestForDepth(target)
+  const pot = estimatePotForDepth(target)
+  const estDoubloons = Math.round(pot * chest.potMult * doubloonMult)
+  const estXp = Math.round(pot * chest.potMult)
+  const cannons = ['davys_heavy_cannon', 'davys_hand_cannon']
+    .map(getRaidItem)
+    .filter((it): it is NonNullable<ReturnType<typeof getRaidItem>> => !!it)
+  const shallowOdds = Math.round(chestCannonDropChance(1) * 1000) / 10
+  const deepOdds = Math.round(chestCannonDropChance(5) * 100)
+
+  return (
+    <div style={{ marginTop: 12, borderRadius: 13, border: `1px solid ${TEAL}30`, background: `${TEAL}0a`, overflow: 'hidden' }}>
+      <button onClick={() => setOpen(o => !o)} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+        style={{ width: '100%', padding: '0.85rem 0.9rem', fontSize: '0.82rem', color: TEAL, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span>What You Can Haul Up</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><path d="M9 18l6-6-6-6" /></svg>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }}
+            style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '0 0.9rem 0.95rem', textAlign: 'left' }}>
+              {/* Estimate */}
+              <div style={{ padding: '0.7rem 0.8rem', borderRadius: 11, background: 'rgba(240,192,64,0.07)', border: `1px solid ${GOLD}2e` }}>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>
+                  {deepest > 0 ? `A run to your depth ${target}` : 'A run to depth 8'}
+                </p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: GOLD, marginTop: 4, lineHeight: 1.15 }}>
+                  ~{fmt(estDoubloons)} ⟡ <span style={{ color: '#6b6760', fontWeight: 400 }}>+</span> ~{fmt(estXp)} Nav XP
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 3 }}>
+                  Hauled up in the {chest.label}{chest.gems > 0 ? ` with +${chest.gems} ◆` : ''}. The pot only banks if you cash out before you sink.
+                </p>
+              </div>
+
+              {/* Chest ladder */}
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 12, marginBottom: 6 }}>The Chests — deeper hauls richer</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {CHEST_TIERS.map(c => {
+                  const reached = target >= c.minDepth
+                  return (
+                    <div key={c.tier} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0.4rem 0.6rem', borderRadius: 9, background: reached ? `${GOLD}10` : 'rgba(255,255,255,0.02)', border: `1px solid ${reached ? `${GOLD}33` : 'rgba(255,255,255,0.06)'}` }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0 }}>
+                        <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: reached ? GOLD : '#6b6760', flexShrink: 0, width: 44 }}>Depth {c.minDepth}+</span>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: reached ? '#f0ede8' : '#7a766e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
+                      </div>
+                      <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: reached ? '#cdb978' : '#6b6760', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        ×{c.potMult}{c.gems > 0 ? ` · +${c.gems} ◆` : ''}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* The named chase */}
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 12, marginBottom: 6 }}>The Chase — rare from any chest</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {cannons.map(it => (
+                  <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.45rem 0.55rem', borderRadius: 9, background: 'rgba(140,90,210,0.08)', border: '1px solid rgba(150,110,220,0.28)' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={it.image ?? undefined} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.5))' }} />
+                    <div style={{ minWidth: 0 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#e9ddff', lineHeight: 1.1 }}>{it.name}</p>
+                      <p className="font-karla" style={{ fontSize: '0.62rem', color: '#9a93a8', lineHeight: 1.3, marginTop: 1 }}>{it.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
+                Each can drop from any chest you crack, from about {shallowOdds}% up shallow to {deepOdds}% in Davy Jones&apos; Locker. Land both and forge them into the Grand Cannon.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
 
