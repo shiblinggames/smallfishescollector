@@ -669,9 +669,9 @@ export default function GauntletGame(props: GauntletGameProps) {
           <button onClick={() => applyCurse(c)} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{
               marginTop: 22, width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1.02rem',
-              color: '#fff', background: `linear-gradient(180deg, #d65656 0%, #a13838 100%)`,
-              border: 'none', cursor: 'pointer',
-              boxShadow: `0 0 22px ${CRIM}33`,
+              color: CRIM, background: `linear-gradient(180deg, ${CRIM}26, ${CRIM}0f)`,
+              border: `1px solid ${CRIM}66`, cursor: 'pointer',
+              boxShadow: `0 0 20px ${CRIM}1f`,
             }}>
             Bear It · Descend
           </button>
