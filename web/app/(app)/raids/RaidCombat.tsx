@@ -655,6 +655,14 @@ export default function RaidCombat({
   const [enemyPhase, setEnemyPhase] = useState<1 | 2>(1)
   const turnRef            = useRef(1)
   const [turn, setTurn]    = useState(1)
+  // Davy's Heavy Cannon ramp — the per-fight +damage stack. Mirrors the
+  // resolver's `rampPerTurn * (turn - 1)` so the hull heat badge shows the
+  // exact live bonus. Resets to 0 each new enemy (turn resets to 1).
+  const rampPerTurn = useMemo(
+    () => getActiveEffects(equippedRaidItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0),
+    [equippedRaidItems],
+  )
+  const rampBonusPct = Math.round(rampPerTurn * Math.max(0, turn - 1) * 100)
   const critFreezeRef      = useRef(false)
   useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
   // Ability per-turn reset effect — every new player turn clears the
@@ -2835,6 +2843,35 @@ export default function RaidCombat({
               {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
             </AnimatePresence>
           </motion.div>
+          {/* Davy's Heavy Cannon heat — a per-fight damage stack badge that runs
+              hotter (orange → red) as the ramp builds, and re-pops each turn it
+              climbs. Only shows once the ramp has actually accrued (turn 2+). */}
+          {rampBonusPct > 0 && (() => {
+            const heatColor = rampBonusPct >= 40 ? '#ef4444' : rampBonusPct >= 20 ? '#f97316' : '#fb923c'
+            const heatGlow = Math.min(22, 7 + rampBonusPct * 0.32)
+            return (
+              <motion.div
+                key={rampBonusPct}
+                aria-hidden
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: [0.6, 1.2, 1], opacity: 1 }}
+                transition={{ duration: 0.34, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute', top: '2%', right: '8%', zIndex: 6, pointerEvents: 'none',
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  padding: '2px 7px 2px 5px', borderRadius: 999,
+                  background: `linear-gradient(180deg, ${heatColor}33, ${heatColor}14)`,
+                  border: `1px solid ${heatColor}`,
+                  boxShadow: `0 0 ${heatGlow}px ${heatColor}aa`,
+                }}
+              >
+                <svg width="11" height="12" viewBox="0 0 24 24" fill={heatColor} stroke="none">
+                  <path d="M12 2c1 3-1.5 4.5-1.5 7A4.5 4.5 0 0 0 17 13c.4 3-1.6 8-5 8a5 5 0 0 1-5-5c0-3.6 3.5-5 5-13z" />
+                </svg>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.62rem', color: heatColor, lineHeight: 1 }}>+{rampBonusPct}%</span>
+              </motion.div>
+            )
+          })()}
         </motion.div>
 
         {/* Low-hull danger — a red vignette breathes at the stage edges while
