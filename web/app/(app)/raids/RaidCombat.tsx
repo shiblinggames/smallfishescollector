@@ -184,6 +184,9 @@ export interface RaidCombatProps {
   /** Optional CSS filter to recolor the ship sprite when a skin is equipped.
    *  e.g. `'hue-rotate(180deg) brightness(0.7)'` for Corsair Black. */
   shipFilter?: string
+  /** Optional CSS filter layered onto the ENEMY sprite. The Gauntlet uses it
+   *  for the "drowned" look so reused raid enemies read as Locker creatures. */
+  enemyArtFilter?: string
   shipName: string
   /** What to show on the player nameplate (and in the Captain's Ledger
    *  popup header). Defaults to shipName when not provided. Used to
@@ -279,7 +282,7 @@ export interface RaidCombatProps {
 
 export default function RaidCombat({
   enemy, affix, isElite = false,
-  isBoss, shipImageUrl, shipFilter, shipName, playerLabel,
+  isBoss, shipImageUrl, shipFilter, enemyArtFilter = '', shipName, playerLabel,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
   playerHpMax, playerHp: initialPlayerHp,
@@ -2521,6 +2524,9 @@ export default function RaidCombat({
                     'drop-shadow(0 0 36px rgba(239,68,68,0.45))',
                   ] : []),
                   isBoss ? 'hue-rotate(20deg) brightness(0.95)' : 'hue-rotate(180deg) brightness(0.85)',
+                  // Gauntlet "drowned" wash — layered last so reused raid
+                  // enemies read as cold, spectral Locker creatures.
+                  ...(enemyArtFilter ? [enemyArtFilter] : []),
                 ].join(' '),
                 pointerEvents: 'none',
               }}

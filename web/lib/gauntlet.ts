@@ -108,13 +108,21 @@ const BOSS_POOL: BroadsideEnemy[] = RAID_CONFIGS.map(c => c.enemies[c.bossId])
 
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
 
+// Every ship in the Locker is a drowned thing — reused raid enemies are
+// renamed + (in combat) washed cold so the bestiary reads as the Locker's, not
+// a campaign shuffle. The CSS filter is layered onto the enemy sprite by
+// RaidCombat (enemyArtFilter prop).
+export const DROWNED_FILTER = 'grayscale(0.45) brightness(0.82) drop-shadow(0 0 11px rgba(110,220,210,0.6))'
+
 /** Overlay the gauntlet curve onto a source enemy, preserving identity
- *  (pattern, art, signature ability, First-Cut startCharges, etc). */
+ *  (pattern, art, signature ability, First-Cut startCharges, etc) but
+ *  reframing it as a drowned Locker creature. */
 function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean): BroadsideEnemy {
   const hp  = isBoss ? Math.round(mobHp(depth) * BOSS_HP_MULT) : mobHp(depth)
   const min = Math.round(mobMinDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
   const max = Math.round(mobMaxDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
-  return { ...src, hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max) }
+  const name = src.name.startsWith('Drowned ') ? src.name : `Drowned ${src.name}`
+  return { ...src, name, hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max) }
 }
 
 export interface GauntletFight {
@@ -357,4 +365,34 @@ export function drawBoons(n: number): GauntletBoon[] {
     out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0])
   }
   return out
+}
+
+// ── Depth bands + Davy's voice ────────────────────────────────────────────────
+// The descent is a place, not a treadmill. Each band has its own name (shown on
+// the plunge + the depth bar) and the deeper bands pair with the darker combat
+// atmosphere already wired in atmosphereForDepth.
+export interface DepthBand { name: string; minDepth: number }
+export const DEPTH_BANDS: DepthBand[] = [
+  { name: 'The Shallows of the Dead', minDepth: 1 },
+  { name: 'The Crush',                minDepth: 6 },
+  { name: "Davy's Court",             minDepth: 13 },
+]
+export function bandForDepth(depth: number): DepthBand {
+  let band = DEPTH_BANDS[0]
+  for (const b of DEPTH_BANDS) if (depth >= b.minDepth) band = b
+  return band
+}
+
+// Davy Jones taunts the descent at set depths — his voice from the dark, so the
+// mode that bears his name actually has him in it. Returns null on quiet depths.
+const DAVY_TAUNTS: Record<number, string> = {
+  3:  'Down you come. They all come down, in the end.',
+  6:  'The Crush has you now. Feel it on your hull?',
+  9:  'Still breathing? The deep is patient. So am I.',
+  13: 'You stand in my court, captain. None leave it but as crew.',
+  16: 'Deeper. Yes. Bring me all of it before you sink.',
+  20: 'No light reaches here. Only me. Only the Locker.',
+}
+export function davyTaunt(depth: number): string | null {
+  return DAVY_TAUNTS[depth] ?? null
 }
