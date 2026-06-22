@@ -27,6 +27,7 @@ import { getHook, hookGlowClass } from '@/lib/hooks'
 import { getShip } from '@/lib/ships'
 import { getShipSkin } from '@/lib/shipSkins'
 import { SPECIAL_ITEMS } from '@/lib/specialItems'
+import PopupShell from '@/components/PopupShell'
 
 interface Props {
   email: string
@@ -97,14 +98,34 @@ function cardTransform(off: number): { tx: number; tz: number; ry: number; scale
   return            { tx: sign * 148, tz: -45, ry: -sign * 36,  scale: 0.60, brightness: 0.35, zIdx: 2  }
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// One shared radius so every section reads as the same designed surface
+// instead of a stack of ad-hoc boxes (radii used to jump 12/14/16/20).
+const CARD_RADIUS = 18
+
+function SectionLabel({ children, color = '#f0c040' }: { children: React.ReactNode; color?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: 'linear-gradient(180deg, #f0c040 0%, rgba(240,192,64,0.15) 100%)' }} />
+      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: `linear-gradient(180deg, ${color} 0%, ${color}26 100%)` }} />
       <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: '#d8d4cd' }}>
         {children}
       </p>
     </div>
+  )
+}
+
+// Small level pill for the identity header — surfaces both core levels up
+// top so the profile reads as an identity, not just an avatar.
+function LevelChip({ color, label, value }: { color: string; label: string; value: number }) {
+  return (
+    <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{
+      display: 'inline-flex', alignItems: 'baseline', gap: 5,
+      padding: '0.32rem 0.72rem', borderRadius: 999,
+      background: `${color}14`, border: `1px solid ${color}3a`,
+      fontSize: '0.56rem', color,
+    }}>
+      {label}
+      <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', letterSpacing: 0, lineHeight: 1 }}>{value}</span>
+    </span>
   )
 }
 
@@ -373,18 +394,18 @@ export default function ProfileClient({
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
 
       {/* ── Identity header ── */}
-      <div className="flex flex-col items-center gap-3 pt-2 pb-7">
+      <div className="flex flex-col items-center pt-3 pb-8">
         {/* Avatar — equipped character + hat composite. Tap to open the
-            color picker (bg + border). Small pencil badge + caption below
-            make the affordance obvious to casual players. */}
+            Profile Look picker. The pencil badge carries the affordance. */}
         <button
           type="button"
           onClick={() => setAvatarPickerOpen(true)}
-          aria-label="Customize avatar colors"
+          aria-label="Customize avatar"
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer',
             borderRadius: '50%',
             position: 'relative',
+            marginBottom: 14,
           }}
         >
           <CharacterAvatar
@@ -410,9 +431,6 @@ export default function ProfileClient({
             </svg>
           </span>
         </button>
-        <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(240,237,232,0.85)', marginTop: 0, letterSpacing: '0.06em' }}>
-          Tap to customize colors
-        </p>
 
         {/* Username + rename */}
         {showUsernameForm ? (
@@ -443,9 +461,10 @@ export default function ProfileClient({
             </div>
           </form>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <p className="font-cinzel font-700" style={{ fontSize: '1.5rem', color: '#f0ede8' }}>{username}</p>
+          <>
+            {/* Name + Captain badge */}
+            <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginBottom: 11 }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1 }}>{username}</p>
               {isPremium && (
                 <span title="Captain" className="flex items-center gap-1 rounded-full" style={{ padding: '0.2rem 0.55rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)' }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
@@ -455,57 +474,65 @@ export default function ProfileClient({
                 </span>
               )}
             </div>
-            {!usernameChanged && (
-              <button
-                onClick={() => setShowUsernameForm(true)}
+
+            {/* Level chips — both core levels surfaced up top */}
+            <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginBottom: 13 }}>
+              <LevelChip color="#60a5fa" label="Fishing Lv" value={level} />
+              <LevelChip color="#c084fc" label="Nav Lv" value={expeditionLevel} />
+            </div>
+
+            {/* Action pills — rename (if available) + the social links, one row */}
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              {!usernameChanged && (
+                <button
+                  onClick={() => setShowUsernameForm(true)}
+                  className="font-karla font-700 uppercase tracking-[0.1em]"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '0.4rem 0.85rem', borderRadius: 999,
+                    background: 'rgba(240,192,64,0.12)',
+                    border: '1px solid rgba(240,192,64,0.4)',
+                    color: '#f0c040', fontSize: '0.62rem', cursor: 'pointer',
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z"/>
+                  </svg>
+                  Rename
+                </button>
+              )}
+              <Link
+                href="/social"
                 className="font-karla font-700 uppercase tracking-[0.1em]"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '0.45rem 1rem', borderRadius: '2rem',
-                  background: 'rgba(240,192,64,0.12)',
-                  border: '1px solid rgba(240,192,64,0.4)',
-                  color: '#f0c040', fontSize: '0.68rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '0.4rem 0.85rem', borderRadius: 999,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  textDecoration: 'none', fontSize: '0.62rem', color: '#bbb5ad',
                 }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9"/>
-                  <path d="M16.5 3.5a2.12 2.12 0 113 3L7 19l-4 1 1-4z"/>
-                </svg>
-                Change username
-              </button>
-            )}
-          </div>
+                Friends ↗
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="font-karla font-700 uppercase tracking-[0.1em]"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '0.4rem 0.85rem', borderRadius: 999,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  textDecoration: 'none', fontSize: '0.62rem', color: '#bbb5ad',
+                }}
+              >
+                Leaderboard ↗
+              </Link>
+            </div>
+          </>
         )}
-
-        {/* Action pills */}
-        <div className="flex items-center gap-2 flex-wrap justify-center">
-          <Link
-            href="/social"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '0.35rem 0.75rem', borderRadius: '2rem',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              textDecoration: 'none',
-            }}
-          >
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>Friends ↗</span>
-          </Link>
-          <Link
-            href="/leaderboard"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '0.35rem 0.75rem', borderRadius: '2rem',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              textDecoration: 'none',
-            }}
-          >
-            <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.65rem', color: '#bbb5ad' }}>Leaderboard ↗</span>
-          </Link>
-        </div>
       </div>
 
-      {/* ── Fishing / Navigation tabs (shared) ── */}
-      <div style={{ display: 'flex', gap: 4, padding: 4, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}>
+      {/* ── Fishing / Navigation tabs (shared) — pill segmented control ── */}
+      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999 }}>
         {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
           const on = profileTab === id
           return (
@@ -515,11 +542,13 @@ export default function ProfileClient({
               onClick={() => setProfileTab(id)}
               className="font-karla font-700 uppercase tracking-[0.12em]"
               style={{
-                flex: 1, padding: '0.6rem 0', borderRadius: 10,
+                flex: 1, padding: '0.62rem 0', borderRadius: 999,
                 fontSize: '0.7rem', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
-                border: on ? '1px solid rgba(96,165,250,0.5)' : '1px solid transparent',
-                background: on ? 'rgba(96,165,250,0.16)' : 'transparent',
-                color: on ? '#cfe2ff' : 'rgba(240,237,232,0.5)',
+                border: on ? '1px solid rgba(96,165,250,0.55)' : '1px solid transparent',
+                background: on ? 'linear-gradient(180deg, rgba(96,165,250,0.24), rgba(96,165,250,0.12))' : 'transparent',
+                color: on ? '#dbe9ff' : 'rgba(240,237,232,0.5)',
+                boxShadow: on ? '0 2px 10px rgba(96,165,250,0.18)' : 'none',
+                transition: 'background 0.15s, color 0.15s',
               }}
             >
               {label}
@@ -533,17 +562,22 @@ export default function ProfileClient({
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
           {/* Headline career stats */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
-            <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
-            <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
+          <div>
+            <SectionLabel color="#60a5fa">Career</SectionLabel>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
+              <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
+              <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
+            </div>
           </div>
 
-          {/* Character Loadout + color picker */}
+          {/* Character Loadout + badge picker */}
+          <div>
+          <SectionLabel color="#60a5fa">Angler &amp; Loadout</SectionLabel>
           <div style={{
             background: 'radial-gradient(ellipse at 50% 90%, rgba(20,50,100,0.22) 0%, transparent 70%)',
-            border: '1px solid rgba(80,120,200,0.18)',
-            borderRadius: 20,
+            border: '1px solid rgba(80,120,200,0.2)',
+            borderRadius: CARD_RADIUS,
             overflow: 'hidden',
             paddingBottom: 14,
           }}>
@@ -795,8 +829,8 @@ export default function ProfileClient({
           {/* Equipped Special */}
           {equippedSpecial && (
             <div style={{
-              display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 8,
-              padding: '0.4rem 0.75rem 0.4rem 0.5rem', borderRadius: 20,
+              display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 12,
+              padding: '0.4rem 0.75rem 0.4rem 0.5rem', borderRadius: 999,
               background: `${equippedSpecial.color}10`, border: `1px solid ${equippedSpecial.color}30`,
             }}>
               {equippedSpecial.image
@@ -806,8 +840,9 @@ export default function ProfileClient({
               <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: equippedSpecial.color }}>{equippedSpecial.name}</span>
             </div>
           )}
+          </div>
 
-          {/* Rarest Catches */}
+          {/* Vault of the Ancients */}
           {ancientTrophies.length > 0 && (
             <div>
               <SectionLabel>Vault of the Ancients</SectionLabel>
@@ -815,7 +850,7 @@ export default function ProfileClient({
                 position: 'relative',
                 background: 'radial-gradient(ellipse at 50% 0%, rgba(60,10,18,0.92) 0%, rgba(8,4,6,0.98) 70%)',
                 border: '1px solid rgba(225,29,72,0.4)',
-                borderRadius: 16,
+                borderRadius: CARD_RADIUS,
                 padding: '1.1rem 0.95rem 1rem',
                 boxShadow: 'inset 0 1px 0 rgba(253,230,138,0.08), inset 0 0 32px rgba(225,29,72,0.06), 0 0 28px rgba(225,29,72,0.12)',
                 overflow: 'hidden',
@@ -962,17 +997,22 @@ export default function ProfileClient({
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
           {/* Headline career stats */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
-            <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
-            <StatTile label="Biggest Hit" value={career.highestRaidDamage.toLocaleString()} color="#fb923c" />
+          <div>
+            <SectionLabel color="#c084fc">Career</SectionLabel>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
+              <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
+              <StatTile label="Biggest Hit" value={career.highestRaidDamage.toLocaleString()} color="#fb923c" />
+            </div>
           </div>
 
           {/* Ship Hero */}
+          <div>
+          <SectionLabel color="#c084fc">Your Ship</SectionLabel>
           <div style={{
             background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
-            border: `1px solid ${ship.color}20`,
-            borderRadius: 20,
+            border: `1px solid ${ship.color}33`,
+            borderRadius: CARD_RADIUS,
             padding: '24px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
@@ -1012,19 +1052,21 @@ export default function ProfileClient({
               )}
             </div>
           </div>
+          </div>
 
           {/* Showcase — falls back to the live ship roster when the
               player hasn't featured anyone yet (see showcaseCrew above). */}
           <div>
-            <SectionLabel>{featuredCrew.length > 0 ? 'Showcase' : 'Active Crew'}</SectionLabel>
+            <SectionLabel color="#c084fc">{featuredCrew.length > 0 ? 'Showcase' : 'Active Crew'}</SectionLabel>
             <CrewShowcase crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Assign crew to your ship, or feature your favorites here" />
           </div>
 
         </div>
       )}
 
-      {/* ── Audio preferences ── */}
-      <div style={{ marginTop: 32 }}>
+      {/* ── Settings ── */}
+      <div style={{ maxWidth: 540, margin: '32px auto 0' }}>
+        <SectionLabel>Settings</SectionLabel>
         <LetOtherAudioPlayToggle />
       </div>
 
@@ -1051,137 +1093,99 @@ export default function ProfileClient({
       </div>
 
       {/* ── Showcase picker modal ── */}
-      {modalOpen && (
+      <PopupShell open={modalOpen} onClose={() => setModalOpen(false)} zIndex={80} backdropColor="rgba(2,5,10,0.85)">
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)' }}
-          onClick={() => setModalOpen(false)}
-        >
-          <div
-            className="w-full sm:max-w-lg relative flex flex-col"
-            style={{
-              background: '#060c14',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '18px 18px 0 0',
-              maxHeight: '85vh',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ padding: '1.25rem 1.25rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-              <div>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>Feature Crew</p>
-                <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#aaa49c', marginTop: 2 }}>
-                  {selectedShowcase.length} / 5 selected
-                  {selectedShowcase.length > 0 && (
-                    <button onClick={() => setSelectedShowcase([])} style={{ marginLeft: 8, color: '#bbb5ad', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.62rem', fontFamily: 'inherit' }}>
-                      Clear all
-                    </button>
-                  )}
-                </p>
-              </div>
-              <button onClick={() => setModalOpen(false)} style={{ color: '#aaa49c', fontSize: '1.2rem', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>✕</button>
-            </div>
-
-            <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
-              {crewRoster.length === 0 ? (
-                <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#aaa49c', padding: '2rem 0' }}>
-                  Recruit some crew first!
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
-                  {crewRoster.map(crew => {
-                    const idx = selectedShowcase.indexOf(crew.id)
-                    const isSelected = idx !== -1
-                    const disabled = !isSelected && selectedShowcase.length >= 5
-                    return (
-                      <div key={crew.id} style={{ position: 'relative', opacity: disabled ? 0.3 : 1 }}>
-                        <div
-                          style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: 4, borderRadius: 12, cursor: 'pointer' } : { cursor: disabled ? 'default' : 'pointer' }}
-                          onClick={() => !disabled && toggleCard(crew.id)}
-                        >
-                          <CrewPortrait crew={crew} w={92} />
-                        </div>
-                        {isSelected && (
-                          <div style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#f0c040', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-                            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#000' }}>{idx + 1}</span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.09)', flexShrink: 0 }}>
-              <button onClick={handleSaveShowcase} disabled={pending} className="font-karla font-700 w-full" style={{ padding: '0.7rem', borderRadius: 10, fontSize: '0.78rem', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.5)', color: '#cfe2ff', cursor: 'pointer', opacity: pending ? 0.5 : 1 }}>
-                {pending ? 'Saving…' : 'Save Showcase'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Avatar color picker ─────────────────────────────────────────────── */}
-      {avatarPickerOpen && (
-        <div
-          onClick={() => setAvatarPickerOpen(false)}
+          onClick={e => e.stopPropagation()}
           style={{
-            position: 'fixed', inset: 0, zIndex: 80,
-            background: 'rgba(0,0,0,0.78)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            // Asymmetric padding clears the fixed Nav (top, ~44 mobile /
-            // ~60 desktop) and the fixed MobileTabBar (bottom, ~64 + safe
-            // area). Without this the centered modal can position itself
-            // behind the tab bar and the Save button is unreachable on
-            // taller content. Mirrors the pattern used by LeaderboardModal
-            // + RaidsSection NodeDetailSheet.
-            padding: 'calc(env(safe-area-inset-top, 0px) + 56px) 1.25rem calc(env(safe-area-inset-bottom, 0px) + 76px)',
-            cursor: 'pointer',
+            margin: 'auto', width: '100%', maxWidth: 480,
+            maxHeight: '100%', display: 'flex', flexDirection: 'column',
+            background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: CARD_RADIUS,
+            boxShadow: '0 18px 60px rgba(0,0,0,0.55)',
           }}
         >
+          <div style={{ padding: '1rem 1.1rem 0.75rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: 'rgba(96,165,250,0.75)', marginBottom: 2 }}>Profile showcase</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>Feature Crew</p>
+              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#aaa49c', marginTop: 3 }}>
+                {selectedShowcase.length} / 5 selected
+                {selectedShowcase.length > 0 && (
+                  <button onClick={() => setSelectedShowcase([])} style={{ marginLeft: 8, color: '#bbb5ad', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.62rem', fontFamily: 'inherit', textDecoration: 'underline' }}>
+                    Clear all
+                  </button>
+                )}
+              </p>
+            </div>
+            <ModalCloseButton onClick={() => setModalOpen(false)} />
+          </div>
+
+          <div style={{ overflowY: 'auto', minHeight: 0, padding: '0.5rem 1.1rem 1rem', flex: 1 }}>
+            {crewRoster.length === 0 ? (
+              <p className="font-karla font-300 text-center" style={{ fontSize: '0.72rem', color: '#aaa49c', padding: '2rem 0' }}>
+                Recruit some crew first!
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
+                {crewRoster.map(crew => {
+                  const idx = selectedShowcase.indexOf(crew.id)
+                  const isSelected = idx !== -1
+                  const disabled = !isSelected && selectedShowcase.length >= 5
+                  return (
+                    <div key={crew.id} style={{ position: 'relative', opacity: disabled ? 0.3 : 1 }}>
+                      <div
+                        style={isSelected ? { outline: '2px solid #f0c040', outlineOffset: 4, borderRadius: 12, cursor: 'pointer' } : { cursor: disabled ? 'default' : 'pointer' }}
+                        onClick={() => !disabled && toggleCard(crew.id)}
+                      >
+                        <CrewPortrait crew={crew} w={92} />
+                      </div>
+                      {isSelected && (
+                        <div style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#f0c040', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                          <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#000' }}>{idx + 1}</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <div style={{ padding: '0.9rem 1.1rem', borderTop: '1px solid rgba(255,255,255,0.09)', flexShrink: 0 }}>
+            <button onClick={handleSaveShowcase} disabled={pending} className="font-karla font-700 uppercase tracking-[0.08em] w-full" style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.74rem', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff', cursor: 'pointer', opacity: pending ? 0.5 : 1 }}>
+              {pending ? 'Saving…' : 'Save Showcase'}
+            </button>
+          </div>
+        </div>
+      </PopupShell>
+
+      {/* ── Profile Look picker ── */}
+      <PopupShell open={avatarPickerOpen} onClose={() => setAvatarPickerOpen(false)} zIndex={90} backdropColor="rgba(2,5,10,0.82)">
           <div
             onClick={e => e.stopPropagation()}
             style={{
+              margin: 'auto',
               background: 'linear-gradient(180deg, #0c1626 0%, #06101c 100%)',
-              border: '1px solid rgba(96,165,250,0.18)',
-              borderRadius: 18,
+              border: '1px solid rgba(96,165,250,0.2)',
+              borderRadius: CARD_RADIUS,
               width: '100%', maxWidth: 360,
               // Fixed height (capped to the available space) so the modal does
               // NOT resize when switching tabs — only the scrollable body's
               // content changes. Flex column: body takes the overflow + scrolls,
-              // the Reset/Save footer stays pinned at the bottom.
+              // the footer stays pinned. PopupShell already insets for the Nav +
+              // tab bar, so 100% here is the safe available height.
               height: 'min(600px, 100%)',
               maxHeight: '100%',
               display: 'flex', flexDirection: 'column',
-              cursor: 'default',
               boxShadow: '0 18px 60px rgba(0,0,0,0.55)',
               position: 'relative',
             }}
           >
             {/* Close (X) */}
-            <button
-              type="button"
-              onClick={() => setAvatarPickerOpen(false)}
-              aria-label="Close"
-              style={{
-                position: 'absolute', top: 10, right: 10, zIndex: 2,
-                width: 32, height: 32,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '50%',
-                color: 'rgba(240,237,232,0.75)',
-                cursor: 'pointer',
-                padding: 0,
-                lineHeight: 1,
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
+            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>
+              <ModalCloseButton onClick={() => setAvatarPickerOpen(false)} />
+            </div>
 
             {/* Scrollable body */}
             <div style={{
@@ -1189,7 +1193,7 @@ export default function ProfileClient({
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
-              padding: '1.1rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1.1rem)',
+              padding: '1.1rem 1rem 1.3rem',
             }}>
             {/* Live preview */}
             <div className="flex items-center justify-center" style={{ marginBottom: 14 }}>
@@ -1579,30 +1583,21 @@ export default function ProfileClient({
 
             </div>
           </div>
-        </div>
-      )}
+      </PopupShell>
 
-      {purchasePrompt && (
-        <div
-          onClick={() => { if (!purchasing) setPurchasePrompt(null) }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 90,
-            background: 'rgba(0,0,0,0.72)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '1.25rem',
-            cursor: 'pointer',
-          }}
-        >
+      {/* ── Purchase confirmation ── */}
+      <PopupShell open={!!purchasePrompt} onClose={() => { if (!purchasing) setPurchasePrompt(null) }} zIndex={120} backdropColor="rgba(2,5,10,0.8)">
+        {purchasePrompt && (
           <div
             onClick={e => e.stopPropagation()}
             style={{
+              margin: 'auto',
               background: 'linear-gradient(180deg, #1a1408 0%, #0c0a06 100%)',
               border: '1px solid rgba(240,192,64,0.35)',
-              borderRadius: 18,
+              borderRadius: CARD_RADIUS,
               padding: '1.25rem 1.1rem 1rem',
               width: '100%', maxWidth: 320,
               boxShadow: '0 18px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(240,192,64,0.08)',
-              cursor: 'default',
             }}
           >
             <p className="font-cinzel font-700 text-center" style={{ fontSize: '1.05rem', color: '#f0c040', marginBottom: 6 }}>
@@ -1679,10 +1674,34 @@ export default function ProfileClient({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </PopupShell>
     </div>
     </>
+  )
+}
+
+// One consistent round close button for every profile modal.
+function ModalCloseButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Close"
+      style={{
+        flexShrink: 0, width: 32, height: 32, padding: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.14)',
+        borderRadius: '50%',
+        color: 'rgba(240,237,232,0.78)',
+        cursor: 'pointer',
+      }}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    </button>
   )
 }
 
@@ -1732,10 +1751,10 @@ function LetOtherAudioPlayToggle() {
   return (
     <div style={{
       maxWidth: 540, margin: '0 auto',
-      padding: '0.85rem 1rem',
-      background: 'rgba(8,12,20,0.55)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: 14,
+      padding: '0.95rem 1.1rem',
+      background: 'rgba(8,13,22,0.5)',
+      border: '1px solid rgba(255,255,255,0.09)',
+      borderRadius: 18,
     }}>
       <button
         type="button" onClick={toggle}
