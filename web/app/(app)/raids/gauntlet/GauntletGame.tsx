@@ -37,9 +37,9 @@ type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 const GOLD = '#f0c040'
 const TEAL = '#5eead4'
 
-// The maw art. Swap this one constant when bespoke "Locker" art lands —
-// it drives both the intro centerpiece and the descent transition.
-const MAW_IMG = '/raid4_gulletmaw.png'
+// Davy Jones himself — the gauntlet's face. Drives both the intro centerpiece
+// and the descent transition.
+const MAW_IMG = '/davyjones.png'
 
 function fmt(n: number) { return Math.round(n).toLocaleString() }
 
