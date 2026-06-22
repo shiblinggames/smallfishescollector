@@ -610,6 +610,8 @@ export default function RaidCombat({
   const [playerImpact, setPlayerImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   // Heal sparkle on the player hull (Mender / Abyssal Tide / repair kit).
   const [playerAura, setPlayerAura] = useState<{ key: number } | null>(null)
+  // Dodge whoosh — afterimage + speed lines on whichever ship slips a shot.
+  const [dodgeFx, setDodgeFx] = useState<{ key: number; actor: Actor } | null>(null)
 
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
@@ -840,7 +842,7 @@ export default function RaidCombat({
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
     setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null)
-    setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null)
+    setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
@@ -1929,6 +1931,10 @@ export default function RaidCombat({
         setTimeout(() => {
           setNameplateFx({ kind: 'dodge', actor: dodger })
           setNameplateFxKey(k => k + 1)
+          // Whoosh + afterimage on the ship that slipped the shot.
+          const dk = Date.now() + i + 6
+          setDodgeFx({ key: dk, actor: dodger })
+          setTimeout(() => setDodgeFx(d => (d && d.key === dk ? null : d)), 460)
         }, PROJECTILE_FLIGHT_MS - 80)
       }
 
@@ -2623,6 +2629,12 @@ export default function RaidCombat({
             {enemyMuzzle && (
               <CannonShotBurst key={`em-${enemyMuzzle.key}`} kind={enemyMuzzle.kind} dir="left" />
             )}
+            {/* Dodge whoosh — enemy juts back-right out of the way */}
+            <AnimatePresence>
+              {dodgeFx?.actor === 'enemy' && (
+                <DodgeWhoosh key={`dw-${dodgeFx.key}`} image={enemy.image} flip dir="right" />
+              )}
+            </AnimatePresence>
             {/* Explosion burst on impact — overlays the enemy hull */}
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
@@ -2689,12 +2701,26 @@ export default function RaidCombat({
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
               )}
+              {/* Dodge whoosh — player juts back-left out of the way */}
+              <AnimatePresence>
+                {dodgeFx?.actor === 'player' && (
+                  <DodgeWhoosh key={`dw-${dodgeFx.key}`} image={shipImageUrl} dir="left" />
+                )}
+              </AnimatePresence>
             </motion.div>
             <AnimatePresence>
               {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
             </AnimatePresence>
           </motion.div>
         </motion.div>
+
+        {/* Low-hull danger — a red vignette breathes at the stage edges while
+            the player's HP is critical, so the tension reads without a number. */}
+        {playerHp > 0 && playerHp / playerHpMax < 0.25 && (
+          <div className="rc-lowhp-vignette" aria-hidden style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 6, borderRadius: 'inherit',
+          }} />
+        )}
 
         {/* Crew-ability cast cue — stage-anchored so it reads as a deliberate beat */}
         <AnimatePresence>
@@ -2980,6 +3006,9 @@ export default function RaidCombat({
             // Sharpshot is consumed at lock and the live width would
             // shrink the band mid-freeze, making the picture lie.
             critW={critFreeze ? lockedCritWRef.current : liveCritW}
+            // Shimmer the gold band while the buff is live (band is already
+            // widened via liveCritW; the pulse makes the boon unmistakable).
+            sharpshotActive={!!sharpshotBuff && !critFreeze}
           />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
@@ -3160,6 +3189,20 @@ export default function RaidCombat({
         }
         .rc-phase2-badge {
           animation: rc-phase2-badge-pulse 1.8s ease-in-out infinite;
+        }
+        @keyframes rc-lowhp-pulse {
+          0%, 100% { box-shadow: inset 0 0 36px 6px rgba(239,68,68,0.28); }
+          50%      { box-shadow: inset 0 0 64px 14px rgba(239,68,68,0.52); }
+        }
+        .rc-lowhp-vignette {
+          animation: rc-lowhp-pulse 1.25s ease-in-out infinite;
+        }
+        @keyframes rc-sharp-pulse {
+          0%, 100% { box-shadow: 0 0 4px rgba(251,191,36,0.5);  filter: brightness(1); }
+          50%      { box-shadow: 0 0 13px rgba(251,191,36,0.95); filter: brightness(1.55); }
+        }
+        .rc-sharp-band {
+          animation: rc-sharp-pulse 1s ease-in-out infinite;
         }
       `}</style>
     </div>
@@ -3869,16 +3912,33 @@ function HPBar({ current, max, accent, compact }: { current: number; max: number
 
 function ChargesRow({ charges, max, small }: { charges: number; max: number; small?: boolean }) {
   const dotSize = small ? 12 : 16
+  // Track the prior count so a freshly-loaded cannonball "clicks in" — the new
+  // pip pops from nothing with a brief overshoot. prevRef lags one render
+  // (updated in the effect), so on the render where charges climbs, the added
+  // pips read as just-filled.
+  const prevRef = useRef(charges)
+  const prev = prevRef.current
+  useEffect(() => { prevRef.current = charges }, [charges])
   return (
     <div style={{ display: 'flex', gap: small ? 4 : 5, marginTop: small ? 5 : 7 }}>
-      {Array.from({ length: max }).map((_, i) => (
-        <div key={i} style={{
-          width: dotSize, height: dotSize, borderRadius: '50%',
-          background: i < charges ? '#fbbf24' : '#1c2540',
-          border: `1px solid ${i < charges ? '#fbbf24' : '#3a4560'}`,
-          boxShadow: i < charges ? `0 0 ${small ? 5 : 7}px rgba(251,191,36,0.55)` : 'none',
-        }} />
-      ))}
+      {Array.from({ length: max }).map((_, i) => {
+        const filled = i < charges
+        const justLoaded = filled && i >= prev
+        return (
+          <motion.div
+            key={i}
+            initial={false}
+            animate={justLoaded ? { scale: [0.2, 1.35, 1] } : { scale: 1 }}
+            transition={justLoaded ? { duration: 0.4, ease: 'easeOut' } : { duration: 0 }}
+            style={{
+              width: dotSize, height: dotSize, borderRadius: '50%',
+              background: filled ? '#fbbf24' : '#1c2540',
+              border: `1px solid ${filled ? '#fbbf24' : '#3a4560'}`,
+              boxShadow: filled ? `0 0 ${small ? 5 : 7}px rgba(251,191,36,0.55)` : 'none',
+            }}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -4027,6 +4087,44 @@ function PlayerStatusAura() {
         />
       ))}
     </motion.div>
+  )
+}
+
+// Dodge whoosh — a bright afterimage of the ship sprite slides in the retreat
+// direction and fades, with a couple of speed lines, so a dodge reads as the
+// ship physically slipping the shot (not just a "Dodged" tag).
+function DodgeWhoosh({ image, flip, dir }: { image: string; flip?: boolean; dir: 'left' | 'right' }) {
+  const sign = dir === 'left' ? -1 : 1
+  const sx = flip ? -1 : 1
+  return (
+    <>
+      <motion.img
+        src={image} alt="" aria-hidden
+        // scaleX kept constant in the animation so FM's transform doesn't drop
+        // the enemy sprite's facing flip while it animates x.
+        initial={{ opacity: 0.5, x: 0, scaleX: sx }}
+        animate={{ opacity: 0, x: sign * 26, scaleX: sx }}
+        transition={{ duration: 0.42, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
+          filter: 'brightness(1.7) saturate(0.35) drop-shadow(0 0 8px rgba(190,225,255,0.7))',
+          pointerEvents: 'none', zIndex: 1,
+        }}
+      />
+      {[0, 1, 2].map(n => (
+        <motion.div
+          key={n}
+          initial={{ opacity: 0.75, x: sign * -2 }}
+          animate={{ opacity: 0, x: sign * -32 }}
+          transition={{ duration: 0.34, delay: n * 0.03, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '46%', top: `${36 + n * 13}%`, width: 24, height: 2,
+            borderRadius: 2, background: 'rgba(220,240,255,0.85)', boxShadow: '0 0 6px rgba(200,230,255,0.7)',
+            pointerEvents: 'none', zIndex: 5,
+          }}
+        />
+      ))}
+    </>
   )
 }
 
@@ -4432,7 +4530,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, sharpshotActive }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -4446,6 +4544,9 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW }:
    *  real window was ~4× wider, so honest crits read as lucky breaks
    *  and the practice bar (which draws the real band) didn't match. */
   critW: number
+  /** Sharpshot buff live — pulse the gold crit band so the widened window
+   *  reads as an active boon, not just a quietly bigger target. */
+  sharpshotActive?: boolean
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
@@ -4505,8 +4606,9 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW }:
           <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(148,163,184,0.15)', borderRadius: 4 }} />
           <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(74,222,128,0.22)' }} />
           {/* Gold crit band at its real width (matches the practice bar),
-              with the hairline kept on top as the aim focus. */}
-          <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
+              with the hairline kept on top as the aim focus. Pulses while
+              Sharpshot is live. */}
+          <div className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
