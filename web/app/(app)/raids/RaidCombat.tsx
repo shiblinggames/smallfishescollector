@@ -598,6 +598,9 @@ export default function RaidCombat({
   const [playerRecoilKey, setPlayerRecoilKey] = useState(0)
   const [cannonShot, setCannonShot]   = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   const [enemyImpact, setEnemyImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
+  // Crew-ability cast cue — themed portrait banner + ring that pops over the
+  // stage so firing ANY ability has an unmistakable "you did something" tell.
+  const [abilityCast, setAbilityCast] = useState<{ key: number; label: string; name: string; color: string; image?: string | null; emoji?: string } | null>(null)
 
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
@@ -827,7 +830,7 @@ export default function RaidCombat({
       // resolveLog gets replaced wholesale and we don't want to clobber it.
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
-    setPHitsplat(null); setEHitsplat(null)
+    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
@@ -944,7 +947,7 @@ export default function RaidCombat({
   // set are bumped together; the parent gets the onAbilityFired callback
   // so the cooldown survives the per-fight RaidCombat remount.
   function fireCrewAbility(
-    crew: { id: number; name: string },
+    crew: { id: number; name: string; imageUrl?: string | null },
     def: AnyClassDef,
     m: AnyClassDef['milestones'][number] | null,
   ): void {
@@ -952,6 +955,14 @@ export default function RaidCombat({
     if (subPhase !== 'await_input') return
     if (oneAbilityUsedThisTurn) return
     if (usedAbilityIds?.has(crew.id)) return
+
+    // Themed cast cue — fires for every ability the instant it lands, so the
+    // player gets an immediate "activated something" beat even for the
+    // buff/utility abilities that otherwise only write a log line.
+    const castKey = Date.now()
+    setAbilityCast({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: `${crew.name} · ${def.name}`, color: def.color, image: crew.imageUrl, emoji: def.emoji })
+    setTimeout(() => setAbilityCast(c => (c && c.key === castKey ? null : c)), 1150)
+    vibrate(18)
 
     // Dispatch on class id — TS narrows the milestone shape from the
     // per-class table.
@@ -2599,6 +2610,13 @@ export default function RaidCombat({
           </motion.div>
         </motion.div>
 
+        {/* Crew-ability cast cue — stage-anchored so it reads as a deliberate beat */}
+        <AnimatePresence>
+          {abilityCast && (
+            <AbilityCastFx key={abilityCast.key} label={abilityCast.label} name={abilityCast.name} color={abilityCast.color} image={abilityCast.image} emoji={abilityCast.emoji} />
+          )}
+        </AnimatePresence>
+
         {/* Aim-result feedback during the lock freeze — critical gets the full fishing-perfect treatment */}
         <AnimatePresence>
           {aimResult === 'critical' && critFreeze && (
@@ -3826,6 +3844,64 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
       }}
     >
       {text}
+    </motion.div>
+  )
+}
+
+// Short punchy verb shown on the cast cue per class id. Falls back to the
+// class name for anything unmapped.
+const ABILITY_CAST_LABEL: Record<string, string> = {
+  mender:       'Hull Patched',
+  sharpshot:    'Aim Steadied',
+  snare:        'Helm Jammed',
+  anchor:       'Sea Anchor Set',
+  navigator:    'Powder Run',
+  abyssal_tide: 'The Abyss Calls',
+  leviathan:    'Heavy Salvo',
+  blitz:        'Frenzy',
+}
+
+// Crew-ability cast cue. A themed pill (crew portrait + ability name) pops up
+// over the stage with an expanding ring behind the portrait, so firing an
+// ability — even a pure buff — reads as a real, deliberate beat.
+function AbilityCastFx({ label, name, color, image, emoji }: { label: string; name: string; color: string; image?: string | null; emoji?: string }) {
+  return (
+    <motion.div
+      // x:'-50%' carries the horizontal centre through the scale/y animation
+      // (a static translateX would be clobbered by FM's transform).
+      initial={{ opacity: 0, x: '-50%', y: 16, scale: 0.82 }}
+      animate={{ opacity: 1, x: '-50%', y: 0, scale: 1 }}
+      exit={{ opacity: 0, x: '-50%', y: -12, scale: 0.96 }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        position: 'absolute', left: '50%', bottom: '15%', zIndex: 8,
+        pointerEvents: 'none', display: 'flex', alignItems: 'center', gap: 9,
+        padding: '0.32rem 0.78rem 0.32rem 0.34rem', borderRadius: 999,
+        background: 'rgba(7,11,18,0.74)', border: `1px solid ${color}77`,
+        boxShadow: `0 0 22px ${color}55, 0 6px 18px rgba(0,0,0,0.5)`,
+        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+      }}
+    >
+      {/* Portrait + expanding ring */}
+      <div style={{ position: 'relative', flexShrink: 0, width: 40, height: 40 }}>
+        <motion.div
+          initial={{ opacity: 0.55, scale: 0.5 }}
+          animate={{ opacity: 0, scale: 2.4 }}
+          transition={{ duration: 0.72, ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}` }}
+        />
+        <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${color}`, boxShadow: `0 0 14px ${color}aa`, background: '#0a121e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {image
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: '1.2rem' }}>{emoji}</span>}
+        </div>
+      </div>
+      {/* Label + crew line */}
+      <div style={{ minWidth: 0 }}>
+        <p className="font-cinzel font-800" style={{ fontSize: '0.92rem', color, lineHeight: 1.05, textShadow: `0 0 10px ${color}88, 0 1px 3px rgba(0,0,0,0.6)`, whiteSpace: 'nowrap' }}>{label}</p>
+        <p className="font-karla font-600 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#b8b2a6', marginTop: 1, whiteSpace: 'nowrap' }}>{name}</p>
+      </div>
     </motion.div>
   )
 }
