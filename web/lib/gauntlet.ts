@@ -121,8 +121,16 @@ function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean): Broa
   const hp  = isBoss ? Math.round(mobHp(depth) * BOSS_HP_MULT) : mobHp(depth)
   const min = Math.round(mobMinDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
   const max = Math.round(mobMaxDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
-  const name = src.name.startsWith('Drowned ') ? src.name : `Drowned ${src.name}`
-  return { ...src, name, hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max) }
+  return { ...src, name: drownedName(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max) }
+}
+
+/** Reframe an enemy as a drowned Locker creature. A leading "The" keeps its
+ *  place ("The Cartographer" -> "The Drowned Cartographer"), everything else
+ *  takes the prefix ("Barnacle Pete" -> "Drowned Barnacle Pete"). */
+function drownedName(name: string): string {
+  if (name.includes('Drowned')) return name
+  if (name.startsWith('The ')) return `The Drowned ${name.slice(4)}`
+  return `Drowned ${name}`
 }
 
 export interface GauntletFight {
