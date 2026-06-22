@@ -374,6 +374,12 @@ export default function RaidCombat({
   enemyHpScaleMultRef.current = tide.enemyHpScaleMult
   const enemyChargesDeltaRef = useRef(tide.enemyChargesDelta)
   enemyChargesDeltaRef.current = tide.enemyChargesDelta
+  // Guaranteed-dodge tide (one-shot "next fight" token). Mirror the bank size
+  // so the tight-deps reset effect can refill it per fight, and track how many
+  // are LEFT this fight in a separate ref the dodge resolver decrements.
+  const guaranteedDodgeBankRef = useRef(tide.guaranteedDodgeBank)
+  guaranteedDodgeBankRef.current = tide.guaranteedDodgeBank
+  const guaranteedDodgeLeftRef = useRef(tide.guaranteedDodgeBank)
   // Anchor save can fire at most once per RaidCombat mount (the parent
   // tracks the per-run charge across encounter remounts via onAnchorSave).
   const anchorUsedRef = useRef(false)
@@ -774,6 +780,7 @@ export default function RaidCombat({
     const playerStartCharges = startChargeChance > 0 && Math.random() < startChargeChance ? 1 : 0
     setPlayerCharges(playerStartCharges)
     setEnemyCharges(Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + enemyChargesDeltaRef.current)))
+    guaranteedDodgeLeftRef.current = guaranteedDodgeBankRef.current
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
     setLastPlayerAction(null)
@@ -1475,7 +1482,9 @@ export default function RaidCombat({
           // have that, so the same outcome happens via RNG.
           // Marksman affix multiplies the crit chance.
           const baseCrit = enemy.critChance ?? 0
-          const effCrit  = affix?.critMult ? Math.min(1, baseCrit * affix.critMult) : baseCrit
+          let effCrit    = affix?.critMult ? Math.min(1, baseCrit * affix.critMult) : baseCrit
+          // Tide: incomingCritReduction lowers the enemy's crit chance vs you.
+          if (tide.inCritReduce > 0) effCrit = Math.max(0, effCrit - tide.inCritReduce)
           if (Math.random() < effCrit) {
             enemyCrit = true
             dmg = Math.floor(dmg * 1.5)
@@ -1490,9 +1499,26 @@ export default function RaidCombat({
         // turns dodge into a soft mitigation read instead of a binary.
         let partialDodge = false
         if (defenderAction === 'dodge') {
-          const def = rollDodge(defenderSpeed, defenderNav)
-          const atk = rollAttackerVsDodge(attackerSpeed)
-          if (def >= atk) {
+          // Tide dodge effects only help the PLAYER (when the player is the
+          // one defending = the enemy is attacking = !isAttackerPlayer).
+          const playerDefending = !isAttackerPlayer
+          let dodged: boolean
+          if (playerDefending && guaranteedDodgeLeftRef.current > 0) {
+            // guaranteedDodge token: auto-succeed, no roll, spend one.
+            guaranteedDodgeLeftRef.current -= 1
+            dodged = true
+          } else {
+            const def = rollDodge(defenderSpeed, defenderNav)
+            const atk = rollAttackerVsDodge(attackerSpeed)
+            dodged = def >= atk
+            // dodgeBonus: flat % shift on the player's dodge outcome.
+            // Positive saves a would-be miss; negative spoils a would-be dodge.
+            if (playerDefending && tide.dodgeBonus !== 0) {
+              if (!dodged && tide.dodgeBonus > 0 && Math.random() < tide.dodgeBonus) dodged = true
+              else if (dodged && tide.dodgeBonus < 0 && Math.random() < -tide.dodgeBonus) dodged = false
+            }
+          }
+          if (dodged) {
             stepLines.push(isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'

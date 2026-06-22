@@ -72,8 +72,10 @@ export type TideEffect =
   | { kind: 'dodgeBonus'; chance: number; scope: 'nextFight' | 'allRemaining' }
   /** Bonus successful dodges (no roll needed) usable on upcoming turns. */
   | { kind: 'guaranteedDodge'; n: number }
-  /** +/- player ship speed for turn order + aim-bar speed. */
-  | { kind: 'speedDelta'; n: number; scope: 'next2Fights' | 'allRemaining' }
+  /** +/- player ship speed for turn order + aim-bar speed.
+   *  `_fights` is a runtime countdown for the next2Fights scope (set by
+   *  expireAfterFight); leave it unset in the pool. */
+  | { kind: 'speedDelta'; n: number; scope: 'next2Fights' | 'allRemaining'; _fights?: number }
   // ── Boss-specific ───────────────────────────────────────────────
   /** Player damage multiplier vs the boss only. */
   | { kind: 'bossDamageMult'; mult: number }
@@ -95,16 +97,49 @@ export type TideEffect =
 // persists for the rest of the run. Centralized so RaidGame and GauntletGame
 // can't drift on which effects are one-shot.
 export function expireAfterFight(effects: TideEffect[]): TideEffect[] {
-  return effects.filter(e => {
-    if (e.kind === 'enemyHpScale')                                return false
-    if (e.kind === 'enemyStartChargesDelta')                      return false
-    if (e.kind === 'startCharges'    && e.scope === 'nextFight')  return false
-    if (e.kind === 'startHpDelta'    && e.scope === 'nextFight')  return false
-    if (e.kind === 'incomingDmgMult' && e.scope === 'nextFight')  return false
-    if (e.kind === 'dodgeBonus'      && e.scope === 'nextFight')  return false
-    if (e.kind === 'speedDelta'      && e.scope === 'next2Fights') return false
-    return true
+  return effects.flatMap<TideEffect>(e => {
+    if (e.kind === 'enemyHpScale')                                return []
+    if (e.kind === 'enemyStartChargesDelta')                      return []
+    if (e.kind === 'guaranteedDodge')                             return []
+    if (e.kind === 'startCharges'    && e.scope === 'nextFight')  return []
+    if (e.kind === 'startHpDelta'    && e.scope === 'nextFight')  return []
+    if (e.kind === 'incomingDmgMult' && e.scope === 'nextFight')  return []
+    if (e.kind === 'dodgeBonus'      && e.scope === 'nextFight')  return []
+    // speedDelta "next 2 fights" is a real 2-fight window: tick a countdown
+    // (defaults to 2) and only drop it once both fights have passed.
+    if (e.kind === 'speedDelta'      && e.scope === 'next2Fights') {
+      const left = (e._fights ?? 2) - 1
+      return left > 0 ? [{ ...e, _fights: left }] : []
+    }
+    return [e]
   })
+}
+
+// Is an effect a boon, a cost, or neutral? Drives the buff/cost coloring on
+// the tide picker chips so a trade reads at a glance. Lives here (next to
+// describeEffect) so any surface that lists effects can color them the same.
+export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
+  switch (e.kind) {
+    case 'damageMult': case 'fireDmgMult': case 'volleyDmgMult':
+    case 'bossDamageMult': case 'bossVolleyDmgMult': case 'critZoneScale':
+      return e.mult > 1 ? 'good' : e.mult < 1 ? 'bad' : 'neutral'
+    case 'incomingDmgMult':
+    case 'enemyHpScale':
+      return e.mult < 1 ? 'good' : e.mult > 1 ? 'bad' : 'neutral'
+    case 'critChanceBonus': case 'incomingCritReduction': case 'dodgeBonus':
+      return e.chance > 0 ? 'good' : e.chance < 0 ? 'bad' : 'neutral'
+    case 'instantHeal': case 'startOfFightHeal':
+    case 'startHpDelta': case 'speedDelta': case 'doubloonsAtRaidEnd':
+      return e.n > 0 ? 'good' : e.n < 0 ? 'bad' : 'neutral'
+    case 'fullHeal': case 'guaranteedDodge': case 'reloadProc':
+      return 'good'
+    case 'startCharges':
+      return e.n > 0 ? 'good' : 'bad' // n <= 0 (incl. the NO_CHARGES sentinel) is a downside
+    case 'enemyStartChargesDelta':
+      return e.n < 0 ? 'good' : e.n > 0 ? 'bad' : 'neutral'
+    default:
+      return 'neutral'
+  }
 }
 
 export interface TideChoice {
@@ -322,7 +357,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'trim',
         label: 'Trim sails for speed',
-        description: '+15% fire damage next fight. -2 ship speed for the next 2 fights.',
+        description: '+15% fire damage all run. -2 ship speed for the next 2 fights.',
         effects: [
           { kind: 'fireDmgMult', mult: 1.15 },
           { kind: 'speedDelta', n: -2, scope: 'next2Fights' },
