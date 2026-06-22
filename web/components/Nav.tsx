@@ -119,7 +119,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
       setIsSignedIn(true)
       const nowIso = new Date().toISOString()
       Promise.all([
-        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin').eq('id', user.id).single(),
+        supabase.from('profiles').select('character_color, equipped_hat, avatar_bg_color, avatar_border_color, is_admin, doubloons, gems').eq('id', user.id).single(),
         supabase.from('daily_voyages').select('created_at, duration_ms').eq('user_id', user.id).eq('status', 'pending'),
         // Active mail messages — RLS lets every signed-in player SELECT.
         supabase.from('mail_messages').select('id').or(`expires_at.is.null,expires_at.gt.${nowIso}`),
@@ -135,6 +135,20 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
         setAvatarBg(bg)
         setAvatarBorder(border)
         setIsAdmin(admin)
+        // Currency refresh — the layout server component that supplies the
+        // doubloons/gems props is NOT re-run on client-side tab switches
+        // (App Router preserves shared layouts), so the props stay frozen
+        // and the `*-changed` events only fire for in-app spends. Without
+        // this, an out-of-session balance change (admin grant, mail claim
+        // settled elsewhere, webhook) wouldn't show until a full reload.
+        // Re-reading here on every route change + foreground makes the
+        // balance self-heal the same way the badges already do. Only set
+        // when the widget is shown (prop was provided) so anonymous shells
+        // stay chip-free.
+        const freshDoubloons = profile?.doubloons as number | null | undefined
+        const freshGems = profile?.gems as number | null | undefined
+        if (typeof freshDoubloons === 'number') setDisplayDoubloons(freshDoubloons)
+        if (typeof freshGems === 'number') setDisplayGems(freshGems)
         // Cache so next tab-switch hydrates immediately (no flash).
         writeNavCache('character_color', cc)
         writeNavCache('equipped_hat', hat)
