@@ -123,6 +123,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [resolving, setResolving] = useState(false)
   // Locker Upgrades panel (permanent, depth-gated, doubloon-bought perks).
   const [upgradesOpen, setUpgradesOpen] = useState(false)
+  const [haulOpen, setHaulOpen] = useState(false)
 
   // Guardrail counters live in refs (read inside combat callbacks).
   const rollStateRef = useRef<GauntletRollState>({ cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 })
@@ -345,59 +346,39 @@ export default function GauntletGame(props: GauntletGameProps) {
             </span>
           </div>
 
-          {/* The three rules of the descent */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-            <StakeTile
-              color={TEAL}
-              label="Descend"
-              line="Each depth drags up a deadlier ship."
-              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>}
-            />
-            <StakeTile
+          {/* Three actions: Descend starts the run; the other two open panels. */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+            <ActionTile
               color={GOLD}
-              label="Hoard"
-              line="Every kill swells one pot."
-              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg>}
+              primary
+              disabled={starting}
+              onClick={begin}
+              label={starting ? 'Diving…' : 'Descend'}
+              line={starting ? 'Into the dark' : 'Drop into the Locker'}
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>}
             />
-            <StakeTile
-              color="#f87171"
-              label="Or Sink"
-              line="Go under and the pot sinks with you."
-              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 2.5 1.2 4.2 2.8 5.4.4.3.7.8.7 1.3V18a1.6 1.6 0 0 0 1.6 1.6h.4l.5-1.6h-1l-.4-1.4h1.6L11 18l.5 1.6h1L13 18l.4-1.4H15l-.4 1.4h-1l.5 1.6h.4A1.6 1.6 0 0 0 16.1 18v-1.3c0-.5.3-1 .7-1.3C18.4 14.2 20 12.5 20 10a8 8 0 0 0-8-8Z" /><circle cx="9" cy="10.5" r="1.6" fill="#0a0e16" /><circle cx="15" cy="10.5" r="1.6" fill="#0a0e16" /></svg>}
+            <ActionTile
+              color={TEAL}
+              onClick={() => setHaulOpen(true)}
+              label="The Haul"
+              line="What you can win"
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /><rect x="10.5" y="11.4" width="3" height="3.6" rx="0.6" fill="currentColor" stroke="none" /></svg>}
+            />
+            <ActionTile
+              color={TEAL}
+              onClick={() => setUpgradesOpen(true)}
+              label="The Shop"
+              line="Spend your doubloons"
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6" rx="6.5" ry="2.4" /><path d="M5.5 6v4c0 1.3 2.9 2.4 6.5 2.4S18.5 11.3 18.5 10V6" /><path d="M5.5 10v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /><path d="M5.5 14v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /></svg>}
             />
           </div>
-
-          {/* The descent itself */}
-          <button onClick={begin} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
-            style={{
-              marginTop: 22, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem',
-              color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`,
-              border: `1px solid ${GOLD}66`, cursor: starting ? 'wait' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-              animation: starting ? 'none' : 'gauntCta 2.6s ease-in-out infinite',
-            }}>
-            {starting ? 'Descending…' : (
-              <>Brave the Locker
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-              </>
-            )}
-          </button>
-          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a766e', marginTop: 10 }}>
-            Starting begins the cooldown before your next.
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a766e', marginTop: 12 }}>
+            Descending begins the cooldown before your next.
           </p>
-
-          {/* What's actually down there — chest ladder, haul estimate, the chase. */}
-          <HaulPreview deepest={props.deepest} doubloonMult={props.classDoubloonMult} />
-
-          {/* Permanent perks bought with what you haul up. */}
-          <button onClick={() => setUpgradesOpen(true)} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-            style={{ marginTop: 12, width: '100%', padding: '0.85rem', borderRadius: 13, fontSize: '0.82rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            Locker Upgrades
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-          </button>
 
           <BackLink router={router} label="Not today" />
         </div>
+        {haulOpen && <HaulModal deepest={props.deepest} doubloonMult={props.classDoubloonMult} onClose={() => setHaulOpen(false)} />}
         {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </>
     )
@@ -1112,12 +1093,11 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
   )
 }
 
-// ── Haul preview ──────────────────────────────────────────────────────────────
-// "What's down there" — a collapsible on the intro so a player can see the chest
+// ── Haul modal ────────────────────────────────────────────────────────────────
+// "What's down there" — a popup on the intro so a player can see the chest
 // ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
 // BEFORE committing a descent (and burning the cooldown).
-function HaulPreview({ deepest, doubloonMult }: { deepest: number; doubloonMult: number }) {
-  const [open, setOpen] = useState(false)
+function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doubloonMult: number; onClose: () => void }) {
   // Estimate against the depth they've actually reached; before any run, point
   // at a realistic first goal so the number isn't zero.
   const target = deepest > 0 ? deepest : 8
@@ -1132,19 +1112,21 @@ function HaulPreview({ deepest, doubloonMult }: { deepest: number; doubloonMult:
   const deepOdds = Math.round(chestCannonDropChance(5) * 100)
 
   return (
-    <div style={{ marginTop: 12, borderRadius: 13, border: `1px solid ${TEAL}30`, background: `${TEAL}0a`, overflow: 'hidden' }}>
-      <button onClick={() => setOpen(o => !o)} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-        style={{ width: '100%', padding: '0.85rem 0.9rem', fontSize: '0.82rem', color: TEAL, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <span>What You Can Haul Up</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><path d="M9 18l6-6-6-6" /></svg>
-      </button>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 440, margin: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>What&apos;s Down There</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>The Haul</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }}
-            style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '0 0.9rem 0.95rem', textAlign: 'left' }}>
+        <div style={{ marginTop: 12, textAlign: 'left' }}>
               {/* Estimate */}
               <div style={{ padding: '0.7rem 0.8rem', borderRadius: 11, background: 'rgba(240,192,64,0.07)', border: `1px solid ${GOLD}2e` }}>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>
@@ -1194,11 +1176,33 @@ function HaulPreview({ deepest, doubloonMult }: { deepest: number; doubloonMult:
               <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
                 Each can drop from any chest you crack, from about {shallowOdds}% up shallow to {deepOdds}% in Davy Jones&apos; Locker. Land both and forge them into the Grand Cannon.
               </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      </motion.div>
     </div>
+  )
+}
+
+// ── Action tile ───────────────────────────────────────────────────────────────
+// The three intro choices. `primary` (Descend) carries the gold pulse so it
+// reads as the start button; the others open their panels.
+function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
+  color: string; icon: React.ReactNode; label: string; line: string; primary?: boolean; disabled?: boolean; onClick: () => void
+}) {
+  return (
+    <button onClick={disabled ? undefined : onClick} disabled={disabled} className="tap"
+      style={{
+        flex: 1, minWidth: 0, padding: '0.95rem 0.4rem 0.8rem', borderRadius: 14,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, textAlign: 'center',
+        cursor: disabled ? 'wait' : 'pointer',
+        background: primary ? `linear-gradient(180deg, ${color}2e, ${color}10)` : `${color}10`,
+        border: `1px solid ${color}${primary ? '70' : '38'}`,
+        boxShadow: primary ? `0 0 22px ${color}1f` : 'none',
+        animation: primary && !disabled ? 'gauntCta 2.6s ease-in-out infinite' : 'none',
+      }}>
+      <span style={{ color }}>{icon}</span>
+      <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.84rem', color: primary ? color : '#f0ede8', lineHeight: 1 }}>{label}</span>
+      <span className="font-karla" style={{ fontSize: '0.58rem', color: '#9a948a', lineHeight: 1.25 }}>{line}</span>
+    </button>
   )
 }
 
@@ -1350,17 +1354,6 @@ function AbyssBackdrop() {
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,0.6) 100%)' }} />
       </div>
     </>
-  )
-}
-
-// One "rule of the descent" tile for the intro — reads like a rift modifier.
-function StakeTile({ color, icon, label, line }: { color: string; icon: React.ReactNode; label: string; line: string }) {
-  return (
-    <div style={{ flex: 1, minWidth: 0, borderRadius: 12, border: `1px solid ${color}33`, background: `${color}0e`, padding: '0.7rem 0.45rem 0.65rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-      <span style={{ color, display: 'flex' }}>{icon}</span>
-      <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.08em', color: '#f0ece4', lineHeight: 1 }}>{label}</p>
-      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#9a948a', lineHeight: 1.3 }}>{line}</p>
-    </div>
   )
 }
 
