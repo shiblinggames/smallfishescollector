@@ -25,6 +25,7 @@ import {
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath } from './actions'
 import { getRaidItem } from '@/lib/raidItems'
+import { vibrate } from '@/lib/haptics'
 
 type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'tide' | 'curse' | 'boon' | 'between' | 'reward' | 'dead'
 
@@ -412,49 +413,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </Shell>
       )
     }
-    return (
-      <Shell>
-        <Title sub={`${r.chest.label} · depth ${r.depth}`}>Hauled Up</Title>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
-          <RewardRow label="Doubloons" value={`+${fmt(r.bankedDoubloons)} ⟡`} color={GOLD} />
-          <RewardRow label="Nav XP" value={`+${fmt(r.bankedXp)}`} color="#4ade80" />
-          {r.gems > 0 && <RewardRow label="Gems" value={`+${fmt(r.gems)} ◆`} color="#a78bfa" />}
-          {r.chest.potMult > 1 && (
-            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', marginTop: 2 }}>
-              {r.chest.label} multiplied your haul ×{r.chest.potMult}.
-            </p>
-          )}
-          {r.depth >= r.deepest && (
-            <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: TEAL, textAlign: 'center', marginTop: 4 }}>
-              New deepest run: depth {r.depth}.
-            </p>
-          )}
-          {/* Davy cannon chest drops — the rare chase. */}
-          {r.droppedItems.map(id => {
-            const item = getRaidItem(id)
-            if (!item) return null
-            return (
-              <div key={id} style={{
-                display: 'flex', alignItems: 'center', gap: 11, marginTop: 4,
-                padding: '0.7rem 0.8rem', borderRadius: 12,
-                background: 'rgba(232,200,121,0.10)', border: '1px solid rgba(232,200,121,0.55)',
-                boxShadow: '0 0 22px rgba(232,200,121,0.18)',
-              }}>
-                {item.image
-                  ? <img src={item.image} alt="" style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0 }} />
-                  : null}
-                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#e8c879' }}>Rare drop · equip from Manage Ship</p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f5ecd6', lineHeight: 1.1 }}>{item.name}</p>
-                  <p className="font-karla" style={{ fontSize: '0.66rem', color: '#b0aaa0', lineHeight: 1.35, marginTop: 1 }}>{item.description}</p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-        <BackLink router={router} label="Back to the map" primary />
-      </Shell>
-    )
+    return <GauntletReward r={r} onBack={() => router.push('/expeditions')} />
   }
 
   // ── Dead ────────────────────────────────────────────────────────────────
@@ -843,6 +802,157 @@ function drawGauntletTide(depth: number, hp: number, hpMax: number): TideEvent {
   return candidates[Math.floor(Math.random() * candidates.length)] ?? candidates[0]
 }
 
+// ── Cash-out chest reveal ─────────────────────────────────────────────────────
+// Hauling up is the payoff of the whole push-your-luck loop, so it gets a real
+// chest-opening moment: the depth-tiered crate sits closed, you tap to crack it,
+// a burst of light + haptic + SFX fires, and the haul counts up out of it.
+type RewardOk = Extract<CashResult, { ok: true }>
+
+const CHEST_ART: Record<number, { closed: string; open: string; color: string }> = {
+  1: { closed: '/crateclosed.png',        open: '/crateopen.png',        color: '#c08a4e' },
+  2: { closed: '/metalcrateclosed.png',   open: '/metalcrateopen.png',   color: '#9fb0bf' },
+  3: { closed: '/goldcrateclosed.png',    open: '/goldcrateopen.png',    color: '#f0c040' },
+  4: { closed: '/diamondcrateclosed.png', open: '/diamondcrateopen.png', color: '#7fdce8' },
+  5: { closed: '/diamondcrateclosed.png', open: '/diamondcrateopen.png', color: '#a78bfa' },
+}
+
+// rAF count-up for the reward numbers (easeOutCubic). App-side, so Date/rAF are fine.
+function CountUp({ to, dur = 850 }: { to: number; dur?: number }) {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (to <= 0) { setN(0); return }
+    let raf = 0, start = 0
+    const tick = (t: number) => {
+      if (!start) start = t
+      const p = Math.min(1, (t - start) / dur)
+      setN(Math.round(to * (1 - Math.pow(1 - p, 3))))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [to, dur])
+  return <>{n.toLocaleString()}</>
+}
+
+function RewardLine({ label, to, suffix = '', color, delay }: { label: string; to: number; suffix?: string; color: string; delay: number }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.35 }}
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0.45rem 0.3rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#9a948a' }}>{label}</span>
+      <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color }}>+<CountUp to={to} />{suffix}</span>
+    </motion.div>
+  )
+}
+
+function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
+  const [opened, setOpened] = useState(false)
+  const art = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
+  const newBest = r.depth >= r.deepest
+
+  function open() {
+    if (opened) return
+    setOpened(true)
+    vibrate([0, 30, 55, 45])
+    import('@/lib/fishingMusic').then(m => m.playForgeSfx(false)).catch(() => {})
+  }
+
+  return (
+    <>
+      <AbyssBackdrop />
+      <div style={{
+        position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+        padding: '10px 0.95rem', textAlign: 'center',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+      }}>
+        {!opened ? (
+          <>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: TEAL, marginTop: 16 }}>
+              You Climbed Back Into the Light
+            </p>
+            <div style={{ position: 'relative', width: 200, height: 200, margin: '20px auto 6px' }}>
+              <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}33 0%, transparent 68%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <motion.img src={art.closed} alt="" loading="eager" decoding="async"
+                animate={{ y: [0, -6, 0] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 26px ${art.color}44)` }} />
+            </div>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: art.color, lineHeight: 1.1, marginTop: 4, textShadow: `0 0 22px ${art.color}44` }}>
+              {r.chest.label}
+            </p>
+            <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 5 }}>
+              Hauled up from depth {r.depth}{r.chest.potMult > 1 ? ` · ×${r.chest.potMult} haul` : ''}
+            </p>
+            <button onClick={open} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+              style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#1a1206', background: 'linear-gradient(180deg, #f4cf6a 0%, #e0a93f 100%)', border: 'none', cursor: 'pointer', boxShadow: `0 0 22px ${GOLD}33` }}>
+              Crack It Open
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ position: 'relative', width: 200, height: 200, margin: '16px auto 4px' }}>
+              {/* Burst of light on open */}
+              <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0.85 }} animate={{ scale: 3, opacity: 0 }} transition={{ duration: 0.7, ease: 'easeOut' }}
+                style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}cc 0%, ${art.color}33 35%, transparent 70%)` }} />
+              <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}33 0%, transparent 68%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <motion.img src={art.open} alt="" loading="eager" decoding="async"
+                initial={{ scale: 0.55 }} animate={{ scale: [0.55, 1.16, 1] }} transition={{ duration: 0.5, ease: 'easeOut' }}
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 30px ${art.color}66)` }} />
+            </div>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
+              className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: TEAL }}>
+              Hauled Up
+            </motion.p>
+            <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 240, damping: 18 }}
+              className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: art.color, lineHeight: 1.1, marginTop: 4, textShadow: `0 0 22px ${art.color}44` }}>
+              {r.chest.label}
+            </motion.p>
+
+            <div style={{ marginTop: 16, textAlign: 'left', background: 'rgba(0,0,0,0.3)', border: `1px solid ${GOLD}26`, borderRadius: 14, padding: '0.5rem 0.85rem 0.7rem' }}>
+              <RewardLine label="Doubloons" to={r.bankedDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} />
+              <RewardLine label="Nav XP" to={r.bankedXp} color="#4ade80" delay={0.32} />
+              {r.gems > 0 && <RewardLine label="Gems" to={r.gems} suffix=" ◆" color="#a78bfa" delay={0.44} />}
+            </div>
+
+            {newBest && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+                className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: TEAL, marginTop: 12 }}>
+                New deepest descent — depth {r.depth}.
+              </motion.p>
+            )}
+
+            {/* Davy cannon chest drops — the rare chase. */}
+            {r.droppedItems.map((id, i) => {
+              const item = getRaidItem(id)
+              if (!item) return null
+              return (
+                <motion.div key={id} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.15, type: 'spring', stiffness: 260, damping: 18 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: 'rgba(232,200,121,0.10)', border: '1px solid rgba(232,200,121,0.55)', boxShadow: '0 0 22px rgba(232,200,121,0.18)' }}>
+                  {item.image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={item.image} alt="" style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0 }} />
+                    : null}
+                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#e8c879' }}>Rare drop · equip from Manage Ship</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f5ecd6', lineHeight: 1.1 }}>{item.name}</p>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#b0aaa0', lineHeight: 1.35, marginTop: 1 }}>{item.description}</p>
+                  </div>
+                </motion.div>
+              )
+            })}
+
+            <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
+              onClick={onBack} className="font-karla font-600 tap"
+              style={{ marginTop: 18, width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfc9bf', cursor: 'pointer' }}>
+              Back to the map
+            </motion.button>
+          </>
+        )}
+      </div>
+    </>
+  )
+}
+
 // ── Atmosphere ────────────────────────────────────────────────────────────────
 // The Gauntlet is the endgame descent, so every meta screen sits over a living
 // abyss: a dim surface glow up top fading to pitch black, drifting god-rays, and
@@ -941,15 +1051,6 @@ function Title({ children, sub }: { children: React.ReactNode; sub?: string }) {
     <div style={{ textAlign: 'center', marginBottom: 14, marginTop: 8 }}>
       <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f0ece4', letterSpacing: '0.02em' }}>{children}</h1>
       {sub && <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 4 }}>{sub}</p>}
-    </div>
-  )
-}
-
-function RewardRow({ label, value, color, small }: { label: string; value: string; color: string; small?: boolean }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-      <span className="font-karla" style={{ fontSize: small ? '0.74rem' : '0.85rem', color: '#9a948a' }}>{label}</span>
-      <span className="font-cinzel font-700" style={{ fontSize: small ? '0.9rem' : '1.05rem', color }}>{value}</span>
     </div>
   )
 }
