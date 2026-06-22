@@ -697,6 +697,65 @@ export function playForgeSfx(descend = false): void {
   } catch {}
 }
 
+/** Treasure-chest open fanfare — fully synthesized (no asset). A low lid
+ *  "thunk", a bright ascending major arpeggio (the payoff), and a couple of
+ *  high coin-shimmer sparkles. Routed through sfxOut so the SFX mute applies.
+ *  Pass `grand` for a fuller, slightly longer flourish on rarer drops. */
+export function playChestSfx(grand = false): void {
+  if (!audioCtx) return
+  const out = sfxOut(); if (!out) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const ctx = audioCtx
+    const t0 = ctx.currentTime
+
+    // Lid thunk — a quick low pitch-drop for the crate cracking open.
+    const thunk = ctx.createOscillator()
+    const tg = ctx.createGain()
+    thunk.type = 'triangle'
+    thunk.frequency.setValueAtTime(240, t0)
+    thunk.frequency.exponentialRampToValueAtTime(80, t0 + 0.13)
+    tg.gain.setValueAtTime(0.0001, t0)
+    tg.gain.exponentialRampToValueAtTime(0.3, t0 + 0.012)
+    tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2)
+    thunk.connect(tg).connect(out)
+    thunk.start(t0); thunk.stop(t0 + 0.22)
+
+    // Ascending major arpeggio — C5 E5 G5 C6 (+ E6 on grand), the reward sting.
+    const notes = grand ? [523.25, 659.25, 783.99, 1046.5, 1318.5] : [523.25, 659.25, 783.99, 1046.5]
+    const lead = t0 + 0.06   // a beat after the thunk
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = i === notes.length - 1 ? 'triangle' : 'sine'
+      osc.frequency.value = freq
+      const start = lead + i * 0.075
+      const peak = 0.24 - i * 0.018
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(Math.max(0.05, peak), start + 0.014)
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.55)
+      osc.connect(g).connect(out)
+      osc.start(start); osc.stop(start + 0.6)
+    })
+
+    // Coin shimmer — two short high band-passed noise bursts riding the top.
+    ;[0.12, 0.26].forEach((off, k) => {
+      const noise = ctx.createBufferSource()
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.09), ctx.sampleRate)
+      const data = buf.getChannelData(0)
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+      noise.buffer = buf
+      const bp = ctx.createBiquadFilter()
+      bp.type = 'bandpass'; bp.frequency.value = 5200 + k * 1400; bp.Q.value = 0.7
+      const ng = ctx.createGain()
+      ng.gain.setValueAtTime(0.1, t0 + off)
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.13)
+      noise.connect(bp).connect(ng).connect(out)
+      noise.start(t0 + off); noise.stop(t0 + off + 0.14)
+    })
+  } catch {}
+}
+
 /** Mute/unmute SFX independently of the music. Persisted to localStorage. */
 export function getFishingSfxMuted(): boolean { return sfxMuted }
 export function setFishingSfxMuted(muted: boolean): void {
