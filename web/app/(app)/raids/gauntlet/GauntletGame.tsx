@@ -280,9 +280,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       setResolving(false)
       setReward(res)
       setPhase('reward')
-      if (res.ok) {
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
-      }
+      // NOTE: the purse tick (doubloons-changed / gems-changed) is deliberately
+      // NOT fired here — it fires when the player cracks the chest open, so the
+      // top purse counts up in sync with the chest reveal (see GauntletReward).
     })
   }
 
@@ -914,6 +914,11 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
     setOpened(true)
     vibrate([0, 30, 55, 45])
     import('@/lib/fishingMusic').then(m => m.playForgeSfx(false)).catch(() => {})
+    // Tick the top purse(s) in sync with the chest reveal — the Nav listens for
+    // these and counts up. Doubloons + gems both land here so the haul visibly
+    // flows into your purse as the chest counts up.
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+    if (r.gems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
   }
 
   return (

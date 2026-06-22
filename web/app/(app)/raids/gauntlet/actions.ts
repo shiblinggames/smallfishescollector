@@ -126,6 +126,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
       bankedXp: number
       gems: number
       newDoubloons: number
+      newGems: number
       newExpeditionXP: number
       deepest: number
       crewXP: CrewXPGrant[]
@@ -206,6 +207,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
     bankedXp,
     gems,
     newDoubloons,
+    newGems,
     newExpeditionXP,
     deepest,
     crewXP,
