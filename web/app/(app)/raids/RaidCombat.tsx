@@ -37,7 +37,13 @@ type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
 type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'done'
 type Actor      = 'player' | 'enemy'
 
+// Cannonball cap. MAX_CHARGES is the enemy's cap AND the volley cost (a volley
+// spends VOLLEY_COST cannonballs for a double-shot). The PLAYER's cap can be
+// raised by the Locker Upgrade "Extra Cannonball Rack" (bonusChargeSlots prop):
+// they stockpile more, but the volley still costs VOLLEY_COST — the extra is
+// reserve.
 const MAX_CHARGES = 3
+const VOLLEY_COST = MAX_CHARGES
 const PLAYER_COLOR = '#4ade80'
 const ENEMY_COLOR  = '#ef4444'
 
@@ -187,6 +193,9 @@ export interface RaidCombatProps {
   /** Optional CSS filter layered onto the ENEMY sprite. The Gauntlet uses it
    *  for the "drowned" look so reused raid enemies read as Locker creatures. */
   enemyArtFilter?: string
+  /** Extra PLAYER cannonball capacity from the "Extra Cannonball Rack" Locker
+   *  Upgrade. The player can hold MAX_CHARGES + this; volley cost is unchanged. */
+  bonusChargeSlots?: number
   shipName: string
   /** What to show on the player nameplate (and in the Captain's Ledger
    *  popup header). Defaults to shipName when not provided. Used to
@@ -282,7 +291,7 @@ export interface RaidCombatProps {
 
 export default function RaidCombat({
   enemy, affix, isElite = false,
-  isBoss, shipImageUrl, shipFilter, enemyArtFilter = '', shipName, playerLabel,
+  isBoss, shipImageUrl, shipFilter, enemyArtFilter = '', bonusChargeSlots = 0, shipName, playerLabel,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
   playerHpMax, playerHp: initialPlayerHp,
@@ -468,12 +477,15 @@ export default function RaidCombat({
   // applies hpStartDelta + everyFightHeal at fight start (heal can
   // push above max? no — clamped to max). Enemy HP scales. Player +
   // enemy starting charges include the tide deltas (clamped 0–MAX).
+  // Player cannonball cap — MAX_CHARGES plus any "Extra Cannonball Rack" Locker
+  // Upgrade slots. Enemies always cap at MAX_CHARGES.
+  const playerMaxCharges = MAX_CHARGES + Math.max(0, bonusChargeSlots)
   const [playerHp, setPlayerHp]       = useState(() =>
     Math.max(0, Math.min(playerHpMax, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal))
   )
   const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
   const [playerCharges, setPlayerCharges] = useState(() =>
-    Math.max(0, Math.min(MAX_CHARGES, tide.chargesStart))
+    Math.max(0, Math.min(playerMaxCharges, tide.chargesStart))
   )
   const [enemyCharges, setEnemyCharges]   = useState(() =>
     Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + tide.enemyChargesDelta))
@@ -907,7 +919,7 @@ export default function RaidCombat({
   // ─── Player action handlers ────────────────────────────────────────────────
 
   const canFire   = playerCharges >= 1
-  const canVolley = playerCharges >= MAX_CHARGES
+  const canVolley = playerCharges >= VOLLEY_COST
   // Dodge has a 1-turn cooldown so it can't be spammed defensively.
   const canDodge  = lastPlayerAction !== 'dodge'
   // Reload no-ops at full magazine — the +1 (and any tide proc bonus)
@@ -915,7 +927,7 @@ export default function RaidCombat({
   // would burn the turn for zero gain. Disable + relabel the slot
   // ("Full") so the player understands why instead of fishing for a
   // missing button.
-  const canReload = playerCharges < MAX_CHARGES
+  const canReload = playerCharges < playerMaxCharges
 
   // Fire a crew class ability. Doesn't consume the player's turn — the
   // chooser closes, the effect applies, and the action menu stays open so
@@ -980,7 +992,7 @@ export default function RaidCombat({
         const one  = !two && (nm.oneChargeChance >= 1 || Math.random() < nm.oneChargeChance)
         const add  = two ? 2 : (one ? 1 : 0)
         if (add > 0) {
-          setPlayerCharges(prev => Math.min(MAX_CHARGES, prev + add))
+          setPlayerCharges(prev => Math.min(playerMaxCharges, prev + add))
         }
         setResolveLog(prev => [...prev, add > 0
           ? `${crew.name} runs the powder up — +${add} cannonball${add === 1 ? '' : 's'} loaded.`
@@ -1350,11 +1362,11 @@ export default function RaidCombat({
           const baseGain = 1
           const procGain = tide.reloadProc.chance > 0 && Math.random() < tide.reloadProc.chance
             ? tide.reloadProc.bonus : 0
-          pCharges = Math.min(MAX_CHARGES, pCharges + baseGain + procGain)
+          pCharges = Math.min(playerMaxCharges, pCharges + baseGain + procGain)
           if (procGain > 0) {
-            stepLines.push(`Powder Keg proc! +${procGain} extra cannonball${procGain === 1 ? '' : 's'}. (${pCharges}/${MAX_CHARGES})`)
+            stepLines.push(`Powder Keg proc! +${procGain} extra cannonball${procGain === 1 ? '' : 's'}. (${pCharges}/${playerMaxCharges})`)
           } else {
-            stepLines.push(`You load a cannonball. (${pCharges}/${MAX_CHARGES})`)
+            stepLines.push(`You load a cannonball. (${pCharges}/${playerMaxCharges})`)
           }
         }
         else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`) }
@@ -1386,7 +1398,7 @@ export default function RaidCombat({
           stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
         }
       } else if (action === 'fire' || action === 'volley') {
-        if (who === 'player') pCharges -= (action === 'volley' ? MAX_CHARGES : 1)
+        if (who === 'player') pCharges -= (action === 'volley' ? VOLLEY_COST : 1)
         else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
 
         const isAttackerPlayer = who === 'player'
@@ -2823,7 +2835,7 @@ export default function RaidCombat({
               {nameplate}
             </p>
             <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
-            <ChargesRow charges={playerCharges} max={MAX_CHARGES} small />
+            <ChargesRow charges={playerCharges} max={playerMaxCharges} small />
           </div>
         </motion.button>
 

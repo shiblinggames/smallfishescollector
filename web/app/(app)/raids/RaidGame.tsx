@@ -359,7 +359,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
-  raidMods,
+  raidMods, bonusChargeSlots = 0,
 }: {
   config: BossRaidConfig
   shipImageUrl: string
@@ -395,6 +395,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   playerAvatarBg: string | null
   playerAvatarBorder: string | null
   raidMods: RaidMods
+  /** Extra player cannonball slots from claimed Locker Upgrades. */
+  bonusChargeSlots?: number
 }) {
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -1454,6 +1456,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 fleeSignal={fleeTick}
                 fleeNav={fleeNavRef.current}
                 raidMods={raidMods}
+                bonusChargeSlots={bonusChargeSlots}
                 tideEffects={activeTideEffects}
                 crewMembers={crewMembers}
                 usedAbilityIds={usedAbilityIds}

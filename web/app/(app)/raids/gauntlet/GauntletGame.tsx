@@ -23,7 +23,8 @@ import {
   type GauntletFight, type GauntletRollState, type GauntletCurse, type GauntletBoon,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade } from './actions'
+import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { getRaidItem } from '@/lib/raidItems'
 import { vibrate } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
@@ -73,6 +74,8 @@ export interface GauntletGameProps {
   playerAvatarBg: string | null
   playerAvatarBorder: string | null
   raidMods: RaidMods
+  /** Extra player cannonball slots from claimed Locker Upgrades. */
+  bonusChargeSlots: number
   deepest: number
   available: boolean
   /** ISO time the next run unlocks (cooldown), or null when available now. */
@@ -117,6 +120,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   >(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
+  // Locker Upgrades panel (permanent, depth-gated, doubloon-bought perks).
+  const [upgradesOpen, setUpgradesOpen] = useState(false)
 
   // Guardrail counters live in refs (read inside combat callbacks).
   const rollStateRef = useRef<GauntletRollState>({ cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 })
@@ -368,8 +373,17 @@ export default function GauntletGame(props: GauntletGameProps) {
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a766e', marginTop: 10 }}>
             Starting spends today&rsquo;s descent.
           </p>
+
+          {/* Permanent perks bought with what you haul up. */}
+          <button onClick={() => setUpgradesOpen(true)} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+            style={{ marginTop: 12, width: '100%', padding: '0.85rem', borderRadius: 13, fontSize: '0.82rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            Locker Upgrades
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+          </button>
+
           <BackLink router={router} label="Not today" />
         </div>
+        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} />}
       </>
     )
   }
@@ -402,7 +416,13 @@ export default function GauntletGame(props: GauntletGameProps) {
             {starting ? 'Descending…' : 'Descend Again →'}
           </button>
         ) : null}
+        <button onClick={() => setUpgradesOpen(true)} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+          style={{ marginTop: 12, width: '100%', padding: '0.85rem', borderRadius: 13, fontSize: '0.82rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          Locker Upgrades
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+        </button>
         <BackLink router={router} label="Back to the map" primary={!ready} />
+        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} />}
       </Shell>
     )
   }
@@ -808,6 +828,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             enemy={fight.enemy}
             atmosphere={atmosphereForDepth(fight.depth)}
             enemyArtFilter={DROWNED_FILTER}
+            bonusChargeSlots={props.bonusChargeSlots}
             affix={fight.affix}
             isElite={fight.isElite}
             isBoss={fight.isBoss}
@@ -1071,6 +1092,101 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
         )}
       </div>
     </>
+  )
+}
+
+// ── Locker Upgrades ───────────────────────────────────────────────────────────
+// Permanent perks bought with hauled-up doubloons, each gated by how deep you've
+// gone. Server-validated on claim (depth + cost + no-double); the panel just
+// reflects state and disables what you can't take yet.
+function LockerUpgradesModal({ onClose }: { onClose: () => void }) {
+  const [state, setState] = useState<{ deepest: number; doubloons: number; owned: string[] } | null>(null)
+  const [claiming, setClaiming] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => { getGauntletUpgradeState().then(setState) }, [])
+
+  async function claim(id: string) {
+    if (claiming) return
+    setClaiming(id); setErr(null)
+    const res = await claimGauntletUpgrade(id)
+    setClaiming(null)
+    if ('error' in res) { setErr(res.error); return }
+    setState(s => (s ? { ...s, doubloons: res.doubloons, owned: res.owned } : s))
+    vibrate([0, 30, 50, 40])
+    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 440, margin: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>From the Deep</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>Locker Upgrades</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
+          Permanent perks. Reach the depth in the Gauntlet, then pay the toll in doubloons.
+        </p>
+
+        {state === null ? (
+          <p className="font-karla" style={{ fontSize: '0.8rem', color: '#7a766e', textAlign: 'center', padding: '2rem 0' }}>Reading the ledger…</p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '12px 0', padding: '0.4rem 0', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#8a8480' }}>Your Purse</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: GOLD }}>{fmt(state.doubloons)} ⟡</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {GAUNTLET_UPGRADES.map(u => {
+                const owned = state.owned.includes(u.id)
+                const depthMet = state.deepest >= u.depthRequired
+                const canAfford = state.doubloons >= u.cost
+                const busy = claiming === u.id
+                const accent = owned ? TEAL : '#d4ba78'
+                return (
+                  <div key={u.id} style={{ borderRadius: 14, padding: '0.85rem 0.9rem', background: owned ? `${TEAL}10` : 'rgba(255,255,255,0.03)', border: `1px solid ${owned ? `${TEAL}45` : 'rgba(255,255,255,0.1)'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8' }}>{u.name}</p>
+                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        {depthMet ? `Depth ${u.depthRequired} ✓` : `Depth ${state.deepest}/${u.depthRequired}`}
+                      </span>
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.45, marginTop: 5 }}>{u.description}</p>
+                    <button
+                      type="button"
+                      onClick={(!owned && depthMet && canAfford && !busy) ? () => claim(u.id) : undefined}
+                      disabled={owned || !depthMet || !canAfford || busy}
+                      className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
+                      style={{
+                        marginTop: 10, width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.74rem',
+                        cursor: (!owned && depthMet && canAfford && !busy) ? 'pointer' : 'default',
+                        color: owned ? TEAL : (depthMet && canAfford) ? GOLD : '#6a6764',
+                        background: owned ? `${TEAL}1a` : (depthMet && canAfford) ? `${GOLD}1c` : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${owned ? `${TEAL}55` : (depthMet && canAfford) ? `${GOLD}66` : 'rgba(255,255,255,0.1)'}`,
+                      }}
+                    >
+                      {busy ? 'Claiming…'
+                        : owned ? 'Unlocked ✓'
+                        : !depthMet ? `Reach Depth ${u.depthRequired}`
+                        : !canAfford ? `Need ${fmt(u.cost)} ⟡`
+                        : `Claim · ${fmt(u.cost)} ⟡`}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+            {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#fca5a5', textAlign: 'center', marginTop: 12 }}>{err}</p>}
+          </>
+        )}
+      </motion.div>
+    </div>
   )
 }
 

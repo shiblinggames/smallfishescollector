@@ -51,6 +51,7 @@ export default async function GauntletPage() {
           playerAvatarBg={stats.avatarBgColor}
           playerAvatarBorder={stats.avatarBorderColor}
           raidMods={stats.raidMods}
+          bonusChargeSlots={stats.bonusChargeSlots}
           deepest={daily.deepest}
           available={daily.available}
           nextAt={daily.nextAt}

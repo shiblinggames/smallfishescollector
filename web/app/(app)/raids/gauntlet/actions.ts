@@ -15,7 +15,65 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS } from '@/lib/gauntlet'
+import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
+
+// ── Locker Upgrades — permanent perks, depth-gated + doubloon-bought ──────────
+
+/** State for the Locker Upgrades panel: the player's deepest run, purse, and
+ *  which upgrades they've already claimed. */
+export async function getGauntletUpgradeState(): Promise<{ deepest: number; doubloons: number; owned: string[] }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { deepest: 0, doubloons: 0, owned: [] }
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('profiles')
+    .select('gauntlet_deepest, doubloons, gauntlet_upgrades')
+    .eq('id', user.id)
+    .single()
+  return {
+    deepest: (data?.gauntlet_deepest as number | null) ?? 0,
+    doubloons: (data?.doubloons as number | null) ?? 0,
+    owned: (data?.gauntlet_upgrades as string[] | null) ?? [],
+  }
+}
+
+/** Claim a Locker Upgrade. Server-validates the depth gate, the cost, and
+ *  no-double-claim, then deducts doubloons + records the id. */
+export async function claimGauntletUpgrade(id: string): Promise<
+  { ok: true; doubloons: number; owned: string[] } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+
+  const upgrade = getGauntletUpgrade(id)
+  if (!upgrade) return { error: 'Unknown upgrade.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_deepest, doubloons, gauntlet_upgrades')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found.' }
+
+  const owned = (profile.gauntlet_upgrades as string[] | null) ?? []
+  if (owned.includes(id)) return { error: 'Already unlocked.' }
+  const deepest = (profile.gauntlet_deepest as number | null) ?? 0
+  if (deepest < upgrade.depthRequired) return { error: `Reach depth ${upgrade.depthRequired} in the Gauntlet first.` }
+  const doubloons = (profile.doubloons as number | null) ?? 0
+  if (doubloons < upgrade.cost) return { error: 'Not enough doubloons.' }
+
+  const newDoubloons = doubloons - upgrade.cost
+  const newOwned = [...owned, id]
+  await Promise.all([
+    admin.from('profiles').update({ doubloons: newDoubloons, gauntlet_upgrades: newOwned }).eq('id', user.id),
+    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -upgrade.cost, reason: `Locker Upgrade: ${upgrade.name}` }),
+  ])
+  return { ok: true, doubloons: newDoubloons, owned: newOwned }
+}
 
 /** The single deepest run across all captains + this player's own deepest.
  *  Surfaced on the gauntlet map node. */

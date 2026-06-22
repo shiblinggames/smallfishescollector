@@ -9,6 +9,7 @@ import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { getActiveEffects } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { getShipSkin } from '@/lib/shipSkins'
+import { bonusChargeSlots } from '@/lib/gauntletUpgrades'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -67,6 +68,8 @@ export interface RaidPlayerStats {
   equippedRepairKit: string
   hasSeenRaidTutorial: boolean
   raidMods: RaidMods
+  /** Extra player cannonball slots from claimed Locker Upgrades (Gauntlet). */
+  bonusChargeSlots: number
 }
 
 export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
@@ -74,7 +77,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes, gauntlet_upgrades')
     .eq('id', userId)
     .single()
 
@@ -160,6 +163,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
     raidMods:             resolved.raid,
+    bonusChargeSlots:     bonusChargeSlots((profile?.gauntlet_upgrades as string[] | null) ?? []),
   }
 }
 

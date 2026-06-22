@@ -46,6 +46,7 @@ export default async function CartographerRaidPage() {
             equippedRepairKit={stats.equippedRepairKit}
             initialExpeditionXP={profile?.expedition_xp ?? 0}
             raidMods={stats.raidMods}
+            bonusChargeSlots={stats.bonusChargeSlots}
           />
         </div>
       </main>

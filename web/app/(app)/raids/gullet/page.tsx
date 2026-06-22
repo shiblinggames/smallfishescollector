@@ -49,6 +49,7 @@ export default async function GulletRaidPage() {
             equippedRepairKit={stats.equippedRepairKit}
             initialExpeditionXP={profile?.expedition_xp ?? 0}
             raidMods={stats.raidMods}
+            bonusChargeSlots={stats.bonusChargeSlots}
           />
         </div>
       </main>
