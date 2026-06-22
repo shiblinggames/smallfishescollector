@@ -19,7 +19,7 @@ import RaidCombat from './RaidCombat'
 import RaidLootStage from './RaidLootStage'
 import BossDialogueModal from './BossDialogueModal'
 import TideModal from './TideModal'
-import { drawTides, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
+import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 import TapToContinueGate from '@/components/TapToContinueGate'
 
@@ -1227,23 +1227,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     //   4. Otherwise just advance to the next enemy.
     // Expire next-fight-scope tide effects now that the fight ended.
     // Boss-scope effects stay until the boss fight ends; allRemaining
-    // effects stay until raid end. enemyHpScale + enemyStartChargesDelta
-    // are also one-shot ("next enemy"), so they expire here too.
-    setActiveTideEffects(prev => prev.filter(e => {
-      if (e.kind === 'enemyHpScale')            return false
-      if (e.kind === 'enemyStartChargesDelta')  return false
-      if (e.kind === 'startCharges'     && e.scope === 'nextFight') return false
-      if (e.kind === 'startHpDelta'     && e.scope === 'nextFight') return false
-      if (e.kind === 'incomingDmgMult'  && e.scope === 'nextFight') return false
-      if (e.kind === 'dodgeBonus'       && e.scope === 'nextFight') return false
-      if (e.kind === 'speedDelta'       && e.scope === 'next2Fights') return false
-      // Per-fight damage mults (fireDmgMult, volleyDmgMult) — the spec
-      // marks several as one-fight in their copy ("on the next fight").
-      // Schema-wise they're run-scoped; we filter the explicit-next-fight
-      // ones via a SECONDARY field if added later. For now they persist
-      // run-wide, matching the schema.
-      return true
-    }))
+    // effects stay until raid end. Shared with the Gauntlet host via
+    // expireAfterFight so the two can't drift on what's one-shot.
+    setActiveTideEffects(expireAfterFight)
 
     const advanceToNext = () => {
       setEnemySinking(false)

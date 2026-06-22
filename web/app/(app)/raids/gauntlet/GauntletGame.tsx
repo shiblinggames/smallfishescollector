@@ -20,7 +20,7 @@ import {
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT,
   type GauntletFight, type GauntletRollState,
 } from '@/lib/gauntlet'
-import { drawTides, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
+import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath } from './actions'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -164,6 +164,11 @@ export default function GauntletGame(props: GauntletGameProps) {
 
     rollStateRef.current = advanceRollState(rollStateRef.current, f)
     const clearedNow = rollStateRef.current.cleared
+
+    // Expire one-shot ("next enemy") tide effects now that this fight ended,
+    // so e.g. the half-health tide hits only the next ship, not every ship
+    // for the rest of the run. Same rule the boss-raid host uses.
+    setActiveTideEffects(expireAfterFight)
 
     // Crew/repair cooldown: abilities refresh every N cleared rounds.
     if (clearedNow % GAUNTLET_COOLDOWN_ROUNDS === 0) setUsedAbilityIds(new Set())

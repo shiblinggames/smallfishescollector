@@ -88,6 +88,25 @@ export type TideEffect =
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
 
+// Drop the one-shot ("next enemy" / next-fight) tide effects once a fight
+// resolves. Boss-scope and allRemaining effects survive (they expire at the
+// boss fight / raid end). EVERY tide host must run this after each fight, or
+// a "next enemy" effect (e.g. enemyHpScale, the half-health tide) silently
+// persists for the rest of the run. Centralized so RaidGame and GauntletGame
+// can't drift on which effects are one-shot.
+export function expireAfterFight(effects: TideEffect[]): TideEffect[] {
+  return effects.filter(e => {
+    if (e.kind === 'enemyHpScale')                                return false
+    if (e.kind === 'enemyStartChargesDelta')                      return false
+    if (e.kind === 'startCharges'    && e.scope === 'nextFight')  return false
+    if (e.kind === 'startHpDelta'    && e.scope === 'nextFight')  return false
+    if (e.kind === 'incomingDmgMult' && e.scope === 'nextFight')  return false
+    if (e.kind === 'dodgeBonus'      && e.scope === 'nextFight')  return false
+    if (e.kind === 'speedDelta'      && e.scope === 'next2Fights') return false
+    return true
+  })
+}
+
 export interface TideChoice {
   /** Stable id for analytics / Ledger ordering. */
   id: string
