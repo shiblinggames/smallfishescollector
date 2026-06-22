@@ -888,12 +888,16 @@ function drawGauntletTide(depth: number, hp: number, hpMax: number): TideEvent {
 // a burst of light + haptic + SFX fires, and the haul counts up out of it.
 type RewardOk = Extract<CashResult, { ok: true }>
 
+// One chest sprite for the whole Locker (Davy's chest); the tiers are told
+// apart by the reveal EFFECTS, not the art — `color` tints the glow/rays and
+// the tier number drives how big the burst gets (see ChestOpenFx).
+const DAVY_CHEST = { closed: '/davychestclosed.png', open: '/davychestopen.png' }
 const CHEST_ART: Record<number, { closed: string; open: string; color: string }> = {
-  1: { closed: '/crateclosed.png',        open: '/crateopen.png',        color: '#c08a4e' },
-  2: { closed: '/metalcrateclosed.png',   open: '/metalcrateopen.png',   color: '#9fb0bf' },
-  3: { closed: '/goldcrateclosed.png',    open: '/goldcrateopen.png',    color: '#f0c040' },
-  4: { closed: '/diamondcrateclosed.png', open: '/diamondcrateopen.png', color: '#7fdce8' },
-  5: { closed: '/diamondcrateclosed.png', open: '/diamondcrateopen.png', color: '#a78bfa' },
+  1: { ...DAVY_CHEST, color: '#c08a4e' },
+  2: { ...DAVY_CHEST, color: '#9fb0bf' },
+  3: { ...DAVY_CHEST, color: '#f0c040' },
+  4: { ...DAVY_CHEST, color: '#7fdce8' },
+  5: { ...DAVY_CHEST, color: '#a78bfa' },
 }
 
 // rAF count-up for the reward numbers (easeOutCubic). Holds at 0 until `run`
@@ -922,6 +926,57 @@ function RewardLine({ label, to, suffix = '', color, delay, run }: { label: stri
       <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#9a948a' }}>{label}</span>
       <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color }}>+<CountUp to={to} run={run} />{suffix}</span>
     </motion.div>
+  )
+}
+
+// Tier-scaled chest-open effect. Same chest sprite at every tier; the richer
+// chests open louder — more mote spray, rotating light rays from tier 2, and a
+// second shock ring from tier 4. Deterministic (no random) so it reads the same
+// every haul. Sits absolutely inside the 200x200 chest box.
+function ChestOpenFx({ tier, color }: { tier: number; color: string }) {
+  const count = tier * 4
+  const motes = Array.from({ length: count }, (_, n) => {
+    const ang = (Math.PI * 2 * n) / count + (n % 2) * 0.32
+    const dist = 64 + (n % 4) * 18
+    return { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, size: 3 + (n % 3), dur: 0.6 + (n % 4) * 0.1, delay: (n % 3) * 0.04 }
+  })
+  return (
+    <>
+      {/* Rotating rays — appear from tier 2, brighter/denser up the ladder */}
+      {tier >= 2 && (
+        <motion.div
+          aria-hidden
+          initial={{ opacity: 0, scale: 0.5, rotate: 0 }}
+          animate={{ opacity: [0, Math.min(0.7, 0.32 + tier * 0.09), 0], scale: 1.5, rotate: 80 }}
+          transition={{ duration: 1.1, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', inset: -34, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen',
+            background: `conic-gradient(from 0deg, ${color}00, ${color}66, ${color}00, ${color}66, ${color}00, ${color}66, ${color}00${tier >= 4 ? `, ${color}66, ${color}00, ${color}66, ${color}00` : ''})`,
+          }}
+        />
+      )}
+      {/* Mote spray — count scales with tier */}
+      {motes.map((m, n) => (
+        <motion.div
+          key={n}
+          aria-hidden
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x: m.x, y: m.y, opacity: 0, scale: 0.3 }}
+          transition={{ duration: m.dur, delay: m.delay, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: m.size, height: m.size, marginLeft: -m.size / 2, marginTop: -m.size / 2, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}`, pointerEvents: 'none' }}
+        />
+      ))}
+      {/* Second shock ring — only the richest chests (tier 4-5) */}
+      {tier >= 4 && (
+        <motion.div
+          aria-hidden
+          initial={{ scale: 0.3, opacity: 0.85 }}
+          animate={{ scale: 2.7, opacity: 0 }}
+          transition={{ duration: 0.8, delay: 0.12, ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 24px ${color}`, pointerEvents: 'none' }}
+        />
+      )}
+    </>
   )
 }
 
@@ -958,8 +1013,9 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
   function open() {
     if (opened) return
     setOpened(true)
-    vibrate([0, 30, 55, 45])
-    import('@/lib/fishingMusic').then(m => m.playForgeSfx(false)).catch(() => {})
+    const grand = r.chest.tier >= 4    // the richest chests open louder
+    vibrate(grand ? [0, 40, 35, 70, 35, 95] : [0, 30, 55, 45])
+    import('@/lib/fishingMusic').then(m => m.playChestSfx(grand)).catch(() => {})
     // Let the chest reveal first, THEN start everything incrementing: the
     // count-ups, the purse tick (the Nav listens for these), and the XP bar.
     window.setTimeout(() => {
@@ -1005,10 +1061,12 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
         ) : (
           <>
             <div style={{ position: 'relative', width: 200, height: 200, margin: '16px auto 4px' }}>
-              {/* Burst of light on open */}
-              <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0.85 }} animate={{ scale: 3, opacity: 0 }} transition={{ duration: 0.7, ease: 'easeOut' }}
+              {/* Burst of light on open — bigger for the richer chests */}
+              <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0.85 }} animate={{ scale: 2.4 + r.chest.tier * 0.4, opacity: 0 }} transition={{ duration: 0.7, ease: 'easeOut' }}
                 style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}cc 0%, ${art.color}33 35%, transparent 70%)` }} />
               <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}33 0%, transparent 68%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
+              {/* Tier-scaled spray / rays / shock ring */}
+              <ChestOpenFx tier={r.chest.tier} color={art.color} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <motion.img src={art.open} alt="" loading="eager" decoding="async"
                 initial={{ scale: 0.55 }} animate={{ scale: [0.55, 1.16, 1] }} transition={{ duration: 0.5, ease: 'easeOut' }}
