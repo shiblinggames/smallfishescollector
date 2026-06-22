@@ -3772,49 +3772,51 @@ function ChargesRow({ charges, max, small }: { charges: number; max: number; sma
 }
 
 function HitsplatOverlay({ text, color, big }: { text: string; color: string; big?: boolean }) {
-  // Magnitude scaling — a 12 damage graze and a 120 damage hit used to
-  // render identically. Now the damage number controls font + glow so
-  // big hits visibly *feel* heavier. Damage parsed from the leading
-  // "-N" pattern; misses ("Dodged"), heals ("+5"), and non-numeric
-  // splats fall through to the default size.
+  // MMO-style floating numbers: bold, outlined, glowing text — NO background
+  // bubble. The dark stroke keeps them legible over bright ship art, the glow
+  // sells the hit, and magnitude drives the font so a chip and a haymaker read
+  // very differently. Damage parsed from the leading "-N"; "Dodged"/"+heal"/
+  // non-numeric splats fall through to the default size.
   const dmgMatch = /^-?(\d+)$/.exec(text)
   const dmg = dmgMatch ? Number(dmgMatch[1]) : null
-  // Map damage into a 0.85x..1.5x scale, then 1.3x on top for crit (big).
-  // Anchor: 15 dmg = small graze, 50 dmg = default, 100+ dmg = chunky.
-  const mag = dmg != null ? Math.max(0.85, Math.min(1.5, dmg / 50)) : 1
-  const scaleMult = big ? mag * 1.3 : mag
-  const baseFontPx = big ? 20 : 13.6                              // 1.25rem / 0.85rem at 16px root
+  // Map damage into a 0.9x..1.7x scale, then a crit bump (big) on top.
+  // Anchor: ~10 dmg = chip, ~45 dmg = default, 90+ dmg = chunky.
+  const mag = dmg != null ? Math.max(0.9, Math.min(1.7, dmg / 45)) : 1
+  const scaleMult = big ? mag * 1.22 : mag
+  const baseFontPx = big ? 32 : 23
   const fontPx     = Math.round(baseFontPx * scaleMult)
-  const padY       = big ? 0.4 : 0.25
-  const padX       = big ? 0.85 : 0.6
-  // Heavier glow on the bigger numbers — same color, more spread.
-  const glowMult = Math.max(0.85, scaleMult)
+  const strokePx   = big ? 2.6 : 1.9
+  // Layered glow — a tight bright halo plus a soft wide bloom, hotter on crits.
+  const glow = big
+    ? `0 0 2px #000, 0 2px 5px rgba(0,0,0,0.7), 0 0 14px ${color}, 0 0 30px ${color}cc`
+    : `0 0 2px #000, 0 1px 4px rgba(0,0,0,0.7), 0 0 10px ${color}aa`
   return (
     <motion.div
-      // Smooth ease-out, no overshoot. The previous cubic-bezier
-      // [0.34, 1.56, 0.64, 1] had a control-y of 1.56 — the scale and y
-      // values shot past their target and bounced back, which on text
-      // (damage numbers, "Dodged") reads as the word briefly repeating.
-      initial={{ opacity: 0, y: 4, scale: big ? 0.6 : 0.7 }}
-      animate={{ opacity: 1, y: big ? -36 : -28, scale: big ? 1.25 : 1 }}
-      exit={{ opacity: 0, y: big ? -48 : -38, scale: big ? 1.3 : 1 }}
+      // Crits punch IN (start oversized, settle to 1) for weight; normal hits
+      // grow in. Both are monotonic on scale, so there's no overshoot bounce
+      // that would read as the number flickering/repeating.
+      // x:'-50%' is the centering offset (NOT a static `transform`, which FM
+      // would clobber once it animates scale/y). FM composes x+y+scale into one
+      // transform, so the splat stays centred under left:50% throughout.
+      initial={{ opacity: 0, x: '-50%', y: 2, scale: big ? 1.55 : 0.55 }}
+      animate={{ opacity: 1, x: '-50%', y: big ? -38 : -30, scale: 1 }}
+      exit={{ opacity: 0, x: '-50%', y: big ? -60 : -48, scale: big ? 1.1 : 0.92 }}
       transition={{
-        opacity: { duration: 0.18 },
-        y:       { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
-        scale:   { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+        opacity: { duration: 0.14 },
+        y:       { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+        scale:   { duration: big ? 0.2 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
       }}
       style={{
-        position: 'absolute', left: '50%', top: '40%', transform: 'translateX(-50%)',
+        position: 'absolute', left: '50%', top: '38%',
         pointerEvents: 'none', zIndex: 10,
-        background: color, color: '#ffffff',
-        padding: `${padY}rem ${padX}rem`,
-        borderRadius: big ? 14 : 10,
-        fontFamily: 'var(--font-cinzel)', fontWeight: 700,
-        fontSize: `${fontPx}px`,
-        boxShadow: big
-          ? `0 ${6 * glowMult}px ${26 * glowMult}px ${color}cc, 0 0 ${14 * glowMult}px ${color}aa`
-          : `0 ${3 * glowMult}px ${14 * glowMult}px ${color}99, 0 0 ${8 * glowMult}px ${color}55`,
-        textShadow: '0 1px 4px rgba(0,0,0,0.65)',
+        color,
+        fontFamily: 'var(--font-cinzel)', fontWeight: 800,
+        fontStyle: big ? 'italic' : 'normal',
+        fontSize: `${fontPx}px`, lineHeight: 1, letterSpacing: '0.01em',
+        WebkitTextStrokeWidth: `${strokePx}px`,
+        WebkitTextStrokeColor: 'rgba(0,0,0,0.92)',
+        paintOrder: 'stroke fill',
+        textShadow: glow,
         whiteSpace: 'nowrap',
       }}
     >
