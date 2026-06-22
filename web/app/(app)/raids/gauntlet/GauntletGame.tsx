@@ -26,6 +26,7 @@ import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type Tide
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath } from './actions'
 import { getRaidItem } from '@/lib/raidItems'
 import { vibrate } from '@/lib/haptics'
+import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 
 type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'tide' | 'curse' | 'boon' | 'between' | 'reward' | 'dead'
 
@@ -909,6 +910,17 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
   const art = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
   const newBest = r.depth >= r.deepest
 
+  // Nav level + XP bar — the banked XP visibly flows into the bar as the chest
+  // opens. Old XP is derived (new total minus this haul's gain).
+  const oldXp = Math.max(0, r.newExpeditionXP - r.bankedXp)
+  const oldProg = getXPProgress(oldXp)
+  const newProg = getXPProgress(r.newExpeditionXP)
+  const leveledUp = newProg.level > oldProg.level
+  // On a level-up the bar fills from EMPTY into the new level (matches the
+  // fishing/trawl feel); otherwise it pushes forward from where it was.
+  const barStart = leveledUp ? 0 : oldProg.progress
+  const barEnd = newProg.level >= MAX_LEVEL ? 1 : newProg.progress
+
   function open() {
     if (opened) return
     setOpened(true)
@@ -919,6 +931,8 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
     // flows into your purse as the chest counts up.
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     if (r.gems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+    // A second haptic punch when the bar reaches the new level.
+    if (leveledUp) window.setTimeout(() => vibrate([0, 45, 70, 45]), 1200)
   }
 
   return (
@@ -978,6 +992,31 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
               <RewardLine label="Nav XP" to={r.bankedXp} color="#4ade80" delay={0.32} />
               {r.gems > 0 && <RewardLine label="Gems" to={r.gems} suffix=" ◆" color="#a78bfa" delay={0.44} />}
             </div>
+
+            {/* Nav level + XP bar — the banked Nav XP flows into the bar as the
+                chest opens, and the level pops if you crossed one. */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.35 }}
+              style={{ marginTop: 14, textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 5 }}>
+                <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#7fa8d8' }}>Navigation</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                  {leveledUp && (
+                    <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.25, type: 'spring', stiffness: 320, damping: 16 }}
+                      className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#cfe2ff', background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.55)', borderRadius: 999, padding: '0.12rem 0.45rem', boxShadow: '0 0 12px rgba(96,165,250,0.35)' }}>
+                      Level Up · {oldProg.level} → {newProg.level}
+                    </motion.span>
+                  )}
+                  <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color: '#cfe2ff' }}>Lv {newProg.level}</span>
+                </div>
+              </div>
+              <div style={{ height: 9, borderRadius: 5, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <motion.div initial={{ width: `${Math.round(barStart * 100)}%` }} animate={{ width: `${Math.round(barEnd * 100)}%` }} transition={{ delay: 0.7, duration: 1, ease: 'easeOut' }}
+                  style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', boxShadow: '0 0 8px rgba(96,165,250,0.7)' }} />
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.56rem', color: '#7a766e', marginTop: 4 }}>
+                {newProg.level >= MAX_LEVEL ? 'Max level' : `${Math.round(newProg.progress * 100)}% to Lv ${newProg.level + 1}`}
+              </p>
+            </motion.div>
 
             {newBest && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
