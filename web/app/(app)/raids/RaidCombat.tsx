@@ -583,8 +583,8 @@ export default function RaidCombat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nameplateFxKey])
   const [resolveLog, setResolveLog] = useState<string[]>([])
-  const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
-  const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean } | null>(null)
+  const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean; volley?: boolean } | null>(null)
+  const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean; volley?: boolean } | null>(null)
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -597,7 +597,7 @@ export default function RaidCombat({
   // but nothing referenced them (legacy from the ripped voyage page).
   const [enemySinking, setEnemySinking] = useState(false)
   const [enemyShakeKey, setEnemyShakeKey] = useState(0)
-  const [enemyShakeKind, setEnemyShakeKind] = useState<'hit' | 'crit'>('hit')
+  const [enemyShakeKind, setEnemyShakeKind] = useState<'hit' | 'volley' | 'crit'>('hit')
   const [playerShakeKey, setPlayerShakeKey] = useState(0)
   const [playerRecoilKey, setPlayerRecoilKey] = useState(0)
   const [cannonShot, setCannonShot]   = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
@@ -688,6 +688,14 @@ export default function RaidCombat({
         x:      [0, -10, 10, -8, 8, -4, 4, -2, 0],
         rotate: [0, -1.5, 1.5, -1, 1, -0.5, 0.3, 0, 0],
         transition: { duration: 0.6 },
+      })
+    } else if (enemyShakeKind === 'volley') {
+      // volley-shake — a stuttering 3-hit rattle between hit and crit, so the
+      // triple cannonball burst lands heavier than a single shot.
+      enemyShakeCtrl.start({
+        x:      [0, -8, 7, -8, 7, -6, 5, -3, 2, 0],
+        rotate: [0, -1.2, 1.1, -1.1, 1, -0.7, 0.5, -0.3, 0, 0],
+        transition: { duration: 0.55 },
       })
     } else {
       // hit-shake (0.45s)
@@ -2025,11 +2033,24 @@ export default function RaidCombat({
       if (isAttack && step.who === 'player') {
         // Player firing: cannon shot + recoil immediately, projectile flies,
         // then splat + shake + HP update + crit flash all together.
-        setPlayerRecoilKey(k => k + 1)
+        const isVolleyShot = step.action === 'volley' && !step.big
         const cannonKind: 'normal' | 'volley' | 'crit' =
-          step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
-        setCannonShot({ key: Date.now() + i, kind: cannonKind })
-        setTimeout(() => setCannonShot(null), 700)
+          step.big ? 'crit' : isVolleyShot ? 'volley' : 'normal'
+        if (isVolleyShot) {
+          // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
+          // burst, so a volley fires visibly as a salvo, not one shot.
+          ;[0, 95, 190].forEach((off, k) => {
+            playStepChainRef.current.push(setTimeout(() => {
+              setPlayerRecoilKey(kk => kk + 1)
+              setCannonShot({ key: Date.now() + i + k * 101, kind: 'volley' })
+              playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 480))
+            }, off))
+          })
+        } else {
+          setPlayerRecoilKey(k => k + 1)
+          setCannonShot({ key: Date.now() + i, kind: cannonKind })
+          setTimeout(() => setCannonShot(null), 700)
+        }
 
         setTimeout(() => {
           setEnemyHp(step.eHp)
@@ -2040,10 +2061,11 @@ export default function RaidCombat({
           // catches up.
           setPlayerHp(step.pHp)
           if (step.splatTarget === 'enemy') {
-            setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big })
+            setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big, volley: isVolleyShot })
             if (!isDodged) {
-              setEnemyShakeKind(step.big ? 'crit' : 'hit')
+              setEnemyShakeKind(step.big ? 'crit' : isVolleyShot ? 'volley' : 'hit')
               setEnemyShakeKey(k => k + 1)
+              if (isVolleyShot) vibrate([0, 22, 26, 30])
             }
             if (!isDodged) {
               // Show impact burst exploding on the enemy ship (crit cascade is huge)
@@ -2075,21 +2097,33 @@ export default function RaidCombat({
       } else if (isAttack && step.who === 'enemy') {
         // Enemy firing at player — muzzle flash off the enemy gun deck now,
         // projectile flies, then splat + shake + impact spray on the player hull.
+        const eIsVolley = step.action === 'volley' && !step.big
         const eCannonKind: 'normal' | 'volley' | 'crit' =
-          step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
-        setEnemyMuzzle({ key: Date.now() + i, kind: eCannonKind })
-        setTimeout(() => setEnemyMuzzle(null), 700)
+          step.big ? 'crit' : eIsVolley ? 'volley' : 'normal'
+        if (eIsVolley) {
+          // Mirror the player's salvo — three muzzle pops off the enemy deck.
+          ;[0, 95, 190].forEach((off, k) => {
+            playStepChainRef.current.push(setTimeout(() => {
+              setEnemyMuzzle({ key: Date.now() + i + k * 103, kind: 'volley' })
+              playStepChainRef.current.push(setTimeout(() => setEnemyMuzzle(null), 480))
+            }, off))
+          })
+        } else {
+          setEnemyMuzzle({ key: Date.now() + i, kind: eCannonKind })
+          setTimeout(() => setEnemyMuzzle(null), 700)
+        }
         setTimeout(() => {
           setPlayerHp(step.pHp)
           // ALSO sync enemy HP — Vampiric lifesteal lands in step.eHp on
           // an enemy-attacks step, so the heal needs a separate push.
           setEnemyHp(step.eHp)
           if (step.splatTarget === 'player') {
-            setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big })
+            setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big, volley: eIsVolley })
             if (!isDodged) {
               setPlayerShakeKey(k => k + 1)
               setPlayerImpact({ key: Date.now() + i + 3, kind: eCannonKind })
               setTimeout(() => setPlayerImpact(null), 700)
+              if (eIsVolley) vibrate([0, 22, 26, 30])
             }
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
@@ -2753,7 +2787,7 @@ export default function RaidCombat({
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
             )}
             <AnimatePresence>
-              {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} />}
+              {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} volley={eHitsplat.volley} />}
             </AnimatePresence>
           </motion.div>
         </motion.div>
@@ -2840,7 +2874,7 @@ export default function RaidCombat({
               )}
             </motion.div>
             <AnimatePresence>
-              {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
+              {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} volley={pHitsplat.volley} />}
             </AnimatePresence>
           </motion.div>
           {/* Davy's Heavy Cannon heat — a per-fight damage stack badge that runs
@@ -4113,24 +4147,24 @@ function ChargesRow({ charges, max, small }: { charges: number; max: number; sma
   )
 }
 
-function HitsplatOverlay({ text, color, big }: { text: string; color: string; big?: boolean }) {
+function HitsplatOverlay({ text, color, big, volley }: { text: string; color: string; big?: boolean; volley?: boolean }) {
   // MMO-style floating numbers: bold, outlined, glowing text — NO background
   // bubble. The dark stroke keeps them legible over bright ship art, the glow
   // sells the hit, and magnitude drives the font so a chip and a haymaker read
-  // very differently. Damage parsed from the leading "-N"; "Dodged"/"+heal"/
-  // non-numeric splats fall through to the default size.
+  // very differently. Crit (big) is the gold italic haymaker; volley is the
+  // heavier-than-normal 3-shot burst (bigger, a fiery edge, a punch-in).
   const dmgMatch = /^-?(\d+)$/.exec(text)
   const dmg = dmgMatch ? Number(dmgMatch[1]) : null
-  // Map damage into a 0.9x..1.7x scale, then a crit bump (big) on top.
-  // Anchor: ~10 dmg = chip, ~45 dmg = default, 90+ dmg = chunky.
+  const isVolley = !!volley && !big
+  // Map damage into a 0.9x..1.7x scale, then a crit/volley bump on top.
   const mag = dmg != null ? Math.max(0.9, Math.min(1.7, dmg / 45)) : 1
-  const scaleMult = big ? mag * 1.22 : mag
-  const baseFontPx = big ? 32 : 23
+  const scaleMult = big ? mag * 1.22 : isVolley ? mag * 1.1 : mag
+  const baseFontPx = big ? 32 : isVolley ? 27 : 23
   const fontPx     = Math.round(baseFontPx * scaleMult)
   // Outline via a tight 8-way dark shadow ring (smoother on serif glyphs than
   // WebkitTextStroke, which blobs on Cinzel's thin strokes), then a colored
-  // glow + soft drop for depth — hotter bloom on crits.
-  const o = big ? 1.3 : 1
+  // glow + soft drop for depth.
+  const o = big ? 1.3 : isVolley ? 1.15 : 1
   const ring = [
     `${o}px ${o}px 0 #0b0e14`, `-${o}px ${o}px 0 #0b0e14`,
     `${o}px -${o}px 0 #0b0e14`, `-${o}px -${o}px 0 #0b0e14`,
@@ -4139,22 +4173,24 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
   ].join(', ')
   const glow = big
     ? `${ring}, 0 2px 5px rgba(0,0,0,0.55), 0 0 13px ${color}, 0 0 28px ${color}bb`
-    : `${ring}, 0 1px 4px rgba(0,0,0,0.55), 0 0 9px ${color}99`
+    : isVolley
+      // Fiery edge — a warm bloom layered under the damage color so a volley
+      // reads hot, distinct from a plain single shot.
+      ? `${ring}, 0 2px 5px rgba(0,0,0,0.55), 0 0 11px ${color}, 0 0 20px rgba(255,150,60,0.7)`
+      : `${ring}, 0 1px 4px rgba(0,0,0,0.55), 0 0 9px ${color}99`
   return (
     <motion.div
-      // Crits punch IN (start oversized, settle to 1) for weight; normal hits
-      // grow in. Both are monotonic on scale, so there's no overshoot bounce
-      // that would read as the number flickering/repeating.
+      // Crits + volleys punch IN (start oversized, settle to 1); normal hits
+      // grow in. Monotonic scale = no overshoot bounce that reads as flicker.
       // x:'-50%' is the centering offset (NOT a static `transform`, which FM
-      // would clobber once it animates scale/y). FM composes x+y+scale into one
-      // transform, so the splat stays centred under left:50% throughout.
-      initial={{ opacity: 0, x: '-50%', y: 2, scale: big ? 1.55 : 0.55 }}
+      // would clobber once it animates scale/y).
+      initial={{ opacity: 0, x: '-50%', y: 2, scale: big ? 1.55 : isVolley ? 1.3 : 0.55 }}
       animate={{ opacity: 1, x: '-50%', y: big ? -38 : -30, scale: 1 }}
       exit={{ opacity: 0, x: '-50%', y: big ? -60 : -48, scale: big ? 1.1 : 0.92 }}
       transition={{
         opacity: { duration: 0.14 },
         y:       { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
-        scale:   { duration: big ? 0.2 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
+        scale:   { duration: big ? 0.2 : isVolley ? 0.22 : 0.26, ease: [0.2, 1.1, 0.4, 1] },
       }}
       style={{
         position: 'absolute', left: '50%', top: '38%',
@@ -4162,7 +4198,7 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
         color,
         fontFamily: 'var(--font-cinzel)', fontWeight: 800,
         fontStyle: big ? 'italic' : 'normal',
-        fontSize: `${fontPx}px`, lineHeight: 1, letterSpacing: '0.01em',
+        fontSize: `${fontPx}px`, lineHeight: 1, letterSpacing: isVolley ? '0.02em' : '0.01em',
         textShadow: glow,
         whiteSpace: 'nowrap',
       }}
