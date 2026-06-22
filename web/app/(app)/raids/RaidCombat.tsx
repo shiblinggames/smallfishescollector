@@ -735,6 +735,9 @@ export default function RaidCombat({
   // both reset when the fight moves to a new enemy.
   const enemyBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
   const enemyFrozenRef = useRef(false)
+  // Carapace teaching line is logged only on the FIRST soak per enemy — the
+  // deflect visual + reduced numbers carry every subsequent soak. Reset per enemy.
+  const carapaceLoggedRef = useRef(false)
   useEffect(() => { playerHpRef.current = playerHp }, [playerHp])
 
   // ── Flee — leaving a real raid is a gamble, not a free exit ───────────────
@@ -833,7 +836,7 @@ export default function RaidCombat({
     // enemyHpScale tide always targets a LATER enemy.
     const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
     setEnemyHp(scaledHp); enemyHpRef.current = scaledHp
-    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; snareBlockedRef.current = false
+    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; snareBlockedRef.current = false; carapaceLoggedRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
     // via Spet's drops — a CHANCE to open each fight with one chambered (Spet's
@@ -1552,7 +1555,12 @@ export default function RaidCombat({
             const before = dmg
             dmg = Math.max(1, Math.round(dmg * (1 - dr)))
             carapaceSoaked = true
-            stepLines.push(`${enemy.abilityName ?? 'Carapace'}! The plate shrugs off your fire (${before} → ${dmg}). Volley to crack it.`)
+            // Log the teaching line only once per enemy — the deflect cue +
+            // reduced numbers carry every soak after that, keeping the log clean.
+            if (!carapaceLoggedRef.current) {
+              carapaceLoggedRef.current = true
+              stepLines.push(`${enemy.abilityName ?? 'Carapace'}! The plate shrugs off your fire (${before} → ${dmg}). Volley to crack it.`)
+            }
           }
           // Ironclad affix: 50% chance to soak 30% off the hit on top of
           // any themed defense. Stacks multiplicatively, never floors
