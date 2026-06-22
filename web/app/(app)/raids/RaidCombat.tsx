@@ -603,7 +603,13 @@ export default function RaidCombat({
   const [abilityCast, setAbilityCast] = useState<{ key: number; label: string; name: string; color: string; image?: string | null; emoji?: string } | null>(null)
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
-  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' } | null>(null)
+  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' } | null>(null)
+  // Enemy firing back: muzzle flash on the enemy hull + impact spray on the
+  // player hull (the receiving end now gets the same treatment the enemy does).
+  const [enemyMuzzle, setEnemyMuzzle] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
+  const [playerImpact, setPlayerImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
+  // Heal sparkle on the player hull (Mender / Abyssal Tide / repair kit).
+  const [playerAura, setPlayerAura] = useState<{ key: number } | null>(null)
 
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
@@ -834,6 +840,7 @@ export default function RaidCombat({
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
     setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null)
+    setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
@@ -966,6 +973,18 @@ export default function RaidCombat({
     setAbilityCast({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: `${crew.name} · ${def.name}`, color: def.color, image: crew.imageUrl, emoji: def.emoji })
     setTimeout(() => setAbilityCast(c => (c && c.key === castKey ? null : c)), 1150)
     vibrate(18)
+
+    // Per-class hull FX alongside the banner: heals sparkle the player hull,
+    // a snare claps a jamming shimmer on the enemy (its dodge is locked).
+    if (def.id === 'mender' || def.id === 'abyssal_tide') {
+      const hk = castKey + 1
+      setPlayerAura({ key: hk })
+      setTimeout(() => setPlayerAura(a => (a && a.key === hk ? null : a)), 900)
+    } else if (def.id === 'snare') {
+      const sk = castKey + 2
+      setEnemyAura({ key: sk, kind: 'snared' })
+      setTimeout(() => setEnemyAura(a => (a && a.key === sk ? null : a)), 900)
+    }
 
     // Dispatch on class id — TS narrows the milestone shape from the
     // per-class table.
@@ -1954,7 +1973,12 @@ export default function RaidCombat({
           }
         }, PROJECTILE_FLIGHT_MS)
       } else if (isAttack && step.who === 'enemy') {
-        // Enemy firing at player — brief beat, then splat + shake + HP update.
+        // Enemy firing at player — muzzle flash off the enemy gun deck now,
+        // projectile flies, then splat + shake + impact spray on the player hull.
+        const eCannonKind: 'normal' | 'volley' | 'crit' =
+          step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
+        setEnemyMuzzle({ key: Date.now() + i, kind: eCannonKind })
+        setTimeout(() => setEnemyMuzzle(null), 700)
         setTimeout(() => {
           setPlayerHp(step.pHp)
           // ALSO sync enemy HP — Vampiric lifesteal lands in step.eHp on
@@ -1962,7 +1986,11 @@ export default function RaidCombat({
           setEnemyHp(step.eHp)
           if (step.splatTarget === 'player') {
             setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big })
-            if (!isDodged) setPlayerShakeKey(k => k + 1)
+            if (!isDodged) {
+              setPlayerShakeKey(k => k + 1)
+              setPlayerImpact({ key: Date.now() + i + 3, kind: eCannonKind })
+              setTimeout(() => setPlayerImpact(null), 700)
+            }
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
         }, PROJECTILE_FLIGHT_MS)
@@ -1975,6 +2003,9 @@ export default function RaidCombat({
           if (step.splatTarget === 'player') {
             setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: false })
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+            const ak = Date.now() + i + 4
+            setPlayerAura({ key: ak })
+            setTimeout(() => setPlayerAura(a => (a && a.key === ak ? null : a)), 900)
           }
         }, PROJECTILE_FLIGHT_MS)
       } else {
@@ -2504,6 +2535,17 @@ export default function RaidCombat({
                 {affix.name}
               </p>
             )}
+            {/* Persistent snare tell — the enemy's helm is jammed, no dodging */}
+            {snareDodgeTurns !== 0 && (
+              <span className="font-karla font-700 uppercase" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 3,
+                padding: '1px 6px', borderRadius: 999, fontSize: '0.46rem', letterSpacing: '0.1em',
+                color: '#f0d79a', background: 'rgba(217,176,102,0.16)', border: '1px solid rgba(217,176,102,0.5)',
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+                Dodge Locked{snareDodgeTurns > 0 ? ` · ${snareDodgeTurns}` : ''}
+              </span>
+            )}
             <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
@@ -2573,10 +2615,14 @@ export default function RaidCombat({
                 pointerEvents: 'none',
               }}
             />
-            {/* Status aura — burning embers / freezing rime over the hull */}
+            {/* Status aura — burning embers / freezing rime / snare jam over the hull */}
             <AnimatePresence>
               {enemyAura && <EnemyStatusAura key={`ea-${enemyAura.key}`} kind={enemyAura.kind} />}
             </AnimatePresence>
+            {/* Muzzle flash when the enemy fires back (toward the player, left) */}
+            {enemyMuzzle && (
+              <CannonShotBurst key={`em-${enemyMuzzle.key}`} kind={enemyMuzzle.kind} dir="left" />
+            )}
             {/* Explosion burst on impact — overlays the enemy hull */}
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
@@ -2635,6 +2681,14 @@ export default function RaidCombat({
                   />
                 )}
               </AnimatePresence>
+              {/* Heal sparkle — green motes rising off the patched hull */}
+              <AnimatePresence>
+                {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} />}
+              </AnimatePresence>
+              {/* Impact spray when the enemy's shot lands on the player hull */}
+              {playerImpact && (
+                <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
+              )}
             </motion.div>
             <AnimatePresence>
               {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
@@ -3662,58 +3716,54 @@ function EnemyStatsPopup({
   )
 }
 
-function CannonShotBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
-  // Burst of emoji projectiles flying off the cannon. Crit = big cascade with star + fire.
+function CannonShotBurst({ kind, dir = 'right' }: { kind: 'normal' | 'volley' | 'crit'; dir?: 'left' | 'right' }) {
+  // Muzzle flash off the gun deck: a hot bloom + a cone of sparks/smoke fired
+  // in the shot direction (right = player firing at the enemy, left = enemy
+  // firing back). No emoji — matches the particle impact on the receiving hull.
   const big = kind === 'crit'
   const volley = kind === 'volley'
-  const baseFont = big ? '1.6rem' : volley ? '1.3rem' : '0.95rem'
+  const sign = dir === 'right' ? 1 : -1
+  const count = big ? 13 : volley ? 9 : 6
+  const reach = big ? 44 : volley ? 34 : 26
+  const sparks = useMemo(() => Array.from({ length: count }, (_, n) => {
+    const ang = (Math.random() - 0.5) * 0.95          // forward cone
+    const dist = reach * (0.55 + Math.random() * 0.75)
+    return {
+      x: sign * Math.cos(ang) * dist,
+      y: Math.sin(ang) * dist - 3,
+      size: (big ? 4.5 : 3.6) * (0.6 + Math.random() * 0.7),
+      color: Math.random() < 0.5 ? '#ffd27a' : '#ff9a3c',
+      dur: 0.32 + Math.random() * 0.2,
+    }
+  }), [count, reach, sign])
+  // Muzzle sits at the firing edge of the hull.
+  const left = dir === 'right' ? '82%' : '18%'
   return (
-    <>
-      <span style={{
-        position: 'absolute', left: '78%', top: '38%',
-        fontSize: baseFont,
-        animation: 'rc-cannon-shot 0.55s ease forwards',
-        pointerEvents: 'none', zIndex: 10,
-      }}>💥</span>
-      {big && (
-        <>
-          <span style={{
-            position: 'absolute', left: '92%', top: '20%', fontSize: '1.5rem',
-            animation: 'rc-cannon-shot 0.5s 0.06s ease forwards',
-            pointerEvents: 'none', zIndex: 10,
-          }}>💥</span>
-          <span style={{
-            position: 'absolute', left: '85%', top: '55%', fontSize: '1.3rem',
-            animation: 'rc-cannon-shot 0.55s 0.1s ease forwards',
-            pointerEvents: 'none', zIndex: 10,
-          }}>💥</span>
-          <span style={{
-            position: 'absolute', left: '108%', top: '42%', fontSize: '1.9rem',
-            animation: 'rc-cannon-shot 0.65s 0.04s ease forwards',
-            pointerEvents: 'none', zIndex: 10,
-          }}>⭐</span>
-          <span style={{
-            position: 'absolute', left: '88%', top: '38%', fontSize: '1.5rem',
-            animation: 'rc-cannon-shot 0.7s 0.12s ease forwards',
-            pointerEvents: 'none', zIndex: 10,
-          }}>🔥</span>
-        </>
-      )}
-      {volley && !big && (
-        <>
-          <span style={{
-            position: 'absolute', left: '90%', top: '55%', fontSize: '1.3rem',
-            animation: 'rc-cannon-shot 0.5s 0.07s ease forwards',
-            pointerEvents: 'none', zIndex: 10,
-          }}>💥</span>
-          <span style={{
-            position: 'absolute', left: '95%', top: '20%', fontSize: '1.4rem',
-            animation: 'rc-cannon-shot 0.6s 0.14s ease forwards',
-            pointerEvents: 'none', zIndex: 10,
-          }}>🔥</span>
-        </>
-      )}
-    </>
+    <div style={{ position: 'absolute', left, top: '42%', width: 0, height: 0, pointerEvents: 'none', zIndex: 10 }}>
+      <motion.div
+        initial={{ scale: 0.3, opacity: 1 }}
+        animate={{ scale: big ? 1.5 : 1.1, opacity: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: 0, top: 0, width: big ? 40 : 28, height: big ? 40 : 28,
+          marginLeft: big ? -20 : -14, marginTop: big ? -20 : -14, borderRadius: '50%',
+          background: 'radial-gradient(circle, #fff 0%, rgba(255,200,120,0.9) 40%, transparent 72%)',
+        }}
+      />
+      {sparks.map((s, n) => (
+        <motion.div
+          key={n}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x: s.x, y: s.y, opacity: 0, scale: 0.4 }}
+          transition={{ duration: s.dur, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: 0, top: 0, width: s.size, height: s.size,
+            marginLeft: -s.size / 2, marginTop: -s.size / 2, borderRadius: '50%',
+            background: s.color, boxShadow: `0 0 5px ${s.color}`,
+          }}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -3895,16 +3945,20 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
 // Enemy status aura — a brief themed glow + drifting motes over the hull when
 // a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
 // settling. Localized to the enemy ship, fades on its own.
-function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' }) {
+function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' }) {
   const burn = kind === 'burn'
-  const color = burn ? '#fb923c' : '#7dd3fc'
-  const motes = useMemo(() => Array.from({ length: 6 }, (_, n) => ({
-    x: (Math.random() - 0.5) * 46,
-    y: (burn ? -1 : 1) * (12 + Math.random() * 26),   // embers rise, rime drifts down
+  const snared = kind === 'snared'
+  const color = burn ? '#fb923c' : snared ? '#d9b066' : '#7dd3fc'
+  const moteColor = burn ? '#ffd27a' : snared ? '#f0d79a' : '#e0f4ff'
+  const motes = useMemo(() => Array.from({ length: snared ? 8 : 6 }, (_, n) => ({
+    // snare = motes clamp INWARD (a tightening net); burn rises, rime drifts down.
+    x: snared ? (Math.random() - 0.5) * 52 : (Math.random() - 0.5) * 46,
+    y: snared ? (Math.random() - 0.5) * 40 : (burn ? -1 : 1) * (12 + Math.random() * 26),
     size: 3 + Math.random() * 3,
     delay: Math.random() * 0.12,
     dur: 0.6 + Math.random() * 0.3,
-  }) ), [burn])
+    inward: snared,
+  }) ), [burn, snared])
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -3918,7 +3972,47 @@ function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' }) {
         position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
         background: `radial-gradient(ellipse at center, ${color}aa 0%, ${color}44 42%, transparent 70%)`,
       }} />
-      {/* Drifting motes */}
+      {/* Drifting motes — snare clamps inward, burn/freeze drift outward */}
+      {motes.map((m, n) => (
+        <motion.div
+          key={n}
+          initial={{ x: m.inward ? m.x : 0, y: m.inward ? m.y : 0, opacity: 0 }}
+          animate={{ x: m.inward ? 0 : m.x, y: m.inward ? 0 : m.y, opacity: [0, 1, 0] }}
+          transition={{ duration: m.dur, delay: m.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '46%', top: '52%', width: m.size, height: m.size,
+            marginLeft: -m.size / 2, marginTop: -m.size / 2, borderRadius: '50%',
+            background: moteColor, boxShadow: `0 0 6px ${color}`,
+          }}
+        />
+      ))}
+    </motion.div>
+  )
+}
+
+// Heal sparkle over the player hull — a soft green wash plus a few motes
+// rising off the deck, for Mender / Abyssal Tide / repair-kit patches.
+function PlayerStatusAura() {
+  const color = '#4ade80'
+  const motes = useMemo(() => Array.from({ length: 6 }, () => ({
+    x: (Math.random() - 0.5) * 50,
+    y: -(14 + Math.random() * 30),                    // rise off the deck
+    size: 3 + Math.random() * 3,
+    delay: Math.random() * 0.14,
+    dur: 0.65 + Math.random() * 0.3,
+  })), [])
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 1, 1, 0] }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.85, times: [0, 0.2, 0.7, 1] }}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}
+    >
+      <div style={{
+        position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
+        background: `radial-gradient(ellipse at center, ${color}99 0%, ${color}3a 44%, transparent 72%)`,
+      }} />
       {motes.map((m, n) => (
         <motion.div
           key={n}
@@ -3926,9 +4020,9 @@ function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' }) {
           animate={{ x: m.x, y: m.y, opacity: [0, 1, 0] }}
           transition={{ duration: m.dur, delay: m.delay, ease: 'easeOut' }}
           style={{
-            position: 'absolute', left: '46%', top: '52%', width: m.size, height: m.size,
+            position: 'absolute', left: '50%', top: '56%', width: m.size, height: m.size,
             marginLeft: -m.size / 2, marginTop: -m.size / 2, borderRadius: '50%',
-            background: burn ? '#ffd27a' : '#e0f4ff', boxShadow: `0 0 6px ${color}`,
+            background: '#bbf7d0', boxShadow: `0 0 6px ${color}`,
           }}
         />
       ))}
