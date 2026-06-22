@@ -4179,14 +4179,17 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW }:
       {/* Inline keyframes for the drifting fog band. Local to the
           component because the rest of RaidCombat sets animations
           via inline strings already; no global stylesheet for it.
-          The band sits at -45% → 145% so the feathered edges sweep
-          fully off-screen each cycle, never visibly snapping. */}
+          translateX % is relative to the BAND's own width (38% of the
+          bar), so the range has to be wide enough that the band's dense
+          CENTER sweeps the full bar: -55% puts the center just off the
+          left edge, 218% puts it just off the right (was -45% → 145%,
+          which left the right ~quarter of the bar permanently clear). */}
       {hasFog && (
         <style>{`
           @keyframes mist-veil-drift {
-            0%   { transform: translateX(-45%); }
-            50%  { transform: translateX(145%); }
-            100% { transform: translateX(-45%); }
+            0%   { transform: translateX(-55%); }
+            50%  { transform: translateX(218%); }
+            100% { transform: translateX(-55%); }
           }
         `}</style>
       )}
