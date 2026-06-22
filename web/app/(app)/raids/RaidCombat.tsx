@@ -618,6 +618,9 @@ export default function RaidCombat({
   // Enemy firing back: muzzle flash on the enemy hull + impact spray on the
   // player hull (the receiving end now gets the same treatment the enemy does).
   const [enemyMuzzle, setEnemyMuzzle] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
+  // Carapace deflect — steely plate-flex + spark scatter when a non-volley hit
+  // gets shrugged off (Krust). Keyed counter; re-fires on each soak.
+  const [enemyDeflect, setEnemyDeflect] = useState(0)
   const [playerImpact, setPlayerImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   // Heal sparkle on the player hull (Mender / Abyssal Tide / repair kit).
   const [playerAura, setPlayerAura] = useState<{ key: number } | null>(null)
@@ -870,7 +873,7 @@ export default function RaidCombat({
     }, 600)
     setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
-    setEnemyBurning(false); setEnemyFrozen(false)
+    setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
@@ -1371,6 +1374,8 @@ export default function RaidCombat({
       reflectDmg?: number
       // Vampiric affix: HP the enemy drank back off the hit it landed.
       enemyHeal?: number
+      // Krust's Carapace soaked this (non-volley) hit — drives a deflect cue.
+      carapaceSoak?: boolean
     }
 
     // Hull plating: equipped damage-reduction items cut INCOMING enemy
@@ -1414,6 +1419,7 @@ export default function RaidCombat({
       let procStatus: 'burn' | 'freeze' | undefined
       let reflectDmgOut: number | undefined
       let enemyHealOut: number | undefined
+      let carapaceSoaked = false
       const stepLines: string[] = []
 
       // Snare made good — the enemy tried to slip aside but its helm is jammed,
@@ -1542,7 +1548,12 @@ export default function RaidCombat({
           // this answer (no enemy in that raid ever volleys themselves; the
           // player's volley is the response). Fire/graze still gets soaked.
           const dr = enemy.damageReduction ?? 0
-          if (dr > 0 && dmg > 0 && action !== 'volley') dmg = Math.max(1, Math.round(dmg * (1 - dr)))
+          if (dr > 0 && dmg > 0 && action !== 'volley') {
+            const before = dmg
+            dmg = Math.max(1, Math.round(dmg * (1 - dr)))
+            carapaceSoaked = true
+            stepLines.push(`${enemy.abilityName ?? 'Carapace'}! The plate shrugs off your fire (${before} → ${dmg}). Volley to crack it.`)
+          }
           // Ironclad affix: 50% chance to soak 30% off the hit on top of
           // any themed defense. Stacks multiplicatively, never floors
           // below 1. Push a log line when it triggers so the player
@@ -1816,6 +1827,7 @@ export default function RaidCombat({
         logLines: stepLines,
         procStatus,
         enemyHeal: enemyHealOut,
+        carapaceSoak: carapaceSoaked,
       })
 
       // Phase 2 revival — when the player's killing blow drops the boss
@@ -2068,11 +2080,18 @@ export default function RaidCombat({
               if (isVolleyShot) vibrate([0, 22, 26, 30])
             }
             if (!isDodged) {
-              // Show impact burst exploding on the enemy ship (crit cascade is huge)
-              const impactKind: 'normal' | 'volley' | 'crit' =
-                step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
-              setEnemyImpact({ key: Date.now() + i + 2, kind: impactKind })
-              setTimeout(() => setEnemyImpact(null), 700)
+              if (step.carapaceSoak) {
+                // Carapace shrugged it off — a steely deflect (plate flex +
+                // sparks bouncing away) instead of the penetrating debris burst,
+                // so a soaked single shot reads as blocked, not clean.
+                setEnemyDeflect(Date.now() + i + 11)
+              } else {
+                // Impact burst exploding on the enemy ship (crit cascade is huge)
+                const impactKind: 'normal' | 'volley' | 'crit' =
+                  step.big ? 'crit' : isVolleyShot ? 'volley' : 'normal'
+                setEnemyImpact({ key: Date.now() + i + 2, kind: impactKind })
+                setTimeout(() => setEnemyImpact(null), 700)
+              }
             }
             // Incendiary lit / Frozen iced — flare the matching hull aura the
             // instant the proc'd shot connects, and switch on the persistent
@@ -2786,6 +2805,8 @@ export default function RaidCombat({
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
             )}
+            {/* Carapace deflect — the plate shrugs a soaked shot away */}
+            {enemyDeflect > 0 && <CarapaceDeflect key={`cd-${enemyDeflect}`} />}
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} volley={eHitsplat.volley} />}
             </AnimatePresence>
@@ -4083,6 +4104,47 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
             marginLeft: -b.size / 2, marginTop: -b.size / 2, borderRadius: '50%',
             background: b.color, boxShadow: `0 0 5px ${b.color}`,
           }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Carapace deflect — the read when Krust's plate shrugs off a non-volley shot:
+// a steely plate-flex ring + a hard glint + sparks scattering sideways/down
+// (deflected, not penetrating). Reads as "blocked — volley to crack it".
+function CarapaceDeflect() {
+  const STEEL = '#9fc4e0'
+  const sparks = useMemo(() => Array.from({ length: 8 }, (_, n) => {
+    const side = n % 2 === 0 ? -1 : 1
+    const dist = 22 + Math.random() * 18
+    const ang = 0.15 + Math.random() * 0.75               // mostly down-and-out
+    return { x: side * Math.cos(ang) * dist, y: Math.abs(Math.sin(ang)) * dist + 4, size: 2.5 + Math.random() * 2, dur: 0.3 + Math.random() * 0.15 }
+  }), [])
+  return (
+    <div style={{ position: 'absolute', left: '46%', top: '46%', width: 0, height: 0, pointerEvents: 'none', zIndex: 11 }}>
+      {/* Plate flex ring */}
+      <motion.div
+        initial={{ scale: 0.4, opacity: 0.95 }}
+        animate={{ scale: 1.7, opacity: 0 }}
+        transition={{ duration: 0.42, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: 0, top: 0, width: 56, height: 56, marginLeft: -28, marginTop: -28, borderRadius: '50%', border: `2.5px solid ${STEEL}`, boxShadow: `0 0 16px ${STEEL}aa` }}
+      />
+      {/* Hard steel glint */}
+      <motion.div
+        initial={{ scale: 0.3, opacity: 1 }}
+        animate={{ scale: 1, opacity: 0 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: 0, top: 0, width: 32, height: 32, marginLeft: -16, marginTop: -16, borderRadius: '50%', background: `radial-gradient(circle, #fff 0%, ${STEEL}cc 48%, transparent 72%)` }}
+      />
+      {/* Deflected sparks */}
+      {sparks.map((s, n) => (
+        <motion.div
+          key={n}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x: s.x, y: s.y, opacity: 0, scale: 0.4 }}
+          transition={{ duration: s.dur, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: 0, top: 0, width: s.size, height: s.size, marginLeft: -s.size / 2, marginTop: -s.size / 2, borderRadius: '50%', background: STEEL, boxShadow: `0 0 5px ${STEEL}` }}
         />
       ))}
     </div>
