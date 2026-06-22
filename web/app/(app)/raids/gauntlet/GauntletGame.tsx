@@ -477,69 +477,109 @@ export default function GauntletGame(props: GauntletGameProps) {
     const chest = chestForDepth(cleared)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
     const previewXp = Math.round(pot * chest.potMult)
-    const hpPct = Math.round((playerHP / props.playerHPMax) * 100)
+    const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / props.playerHPMax) * 100)))
+    const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
+    const band = bandForDepth(cleared)
+    const boonCounts = Object.entries(activeBoons.reduce<Record<string, { name: string; n: number }>>((acc, b) => {
+      acc[b.id] = { name: b.name, n: (acc[b.id]?.n ?? 0) + 1 }
+      return acc
+    }, {}))
     return (
-      <Shell>
-        <Title sub={`${cleared} ${cleared === 1 ? 'round' : 'rounds'} deep`}>Catch Your Breath</Title>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
-          <div style={{ background: 'rgba(0,0,0,0.35)', border: `1px solid ${GOLD}33`, borderRadius: 12, padding: '0.8rem 0.9rem' }}>
-            <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#8a8880', marginBottom: 6 }}>If you cash out now</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <RewardRow label="Doubloons" value={`+${fmt(previewDoubloons)} ⟡`} color={GOLD} small />
-              <RewardRow label="Nav XP" value={`+${fmt(previewXp)}`} color="#4ade80" small />
-              {chest.gems > 0 && <RewardRow label="Gems" value={`+${chest.gems} ◆`} color="#a78bfa" small />}
-            </div>
-            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a948a', marginTop: 7 }}>
-              {chest.label}{chest.potMult > 1 ? ` · ×${chest.potMult} haul` : ''}
+      <>
+        <AbyssBackdrop />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          padding: '10px 0.95rem', textAlign: 'center',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: TEAL, marginTop: 12 }}>
+            Catch Your Breath
+          </p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#cfc9bf', marginTop: 7 }}>
+            {cleared} {cleared === 1 ? 'round' : 'rounds'} deep · {band.name}
+          </p>
+
+          {/* The haul on the line — the push-your-luck centerpiece. */}
+          <div style={{
+            marginTop: 16, padding: '1.15rem 1rem 1.05rem', borderRadius: 18,
+            background: `radial-gradient(ellipse at 50% 0%, ${GOLD}1c 0%, rgba(8,13,22,0.55) 74%)`,
+            border: `1px solid ${GOLD}40`,
+            boxShadow: `inset 0 0 28px ${GOLD}10, 0 14px 40px rgba(0,0,0,0.45)`,
+          }}>
+            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: `${GOLD}aa` }}>
+              The Haul on the Line
+            </p>
+            <p className="font-cinzel font-800" style={{ fontSize: '2.15rem', color: GOLD, lineHeight: 1.05, marginTop: 5, textShadow: `0 0 26px ${GOLD}44` }}>
+              {fmt(previewDoubloons)} <span style={{ fontSize: '1.35rem' }}>⟡</span>
+            </p>
+            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a948a', marginTop: 6 }}>
+              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {chest.label}{chest.potMult > 1 ? ` ×${chest.potMult}` : ''}
             </p>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem' }} className="font-karla">
-            <span style={{ color: '#9a948a' }}>Hull</span>
-            <span style={{ color: hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80' }}>{playerHP}/{props.playerHPMax} HP</span>
+
+          {/* Hull bar */}
+          <div style={{ marginTop: 14, textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+              <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#8a8880' }}>Hull</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: hpColor }}>{playerHP} / {props.playerHPMax}</span>
+            </div>
+            <div style={{ height: 9, borderRadius: 5, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <motion.div initial={{ width: `${hpPct}%` }} animate={{ width: `${hpPct}%` }} transition={{ duration: 0.4 }}
+                style={{ height: '100%', background: `linear-gradient(90deg, ${hpColor}aa, ${hpColor})`, boxShadow: `0 0 8px ${hpColor}88` }} />
+            </div>
           </div>
-          {activeBoons.length > 0 && (
-            <div style={{ borderTop: `1px solid ${TEAL}33`, paddingTop: 9 }}>
-              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: TEAL, marginBottom: 6 }}>
-                Powers Claimed · {activeBoons.length}
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {Object.entries(activeBoons.reduce<Record<string, { name: string; n: number }>>((acc, b) => {
-                  acc[b.id] = { name: b.name, n: (acc[b.id]?.n ?? 0) + 1 }
-                  return acc
-                }, {})).map(([id, { name, n }]) => (
-                  <span key={id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}3a`, color: '#aef3e6' }}>
-                    {name}{n > 1 ? ` ×${n}` : ''}
-                  </span>
-                ))}
-              </div>
+
+          {/* Powers + Curses tallies */}
+          {(boonCounts.length > 0 || activeCurses.length > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 14, textAlign: 'left' }}>
+              {boonCounts.length > 0 && (
+                <div>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: TEAL, marginBottom: 5 }}>
+                    Powers Claimed · {activeBoons.length}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {boonCounts.map(([id, { name, n }]) => (
+                      <span key={id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}3a`, color: '#aef3e6' }}>
+                        {name}{n > 1 ? ` ×${n}` : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {activeCurses.length > 0 && (
+                <div>
+                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: '#f87171', marginBottom: 5 }}>
+                    The Locker&rsquo;s Curses · {activeCurses.length}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {activeCurses.map(c => (
+                      <span key={c.id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.38)', color: '#fca5a5' }}>
+                        {c.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          {activeCurses.length > 0 && (
-            <div style={{ borderTop: '1px solid rgba(248,113,113,0.2)', paddingTop: 9 }}>
-              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#f87171', marginBottom: 6 }}>
-                The Locker&rsquo;s Curses · {activeCurses.length}
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {activeCurses.map(c => (
-                  <span key={c.id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.38)', color: '#fca5a5' }}>
-                    {c.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+
+          {/* The fork */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+              style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#1a1206', background: 'linear-gradient(180deg, #f4cf6a 0%, #e0a93f 100%)', border: 'none', cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 20px ${GOLD}26` }}>
+              {resolving ? '…' : `Haul Up · ${fmt(previewDoubloons)} ⟡`}
+            </button>
+            <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
+              style={{ width: '100%', padding: '0.95rem', borderRadius: 14, fontSize: '1rem', background: `${TEAL}1c`, border: `1px solid ${TEAL}66`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              Push On to Depth {nextDepth}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a766e', marginTop: 2 }}>
+              Push on and the whole haul sinks with you if your ship goes down.
+            </p>
+          </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          <button onClick={cashOut} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.06em]"
-            style={{ width: '100%', padding: '0.9rem', borderRadius: 12, fontSize: '1rem', background: `${GOLD}22`, border: `1px solid ${GOLD}66`, color: GOLD, cursor: resolving ? 'wait' : 'pointer' }}>
-            {resolving ? '…' : `Cash Out · ${fmt(previewDoubloons)} ⟡`}
-          </button>
-          <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.06em]"
-            style={{ width: '100%', padding: '0.9rem', borderRadius: 12, fontSize: '1rem', background: `${TEAL}1f`, border: `1px solid ${TEAL}55`, color: TEAL, cursor: resolving ? 'wait' : 'pointer' }}>
-            Push On → Depth {nextDepth}
-          </button>
-        </div>
-      </Shell>
+      </>
     )
   }
 
