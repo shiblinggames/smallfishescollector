@@ -1136,28 +1136,37 @@ function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doublo
                   ~{fmt(estDoubloons)} ⟡ <span style={{ color: '#6b6760', fontWeight: 400 }}>+</span> ~{fmt(estXp)} Nav XP
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 3 }}>
-                  Hauled up in the {chest.label}{chest.gems > 0 ? ` with +${chest.gems} ◆` : ''}. The pot only banks if you cash out before you sink.
+                  Hauled up in the {chest.label}{chest.gems > 0 ? ` with +${chest.gems} ◆` : ''}.
                 </p>
               </div>
 
-              {/* Chest ladder */}
-              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 12, marginBottom: 6 }}>The Chests — deeper hauls richer</p>
+              {/* Floor guide — what cashing out at each depth roughly banks.
+                  Concrete doubloons/gems instead of abstract multipliers, sampled
+                  at a depth inside each chest's band. */}
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 12, marginBottom: 6 }}>Cash out by depth — roughly what you bank</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {CHEST_TIERS.map(c => {
-                  const reached = target >= c.minDepth
+                  const d = c.minDepth === 0 ? 5 : c.minDepth + 2
+                  const pot = estimatePotForDepth(d)
+                  const rowDoubloons = Math.round(pot * c.potMult * doubloonMult)
+                  const reached = target >= d
                   return (
                     <div key={c.tier} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0.4rem 0.6rem', borderRadius: 9, background: reached ? `${GOLD}10` : 'rgba(255,255,255,0.02)', border: `1px solid ${reached ? `${GOLD}33` : 'rgba(255,255,255,0.06)'}` }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0 }}>
-                        <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: reached ? GOLD : '#6b6760', flexShrink: 0, width: 44 }}>Depth {c.minDepth}+</span>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: reached ? '#f0ede8' : '#7a766e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
+                        <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: reached ? GOLD : '#6b6760', flexShrink: 0, width: 48 }}>Depth {d}</span>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: reached ? '#f0ede8' : '#7a766e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
                       </div>
-                      <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: reached ? '#cdb978' : '#6b6760', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                        ×{c.potMult}{c.gems > 0 ? ` · +${c.gems} ◆` : ''}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: reached ? GOLD : '#6b6760' }}>~{fmt(rowDoubloons)} ⟡</span>
+                        {c.gems > 0 && <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: reached ? '#a78bfa' : '#5a5566' }}>+{c.gems} ◆</span>}
+                      </div>
                     </div>
                   )
                 })}
               </div>
+              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#7a766e', marginTop: 5, lineHeight: 1.4 }}>
+                The deeper you cash out, the bigger the haul. Plus the same in Nav XP. Sink before you cash out and it all goes to the deep.
+              </p>
 
               {/* The named chase */}
               <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 12, marginBottom: 6 }}>The Chase — rare from any chest</p>
