@@ -877,11 +877,12 @@ const CHEST_ART: Record<number, { closed: string; open: string; color: string }>
   5: { closed: '/diamondcrateclosed.png', open: '/diamondcrateopen.png', color: '#a78bfa' },
 }
 
-// rAF count-up for the reward numbers (easeOutCubic). App-side, so Date/rAF are fine.
-function CountUp({ to, dur = 850 }: { to: number; dur?: number }) {
+// rAF count-up for the reward numbers (easeOutCubic). Holds at 0 until `run`
+// flips true, so the chest can reveal first and THEN the numbers tick up.
+function CountUp({ to, dur = 850, run = true }: { to: number; dur?: number; run?: boolean }) {
   const [n, setN] = useState(0)
   useEffect(() => {
-    if (to <= 0) { setN(0); return }
+    if (!run || to <= 0) { setN(0); return }
     let raf = 0, start = 0
     const tick = (t: number) => {
       if (!start) start = t
@@ -891,22 +892,28 @@ function CountUp({ to, dur = 850 }: { to: number; dur?: number }) {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [to, dur])
+  }, [to, dur, run])
   return <>{n.toLocaleString()}</>
 }
 
-function RewardLine({ label, to, suffix = '', color, delay }: { label: string; to: number; suffix?: string; color: string; delay: number }) {
+function RewardLine({ label, to, suffix = '', color, delay, run }: { label: string; to: number; suffix?: string; color: string; delay: number; run: boolean }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.35 }}
       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0.45rem 0.3rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
       <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.56rem', color: '#9a948a' }}>{label}</span>
-      <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color }}>+<CountUp to={to} />{suffix}</span>
+      <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color }}>+<CountUp to={to} run={run} />{suffix}</span>
     </motion.div>
   )
 }
 
+// How long the chest "reveals" before the haul starts ticking into your purse.
+const REVEAL_DELAY = 900
+
 function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
   const [opened, setOpened] = useState(false)
+  // Counting starts a beat AFTER opening: chest cracks + reveals, then the
+  // doubloons / XP increment (count-up + purse tick + bar fill).
+  const [counting, setCounting] = useState(false)
   const art = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
   const newBest = r.depth >= r.deepest
 
@@ -916,23 +923,33 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
   const oldProg = getXPProgress(oldXp)
   const newProg = getXPProgress(r.newExpeditionXP)
   const leveledUp = newProg.level > oldProg.level
-  // On a level-up the bar fills from EMPTY into the new level (matches the
-  // fishing/trawl feel); otherwise it pushes forward from where it was.
-  const barStart = leveledUp ? 0 : oldProg.progress
   const barEnd = newProg.level >= MAX_LEVEL ? 1 : newProg.progress
+  // Bar fill: before counting it sits at the pre-haul progress. On counting it
+  // sweeps forward; on a level-up it fills the old level to full, snaps to
+  // empty, then fills into the new level (so it never visually runs backwards).
+  const barAnimate = !counting
+    ? { width: `${Math.round(oldProg.progress * 100)}%` }
+    : leveledUp
+      ? { width: [`${Math.round(oldProg.progress * 100)}%`, '100%', '0%', `${Math.round(barEnd * 100)}%`] }
+      : { width: `${Math.round(barEnd * 100)}%` }
+  const barTransition = counting && leveledUp
+    ? { duration: 1.7, times: [0, 0.4, 0.42, 1], ease: 'easeOut' as const }
+    : { duration: 1, ease: 'easeOut' as const }
 
   function open() {
     if (opened) return
     setOpened(true)
     vibrate([0, 30, 55, 45])
     import('@/lib/fishingMusic').then(m => m.playForgeSfx(false)).catch(() => {})
-    // Tick the top purse(s) in sync with the chest reveal — the Nav listens for
-    // these and counts up. Doubloons + gems both land here so the haul visibly
-    // flows into your purse as the chest counts up.
-    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
-    if (r.gems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
-    // A second haptic punch when the bar reaches the new level.
-    if (leveledUp) window.setTimeout(() => vibrate([0, 45, 70, 45]), 1200)
+    // Let the chest reveal first, THEN start everything incrementing: the
+    // count-ups, the purse tick (the Nav listens for these), and the XP bar.
+    window.setTimeout(() => {
+      setCounting(true)
+      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+      if (r.gems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+      // A second haptic punch when the bar reaches the new level.
+      if (leveledUp) window.setTimeout(() => vibrate([0, 45, 70, 45]), 1000)
+    }, REVEAL_DELAY)
   }
 
   return (
@@ -988,9 +1005,9 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
             </motion.p>
 
             <div style={{ marginTop: 16, textAlign: 'left', background: 'rgba(0,0,0,0.3)', border: `1px solid ${GOLD}26`, borderRadius: 14, padding: '0.5rem 0.85rem 0.7rem' }}>
-              <RewardLine label="Doubloons" to={r.bankedDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} />
-              <RewardLine label="Nav XP" to={r.bankedXp} color="#4ade80" delay={0.32} />
-              {r.gems > 0 && <RewardLine label="Gems" to={r.gems} suffix=" ◆" color="#a78bfa" delay={0.44} />}
+              <RewardLine label="Doubloons" to={r.bankedDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} run={counting} />
+              <RewardLine label="Nav XP" to={r.bankedXp} color="#4ade80" delay={0.32} run={counting} />
+              {r.gems > 0 && <RewardLine label="Gems" to={r.gems} suffix=" ◆" color="#a78bfa" delay={0.44} run={counting} />}
             </div>
 
             {/* Nav level + XP bar — the banked Nav XP flows into the bar as the
@@ -1000,21 +1017,21 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 5 }}>
                 <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#7fa8d8' }}>Navigation</span>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                  {leveledUp && (
-                    <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.25, type: 'spring', stiffness: 320, damping: 16 }}
+                  {leveledUp && counting && (
+                    <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.85, type: 'spring', stiffness: 320, damping: 16 }}
                       className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#cfe2ff', background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.55)', borderRadius: 999, padding: '0.12rem 0.45rem', boxShadow: '0 0 12px rgba(96,165,250,0.35)' }}>
                       Level Up · {oldProg.level} → {newProg.level}
                     </motion.span>
                   )}
-                  <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color: '#cfe2ff' }}>Lv {newProg.level}</span>
+                  <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color: '#cfe2ff' }}>Lv {counting ? newProg.level : oldProg.level}</span>
                 </div>
               </div>
               <div style={{ height: 9, borderRadius: 5, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <motion.div initial={{ width: `${Math.round(barStart * 100)}%` }} animate={{ width: `${Math.round(barEnd * 100)}%` }} transition={{ delay: 0.7, duration: 1, ease: 'easeOut' }}
+                <motion.div initial={{ width: `${Math.round(oldProg.progress * 100)}%` }} animate={barAnimate} transition={barTransition}
                   style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', boxShadow: '0 0 8px rgba(96,165,250,0.7)' }} />
               </div>
               <p className="font-karla" style={{ fontSize: '0.56rem', color: '#7a766e', marginTop: 4 }}>
-                {newProg.level >= MAX_LEVEL ? 'Max level' : `${Math.round(newProg.progress * 100)}% to Lv ${newProg.level + 1}`}
+                {newProg.level >= MAX_LEVEL ? 'Max level' : counting ? `${Math.round(newProg.progress * 100)}% to Lv ${newProg.level + 1}` : `${Math.round(oldProg.progress * 100)}% to Lv ${oldProg.level + 1}`}
               </p>
             </motion.div>
 
