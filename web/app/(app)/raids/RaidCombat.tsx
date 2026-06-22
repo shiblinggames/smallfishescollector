@@ -601,6 +601,9 @@ export default function RaidCombat({
   // Crew-ability cast cue — themed portrait banner + ring that pops over the
   // stage so firing ANY ability has an unmistakable "you did something" tell.
   const [abilityCast, setAbilityCast] = useState<{ key: number; label: string; name: string; color: string; image?: string | null; emoji?: string } | null>(null)
+  // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
+  // status (burn, freeze) procs on it, so those effects read on the ship itself.
+  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' } | null>(null)
 
   // Aim bar state — RAF driven during 'aiming' subphase
   const firePosRef  = useRef(0)
@@ -830,7 +833,7 @@ export default function RaidCombat({
       // resolveLog gets replaced wholesale and we don't want to clobber it.
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
-    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null)
+    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
@@ -1989,6 +1992,13 @@ export default function RaidCombat({
           if (step.splatTarget === 'enemy' && step.splatText) {
             setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: false })
             setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
+            // Themed hull aura for the recurring status procs (burn / freeze).
+            const auraKind = step.splatColor === BURN_COLOR ? 'burn' : step.splatColor === FREEZE_COLOR ? 'freeze' : null
+            if (auraKind) {
+              const ak = Date.now() + i + 5
+              setEnemyAura({ key: ak, kind: auraKind })
+              setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 900)
+            }
           }
         }, PROJECTILE_FLIGHT_MS)
       }
@@ -2563,6 +2573,10 @@ export default function RaidCombat({
                 pointerEvents: 'none',
               }}
             />
+            {/* Status aura — burning embers / freezing rime over the hull */}
+            <AnimatePresence>
+              {enemyAura && <EnemyStatusAura key={`ea-${enemyAura.key}`} kind={enemyAura.kind} />}
+            </AnimatePresence>
             {/* Explosion burst on impact — overlays the enemy hull */}
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
@@ -2603,6 +2617,24 @@ export default function RaidCombat({
               {cannonShot && (
                 <CannonShotBurst key={`cs-${cannonShot.key}`} kind={cannonShot.kind} />
               )}
+              {/* Buff pulse — the player ship flares in the ability's class
+                  color the instant a crew ability fires (pairs with the cast
+                  banner so the activation lands on the ship itself too). */}
+              <AnimatePresence>
+                {abilityCast && (
+                  <motion.div
+                    key={`pcast-${abilityCast.key}`}
+                    initial={{ opacity: 0, scale: 0.6 }}
+                    animate={{ opacity: [0, 0.9, 0], scale: 1.5 }}
+                    transition={{ duration: 0.8, ease: 'easeOut', times: [0, 0.28, 1] }}
+                    style={{
+                      position: 'absolute', inset: '-8%', borderRadius: '50%',
+                      pointerEvents: 'none', zIndex: 2, mixBlendMode: 'screen',
+                      background: `radial-gradient(ellipse at center, ${abilityCast.color}cc 0%, ${abilityCast.color}55 40%, transparent 72%)`,
+                    }}
+                  />
+                )}
+              </AnimatePresence>
             </motion.div>
             <AnimatePresence>
               {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
@@ -3686,65 +3718,77 @@ function CannonShotBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 }
 
 function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
-  // Explosion centered on the target. Crit erupts with a cascade of emojis +
-  // a brief expanding shockwave ring around the impact site.
+  // Cannonball striking the hull: a hot flash, an expanding shockwave ring,
+  // and a spray of debris/splinter particles thrown outward — no emoji. Scales
+  // up for volley, erupts for crit (more + faster particles, gold shockwave).
   const big = kind === 'crit'
   const volley = kind === 'volley'
+  const count = big ? 16 : volley ? 11 : 7
+  const spread = big ? 40 : volley ? 30 : 22
+  // Deterministic-per-mount spray (component remounts on each impact key).
+  const bits = useMemo(() => Array.from({ length: count }, (_, n) => {
+    const ang = (Math.PI * 2 * n) / count + (Math.random() - 0.5) * 0.7
+    const dist = spread * (0.55 + Math.random() * 0.8)
+    const warm = Math.random() < 0.6
+    return {
+      x: Math.cos(ang) * dist,
+      y: Math.sin(ang) * dist - 5,                   // bias upward (kicked-up debris)
+      size: (big ? 5.5 : 4.5) * (0.55 + Math.random() * 0.7),
+      color: warm ? (Math.random() < 0.5 ? '#ffd27a' : '#ff9a3c') : '#cbb591',
+      dur: 0.42 + Math.random() * 0.22,
+    }
+  }), [count, spread, big])
+  const flashColor = big ? 'rgba(251,191,36,0.9)' : 'rgba(255,210,140,0.85)'
   return (
-    <>
-      {big && (
+    <div style={{ position: 'absolute', left: '46%', top: '46%', width: 0, height: 0, pointerEvents: 'none', zIndex: 10 }}>
+      {/* Hot core flash */}
+      <motion.div
+        initial={{ scale: 0.3, opacity: 1 }}
+        animate={{ scale: big ? 1.6 : 1.1, opacity: 0 }}
+        transition={{ duration: 0.26, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: 0, top: 0, width: big ? 52 : 38, height: big ? 52 : 38,
+          marginLeft: big ? -26 : -19, marginTop: big ? -26 : -19, borderRadius: '50%',
+          background: `radial-gradient(circle, #fff 0%, ${flashColor} 40%, transparent 72%)`,
+        }}
+      />
+      {/* Shockwave ring */}
+      <motion.div
+        initial={{ scale: 0.3, opacity: 0.85 }}
+        animate={{ scale: big ? 2.8 : volley ? 2.1 : 1.7, opacity: 0 }}
+        transition={{ duration: big ? 0.55 : 0.45, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: 0, top: 0, width: 60, height: 60, marginLeft: -30, marginTop: -30,
+          borderRadius: '50%',
+          border: `${big ? 3 : 2}px solid ${big ? 'rgba(251,191,36,0.85)' : 'rgba(255,200,130,0.7)'}`,
+          boxShadow: big ? '0 0 26px rgba(251,191,36,0.6)' : '0 0 14px rgba(255,190,120,0.4)',
+        }}
+      />
+      {/* Smoke puff (dust) */}
+      <motion.div
+        initial={{ scale: 0.4, opacity: 0.4 }}
+        animate={{ scale: big ? 2.2 : 1.6, opacity: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: 0, top: 0, width: 50, height: 50, marginLeft: -25, marginTop: -25,
+          borderRadius: '50%', background: 'radial-gradient(circle, rgba(120,120,128,0.5) 0%, rgba(90,90,100,0.2) 50%, transparent 72%)',
+        }}
+      />
+      {/* Debris spray */}
+      {bits.map((b, n) => (
         <motion.div
-          initial={{ scale: 0.3, opacity: 0.9 }}
-          animate={{ scale: 2.6, opacity: 0 }}
-          transition={{ duration: 0.55, ease: 'easeOut' }}
+          key={n}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x: b.x, y: b.y, opacity: 0, scale: 0.35 }}
+          transition={{ duration: b.dur, ease: 'easeOut' }}
           style={{
-            position: 'absolute', left: '50%', top: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 70, height: 70, borderRadius: '50%',
-            border: '3px solid rgba(251,191,36,0.85)',
-            boxShadow: '0 0 30px rgba(251,191,36,0.7)',
-            pointerEvents: 'none', zIndex: 9,
+            position: 'absolute', left: 0, top: 0, width: b.size, height: b.size,
+            marginLeft: -b.size / 2, marginTop: -b.size / 2, borderRadius: '50%',
+            background: b.color, boxShadow: `0 0 5px ${b.color}`,
           }}
         />
-      )}
-      <span style={{
-        position: 'absolute', left: '38%', top: '32%',
-        fontSize: big ? '2.4rem' : volley ? '1.7rem' : '1.3rem',
-        animation: 'rc-impact-pop 0.55s ease forwards',
-        pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.6))',
-      }}>💥</span>
-      {big && (
-        <>
-          <span style={{
-            position: 'absolute', left: '62%', top: '42%', fontSize: '1.9rem',
-            animation: 'rc-impact-pop 0.55s 0.05s ease forwards',
-            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.6))',
-          }}>💥</span>
-          <span style={{
-            position: 'absolute', left: '48%', top: '18%', fontSize: '1.7rem',
-            animation: 'rc-impact-pop 0.6s 0.1s ease forwards',
-            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.6))',
-          }}>⭐</span>
-          <span style={{
-            position: 'absolute', left: '32%', top: '55%', fontSize: '1.8rem',
-            animation: 'rc-impact-pop 0.65s 0.07s ease forwards',
-            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,113,36,0.6))',
-          }}>🔥</span>
-          <span style={{
-            position: 'absolute', left: '58%', top: '60%', fontSize: '1.6rem',
-            animation: 'rc-impact-pop 0.7s 0.14s ease forwards',
-            pointerEvents: 'none', zIndex: 11, filter: 'drop-shadow(0 0 6px rgba(251,113,36,0.6))',
-          }}>🔥</span>
-        </>
-      )}
-      {volley && !big && (
-        <span style={{
-          position: 'absolute', left: '55%', top: '50%', fontSize: '1.5rem',
-          animation: 'rc-impact-pop 0.5s 0.08s ease forwards',
-          pointerEvents: 'none', zIndex: 11,
-        }}>💥</span>
-      )}
-    </>
+      ))}
+    </div>
   )
 }
 
@@ -3844,6 +3888,50 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
       }}
     >
       {text}
+    </motion.div>
+  )
+}
+
+// Enemy status aura — a brief themed glow + drifting motes over the hull when
+// a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
+// settling. Localized to the enemy ship, fades on its own.
+function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' }) {
+  const burn = kind === 'burn'
+  const color = burn ? '#fb923c' : '#7dd3fc'
+  const motes = useMemo(() => Array.from({ length: 6 }, (_, n) => ({
+    x: (Math.random() - 0.5) * 46,
+    y: (burn ? -1 : 1) * (12 + Math.random() * 26),   // embers rise, rime drifts down
+    size: 3 + Math.random() * 3,
+    delay: Math.random() * 0.12,
+    dur: 0.6 + Math.random() * 0.3,
+  }) ), [burn])
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 1, 1, 0] }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.85, times: [0, 0.2, 0.7, 1] }}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}
+    >
+      {/* Hull wash */}
+      <div style={{
+        position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
+        background: `radial-gradient(ellipse at center, ${color}aa 0%, ${color}44 42%, transparent 70%)`,
+      }} />
+      {/* Drifting motes */}
+      {motes.map((m, n) => (
+        <motion.div
+          key={n}
+          initial={{ x: 0, y: 0, opacity: 0 }}
+          animate={{ x: m.x, y: m.y, opacity: [0, 1, 0] }}
+          transition={{ duration: m.dur, delay: m.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '46%', top: '52%', width: m.size, height: m.size,
+            marginLeft: -m.size / 2, marginTop: -m.size / 2, borderRadius: '50%',
+            background: burn ? '#ffd27a' : '#e0f4ff', boxShadow: `0 0 6px ${color}`,
+          }}
+        />
+      ))}
     </motion.div>
   )
 }
