@@ -18,6 +18,7 @@ import { useAnimatedNumber } from '../useAnimatedNumber'
 import { Avatar } from '@/app/(app)/leaderboard/boardUI'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import BackButton from '@/components/BackButton'
+import ResetCountdown from '@/components/ResetCountdown'
 
 const GOLD = '#f0c040'
 const MEMBER_START_CAP = DEN_PURSE_TIERS[0].cap
@@ -301,8 +302,8 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
         {/* Daily cap line */}
         <p className="font-karla" style={{ fontSize: '0.6rem', color: '#7a7470', marginTop: 8, textAlign: 'center', letterSpacing: '0.04em' }}>
           {dailyRemaining > 0
-            ? `${dailyRemaining.toLocaleString()} ⟡ of today's ${dailyCap.toLocaleString()} ⟡ buy-in cap left`
-            : 'Daily buy-in cap reached, back tomorrow'}
+            ? <>{dailyRemaining.toLocaleString()} ⟡ of today&apos;s {dailyCap.toLocaleString()} ⟡ buy-in cap left · <ResetCountdown prefix="resets in" /></>
+            : <>Daily buy-in cap reached · <ResetCountdown prefix="resets in" style={{ color: GOLD }} /></>}
         </p>
 
         {/* Non-member cap upsell — only once they've actually HIT today's

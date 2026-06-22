@@ -8,6 +8,7 @@ import { claimDailyBonus, claimDailyBait, claimWeeklyCrate } from '@/app/actions
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
 import SpinReel from '@/components/SpinReel'
 import BackButton from '@/components/BackButton'
+import ResetCountdown from '@/components/ResetCountdown'
 
 const GEM = '#a78bfa'
 const BAIT = '#4ade80'
@@ -118,14 +119,14 @@ export default function DailyBonusClient({ isPremium, gemsClaimed: g0, baitClaim
         <ClaimCard
           accent={GEM} eyebrow="Daily Gems" title={`+${gemAmount} ◆`}
           sub={isPremium ? 'Your Captain gem stipend, every day.' : 'Captains earn 150 a day.'}
-          claimed={gemsClaimed} claimedSub="Back tomorrow." loading={loading === 'gems'} onClaim={claimGems}
+          claimed={gemsClaimed} claimedSub={<ResetCountdown prefix="Resets in" />} loading={loading === 'gems'} onClaim={claimGems}
           glyph={<span className="font-cinzel font-800" style={{ fontSize: '2rem', color: GEM, lineHeight: 1 }}>◆</span>}
         />
 
         <ClaimCard
           accent={BAIT} eyebrow="Daily Bait" title={`+20 ${baitName}`}
           sub={isPremium ? 'Premium chum to draw the big ones.' : 'Captains get chum instead.'}
-          claimed={baitClaimed} claimedSub="Back tomorrow." loading={loading === 'bait'} onClaim={claimBait}
+          claimed={baitClaimed} claimedSub={<ResetCountdown prefix="Resets in" />} loading={loading === 'bait'} onClaim={claimBait}
           img={baitImg}
         />
 
@@ -209,7 +210,7 @@ function SlotTile({ loot }: { loot: GoodLoot }) {
 
 function ClaimCard({ accent, eyebrow, title, sub, claimed, claimedSub, loading, onClaim, img, glyph }: {
   accent: string; eyebrow: string; title: string; sub: string
-  claimed: boolean; claimedSub: string; loading: boolean; onClaim: () => void
+  claimed: boolean; claimedSub: React.ReactNode; loading: boolean; onClaim: () => void
   img?: string; glyph?: React.ReactNode
 }) {
   return (
@@ -265,7 +266,7 @@ function CrateCard({ isPremium, crateName, crateClosed, crateOpen, phase, strip,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: `${accent}cc` }}>Weekly Crate</p>
-        <span className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#8a857c' }}>Resets Monday</span>
+        <ResetCountdown kind="weekly" prefix="Resets in" className="font-karla font-600" style={{ fontSize: '0.56rem', color: '#8a857c' }} />
       </div>
 
       {/* Rolling: scrolling slot reel that blurs past then eases onto the
@@ -344,7 +345,9 @@ function CrateCard({ isPremium, crateName, crateClosed, crateOpen, phase, strip,
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color: `${accent}cc`, textAlign: 'center', marginTop: 12 }}>Rolling…</p>
       )}
       {dim && (
-        <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a7674', textAlign: 'center', marginTop: 10 }}>Opened this week. Back Monday.</p>
+        <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a7674', textAlign: 'center', marginTop: 10 }}>
+          Opened this week · <ResetCountdown kind="weekly" prefix="resets in" />
+        </p>
       )}
     </div>
   )
