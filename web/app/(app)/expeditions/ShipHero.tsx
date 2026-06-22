@@ -1278,6 +1278,11 @@ export default function ShipHero({
                 {SHIP_SKINS.map(skin => {
                   const owned    = ownedSkins.includes(skin.id)
                   const isEquipped = equippedSkin === skin.id
+                  // Most skins recolor via a bespoke sprite (imageByTier), not a
+                  // CSS filter — so preview the skin's OWN sprite at the player's
+                  // hull tier, falling back to base + filter for filter-only skins.
+                  const skinTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
+                  const skinImg = skin.imageByTier?.[skinTier] ?? shipStats.image
                   return (
                     <button
                       key={skin.id}
@@ -1298,7 +1303,7 @@ export default function ShipHero({
                       <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={shipStats.image}
+                          src={skinImg}
                           alt=""
                           loading="lazy"
                           decoding="async"
