@@ -24,6 +24,7 @@ import {
   type BroadsideEnemy,
 } from './bossRaids'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, type AffixDef } from './raidAffixes'
+import { type TideEffect } from './tides'
 
 // ── Economy ────────────────────────────────────────────────────────────────
 // Per-round pot contribution = POT_BASE + POT_GROWTH * depth (⟡ AND XP, the
@@ -64,11 +65,15 @@ export const MAX_GAUNTLET_DEPTH = 60
 // Source enemies keep their pattern / speed / crit / art / signature ability;
 // only HP + damage are replaced with this curve so depth-1 and depth-1-boss
 // always feel right regardless of which raid the enemy came from.
-function mobHp(depth: number)    { return Math.round(20 + depth * 9) }
-function mobMinDmg(depth: number){ return Math.round(2 + depth * 0.6) }
-function mobMaxDmg(depth: number){ return Math.round(5 + depth * 1.1) }
-const BOSS_HP_MULT  = 3.2
-const BOSS_DMG_MULT = 1.45
+// Steeper than the old curve so deep hits actually threaten a maxed hull. The
+// real escalation, though, is the Curses (below) — raw stats alone can't both
+// stay fair to a fresh build AND threaten an endgame one, so depth pressure
+// comes mostly from stacking rules, not bigger bars.
+function mobHp(depth: number)    { return Math.round(22 + depth * 10) }
+function mobMinDmg(depth: number){ return Math.round(3 + depth * 0.9) }
+function mobMaxDmg(depth: number){ return Math.round(6 + depth * 1.7) }
+const BOSS_HP_MULT  = 3.3
+const BOSS_DMG_MULT = 1.5
 
 // ── Roll guardrails ──────────────────────────────────────────────────────────
 const FIRST_BOSS_EARLIEST = 4    // no boss before this depth
@@ -234,4 +239,77 @@ const CHEST_CANNON_ODDS: Record<number, number> = {
 }
 export function chestCannonDropChance(chestTier: number): number {
   return CHEST_CANNON_ODDS[chestTier] ?? 0
+}
+
+// ── Curses — the Locker's Pressure ────────────────────────────────────────────
+// The descent's escalating difficulty does NOT come from fatter HP bars; it
+// comes from rules. At each CURSE_DEPTH the Locker imposes one new curse, drawn
+// at random and PERMANENT for the run. They stack, so the deep is defined by
+// what the sea has taken from you, not by enemy stats.
+//
+// Most curses are just a run-wide (allRemaining) TideEffect appended to the
+// player's active-effects channel — the exact pipeline the Tides already use,
+// so they apply + persist for free. The one exception is Crushing Depth, an
+// attrition clock the host applies between fights (hpDrainPct).
+export interface GauntletCurse {
+  id: string
+  name: string
+  /** One-line dread, shown on the curse interstitial. */
+  flavor: string
+  /** Run-wide effects appended to the tide-effect channel when imposed. */
+  effects?: TideEffect[]
+  /** % of MAX HP the hull sheds at the start of every fight while active. */
+  hpDrainPct?: number
+}
+
+export const GAUNTLET_CURSES: GauntletCurse[] = [
+  {
+    id: 'crushing_depth',
+    name: 'Crushing Depth',
+    flavor: 'The water itself leans on your hull. Every fight begins a little closer to the breaking point.',
+    hpDrainPct: 0.08,
+  },
+  {
+    id: 'bloodthirst',
+    name: 'Bloodthirst',
+    flavor: 'The drowned smell your wake. Every gun down here is aimed to kill, not to warn.',
+    effects: [{ kind: 'incomingDmgMult', mult: 1.25, scope: 'allRemaining' }],
+  },
+  {
+    id: 'maelstrom',
+    name: 'Maelstrom',
+    flavor: 'A black current drags every broadside harder onto your decks.',
+    effects: [{ kind: 'incomingDmgMult', mult: 1.2, scope: 'allRemaining' }],
+  },
+  {
+    id: 'becalmed',
+    name: 'Becalmed',
+    flavor: 'The wind died at this depth. Your ship answers the wheel a beat too slow.',
+    effects: [{ kind: 'speedDelta', n: -3, scope: 'allRemaining' }],
+  },
+  {
+    id: 'squall',
+    name: 'Squall',
+    flavor: 'Salt-spray fouls your powder. Your shots land softer than they should.',
+    effects: [{ kind: 'damageMult', mult: 0.9 }],
+  },
+  {
+    id: 'murk',
+    name: 'Murk',
+    flavor: 'The dark closes over your sights. The perfect shot is a narrower thing now.',
+    effects: [{ kind: 'critZoneScale', mult: 0.85 }],
+  },
+]
+
+// Depths at which the Locker imposes its next curse. One curse per milestone,
+// drawn at random from those not yet active; runs deep enough to exhaust the
+// list (depth 19+) simply keep every curse stacked.
+export const CURSE_DEPTHS = [4, 7, 10, 13, 16, 19]
+
+/** Pick the next curse to impose, given the ids already active. Returns null
+ *  once every curse is in play. */
+export function drawCurse(activeIds: string[]): GauntletCurse | null {
+  const remaining = GAUNTLET_CURSES.filter(c => !activeIds.includes(c.id))
+  if (remaining.length === 0) return null
+  return remaining[Math.floor(Math.random() * remaining.length)]
 }

@@ -17,14 +17,15 @@ import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import {
   generateFight, advanceRollState, shouldFireTide, chestForDepth,
+  CURSE_DEPTHS, drawCurse,
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT,
-  type GauntletFight, type GauntletRollState,
+  type GauntletFight, type GauntletRollState, type GauntletCurse,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath } from './actions'
 import { getRaidItem } from '@/lib/raidItems'
 
-type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'tide' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'tide' | 'curse' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -100,6 +101,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [activeTideEffects, setActiveTideEffects] = useState<TideEffect[]>([])
   const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
   const [pendingTide, setPendingTide] = useState<TideEvent | null>(null)
+  // Curses — the Locker's escalating, permanent run modifiers.
+  const [activeCurses, setActiveCurses] = useState<GauntletCurse[]>([])
+  const [pendingCurse, setPendingCurse] = useState<GauntletCurse | null>(null)
+  const activeCursesRef = useRef<GauntletCurse[]>([])
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
 
@@ -138,6 +143,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       setBossesDefeated(0)
       setActiveTideEffects([])
       setUsedAbilityIds(new Set())
+      setActiveCurses([]); activeCursesRef.current = []
+      setPendingCurse(null)
       setFight(generateFight(rollStateRef.current))
       setPhase('descending')
       setStarting(false)
@@ -173,6 +180,20 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Crew/repair cooldown: abilities refresh every N cleared rounds.
     if (clearedNow % GAUNTLET_COOLDOWN_ROUNDS === 0) setUsedAbilityIds(new Set())
 
+    // Curse milestone — descending INTO a CURSE_DEPTH imposes a new curse.
+    // Takes priority over a tide this round so the two interstitials never
+    // stack; the tide pity counter still ticks so recovery isn't starved.
+    const nextDepth = clearedNow + 1
+    if (CURSE_DEPTHS.includes(nextDepth)) {
+      const curse = drawCurse(activeCursesRef.current.map(c => c.id))
+      if (curse) {
+        roundsSinceTideRef.current += 1
+        setPendingCurse(curse)
+        setPhase('curse')
+        return
+      }
+    }
+
     // Tide between rounds (guardrail pity floor).
     if (shouldFireTide({ roundsSinceTide: roundsSinceTideRef.current })) {
       roundsSinceTideRef.current = 0
@@ -182,6 +203,20 @@ export default function GauntletGame(props: GauntletGameProps) {
       roundsSinceTideRef.current += 1
       setPhase('between')
     }
+  }
+
+  // Apply a freshly-imposed curse, then drop into the breather screen. Curse
+  // effects ride the same active-effect channel the Tides use (they're
+  // allRemaining, so they persist + apply for free).
+  function applyCurse(curse: GauntletCurse) {
+    const next = [...activeCursesRef.current, curse]
+    activeCursesRef.current = next
+    setActiveCurses(next)
+    if (curse.effects && curse.effects.length > 0) {
+      setActiveTideEffects(prev => [...prev, ...curse.effects!])
+    }
+    setPendingCurse(null)
+    setPhase('between')
   }
 
   function handlePlayerDefeated() {
@@ -194,6 +229,15 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   function pushOn() {
+    // Crushing Depth (and any future drain curse): the hull sheds a slice of
+    // max HP before each new fight. Clamped to leave at least 1 — the curse
+    // squeezes how deep you can go, but the sea never lands the kill itself.
+    const drainPct = activeCursesRef.current.reduce((a, c) => a + (c.hpDrainPct ?? 0), 0)
+    if (drainPct > 0) {
+      const drained = Math.max(1, Math.round(playerHPRef.current - props.playerHPMax * drainPct))
+      playerHPRef.current = drained
+      setPlayerHP(drained)
+    }
     setFight(generateFight(rollStateRef.current))
     setPhase('descending')
   }
@@ -427,6 +471,20 @@ export default function GauntletGame(props: GauntletGameProps) {
             <span style={{ color: '#9a948a' }}>Hull</span>
             <span style={{ color: hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80' }}>{playerHP}/{props.playerHPMax} HP</span>
           </div>
+          {activeCurses.length > 0 && (
+            <div style={{ borderTop: '1px solid rgba(248,113,113,0.2)', paddingTop: 9 }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#f87171', marginBottom: 6 }}>
+                The Locker&rsquo;s Curses · {activeCurses.length}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {activeCurses.map(c => (
+                  <span key={c.id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.38)', color: '#fca5a5' }}>
+                    {c.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
           <button onClick={cashOut} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.06em]"
@@ -467,6 +525,56 @@ export default function GauntletGame(props: GauntletGameProps) {
             setPhase('between')
           }}
         />
+    )
+  }
+
+  // ── Curse interstitial — the Locker imposes a permanent run modifier ────────
+  if (phase === 'curse' && pendingCurse) {
+    const c = pendingCurse
+    const CRIM = '#f87171'
+    return (
+      <>
+        <AbyssBackdrop />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          padding: '8px 0.95rem', textAlign: 'center',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: CRIM, marginTop: 14 }}>
+            The Locker Curses You
+          </p>
+
+          {/* Crimson sigil */}
+          <div style={{ position: 'relative', width: 124, height: 124, margin: '16px auto 6px' }}>
+            <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', background: `radial-gradient(circle, ${CRIM}33 0%, transparent 68%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
+            <svg width="124" height="124" viewBox="0 0 24 24" fill={CRIM} style={{ position: 'relative', filter: `drop-shadow(0 6px 22px ${CRIM}55)` }} aria-hidden>
+              <path d="M12 2a8 8 0 0 0-8 8c0 2.5 1.2 4.2 2.8 5.4.4.3.7.8.7 1.3V18a1.6 1.6 0 0 0 1.6 1.6h.4l.5-1.6h-1l-.4-1.4h1.6L11 18l.5 1.6h1L13 18l.4-1.4H15l-.4 1.4h-1l.5 1.6h.4A1.6 1.6 0 0 0 16.1 18v-1.3c0-.5.3-1 .7-1.3C18.4 14.2 20 12.5 20 10a8 8 0 0 0-8-8Z" />
+              <circle cx="9" cy="10.5" r="1.7" fill="#0a0e16" />
+              <circle cx="15" cy="10.5" r="1.7" fill="#0a0e16" />
+            </svg>
+          </div>
+
+          <h1 className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: '#fdecec', lineHeight: 1.08, marginTop: 6, textShadow: `0 0 24px ${CRIM}44` }}>
+            {c.name}
+          </h1>
+          <p className="font-karla" style={{ fontSize: '0.86rem', lineHeight: 1.55, color: 'rgba(253,236,236,0.82)', fontStyle: 'italic', marginTop: 10, padding: '0 0.4rem' }}>
+            {c.flavor}
+          </p>
+          <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#9a948a', marginTop: 12 }}>
+            It holds for the rest of the descent. {activeCurses.length + 1} {activeCurses.length === 0 ? 'curse' : 'curses'} now upon you.
+          </p>
+
+          <button onClick={() => applyCurse(c)} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+            style={{
+              marginTop: 22, width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1.02rem',
+              color: '#fff', background: `linear-gradient(180deg, #d65656 0%, #a13838 100%)`,
+              border: 'none', cursor: 'pointer',
+              boxShadow: `0 0 22px ${CRIM}33`,
+            }}>
+            Bear It · Descend
+          </button>
+        </div>
+      </>
     )
   }
 
@@ -513,7 +621,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none"
         style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
         <div style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} />
+          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={activeCurses.length} />
         </div>
         <div style={{ width: '100%' }}>
           <RaidCombat
@@ -700,7 +808,7 @@ function BackLink({ router, label, primary }: { router: ReturnType<typeof useRou
   )
 }
 
-function DepthBar({ depth, pot, isBoss, isElite, affixName }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string }) {
+function DepthBar({ depth, pot, isBoss, isElite, affixName, curses }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number }) {
   const tag = isBoss ? 'BOSS' : isElite ? `ELITE${affixName ? ` · ${affixName}` : ''}` : null
   const tagColor = isBoss ? '#f87171' : '#c084fc'
   return (
@@ -711,9 +819,17 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName }: { depth: number; p
         <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
         {tag && <span className="font-cinzel font-700" style={{ fontSize: '0.56rem', color: tagColor, letterSpacing: '0.06em', marginLeft: 4 }}>{tag}</span>}
       </div>
-      <div className="flex items-baseline gap-1">
-        <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#9a948a', letterSpacing: '0.08em' }}>POT</span>
-        <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8dfc8' }}>{fmt(pot)} ⟡</span>
+      <div className="flex items-center gap-2.5">
+        {curses > 0 && (
+          <span className="flex items-baseline gap-1" title={`${curses} curse${curses === 1 ? '' : 's'} active`}>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', color: '#f8717199', letterSpacing: '0.08em' }}>CURSED</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#f87171', lineHeight: 1 }}>{curses}</span>
+          </span>
+        )}
+        <span className="flex items-baseline gap-1">
+          <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: '#9a948a', letterSpacing: '0.08em' }}>POT</span>
+          <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#e8dfc8' }}>{fmt(pot)} ⟡</span>
+        </span>
       </div>
     </div>
   )
