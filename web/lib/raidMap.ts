@@ -300,7 +300,11 @@ function lootDrops(loot: RaidLootItem[]): RaidNodeDrop[] {
       if (skin) {
         drop.label = skin.name
         drop.sublabel = 'Ship skin. A cosmetic new look for your ship.'
-        drop.image = SHIP_SKIN_PREVIEW_IMG
+        // Most skins recolour via a bespoke sprite (imageByTier), not a CSS
+        // filter — preview that sprite (the recoloured brigantine) so the drop
+        // shows the skin's real look, not the base hull. Filter-only skins fall
+        // back to the base preview image + their filter.
+        drop.image = skin.imageByTier?.[4] ?? SHIP_SKIN_PREVIEW_IMG
         drop.imageFilter = skin.filter
         drop.shipSkinId = l.shipSkinId
       }
