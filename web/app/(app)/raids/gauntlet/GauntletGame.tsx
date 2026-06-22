@@ -353,8 +353,8 @@ export default function GauntletGame(props: GauntletGameProps) {
           <button onClick={begin} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{
               marginTop: 22, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem',
-              color: '#1a1206', background: 'linear-gradient(180deg, #f4cf6a 0%, #e0a93f 100%)',
-              border: 'none', cursor: starting ? 'wait' : 'pointer',
+              color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`,
+              border: `1px solid ${GOLD}66`, cursor: starting ? 'wait' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
               animation: starting ? 'none' : 'gauntCta 2.6s ease-in-out infinite',
             }}>
@@ -533,7 +533,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* The fork */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
             <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-              style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '1rem', color: '#1a1206', background: 'linear-gradient(180deg, #f4cf6a 0%, #e0a93f 100%)', border: 'none', cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 20px ${GOLD}26` }}>
+              style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '1rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 20px ${GOLD}1f` }}>
               {resolving ? '…' : `Haul Up · ${fmt(previewDoubloons)} ⟡`}
             </button>
             <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
@@ -943,7 +943,7 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
               Hauled up from depth {r.depth}{r.chest.potMult > 1 ? ` · ×${r.chest.potMult} haul` : ''}
             </p>
             <button onClick={open} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
-              style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#1a1206', background: 'linear-gradient(180deg, #f4cf6a 0%, #e0a93f 100%)', border: 'none', cursor: 'pointer', boxShadow: `0 0 22px ${GOLD}33` }}>
+              style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: 'pointer', boxShadow: `0 0 20px ${GOLD}1f` }}>
               Crack It Open
             </button>
           </>
