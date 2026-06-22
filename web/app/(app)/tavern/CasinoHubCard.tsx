@@ -11,10 +11,11 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ScenicCard from './ScenicCard'
+import { ResetPill } from '@/components/ResetCountdown'
 
 const TABLES = ['/blackjack.png', '/roulette.png', '/fishslots.png'] as const
 
-export default function CasinoHubCard() {
+export default function CasinoHubCard({ capped = false }: { capped?: boolean }) {
   const [tableIdx, setTableIdx] = useState(0)
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function CasinoHubCard() {
       title="The Den"
       gradient={['#4a1212', '#2a0808', '#100404']}
       accent="#c63838"
+      badge={capped ? <ResetPill kind="daily" prefix="Cap resets in" accent="#f3c6c6" /> : undefined}
     >
       {/* Velvet sheen — felt lit from above, slow pulse. */}
       <motion.div

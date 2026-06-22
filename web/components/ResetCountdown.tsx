@@ -56,3 +56,34 @@ export default function ResetCountdown({
     </span>
   )
 }
+
+// A self-contained status pill (clock + live countdown) for overlaying on a
+// card once a daily reward is claimed / a cap is reached. Renders nothing until
+// the clock mounts, so there's no empty-pill flash.
+export function ResetPill({
+  kind = 'daily',
+  prefix = 'Resets in',
+  accent = '#f0e6c8',
+}: {
+  kind?: 'daily' | 'weekly'
+  prefix?: string
+  accent?: string
+}) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  if (!mounted) return null
+  return (
+    <span
+      className="font-karla font-700"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 8px', borderRadius: 999, fontSize: '0.52rem', letterSpacing: '0.04em',
+        color: accent, background: 'rgba(6,12,20,0.82)', border: '1px solid rgba(255,255,255,0.18)',
+        backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', whiteSpace: 'nowrap',
+      }}
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 1.8" /></svg>
+      <ResetCountdown kind={kind} prefix={prefix} />
+    </span>
+  )
+}

@@ -25,6 +25,9 @@ interface Props {
   /** When set, tapping fires this instead of navigating to `href` — used by
    *  cards that open an in-app popup (e.g. the membership purchase modal). */
   onActivate?: () => void
+  /** Optional status pill rendered top-center over the art (e.g. a reset
+   *  countdown once a daily reward is claimed / a cap is reached). */
+  badge?: React.ReactNode
   /** Bespoke scene art rendered absolute inside the card. ScenicCard
    *  owns the gradient bg, border, bottom scrim, title, and tap feel
    *  — scenes just supply the illustration + animation. */
@@ -36,7 +39,7 @@ interface Props {
  *  by default (168px tall, fills its grid cell). Pass `external` to
  *  navigate via <a target="_blank"> instead of next/navigation
  *  router.push — used by the marketplace's Shopify links. */
-export default function ScenicCard({ href, title, gradient, accent, height = 168, external, onActivate, children }: Props) {
+export default function ScenicCard({ href, title, gradient, accent, height = 168, external, onActivate, badge, children }: Props) {
   const router = useRouter()
   const handleActivate = () => {
     if (onActivate) { onActivate(); return }
@@ -68,6 +71,12 @@ export default function ScenicCard({ href, title, gradient, accent, height = 168
       }}
     >
       {children}
+      {/* Status pill — top-center over the art (reset countdown, etc.). */}
+      {badge && (
+        <div style={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', justifyContent: 'center', zIndex: 3, pointerEvents: 'none' }}>
+          {badge}
+        </div>
+      )}
       {/* Bottom scrim — gradient fade from transparent to near-opaque
           dark so the title reads cleanly against busy art. */}
       <div

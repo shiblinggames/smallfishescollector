@@ -2,18 +2,20 @@
 
 import { motion } from 'framer-motion'
 import ScenicCard from './ScenicCard'
+import { ResetPill } from '@/components/ResetCountdown'
 
 /** Tavern hub card for Daily Bonus. Warm golden scene — a treasure
  *  chest glowing as if just lit from above. The chest "breathes" with
  *  a tiny scale pulse and a radiating glow behind it shimmers, like
  *  there's still loot inside waiting to be claimed. */
-export default function DailyBonusCard() {
+export default function DailyBonusCard({ claimed = false }: { claimed?: boolean }) {
   return (
     <ScenicCard
       href="/tavern/daily-bonus"
       title="Login Bonus"
       gradient={['#3a2a0e', '#1f160a', '#0e0a06']}
       accent="#f0c040"
+      badge={claimed ? <ResetPill kind="daily" accent="#f0e0b0" /> : undefined}
     >
       {/* Radial gold halo behind the chest — pulses on a slow loop to
           suggest the loot inside is "alive" / waiting. */}

@@ -16,6 +16,8 @@ import SupportStudioCard from '@/components/SupportStudioCard'
 import { CHARACTER_COLORS } from '@/lib/characters'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
+import { kingWeekStr } from './trivia/constants'
+import { getCasinoState } from './casino/actions'
 
 // Same streaming pattern as /expeditions: shell + Nav paint as soon as
 // profile arrives, then each card-group section streams in via its own
@@ -27,20 +29,31 @@ import { SkeletonBox } from '@/components/Skeleton'
 function GamesSection() {
   // The Den + Tide Run share this row (layout reshuffle 2026-06-18: Tide Run
   // took the Parlor's old slot; the Parlor moved down to the Charting row).
+  // The Den's daily-cap state streams in (DenCard) so the card paints
+  // immediately and the reset timer pops in once the buy-in total resolves.
   return (
     <div className="grid grid-cols-2 gap-3">
-      <CasinoHubCard />
+      <Suspense fallback={<CasinoHubCard />}>
+        <DenCard />
+      </Suspense>
       <TideRunCard />
     </div>
   )
 }
 
+// Async: reads today's buy-in total vs the cap so the card can show a reset
+// timer once the player has hit the Den's daily limit.
+async function DenCard() {
+  const state = await getCasinoState()
+  return <CasinoHubCard capped={state.dailyRemaining <= 0} />
+}
+
 // Top-of-page features grid: Login Bonus + Contests (Contests took Tide Run's
 // old slot here on 2026-06-18).
-function FeaturesSection() {
+function FeaturesSection({ dailyClaimed }: { dailyClaimed: boolean }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <DailyBonusCard />
+      <DailyBonusCard claimed={dailyClaimed} />
       <ContestsHubCard />
     </div>
   )
@@ -53,6 +66,15 @@ export default async function TavernPage() {
 
   const freeColorIds = CHARACTER_COLORS.filter(c => c.free).map(c => c.id)
   const unlockedColors = [...freeColorIds, ...((profile?.unlocked_character_colors as string[] | null) ?? [])]
+
+  // Login Bonus card shows a reset timer once the player has claimed everything
+  // available right now: today's gems + bait AND this week's crate. The soonest
+  // thing to return is the daily gems/bait (UTC midnight), so it's a daily timer.
+  const today = new Date().toISOString().split('T')[0]
+  const dailyClaimed =
+    profile?.last_daily_claim === today &&
+    profile?.last_worm_claim === today &&
+    profile?.last_crate_claim_week === kingWeekStr()
 
   return (
     <>
@@ -93,7 +115,7 @@ export default async function TavernPage() {
               cards. Daily Bonus took Recruit Crew's slot here on
               2026-06-11. */}
           <div>
-            <FeaturesSection />
+            <FeaturesSection dailyClaimed={dailyClaimed} />
           </div>
 
           {/* Games — the Den + the Parlor, one door each into their
