@@ -1273,6 +1273,35 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
   )
 }
 
+// Visual for the Extra Cannonball Rack — the raid cannonball pips (same gold
+// dots as the in-combat ChargesRow) going from the standard 3 to 4, with the
+// new reserve pip pulsing teal so the gain is obvious at a glance.
+function CannonballRackDemo() {
+  function Pip({ extra }: { extra?: boolean }) {
+    return (
+      <motion.div
+        aria-hidden
+        animate={extra ? { scale: [1, 1.16, 1], boxShadow: [`0 0 6px rgba(251,191,36,0.5)`, `0 0 12px ${TEAL}, 0 0 7px rgba(251,191,36,0.85)`, `0 0 6px rgba(251,191,36,0.5)`] } : undefined}
+        transition={extra ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : undefined}
+        style={{ width: 14, height: 14, borderRadius: '50%', background: '#fbbf24', border: `1px solid ${extra ? TEAL : '#fbbf24'}`, boxShadow: extra ? `0 0 10px ${TEAL}` : '0 0 6px rgba(251,191,36,0.5)' }}
+      />
+    )
+  }
+  return (
+    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '0.7rem 0.5rem', borderRadius: 10, background: 'rgba(4,8,14,0.6)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>{[0, 1, 2].map(i => <Pip key={i} />)}</div>
+        <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.44rem', color: '#8a8480', marginTop: 7 }}>Standard · 3</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8480" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>{[0, 1, 2].map(i => <Pip key={i} />)}<Pip extra /></div>
+        <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.44rem', color: TEAL, marginTop: 7 }}>With Rack · 4</p>
+      </div>
+    </div>
+  )
+}
+
 // ── Locker Upgrades ───────────────────────────────────────────────────────────
 // Permanent perks bought with hauled-up doubloons, each gated by how deep you've
 // gone. Server-validated on claim (depth + cost + no-double); the panel just
@@ -1338,6 +1367,7 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
                       </span>
                     </div>
                     <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.45, marginTop: 5 }}>{u.description}</p>
+                    {u.id === 'cannonball_rack' && <CannonballRackDemo />}
                     <button
                       type="button"
                       onClick={(!owned && depthMet && canAfford && !busy) ? () => claim(u.id) : undefined}
