@@ -608,6 +608,13 @@ export default function RaidCombat({
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
   const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' } | null>(null)
+  // Persistent status — the enemy keeps a low ember glow while burning and a
+  // frost tint while iced, between the activation flare and the tick/skip.
+  const [enemyBurning, setEnemyBurning] = useState(false)
+  const [enemyFrozen, setEnemyFrozen]   = useState(false)
+  // Lethal-save (Quartermaster's Anchor item) burst — fires the moment the
+  // anchor catches a killing blow.
+  const [anchorSaveFx, setAnchorSaveFx] = useState(0)
   // Enemy firing back: muzzle flash on the enemy hull + impact spray on the
   // player hull (the receiving end now gets the same treatment the enemy does).
   const [enemyMuzzle, setEnemyMuzzle] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
@@ -847,6 +854,7 @@ export default function RaidCombat({
     }, 600)
     setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
+    setEnemyBurning(false); setEnemyFrozen(false)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
@@ -1339,6 +1347,14 @@ export default function RaidCombat({
       // Set when this hit lit an Incendiary / froze a Frozen cannonball, so the
       // enemy hull flares with the matching status aura the instant it lands.
       procStatus?: 'burn' | 'freeze'
+      // Burn turns remaining AFTER this tick (drives the persistent ember glow).
+      burnTurnsLeft?: number
+      // This step is the frozen-skip — the ice breaks after it (clears the tint).
+      freezeEnds?: boolean
+      // Astrolabe riposte: damage reflected into the enemy on a dodge.
+      reflectDmg?: number
+      // Vampiric affix: HP the enemy drank back off the hit it landed.
+      enemyHeal?: number
     }
 
     // Hull plating: equipped damage-reduction items cut INCOMING enemy
@@ -1362,7 +1378,7 @@ export default function RaidCombat({
       const tick = enemyBurnRef.current.dmg
       eHp = Math.max(0, eHp - tick)
       enemyBurnRef.current = { turns: enemyBurnRef.current.turns - 1, dmg: enemyBurnRef.current.dmg }
-      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`The ${enemy.name} is ablaze, burning for ${tick}.`] })
+      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`The ${enemy.name} is ablaze, burning for ${tick}.`], burnTurnsLeft: enemyBurnRef.current.turns })
     }
 
     for (const who of order) {
@@ -1371,7 +1387,7 @@ export default function RaidCombat({
       // turn-start heal + action). One turn, then the ice breaks.
       if (who === 'enemy' && enemyFrozenRef.current) {
         enemyFrozenRef.current = false
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [`The ${enemy.name} is frozen solid and loses its turn.`] })
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [`The ${enemy.name} is frozen solid and loses its turn.`], freezeEnds: true })
         continue
       }
       const action = who === 'player' ? pAction : eAction
@@ -1380,6 +1396,8 @@ export default function RaidCombat({
       let splatColor = '#ef4444'
       let enemyCrit = false
       let procStatus: 'burn' | 'freeze' | undefined
+      let reflectDmgOut: number | undefined
+      let enemyHealOut: number | undefined
       const stepLines: string[] = []
 
       // Snare made good — the enemy tried to slip aside but its helm is jammed,
@@ -1627,11 +1645,12 @@ export default function RaidCombat({
               if (parryChance > 0 && parryReflectPct > 0 && dmg > 0 && Math.random() < parryChance) {
                 const reflectDmg = Math.max(1, Math.floor(dmg * parryReflectPct))
                 eHp = Math.max(0, eHp - reflectDmg)
+                reflectDmgOut = reflectDmg
                 stepLines.push(`Riposte! You turn the shot back, slicing ${reflectDmg} into ${enemy.name}.`)
               }
             }
 
-            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines })
+            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut })
             continue
           } else {
             partialDodge = true
@@ -1745,6 +1764,7 @@ export default function RaidCombat({
             const stolen = Math.min(enemy.hpBase - eHp, Math.max(1, Math.round(dmg * affix.lifestealPct)))
             if (stolen > 0) {
               eHp += stolen
+              enemyHealOut = stolen
               stepLines.push(`${enemy.name} drinks back ${stolen} HP from the hit.`)
             }
           }
@@ -1779,6 +1799,7 @@ export default function RaidCombat({
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
         procStatus,
+        enemyHeal: enemyHealOut,
       })
 
       // Phase 2 revival — when the player's killing blow drops the boss
@@ -1894,6 +1915,8 @@ export default function RaidCombat({
               onAnchorSave?.()
               pHp = 1
               setPlayerHp(1)
+              setAnchorSaveFx(k => k + 1)
+              vibrate([0, 60, 40, 90])
               setResolveLog(prev => [...prev, 'The anchor holds. You cling on at 1 HP.'])
               // fall through to the normal next-turn continuation below
             } else {
@@ -1976,6 +1999,18 @@ export default function RaidCombat({
           const dk = Date.now() + i + 6
           setDodgeFx({ key: dk, actor: dodger })
           setTimeout(() => setDodgeFx(d => (d && d.key === dk ? null : d)), 460)
+          // Astrolabe riposte — the dodged shot is turned back into the enemy.
+          // Lands a beat after the dodge reads, with its own number + impact.
+          if (step.reflectDmg) {
+            setTimeout(() => {
+              setEnemyHp(step.eHp)
+              setEHitsplat({ key: Date.now() + i + 8, text: `-${step.reflectDmg}`, color: '#38bdf8' })
+              setEnemyShakeKind('hit'); setEnemyShakeKey(k => k + 1)
+              setEnemyImpact({ key: Date.now() + i + 9, kind: 'normal' })
+              setTimeout(() => setEnemyImpact(null), 700)
+              setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
+            }, 240)
+          }
         }, PROJECTILE_FLIGHT_MS - 80)
       }
 
@@ -2010,11 +2045,14 @@ export default function RaidCombat({
               setTimeout(() => setEnemyImpact(null), 700)
             }
             // Incendiary lit / Frozen iced — flare the matching hull aura the
-            // instant the proc'd shot connects (not just on later burn ticks).
+            // instant the proc'd shot connects, and switch on the persistent
+            // glow/tint that lingers until the burn ticks out / ice breaks.
             if (step.procStatus) {
               const ak = Date.now() + i + 7
               setEnemyAura({ key: ak, kind: step.procStatus })
               setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
+              if (step.procStatus === 'burn') setEnemyBurning(true)
+              else setEnemyFrozen(true)
             }
             if (step.big) {
               setCritFlash(true)
@@ -2046,6 +2084,15 @@ export default function RaidCombat({
               setTimeout(() => setPlayerImpact(null), 700)
             }
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+          }
+          // Vampiric drink-back — a green +N rises off the enemy hull a beat
+          // after its hit lands, so the lifesteal reads instead of the HP bar
+          // quietly creeping back up.
+          if (step.enemyHeal) {
+            setTimeout(() => {
+              setEHitsplat({ key: Date.now() + i + 5, text: `+${step.enemyHeal}`, color: '#4ade80' })
+              setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
+            }, 360)
           }
         }, PROJECTILE_FLIGHT_MS)
       } else if (step.action === 'repair' && step.who === 'player') {
@@ -2084,6 +2131,10 @@ export default function RaidCombat({
               setEnemyAura({ key: ak, kind: auraKind })
               setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 900)
             }
+            // Persistent glow/tint: burn lingers until its last tick, frost
+            // until the ice breaks (this skip step).
+            if (auraKind === 'burn') setEnemyBurning((step.burnTurnsLeft ?? 0) > 0)
+            if (step.freezeEnds) setEnemyFrozen(false)
           }
         }, PROJECTILE_FLIGHT_MS)
       }
@@ -2673,6 +2724,8 @@ export default function RaidCombat({
                 pointerEvents: 'none',
               }}
             />
+            {/* Persistent burn/freeze tell — lingers between activation + tick */}
+            {(enemyBurning || enemyFrozen) && <EnemyPersistentStatus burning={enemyBurning} frozen={enemyFrozen} />}
             {/* Status aura — burning embers / freezing rime / snare jam over the hull */}
             <AnimatePresence>
               {enemyAura && <EnemyStatusAura key={`ea-${enemyAura.key}`} kind={enemyAura.kind} />}
@@ -2753,6 +2806,8 @@ export default function RaidCombat({
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
               )}
+              {/* Lethal-save burst — Quartermaster's Anchor catches a killing blow */}
+              {anchorSaveFx > 0 && <AnchorSaveBurst key={`asf-${anchorSaveFx}`} />}
               {/* Dodge whoosh — player juts back-left out of the way */}
               <AnimatePresence>
                 {dodgeFx?.actor === 'player' && (
@@ -3271,6 +3326,16 @@ export default function RaidCombat({
         }
         .rc-sharp-band {
           animation: rc-sharp-pulse 1s ease-in-out infinite;
+        }
+        @keyframes rc-ember-rise {
+          0%   { transform: translateY(0) scale(1);     opacity: 0; }
+          22%  { opacity: 0.95; }
+          100% { transform: translateY(-40px) scale(0.35); opacity: 0; }
+        }
+        .rc-ember {
+          position: absolute; bottom: 16%; width: 4px; height: 4px; border-radius: 50%;
+          box-shadow: 0 0 6px #fb923c; pointer-events: none;
+          animation: rc-ember-rise 2.1s ease-out infinite;
         }
       `}</style>
     </div>
@@ -4115,6 +4180,62 @@ function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' }) {
         />
       ))}
     </motion.div>
+  )
+}
+
+// Persistent enemy status — a low ambient tell that lingers between the
+// activation flare and the tick/skip. Burning: a base ember glow + slow rising
+// embers. Frozen: a cyan frost tint over the hull.
+function EnemyPersistentStatus({ burning, frozen }: { burning: boolean; frozen: boolean }) {
+  return (
+    <>
+      {burning && (
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+          <motion.div
+            aria-hidden
+            animate={{ opacity: [0.22, 0.46, 0.22] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ position: 'absolute', inset: '-10% -4% -2%', borderRadius: '46%', mixBlendMode: 'screen', background: 'radial-gradient(ellipse at 50% 82%, rgba(251,146,60,0.6) 0%, rgba(251,146,60,0.2) 46%, transparent 72%)' }}
+          />
+          {[0, 1, 2].map(n => (
+            <span key={n} className="rc-ember" style={{ left: `${36 + n * 13}%`, animationDelay: `${n * 0.55}s`, background: '#ffd27a' }} />
+          ))}
+        </div>
+      )}
+      {frozen && (
+        <motion.div
+          aria-hidden
+          animate={{ opacity: [0.4, 0.62, 0.4] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen', zIndex: 3, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, rgba(125,211,252,0.5) 0%, rgba(186,230,253,0.22) 45%, transparent 72%)' }}
+        />
+      )}
+    </>
+  )
+}
+
+// Lethal-save burst (Quartermaster's Anchor item) — a cyan shield ring + flash
+// + a held "ANCHOR HELD" beat on the player hull when a killing blow is caught.
+function AnchorSaveBurst() {
+  return (
+    <>
+      <motion.div
+        aria-hidden
+        initial={{ opacity: 0.85, scale: 0.4 }}
+        animate={{ opacity: 0, scale: 2.4 }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '-10%', borderRadius: '50%', border: '2.5px solid rgba(125,211,252,0.9)', boxShadow: '0 0 30px rgba(125,211,252,0.7)', pointerEvents: 'none', zIndex: 4 }}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.7 }}
+        animate={{ opacity: [0, 1, 1, 0], y: -16, scale: 1 }}
+        transition={{ duration: 1.3, times: [0, 0.18, 0.7, 1], ease: 'easeOut' }}
+        className="font-cinzel font-800 uppercase tracking-[0.1em]"
+        style={{ position: 'absolute', left: '50%', top: '8%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', color: '#7dd3fc', fontSize: '0.78rem', textShadow: '0 0 10px rgba(125,211,252,0.9), 0 1px 3px rgba(0,0,0,0.7)', pointerEvents: 'none', zIndex: 5 }}
+      >
+        Anchor Held
+      </motion.div>
+    </>
   )
 }
 
