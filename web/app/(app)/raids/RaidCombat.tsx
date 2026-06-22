@@ -446,14 +446,18 @@ export default function RaidCombat({
   // turn changes is defined further down where the `turn` state is in
   // scope (search for "ability per-turn reset effect").
   // Anchor — next incoming hit's damage is reduced by this fraction (0-1).
-  // Read at hit-resolve time, then cleared.
+  // Read + consumed at hit-resolve time inside resolveTurn (which builds the
+  // turn synchronously), so the live value lives in a ref the resolver reads
+  // and decrements; the state mirror drives the brace glint on the hull.
   const [anchorReductionPct, setAnchorReductionPct] = useState<number | null>(null)
+  const anchorReductionRef = useRef<number | null>(null)
+  const anchorAbsorbsCritsRef = useRef(false)   // Lv 100 anchor cuts crits too
   // Abyssal Tide (Catfish-only legendary) — damage-absorbing shield buffer
-  // granted on top of HP. Drains BEFORE HP on the next incoming hit; carry
-  // over until consumed or the encounter ends. Anchor-style next-hit
-  // resolution wiring is pending, so for now this is staged but only
-  // visible via the chooser/log.
-  const [, setAbyssalShieldHp] = useState(0)
+  // granted on top of HP. Drains BEFORE HP on incoming hits and carries over
+  // across turns/phases until consumed. Same ref-for-resolver + state-for-glint
+  // split as the anchor.
+  const [abyssalShieldHp, setAbyssalShieldHp] = useState(0)
+  const abyssalShieldRef = useRef(0)
   // Cleanse Mender flag — Lv 100 Mender heals AND strips one enemy debuff
   // from the player. There's no in-fight debuff system yet, so this is a
   // hook for future expansion; for now it's tracked but does nothing.
@@ -1024,9 +1028,9 @@ export default function RaidCombat({
       case 'anchor': {
         const an = m as import('@/lib/crewClasses').AnchorMilestone
         setAnchorReductionPct(an.pctReduction)
-        // absorbsCrits handling is deferred — applies on the next hit
-        // resolve. Tracked in state for now; future polish wires it.
-        setResolveLog(prev => [...prev, `${crew.name} drops the sea anchor — the next hit you take is cut ${Math.round(an.pctReduction * 100)}%.`])
+        anchorReductionRef.current = an.pctReduction
+        anchorAbsorbsCritsRef.current = !!an.absorbsCrits
+        setResolveLog(prev => [...prev, `${crew.name} drops the sea anchor — the next hit you take is cut ${Math.round(an.pctReduction * 100)}%${an.absorbsCrits ? ', crits and all' : ''}.`])
         break
       }
       case 'navigator': {
@@ -1049,10 +1053,11 @@ export default function RaidCombat({
         const heal = Math.round(playerHpMax * at.pctMaxHp)
         setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
         playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
-        // Shield buffer — staged for the next incoming hit. Matches the
-        // anchor pattern (state set here, resolver consumes later).
+        // Shield buffer — soaks incoming damage before HP (resolver reads the
+        // ref + decrements; state mirror drives the hull glint).
         const shield = Math.round(playerHpMax * at.shieldPctMaxHp)
-        setAbyssalShieldHp(shield)
+        setAbyssalShieldHp(prev => prev + shield)
+        abyssalShieldRef.current += shield
         if (at.cleanseDebuff) setCleanseDebuffPending(true)
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
         break
@@ -1298,6 +1303,10 @@ export default function RaidCombat({
 
   function resolveTurn(pAction: EnemyAction, eAction: EnemyAction, first: Actor, pSpeedRoll: number, eSpeedRoll: number, lockedAimResult: ShotResult | null) {
     setSubPhase('resolving')
+    // Defensive-buff consumption is tracked on refs during the synchronous
+    // build, then committed to state once (after) so the hull glints clear.
+    let anchorConsumed = false
+    let shieldChanged = false
     // Speed-roll line shows immediately. Per-step lines are appended as each
     // step starts animating (see playStep) so the log feels alive instead of
     // dumping the whole turn at once.
@@ -1696,6 +1705,27 @@ export default function RaidCombat({
           // effects (Drop sea anchor: ×0.85 next fight, etc.).
           const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
           if (takenMult !== 1 && dmg > 0) dmg = Math.max(1, Math.floor(dmg * takenMult))
+          // Quartermaster's Anchor — cut the next incoming hit. Crits punch
+          // through unless the milestone absorbs them. Consumed only when it
+          // actually mitigates (a crit it can't touch leaves it set for later).
+          if (anchorReductionRef.current != null && dmg > 0 && (!enemyCrit || anchorAbsorbsCritsRef.current)) {
+            const before = dmg
+            dmg = Math.max(1, Math.round(dmg * (1 - anchorReductionRef.current)))
+            stepLines.push(`The sea anchor holds — the blow is cut (${before} → ${dmg}).`)
+            anchorReductionRef.current = null
+            anchorConsumed = true
+          }
+          // Abyssal Tide shield — soaks from the pool before HP, carries across
+          // turns until drained.
+          if (abyssalShieldRef.current > 0 && dmg > 0) {
+            const soaked = Math.min(abyssalShieldRef.current, dmg)
+            abyssalShieldRef.current -= soaked
+            dmg -= soaked
+            shieldChanged = true
+            stepLines.push(abyssalShieldRef.current > 0
+              ? `The abyssal shield soaks ${soaked}.`
+              : `The abyssal shield soaks ${soaked} and shatters.`)
+          }
           pHp = Math.max(0, pHp - dmg)
           // Vampiric affix: 50% chance to heal a fraction of dealt
           // damage. Capped at its maxHP. Fires after the damage lands so
@@ -1712,7 +1742,11 @@ export default function RaidCombat({
               stepLines.push(`${enemy.name} drinks back ${stolen} HP from the hit.`)
             }
           }
-          if (partialDodge) {
+          if (dmg === 0) {
+            // The shield ate the whole shot — show the block, not a "-0".
+            splatText = 'Shielded'
+            splatColor = '#7dd3fc'
+          } else if (partialDodge) {
             stepLines.push(action === 'volley'
               ? `You partially dodge the volley — grazed for ${dmg}.`
               : `You partially dodge — grazed for ${dmg}.`)
@@ -2046,6 +2080,10 @@ export default function RaidCombat({
       const gapMs = step.phaseTransition ? 1600 : STEP_GAP_MS
       playStepChainRef.current.push(setTimeout(() => playStep(i + 1), gapMs))
     }
+
+    // Commit defensive-buff consumption so the hull glints reflect what's left.
+    if (anchorConsumed) setAnchorReductionPct(null)
+    if (shieldChanged) setAbyssalShieldHp(abyssalShieldRef.current)
 
     playStepChainRef.current = []
     playStepChainRef.current.push(setTimeout(() => playStep(0), SPEED_LINE_HOLD_MS))
@@ -2707,6 +2745,22 @@ export default function RaidCombat({
                   <DodgeWhoosh key={`dw-${dodgeFx.key}`} image={shipImageUrl} dir="left" />
                 )}
               </AnimatePresence>
+              {/* Brace glint — a cyan shield dome breathes over the hull while
+                  an Anchor cut or Abyssal shield is queued, and clears when the
+                  resolver consumes it. */}
+              {((anchorReductionPct ?? 0) > 0 || abyssalShieldHp > 0) && (
+                <motion.div
+                  aria-hidden
+                  initial={{ opacity: 0.32 }}
+                  animate={{ opacity: [0.32, 0.62, 0.32] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    position: 'absolute', inset: '-7%', borderRadius: '50%',
+                    pointerEvents: 'none', zIndex: 2, mixBlendMode: 'screen',
+                    background: 'radial-gradient(ellipse 72% 104% at 74% 50%, rgba(125,211,252,0.55) 0%, rgba(94,234,212,0.22) 46%, transparent 72%)',
+                  }}
+                />
+              )}
             </motion.div>
             <AnimatePresence>
               {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} />}
