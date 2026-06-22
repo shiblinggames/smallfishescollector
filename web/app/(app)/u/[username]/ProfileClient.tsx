@@ -90,11 +90,32 @@ const RARITY_LABEL: Record<number, string> = {
   1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary',
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// Kept in sync with /profile (ProfileClient): one card radius, the gold-bar
+// SectionLabel, and the identity LevelChip so the public page reads identically.
+const CARD_RADIUS = 18
+
+function SectionLabel({ children, color = '#f0c040' }: { children: React.ReactNode; color?: string }) {
   return (
-    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.78rem', color: '#ccc7c0', marginBottom: 14 }}>
-      {children}
-    </p>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <span aria-hidden style={{ width: 3, height: 13, borderRadius: 2, flexShrink: 0, background: `linear-gradient(180deg, ${color} 0%, ${color}26 100%)` }} />
+      <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: '#d8d4cd' }}>
+        {children}
+      </p>
+    </div>
+  )
+}
+
+function LevelChip({ color, label, value }: { color: string; label: string; value: number }) {
+  return (
+    <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{
+      display: 'inline-flex', alignItems: 'baseline', gap: 5,
+      padding: '0.32rem 0.72rem', borderRadius: 999,
+      background: `${color}14`, border: `1px solid ${color}3a`,
+      fontSize: '0.56rem', color,
+    }}>
+      {label}
+      <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8', letterSpacing: 0, lineHeight: 1 }}>{value}</span>
+    </span>
   )
 }
 
@@ -165,7 +186,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
     <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
 
       {/* ── Header ── */}
-      <div className="flex flex-col items-center gap-3 pt-2 pb-8">
+      <div className="flex flex-col items-center pt-3 pb-8">
         {/* Portrait — same composite (character + hat + bg + border) used on
             /profile and in the desktop Nav avatar, so the player's visual
             identity stays consistent everywhere. */}
@@ -176,37 +197,44 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
           ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
         />
-        <p className="font-cinzel font-700 text-[#f0ede8]" style={{ fontSize: '1.5rem', marginTop: 6 }}>{username}</p>
 
-        <div className="flex items-center gap-2 flex-wrap justify-center">
+        <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginTop: 14, marginBottom: 11 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1 }}>{username}</p>
           {isPremium && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.28)' }}>
+            <span title="Captain" className="flex items-center gap-1 rounded-full" style={{ padding: '0.2rem 0.55rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)' }}>
               <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.65rem', color: '#f0c040' }}>Captain</span>
-            </div>
-          )}
-          {!isOwnProfile && (
-            <button
-              onClick={toggleCrew}
-              disabled={crewPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-karla font-700 uppercase tracking-[0.12em] transition-all disabled:opacity-40"
-              style={{
-                fontSize: '0.65rem',
-                background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.08)',
-                border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.18)'}`,
-                color: inCrew ? '#4ade80' : '#c0bdb8',
-              }}
-            >
-              {crewPending ? '…' : inCrew ? '✓ Friends' : '+ Add Friend'}
-            </button>
+              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Captain</span>
+            </span>
           )}
         </div>
+
+        {/* Level chips — both core levels surfaced up top */}
+        <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginBottom: 13 }}>
+          <LevelChip color="#60a5fa" label="Fishing Lv" value={fishingLevel} />
+          <LevelChip color="#c084fc" label="Nav Lv" value={expLevel} />
+        </div>
+
+        {!isOwnProfile && (
+          <button
+            onClick={toggleCrew}
+            disabled={crewPending}
+            className="flex items-center gap-1.5 rounded-full font-karla font-700 uppercase tracking-[0.1em] transition-all disabled:opacity-40"
+            style={{
+              padding: '0.4rem 0.95rem', fontSize: '0.62rem',
+              background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.16)'}`,
+              color: inCrew ? '#4ade80' : '#c0bdb8',
+            }}
+          >
+            {crewPending ? '…' : inCrew ? '✓ Friends' : '+ Add Friend'}
+          </button>
+        )}
       </div>
 
-      {/* ── Fishing / Navigation tabs ── */}
-      <div style={{ display: 'flex', gap: 4, padding: 4, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.55)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}>
+      {/* ── Fishing / Navigation tabs — pill segmented control ── */}
+      <div style={{ display: 'flex', gap: 5, padding: 5, margin: '0 auto 22px', maxWidth: 540, width: '100%', background: 'rgba(8,14,24,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999 }}>
         {([['fishing', 'Fishing'], ['navigation', 'Navigation']] as const).map(([id, label]) => {
           const on = profileTab === id
           return (
@@ -216,11 +244,13 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
               onClick={() => setProfileTab(id)}
               className="font-karla font-700 uppercase tracking-[0.12em]"
               style={{
-                flex: 1, padding: '0.6rem 0', borderRadius: 10,
+                flex: 1, padding: '0.62rem 0', borderRadius: 999,
                 fontSize: '0.7rem', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
-                border: on ? '1px solid rgba(96,165,250,0.5)' : '1px solid transparent',
-                background: on ? 'rgba(96,165,250,0.16)' : 'transparent',
-                color: on ? '#cfe2ff' : 'rgba(240,237,232,0.5)',
+                border: on ? '1px solid rgba(96,165,250,0.55)' : '1px solid transparent',
+                background: on ? 'linear-gradient(180deg, rgba(96,165,250,0.24), rgba(96,165,250,0.12))' : 'transparent',
+                color: on ? '#dbe9ff' : 'rgba(240,237,232,0.5)',
+                boxShadow: on ? '0 2px 10px rgba(96,165,250,0.18)' : 'none',
+                transition: 'background 0.15s, color 0.15s',
               }}
             >
               {label}
@@ -234,17 +264,22 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
           {/* Headline career stats */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
-            <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
-            <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
+          <div>
+            <SectionLabel color="#60a5fa">Career</SectionLabel>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
+              <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
+              <StatTile label="Fish Sold" value={`${career.fishSold.toLocaleString()} ⟡`} color="#4ade80" />
+            </div>
           </div>
 
           {/* Character Loadout */}
+          <div>
+          <SectionLabel color="#60a5fa">Angler &amp; Loadout</SectionLabel>
           <div style={{
             background: 'radial-gradient(ellipse at 50% 90%, rgba(20,50,100,0.22) 0%, transparent 70%)',
-            border: '1px solid rgba(80,120,200,0.18)',
-            borderRadius: 20,
+            border: '1px solid rgba(80,120,200,0.2)',
+            borderRadius: CARD_RADIUS,
             overflow: 'hidden',
             paddingBottom: 14,
           }}>
@@ -377,8 +412,8 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           {/* Equipped Special */}
           {equippedSpecial && (
             <div style={{
-              display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 8,
-              padding: '0.4rem 0.75rem 0.4rem 0.5rem', borderRadius: 20,
+              display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 12,
+              padding: '0.4rem 0.75rem 0.4rem 0.5rem', borderRadius: 999,
               background: `${equippedSpecial.color}10`, border: `1px solid ${equippedSpecial.color}30`,
             }}>
               {equippedSpecial.image
@@ -388,6 +423,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
               <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: equippedSpecial.color }}>{equippedSpecial.name}</span>
             </div>
           )}
+          </div>
 
           {/* Rarest Catches */}
           {rarestFish.length > 0 && (
@@ -438,17 +474,22 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
           {/* Headline career stats */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
-            <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
-            <StatTile label="Biggest Hit" value={career.highestRaidDamage.toLocaleString()} color="#fb923c" />
+          <div>
+            <SectionLabel color="#c084fc">Career</SectionLabel>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
+              <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
+              <StatTile label="Biggest Hit" value={career.highestRaidDamage.toLocaleString()} color="#fb923c" />
+            </div>
           </div>
 
           {/* Ship Hero */}
+          <div>
+          <SectionLabel color="#c084fc">Your Ship</SectionLabel>
           <div style={{
             background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
-            border: `1px solid ${ship.color}20`,
-            borderRadius: 20,
+            border: `1px solid ${ship.color}33`,
+            borderRadius: CARD_RADIUS,
             padding: '24px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
@@ -489,11 +530,12 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
               )}
             </div>
           </div>
+          </div>
 
           {/* Crew — the player-picked showcase */}
           {showcaseCrew.length > 0 && (
             <div>
-              <SectionLabel>Crew</SectionLabel>
+              <SectionLabel color="#c084fc">Crew</SectionLabel>
               <div style={{ display: 'flex', gap: '0.6rem', overflowX: 'auto', paddingBottom: '0.4rem' }}>
                 {showcaseCrew.map(c => <CrewPortrait key={c.id} crew={c} />)}
               </div>
@@ -503,7 +545,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           {/* Voyages */}
           {voyages && voyages.length > 0 && (
             <div>
-              <SectionLabel>Voyages</SectionLabel>
+              <SectionLabel color="#c084fc">Voyages</SectionLabel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {visibleVoyages.map(v => {
                   const routeConfig = ROUTE_CONFIGS[v.route as keyof typeof ROUTE_CONFIGS]
