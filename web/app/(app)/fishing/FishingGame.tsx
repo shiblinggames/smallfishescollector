@@ -3608,9 +3608,27 @@ export default function FishingGame({
   useEffect(() => {
     const onXP = (e: Event) => { const v = (e as CustomEvent<number>).detail; if (typeof v === 'number') setFishingXP(v) }
     const onDbl = (e: Event) => { const v = (e as CustomEvent<number>).detail; if (typeof v === 'number') setDoubloons(v) }
+    // A trawl haul can push the player over a fishing level while they're on
+    // the fishing screen. The Trawls indicator fires this AFTER its own haul
+    // card is dismissed, so the SAME full level-up celebration the catch flow
+    // shows runs here too (perks, zone/gear/trawl unlocks) — no stacked
+    // popups, since the haul card is already gone. Mirrors the catch-flow
+    // path at the reel-in handler (setLevelUpNotif + the two events).
+    const onTrawlLevelUp = (e: Event) => {
+      const d = (e as CustomEvent<{ from?: number; to?: number }>).detail
+      if (!d || typeof d.from !== 'number' || typeof d.to !== 'number' || d.to <= d.from) return
+      setLevelUpNotif({ from: d.from, to: d.to })
+      window.dispatchEvent(new CustomEvent('fishing-levelup-open'))
+      window.dispatchEvent(new CustomEvent('fishing-leveled'))
+    }
     window.addEventListener('fishing-xp-changed', onXP)
     window.addEventListener('doubloons-changed', onDbl)
-    return () => { window.removeEventListener('fishing-xp-changed', onXP); window.removeEventListener('doubloons-changed', onDbl) }
+    window.addEventListener('fishing-levelup', onTrawlLevelUp)
+    return () => {
+      window.removeEventListener('fishing-xp-changed', onXP)
+      window.removeEventListener('doubloons-changed', onDbl)
+      window.removeEventListener('fishing-levelup', onTrawlLevelUp)
+    }
   }, [])
   // Level-up celebration carries both the old AND new level so we can
   // compute the stat deltas the player just earned (catch-zone width,

@@ -301,7 +301,26 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     setCoins(Array.from({ length: 8 }, () => ({ id: pid.current++ })))
     setTimeout(() => setCoins([]), 900)
     setReveal(r)
+    // If this haul leveled the player up, the full level-up overlay (owned by
+    // FishingGame) fires when the haul card is dismissed (see dismissReveal).
+    // Signal it now, BEFORE refresh(), so any slot unlocked by the same haul
+    // holds its own celebration until the level-up overlay closes — same
+    // anti-stacking deferral the catch flow uses.
+    if (r.newFishingLevel > r.oldFishingLevel) {
+      window.dispatchEvent(new CustomEvent('fishing-levelup-open'))
+    }
     void refresh()
+  }
+
+  // Dismiss the haul card; if it was a level-up, hand off to FishingGame's
+  // main level-up overlay so trawl level-ups get the same celebration (perks,
+  // zone/gear/trawl unlocks) as a level-up earned by catching a fish.
+  function dismissReveal() {
+    const r = reveal
+    setReveal(null)
+    if (r && r.newFishingLevel > r.oldFishingLevel) {
+      window.dispatchEvent(new CustomEvent('fishing-levelup', { detail: { from: r.oldFishingLevel, to: r.newFishingLevel } }))
+    }
   }
 
   // ── Indicator (inline, z-15 HUD layer; drag to reposition) ────────────────
@@ -601,7 +620,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const collectReveal = (
     <AnimatePresence>
       {reveal && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setReveal(null)}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={dismissReveal}
           style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
             style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 22%, rgba(196,169,106,0.16) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
@@ -612,15 +631,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             <CountUp to={reveal.xpGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: GREEN, display: 'block', marginTop: 6 }} />
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: '#7fae8f' }}>fishing xp</p>
 
-            {/* Level-up callout — collectTrawl returns old/new fishing level. */}
-            {reveal.newFishingLevel > reveal.oldFishingLevel && (
-              <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 320, damping: 18 }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '0.28rem 0.75rem', borderRadius: 999, background: `${GOLD}1f`, border: `1px solid ${GOLD}66`, boxShadow: `0 0 14px ${GOLD}33` }}>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: GOLD }}>
-                  Level up! Lv {reveal.oldFishingLevel} → {reveal.newFishingLevel}
-                </span>
-              </motion.div>
-            )}
+            {/* The level-up itself is celebrated by FishingGame's full
+                level-up overlay, fired on dismiss (see dismissReveal) — no
+                inline pill here so the two don't say the same thing twice.
+                The XP bar below still shows the new level + progress. */}
 
             {xpProg && (
               <div style={{ maxWidth: 230, margin: '9px auto 0' }}>
@@ -639,7 +653,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
             <CountUp to={reveal.doubloonsGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: GOLD, display: 'block', marginTop: 14 }} />
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: '#bca27a' }}>doubloons → purse</p>
 
-            <motion.button onClick={() => setReveal(null)} whileTap={{ scale: 0.92 }} className="font-cinzel font-700 uppercase" style={{ marginTop: 20, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.78rem', background: `${GOLD}22`, border: `1px solid ${GOLD}7a`, color: '#f4ecd8', boxShadow: `0 0 14px ${GOLD}22`, cursor: 'pointer' }}>Stow it</motion.button>
+            <motion.button onClick={dismissReveal} whileTap={{ scale: 0.92 }} className="font-cinzel font-700 uppercase" style={{ marginTop: 20, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.78rem', background: `${GOLD}22`, border: `1px solid ${GOLD}7a`, color: '#f4ecd8', boxShadow: `0 0 14px ${GOLD}22`, cursor: 'pointer' }}>Stow it</motion.button>
           </motion.div>
         </motion.div>
       )}
