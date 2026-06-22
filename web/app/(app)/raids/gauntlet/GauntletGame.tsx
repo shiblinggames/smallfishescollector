@@ -95,17 +95,19 @@ export default function GauntletGame(props: GauntletGameProps) {
   const playerHPRef = useRef(props.playerHPMax)
   const potRef = useRef(0)
 
-  // Body-scroll lock in installed PWA only (keeps action buttons reachable —
-  // same reasoning as RaidGame).
+  // Body-scroll lock in installed PWA only, and ONLY during combat (keeps the
+  // action buttons reachable — same reasoning as RaidGame). The meta screens
+  // (intro/cooldown/between/reward/dead) are taller and must stay scrollable.
   useEffect(() => {
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true
     if (!standalone) return
+    if (phase !== 'fighting' && phase !== 'tide') return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
-  }, [])
+  }, [phase])
 
   function begin() {
     if (starting) return
@@ -184,20 +186,87 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Intro ──────────────────────────────────────────────────────────────
   if (phase === 'intro') {
     return (
-      <Shell>
-        <Title sub="One run a day. How deep do you dare?">Davy Jones Gauntlet</Title>
-        <div className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#c9c3b8', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p>Fight down through the deep. Every win drags up harder ships from the crews you have already faced, and the loot piles into one pot.</p>
-          <p>After each fight you choose: <span style={{ color: GOLD }}>cash out</span> and bank the haul, or <span style={{ color: TEAL }}>push on</span> for a bigger one. The deeper you go the fatter it gets.</p>
-          <p style={{ color: '#f8a5a5' }}>But if your ship sinks, the whole pot goes down with it. You keep nothing.</p>
-          <p style={{ color: '#9a948a', fontSize: '0.74rem' }}>Starting spends your run for the day. Deepest so far: depth {props.deepest}.</p>
+      <>
+        <AbyssBackdrop />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
+          padding: '6px 0.85rem', textAlign: 'center',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          {/* Kicker + title */}
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: TEAL, marginTop: 6 }}>
+            The Endless Descent
+          </p>
+          <h1 className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 26px rgba(240,192,64,0.32)' }}>
+            Davy Jones Gauntlet
+          </h1>
+          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#9a948a', marginTop: 6 }}>
+            One descent a day. How deep do you dare?
+          </p>
+
+          {/* The maw — the hole you drop into */}
+          <div style={{ position: 'relative', width: 196, height: 196, margin: '14px auto 4px' }}>
+            <div style={{ position: 'absolute', inset: -26, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,192,64,0.26) 0%, rgba(94,234,212,0.12) 42%, transparent 70%)', animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/raid4_gulletmaw.png" alt="" loading="eager" decoding="async"
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntDrift 6s ease-in-out infinite' }} />
+          </div>
+
+          {/* Deepest descent — the record to beat (Greater-Rift style) */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 10, marginTop: 6,
+            padding: '0.45rem 1.1rem', borderRadius: 999,
+            background: 'rgba(240,192,64,0.08)', border: `1px solid ${GOLD}3a`,
+          }}>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.18em', color: '#9a948a' }}>Deepest Descent</span>
+            <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD, lineHeight: 1 }}>
+              {props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}
+            </span>
+          </div>
+
+          {/* The three rules of the descent */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+            <StakeTile
+              color={TEAL}
+              label="Descend"
+              line="Each depth drags up a deadlier ship."
+              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>}
+            />
+            <StakeTile
+              color={GOLD}
+              label="Hoard"
+              line="Every kill swells one pot."
+              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg>}
+            />
+            <StakeTile
+              color="#f87171"
+              label="Or Sink"
+              line="Go under and the pot sinks with you."
+              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 2.5 1.2 4.2 2.8 5.4.4.3.7.8.7 1.3V18a1.6 1.6 0 0 0 1.6 1.6h.4l.5-1.6h-1l-.4-1.4h1.6L11 18l.5 1.6h1L13 18l.4-1.4H15l-.4 1.4h-1l.5 1.6h.4A1.6 1.6 0 0 0 16.1 18v-1.3c0-.5.3-1 .7-1.3C18.4 14.2 20 12.5 20 10a8 8 0 0 0-8-8Z" /><circle cx="9" cy="10.5" r="1.6" fill="#0a0e16" /><circle cx="15" cy="10.5" r="1.6" fill="#0a0e16" /></svg>}
+            />
+          </div>
+
+          {/* The descent itself */}
+          <button onClick={begin} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+            style={{
+              marginTop: 22, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem',
+              color: '#1a1206', background: 'linear-gradient(180deg, #f4cf6a 0%, #e0a93f 100%)',
+              border: 'none', cursor: starting ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+              animation: starting ? 'none' : 'gauntCta 2.6s ease-in-out infinite',
+            }}>
+            {starting ? 'Descending…' : (
+              <>Brave the Locker
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </>
+            )}
+          </button>
+          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a766e', marginTop: 10 }}>
+            Starting spends today&rsquo;s descent.
+          </p>
+          <BackLink router={router} label="Not today" />
         </div>
-        <button onClick={begin} disabled={starting} className="font-cinzel font-700 uppercase tracking-[0.06em]"
-          style={{ marginTop: 18, width: '100%', padding: '0.95rem', borderRadius: 12, fontSize: '1rem', background: `${GOLD}22`, border: `1px solid ${GOLD}66`, color: GOLD, cursor: starting ? 'wait' : 'pointer' }}>
-          {starting ? '…' : 'Brave the Locker →'}
-        </button>
-        <BackLink router={router} label="Not today" />
-      </Shell>
+      </>
     )
   }
 
@@ -441,25 +510,96 @@ function drawGauntletTide(depth: number, hp: number, hpMax: number): TideEvent {
   return candidates[Math.floor(Math.random() * candidates.length)] ?? candidates[0]
 }
 
+// ── Atmosphere ────────────────────────────────────────────────────────────────
+// The Gauntlet is the endgame descent, so every meta screen sits over a living
+// abyss: a dim surface glow up top fading to pitch black, drifting god-rays, and
+// motes rising from the deep. CSS-only (transform/opacity) so it stays cheap on
+// mobile / iOS PWA. Keyframes are injected once via the backdrop's <style>.
+const ABYSS_KEYFRAMES = `
+@keyframes gauntRise { 0% { transform: translateY(0); opacity: 0 } 12% { opacity: 0.55 } 88% { opacity: 0.4 } 100% { transform: translateY(-360px); opacity: 0 } }
+@keyframes gauntPulse { 0%, 100% { opacity: 0.38; transform: scale(1) } 50% { opacity: 0.78; transform: scale(1.07) } }
+@keyframes gauntDrift { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
+@keyframes gauntShaft { 0%, 100% { opacity: 0.14 } 50% { opacity: 0.3 } }
+@keyframes gauntCta { 0%, 100% { box-shadow: 0 0 0 1px rgba(240,192,64,0.5), 0 0 20px rgba(240,192,64,0.22) } 50% { box-shadow: 0 0 0 1px rgba(240,192,64,0.75), 0 0 34px rgba(240,192,64,0.42) } }
+`
+
+// Deterministic so SSR + client agree (no Math.random in render).
+const MOTES = [
+  { left: 12, size: 3, dur: 9,  delay: 0 },
+  { left: 22, size: 2, dur: 12, delay: 2 },
+  { left: 34, size: 4, dur: 8,  delay: 1 },
+  { left: 45, size: 2, dur: 11, delay: 4 },
+  { left: 53, size: 3, dur: 10, delay: 0.5 },
+  { left: 64, size: 2, dur: 13, delay: 3 },
+  { left: 72, size: 4, dur: 9,  delay: 1.5 },
+  { left: 81, size: 3, dur: 11, delay: 2.5 },
+  { left: 90, size: 2, dur: 10, delay: 5 },
+  { left: 7,  size: 2, dur: 14, delay: 6 },
+  { left: 58, size: 2, dur: 9,  delay: 7 },
+]
+
+function AbyssBackdrop() {
+  return (
+    <>
+      <style>{ABYSS_KEYFRAMES}</style>
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden',
+        background: 'radial-gradient(ellipse 130% 80% at 50% -12%, rgba(34,64,98,0.55) 0%, rgba(10,20,34,0.62) 36%, rgba(2,5,10,0.97) 76%), #02040a',
+      }}>
+        {/* God-rays from the surface */}
+        <div style={{ position: 'absolute', top: '-12%', left: '20%', width: 130, height: '95%', transform: 'rotate(9deg)', filter: 'blur(10px)', background: 'linear-gradient(to bottom, rgba(120,180,220,0.18), transparent 68%)', animation: 'gauntShaft 7s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', top: '-12%', left: '62%', width: 100, height: '95%', transform: 'rotate(-7deg)', filter: 'blur(10px)', background: 'linear-gradient(to bottom, rgba(120,180,220,0.13), transparent 64%)', animation: 'gauntShaft 9s ease-in-out infinite', animationDelay: '1.5s' }} />
+        {/* Motes rising from the deep */}
+        {MOTES.map((m, i) => (
+          <div key={i} style={{
+            position: 'absolute', bottom: -10, left: `${m.left}%`,
+            width: m.size, height: m.size, borderRadius: '50%',
+            background: 'rgba(150,200,230,0.55)', boxShadow: '0 0 6px rgba(150,200,230,0.55)',
+            animation: `gauntRise ${m.dur}s linear ${m.delay}s infinite`,
+          }} />
+        ))}
+        {/* Vignette to keep the focus center */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,0.6) 100%)' }} />
+      </div>
+    </>
+  )
+}
+
+// One "rule of the descent" tile for the intro — reads like a rift modifier.
+function StakeTile({ color, icon, label, line }: { color: string; icon: React.ReactNode; label: string; line: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, borderRadius: 12, border: `1px solid ${color}33`, background: `${color}0e`, padding: '0.7rem 0.45rem 0.65rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+      <span style={{ color, display: 'flex' }}>{icon}</span>
+      <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.64rem', letterSpacing: '0.08em', color: '#f0ece4', lineHeight: 1 }}>{label}</p>
+      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#9a948a', lineHeight: 1.3 }}>{line}</p>
+    </div>
+  )
+}
+
 // ── Small presentational helpers ──────────────────────────────────────────────
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="flex flex-col" style={{
-      maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '12px 0.25rem',
-      paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
-    }}>
-      {/* Solid dark panel so copy stays legible over the ocean background. */}
-      <div style={{
-        background: 'linear-gradient(180deg, rgba(10,14,22,0.94) 0%, rgba(5,8,14,0.97) 100%)',
-        border: `1px solid ${GOLD}26`,
-        borderRadius: 18,
-        padding: '1.25rem 1.2rem 1.4rem',
-        boxShadow: '0 18px 54px rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+    <>
+      <AbyssBackdrop />
+      <div className="flex flex-col" style={{
+        position: 'relative', zIndex: 1,
+        maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '12px 0.25rem',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
       }}>
-        {children}
+        {/* Dark panel so copy stays legible over the abyss; slightly translucent
+            now so the atmosphere bleeds through behind it. */}
+        <div style={{
+          background: 'linear-gradient(180deg, rgba(10,14,22,0.86) 0%, rgba(5,8,14,0.93) 100%)',
+          border: `1px solid ${GOLD}33`,
+          borderRadius: 18,
+          padding: '1.25rem 1.2rem 1.4rem',
+          boxShadow: '0 18px 54px rgba(0,0,0,0.6), inset 0 1px 0 rgba(240,192,64,0.08)',
+          backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+        }}>
+          {children}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
