@@ -3785,11 +3785,19 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
   const scaleMult = big ? mag * 1.22 : mag
   const baseFontPx = big ? 32 : 23
   const fontPx     = Math.round(baseFontPx * scaleMult)
-  const strokePx   = big ? 2.6 : 1.9
-  // Layered glow — a tight bright halo plus a soft wide bloom, hotter on crits.
+  // Outline via a tight 8-way dark shadow ring (smoother on serif glyphs than
+  // WebkitTextStroke, which blobs on Cinzel's thin strokes), then a colored
+  // glow + soft drop for depth — hotter bloom on crits.
+  const o = big ? 1.3 : 1
+  const ring = [
+    `${o}px ${o}px 0 #0b0e14`, `-${o}px ${o}px 0 #0b0e14`,
+    `${o}px -${o}px 0 #0b0e14`, `-${o}px -${o}px 0 #0b0e14`,
+    `0 ${o}px 0 #0b0e14`, `0 -${o}px 0 #0b0e14`,
+    `${o}px 0 0 #0b0e14`, `-${o}px 0 0 #0b0e14`,
+  ].join(', ')
   const glow = big
-    ? `0 0 2px #000, 0 2px 5px rgba(0,0,0,0.7), 0 0 14px ${color}, 0 0 30px ${color}cc`
-    : `0 0 2px #000, 0 1px 4px rgba(0,0,0,0.7), 0 0 10px ${color}aa`
+    ? `${ring}, 0 2px 5px rgba(0,0,0,0.55), 0 0 13px ${color}, 0 0 28px ${color}bb`
+    : `${ring}, 0 1px 4px rgba(0,0,0,0.55), 0 0 9px ${color}99`
   return (
     <motion.div
       // Crits punch IN (start oversized, settle to 1) for weight; normal hits
@@ -3813,9 +3821,6 @@ function HitsplatOverlay({ text, color, big }: { text: string; color: string; bi
         fontFamily: 'var(--font-cinzel)', fontWeight: 800,
         fontStyle: big ? 'italic' : 'normal',
         fontSize: `${fontPx}px`, lineHeight: 1, letterSpacing: '0.01em',
-        WebkitTextStrokeWidth: `${strokePx}px`,
-        WebkitTextStrokeColor: 'rgba(0,0,0,0.92)',
-        paintOrder: 'stroke fill',
         textShadow: glow,
         whiteSpace: 'nowrap',
       }}
