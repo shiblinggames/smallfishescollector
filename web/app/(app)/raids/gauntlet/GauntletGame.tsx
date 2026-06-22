@@ -310,7 +310,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             Davy Jones Gauntlet
           </h1>
           <p className="font-karla" style={{ fontSize: '0.82rem', color: '#9a948a', marginTop: 6 }}>
-            One descent a day. How deep do you dare?
+            One descent at a time. How deep do you dare?
           </p>
 
           {/* The maw — the hole you drop into */}
@@ -371,7 +371,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             )}
           </button>
           <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a766e', marginTop: 10 }}>
-            Starting spends today&rsquo;s descent.
+            Starting begins the cooldown before your next.
           </p>
 
           {/* Permanent perks bought with what you haul up. */}

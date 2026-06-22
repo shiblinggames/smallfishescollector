@@ -386,6 +386,12 @@ export default function RaidCombat({
   enemyHpScaleMultRef.current = tide.enemyHpScaleMult
   const enemyChargesDeltaRef = useRef(tide.enemyChargesDelta)
   enemyChargesDeltaRef.current = tide.enemyChargesDelta
+  // PLAYER start-charge tide (startCharges: netting +2, NO_CHARGES = start at 0,
+  // -1 ones). Mirror it so the tight-deps reset effect can fold it into the
+  // player's opening cannonballs — otherwise the reset clobbers the useState
+  // seed and the tide silently does nothing.
+  const chargesStartRef = useRef(tide.chargesStart)
+  chargesStartRef.current = tide.chargesStart
   // Guaranteed-dodge tide (one-shot "next fight" token). Mirror the bank size
   // so the tight-deps reset effect can refill it per fight, and track how many
   // are LEFT this fight in a separate ref the dodge resolver decrements.
@@ -793,7 +799,10 @@ export default function RaidCombat({
       .filter(e => e.type === 'start_charge_chance')
       .reduce((a, e) => Math.max(a, e.value), 0)
     const playerStartCharges = startChargeChance > 0 && Math.random() < startChargeChance ? 1 : 0
-    setPlayerCharges(playerStartCharges)
+    // Fold in the start-charge TIDE (e.g. "+2 cannonballs next fight"). The
+    // NO_CHARGES sentinel (-99) drives the total below 0 → clamps to 0 ("start
+    // with 0"). Without this the reset wiped the tide's opening cannonballs.
+    setPlayerCharges(Math.max(0, Math.min(playerMaxCharges, playerStartCharges + chargesStartRef.current)))
     setEnemyCharges(Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + enemyChargesDeltaRef.current)))
     guaranteedDodgeLeftRef.current = guaranteedDodgeBankRef.current
     setSubPhase('await_input')
