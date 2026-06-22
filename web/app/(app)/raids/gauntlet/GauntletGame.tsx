@@ -24,8 +24,8 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade } from './actions'
-import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
-import { getRaidItem } from '@/lib/raidItems'
+import { GAUNTLET_UPGRADES, bonusChargeSlots } from '@/lib/gauntletUpgrades'
+import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
 import { vibrate } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 
@@ -128,6 +128,15 @@ export default function GauntletGame(props: GauntletGameProps) {
   const roundsSinceTideRef = useRef(0)
   const playerHPRef = useRef(props.playerHPMax)
   const potRef = useRef(0)
+  // Lethal-save charges (Quartermaster's Anchor etc.) — a per-RUN pool that
+  // survives the per-fight RaidCombat remounts, decremented when one fires.
+  // Reset each run in begin().
+  const anchorSavesLeftRef = useRef(
+    getActiveEffects(props.equippedItems).filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0),
+  )
+  // Extra cannonball slots from claimed Locker Upgrades. Seeded from the server
+  // prop but kept in state so a purchase mid-session applies without a refresh.
+  const [bonusSlots, setBonusSlots] = useState(props.bonusChargeSlots)
 
   // Body-scroll lock in installed PWA only, and ONLY during combat (keeps the
   // action buttons reachable — same reasoning as RaidGame). The meta screens
@@ -161,6 +170,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       setActiveCurses([]); activeCursesRef.current = []
       setPendingCurse(null)
       setActiveBoons([]); setPendingBoons(null)
+      anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
+        .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
       setFight(generateFight(rollStateRef.current))
       setPhase('descending')
       setStarting(false)
@@ -383,7 +394,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           <BackLink router={router} label="Not today" />
         </div>
-        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} />}
+        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </>
     )
   }
@@ -422,7 +433,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
         </button>
         <BackLink router={router} label="Back to the map" primary={!ready} />
-        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} />}
+        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </Shell>
     )
   }
@@ -828,7 +839,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             enemy={fight.enemy}
             atmosphere={atmosphereForDepth(fight.depth)}
             enemyArtFilter={DROWNED_FILTER}
-            bonusChargeSlots={props.bonusChargeSlots}
+            bonusChargeSlots={bonusSlots}
+            anchorSaveAvailable={anchorSavesLeftRef.current > 0}
+            onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
             affix={fight.affix}
             isElite={fight.isElite}
             isBoss={fight.isBoss}
@@ -1099,7 +1112,7 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
 // Permanent perks bought with hauled-up doubloons, each gated by how deep you've
 // gone. Server-validated on claim (depth + cost + no-double); the panel just
 // reflects state and disables what you can't take yet.
-function LockerUpgradesModal({ onClose }: { onClose: () => void }) {
+function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onClaimed?: (owned: string[]) => void }) {
   const [state, setState] = useState<{ deepest: number; doubloons: number; owned: string[] } | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -1113,6 +1126,7 @@ function LockerUpgradesModal({ onClose }: { onClose: () => void }) {
     setClaiming(null)
     if ('error' in res) { setErr(res.error); return }
     setState(s => (s ? { ...s, doubloons: res.doubloons, owned: res.owned } : s))
+    onClaimed?.(res.owned)
     vibrate([0, 30, 50, 40])
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
   }
