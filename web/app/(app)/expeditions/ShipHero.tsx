@@ -1336,7 +1336,7 @@ export default function ShipHero({
               <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.9rem', lineHeight: 1.45 }}>
                 Equipped for your next raid. Tap a slot to remove it.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, 1fr)`, gap: 8, marginBottom: '1.6rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, minmax(0, 1fr))`, gap: 8, marginBottom: '1.6rem' }}>
                 {Array.from({ length: raidItemSlots }, (_, i) => {
                   const itemId = equippedItems[i]
                   const def = itemId ? getRaidItem(itemId) : null
@@ -1348,7 +1348,7 @@ export default function ShipHero({
                         type="button"
                         onClick={() => toggleItem(itemId)}
                         aria-label={`${def.name}, equipped. Tap to remove.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f`, cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f`, cursor: 'pointer' }}
                       >
                         <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                           {def.image
