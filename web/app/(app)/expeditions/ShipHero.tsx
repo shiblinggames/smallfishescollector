@@ -12,6 +12,7 @@ import { navLevelReqForShip } from '@/lib/gearGating'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
+import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
 import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem } from './actions'
 import PopupShell from '@/components/PopupShell'
@@ -194,6 +195,9 @@ interface Props {
    *  Used to render the "Classes" section in the loadout drawer so the
    *  player can see which classes are buffing their next raid. */
   shipClasses: Record<string, string>
+  /** Claimed Davy Jones Gauntlet locker-upgrade ids (display-only here;
+   *  buying happens in the Gauntlet shop). */
+  gauntletUpgrades?: string[]
 }
 
 // Drag handle for the loadout drawer. Touching this strip starts a
@@ -265,6 +269,7 @@ export default function ShipHero({
   ownedRepairKits: initialOwnedRepairKits,
   raidRepairOwed, doubloons,
   shipClasses,
+  gauntletUpgrades = [],
 }: Props) {
   const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
@@ -1571,6 +1576,37 @@ export default function ShipHero({
                         ))}
                       </div>
                     )}
+
+                    {/* ── From the Locker ── permanent perks earned in the Davy
+                        Jones Gauntlet. Display-only; buying happens in the
+                        Gauntlet shop. Hidden until you own at least one. */}
+                    {(() => {
+                      const owned = gauntletUpgrades
+                        .map(getGauntletUpgrade)
+                        .filter((u): u is NonNullable<ReturnType<typeof getGauntletUpgrade>> => !!u)
+                      if (owned.length === 0) return null
+                      return (
+                        <>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>From the Locker</p>
+                          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+                            Permanent upgrades hauled up from the Davy Jones Gauntlet.
+                          </p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.7rem' }}>
+                            {owned.map(u => (
+                              <div key={u.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 11, padding: '0.7rem 0.8rem', borderRadius: 12, background: 'rgba(94,234,212,0.08)', border: '1px solid rgba(94,234,212,0.3)' }}>
+                                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: 'rgba(94,234,212,0.14)', border: '1px solid rgba(94,234,212,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5eead4' }}>
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h18l-1.5 13.5a1 1 0 0 1-1 .9H5.5a1 1 0 0 1-1-.9L3 7Z" /><path d="M3 7V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2" /><path d="M12 11v6" /></svg>
+                                </span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8' }}>{u.name}</p>
+                                  <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a39a', lineHeight: 1.4, marginTop: 2 }}>{u.description}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )
+                    })()}
 
                     {/* ── Repair Kit ── once-per-battle hull patch (Special action). */}
                     {(() => {

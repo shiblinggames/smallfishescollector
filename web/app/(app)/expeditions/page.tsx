@@ -82,6 +82,7 @@ async function ShipHeroSection() {
       raidRepairOwed={profile?.raid_repair_owed ?? 0}
       doubloons={profile?.doubloons ?? 0}
       shipClasses={(profile?.ship_classes as Record<string, string> | null) ?? {}}
+      gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
     />
   )
 }
