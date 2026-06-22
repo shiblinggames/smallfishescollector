@@ -1336,6 +1336,9 @@ export default function RaidCombat({
       // phase-2 HP threshold. Triggers a red full-screen flash so the
       // transition reads as a beat, not a silent shift in pattern.
       phaseTransition?: boolean
+      // Set when this hit lit an Incendiary / froze a Frozen cannonball, so the
+      // enemy hull flares with the matching status aura the instant it lands.
+      procStatus?: 'burn' | 'freeze'
     }
 
     // Hull plating: equipped damage-reduction items cut INCOMING enemy
@@ -1376,6 +1379,7 @@ export default function RaidCombat({
       let splatText = ''
       let splatColor = '#ef4444'
       let enemyCrit = false
+      let procStatus: 'burn' | 'freeze' | undefined
       const stepLines: string[] = []
 
       // Snare made good — the enemy tried to slip aside but its helm is jammed,
@@ -1649,10 +1653,12 @@ export default function RaidCombat({
               const tickDmg = Math.max(1, Math.round(dmg * BURN_TICK_PCT))
               enemyBurnRef.current = { turns: BURN_TURNS, dmg: tickDmg }
               stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
+              procStatus = 'burn'
             }
             if (freezeChance > 0 && Math.random() < freezeChance) {
               enemyFrozenRef.current = true
               stepLines.push(`Frozen shot! The ${enemy.name} ices over and loses a turn.`)
+              procStatus = 'freeze'
             }
           }
           // Reflective affix: 50% chance to bounce a slice of the damage
@@ -1772,6 +1778,7 @@ export default function RaidCombat({
         who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor,
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
+        procStatus,
       })
 
       // Phase 2 revival — when the player's killing blow drops the boss
@@ -2001,6 +2008,13 @@ export default function RaidCombat({
                 step.big ? 'crit' : step.action === 'volley' ? 'volley' : 'normal'
               setEnemyImpact({ key: Date.now() + i + 2, kind: impactKind })
               setTimeout(() => setEnemyImpact(null), 700)
+            }
+            // Incendiary lit / Frozen iced — flare the matching hull aura the
+            // instant the proc'd shot connects (not just on later burn ticks).
+            if (step.procStatus) {
+              const ak = Date.now() + i + 7
+              setEnemyAura({ key: ak, kind: step.procStatus })
+              setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
             }
             if (step.big) {
               setCritFlash(true)
