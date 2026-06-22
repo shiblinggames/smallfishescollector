@@ -17,15 +17,15 @@ import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import {
   generateFight, advanceRollState, shouldFireTide, chestForDepth,
-  CURSE_DEPTHS, drawCurse,
+  CURSE_DEPTHS, drawCurse, BOON_DEPTHS, drawBoons,
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT,
-  type GauntletFight, type GauntletRollState, type GauntletCurse,
+  type GauntletFight, type GauntletRollState, type GauntletCurse, type GauntletBoon,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath } from './actions'
 import { getRaidItem } from '@/lib/raidItems'
 
-type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'tide' | 'curse' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'tide' | 'curse' | 'boon' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -105,6 +105,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [activeCurses, setActiveCurses] = useState<GauntletCurse[]>([])
   const [pendingCurse, setPendingCurse] = useState<GauntletCurse | null>(null)
   const activeCursesRef = useRef<GauntletCurse[]>([])
+  // Boons — drafted, stacking, the player's answer to the curses.
+  const [activeBoons, setActiveBoons] = useState<GauntletBoon[]>([])
+  const [pendingBoons, setPendingBoons] = useState<GauntletBoon[] | null>(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
 
@@ -145,6 +148,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setUsedAbilityIds(new Set())
       setActiveCurses([]); activeCursesRef.current = []
       setPendingCurse(null)
+      setActiveBoons([]); setPendingBoons(null)
       setFight(generateFight(rollStateRef.current))
       setPhase('descending')
       setStarting(false)
@@ -194,6 +198,16 @@ export default function GauntletGame(props: GauntletGameProps) {
       }
     }
 
+    // Boon draft — descending past a BOON_DEPTH lets the player claim a power.
+    // Offset from curse depths so the run alternates gift and toll; also takes
+    // priority over a tide this round so interstitials never stack.
+    if (BOON_DEPTHS.includes(nextDepth)) {
+      roundsSinceTideRef.current += 1
+      setPendingBoons(drawBoons(3))
+      setPhase('boon')
+      return
+    }
+
     // Tide between rounds (guardrail pity floor).
     if (shouldFireTide({ roundsSinceTide: roundsSinceTideRef.current })) {
       roundsSinceTideRef.current = 0
@@ -216,6 +230,15 @@ export default function GauntletGame(props: GauntletGameProps) {
       setActiveTideEffects(prev => [...prev, ...curse.effects!])
     }
     setPendingCurse(null)
+    setPhase('between')
+  }
+
+  // Claim a drafted boon — its effect rides the active-effect channel (run-wide,
+  // so it persists + stacks), then drop into the breather.
+  function applyBoon(boon: GauntletBoon) {
+    setActiveBoons(prev => [...prev, boon])
+    setActiveTideEffects(prev => [...prev, boon.effect])
+    setPendingBoons(null)
     setPhase('between')
   }
 
@@ -471,6 +494,23 @@ export default function GauntletGame(props: GauntletGameProps) {
             <span style={{ color: '#9a948a' }}>Hull</span>
             <span style={{ color: hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80' }}>{playerHP}/{props.playerHPMax} HP</span>
           </div>
+          {activeBoons.length > 0 && (
+            <div style={{ borderTop: `1px solid ${TEAL}33`, paddingTop: 9 }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: TEAL, marginBottom: 6 }}>
+                Powers Claimed · {activeBoons.length}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {Object.entries(activeBoons.reduce<Record<string, { name: string; n: number }>>((acc, b) => {
+                  acc[b.id] = { name: b.name, n: (acc[b.id]?.n ?? 0) + 1 }
+                  return acc
+                }, {})).map(([id, { name, n }]) => (
+                  <span key={id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}3a`, color: '#aef3e6' }}>
+                    {name}{n > 1 ? ` ×${n}` : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {activeCurses.length > 0 && (
             <div style={{ borderTop: '1px solid rgba(248,113,113,0.2)', paddingTop: 9 }}>
               <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#f87171', marginBottom: 6 }}>
@@ -573,6 +613,69 @@ export default function GauntletGame(props: GauntletGameProps) {
             }}>
             Bear It · Descend
           </button>
+        </div>
+      </>
+    )
+  }
+
+  // ── Boon draft — claim one of three powers ──────────────────────────────────
+  if (phase === 'boon' && pendingBoons) {
+    return (
+      <>
+        <AbyssBackdrop />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
+          padding: '8px 0.85rem', textAlign: 'center',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: TEAL, marginTop: 14 }}>
+            A Gift From the Deep
+          </p>
+          <h1 className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#eafffb', lineHeight: 1.1, marginTop: 8, textShadow: `0 0 22px ${TEAL}33` }}>
+            Claim a Power
+          </h1>
+          <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 6, marginBottom: 16 }}>
+            It holds for the rest of the descent. Stack it to go deeper.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {pendingBoons.map((b, idx) => {
+              const owned = activeBoons.filter(x => x.id === b.id).length
+              return (
+                <motion.button
+                  key={b.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + idx * 0.08, duration: 0.3 }}
+                  whileTap={{ scale: 0.975 }}
+                  onClick={() => applyBoon(b)}
+                  className="tap"
+                  style={{
+                    position: 'relative', textAlign: 'left',
+                    padding: '0.85rem 0.95rem 0.85rem 1.05rem', borderRadius: 13,
+                    background: `linear-gradient(180deg, ${TEAL}12, rgba(255,255,255,0.012))`,
+                    border: `1px solid ${TEAL}38`, color: '#e7f6f2', cursor: 'pointer', overflow: 'hidden',
+                  }}
+                >
+                  <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${TEAL}, ${TEAL}33)` }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <p className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.98rem', color: '#aef3e6', lineHeight: 1.2 }}>{b.name}</p>
+                    {owned > 0 && (
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: `${TEAL}cc`, background: `${TEAL}1c`, border: `1px solid ${TEAL}44`, borderRadius: 999, padding: '0.12rem 0.4rem' }}>
+                        Owned ×{owned}
+                      </span>
+                    )}
+                    <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.6rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: 'rgba(74,222,128,0.13)', border: '1px solid rgba(74,222,128,0.42)', color: '#86efac', whiteSpace: 'nowrap' }}>
+                      ▲ {b.desc}
+                    </span>
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(231,246,242,0.66)', lineHeight: 1.45, fontStyle: 'italic' }}>
+                    {b.flavor}
+                  </p>
+                </motion.button>
+              )
+            })}
+          </div>
         </div>
       </>
     )

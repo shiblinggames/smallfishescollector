@@ -313,3 +313,48 @@ export function drawCurse(activeIds: string[]): GauntletCurse | null {
   if (remaining.length === 0) return null
   return remaining[Math.floor(Math.random() * remaining.length)]
 }
+
+// ── Boons — the descent's gifts ───────────────────────────────────────────────
+// The flip side of Curses: at each BOON_DEPTH the player DRAFTS one of three
+// powers, permanent for the run and STACKABLE (draft the same boon twice and it
+// compounds). This is the build-craft / agency layer — every descent plays
+// differently, and the boons are the player's answer to the curses (Ironhide
+// vs Bloodthirst, Bilge Pump vs Crushing Depth, and so on).
+//
+// Each boon is a single run-wide TideEffect, so it rides the same active-effect
+// pipeline the Tides + Curses use. `desc` is the player-facing summary chip.
+export interface GauntletBoon {
+  id: string
+  name: string
+  flavor: string
+  desc: string
+  effect: TideEffect
+}
+
+export const GAUNTLET_BOONS: GauntletBoon[] = [
+  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', desc: '+15% damage', effect: { kind: 'damageMult', mult: 1.15 } },
+  { id: 'powder_and_shot',   name: 'Powder & Shot',     flavor: 'Dry powder, packed tight. Your aimed shots punch through.',       desc: '+20% fire damage', effect: { kind: 'fireDmgMult', mult: 1.2 } },
+  { id: 'grapeshot',         name: 'Grapeshot',          flavor: 'A scatter of iron off the rails. Your volleys shred.',            desc: '+20% volley damage', effect: { kind: 'volleyDmgMult', mult: 1.2 } },
+  { id: 'dead_eye',          name: 'Dead-Eye',           flavor: 'You learn exactly where a hull wants to break.',                  desc: '+8% crit chance', effect: { kind: 'critChanceBonus', chance: 0.08 } },
+  { id: 'wide_sights',       name: 'Wide Sights',        flavor: 'The perfect shot stops being luck.',                              desc: 'Crit zone +12%', effect: { kind: 'critZoneScale', mult: 1.12 } },
+  { id: 'ironhide',          name: 'Ironhide',           flavor: 'Plates doubled along the waterline.',                             desc: 'Take 12% less damage', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
+  { id: 'press_the_powder',  name: 'Press the Powder',   flavor: 'Your crew loads like the deep is at their heels.',                desc: '10% per reload: +1 cannonball', effect: { kind: 'reloadProc', chance: 0.1, bonusCharges: 1 } },
+  { id: 'following_sea',     name: 'Following Sea',      flavor: 'The current finally runs with you.',                             desc: '+2 ship speed', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
+  { id: 'bilge_pump',        name: 'Bilge Pump',         flavor: 'Patch the seams in the lull before the next gun.',                desc: 'Heal 6 HP each fight', effect: { kind: 'startOfFightHeal', n: 6 } },
+  { id: 'ghostward',         name: 'Ghostward',          flavor: 'Salt and cold iron at the rails. The drowned aim wide.',          desc: 'Enemies crit 12% less', effect: { kind: 'incomingCritReduction', chance: 0.12 } },
+]
+
+// Depths at which the player drafts a boon — offset from CURSE_DEPTHS so the
+// descent alternates gift and toll.
+export const BOON_DEPTHS = [2, 5, 8, 11, 14, 17, 20, 23]
+
+/** Offer `n` distinct boons to draft (boons CAN repeat across drafts to stack,
+ *  but a single draft never shows the same boon twice). */
+export function drawBoons(n: number): GauntletBoon[] {
+  const pool = [...GAUNTLET_BOONS]
+  const out: GauntletBoon[] = []
+  for (let i = 0; i < n && pool.length > 0; i++) {
+    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0])
+  }
+  return out
+}
