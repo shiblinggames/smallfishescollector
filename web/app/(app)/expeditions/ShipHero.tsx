@@ -389,9 +389,9 @@ export default function ShipHero({
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
   const raidItemSlots = raidItemSlotsForTier(shipTierForSlots)
 
-  // Loadout drawer section tab. Items first/default — it's the most
-  // important loadout decision; cosmetics (skins) live last.
-  const [loadoutTab, setLoadoutTab] = useState<'items' | 'skins'>('items')
+  // Manage Ship section tab. Loadout (the battle decision) first; Ship
+  // (upgrade / class / repair) next; cosmetic Skins last.
+  const [loadoutTab, setLoadoutTab] = useState<'loadout' | 'ship' | 'skins'>('loadout')
 
   // Ship name state
   const [shipName, setShipName] = useState(initialShipName)
@@ -1146,15 +1146,10 @@ export default function ShipHero({
                   modals (Campaign / Voyages hub cards) where the decision
                   to launch actually happens — that's where they belong. */}
 
-              {/* Hero — large centered ship image with the Upgrade action as a
-                  gold pill floating ON the image; name (inline rename) and the
-                  current class sit tidily beneath. */}
+              {/* Hero — ship portrait + name (inline rename). Upgrade, class,
+                  and repair all moved into the Ship tab so the header is a clean
+                  identity strip and each concern has its own home. */}
               {(() => {
-                const shipTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
-                const shipAtMax = shipTier + 1 >= SHIPS.length
-                const picks = Object.values(shipClasses)
-                  .map(id => getShipClass(id))
-                  .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
                 return (
                   <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                     <div style={{ position: 'relative', display: 'inline-block', width: '78%', maxWidth: 230 }}>
@@ -1166,16 +1161,6 @@ export default function ShipHero({
                         decoding="async"
                         style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block', filter: skinFilter, transition: 'filter 0.3s ease' }}
                       />
-                      {!shipAtMax && (
-                        <button
-                          type="button"
-                          onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
-                          aria-label="Upgrade ship"
-                          style={{ position: 'absolute', right: 6, bottom: 6, width: 28, height: 28, borderRadius: '50%', padding: 0, background: 'linear-gradient(180deg, #f4c84e, #d4a017)', border: '2px solid #14110d', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)', cursor: 'pointer' }}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                        </button>
-                      )}
                     </div>
 
                     {/* Name + inline rename (pencil implies it; no helper text). */}
@@ -1213,18 +1198,6 @@ export default function ShipHero({
                       )}
                     </div>
 
-                    {/* Current class — compact chips, centered (details live in
-                        the Captain's Choice picker). */}
-                    <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-                      {picks.length === 0 ? (
-                        <span className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6a6764' }}>No class chosen yet</span>
-                      ) : picks.map(cls => (
-                        <span key={cls.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${cls.color}18`, border: `1px solid ${cls.color}55`, borderRadius: 999, padding: '0.22rem 0.55rem' }}>
-                          <span style={{ fontSize: '0.82rem', lineHeight: 1, color: cls.color }}>{cls.emoji}</span>
-                          <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f0ede8' }}>{cls.name}</span>
-                        </span>
-                      ))}
-                    </div>
                   </div>
                 )
               })()}
@@ -1242,7 +1215,8 @@ export default function ShipHero({
                 }}
               >
                 {([
-                  ['items', 'Items'],
+                  ['loadout', 'Loadout'],
+                  ['ship', 'Ship'],
                   ['skins', 'Skins'],
                 ] as const).map(([id, label]) => {
                   const active = loadoutTab === id
@@ -1350,92 +1324,121 @@ export default function ShipHero({
 
               </>)}
 
-              {loadoutTab === 'items' && (<>
-              {/* ── Repair Kit ── once-per-battle hull patch in the Special
-                  action slot. Shows only the EQUIPPED kit; the upgrade ladder
-                  (doubloon-bought, Nav-gated, next tier only) lives behind the
-                  Upgrade Kit modal so it doesn't clog the loadout — same shape
-                  as Upgrade Ship. */}
+              {loadoutTab === 'loadout' && (<>
+              {/* ── Battle Loadout ── the ACTIVE equipped items shown as real
+                  slots, so what's equipped reads at a glance. Tap a filled slot
+                  to remove it; equip from the Inventory below. Effects stack —
+                  any item in any slot — so the slots are just capacity. */}
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Battle Loadout</p>
+                <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#8a8480' }}>{equippedItems.length}/{raidItemSlots} slots</span>
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.9rem', lineHeight: 1.45 }}>
+                Equipped for your next raid. Tap a slot to remove it.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(raidItemSlots, 2)}, 1fr)`, gap: 8, marginBottom: '1.6rem' }}>
+                {Array.from({ length: raidItemSlots }, (_, i) => {
+                  const itemId = equippedItems[i]
+                  const def = itemId ? getRaidItem(itemId) : null
+                  if (def && itemId) {
+                    const color = RARITY_ITEM_COLOR[def.rarity]
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleItem(itemId)}
+                        aria-label={`${def.name}, equipped. Tap to remove.`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f`, cursor: 'pointer' }}
+                      >
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {def.image
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+                            : <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{def.emoji}</span>}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color }}>{def.name}</p>
+                          <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap to remove</span>
+                        </div>
+                      </button>
+                    )
+                  }
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 64, padding: '0.6rem', borderRadius: 12, border: '1.5px dashed rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.02)' }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#6a6764' }}>Empty slot</span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* ── Inventory ── owned items you HAVEN'T equipped; tap to slot one. */}
               {(() => {
-                const kit = getRepairKit(kitEquipped) ?? getRepairKit('basic_repair_kit')!
-                const range = repairKitRange(kit, ratedFortune)
-                const accent = kitRarityColor(kit.rarity)
-                const next = nextRepairKit(kitsOwned)
+                const unequipped = ownedRaidItems.filter(id => !equippedItems.includes(id))
+                const full = equippedItems.length >= raidItemSlots
                 return (
                   <>
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Repair Kit</p>
-                    <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
-                      Fired from the Special action in combat. Once per battle, costs the turn.
-                    </p>
-                    {/* The whole card is the tap target; the gold badge on the kit
-                        icon is the "upgrade available" affordance (mirrors the
-                        ship's on-image Upgrade pill). */}
-                    <div
-                      onClick={next ? () => { setKitErr(null); setKitOpen(true) } : undefined}
-                      style={{
-                        background: `${accent}14`, border: `1px solid ${accent}55`,
-                        borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: '1.5rem',
-                        display: 'flex', alignItems: 'center', gap: '0.85rem',
-                        cursor: next ? 'pointer' : 'default',
-                      }}>
-                      <div style={{ position: 'relative', flexShrink: 0, width: 48, height: 48 }}>
-                        <div style={{ width: '100%', height: '100%', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}55` }}>
-                          {kit.image
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 34, height: 34, objectFit: 'contain' }} />
-                            : <WrenchGlyph color={accent} />}
-                        </div>
-                        {next && (
-                          <span aria-hidden style={{ position: 'absolute', right: -6, bottom: -6, width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(180deg, #f4c84e, #d4a017)', border: '2px solid #14110d', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)', zIndex: 2 }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                          </span>
-                        )}
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>Inventory</p>
+                    {ownedRaidItems.length === 0 ? (
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', margin: '0.7rem 0 1.6rem' }}>
+                        <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', lineHeight: 1.55 }}>No items yet.<br />Clear raids to earn them.</p>
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{kit.name}</p>
-                          <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#4ade80' }}>+{range.min}-{range.max} HP</p>
-                        </div>
-                        <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8480', lineHeight: 1.4 }}>
-                          {kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()} Fortune scales the max ({range.max - kit.baseMax > 0 ? `+${range.max - kit.baseMax}` : 'no'} bonus from your {ratedFortune} Fortune).
+                    ) : unequipped.length === 0 ? (
+                      <p className="font-karla" style={{ fontSize: '0.74rem', color: '#7a7470', textAlign: 'center', padding: '1rem 0 1.6rem', fontStyle: 'italic' }}>Everything you own is equipped.</p>
+                    ) : (
+                      <>
+                        <p className="font-karla" style={{ fontSize: '0.74rem', color: full ? '#d8a14a' : '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+                          {full ? 'Hull full — remove a slot above to swap something in.' : 'Tap an item to equip it.'}
                         </p>
-                      </div>
-                      {next ? (
-                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: '#f0c040', flexShrink: 0, whiteSpace: 'nowrap' }}>Upgrade ›</span>
-                      ) : (
-                        <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: '#7a7674', flexShrink: 0 }}>Max</span>
-                      )}
-                    </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.6rem' }}>
+                          {unequipped.map(itemId => {
+                            const def = getRaidItem(itemId)
+                            if (!def) return null
+                            const color = RARITY_ITEM_COLOR[def.rarity]
+                            const isNew = newRaidItems.has(itemId)
+                            return (
+                              <button
+                                key={itemId}
+                                type="button"
+                                onClick={full ? undefined : () => toggleItem(itemId)}
+                                disabled={full}
+                                aria-label={full ? `${def.name}. Hull full, free a slot first.` : `${def.name}. Tap to equip.`}
+                                style={{ background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: full ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: full ? 0.42 : 1, transition: 'opacity 0.15s' }}
+                              >
+                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                  {def.image ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
+                                  ) : (
+                                    <span style={{ fontSize: '1.55rem', lineHeight: 1 }}>{def.emoji}</span>
+                                  )}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 2 }}>
+                                    {def.name}
+                                    {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
+                                  </p>
+                                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
+                                </div>
+                                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.58rem', color: full ? '#6a6764' : '#9ae6b4', padding: '0.24rem 0.55rem', borderRadius: 999, background: full ? 'rgba(255,255,255,0.04)' : 'rgba(154,230,180,0.10)', border: `1px solid ${full ? 'rgba(255,255,255,0.1)' : 'rgba(154,230,180,0.32)'}`, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                  {full ? 'Full' : 'Equip'}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
                   </>
                 )
               })()}
-
-              {/* ── Equipment ──
-                  Inventory-first: the whole owned collection is laid out
-                  here and tapping a row toggles equip/unequip directly.
-                  Effects stack regardless of position, so there are no typed
-                  slots — just a capacity cap (raidItemSlots, scales with
-                  hull). Equipped rows light up with a check; once the hull
-                  is full the unequipped rows grey out until one is freed. */}
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', letterSpacing: '0.04em' }}>Equipment</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#8a8480' }}>{equippedItems.length}/{raidItemSlots}</span>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {Array.from({ length: raidItemSlots }, (_, i) => (
-                      <div key={i} style={{ width: 9, height: 9, borderRadius: '50%', background: i < equippedItems.length ? '#d4ba78' : 'transparent', border: `1px solid ${i < equippedItems.length ? '#d4ba78' : 'rgba(255,255,255,0.22)'}` }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                Tap to equip up to {raidItemSlots} item{raidItemSlots === 1 ? '' : 's'} (bigger hulls hold more).
-              </p>
 
               {/* Forge recipes — each is always visible (until forged) so the
                   result reads as a goal to chase. Shows a component checklist;
                   the forge button only unlocks once every component is owned.
                   Generic over FORGE_RECIPES, so new forgeable items just appear. */}
+              {FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
+                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Forge</p>
+              )}
               {FORGE_RECIPES.filter(recipe => !ownedRaidItems.includes(recipe.result)).map(recipe => {
                 const result = getRaidItem(recipe.result)
                 if (!result) return null
@@ -1497,83 +1500,121 @@ export default function ShipHero({
                 )
               })}
 
-              {ownedRaidItems.length === 0 ? (
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.7rem 1rem', marginBottom: '1.5rem' }}>
-                  <p className="font-karla text-center" style={{ fontSize: '0.8rem', color: '#7a7470', lineHeight: 1.55 }}>No items yet.<br />Clear raids to earn them.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                  {ownedRaidItems.map(itemId => {
-                    const def = getRaidItem(itemId)
-                    if (!def) return null
-                    const color = RARITY_ITEM_COLOR[def.rarity]
-                    const equipped = equippedItems.includes(itemId)
-                    const full = equippedItems.length >= raidItemSlots
-                    const disabled = !equipped && full
-                    const isNew = newRaidItems.has(itemId) && !equipped
-                    return (
-                      <button
-                        key={itemId}
-                        type="button"
-                        onClick={disabled ? undefined : () => toggleItem(itemId)}
-                        disabled={disabled}
-                        aria-label={equipped ? `${def.name}, equipped. Tap to remove.` : disabled ? `${def.name}. Hull full, free a slot first.` : `${def.name}. Tap to equip.`}
-                        style={{
-                          background: equipped ? `${color}1c` : 'rgba(255,255,255,0.04)',
-                          border: `1.5px solid ${equipped ? color + '88' : 'rgba(255,255,255,0.1)'}`,
-                          borderRadius: 12,
-                          padding: '0.7rem 0.8rem',
-                          display: 'flex', alignItems: 'center', gap: '0.8rem',
-                          cursor: disabled ? 'not-allowed' : 'pointer',
-                          width: '100%', textAlign: 'left',
-                          opacity: disabled ? 0.42 : 1,
-                          boxShadow: equipped ? `0 0 14px ${color}1f` : 'none',
-                          transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
-                        }}
-                      >
-                        <div style={{ position: 'relative', flexShrink: 0, width: 46, height: 46 }}>
-                          {/* Inner box clips the art to rounded corners; the check
-                              badge lives on the OUTER box so overflow doesn't cut it. */}
-                          <div style={{ width: '100%', height: '100%', borderRadius: 10, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                            {def.image ? (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
+              </>)}
+
+              {loadoutTab === 'ship' && (<>
+              {(() => {
+                const shipTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
+                const nextShip = SHIPS[shipTier + 1]
+                const picks = Object.values(shipClasses)
+                  .map(id => getShipClass(id))
+                  .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
+                return (
+                  <>
+                    {/* ── Your Ship ── hull stats + the upgrade ladder. */}
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Your Ship</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 10 }}>
+                      {([['Hull HP', shipStats.durability], ['Speed', shipStats.speed], ['Min Dmg', shipStats.minDamage]] as [string, number][]).map(([label, val]) => (
+                        <div key={label} style={{ textAlign: 'center', padding: '0.6rem 0.4rem', borderRadius: 12, background: 'rgba(8,14,24,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>{val}</p>
+                          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#9a948c', marginTop: 4 }}>{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a7470', marginBottom: '1.4rem', textAlign: 'center' }}>
+                      {shipStats.crewSlots} crew slot{shipStats.crewSlots === 1 ? '' : 's'} · {raidItemSlots} item slot{raidItemSlots === 1 ? '' : 's'}
+                    </p>
+
+                    {nextShip ? (
+                      <button type="button" onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', width: '100%', textAlign: 'left', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', cursor: 'pointer' }}>
+                        <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, background: 'rgba(240,192,64,0.16)', border: '1px solid rgba(240,192,64,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0c040" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#d8b24a' }}>Upgrade Hull</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8', lineHeight: 1.1 }}>{nextShip.name}</p>
+                          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9a948a', marginTop: 1 }}>{nextShip.cost.toLocaleString()} ⟡ · bigger hull, more slots</p>
+                        </div>
+                        <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: '#f0c040', flexShrink: 0 }}>Upgrade ›</span>
+                      </button>
+                    ) : (
+                      <div style={{ borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
+                        <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#9a948a' }}>Top of the line — no bigger hull.</p>
+                      </div>
+                    )}
+
+                    {/* ── Captain's Class ── permanent chapter-end buffs. */}
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>Captain&rsquo;s Class</p>
+                    <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+                      Permanent buffs you pick at the end of each chapter. They stack.
+                    </p>
+                    {picks.length === 0 ? (
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.3rem 1rem', marginBottom: '1.7rem' }}>
+                        <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#7a7470', lineHeight: 1.5 }}>No class yet. Clear a chapter to choose one.</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.7rem' }}>
+                        {picks.map(cls => (
+                          <div key={cls.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 11, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${cls.color}12`, border: `1px solid ${cls.color}45` }}>
+                            <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: `${cls.color}20`, border: `1px solid ${cls.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', color: cls.color }}>{cls.emoji}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8' }}>{cls.name}</p>
+                              <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a39a', lineHeight: 1.4, marginTop: 2 }}>{cls.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── Repair Kit ── once-per-battle hull patch (Special action). */}
+                    {(() => {
+                      const kit = getRepairKit(kitEquipped) ?? getRepairKit('basic_repair_kit')!
+                      const range = repairKitRange(kit, ratedFortune)
+                      const accent = kitRarityColor(kit.rarity)
+                      const next = nextRepairKit(kitsOwned)
+                      return (
+                        <>
+                          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>Repair Kit</p>
+                          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.8rem', lineHeight: 1.45 }}>
+                            Fired from the Special action in combat. Once per battle, costs the turn.
+                          </p>
+                          <div onClick={next ? () => { setKitErr(null); setKitOpen(true) } : undefined}
+                            style={{ background: `${accent}14`, border: `1px solid ${accent}55`, borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.85rem', cursor: next ? 'pointer' : 'default' }}>
+                            <div style={{ position: 'relative', flexShrink: 0, width: 48, height: 48 }}>
+                              <div style={{ width: '100%', height: '100%', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${accent}1f`, border: `1px solid ${accent}55` }}>
+                                {kit.image
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  ? <img src={kit.image} alt="" loading="lazy" decoding="async" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+                                  : <WrenchGlyph color={accent} />}
+                              </div>
+                              {next && (
+                                <span aria-hidden style={{ position: 'absolute', right: -6, bottom: -6, width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(180deg, #f4c84e, #d4a017)', border: '2px solid #14110d', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)', zIndex: 2 }}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1a1206" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
+                                <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f0ede8' }}>{kit.name}</p>
+                                <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: '#4ade80' }}>+{range.min}-{range.max} HP</p>
+                              </div>
+                              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8480', lineHeight: 1.4 }}>
+                                {kit.description.replace(/\s*Once per battle\.\s*$/i, '').trim()} Fortune scales the max ({range.max - kit.baseMax > 0 ? `+${range.max - kit.baseMax}` : 'no'} bonus from your {ratedFortune} Fortune).
+                              </p>
+                            </div>
+                            {next ? (
+                              <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.56rem', color: '#f0c040', flexShrink: 0, whiteSpace: 'nowrap' }}>Upgrade ›</span>
                             ) : (
-                              <span style={{ fontSize: '1.55rem', lineHeight: 1 }}>{def.emoji}</span>
+                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.54rem', color: '#7a7674', flexShrink: 0 }}>Max</span>
                             )}
                           </div>
-                          {equipped && (
-                            <div style={{ position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #14110d', zIndex: 2 }}>
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#14110d" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: equipped ? color : '#f0ede8', marginBottom: 2 }}>
-                            {def.name}
-                            {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
-                          </p>
-                          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
-                        </div>
-                        <span
-                          className="font-karla font-700 uppercase tracking-[0.06em]"
-                          style={{
-                            fontSize: '0.58rem',
-                            color: equipped ? color : disabled ? '#6a6764' : '#9ae6b4',
-                            padding: '0.24rem 0.55rem',
-                            borderRadius: 999,
-                            background: equipped ? `${color}1a` : disabled ? 'rgba(255,255,255,0.04)' : 'rgba(154,230,180,0.10)',
-                            border: `1px solid ${equipped ? color + '50' : disabled ? 'rgba(255,255,255,0.1)' : 'rgba(154,230,180,0.32)'}`,
-                            flexShrink: 0, whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {equipped ? 'Equipped' : disabled ? 'Full' : 'Equip'}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
+                        </>
+                      )
+                    })()}
+                  </>
+                )
+              })()}
               </>)}
               </div>{/* end scrollable */}
 
