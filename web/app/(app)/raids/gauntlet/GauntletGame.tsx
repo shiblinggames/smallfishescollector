@@ -110,6 +110,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Boons — drafted, stacking, the player's answer to the curses.
   const [activeBoons, setActiveBoons] = useState<GauntletBoon[]>([])
   const [pendingBoons, setPendingBoons] = useState<GauntletBoon[] | null>(null)
+  // Tapped boon/curse on the breather screen → details popup.
+  const [detailEffect, setDetailEffect] = useState<
+    { kind: 'boon' | 'curse'; name: string; desc: string; detail: string; flavor: string; count: number } | null
+  >(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
 
@@ -439,8 +443,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / props.playerHPMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
     const band = bandForDepth(cleared)
-    const boonCounts = Object.entries(activeBoons.reduce<Record<string, { name: string; n: number }>>((acc, b) => {
-      acc[b.id] = { name: b.name, n: (acc[b.id]?.n ?? 0) + 1 }
+    const boonCounts = Object.values(activeBoons.reduce<Record<string, { boon: GauntletBoon; n: number }>>((acc, b) => {
+      acc[b.id] = { boon: b, n: (acc[b.id]?.n ?? 0) + 1 }
       return acc
     }, {}))
     return (
@@ -488,19 +492,21 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           </div>
 
-          {/* Powers + Curses tallies */}
+          {/* Powers + Curses tallies — each chip taps to a plain-English detail. */}
           {(boonCounts.length > 0 || activeCurses.length > 0) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 14, textAlign: 'left' }}>
               {boonCounts.length > 0 && (
                 <div>
                   <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: TEAL, marginBottom: 5 }}>
-                    Powers Claimed · {activeBoons.length}
+                    Powers Claimed · {activeBoons.length} <span style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: 0 }}>· tap for details</span>
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {boonCounts.map(([id, { name, n }]) => (
-                      <span key={id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}3a`, color: '#aef3e6' }}>
-                        {name}{n > 1 ? ` ×${n}` : ''}
-                      </span>
+                    {boonCounts.map(({ boon, n }) => (
+                      <button key={boon.id} className="font-karla font-700 tap"
+                        onClick={() => setDetailEffect({ kind: 'boon', name: boon.name, desc: boon.desc, detail: boon.detail, flavor: boon.flavor, count: n })}
+                        style={{ cursor: 'pointer', fontSize: '0.58rem', padding: '0.2rem 0.55rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}3a`, color: '#aef3e6' }}>
+                        {boon.name}{n > 1 ? ` ×${n}` : ''}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -508,13 +514,15 @@ export default function GauntletGame(props: GauntletGameProps) {
               {activeCurses.length > 0 && (
                 <div>
                   <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: '#f87171', marginBottom: 5 }}>
-                    The Locker&rsquo;s Curses · {activeCurses.length}
+                    The Locker&rsquo;s Curses · {activeCurses.length} <span style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: 0 }}>· tap for details</span>
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {activeCurses.map(c => (
-                      <span key={c.id} className="font-karla font-700" style={{ fontSize: '0.58rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.38)', color: '#fca5a5' }}>
+                      <button key={c.id} className="font-karla font-700 tap"
+                        onClick={() => setDetailEffect({ kind: 'curse', name: c.name, desc: c.desc, detail: c.detail, flavor: c.flavor, count: 1 })}
+                        style={{ cursor: 'pointer', fontSize: '0.58rem', padding: '0.2rem 0.55rem', borderRadius: 999, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.38)', color: '#fca5a5' }}>
                         {c.name}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -538,6 +546,50 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           </div>
         </div>
+
+        {/* Detail popup — plain-English explanation of a tapped power / curse. */}
+        <AnimatePresence>
+          {detailEffect && (() => {
+            const isBoon = detailEffect.kind === 'boon'
+            const accent = isBoon ? TEAL : '#f87171'
+            const fg = isBoon ? '#aef3e6' : '#fca5a5'
+            return (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+                onClick={() => setDetailEffect(null)}
+                style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+                <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+                  onClick={e => e.stopPropagation()}
+                  style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.5rem', color: `${accent}cc` }}>
+                    {isBoon ? 'Your Power' : 'The Locker’s Curse'}
+                  </p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: '#f5f2ec', lineHeight: 1.15, marginTop: 5 }}>
+                    {detailEffect.name}{detailEffect.count > 1 ? <span style={{ color: accent }}> ×{detailEffect.count}</span> : null}
+                  </p>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '0.3rem 0.8rem', borderRadius: 999, background: `${accent}1c`, border: `1px solid ${accent}55` }}>
+                    <span aria-hidden style={{ fontSize: '0.68rem', color: accent }}>{isBoon ? '▲' : '▼'}</span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: fg }}>{detailEffect.desc}</span>
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.82)', marginTop: 12 }}>
+                    {detailEffect.detail}
+                  </p>
+                  {detailEffect.count > 1 && (
+                    <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: accent, marginTop: 8 }}>
+                      You hold {detailEffect.count} of these, and the effect stacks.
+                    </p>
+                  )}
+                  <p className="font-karla" style={{ fontSize: '0.74rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.5)', lineHeight: 1.5, marginTop: 12 }}>
+                    {detailEffect.flavor}
+                  </p>
+                  <button onClick={() => setDetailEffect(null)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+                    style={{ marginTop: 16, width: '100%', padding: '0.75rem', borderRadius: 12, fontSize: '0.72rem', background: `${accent}1c`, border: `1px solid ${accent}55`, color: fg, cursor: 'pointer' }}>
+                    Got It
+                  </button>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>
       </>
     )
   }
@@ -599,10 +651,18 @@ export default function GauntletGame(props: GauntletGameProps) {
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: '#fdecec', lineHeight: 1.08, marginTop: 6, textShadow: `0 0 24px ${CRIM}44` }}>
             {c.name}
           </h1>
-          <p className="font-karla" style={{ fontSize: '0.86rem', lineHeight: 1.55, color: 'rgba(253,236,236,0.82)', fontStyle: 'italic', marginTop: 10, padding: '0 0.4rem' }}>
+          {/* What it actually does, in plain words — the headline, not buried in flavor. */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, padding: '0.32rem 0.85rem', borderRadius: 999, background: `${CRIM}1c`, border: `1px solid ${CRIM}55` }}>
+            <span aria-hidden style={{ fontSize: '0.7rem', color: CRIM }}>▼</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#fca5a5' }}>{c.desc}</span>
+          </div>
+          <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(253,236,236,0.7)', marginTop: 12, padding: '0 0.4rem' }}>
+            {c.detail}
+          </p>
+          <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(253,236,236,0.5)', fontStyle: 'italic', marginTop: 10, padding: '0 0.4rem' }}>
             {c.flavor}
           </p>
-          <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#9a948a', marginTop: 12 }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#9a948a', marginTop: 12 }}>
             It holds for the rest of the descent. {activeCurses.length + 1} {activeCurses.length === 0 ? 'curse' : 'curses'} now upon you.
           </p>
 

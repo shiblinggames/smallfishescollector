@@ -270,6 +270,10 @@ export function chestCannonDropChance(chestTier: number): number {
 export interface GauntletCurse {
   id: string
   name: string
+  /** Short, plain mechanical summary — the chip + interstitial headline. */
+  desc: string
+  /** Full plain-English explanation for the details popup (no jargon). */
+  detail: string
   /** One-line dread, shown on the curse interstitial. */
   flavor: string
   /** Run-wide effects appended to the tide-effect channel when imposed. */
@@ -282,36 +286,48 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
   {
     id: 'crushing_depth',
     name: 'Crushing Depth',
+    desc: 'Lose 8% max HP before every fight',
+    detail: 'At the start of every fight from now on, your ship loses 8% of its maximum HP. It can never land the killing blow itself (you stop at 1 HP), but it steadily wears you down — this is what caps how deep you can really push.',
     flavor: 'The water itself leans on your hull. Every fight begins a little closer to the breaking point.',
     hpDrainPct: 0.08,
   },
   {
     id: 'bloodthirst',
     name: 'Bloodthirst',
+    desc: 'Enemies deal 25% more damage',
+    detail: 'Every hit an enemy lands on you deals 25% more damage for the rest of the run.',
     flavor: 'The drowned smell your wake. Every gun down here is aimed to kill, not to warn.',
     effects: [{ kind: 'incomingDmgMult', mult: 1.25, scope: 'allRemaining' }],
   },
   {
     id: 'maelstrom',
     name: 'Maelstrom',
+    desc: 'Enemies deal 20% more damage',
+    detail: 'On top of anything else, every enemy hit deals a further 20% more damage for the rest of the run.',
     flavor: 'A black current drags every broadside harder onto your decks.',
     effects: [{ kind: 'incomingDmgMult', mult: 1.2, scope: 'allRemaining' }],
   },
   {
     id: 'becalmed',
     name: 'Becalmed',
+    desc: '-3 ship speed',
+    detail: 'Your ship is 3 slower. Speed decides who fires first each turn and how fast your aim bar sweeps, so you will act after the enemy more often and have less time to line up a shot.',
     flavor: 'The wind died at this depth. Your ship answers the wheel a beat too slow.',
     effects: [{ kind: 'speedDelta', n: -3, scope: 'allRemaining' }],
   },
   {
     id: 'squall',
     name: 'Squall',
+    desc: 'Your shots deal 10% less damage',
+    detail: 'Every shot you fire — aimed shots and volleys both — deals 10% less damage for the rest of the run.',
     flavor: 'Salt-spray fouls your powder. Your shots land softer than they should.',
     effects: [{ kind: 'damageMult', mult: 0.9 }],
   },
   {
     id: 'murk',
     name: 'Murk',
+    desc: 'Your crit zone is 15% smaller',
+    detail: 'The gold "perfect shot" band on your aim bar shrinks by 15%, so landing a critical hit is harder.',
     flavor: 'The dark closes over your sights. The perfect shot is a narrower thing now.',
     effects: [{ kind: 'critZoneScale', mult: 0.85 }],
   },
@@ -343,21 +359,24 @@ export interface GauntletBoon {
   id: string
   name: string
   flavor: string
+  /** Short, plain mechanical summary — the draft chip + breather chip. */
   desc: string
+  /** Full plain-English explanation for the details popup (no jargon). */
+  detail: string
   effect: TideEffect
 }
 
 export const GAUNTLET_BOONS: GauntletBoon[] = [
-  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', desc: '+15% damage', effect: { kind: 'damageMult', mult: 1.15 } },
-  { id: 'powder_and_shot',   name: 'Powder & Shot',     flavor: 'Dry powder, packed tight. Your aimed shots punch through.',       desc: '+20% fire damage', effect: { kind: 'fireDmgMult', mult: 1.2 } },
-  { id: 'grapeshot',         name: 'Grapeshot',          flavor: 'A scatter of iron off the rails. Your volleys shred.',            desc: '+20% volley damage', effect: { kind: 'volleyDmgMult', mult: 1.2 } },
-  { id: 'dead_eye',          name: 'Dead-Eye',           flavor: 'You learn exactly where a hull wants to break.',                  desc: '+8% crit chance', effect: { kind: 'critChanceBonus', chance: 0.08 } },
-  { id: 'wide_sights',       name: 'Wide Sights',        flavor: 'The perfect shot stops being luck.',                              desc: 'Crit zone +12%', effect: { kind: 'critZoneScale', mult: 1.12 } },
-  { id: 'ironhide',          name: 'Ironhide',           flavor: 'Plates doubled along the waterline.',                             desc: 'Take 12% less damage', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
-  { id: 'press_the_powder',  name: 'Press the Powder',   flavor: 'Your crew loads like the deep is at their heels.',                desc: '10% per reload: +1 cannonball', effect: { kind: 'reloadProc', chance: 0.1, bonusCharges: 1 } },
-  { id: 'following_sea',     name: 'Following Sea',      flavor: 'The current finally runs with you.',                             desc: '+2 ship speed', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
-  { id: 'bilge_pump',        name: 'Bilge Pump',         flavor: 'Patch the seams in the lull before the next gun.',                desc: 'Heal 6 HP each fight', effect: { kind: 'startOfFightHeal', n: 6 } },
-  { id: 'ghostward',         name: 'Ghostward',          flavor: 'Salt and cold iron at the rails. The drowned aim wide.',          desc: 'Enemies crit 12% less', effect: { kind: 'incomingCritReduction', chance: 0.12 } },
+  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', desc: '+15% damage', detail: 'Every shot you fire — both aimed shots and volleys — deals 15% more damage.', effect: { kind: 'damageMult', mult: 1.15 } },
+  { id: 'powder_and_shot',   name: 'Powder & Shot',     flavor: 'Dry powder, packed tight. Your aimed shots punch through.',       desc: '+20% aimed-shot damage', detail: 'Your single aimed shots (the Fire action) deal 20% more damage. Does not affect volleys.', effect: { kind: 'fireDmgMult', mult: 1.2 } },
+  { id: 'grapeshot',         name: 'Grapeshot',          flavor: 'A scatter of iron off the rails. Your volleys shred.',            desc: '+20% volley damage', detail: 'Your volleys (the double-shot) deal 20% more damage. Does not affect single aimed shots.', effect: { kind: 'volleyDmgMult', mult: 1.2 } },
+  { id: 'dead_eye',          name: 'Dead-Eye',           flavor: 'You learn exactly where a hull wants to break.',                  desc: '+8% crit chance', detail: 'Every shot has an extra 8% chance to land as a critical hit (extra damage).', effect: { kind: 'critChanceBonus', chance: 0.08 } },
+  { id: 'wide_sights',       name: 'Wide Sights',        flavor: 'The perfect shot stops being luck.',                              desc: 'Bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 12% wider, so landing a critical hit is easier.', effect: { kind: 'critZoneScale', mult: 1.12 } },
+  { id: 'ironhide',          name: 'Ironhide',           flavor: 'Plates doubled along the waterline.',                             desc: 'Take 12% less damage', detail: 'Every hit an enemy lands on you deals 12% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
+  { id: 'press_the_powder',  name: 'Press the Powder',   flavor: 'Your crew loads like the deep is at their heels.',                desc: 'Reloads can load extra', detail: 'Each time you reload, there is a 10% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.1, bonusCharges: 1 } },
+  { id: 'following_sea',     name: 'Following Sea',      flavor: 'The current finally runs with you.',                             desc: '+2 ship speed', detail: 'Your ship is 2 faster. Speed decides who fires first each turn and how fast your aim bar sweeps, so you act first more often.', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
+  { id: 'bilge_pump',        name: 'Bilge Pump',         flavor: 'Patch the seams in the lull before the next gun.',                desc: 'Heal 6 HP each fight', detail: 'At the start of every fight, your ship repairs 6 HP — a steady answer to the deep wearing you down.', effect: { kind: 'startOfFightHeal', n: 6 } },
+  { id: 'ghostward',         name: 'Ghostward',          flavor: 'Salt and cold iron at the rails. The drowned aim wide.',          desc: 'Enemies crit 12% less', detail: 'Enemies are 12% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.12 } },
 ]
 
 // Depths at which the player drafts a boon — offset from CURSE_DEPTHS so the
