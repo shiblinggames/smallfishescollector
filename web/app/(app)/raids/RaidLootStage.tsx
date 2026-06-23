@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { vibrate } from '@/lib/haptics'
@@ -193,126 +193,72 @@ export default function RaidLootStage(props: Props) {
         <div style={{ position: 'absolute', left: 0, right: 0, top: '38%', height: 1, background: 'rgba(255,255,255,0.12)', boxShadow: '0 0 24px rgba(140,180,210,0.18)' }} />
         <div style={{ position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0, background: 'linear-gradient(180deg, rgba(20,40,60,0.4) 0%, rgba(8,16,28,0.85) 100%)' }} />
 
-        {/* ── Chest + reveal — centered ──────────────────────────────────── */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '1rem' }}>
-          {/* Lid-pop flash — fills the stage in the rarity color for a beat */}
+        {/* ── Chest + reveal — bottom-anchored so the crate sits low and the
+            reward rises UP out of it. One coherent stack: the crate never moves
+            or resizes, and the loot clearly comes from the chest you tapped. ── */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '9%', overflow: 'hidden' }}>
+          {/* Lid-pop flash — a beat of rarity colour across the whole stage */}
           {burst && (
-            <motion.div aria-hidden initial={{ opacity: 0.92 }} animate={{ opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}
-              style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 52%, ${accent}77 0%, ${accent}22 42%, transparent 66%)`, pointerEvents: 'none', zIndex: 1 }} />
-          )}
-          {/* Light beam shooting up out of the crate */}
-          {burst && (
-            <motion.div aria-hidden initial={{ opacity: 0, scaleY: 0.2 }} animate={{ opacity: [0, 0.85, 0], scaleY: 1 }} transition={{ duration: 0.8, ease: 'easeOut', times: [0, 0.25, 1] }}
-              style={{ position: 'absolute', bottom: '32%', left: '50%', width: 96, height: 180, marginLeft: -48, transformOrigin: 'bottom center', background: `linear-gradient(to top, ${accent}, ${accent}55 45%, transparent)`, filter: 'blur(7px)', mixBlendMode: 'screen', pointerEvents: 'none', zIndex: 1 }} />
-          )}
-          {/* Open crate sitting at the base, lid thrown back */}
-          {burst && (
-            <motion.img
-              aria-hidden src="/plunderopen.png" alt=""
-              initial={{ opacity: 0, scale: 0.8, y: 8 }}
-              animate={{ opacity: 0.96, scale: 1, y: 0 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              style={{ position: 'absolute', bottom: '14%', width: 96, height: 96, objectFit: 'contain', filter: `drop-shadow(0 0 18px ${accent}88) drop-shadow(0 5px 10px rgba(0,0,0,0.45))`, pointerEvents: 'none', zIndex: 1 }}
-            />
+            <motion.div aria-hidden initial={{ opacity: 0.85 }} animate={{ opacity: 0 }} transition={{ duration: 0.55, ease: 'easeOut' }}
+              style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 62%, ${accent}66 0%, ${accent}1c 40%, transparent 64%)`, pointerEvents: 'none', zIndex: 1 }} />
           )}
 
-          <AnimatePresence mode="wait">
-            {/* Pending: closed crate bob + tap hint */}
-            {phase === 'pending' && (
-              <motion.div
-                key="chest-closed"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: [0, -6, 0] }}
-                exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                transition={{ opacity: { duration: 0.4 }, y: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/plunderclosed.png" alt="Plunder crate" style={{
-                  width: 150, height: 150, objectFit: 'contain',
-                  filter: 'drop-shadow(0 6px 14px rgba(240,192,64,0.35)) drop-shadow(0 0 28px rgba(240,192,64,0.18))',
-                }} />
-                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.56rem', color: '#f0c040bb' }}>Tap to open</p>
-              </motion.div>
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {/* Light beam up out of the crate, behind the reward */}
+            {burst && (
+              <motion.div aria-hidden initial={{ opacity: 0, scaleY: 0.2 }} animate={{ opacity: [0, 0.75, 0], scaleY: 1 }} transition={{ duration: 0.85, ease: 'easeOut', times: [0, 0.25, 1] }}
+                style={{ position: 'absolute', bottom: 60, left: '50%', width: 84, height: 200, marginLeft: -42, transformOrigin: 'bottom center', background: `linear-gradient(to top, ${accent}, ${accent}40 45%, transparent)`, filter: 'blur(8px)', mixBlendMode: 'screen', pointerEvents: 'none', zIndex: 0 }} />
             )}
 
-            {/* Opening anticipation: the crate strains and rattles, glow building */}
-            {phase === 'opening' && !burst && (
-              <motion.div
-                key="chest-rattle"
-                initial={{ scale: 1 }}
-                animate={{ x: [0, -3, 3, -3, 3, -2, 2, 0], rotate: [0, -2, 2, -2, 2, -1, 1, 0], scale: [1, 1.03, 1.06] }}
-                exit={{ opacity: 0, transition: { duration: 0.08 } }}
-                transition={{ duration: 0.32, ease: 'easeInOut' }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/plunderclosed.png" alt="" style={{
-                  width: 150, height: 150, objectFit: 'contain',
-                  filter: `drop-shadow(0 0 26px ${accent}cc) drop-shadow(0 6px 14px rgba(240,192,64,0.4))`,
-                }} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+            {/* Burst motes flung up out of the crate mouth */}
+            {burst && motes.map((m, n) => (
+              <motion.div key={n} aria-hidden
+                initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                animate={{ opacity: 0, x: m.x, y: m.y - 24, scale: 0.3 }}
+                transition={{ duration: m.dur, ease: 'easeOut' }}
+                style={{ position: 'absolute', bottom: 90, left: '50%', marginLeft: -(m.size / 2), width: m.size, height: m.size, borderRadius: '50%', background: accent, boxShadow: `0 0 6px ${accent}`, pointerEvents: 'none', zIndex: 1 }} />
+            ))}
 
-          {/* Reward — bursts up out of the crate the instant the lid pops */}
-          {burst && (
-            <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: '100%' }}>
-              {/* Burst motes thrown from the crate */}
-              {motes.map((m, n) => (
-                <motion.div
-                  key={n}
-                  aria-hidden
-                  initial={{ opacity: 1, x: 0, y: 64, scale: 1 }}
-                  animate={{ opacity: 0, x: m.x, y: 64 + m.y, scale: 0.3 }}
-                  transition={{ duration: m.dur, ease: 'easeOut' }}
-                  style={{ position: 'absolute', top: 0, width: m.size, height: m.size, borderRadius: '50%', background: accent, boxShadow: `0 0 6px ${accent}`, pointerEvents: 'none' }}
-                />
-              ))}
-
-              {/* Reward card — rises out of the crate with an overshoot pop */}
+            {/* Reward — rises up out of the crate, its base tucked into the open
+                mouth (negative margin) so it reads as a real drop. */}
+            {burst && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.3, y: 50 }}
-                animate={{ opacity: 1, scale: [0.3, 1.16, 1], y: 0 }}
-                transition={{ duration: 0.52, ease: [0.22, 1.3, 0.4, 1] }}
-                style={{
-                  position: 'relative', zIndex: 2,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  padding: '0.85rem 1.3rem 0.95rem',
-                  borderRadius: 16,
-                  background: `linear-gradient(180deg, ${accent}24 0%, ${accent}0a 100%)`,
-                  border: `1.5px solid ${accent}`,
-                  boxShadow: `0 0 34px ${accent}66, 0 10px 30px rgba(0,0,0,0.5)`,
-                  minWidth: 188,
-                }}
+                initial={{ opacity: 0, scale: 0.4, y: 42 }}
+                animate={{ opacity: 1, scale: [0.4, 1.14, 1], y: 0 }}
+                transition={{ duration: 0.5, ease: [0.22, 1.3, 0.4, 1] }}
+                style={{ position: 'relative', zIndex: 3, marginBottom: -18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0.55rem 1.15rem 0.65rem', borderRadius: 16, background: `linear-gradient(180deg, ${accent}28 0%, ${accent}0c 100%)`, border: `1.5px solid ${accent}`, boxShadow: `0 0 30px ${accent}66, 0 8px 24px rgba(0,0,0,0.55)`, minWidth: 168 }}
               >
-                <span className="font-karla font-700 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: accent }}>
-                  {RARITY_LABEL[finalItem.rarity] ?? finalItem.rarity}
-                </span>
-                <div style={{ height: 92, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: `drop-shadow(0 4px 12px ${accent}66)` }}>
-                  {lootArt(finalItem, 88)}
+                <span className="font-karla font-700 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: accent }}>{RARITY_LABEL[finalItem.rarity] ?? finalItem.rarity}</span>
+                <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: `drop-shadow(0 4px 12px ${accent}66)` }}>{lootArt(finalItem, 68)}</div>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f3ede2', textAlign: 'center', lineHeight: 1.15 }}>{finalItem.label}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 4, paddingTop: 6, borderTop: `1px solid ${accent}33`, width: '100%' }}>
+                  <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: GOLD }}>+{fmtGold(lootAmount)} ⟡</span>
+                  {fortuneMult > 1 && <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.48rem', color: '#f0c040aa' }}>{fortuneMult.toFixed(2)}× luck</span>}
                 </div>
-                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#f3ede2', textAlign: 'center', lineHeight: 1.15 }}>
-                  {finalItem.label}
-                </p>
               </motion.div>
+            )}
 
-              {/* Doubloons hauled — its own gold prize line */}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.5 }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.32rem 0.85rem', borderRadius: 999, background: 'rgba(240,192,64,0.12)', border: `1px solid ${GOLD}55` }}
-              >
-                <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD }}>+{fmtGold(lootAmount)} ⟡</span>
-                {fortuneMult > 1 && (
-                  <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#f0c040aa' }}>
-                    {fortuneMult.toFixed(2)}× luck
-                  </span>
-                )}
-              </motion.div>
+            {/* The crate — one spot + size, closed → open in place (never teleports) */}
+            <div style={{ position: 'relative', zIndex: 2, width: 138, height: 138, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {!burst ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <motion.img src="/plunderclosed.png" alt="Plunder crate"
+                  animate={phase === 'opening' ? { x: [0, -3, 3, -3, 3, -2, 2, 0], rotate: [0, -2, 2, -2, 2, -1, 1, 0], scale: [1, 1.04, 1.06] } : { y: [0, -6, 0] }}
+                  transition={phase === 'opening' ? { duration: 0.32, ease: 'easeInOut' } : { y: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } }}
+                  style={{ width: 138, height: 138, objectFit: 'contain', filter: phase === 'opening' ? `drop-shadow(0 0 26px ${accent}cc) drop-shadow(0 6px 14px rgba(240,192,64,0.4))` : 'drop-shadow(0 6px 14px rgba(240,192,64,0.35)) drop-shadow(0 0 28px rgba(240,192,64,0.18))' }} />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <motion.img src="/plunderopen.png" alt=""
+                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.18 }}
+                  style={{ width: 138, height: 138, objectFit: 'contain', filter: `drop-shadow(0 0 20px ${accent}aa) drop-shadow(0 6px 12px rgba(0,0,0,0.45))` }} />
+              )}
             </div>
-          )}
+
+            {/* Tap hint (pending only) */}
+            {phase === 'pending' && (
+              <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.56rem', color: '#f0c040bb', marginTop: 6 }}>Tap to open</p>
+            )}
+          </div>
         </div>
 
         {/* Decorative ship in the lower-left (matches the battle framing) */}
