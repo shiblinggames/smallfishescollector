@@ -19,6 +19,7 @@ import type { ShipBattleSummary } from '@/app/(app)/social/shipBattleActions'
 import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 
 const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
+const GAUNTLET_NEW_TAG = '#5eead4'   // bright teal "NEW" ribbon
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import type { ShipStats } from '@/lib/expeditions'
@@ -191,13 +192,18 @@ function HubCrewStrip({
 // Voyages cards — art + title + one line + a status footer. When `locked`
 // it dims, drops its tap handler, and shows a "Coming Soon" lock instead of
 // the open affordance.
-function SideHubCard({ accent, image, title, desc, locked, onClick }: {
+function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLabel = 'Coming Soon' }: {
   accent: string
   image: string
   title: string
   desc: string
   locked: boolean
   onClick?: () => void
+  /** Optional corner ribbon (e.g. 'NEW') — shown when the card is available. */
+  tag?: string
+  /** Footer text when locked. Defaults to 'Coming Soon'; a released-but-gated
+   *  card (e.g. the Gauntlet) overrides it with the unlock requirement. */
+  lockLabel?: string
 }) {
   return (
     <button
@@ -215,6 +221,14 @@ function SideHubCard({ accent, image, title, desc, locked, onClick }: {
         opacity: locked ? 0.92 : 1,
       }}
     >
+      {tag && !locked && (
+        <span className="font-karla font-800 uppercase tracking-[0.14em]" style={{
+          position: 'absolute', top: 9, right: 9, zIndex: 2,
+          padding: '2px 7px', borderRadius: 999, fontSize: '0.46rem',
+          color: '#0a0e14', background: GAUNTLET_NEW_TAG, border: `1px solid ${GAUNTLET_NEW_TAG}`,
+          boxShadow: `0 0 12px ${GAUNTLET_NEW_TAG}88`,
+        }}>{tag}</span>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 56, marginBottom: 8 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={image} alt="" loading="lazy" decoding="async"
@@ -230,7 +244,7 @@ function SideHubCard({ accent, image, title, desc, locked, onClick }: {
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            Coming Soon
+            {lockLabel}
           </p>
         ) : (
           <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: accent }}>
@@ -439,6 +453,8 @@ export default function HubCards({
           desc="Push your luck down a gauntlet for one swelling pot. Bank it or sink."
           locked={!gauntletOpen}
           onClick={gauntletOpen ? () => setModal('gauntlets') : undefined}
+          tag="NEW"
+          lockLabel="Clear Chapter 2"
         />
       </div>
 

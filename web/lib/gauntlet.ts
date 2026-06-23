@@ -43,10 +43,10 @@ export const GAUNTLET_COOLDOWN_HOURS = 1
 export const GAUNTLET_COOLDOWN_MS = GAUNTLET_COOLDOWN_HOURS * 60 * 60 * 1000
 
 // ── Launch gate ───────────────────────────────────────────────────────────────
-// The Gauntlet is admin-only until this flips true. Once live it's unlocked by
-// clearing Chapter 2 (the chapter_2_class node). The chapter-2-clear + depth
-// notifications also gate on this so nothing fires for real players early.
-export const GAUNTLET_LIVE = false
+// LIVE since 2026-06-22. Unlocked by clearing Chapter 2 (the chapter_2_class
+// node — reachable: Cartographer + Tollmaster Spet are both shipped). The
+// chapter-2-clear + depth notifications also gate on this.
+export const GAUNTLET_LIVE = true
 // The node whose clear means "Chapter 2 done" (RAID_CHAPTERS[1].lastNodeId).
 export const GAUNTLET_UNLOCK_NODE = 'chapter_2_class'
 

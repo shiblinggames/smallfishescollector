@@ -398,9 +398,9 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // finndicate_notice → smugglers_chart → last_cache → cartographer_reveal →
     // cartographer → (the Gullet run) gullet_heading → gullet_cipher →
     // gullet_bones → gullet_cache → scout_debt → gullet_raid → chapter_2_class.
-    // gullet_raid + its challenge are coming-soon stubs; chapter_2_class is the
-    // real tail gate, so the chapter only reads "cleared" once the boss ships
-    // and the player picks a class. Chapter III starts with a new entry.
+    // gullet_raid (Tollmaster Spet) is LIVE; chapter_2_class is the real tail
+    // gate, so the chapter reads "cleared" once Spet is down and the player
+    // picks a class. Chapter III starts with a new entry.
     lastNodeId: 'chapter_2_class',
   },
 ]
@@ -1118,7 +1118,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     // Chapter II's closing class pick — mirrors chapter_1_class. Gated on the
-    // boss (gullet_raid), so it stays locked until the raid ships. Writes
+    // boss (gullet_raid, Tollmaster Spet — live). Writes
     // profiles.ship_classes['sunken_hand'], stacking with the chapter I pick.
     id: 'chapter_2_class',    type: 'class_pick',
     label: "Captain's Choice",
