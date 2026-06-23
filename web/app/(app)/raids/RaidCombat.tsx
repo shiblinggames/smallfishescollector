@@ -285,6 +285,12 @@ export interface RaidCombatProps {
   crewMembers?: import('./actions').RaidCrewMember[]
   usedAbilityIds?: Set<number>
   onAbilityFired?: (crewId: number) => void
+  /** Sub-text shown on a USED crew-ability card. Defaults to the campaign's
+   *  'Already used this raid.'; the Gauntlet overrides it (rounds cooldown). */
+  usedAbilitySub?: string
+  /** One extra line seeded into THIS fight's opening combat log (e.g. the
+   *  Gauntlet's 'Crew abilities refreshed.' on a refresh round). */
+  openingNote?: string
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -308,6 +314,7 @@ export default function RaidCombat({
   tideEffects = [],
   atmosphere = 'dusk',
   crewMembers = [], usedAbilityIds, onAbilityFired,
+  usedAbilitySub = 'Already used this raid.', openingNote,
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
@@ -862,6 +869,8 @@ export default function RaidCombat({
     // soft / why the bar fogs over. Each ability gets its own line so an
     // enemy carrying both reads cleanly in the log.
     const introLines = [intro]
+    // Host-supplied opener (Gauntlet: 'Crew abilities refreshed.' on a refresh round).
+    if (openingNote) introLines.push(openingNote)
     if ((enemy.damageReduction ?? 0) > 0) {
       introLines.push(`Its ${(enemy.abilityName ?? 'armour').toLowerCase()} soaks fire and graze. Volleys break through.`)
     }
@@ -3292,7 +3301,7 @@ export default function RaidCombat({
                 const sub = locked
                   ? `Unlocks at Lv 10.`
                   : usedRaid
-                    ? 'Already used this raid.'
+                    ? usedAbilitySub
                     : oneAbilityUsedThisTurn
                       ? 'Wait until next turn.'
                       : m.desc

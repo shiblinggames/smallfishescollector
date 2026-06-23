@@ -893,6 +893,8 @@ export default function GauntletGame(props: GauntletGameProps) {
               if (prev.has(crewId)) return prev
               const next = new Set(prev); next.add(crewId); return next
             })}
+            usedAbilitySub="Used — back soon."
+            openingNote={fight.depth > 1 && (fight.depth - 1) % GAUNTLET_COOLDOWN_ROUNDS === 0 ? 'Your crew catch their breath. Abilities refreshed.' : undefined}
           />
         </div>
       </div>
