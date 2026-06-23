@@ -7,6 +7,7 @@
 
 import HoldCard from './HoldCard'
 import TreasureMatchCard from './TreasureMatchCard'
+import MinefieldCard from './MinefieldCard'
 import RiggingCard from './RiggingCard'
 import { DEN_PURSE_TIERS, DEN_CAP_NONMEMBER } from '../constants'
 import BecomeCaptainButton from '@/components/BecomeCaptainButton'
@@ -14,12 +15,14 @@ import BackButton from '@/components/BackButton'
 
 const GOLD = '#f0c040'
 
-export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, riggingStatus, riggingReward, puzzlePoints, isMember }: {
+export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsToday, matchStatus, matchReward, minefieldStatus, minefieldReward, riggingStatus, riggingReward, puzzlePoints, isMember }: {
   doubloons: number
   holdStatus: 'open' | 'locked' | 'done'
   holdDoubloonsToday: number
   matchStatus: 'active' | 'cleared'
   matchReward: number
+  minefieldStatus: 'active' | 'cleared'
+  minefieldReward: number
   riggingStatus: 'active' | 'cleared'
   riggingReward: number
   puzzlePoints: number
@@ -50,7 +53,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       </div>
 
       <p className="font-karla" style={{ fontSize: '0.8rem', color: '#c2b9a4', lineHeight: 1.55, textAlign: 'center' }}>
-        A quiet corner for steady minds. Three puzzles, fresh every week.
+        A quiet corner for steady minds. Four puzzles, fresh every week.
       </p>
 
       {/* Den-purse progress — compact. Points (from the puzzles) raise
@@ -116,6 +119,7 @@ export default function ChartRoomLobby({ doubloons, holdStatus, holdDoubloonsTod
       <div className="grid grid-cols-2 gap-3">
         <HoldCard status={holdStatus} doubloonsToday={holdDoubloonsToday} />
         <TreasureMatchCard status={matchStatus} reward={matchReward} />
+        <MinefieldCard status={minefieldStatus} reward={minefieldReward} />
         <RiggingCard status={riggingStatus} reward={riggingReward} isMember={isMember} />
       </div>
 

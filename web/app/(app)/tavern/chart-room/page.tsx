@@ -4,6 +4,8 @@ import { isPremiumActive } from '@/lib/premium'
 import { getHoldState } from './hold/actions'
 import { getMatchState } from '@/app/(app)/charting/actions'
 import { MATCH_MAX_POINTS } from '@/app/(app)/charting/constants'
+import { getMinefieldState } from '@/app/(app)/charting/minefieldActions'
+import { MINEFIELD_POINTS } from '@/app/(app)/charting/minefieldConstants'
 import { getRiggingState } from './rigging/actions'
 import { RIGGING_POINTS } from './rigging/constants'
 import ChartRoomLobby from './ChartRoomLobby'
@@ -13,7 +15,7 @@ export default async function ChartRoomPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [profile, hold, mtch, rig] = await Promise.all([getCurrentProfile(), getHoldState(), getMatchState(), getRiggingState()])
+  const [profile, hold, mtch, mine, rig] = await Promise.all([getCurrentProfile(), getHoldState(), getMatchState(), getMinefieldState(), getRiggingState()])
 
   const solvedToday = 'error' in hold ? false : hold.puzzles.some(p => p.solved)
   const holdStatus: 'open' | 'locked' | 'done' =
@@ -23,6 +25,9 @@ export default async function ChartRoomPage() {
   const matchStatus: 'active' | 'cleared' = 'error' in mtch ? 'active' : mtch.status
   // The card shows the max attainable (5); the run tiers the actual award.
   const matchReward = MATCH_MAX_POINTS
+
+  const minefieldStatus: 'active' | 'cleared' = 'error' in mine ? 'active' : mine.status
+  const minefieldReward = MINEFIELD_POINTS
 
   const riggingStatus: 'active' | 'cleared' = 'error' in rig ? 'active' : rig.status
   const riggingReward = 'error' in rig ? RIGGING_POINTS : rig.reward
@@ -41,6 +46,8 @@ export default async function ChartRoomPage() {
               holdDoubloonsToday={holdDoubloonsToday}
               matchStatus={matchStatus}
               matchReward={matchReward}
+              minefieldStatus={minefieldStatus}
+              minefieldReward={minefieldReward}
               riggingStatus={riggingStatus}
               riggingReward={riggingReward}
               puzzlePoints={puzzlePoints}

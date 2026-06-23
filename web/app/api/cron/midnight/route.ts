@@ -3,6 +3,7 @@ import { getThisWeeksBoard } from '@/app/(app)/tavern/trivia/board/generate'
 import { getThisWeeksLadder } from '@/app/(app)/tavern/trivia/king/generate'
 import { getThisWeeksSudoku } from '@/app/(app)/tavern/chart-room/hold/generate'
 import { getThisWeeksMatch } from '@/app/(app)/charting/generate'
+import { getThisWeeksMinefield } from '@/app/(app)/charting/minefieldGenerate'
 import { getThisWeeksRigging } from '@/app/(app)/tavern/chart-room/rigging/generate'
 
 export const maxDuration = 60
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
   const ladder = await Promise.allSettled([getThisWeeksLadder()]).then(r => r[0])
   const hold = await Promise.allSettled([getThisWeeksSudoku()]).then(r => r[0])
   const match = await Promise.allSettled([getThisWeeksMatch()]).then(r => r[0])
+  const minefield = await Promise.allSettled([getThisWeeksMinefield()]).then(r => r[0])
   const rigging = await Promise.allSettled([getThisWeeksRigging()]).then(r => r[0])
 
   return NextResponse.json({
@@ -30,6 +32,7 @@ export async function GET(req: NextRequest) {
     ladder: ladder.status === 'fulfilled' ? 'ok' : 'failed',
     hold: hold.status === 'fulfilled' ? 'ok' : 'failed',
     match: match.status === 'fulfilled' ? 'ok' : 'failed',
+    minefield: minefield.status === 'fulfilled' ? 'ok' : 'failed',
     rigging: rigging.status === 'fulfilled' ? 'ok' : 'failed',
   })
 }
