@@ -26,7 +26,7 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletCurseDelay } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -81,6 +81,9 @@ export interface GauntletGameProps {
   raidMods: RaidMods
   /** Extra player cannonball slots from claimed Locker Upgrades. */
   bonusChargeSlots: number
+  /** Claimed Locker Upgrade ids — drives the run-scoped perks (Diving Bell,
+   *  Calm Before…). */
+  gauntletUpgrades: string[]
   deepest: number
   /** Fathoms balance — the Gauntlet's meta-currency, spent in the Locker. */
   fathoms: number
@@ -96,6 +99,9 @@ export interface GauntletGameProps {
 export default function GauntletGame(props: GauntletGameProps) {
   const router = useRouter()
   const shipFilter = props.equippedShipSkin ? getShipSkin(props.equippedShipSkin)?.filter ?? 'none' : 'none'
+  // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run; every
+  // HP reference below uses this boosted ceiling rather than the raw stat.
+  const hpMax = Math.round(props.playerHPMax * gauntletRunHpMult(props.gauntletUpgrades))
 
   const [phase, setPhase] = useState<Phase>(props.available ? 'intro' : 'usedup')
   const [starting, setStarting] = useState(false)
@@ -111,7 +117,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   }, [phase])
 
   // Run state
-  const [playerHP, setPlayerHP] = useState(props.playerHPMax)
+  const [playerHP, setPlayerHP] = useState(hpMax)
   const [pot, setPot] = useState(0)
   const [bossesDefeated, setBossesDefeated] = useState(0)
   const [fight, setFight] = useState<GauntletFight | null>(null)
@@ -144,7 +150,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Guardrail counters live in refs (read inside combat callbacks).
   const rollStateRef = useRef<GauntletRollState>({ cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 })
   const roundsSinceTideRef = useRef(0)
-  const playerHPRef = useRef(props.playerHPMax)
+  const playerHPRef = useRef(hpMax)
   const potRef = useRef(0)
   // Lethal-save charges (Quartermaster's Anchor etc.) — a per-RUN pool that
   // survives the per-fight RaidCombat remounts, decremented when one fires.
@@ -183,9 +189,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       // Fresh run.
       rollStateRef.current = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
       roundsSinceTideRef.current = 0
-      playerHPRef.current = props.playerHPMax
+      playerHPRef.current = hpMax
       potRef.current = 0
-      setPlayerHP(props.playerHPMax)
+      setPlayerHP(hpMax)
       setPot(0)
       setBossesDefeated(0)
       setActiveTideEffects([])
@@ -235,8 +241,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Curse milestone — descending INTO a CURSE_DEPTH imposes a new curse.
     // Takes priority over a tide this round so the two interstitials never
     // stack; the tide pity counter still ticks so recovery isn't starved.
+    // Calm Before (Run Upgrade) pushes every curse one or more depths deeper.
     const nextDepth = clearedNow + 1
-    if (CURSE_DEPTHS.includes(nextDepth)) {
+    if (CURSE_DEPTHS.includes(nextDepth - gauntletCurseDelay(props.gauntletUpgrades))) {
       const curse = drawCurse(activeCursesRef.current.map(c => c.id))
       if (curse) {
         roundsSinceTideRef.current += 1
@@ -259,7 +266,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Tide between rounds (guardrail pity floor).
     if (shouldFireTide({ roundsSinceTide: roundsSinceTideRef.current })) {
       roundsSinceTideRef.current = 0
-      setPendingTide(drawGauntletTide(clearedNow, remainingHp, props.playerHPMax))
+      setPendingTide(drawGauntletTide(clearedNow, remainingHp, hpMax))
       setPhase('tide')
     } else {
       roundsSinceTideRef.current += 1
@@ -307,7 +314,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // squeezes how deep you can go, but the sea never lands the kill itself.
     const drainPct = activeCursesRef.current.reduce((a, c) => a + (c.hpDrainPct ?? 0), 0)
     if (drainPct > 0) {
-      const drained = Math.max(1, Math.round(playerHPRef.current - props.playerHPMax * drainPct))
+      const drained = Math.max(1, Math.round(playerHPRef.current - hpMax * drainPct))
       playerHPRef.current = drained
       setPlayerHP(drained)
     }
@@ -600,7 +607,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const chest = chestForDepth(cleared)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
     const previewXp = Math.round(pot * chest.potMult)
-    const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / props.playerHPMax) * 100)))
+    const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
     const band = bandForDepth(cleared)
     const boonCounts = Object.values(activeBoons.reduce<Record<string, { boon: GauntletBoon; n: number }>>((acc, b) => {
@@ -644,7 +651,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div style={{ marginTop: 14, textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
               <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#8a8880' }}>Hull</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: hpColor }}>{playerHP} / {props.playerHPMax}</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: hpColor }}>{playerHP} / {hpMax}</span>
             </div>
             <div style={{ height: 9, borderRadius: 5, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
               <motion.div initial={{ width: `${hpPct}%` }} animate={{ width: `${hpPct}%` }} transition={{ duration: 0.4 }}
@@ -771,9 +778,9 @@ export default function GauntletGame(props: GauntletGameProps) {
               else if (e.kind === 'doubloonsAtRaidEnd') { potRef.current = Math.max(0, potRef.current + e.n); setPot(potRef.current) }
               else persisted.push(e)
             }
-            if (fullHealTriggered) { playerHPRef.current = props.playerHPMax; setPlayerHP(props.playerHPMax) }
+            if (fullHealTriggered) { playerHPRef.current = hpMax; setPlayerHP(hpMax) }
             else if (healDelta !== 0) {
-              const next = Math.min(props.playerHPMax, Math.max(0, playerHPRef.current + healDelta))
+              const next = Math.min(hpMax, Math.max(0, playerHPRef.current + healDelta))
               playerHPRef.current = next; setPlayerHP(next)
             }
             if (persisted.length > 0) setActiveTideEffects(prev => [...prev, ...persisted])
@@ -983,7 +990,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             playerEquippedHat={props.playerEquippedHat}
             playerAvatarBg={props.playerAvatarBg}
             playerAvatarBorder={props.playerAvatarBorder}
-            playerHpMax={props.playerHPMax}
+            playerHpMax={hpMax}
             playerHp={playerHP}
             shipMinDamage={props.shipMinDamage}
             shipSpeed={props.shipSpeed}

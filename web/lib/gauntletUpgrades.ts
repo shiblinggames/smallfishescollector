@@ -42,11 +42,27 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
+    id: 'diving_bell',
+    name: 'Diving Bell',
+    description: 'Start every Gauntlet run with 15% more max HP.',
+    depthRequired: 8,
+    cost: 50,
+    scope: 'gauntlet',
+  },
+  {
     id: 'salvagers_eye',
     name: "Salvager's Eye",
     description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
     depthRequired: 12,
     cost: 70,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'calm_before',
+    name: 'Calm Before',
+    description: "The Locker's curses take one depth longer to catch you.",
+    depthRequired: 16,
+    cost: 90,
     scope: 'gauntlet',
   },
   {
@@ -104,4 +120,14 @@ export function gauntletXpMult(unlocked: string[] | null | undefined): number {
 /** Lucky Locker: multiplier on Fathoms earned per run (cash-out AND death). */
 export function gauntletFathomsMult(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('lucky_locker') ? 1.5 : 1
+}
+
+/** Diving Bell: max-HP multiplier applied for the whole Gauntlet run. */
+export function gauntletRunHpMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('diving_bell') ? 1.15 : 1
+}
+
+/** Calm Before: how many depths later the Locker's curses begin. */
+export function gauntletCurseDelay(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('calm_before') ? 1 : 0
 }

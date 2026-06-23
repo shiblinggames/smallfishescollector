@@ -53,6 +53,7 @@ export default async function GauntletPage() {
           playerAvatarBorder={stats.avatarBorderColor}
           raidMods={stats.raidMods}
           bonusChargeSlots={stats.bonusChargeSlots}
+          gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
           deepest={daily.deepest}
           fathoms={daily.fathoms}
           available={daily.available}
