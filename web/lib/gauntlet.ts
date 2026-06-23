@@ -109,9 +109,12 @@ export const MAX_GAUNTLET_DEPTH = 60
 // real escalation, though, is the Curses (below) — raw stats alone can't both
 // stay fair to a fresh build AND threaten an endgame one, so depth pressure
 // comes mostly from stacking rules, not bigger bars.
-function mobHp(depth: number)    { return Math.round(22 + depth * 10) }
-function mobMinDmg(depth: number){ return Math.round(3 + depth * 0.9) }
-function mobMaxDmg(depth: number){ return Math.round(6 + depth * 1.7) }
+// The depth term (slope) is the ramp; the constant (intercept) is the opening
+// floor. Raised the intercepts so depths 1-3 aren't pushovers — the slope is
+// unchanged so the deep end ramps exactly as before.
+function mobHp(depth: number)    { return Math.round(34 + depth * 10) }
+function mobMinDmg(depth: number){ return Math.round(5 + depth * 0.9) }
+function mobMaxDmg(depth: number){ return Math.round(9 + depth * 1.7) }
 const BOSS_HP_MULT  = 3.3
 const BOSS_DMG_MULT = 1.5
 
@@ -131,8 +134,9 @@ const TIDE_PITY           = 4    // force a tide after this many tideless rounds
 const TIDE_HEAL_HP_PCT    = 0.4  // "low HP" threshold that biases the draw toward recovery
 
 /** Crew abilities + repair reset every this-many cleared rounds (the one
- *  predictable resource the player plans around). */
-export const GAUNTLET_COOLDOWN_ROUNDS = 3
+ *  predictable resource the player plans around). Slower = abilities matter
+ *  more, you ration them across a longer stretch. */
+export const GAUNTLET_COOLDOWN_ROUNDS = 5
 
 // ── Enemy pools ──────────────────────────────────────────────────────────────
 // Every non-boss enemy across the four raids (variety of pattern + signature
