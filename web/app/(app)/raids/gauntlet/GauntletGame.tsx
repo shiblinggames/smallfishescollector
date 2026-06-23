@@ -472,14 +472,82 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // ── Dead ────────────────────────────────────────────────────────────────
   if (phase === 'dead') {
+    const cleared = rollStateRef.current.cleared
+    const diedAt = cleared + 1
+    const lost = potRef.current
+    const newRecord = cleared > 0 && cleared > props.deepest
+    const best = Math.max(cleared, props.deepest)
+    const CRIMSON = '#ef4444'
     return (
-      <Shell>
-        <Title sub={`You went down at depth ${rollStateRef.current.cleared + 1}.`}>The Locker Takes It</Title>
-        <p className="font-karla" style={{ fontSize: '0.85rem', color: '#f8a5a5', lineHeight: 1.5 }}>
-          Your ship sank with the whole pot aboard. {fmt(potRef.current)} ⟡ and as much XP, gone to the deep. You cleared {rollStateRef.current.cleared} {rollStateRef.current.cleared === 1 ? 'round' : 'rounds'}.
-        </p>
-        <BackLink router={router} label="Back to the map" primary />
-      </Shell>
+      <>
+        <AbyssBackdrop />
+        {/* Crimson death wash bleeding up from the deep, over the abyss. */}
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          padding: '10px 0.95rem', textAlign: 'center',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          {/* Davy claims it — drowned, looming, sinking in from above. */}
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.86 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'relative', width: 188, height: 188, margin: '14px auto 2px' }}
+          >
+            <div style={{ position: 'absolute', inset: -22, borderRadius: '50%', background: `radial-gradient(circle, ${CRIMSON}30 0%, rgba(120,20,20,0.14) 42%, transparent 70%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <motion.img src={MAW_IMG} alt="" loading="eager" decoding="async"
+              animate={{ y: [0, -5, 0] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${DROWNED_FILTER} drop-shadow(0 10px 30px rgba(0,0,0,0.8)) drop-shadow(0 0 22px ${CRIMSON}40)` }} />
+          </motion.div>
+
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: CRIMSON }}>
+            The Locker Takes It
+          </motion.p>
+          <motion.h1 initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.24, type: 'spring', stiffness: 240, damping: 18 }}
+            className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: '#f3d6d6', lineHeight: 1.08, marginTop: 6, textShadow: `0 0 26px ${CRIMSON}3a` }}>
+            You Sank
+          </motion.h1>
+          <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 6 }}>
+            Dragged under at depth {diedAt} · {cleared} {cleared === 1 ? 'round' : 'rounds'} deep
+          </p>
+
+          {/* The pot lost — the cost of pushing too far. */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.4 }}
+            style={{ marginTop: 16, padding: '1rem 1rem 0.95rem', borderRadius: 16, background: `radial-gradient(ellipse at 50% 0%, ${CRIMSON}14 0%, rgba(8,13,22,0.5) 74%)`, border: `1px solid ${CRIMSON}40`, boxShadow: `inset 0 0 24px ${CRIMSON}0e, 0 14px 40px rgba(0,0,0,0.45)` }}
+          >
+            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: `${CRIMSON}cc` }}>Gone to the Deep</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#e08a8a', lineHeight: 1.05, marginTop: 5, textShadow: `0 0 18px ${CRIMSON}33` }}>
+              {fmt(lost)} <span style={{ fontSize: '1.1rem' }}>⟡</span>
+            </p>
+            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 4 }}>
+              and as much Nav XP, sunk with your ship.
+            </p>
+          </motion.div>
+
+          {/* Silver lining — depth still counts. */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} style={{ marginTop: 14 }}>
+            {newRecord ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.4rem 0.9rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}55` }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: TEAL }}>New deepest — depth {cleared}</span>
+              </div>
+            ) : (
+              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a766e' }}>Deepest run: depth {best}</p>
+            )}
+            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 8, lineHeight: 1.45 }}>
+              The pot is lost, but how deep you reached is not. Any depth unlocks you tore loose are yours to keep.
+            </p>
+          </motion.div>
+
+          <div style={{ marginTop: 22 }}>
+            <BackLink router={router} label="Back to the map" primary />
+          </div>
+        </div>
+      </>
     )
   }
 
