@@ -1554,7 +1554,15 @@ type LockerState = { deepest: number; fathoms: number; owned: string[]; hasAutoC
 type ShopEntry = {
   id: string; name: string; description: string; depthRequired: number; cost: number
   scope: string; owned: boolean; lockNote: string | null; demo: boolean; special: boolean
+  category?: 'voyages' | 'raids' | 'fishing'
 }
+
+// Ship & Shore sections, ordered, each with a small glyph for the header.
+const SHORE_CATEGORIES: { id: 'voyages' | 'raids' | 'fishing'; label: string; icon: React.ReactNode }[] = [
+  { id: 'voyages', label: 'Voyages', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v9" /><path d="M12 5l6 6-6 1" /><path d="M4 14h16l-1.6 4.2a2 2 0 0 1-1.9 1.3H7.5a2 2 0 0 1-1.9-1.3z" /></svg> },
+  { id: 'raids', label: 'Raids', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="M9.5 6.5 21 6V3h-3L6.5 14.5" /><path d="m5 13 6 6" /><path d="m8 18-5 3" /></svg> },
+  { id: 'fishing', label: 'Fishing', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12c3-4 8-5 12-3 2 1 4 3 6 3-2 0-4 2-6 3-4 2-9 1-12-3z" /><path d="m16 9.5 4-2.5v10l-4-2.5" /><circle cx="7.5" cy="11.5" r="0.7" fill="currentColor" stroke="none" /></svg> },
+]
 
 function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' | 'shore'; onClose: () => void; onClaimed?: (owned: string[]) => void }) {
   const [state, setState] = useState<LockerState | null>(null)
@@ -1653,7 +1661,7 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
             const upgrades: ShopEntry[] = GAUNTLET_UPGRADES.map(u => ({
               id: u.id, name: u.name, description: u.description, depthRequired: u.depthRequired,
               cost: u.cost, scope: u.scope, owned: state.owned.includes(u.id), lockNote: null,
-              demo: u.id === 'cannonball_rack', special: false,
+              demo: u.id === 'cannonball_rack', special: false, category: u.category,
             }))
             const ac = getSpecialItem('auto_catcher')
             const autoCatcher: ShopEntry | null = ac ? {
@@ -1661,7 +1669,7 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
               depthRequired: ac.requiresGauntletDepth ?? 5, cost: ac.costFathoms ?? 0,
               scope: 'world', owned: state.hasAutoCatcher,
               lockNote: state.hasAutoCaster ? null : 'Buy the Auto Caster in the fishing shop first.',
-              demo: false, special: true,
+              demo: false, special: true, category: 'fishing',
             } : null
             const runShop = upgrades.filter(e => e.scope === 'gauntlet')
             const shoreShop = [...upgrades.filter(e => e.scope !== 'gauntlet'), ...(autoCatcher ? [autoCatcher] : [])]
@@ -1673,9 +1681,29 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
               <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: TEAL }}>{fmt(state.fathoms)} Fathoms</span>
             </div>
 
-            {entries.length === 0
-              ? <p className="font-karla" style={{ fontSize: '0.78rem', color: '#7a766e', textAlign: 'center', padding: '1.5rem 0' }}>Nothing in this shop yet — more coming.</p>
-              : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{entries.map(e => <Card key={e.id} e={e} />)}</div>}
+            {entries.length === 0 ? (
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#7a766e', textAlign: 'center', padding: '1.5rem 0' }}>Nothing in this shop yet — more coming.</p>
+            ) : section === 'run' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{entries.map(e => <Card key={e.id} e={e} />)}</div>
+            ) : (
+              // Ship & Shore — grouped by what each upgrade affects.
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {SHORE_CATEGORIES.map(cat => {
+                  const group = entries.filter(e => e.category === cat.id)
+                  if (group.length === 0) return null
+                  return (
+                    <div key={cat.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                        <span style={{ color: TEAL, display: 'flex' }}>{cat.icon}</span>
+                        <span className="font-cinzel font-800" style={{ fontSize: '0.88rem', color: '#eafffb', letterSpacing: '0.02em' }}>{cat.label}</span>
+                        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{group.map(e => <Card key={e.id} e={e} />)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#fca5a5', textAlign: 'center', marginTop: 12 }}>{err}</p>}
           </>

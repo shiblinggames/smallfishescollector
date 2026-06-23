@@ -19,6 +19,10 @@ export type UpgradeScope =
   | 'world'    // applies out in the wider game (voyages, fishing…)
   | 'gauntlet' // applies only to Gauntlet runs
 
+/** Which part of the wider game a Ship & Shore upgrade touches — groups the
+ *  shop into sections. Run Upgrades (scope 'gauntlet') don't carry one. */
+export type UpgradeCategory = 'voyages' | 'raids' | 'fishing'
+
 export interface GauntletUpgrade {
   id: string
   name: string
@@ -29,6 +33,8 @@ export interface GauntletUpgrade {
   /** One-time cost in Fathoms. */
   cost: number
   scope: UpgradeScope
+  /** Ship & Shore section this lands in. */
+  category?: UpgradeCategory
 }
 
 export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
@@ -89,6 +95,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     depthRequired: 8,
     cost: 45,
     scope: 'world',
+    category: 'voyages',
   },
   {
     id: 'cannonball_rack',
@@ -97,6 +104,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     depthRequired: 10,
     cost: 60,
     scope: 'account',
+    category: 'raids',
   },
   {
     id: 'swift_sails',
@@ -105,6 +113,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     depthRequired: 12,
     cost: 65,
     scope: 'world',
+    category: 'voyages',
   },
   {
     id: 'reinforced_hull',
@@ -113,6 +122,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     depthRequired: 14,
     cost: 80,
     scope: 'account',
+    category: 'raids',
   },
   {
     id: 'tireless_catcher',
@@ -121,6 +131,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     depthRequired: 16,
     cost: 90,
     scope: 'world',
+    category: 'fishing',
   },
 ]
 
