@@ -44,6 +44,8 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [foeHp, setFoeHp] = useState(initial.foeHp)
   const [myCharges, setMyCharges] = useState(initial.myCharges)
   const [foeCharges, setFoeCharges] = useState(initial.foeCharges)
+  const [myShield, setMyShield] = useState(initial.myShield ?? 0)
+  const [foeShield, setFoeShield] = useState(initial.foeShield ?? 0)
   const [splat, setSplat] = useState<{ who: 'me' | 'foe'; dmg: number; crit: boolean; dodged: boolean; heal?: number; burn?: boolean; frozen?: boolean } | null>(null)
   const [log, setLog] = useState<{ id: number; text: string }[]>([{ id: 0, text: 'The duel begins.' }])
   const logId = useRef(1)
@@ -101,6 +103,9 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         const targetFoeHp = isChallenger ? s.opponentHp : s.challengerHp
         const targetMyCh = isChallenger ? s.challengerCharges : s.opponentCharges
         const targetFoeCh = isChallenger ? s.opponentCharges : s.challengerCharges
+        const targetMyShield = isChallenger ? s.challengerShield : s.opponentShield
+        const targetFoeShield = isChallenger ? s.opponentShield : s.challengerShield
+        const setBars = () => { setMyHp(targetMyHp); setFoeHp(targetFoeHp); setMyCharges(targetMyCh); setFoeCharges(targetFoeCh); setMyShield(targetMyShield); setFoeShield(targetFoeShield) }
         if (s.fx) {
           // Status beat — burn tick / parry reflect / freeze. Lands on the
           // ACTOR side (the one experiencing the effect).
@@ -111,7 +116,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
             ;(actorIsMe ? myShip : foeShip).start(HIT_SHAKE)
             vibrate(s.fx === 'burn' ? 30 : [20, 40])
           }
-          setMyHp(targetMyHp); setFoeHp(targetFoeHp); setMyCharges(targetMyCh); setFoeCharges(targetFoeCh)
+          setBars()
           await sleep(680)
           setSplat(null)
           await sleep(160)
@@ -120,7 +125,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         if (s.ability) {
           // Free Special cast — gentle beat, green heal splat if it healed.
           if (s.heal && s.heal > 0) setSplat({ who: actorIsMe ? 'me' : 'foe', dmg: 0, crit: false, dodged: false, heal: s.heal })
-          setMyHp(targetMyHp); setFoeHp(targetFoeHp); setMyCharges(targetMyCh); setFoeCharges(targetFoeCh)
+          setBars()
           await sleep(700)
           setSplat(null)
           await sleep(150)
@@ -137,10 +142,10 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
             ;(actorIsMe ? foeShip : myShip).start(s.crit ? CRIT_SHAKE : HIT_SHAKE)
             if (s.crit) { setCritFlash(true); vibrate([40, 60, 80]); setTimeout(() => setCritFlash(false), 360) }
           }
-          setMyHp(targetMyHp); setFoeHp(targetFoeHp); setMyCharges(targetMyCh); setFoeCharges(targetFoeCh)
+          setBars()
           await sleep(820)
         } else {
-          setMyCharges(targetMyCh); setFoeCharges(targetFoeCh)
+          setBars()
           await sleep(720)
         }
         setSplat(null)
@@ -152,6 +157,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
     // were tail-capped and we couldn't animate every step.
     playedRef.current = Math.max(playedRef.current, state.round - 1)
     setMyHp(state.myHp); setFoeHp(state.foeHp); setMyCharges(state.myCharges); setFoeCharges(state.foeCharges)
+    setMyShield(state.myShield ?? 0); setFoeShield(state.foeShield ?? 0)
     setMyFx(state.myFx)
     setMyLastAction(lastActionOf(state.rounds, mySide))
     if (state.status !== 'active') {
@@ -312,7 +318,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         <Link href="/expeditions" className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.1em', color: '#9a948a' }}>← Expeditions</Link>
       </div>
 
-      <ShipPanel load={foe} hp={foeHp} charges={foeCharges} accent="#f87171" top ctrl={foeShip} splat={splat?.who === 'foe' ? splat : null} onTap={() => setStatsFor({ load: foe, hp: foeHp, you: false })} online={foeOnline} />
+      <ShipPanel load={foe} hp={foeHp} shield={foeShield} charges={foeCharges} accent="#f87171" top ctrl={foeShip} splat={splat?.who === 'foe' ? splat : null} onTap={() => setStatsFor({ load: foe, hp: foeHp, you: false })} online={foeOnline} />
 
       {/* Center: fixed combat log — last events scroll up like the raid log. */}
       <div className="px-4" style={{ marginTop: 8 }}>
@@ -320,7 +326,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
       </div>
 
       <div style={{ marginTop: 8 }}>
-        <ShipPanel load={me} you hp={myHp} charges={myCharges} accent="#5fd6ff" ctrl={myShip} splat={splat?.who === 'me' ? splat : null} onTap={() => setStatsFor({ load: me, hp: myHp, you: true })} />
+        <ShipPanel load={me} you hp={myHp} shield={myShield} charges={myCharges} accent="#5fd6ff" ctrl={myShip} splat={splat?.who === 'me' ? splat : null} onTap={() => setStatsFor({ load: me, hp: myHp, you: true })} />
       </div>
 
       {/* Bottom slot: action menu / aim bar+Lock / waiting / result */}
@@ -408,8 +414,8 @@ function LogBox({ lines }: { lines: { id: number; text: string }[] }) {
   )
 }
 
-function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, online }: {
-  load: BattleLoadout; you?: boolean; hp: number; charges: number; accent: string; top?: boolean
+function ShipPanel({ load, you, hp, shield = 0, charges, accent, top, ctrl, splat, onTap, online }: {
+  load: BattleLoadout; you?: boolean; hp: number; shield?: number; charges: number; accent: string; top?: boolean
   ctrl: ReturnType<typeof useAnimation>
   splat: { dmg: number; crit: boolean; dodged: boolean; heal?: number; burn?: boolean; frozen?: boolean } | null
   onTap: () => void
@@ -417,6 +423,9 @@ function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, on
 }) {
   const hpMax = load.hpMax
   const pct = Math.max(0, Math.min(100, (hp / Math.max(1, hpMax)) * 100))
+  // Tidecaller shield — a cyan armor segment riding above the hull, scaled to
+  // the same hull-max so its length reads against the HP bar.
+  const shieldPct = Math.max(0, Math.min(100, (shield / Math.max(1, hpMax)) * 100))
   return (
     <div className="px-4" style={{ paddingTop: top ? 8 : 0 }}>
       <div onClick={onTap} style={{ position: 'relative', background: 'rgba(11,14,20,0.9)', border: `1px solid ${accent}40`, borderRadius: 14, padding: '0.7rem 0.9rem', cursor: 'pointer' }}>
@@ -463,7 +472,18 @@ function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, on
             <div style={{ height: 12, borderRadius: 6, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
               <motion.div animate={{ width: `${pct}%` }} transition={{ type: 'spring', stiffness: 200, damping: 28 }} style={{ height: '100%', background: pct > 50 ? '#4ade80' : pct > 22 ? '#fbbf24' : '#f87171' }} />
             </div>
-            <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#9a948a', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>{hp} / {hpMax} hull</p>
+            {/* Tidecaller shield bar — only present while a shield holds. */}
+            <AnimatePresence>
+              {shield > 0 && (
+                <motion.div initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: 6, marginTop: 3 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  style={{ borderRadius: 4, background: 'rgba(125,211,252,0.14)', overflow: 'hidden', border: '1px solid rgba(125,211,252,0.3)' }}>
+                  <motion.div animate={{ width: `${shieldPct}%` }} transition={{ type: 'spring', stiffness: 220, damping: 26 }} style={{ height: '100%', background: 'linear-gradient(90deg, #38bdf8, #7dd3fc)', boxShadow: '0 0 8px rgba(125,211,252,0.6)' }} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: '#9a948a', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+              {hp} / {hpMax} hull{shield > 0 && <span style={{ color: '#7dd3fc' }}> · +{shield} shield</span>}
+            </p>
           </div>
         </div>
       </div>

@@ -163,11 +163,13 @@ export interface RoundStep {
   fx?: 'burn' | 'freeze' | 'parry'
   /** HP restored by a heal Special (drives the green heal splat). */
   heal?: number
-  /** Resulting HP/charges AFTER this step, for both sides. */
+  /** Resulting HP/charges/shield AFTER this step, for both sides. */
   challengerHp: number
   opponentHp: number
   challengerCharges: number
   opponentCharges: number
+  challengerShield: number
+  opponentShield: number
   log: string
 }
 
@@ -265,6 +267,7 @@ export function resolveRound(
     actor: 'challenger', action: 'reload', damage: 0, dodged: false, crit: false,
     challengerHp: sides.challenger.s.hp, opponentHp: sides.opponent.s.hp,
     challengerCharges: sides.challenger.s.charges, opponentCharges: sides.opponent.s.charges,
+    challengerShield: fx.challenger.shield ?? 0, opponentShield: fx.opponent.shield ?? 0,
     log: '', ...over,
   })
 

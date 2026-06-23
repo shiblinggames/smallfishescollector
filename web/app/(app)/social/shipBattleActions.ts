@@ -322,6 +322,8 @@ export interface ShipBattleState {
   foe: BattleLoadout
   myHp: number
   foeHp: number
+  myShield: number
+  foeShield: number
   myCharges: number
   foeCharges: number
   round: number
@@ -348,7 +350,7 @@ export async function getShipBattleState(id: string): Promise<ShipBattleState | 
       id: b.id, status: b.status, side,
       me: (isC ? b.challenger_loadout : b.opponent_loadout)!,
       foe: (isC ? b.opponent_loadout : b.challenger_loadout)!,
-      myHp: 0, foeHp: 0, myCharges: 0, foeCharges: 0, round: b.round,
+      myHp: 0, foeHp: 0, myShield: 0, foeShield: 0, myCharges: 0, foeCharges: 0, round: b.round,
       myMoveIn: false, foeMoveIn: false, rounds: b.rounds ?? [],
       myFx: fxView(isC ? b.challenger_fx : b.opponent_fx),
       iWon: b.winner_id == null ? null : b.winner_id === user.id,
@@ -360,6 +362,8 @@ export async function getShipBattleState(id: string): Promise<ShipBattleState | 
     foe: isC ? b.opponent_loadout : b.challenger_loadout,
     myHp: isC ? b.challenger_hp : b.opponent_hp,
     foeHp: isC ? b.opponent_hp : b.challenger_hp,
+    myShield: (isC ? b.challenger_fx?.shield : b.opponent_fx?.shield) ?? 0,
+    foeShield: (isC ? b.opponent_fx?.shield : b.challenger_fx?.shield) ?? 0,
     myCharges: isC ? b.challenger_charges : b.opponent_charges,
     foeCharges: isC ? b.opponent_charges : b.challenger_charges,
     round: b.round,
