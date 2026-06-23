@@ -8,6 +8,7 @@
 // lib/gauntlet. The pot is only banked on cash-out; a wipe loses everything.
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import RaidCombat from '../RaidCombat'
@@ -1299,19 +1300,24 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
 }
 
 // ── Modal scrim ───────────────────────────────────────────────────────────────
-// One backdrop for the popup modals. Centers content when it fits and scrolls
-// from the top when it's taller than the screen — the min-height wrapper sidesteps
-// the flexbox "centered overflow clips the top + won't scroll" trap. Respects iOS
-// safe areas + momentum scroll. Click the scrim (not the panel) to close.
+// One backdrop for the popup modals. PORTALED to <body> so it escapes any
+// transformed ancestor (PageTransition / Nav) — otherwise `position: fixed`
+// anchors to that ancestor instead of the viewport and the overflow scroll
+// can't reach the bottom (see [[feedback-transform-breaks-fixed-positioning]]).
+// Centers content when it fits and scrolls from the top when it's taller than
+// the screen (the min-height wrapper sidesteps the flexbox centered-overflow
+// clip). Respects iOS safe areas + momentum scroll. Click the scrim to close.
 function ModalScrim({ zIndex, onClose, bg = 'rgba(2,6,12,0.85)', blur = 'blur(4px)', children }: {
   zIndex: number; onClose: () => void; bg?: string; blur?: string; children: React.ReactNode
 }) {
-  return (
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex, background: bg, backdropFilter: blur, WebkitBackdropFilter: blur, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
       <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

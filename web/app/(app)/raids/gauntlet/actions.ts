@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth } from '@/lib/gauntlet'
-import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletBonusGems, gauntletChestLuck } from '@/lib/gauntletUpgrades'
+import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 
 /** Mail the player for each depth-unlock milestone they cross this run. Deepest
@@ -247,10 +247,10 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
 
   // Davy cannon chest drops — each component rolls independently at the chest
-  // tier's chance (lifted by Lucky Locker), only for cannons not yet owned, and
-  // never once the player has forged them into the Grand Cannon.
+  // tier's chance, only for cannons not yet owned, and never once the player
+  // has forged them into the Grand Cannon.
   const ownedItems = (profile.raid_items as string[] | null) ?? []
-  const dropChance = Math.min(1, chestCannonDropChance(chest.tier) * gauntletChestLuck(upgrades))
+  const dropChance = chestCannonDropChance(chest.tier)
   const droppedItems: string[] = []
   if (!ownedItems.includes(DAVY_FORGE.result)) {
     for (const cannon of DAVY_FORGE.components) {
@@ -264,10 +264,11 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 
   const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades))
   const bankedXp        = Math.round(cleanPot * chest.potMult * gauntletXpMult(upgrades))
-  const gems            = chest.gems + gauntletBonusGems(upgrades)
+  const gems            = chest.gems
 
-  // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth.
-  const earnedFathoms    = fathomsForDepth(d)
+  // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth
+  // (Lucky Locker boosts the payout).
+  const earnedFathoms    = Math.round(fathomsForDepth(d) * gauntletFathomsMult(upgrades))
   const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
@@ -338,7 +339,7 @@ export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_fathoms')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades')
     .eq('id', user.id)
     .single()
 
@@ -349,7 +350,8 @@ export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean
   const d = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(depth)))
   const prevDeepest = (profile.gauntlet_deepest as number | null) ?? 0
   const deepest = Math.max(prevDeepest, d)
-  const earnedFathoms = fathomsForDepth(d)
+  // Lucky Locker boosts Fathoms win or lose, so it applies on a sink too.
+  const earnedFathoms = Math.round(fathomsForDepth(d) * gauntletFathomsMult((profile.gauntlet_upgrades as string[] | null) ?? []))
   const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
 
   await admin

@@ -42,27 +42,19 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
-    id: 'pearl_diver',
-    name: 'Pearl Diver',
-    description: 'Every Gauntlet chest you crack open coughs up 1 extra gem.',
-    depthRequired: 10,
-    cost: 60,
-    scope: 'gauntlet',
-  },
-  {
     id: 'salvagers_eye',
     name: "Salvager's Eye",
     description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
-    depthRequired: 14,
-    cost: 80,
+    depthRequired: 12,
+    cost: 70,
     scope: 'gauntlet',
   },
   {
     id: 'lucky_locker',
     name: 'Lucky Locker',
-    description: 'Better odds of a Davy cannon dropping from your Gauntlet chests.',
-    depthRequired: 20,
-    cost: 110,
+    description: 'Earn 50% more Fathoms from every dive, win or lose.',
+    depthRequired: 18,
+    cost: 100,
     scope: 'gauntlet',
   },
   // ── Ship & Shore (scope 'account'/'world') — power for the wider game ───────
@@ -109,12 +101,7 @@ export function gauntletXpMult(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('navigators_log') ? 1.2 : 1
 }
 
-/** Pearl Diver: flat extra gems added to a Gauntlet cash-out chest. */
-export function gauntletBonusGems(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('pearl_diver') ? 1 : 0
-}
-
-/** Lucky Locker: multiplier on the Davy-cannon chest drop chance. */
-export function gauntletChestLuck(unlocked: string[] | null | undefined): number {
+/** Lucky Locker: multiplier on Fathoms earned per run (cash-out AND death). */
+export function gauntletFathomsMult(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('lucky_locker') ? 1.5 : 1
 }
