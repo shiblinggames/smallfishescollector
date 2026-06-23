@@ -19,12 +19,12 @@ import {
   generateFight, advanceRollState, shouldFireTide, chestForDepth,
   CURSE_DEPTHS, drawCurse, BOON_DEPTHS, drawBoons,
   DROWNED_FILTER, bandForDepth, davyTaunt,
-  GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT,
-  CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
+  GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT, GAUNTLET_COOLDOWN_HOURS,
+  CHEST_TIERS, chestCannonDropChance, estimatePotForDepth, GAUNTLET_DEPTH_UNLOCKS,
   type GauntletFight, type GauntletRollState, type GauntletCurse, type GauntletBoon,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen } from './actions'
 import { GAUNTLET_UPGRADES, bonusChargeSlots } from '@/lib/gauntletUpgrades'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
 import { vibrate } from '@/lib/haptics'
@@ -81,6 +81,8 @@ export interface GauntletGameProps {
   available: boolean
   /** ISO time the next run unlocks (cooldown), or null when available now. */
   nextAt: string | null
+  /** Whether the player has seen the first-time explainer. */
+  hasSeenIntro: boolean
 }
 
 export default function GauntletGame(props: GauntletGameProps) {
@@ -124,6 +126,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Locker Upgrades panel (permanent, depth-gated, doubloon-bought perks).
   const [upgradesOpen, setUpgradesOpen] = useState(false)
   const [haulOpen, setHaulOpen] = useState(false)
+  const [unlocksOpen, setUnlocksOpen] = useState(false)
+  // First-timer explainer. Auto-opens once (server flag), reopenable via the
+  // "How it works" link.
+  const [introOpen, setIntroOpen] = useState(!props.hasSeenIntro)
 
   // Guardrail counters live in refs (read inside combat callbacks).
   const rollStateRef = useRef<GauntletRollState>({ cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 })
@@ -153,6 +159,11 @@ export default function GauntletGame(props: GauntletGameProps) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [phase])
+
+  function dismissIntro() {
+    setIntroOpen(false)
+    if (!props.hasSeenIntro) markGauntletIntroSeen().catch(() => {})
+  }
 
   function begin() {
     if (starting) return
@@ -346,39 +357,61 @@ export default function GauntletGame(props: GauntletGameProps) {
             </span>
           </div>
 
-          {/* Three actions: Descend starts the run; the other two open panels. */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-            <ActionTile
-              color={GOLD}
-              primary
-              disabled={starting}
-              onClick={begin}
-              label={starting ? 'Diving…' : 'Descend'}
-              line={starting ? 'Into the dark' : 'Drop into the Locker'}
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>}
-            />
+          {/* Descend — the start. Big and obvious. */}
+          <button onClick={begin} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+            style={{
+              marginTop: 20, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem',
+              color: GOLD, background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}10)`,
+              border: `1px solid ${GOLD}70`, cursor: starting ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+              boxShadow: `0 0 22px ${GOLD}22`,
+              animation: starting ? 'none' : 'gauntCta 2.6s ease-in-out infinite',
+            }}>
+            {starting ? 'Diving…' : (
+              <>Descend
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+              </>
+            )}
+          </button>
+          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a766e', marginTop: 8 }}>
+            Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
+          </p>
+
+          {/* Secondary doors: rewards, unlocks, shop. */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <ActionTile
               color={TEAL}
               onClick={() => setHaulOpen(true)}
               label="The Haul"
-              line="What you can win"
+              line="What you earn"
               icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /><rect x="10.5" y="11.4" width="3" height="3.6" rx="0.6" fill="currentColor" stroke="none" /></svg>}
             />
             <ActionTile
-              color={TEAL}
+              color="#c4a0e8"
+              onClick={() => setUnlocksOpen(true)}
+              label="Unlocks"
+              line="Depth rewards"
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0" /><circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none" /></svg>}
+            />
+            <ActionTile
+              color={GOLD}
               onClick={() => setUpgradesOpen(true)}
               label="The Shop"
-              line="Spend your doubloons"
+              line="Spend doubloons"
               icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6" rx="6.5" ry="2.4" /><path d="M5.5 6v4c0 1.3 2.9 2.4 6.5 2.4S18.5 11.3 18.5 10V6" /><path d="M5.5 10v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /><path d="M5.5 14v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /></svg>}
             />
           </div>
-          <p className="font-karla" style={{ fontSize: '0.68rem', color: '#7a766e', marginTop: 12 }}>
-            Descending begins the cooldown before your next.
-          </p>
+
+          <button onClick={() => setIntroOpen(true)} className="font-karla font-600 tap"
+            style={{ marginTop: 14, background: 'none', border: 'none', color: '#8a8480', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+            How it works
+          </button>
 
           <BackLink router={router} label="Not today" />
         </div>
+        {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal deepest={props.deepest} doubloonMult={props.classDoubloonMult} onClose={() => setHaulOpen(false)} />}
+        {unlocksOpen && <UnlocksModal deepest={props.deepest} onClose={() => setUnlocksOpen(false)} />}
         {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </>
     )
@@ -1156,13 +1189,9 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
 // ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
 // BEFORE committing a descent (and burning the cooldown).
 function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doubloonMult: number; onClose: () => void }) {
-  // Estimate against the depth they've actually reached; before any run, point
-  // at a realistic first goal so the number isn't zero.
+  // The floor guide lights up the rows the player can already reach; before any
+  // run, treat depth 8 as a realistic first goal.
   const target = deepest > 0 ? deepest : 8
-  const chest = chestForDepth(target)
-  const pot = estimatePotForDepth(target)
-  const estDoubloons = Math.round(pot * chest.potMult * doubloonMult)
-  const estXp = Math.round(pot * chest.potMult)
   const cannons = ['davys_heavy_cannon', 'davys_hand_cannon']
     .map(getRaidItem)
     .filter((it): it is NonNullable<ReturnType<typeof getRaidItem>> => !!it)
@@ -1185,23 +1214,15 @@ function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doublo
         </div>
 
         <div style={{ marginTop: 12, textAlign: 'left' }}>
-              {/* Estimate */}
-              <div style={{ padding: '0.7rem 0.8rem', borderRadius: 11, background: 'rgba(240,192,64,0.07)', border: `1px solid ${GOLD}2e` }}>
-                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>
-                  {deepest > 0 ? `A run to your depth ${target}` : 'A run to depth 8'}
-                </p>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: GOLD, marginTop: 4, lineHeight: 1.15 }}>
-                  ~{fmt(estDoubloons)} ⟡ <span style={{ color: '#6b6760', fontWeight: 400 }}>+</span> ~{fmt(estXp)} Nav XP
-                </p>
-                <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 3 }}>
-                  Hauled up in the {chest.label}{chest.gems > 0 ? ` with +${chest.gems} ◆` : ''}.
-                </p>
-              </div>
+              {/* Plain-English intro — the whole loop in one breath. */}
+              <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b8b2a6', lineHeight: 1.5 }}>
+                Every ship you sink grows <span style={{ color: GOLD, fontWeight: 700 }}>one pot</span>. Cash out at any depth to bank it as doubloons, plus the same amount in Nav XP. The deeper you go, the bigger it gets — but sink first and you lose the lot.
+              </p>
 
-              {/* Floor guide — what cashing out at each depth roughly banks.
-                  Concrete doubloons/gems instead of abstract multipliers, sampled
-                  at a depth inside each chest's band. */}
-              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 12, marginBottom: 6 }}>Cash out by depth — roughly what you bank</p>
+              {/* Floor guide — concrete earnings at each floor (no multipliers).
+                  Sampled at a depth inside each chest's band; rows you can already
+                  reach are lit gold. */}
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 14, marginBottom: 6 }}>What you bank by depth</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {CHEST_TIERS.map(c => {
                   const d = c.minDepth === 0 ? 5 : c.minDepth + 2
@@ -1270,6 +1291,103 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
       <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.84rem', color: primary ? color : '#f0ede8', lineHeight: 1 }}>{label}</span>
       <span className="font-karla" style={{ fontSize: '0.58rem', color: '#9a948a', lineHeight: 1.25 }}>{line}</span>
     </button>
+  )
+}
+
+// ── Unlocks modal ─────────────────────────────────────────────────────────────
+// Depth milestones that permanently unlock something outside a single run.
+// Reaching the depth ONCE is enough — sinking on the way down still counts.
+function UnlocksModal({ deepest, onClose }: { deepest: number; onClose: () => void }) {
+  const PURPLE = '#c4a0e8'
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 440, margin: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(18,14,28,0.99), rgba(9,7,16,0.99))', border: `1px solid ${PURPLE}3a`, boxShadow: `0 0 44px ${PURPLE}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${PURPLE}cc` }}>Reach it once, keep it</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#f0eafc', lineHeight: 1.1, marginTop: 3 }}>Depth Unlocks</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a93a8', marginTop: 6, lineHeight: 1.45 }}>
+          Push to these depths to unlock rewards for good. Reaching the depth is all it takes, even on a run you sink.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+          {GAUNTLET_DEPTH_UNLOCKS.map(u => {
+            const unlocked = deepest >= u.depth
+            const accent = unlocked ? '#7fd49a' : PURPLE
+            return (
+              <div key={u.depth} style={{ display: 'flex', gap: 11, padding: '0.8rem 0.85rem', borderRadius: 14, background: unlocked ? 'rgba(127,212,154,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${unlocked ? 'rgba(127,212,154,0.32)' : `${PURPLE}33`}` }}>
+                <div style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 11, background: `${accent}1c`, border: `1px solid ${accent}55`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: accent }}>
+                  {unlocked
+                    ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>{u.name}</p>
+                    <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: accent, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      {unlocked ? 'Unlocked' : `Depth ${Math.min(deepest, u.depth)}/${u.depth}`}
+                    </span>
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.4, marginTop: 3 }}>{u.blurb}</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: unlocked ? '#7fd49a' : '#8a8480', marginTop: 4 }}>{u.where}.</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ── First-time explainer ──────────────────────────────────────────────────────
+// A short, noob-proof "how this works" for the Gauntlet. Auto-opens once;
+// reopenable via "How it works".
+function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; firstTime: boolean }) {
+  const steps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
+    { color: TEAL, title: 'Descend the Locker', text: 'Drop in and fight ship after ship. Each one deeper hits harder.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg> },
+    { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg> },
+    { color: '#f87171', title: 'Cash out or sink', text: 'Haul the pot up any time to bank it. Go under first and it all sinks with you.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg> },
+    { color: '#c4a0e8', title: 'Go deep for keeps', text: 'Hitting new depths unlocks permanent rewards you keep topside forever.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg> },
+  ]
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(2,6,12,0.88)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+      <motion.div initial={{ opacity: 0, y: 18, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 250, damping: 23 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 420, margin: 'auto', borderRadius: 20, background: 'linear-gradient(180deg, rgba(12,18,30,0.99), rgba(6,9,16,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 50px ${TEAL}22, 0 18px 50px rgba(0,0,0,0.65)`, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center' }}>
+        <div style={{ position: 'relative', width: 92, height: 92, margin: '0 auto 6px' }}>
+          <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}22 0%, ${TEAL}12 45%, transparent 72%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={MAW_IMG} alt="" loading="eager" decoding="async" style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.7))' }} />
+        </div>
+        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.3em', color: TEAL }}>The Davy Jones Gauntlet</p>
+        <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#f3ead2', lineHeight: 1.1, marginTop: 5 }}>How the descent works</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16, textAlign: 'left' }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0.6rem 0.7rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, background: `${s.color}1c`, border: `1px solid ${s.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>{s.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f0ede8', lineHeight: 1.1 }}>{s.title}</p>
+                <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a948a', lineHeight: 1.35, marginTop: 1 }}>{s.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onClose} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+          style={{ marginTop: 18, width: '100%', padding: '0.95rem', borderRadius: 13, fontSize: '0.95rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: 'pointer' }}>
+          {firstTime ? 'Into the Locker' : 'Got it'}
+        </button>
+      </motion.div>
+    </div>
   )
 }
 

@@ -329,3 +329,12 @@ export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean
 
   return { ok: true, deepest }
 }
+
+/** Mark the first-time explainer as seen so it doesn't auto-open again. */
+export async function markGauntletIntroSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ has_seen_gauntlet_intro: true }).eq('id', user.id)
+}

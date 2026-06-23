@@ -55,6 +55,7 @@ export default async function GauntletPage() {
           deepest={daily.deepest}
           available={daily.available}
           nextAt={daily.nextAt}
+          hasSeenIntro={profile?.has_seen_gauntlet_intro === true}
         />
       </div>
     </main>
