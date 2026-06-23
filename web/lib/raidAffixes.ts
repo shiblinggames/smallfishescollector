@@ -24,6 +24,7 @@
 //   onThisEnemyFire           → Frenzied
 //   onCritRoll                → Marksman
 //   onThisEnemyDamagedPlayer  → Vampiric, Scorching (burn), Glacial (freeze)
+//   onThisEnemyDodgesPlayer   → Riposte (reflect % of the shot you would've landed)
 //
 // Scorching / Glacial mirror the player's Incendiary / Frozen cannonballs onto
 // the elite: a per-hit chance to set the PLAYER ablaze (DoT, same BURN_TURNS /
@@ -41,6 +42,7 @@ export type AffixId =
   | 'marksman'
   | 'scorching'
   | 'glacial'
+  | 'riposte'
 
 export interface AffixDef {
   id: AffixId
@@ -87,6 +89,11 @@ export interface AffixDef {
   // ── Glacial — chance, each hit on the player, to freeze them ─────────
   // Mirrors the player's Frozen Cannonball (player loses their next turn).
   freezeChance?:       number  // 0.20
+
+  // ── Riposte — when it dodges your shot, reflect this fraction of the
+  //    damage you WOULD have dealt back onto you. Scales with the player's
+  //    hit, so it punishes heavy hitters specifically. ──────────────────
+  riposteReflectPct?:  number  // 0.50
 }
 
 export const AFFIXES: Record<AffixId, AffixDef> = {
@@ -144,6 +151,11 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
     id: 'glacial', name: 'Glacial',
     description: '20% chance its shot freezes you solid, costing your next turn.',
     freezeChance: 0.20,
+  },
+  riposte: {
+    id: 'riposte', name: 'Riposte',
+    description: 'When it dodges your shot, it turns 50% of that blow back on you.',
+    riposteReflectPct: 0.50,
   },
 }
 

@@ -1722,6 +1722,15 @@ export default function RaidCombat({
               if (takenMult !== 1) parryDmg = Math.max(1, Math.floor(parryDmg * takenMult))
               pHp = Math.max(0, pHp - parryDmg)
               stepLines.push(`${enemy.parryName ?? 'Riposte'}! ${enemy.name} counters your strike for ${parryDmg}.`)
+            } else if (isAttackerPlayer && affix?.riposteReflectPct && dmg > 0) {
+              // Riposte affix — reflect a slice of the shot you WOULD have landed
+              // (so it scales with the player's own damage and punishes heavy
+              // hitters), through the same incoming-mitigation chain as a hit.
+              let riposteDmg = Math.max(1, Math.round(dmg * affix.riposteReflectPct))
+              const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
+              if (takenMult !== 1) riposteDmg = Math.max(1, Math.floor(riposteDmg * takenMult))
+              pHp = Math.max(0, pHp - riposteDmg)
+              stepLines.push(`Riposte! ${enemy.name} turns your own ${dmg}-damage strike back for ${riposteDmg}.`)
             } else if (!isAttackerPlayer) {
               const parryEffects = getActiveEffects(equippedRaidItems)
               const parryChance      = parryEffects.filter(e => e.type === 'parry_chance').reduce((a, e) => Math.max(a, e.value), 0)
