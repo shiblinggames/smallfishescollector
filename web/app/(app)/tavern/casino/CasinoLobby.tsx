@@ -44,7 +44,10 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
   const [denTab, setDenTab] = useState<DenTabKey>('overall')
   const [dailyCap, setDailyCap] = useState(initial.dailyCap)
   const [nets, setNets] = useState<CasinoSessionNets>(initial.sessionNets)
-  const [buyInAmount, setBuyInAmount] = useState(500)
+  // Default the selector to the whole remaining buy-in limit (Max).
+  const [buyInAmount, setBuyInAmount] = useState(() =>
+    Math.min(CASINO_BUY_IN_MAX, initial.doubloons, Math.max(0, initial.dailyCap - initial.dailyBoughtIn)),
+  )
   const [showBuyPanel, setShowBuyPanel] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -70,6 +73,13 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
   // Buy panel is forced open when the purse is empty — that IS the
   // first-visit flow ("buy chips before you sit at a table").
   const panelOpen = chips === 0 || showBuyPanel
+
+  // Every time the buy-in panel opens, pre-select Max (the whole remaining
+  // limit). A manual pick afterward sticks until the panel is reopened.
+  useEffect(() => {
+    if (panelOpen) setBuyInAmount(buyInCap)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelOpen])
 
   function doBuyIn() {
     if (!canBuyIn) return
@@ -198,8 +208,10 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
               <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a09988', lineHeight: 1.4, textAlign: 'center' }}>
                 {chips === 0 ? <>Buy chips to play any table — cash out any time.</> : <>Top up. Chips work at every table.</>}
               </p>
+              {/* Five increments + a Max cell in one 3-col grid = two tidy rows.
+                  (Drop the smallest preset so the Max cell makes six total.) */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-                {CASINO_BUY_IN_PRESETS.map(amt => {
+                {CASINO_BUY_IN_PRESETS.slice(1).map(amt => {
                   const disabled = amt > buyInCap
                   const selected = buyInAmount === amt
                   return (
@@ -210,7 +222,8 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
                       onClick={() => setBuyInAmount(amt)}
                       className="font-karla font-700"
                       style={{
-                        padding: '0.5rem 0', borderRadius: 9,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '2.55rem',
+                        padding: '0.3rem 0', borderRadius: 9,
                         background: selected ? 'rgba(240,192,64,0.14)' : 'rgba(4,10,20,0.5)',
                         border: `1px solid ${selected ? GOLD : 'rgba(255,255,255,0.12)'}`,
                         color: disabled ? '#3a3835' : selected ? GOLD : '#9a9488',
@@ -222,32 +235,32 @@ export default function CasinoLobby({ initial, jackpotPot, denBoards }: {
                     </button>
                   )
                 })}
+                {/* Max cell — the whole remaining buy-in limit (min of purse cap,
+                    your doubloons, and today's cap). */}
+                {(() => {
+                  const maxSelected = buyInAmount === buyInCap && buyInCap > 0
+                  const maxDisabled = buyInCap <= 0 || isPending
+                  return (
+                    <button
+                      type="button"
+                      disabled={maxDisabled}
+                      onClick={() => setBuyInAmount(buyInCap)}
+                      className="font-karla font-700"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minHeight: '2.55rem',
+                        padding: '0.3rem 0', borderRadius: 9,
+                        background: maxSelected ? 'rgba(240,192,64,0.18)' : 'rgba(4,10,20,0.5)',
+                        border: `1px solid ${maxSelected ? GOLD : 'rgba(200,168,90,0.4)'}`,
+                        color: buyInCap <= 0 ? '#3a3835' : maxSelected ? GOLD : '#c8a85a',
+                        cursor: maxDisabled ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <span className="uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', opacity: 0.85 }}>Max</span>
+                      <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{buyInCap > 0 ? `${buyInCap.toLocaleString()} ⟡` : '—'}</span>
+                    </button>
+                  )
+                })()}
               </div>
-
-              {/* Max — jump straight to the whole remaining buy-in limit
-                  (min of the purse cap, your doubloons, and today's cap). */}
-              {(() => {
-                const maxSelected = buyInAmount === buyInCap && buyInCap > 0
-                const maxDisabled = buyInCap <= 0 || isPending
-                return (
-                  <button
-                    type="button"
-                    disabled={maxDisabled}
-                    onClick={() => setBuyInAmount(buyInCap)}
-                    className="font-karla font-700 uppercase tracking-[0.08em]"
-                    style={{
-                      padding: '0.45rem 0', borderRadius: 9,
-                      background: maxSelected ? 'rgba(240,192,64,0.14)' : 'rgba(4,10,20,0.5)',
-                      border: `1px solid ${maxSelected ? GOLD : 'rgba(255,255,255,0.12)'}`,
-                      color: buyInCap <= 0 ? '#3a3835' : maxSelected ? GOLD : '#c8a85a',
-                      fontSize: '0.64rem', letterSpacing: '0.07em',
-                      cursor: maxDisabled ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {buyInCap > 0 ? `Max · ${buyInCap.toLocaleString()} ⟡` : 'Max'}
-                  </button>
-                )
-              })()}
 
               <motion.button
                 type="button"
