@@ -20,7 +20,7 @@ import {
   CURSE_DEPTHS, drawCurse, BOON_DEPTHS, drawBoons,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT, GAUNTLET_COOLDOWN_HOURS,
-  CHEST_TIERS, chestCannonDropChance, estimatePotForDepth, GAUNTLET_DEPTH_UNLOCKS,
+  CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
   type GauntletFight, type GauntletRollState, type GauntletCurse, type GauntletBoon,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
@@ -132,10 +132,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [resolving, setResolving] = useState(false)
   // Fathoms salvaged from a sunk run (the meta-currency still pays for the dive).
   const [deathFathoms, setDeathFathoms] = useState(0)
-  // Locker Upgrades panel (permanent, depth-gated, doubloon-bought perks).
-  const [upgradesOpen, setUpgradesOpen] = useState(false)
+  // The Locker — two separate shops, each opened to its own section:
+  // 'run' = perks for the descent itself, 'shore' = upgrades for the wider game.
+  const [shopSection, setShopSection] = useState<'run' | 'shore' | null>(null)
   const [haulOpen, setHaulOpen] = useState(false)
-  const [unlocksOpen, setUnlocksOpen] = useState(false)
   // First-timer explainer. Auto-opens once (server flag), reopenable via the
   // "How it works" link.
   const [introOpen, setIntroOpen] = useState(!props.hasSeenIntro)
@@ -412,7 +412,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           )}
 
-          {/* Secondary doors: rewards, unlocks, shop. */}
+          {/* Secondary doors: the rewards guide + the two Fathoms shops. */}
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <ActionTile
               color={TEAL}
@@ -423,17 +423,17 @@ export default function GauntletGame(props: GauntletGameProps) {
             />
             <ActionTile
               color="#c4a0e8"
-              onClick={() => setUnlocksOpen(true)}
-              label="Unlocks"
-              line="Depth rewards"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0" /><circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none" /></svg>}
+              onClick={() => setShopSection('run')}
+              label="Run Upgrades"
+              line="For the descent"
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l6 6 6-6" /><path d="M6 12l6 6 6-6" /></svg>}
             />
             <ActionTile
               color={GOLD}
-              onClick={() => setUpgradesOpen(true)}
-              label="The Shop"
-              line="Spend doubloons"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6" rx="6.5" ry="2.4" /><path d="M5.5 6v4c0 1.3 2.9 2.4 6.5 2.4S18.5 11.3 18.5 10V6" /><path d="M5.5 10v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /><path d="M5.5 14v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /></svg>}
+              onClick={() => setShopSection('shore')}
+              label="Ship & Shore"
+              line="Beyond the Gauntlet"
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></svg>}
             />
           </div>
 
@@ -446,8 +446,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal deepest={props.deepest} doubloonMult={props.classDoubloonMult} onClose={() => setHaulOpen(false)} />}
-        {unlocksOpen && <UnlocksModal deepest={props.deepest} onClose={() => setUnlocksOpen(false)} />}
-        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </>
     )
   }
@@ -480,13 +479,18 @@ export default function GauntletGame(props: GauntletGameProps) {
             {starting ? 'Descending…' : 'Descend Again →'}
           </button>
         ) : null}
-        <button onClick={() => setUpgradesOpen(true)} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-          style={{ marginTop: 12, width: '100%', padding: '0.85rem', borderRadius: 13, fontSize: '0.82rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          Locker Upgrades
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-        </button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button onClick={() => setShopSection('run')} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
+            style={{ flex: 1, padding: '0.8rem', borderRadius: 13, fontSize: '0.74rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer' }}>
+            Run Upgrades
+          </button>
+          <button onClick={() => setShopSection('shore')} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
+            style={{ flex: 1, padding: '0.8rem', borderRadius: 13, fontSize: '0.74rem', color: GOLD, background: `${GOLD}14`, border: `1px solid ${GOLD}55`, cursor: 'pointer' }}>
+            Ship & Shore
+          </button>
+        </div>
         <BackLink router={router} label="Back to the map" primary={!ready} />
-        {upgradesOpen && <LockerUpgradesModal onClose={() => setUpgradesOpen(false)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </Shell>
     )
   }
@@ -1406,59 +1410,6 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
   )
 }
 
-// ── Unlocks modal ─────────────────────────────────────────────────────────────
-// Depth milestones that permanently unlock something outside a single run.
-// Reaching the depth ONCE is enough — sinking on the way down still counts.
-function UnlocksModal({ deepest, onClose }: { deepest: number; onClose: () => void }) {
-  const PURPLE = '#c4a0e8'
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
-      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-        onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, margin: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(18,14,28,0.99), rgba(9,7,16,0.99))', border: `1px solid ${PURPLE}3a`, boxShadow: `0 0 44px ${PURPLE}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${PURPLE}cc` }}>Reach it once, keep it</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#f0eafc', lineHeight: 1.1, marginTop: 3 }}>Depth Unlocks</p>
-          </div>
-          <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a93a8', marginTop: 6, lineHeight: 1.45 }}>
-          Push to these depths to unlock rewards for good. Reaching the depth is all it takes, even on a run you sink.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-          {GAUNTLET_DEPTH_UNLOCKS.map(u => {
-            const unlocked = deepest >= u.depth
-            const accent = unlocked ? '#7fd49a' : PURPLE
-            return (
-              <div key={u.depth} style={{ display: 'flex', gap: 11, padding: '0.8rem 0.85rem', borderRadius: 14, background: unlocked ? 'rgba(127,212,154,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${unlocked ? 'rgba(127,212,154,0.32)' : `${PURPLE}33`}` }}>
-                <div style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 11, background: `${accent}1c`, border: `1px solid ${accent}55`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: accent }}>
-                  {unlocked
-                    ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f0ede8' }}>{u.name}</p>
-                    <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: accent, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                      {unlocked ? 'Unlocked' : `Depth ${Math.min(deepest, u.depth)}/${u.depth}`}
-                    </span>
-                  </div>
-                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.4, marginTop: 3 }}>{u.blurb}</p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: unlocked ? '#7fd49a' : '#8a8480', marginTop: 4 }}>{u.where}.</p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
 // ── First-time explainer ──────────────────────────────────────────────────────
 // A short, noob-proof "how this works" for the Gauntlet. Auto-opens once;
 // reopenable via "How it works".
@@ -1546,7 +1497,7 @@ type ShopEntry = {
   scope: string; owned: boolean; lockNote: string | null; demo: boolean; special: boolean
 }
 
-function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onClaimed?: (owned: string[]) => void }) {
+function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' | 'shore'; onClose: () => void; onClaimed?: (owned: string[]) => void }) {
   const [state, setState] = useState<LockerState | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -1620,19 +1571,6 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
     )
   }
 
-  function Section({ title, blurb, entries }: { title: string; blurb: string; entries: ShopEntry[] }) {
-    if (entries.length === 0) return null
-    return (
-      <div style={{ marginTop: 18 }}>
-        <p className="font-cinzel font-800" style={{ fontSize: '1.02rem', color: TEAL, lineHeight: 1.1 }}>{title}</p>
-        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 2, marginBottom: 11, lineHeight: 1.4 }}>{blurb}</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {entries.map(e => <Card key={e.id} e={e} />)}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
@@ -1640,15 +1578,17 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
         style={{ width: '100%', maxWidth: 440, margin: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>From the Deep</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>Locker Upgrades</p>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>The Locker</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>{section === 'run' ? 'Run Upgrades' : 'Ship & Shore'}</p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
         <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
-          Everything here is bought with Fathoms — earned by descending, banked whether you cash out or sink. Two counters: one sharpens the descent, one arms the rest of your game.
+          {section === 'run'
+            ? 'Perks that sharpen the descent itself — they only matter inside the Gauntlet. Bought with Fathoms.'
+            : 'Permanent power you carry topside — into raids, voyages, and fishing. Bought with Fathoms, earned by descending.'}
         </p>
 
         {state === null ? (
@@ -1669,15 +1609,17 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
             } : null
             const runShop = upgrades.filter(e => e.scope === 'gauntlet')
             const shoreShop = [...upgrades.filter(e => e.scope !== 'gauntlet'), ...(autoCatcher ? [autoCatcher] : [])]
+            const entries = section === 'run' ? runShop : shoreShop
             return (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '12px 0 0', padding: '0.4rem 0', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '12px 0 14px', padding: '0.4rem 0', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#8a8480' }}>Your Fathoms</span>
               <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: TEAL }}>{fmt(state.fathoms)} Fathoms</span>
             </div>
 
-            <Section title="Run Upgrades" blurb="Perks that sharpen the descent itself — they only matter inside the Gauntlet." entries={runShop} />
-            <Section title="Hauled to Shore" blurb="Permanent power you carry topside — into raids, voyages, and fishing." entries={shoreShop} />
+            {entries.length === 0
+              ? <p className="font-karla" style={{ fontSize: '0.78rem', color: '#7a766e', textAlign: 'center', padding: '1.5rem 0' }}>Nothing in this shop yet — more coming.</p>
+              : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{entries.map(e => <Card key={e.id} e={e} />)}</div>}
 
             {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#fca5a5', textAlign: 'center', marginTop: 12 }}>{err}</p>}
           </>
