@@ -14,9 +14,31 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS } from '@/lib/gauntlet'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
+
+/** Mail the player for each depth-unlock milestone they cross this run. Deepest
+ *  only ever climbs, so each milestone fires exactly once. Best-effort. */
+async function notifyDepthUnlocks(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  prevDeepest: number,
+  newDeepest: number,
+): Promise<void> {
+  const crossed = GAUNTLET_DEPTH_UNLOCKS.filter(u => prevDeepest < u.depth && u.depth <= newDeepest)
+  if (crossed.length === 0) return
+  try {
+    await admin.from('mail_messages').insert(
+      crossed.map(u => ({
+        subject: `Depth ${u.depth} cleared — ${u.name} unlocked`,
+        body: `You dragged the Locker down to depth ${u.depth} and tore something loose: the ${u.name}.\n\n${u.blurb}\n\n${u.where}.\n\nThe deep keeps its prizes for those who go after them. Descend further and you'll find more.\n\n— Davy Jones`,
+        sender_label: 'Davy Jones',
+        target_user_id: userId,
+      })),
+    )
+  } catch { /* notification is best-effort; never block the payout */ }
+}
 
 // ── Locker Upgrades — permanent perks, depth-gated + doubloon-bought ──────────
 
@@ -238,7 +260,8 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
   const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
-  const deepest          = Math.max((profile.gauntlet_deepest as number | null) ?? 0, d)
+  const prevDeepest      = (profile.gauntlet_deepest as number | null) ?? 0
+  const deepest          = Math.max(prevDeepest, d)
 
   const [, , crewXP] = await Promise.all([
     admin.from('profiles').update({
@@ -256,6 +279,8 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
     }),
     grantXPToAssignedCrew(admin, user.id, bankedXp),
   ])
+
+  await notifyDepthUnlocks(admin, user.id, prevDeepest, deepest)
 
   return {
     ok: true,
@@ -291,12 +316,16 @@ export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean
   }
 
   const d = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(depth)))
-  const deepest = Math.max((profile.gauntlet_deepest as number | null) ?? 0, d)
+  const prevDeepest = (profile.gauntlet_deepest as number | null) ?? 0
+  const deepest = Math.max(prevDeepest, d)
 
   await admin
     .from('profiles')
     .update({ gauntlet_run_open: false, gauntlet_deepest: deepest })
     .eq('id', user.id)
+
+  // Sinking still records your deepest — and still unlocks what you reached.
+  await notifyDepthUnlocks(admin, user.id, prevDeepest, deepest)
 
   return { ok: true, deepest }
 }

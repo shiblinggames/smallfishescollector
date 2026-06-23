@@ -52,7 +52,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     effectLabel: 'Auto cast + catch commons & uncommons',
     shopCost: 25000,
     requiresItem: 'auto_caster',
-    requiresGauntletDepth: 20,
+    requiresGauntletDepth: 5,
   },
   {
     id: 'perfected_sigil',

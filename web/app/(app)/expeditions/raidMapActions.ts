@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { RAID_MAP, computeRaidMap, type RaidNodeView } from '@/lib/raidMap'
+import { GAUNTLET_LIVE, GAUNTLET_UNLOCK_NODE } from '@/lib/gauntlet'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -613,6 +614,20 @@ export async function pickShipClass(
       raid_node_progress: { ...prog, cleared: newCleared },
     })
     .eq('id', user.id)
+
+  // Clearing the Chapter 2 class node = Chapter 2 done. Once the Gauntlet is
+  // live, that's the unlock — let the player know it just opened. Gated on
+  // GAUNTLET_LIVE so this never fires while the Gauntlet is still admin-only.
+  if (GAUNTLET_LIVE && nodeId === GAUNTLET_UNLOCK_NODE) {
+    try {
+      await admin.from('mail_messages').insert({
+        subject: 'The Locker Opens — Davy Jones Gauntlet Unlocked',
+        body: "You closed out Chapter 2. Word travels fast down in the dark, and something has taken notice.\n\nThe Davy Jones Gauntlet is open to you now. Descend as deep as you dare, fighting ship after ship while one pot swells with every kill. Cash out and it's all yours. Sink before you do and it goes to the deep with you.\n\nGo as deep as you can and you'll tear loose rewards that follow you topside. Find it under Expeditions.\n\n— Davy Jones",
+        sender_label: 'Davy Jones',
+        target_user_id: user.id,
+      })
+    } catch { /* best-effort */ }
+  }
 
   return { ok: true }
 }

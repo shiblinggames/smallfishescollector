@@ -8,6 +8,7 @@ import GauntletGame from './GauntletGame'
 import { getRaidPlayerStats } from '../actions'
 import { getGauntletDailyState } from './actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { gauntletUnlocked } from '@/lib/gauntlet'
 
 export default async function GauntletPage() {
   const user = await getCurrentUser()
@@ -19,10 +20,9 @@ export default async function GauntletPage() {
     getGauntletDailyState(),
   ])
 
-  // Admin-only during review: the node is hidden from the map for non-admins
-  // (adminOnly flag), and this guard blocks the URL directly. Drop both
-  // together to launch to all players.
-  if (profile?.is_admin !== true) redirect('/expeditions')
+  // Locked until GAUNTLET_LIVE flips (then: cleared Chapter 2). Admins always.
+  const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
+  if (!gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes })) redirect('/expeditions')
 
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 

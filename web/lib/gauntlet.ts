@@ -39,8 +39,39 @@ export const BOSS_POT_MULT = 3
 // Cooldown between Gauntlet runs. Measured from when a run STARTS
 // (consume-on-start), so a quit-retry can't dodge it. Tune here to make the
 // Gauntlet more or less farmable.
-export const GAUNTLET_COOLDOWN_HOURS = 4
+export const GAUNTLET_COOLDOWN_HOURS = 1
 export const GAUNTLET_COOLDOWN_MS = GAUNTLET_COOLDOWN_HOURS * 60 * 60 * 1000
+
+// ── Launch gate ───────────────────────────────────────────────────────────────
+// The Gauntlet is admin-only until this flips true. Once live it's unlocked by
+// clearing Chapter 2 (the chapter_2_class node). The chapter-2-clear + depth
+// notifications also gate on this so nothing fires for real players early.
+export const GAUNTLET_LIVE = false
+// The node whose clear means "Chapter 2 done" (RAID_CHAPTERS[1].lastNodeId).
+export const GAUNTLET_UNLOCK_NODE = 'chapter_2_class'
+
+/** Has this player unlocked the Gauntlet? Admins always; everyone else only
+ *  once it's live AND they've cleared Chapter 2. */
+export function gauntletUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?: string[] | null }): boolean {
+  if (opts.isAdmin) return true
+  return GAUNTLET_LIVE && (opts.clearedNodes ?? []).includes(GAUNTLET_UNLOCK_NODE)
+}
+
+// ── Depth unlocks ─────────────────────────────────────────────────────────────
+// Reaching these depths permanently unlocks something OUTSIDE a single run.
+// One source of truth for the Unlocks panel + the milestone notifications.
+export interface GauntletDepthUnlock {
+  depth: number
+  name: string
+  /** Plain one-liner: what reaching this depth gets you. */
+  blurb: string
+  /** Where the unlocked thing is actually bought / used. */
+  where: string
+}
+export const GAUNTLET_DEPTH_UNLOCKS: GauntletDepthUnlock[] = [
+  { depth: 5,  name: 'Auto Catcher',        blurb: 'Auto-reels common & uncommon fish for you, no dial needed.', where: 'Buy it in the Fishing shop' },
+  { depth: 10, name: 'Extra Cannonball Rack', blurb: 'Stockpile a 4th cannonball in every raid (volleys still cost 3).', where: 'Buy it in the Locker shop' },
+]
 
 /** ⟡ (== XP) a single cleared round at this depth adds to the pot. */
 export function roundContribution(depth: number, isBoss: boolean): number {
