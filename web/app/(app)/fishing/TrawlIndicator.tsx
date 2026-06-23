@@ -633,6 +633,20 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const bump = reveal ? TRAWL_BUMPERS[reveal.bumper] : null
   const isUp = !!reveal && (reveal.bumper === 'good' || reveal.bumper === 'bumper' || reveal.bumper === 'jackpot')
   const revAccent = isUp && bump ? bump.accent : GOLD
+  // Plain-language outcome: a vibe headline + the exact "X% more/less than usual"
+  // so the haul reads in one glance instead of decoding a "×0.90" multiplier.
+  // "Usual" = the ×1.0 expected haul; the spread runs ~-20%..+20%.
+  const haulPct = reveal ? Math.round((reveal.mult - 1) * 100) : 0
+  const haulHeadline = !reveal ? '' : (
+    reveal.bumper === 'jackpot' ? 'A huge haul today!' :
+    reveal.bumper === 'bumper' ? 'A big haul today!' :
+    reveal.bumper === 'good' ? 'Caught more than usual today' :
+    reveal.bumper === 'slim' ? 'Caught less than usual today' :
+    'About a usual haul today'
+  )
+  const haulPhrase = haulPct > 0 ? `${haulPct}% more haul than usual`
+    : haulPct < 0 ? `${-haulPct}% less haul than usual`
+    : 'right on a usual haul'
   const collectReveal = (
     <AnimatePresence>
       {reveal && (
@@ -648,22 +662,22 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
               <Portrait crew={revealCrew} size={74} />
             </motion.div>
 
-            {/* Haul chip — band name + exact multiplier, always shown so the
-                bonus they got is unmistakable (gold for a normal haul). */}
-            {bump && (() => {
-              const chipAccent = bump.accent
-              return (
-                <motion.div initial={{ opacity: 0, scale: 0.5, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.1, type: 'spring', stiffness: 320, damping: 17 }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '12px 0 0', padding: '0.34rem 1rem', borderRadius: 999, background: `${chipAccent}${isUp ? '22' : '16'}`, border: `1px solid ${chipAccent}${isUp ? 'ff' : '66'}`, boxShadow: isUp ? `0 0 20px ${chipAccent}66` : 'none' }}>
-                  <span className="font-cinzel font-800 uppercase" style={{ fontSize: isUp ? '0.84rem' : '0.74rem', letterSpacing: '0.06em', color: chipAccent, textShadow: isUp ? `0 0 10px ${chipAccent}66` : 'none' }}>
-                    {isUp ? '✦ ' : ''}{bump.label ? `${bump.label} ` : 'Haul '}×{reveal.mult.toFixed(2)}{isUp ? ' ✦' : ''}
-                  </span>
-                </motion.div>
-              )
-            })()}
+            {/* Plain-language outcome — a vibe headline, then the exact
+                "X% more/less than usual" so the haul reads instantly instead
+                of decoding a multiplier. */}
+            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}
+              className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: revAccent, marginTop: 12, textShadow: isUp ? `0 0 12px ${revAccent}44` : 'none' }}>
+              {haulHeadline}
+            </motion.p>
+            <motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 320, damping: 17 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '0.3rem 0.9rem', borderRadius: 999, background: `${revAccent}${isUp ? '22' : '14'}`, border: `1px solid ${revAccent}${isUp ? 'cc' : '5e'}`, boxShadow: isUp ? `0 0 16px ${revAccent}55` : 'none' }}>
+              {haulPct !== 0 && <span style={{ fontSize: '0.7rem', color: revAccent }}>{haulPct > 0 ? '▲' : '▼'}</span>}
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.08em', color: revAccent }}>{haulPhrase}</span>
+            </motion.div>
 
-            <p className="font-karla" style={{ fontSize: '0.84rem', color: '#dccba6', marginTop: 8 }}>
-              <span className="font-700" style={{ color: '#f4ecd8' }}>{reveal.crewName}</span> trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.
+            {/* Who + where — secondary context now that the outcome leads */}
+            <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9c917a', marginTop: 8 }}>
+              {reveal.crewName} · {state.zones.find(z => z.key === reveal.zone)?.label}
             </p>
 
             {/* Flavour event — a fresh little story for why the haul came in like it did */}
