@@ -26,7 +26,7 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletCurseDelay, gauntletDamageTakenMod } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletCurseDelay, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -102,9 +102,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run; every
   // HP reference below uses this boosted ceiling rather than the raw stat.
   const hpMax = Math.round(props.playerHPMax * gauntletRunHpMult(props.gauntletUpgrades))
-  // Iron Hide (Run Upgrade) folds a damage-taken reduction into the combat mods
-  // (negative damageTakenPct = less damage; RaidCombat applies 1 + pct/100).
-  const runRaidMods = { ...props.raidMods, damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(props.gauntletUpgrades) }
+  // Run Upgrades that fold into the combat mods: Iron Hide (−damage taken) +
+  // Gunner's Eye (+damage dealt).
+  const runRaidMods = {
+    ...props.raidMods,
+    damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(props.gauntletUpgrades),
+    damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(props.gauntletUpgrades),
+  }
 
   const [phase, setPhase] = useState<Phase>(props.available ? 'intro' : 'usedup')
   const [starting, setStarting] = useState(false)
@@ -234,8 +238,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   function handleEnemyDefeated(remainingHp: number) {
     const f = fight
     if (!f) return
-    playerHPRef.current = remainingHp
-    setPlayerHP(remainingHp)
+    // Vigor (Run Upgrade): patch up a slice of max HP for every ship you sink.
+    const vigorHeal = Math.round(hpMax * gauntletKillHealPct(props.gauntletUpgrades))
+    const healedHp = vigorHeal > 0 ? Math.min(hpMax, remainingHp + vigorHeal) : remainingHp
+    playerHPRef.current = healedHp
+    setPlayerHP(healedHp)
     potRef.current += f.potContribution
     setPot(potRef.current)
     if (f.isBoss) setBossesDefeated(b => b + 1)

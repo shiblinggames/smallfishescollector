@@ -60,6 +60,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
+    id: 'treasure_sense',
+    name: 'Treasure Sense',
+    description: 'Better odds of a Davy cannon dropping from the chests you crack in the Gauntlet.',
+    depthRequired: 0,
+    cost: 45,
+    scope: 'gauntlet',
+  },
+  {
     id: 'calm_before',
     name: 'Calm Before',
     description: "The Locker's curses take one depth longer to catch you.",
@@ -76,6 +84,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
+    id: 'vigor',
+    name: 'Vigor',
+    description: 'Patch up 8% of your max HP each time you sink a ship in the Gauntlet.',
+    depthRequired: 0,
+    cost: 80,
+    scope: 'gauntlet',
+  },
+  {
     id: 'diving_bell',
     name: 'Diving Bell',
     description: 'Start every Gauntlet run with 15% more max HP.',
@@ -87,6 +103,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     id: 'iron_hide',
     name: 'Iron Hide',
     description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
+    depthRequired: 0,
+    cost: 100,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'gunners_eye',
+    name: "Gunner's Eye",
+    description: 'Deal 10% more damage to every enemy for the whole Gauntlet run.',
     depthRequired: 0,
     cost: 100,
     scope: 'gauntlet',
@@ -199,4 +223,19 @@ export function gauntletCurseDelay(unlocked: string[] | null | undefined): numbe
  *  1 + pct/100, so -10 → ×0.9 incoming). */
 export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('iron_hide') ? -10 : 0
+}
+
+/** Gunner's Eye: bonus damage % DEALT during Gauntlet runs (into runRaidMods). */
+export function gauntletDamageMod(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('gunners_eye') ? 10 : 0
+}
+
+/** Treasure Sense: multiplier on the Davy-cannon chest drop chance (cash-out). */
+export function gauntletChestLuck(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('treasure_sense') ? 1.5 : 1
+}
+
+/** Vigor: fraction of max HP restored after each enemy sunk in a run. */
+export function gauntletKillHealPct(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('vigor') ? 0.08 : 0
 }
