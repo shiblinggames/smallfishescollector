@@ -170,6 +170,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const [busy, setBusy] = useState(false)
   const [reveal, setReveal] = useState<CollectTrawlResult | null>(null)
   const [revealEvent, setRevealEvent] = useState<string>('')
+  // The crew that ran the trawl — captured from the active trawl at collect time
+  // (the row is deleted server-side after collect) so the reveal can show their
+  // portrait as the hero of the haul.
+  const [revealCrew, setRevealCrew] = useState<TrawlCrewView | null>(null)
   const [coins, setCoins] = useState<{ id: number }[]>([])
   const [flashZone, setFlashZone] = useState<TrawlZoneKey | null>(null)
   const [sendingId, setSendingId] = useState<number | null>(null)
@@ -305,6 +309,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     setCoins(Array.from({ length: coinCount }, () => ({ id: pid.current++ })))
     setTimeout(() => setCoins([]), 900)
     setRevealEvent(pickTrawlEvent(r.bumper))
+    setRevealCrew(state?.zones.find(z => z.key === zone)?.trawl?.crew ?? null)
     setReveal(r)
     // If this haul leveled the player up, the full level-up overlay (owned by
     // FishingGame) fires when the haul card is dismissed (see dismissReveal).
@@ -635,59 +640,76 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
           style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
             style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18, background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${revAccent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${revAccent}${isUp ? '9a' : '5e'}`, boxShadow: isUp ? `0 0 40px ${revAccent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
-            {/* Haul chip — the band name + the exact multiplier, always shown so
-                the bonus they got is unmistakable (gold for a normal haul). */}
+            {/* Hero — the crew that ran the haul, framed in the band accent so
+                the tier reads at a glance and the screen has a face, not just
+                numbers. */}
+            <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 17 }}
+              style={{ width: 82, height: 82, margin: '0 auto', borderRadius: '50%', display: 'grid', placeItems: 'center', overflow: 'hidden', background: `radial-gradient(circle at 50% 32%, ${revAccent}3a, rgba(0,0,0,0.4))`, border: `2px solid ${revAccent}${isUp ? 'cc' : '88'}`, boxShadow: isUp ? `0 0 26px ${revAccent}66, inset 0 0 14px rgba(0,0,0,0.4)` : `0 0 12px ${revAccent}33, inset 0 0 14px rgba(0,0,0,0.4)` }}>
+              <Portrait crew={revealCrew} size={74} />
+            </motion.div>
+
+            {/* Haul chip — band name + exact multiplier, always shown so the
+                bonus they got is unmistakable (gold for a normal haul). */}
             {bump && (() => {
-              // normal's accent is already gold, slim's grey, up-tiers their band colour.
               const chipAccent = bump.accent
               return (
-                <motion.div initial={{ opacity: 0, scale: 0.5, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 17 }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0.34rem 1rem', borderRadius: 999, background: `${chipAccent}${isUp ? '22' : '16'}`, border: `1px solid ${chipAccent}${isUp ? 'ff' : '66'}`, boxShadow: isUp ? `0 0 20px ${chipAccent}66` : 'none' }}>
-                  <span className="font-cinzel font-800 uppercase" style={{ fontSize: isUp ? '0.82rem' : '0.72rem', letterSpacing: '0.06em', color: chipAccent, textShadow: isUp ? `0 0 10px ${chipAccent}66` : 'none' }}>
+                <motion.div initial={{ opacity: 0, scale: 0.5, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.1, type: 'spring', stiffness: 320, damping: 17 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '12px 0 0', padding: '0.34rem 1rem', borderRadius: 999, background: `${chipAccent}${isUp ? '22' : '16'}`, border: `1px solid ${chipAccent}${isUp ? 'ff' : '66'}`, boxShadow: isUp ? `0 0 20px ${chipAccent}66` : 'none' }}>
+                  <span className="font-cinzel font-800 uppercase" style={{ fontSize: isUp ? '0.84rem' : '0.74rem', letterSpacing: '0.06em', color: chipAccent, textShadow: isUp ? `0 0 10px ${chipAccent}66` : 'none' }}>
                     {isUp ? '✦ ' : ''}{bump.label ? `${bump.label} ` : 'Haul '}×{reveal.mult.toFixed(2)}{isUp ? ' ✦' : ''}
                   </span>
                 </motion.div>
               )
             })()}
-            <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD }}>Haul secured.</p>
-            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#dccba6', marginTop: 4 }}>
-              {reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.
+
+            <p className="font-karla" style={{ fontSize: '0.84rem', color: '#dccba6', marginTop: 8 }}>
+              <span className="font-700" style={{ color: '#f4ecd8' }}>{reveal.crewName}</span> trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.
             </p>
+
             {/* Flavour event — a fresh little story for why the haul came in like it did */}
             {revealEvent && (
-              <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.4 }}
-                className="font-karla" style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#b6a988', marginTop: 8, lineHeight: 1.5 }}>
+              <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}
+                className="font-karla" style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#b6a988', marginTop: 7, lineHeight: 1.5 }}>
                 &ldquo;{revealEvent}&rdquo;
               </motion.p>
             )}
 
-            <div style={{ marginTop: 14 }} />
-            <CountUp to={reveal.xpGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: GREEN, display: 'block', marginTop: 6 }} />
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: '#7fae8f' }}>fishing xp</p>
-
-            {/* The level-up itself is celebrated by FishingGame's full
-                level-up overlay, fired on dismiss (see dismissReveal) — no
-                inline pill here so the two don't say the same thing twice.
-                The XP bar below still shows the new level + progress. */}
-
-            {xpProg && (
-              <div style={{ maxWidth: 230, margin: '9px auto 0' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#e6dcc2' }}>Lv {reveal.newFishingLevel}</span>
-                  <span className="font-karla" style={{ fontSize: '0.6rem', color: '#8a8068' }}>
-                    {reveal.newFishingLevel >= MAX_LEVEL ? 'Max level' : `${Math.round(xpProg.progress * 100)}% to ${reveal.newFishingLevel + 1}`}
-                  </span>
-                </div>
-                <div style={{ height: 7, borderRadius: 4, background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-                  <motion.div initial={{ width: `${Math.round(xpFromProgress * 100)}%` }} animate={{ width: `${Math.round(xpProg.progress * 100)}%` }} transition={{ delay: 0.35, duration: 0.7 }} style={{ height: '100%', background: `linear-gradient(90deg, #3fae78, ${GREEN})` }} />
-                </div>
+            {/* Reward panel — the two payouts in one contained block, each on its
+                own labelled row so it's obvious what landed where. */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.4 }}
+              style={{ marginTop: 16, borderRadius: 14, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(196,169,106,0.2)', padding: '0.9rem 1rem', textAlign: 'left' }}>
+              {/* Fishing XP */}
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#7fae8f' }}>Fishing XP</span>
+                <CountUp to={reveal.xpGained} prefix="+" className="font-cinzel font-800" style={{ fontSize: '1.55rem', color: GREEN, lineHeight: 1 }} />
               </div>
-            )}
+              {xpProg && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#e6dcc2' }}>Lv {reveal.newFishingLevel}</span>
+                    <span className="font-karla" style={{ fontSize: '0.6rem', color: '#8a8068' }}>
+                      {reveal.newFishingLevel >= MAX_LEVEL ? 'Max level' : `${Math.round(xpProg.progress * 100)}% to ${reveal.newFishingLevel + 1}`}
+                    </span>
+                  </div>
+                  <div style={{ height: 7, borderRadius: 4, background: 'rgba(0,0,0,0.45)', overflow: 'hidden' }}>
+                    <motion.div initial={{ width: `${Math.round(xpFromProgress * 100)}%` }} animate={{ width: `${Math.round(xpProg.progress * 100)}%` }} transition={{ delay: 0.35, duration: 0.7 }} style={{ height: '100%', background: `linear-gradient(90deg, #3fae78, ${GREEN})` }} />
+                  </div>
+                </div>
+              )}
 
-            <CountUp to={reveal.doubloonsGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.45rem', color: GOLD, display: 'block', marginTop: 14 }} />
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: '#bca27a' }}>doubloons → purse</p>
+              <div style={{ height: 1, background: 'rgba(196,169,106,0.16)', margin: '11px 0' }} />
 
-            <motion.button onClick={dismissReveal} whileTap={{ scale: 0.92 }} className="font-cinzel font-700 uppercase" style={{ marginTop: 20, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.78rem', background: `${GOLD}22`, border: `1px solid ${GOLD}7a`, color: '#f4ecd8', boxShadow: `0 0 14px ${GOLD}22`, cursor: 'pointer' }}>Stow it</motion.button>
+              {/* Doubloons → purse */}
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: '#bca27a' }}>Doubloons</span>
+                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
+                  <CountUp to={reveal.doubloonsGained} prefix="+" className="font-cinzel font-800" style={{ fontSize: '1.55rem', color: GOLD, lineHeight: 1 }} />
+                  <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: GOLD }}>⟡</span>
+                </span>
+              </div>
+            </motion.div>
+
+            <motion.button onClick={dismissReveal} whileTap={{ scale: 0.92 }} className="font-cinzel font-700 uppercase" style={{ marginTop: 18, padding: '0.7rem 2rem', borderRadius: 12, letterSpacing: '0.1em', fontSize: '0.78rem', background: `${GOLD}22`, border: `1px solid ${GOLD}7a`, color: '#f4ecd8', boxShadow: `0 0 14px ${GOLD}22`, cursor: 'pointer' }}>Stow it</motion.button>
           </motion.div>
         </motion.div>
       )}
