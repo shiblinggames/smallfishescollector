@@ -1335,6 +1335,13 @@ function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doublo
                 Every ship you sink grows <span style={{ color: GOLD, fontWeight: 700 }}>one pot</span>. Cash out at any depth to bank it as doubloons, plus the same amount in Nav XP. The deeper you go, the bigger it gets — but sink first and you lose the lot.
               </p>
 
+              {/* Fathoms — the always-earned half, distinct from the gambled pot. */}
+              <div style={{ marginTop: 11, padding: '0.6rem 0.7rem', borderRadius: 10, background: `${TEAL}0c`, border: `1px solid ${TEAL}30` }}>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a6', lineHeight: 1.5 }}>
+                  Every dive also pays <span style={{ color: TEAL, fontWeight: 700 }}>Fathoms</span> — one for each depth you reach, <span style={{ color: TEAL, fontWeight: 700 }}>kept even if you sink</span>. Spend them in the Locker&apos;s two shops on permanent upgrades.
+                </p>
+              </div>
+
               {/* Floor guide — concrete earnings at each floor (no multipliers).
                   Sampled at a depth inside each chest's band; rows you can already
                   reach are lit gold. */}
@@ -1418,7 +1425,8 @@ function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; first
     { color: TEAL, title: 'Descend the Locker', text: 'Drop in and fight ship after ship. Each one deeper hits harder.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg> },
     { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg> },
     { color: '#f87171', title: 'Cash out or sink', text: 'Haul the pot up any time to bank it. Go under first and it all sinks with you.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg> },
-    { color: '#c4a0e8', title: 'Go deep for keeps', text: 'Hitting new depths unlocks permanent rewards you keep topside forever.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg> },
+    { color: TEAL, title: 'Earn Fathoms', text: 'Every dive pays Fathoms — one for each depth you reach, kept even if you sink. They never go to the deep.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M7 10.6c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /><path d="M7 14c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /></svg> },
+    { color: GOLD, title: 'Two shops to spend them', text: 'Run Upgrades sharpen your dives. Ship & Shore is permanent power for your raids, voyages, and fishing.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6" rx="6.5" ry="2.4" /><path d="M5.5 6v4c0 1.3 2.9 2.4 6.5 2.4S18.5 11.3 18.5 10V6" /><path d="M5.5 10v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /><path d="M5.5 14v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /></svg> },
   ]
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(2,6,12,0.88)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
