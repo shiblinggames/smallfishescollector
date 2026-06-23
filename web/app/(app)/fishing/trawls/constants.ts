@@ -64,7 +64,7 @@ export const TRAWL_SLOT_LADDER: { slot: number; fishing: number; nav: number }[]
   { slot: 1, fishing: 25, nav: 0 },
   { slot: 2, fishing: 45, nav: 20 },
   { slot: 3, fishing: 70, nav: 45 },
-  { slot: 4, fishing: 90, nav: 65 },
+  { slot: 4, fishing: 90, nav: 50 },
 ]
 export const TRAWL_MAX_SLOTS = TRAWL_SLOT_LADDER.length
 
