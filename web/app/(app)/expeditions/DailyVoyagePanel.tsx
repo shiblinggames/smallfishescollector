@@ -9,6 +9,7 @@ import { RARITY_COLORS as CREW_RARITY_COLORS } from '@/lib/crewGen'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { VoyageEvent } from '@/lib/voyageRoutes'
 import { ROUTE_CONFIGS, COMING_SOON_ROUTES, effectiveCrewLossChance, type VoyageRoute } from '@/lib/voyageRoutes'
+import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, getTrawlingCrewIds, type DailyVoyage } from './voyageActions'
@@ -117,6 +118,7 @@ function computeRouteEstimate(
   stats: { power: number; dodge: number; fortune: number },
   crewCount: number,
   route: VoyageRoute,
+  safeVoyages = false,
 ) {
   const rc = ROUTE_CONFIGS[route]
   const fortuneScale = 1 + stats.fortune / 55
@@ -140,9 +142,11 @@ function computeRouteEstimate(
   // fully zeroed once fortune matches the route's minLevel (see
   // effectiveCrewLossChance in lib/voyageRoutes). One-decimal precision so
   // partially-mitigated values don't get overstated by whole-% rounding.
-  const crewRiskPct = crewCount >= 2
-    ? Math.round(effectiveCrewLossChance(route, stats.fortune) * 1000) / 10
-    : 0
+  const crewRiskPct = safeVoyages
+    ? 0
+    : crewCount >= 2
+      ? Math.round(effectiveCrewLossChance(route, stats.fortune) * 1000) / 10
+      : 0
 
   // XP estimate — same event counts, best/worst case outcomes
   const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90, triangle: 140, shroud: 220 }
@@ -162,6 +166,8 @@ interface Props {
   raidActive?: boolean
   expeditionXP?: number
   voyages?: VoyageHistoryEntry[]
+  /** Claimed Gauntlet Locker Upgrade ids — surfaces Safe Passage / Swift Sails. */
+  gauntletUpgrades?: string[]
 }
 
 export default function DailyVoyagePanel({
@@ -172,8 +178,12 @@ export default function DailyVoyagePanel({
   raidActive = false,
   expeditionXP = 0,
   voyages = [],
+  gauntletUpgrades = [],
 }: Props) {
   const router = useRouter()
+  // Gauntlet Locker Upgrades that change voyages — surfaced truthfully below.
+  const safeVoyages = hasSafeVoyages(gauntletUpgrades)
+  const voyageSpeedMult = gauntletVoyageSpeedMult(gauntletUpgrades)
   const [isPending, startTransition] = useTransition()
 
   const initialState: PanelState =
@@ -492,7 +502,7 @@ export default function DailyVoyagePanel({
                   const shipLockedRoute  = shipTier < rco.minShipTier
                   const comingSoonRoute  = COMING_SOON_ROUTES.has(selectedRoute)
                   const routeLocked = levelLockedRoute || shipLockedRoute || comingSoonRoute
-                  const est = stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute) : null
+                  const est = stats ? computeRouteEstimate(stats, savedCrew.length, selectedRoute, safeVoyages) : null
                   return (
                     <div style={{
                       position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -529,7 +539,9 @@ export default function DailyVoyagePanel({
                       {/* Stats row */}
                       {stats && (() => {
                         const expLevel = getLevelFromXP(expeditionXP)
-                        const estMs = computeVoyageDurationMs(expLevel, stats.dodge)
+                        // Swift Sails (Locker Upgrade) shortens the actual voyage,
+                        // so the preview reflects it too.
+                        const estMs = Math.round(computeVoyageDurationMs(expLevel, stats.dodge) * voyageSpeedMult)
                         const riskPct = est?.crewRiskPct ?? 0
                         const riskColor = riskPct >= 15 ? '#f87171' : riskPct >= 8 ? '#f0c040' : '#6a8a6a'
                         return (
@@ -548,6 +560,11 @@ export default function DailyVoyagePanel({
                                 <span className="font-karla" style={{ fontSize: '0.76rem', color: '#7a6848' }}>
                                   ⏳ {formatDuration(estMs)}
                                 </span>
+                                {voyageSpeedMult < 1 && (
+                                  <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#46c0a0' }}>
+                                    Swift Sails
+                                  </span>
+                                )}
                               </div>
                             )}
                             {/* A slotted crew that's away on a trawl can't sail —
@@ -561,6 +578,10 @@ export default function DailyVoyagePanel({
                             {savedCrew.length < minCrew ? (
                               <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#c87a4a' }}>
                                 {minCrew === 1 ? '⚠ Need at least 1 crew to set sail' : `⚠ Need at least ${minCrew} crew to set sail`}
+                              </span>
+                            ) : safeVoyages ? (
+                              <span className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#4ade80' }}>
+                                ✓ No crew risk — Safe Passage keeps your crew safe on every route.
                               </span>
                             ) : riskPct > 0 ? (
                               <>

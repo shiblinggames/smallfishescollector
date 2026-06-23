@@ -275,6 +275,7 @@ async function ExpeditionHub() {
       voyageHistory={voyageHistory}
       isAdmin={isAdmin}
       gauntletOpen={gauntletOpen}
+      gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
       pvp={pvp}
     />
   )

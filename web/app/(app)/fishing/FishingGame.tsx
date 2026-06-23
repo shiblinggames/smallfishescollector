@@ -6209,6 +6209,11 @@ export default function FishingGame({
                       <span style={{ position: 'absolute', top: 1, left: autoEnabled ? 11 : 1, width: 8, height: 8, borderRadius: '50%', background: autoEnabled ? col : '#7a7672', transition: 'left 0.15s, background 0.15s' }} />
                     </span>
                     <span style={{ color: autoEnabled ? '#f0ede8' : '#9a9488' }}>{autoEnabled ? 'On' : 'Off'}</span>
+                    {/* Tireless Catcher (Gauntlet Locker Upgrade) — flag that the
+                        Auto Catcher now nets rares too, so the perk is visibly on. */}
+                    {isCatcher && gauntletAutoCatchRares(gauntletUpgrades) && (
+                      <span title="Tireless Catcher: also auto-reels rare fish" style={{ color: autoEnabled ? col : '#9a9488', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '0.06em', borderLeft: `1px solid ${col}33`, paddingLeft: '0.45rem' }}>+ RARES</span>
+                    )}
                   </motion.button>
                 )
               })()}

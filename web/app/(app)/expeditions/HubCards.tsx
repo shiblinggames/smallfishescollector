@@ -75,6 +75,9 @@ interface Props {
   /** Whether the Gauntlet door is open to this player (admin, or live + cleared
    *  Chapter 2). Drives the Gauntlets card lock independently of PvP. */
   gauntletOpen: boolean
+  /** Claimed Gauntlet Locker Upgrade ids — drives the voyage panel's truthful
+   *  Safe Passage / Swift Sails surfacing. */
+  gauntletUpgrades: string[]
   pvp: { battles: ShipBattleSummary[]; wins: number; losses: number; friends: SocialCrewMember[] } | null
 }
 
@@ -260,7 +263,7 @@ export default function HubCards({
   roster, shipCrewSlots,
   shipStats, raidScore,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  isAdmin, gauntletOpen, pvp,
+  isAdmin, gauntletOpen, gauntletUpgrades, pvp,
 }: Props) {
   const router = useRouter()
   // Compute each track's party once. Filtering by voyage_slot / raid_slot
@@ -662,6 +665,7 @@ export default function HubCards({
               readyVoyage={readyVoyage}
               expeditionXP={expeditionXP}
               voyages={voyageHistory}
+              gauntletUpgrades={gauntletUpgrades}
             />
           </div>
         </div>
