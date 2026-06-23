@@ -98,6 +98,30 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     cost: 60,
     scope: 'account',
   },
+  {
+    id: 'swift_sails',
+    name: 'Swift Sails',
+    description: 'Your crew voyages return 30% faster — less waiting, more sailing.',
+    depthRequired: 12,
+    cost: 65,
+    scope: 'world',
+  },
+  {
+    id: 'reinforced_hull',
+    name: 'Reinforced Hull',
+    description: 'Your ship carries 10% more max HP into every raid.',
+    depthRequired: 14,
+    cost: 80,
+    scope: 'account',
+  },
+  {
+    id: 'tireless_catcher',
+    name: 'Tireless Catcher',
+    description: 'Your Auto Catcher reels in rare fish on its own too, not just commons and uncommons.',
+    depthRequired: 16,
+    cost: 90,
+    scope: 'world',
+  },
 ]
 
 export function getGauntletUpgrade(id: string): GauntletUpgrade | null {
@@ -113,6 +137,21 @@ export function bonusChargeSlots(unlocked: string[] | null | undefined): number 
 /** Safe Passage: when owned, voyages never roll a crew casualty. */
 export function hasSafeVoyages(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('safe_voyages')
+}
+
+/** Reinforced Hull: max-HP multiplier applied in EVERY raid (account-wide). */
+export function gauntletHullMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('reinforced_hull') ? 1.1 : 1
+}
+
+/** Swift Sails: voyage-duration multiplier (lower = faster). */
+export function gauntletVoyageSpeedMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('swift_sails') ? 0.7 : 1
+}
+
+/** Tireless Catcher: the Auto Catcher also auto-reels rare fish (bite tier 3). */
+export function gauntletAutoCatchRares(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('tireless_catcher')
 }
 
 /** Salvager's Eye: doubloon multiplier applied to a Gauntlet cash-out haul. */

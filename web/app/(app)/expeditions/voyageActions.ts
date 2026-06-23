@@ -14,7 +14,7 @@ import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { hasSafeVoyages } from '@/lib/gauntletUpgrades'
+import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -178,14 +178,16 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
     }
   })
 
-  // Safe Passage (Davy Jones Gauntlet Locker Upgrade) removes all crew-loss risk.
-  const safeVoyages = hasSafeVoyages((profile.gauntlet_upgrades as string[] | null) ?? [])
+  // Davy Jones Gauntlet Locker Upgrades that touch voyages.
+  const gauntletUpgrades = (profile.gauntlet_upgrades as string[] | null) ?? []
+  const safeVoyages = hasSafeVoyages(gauntletUpgrades)  // Safe Passage — no crew loss
   const result = generateVoyageEvents(crew, shipTier, route, safeVoyages)
   const totalDoubloons = Math.round(result.totalDoubloons * (1 + resolved.voyage.doubloonPct / 100))
 
   const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)
   const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * (i === 0 ? 1 : 0.8)), 0)
-  const duration_ms = computeVoyageDuration(expeditionLevel, totalNav)
+  // Swift Sails (Locker Upgrade) shortens the wait.
+  const duration_ms = Math.round(computeVoyageDuration(expeditionLevel, totalNav) * gauntletVoyageSpeedMult(gauntletUpgrades))
   const crewIds = party.map(p => p.id)
 
   const { data: voyage, error } = await admin

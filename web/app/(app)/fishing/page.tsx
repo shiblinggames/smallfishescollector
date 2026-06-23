@@ -114,6 +114,7 @@ export default async function FishingPage() {
   const hasAutoCaster = profile?.has_auto_caster ?? false
   const hasAutoCatcher = profile?.has_auto_catcher ?? false
   const gauntletDeepest = profile?.gauntlet_deepest ?? 0
+  const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
   const hasPerfectedSigil = profile?.has_perfected_sigil ?? false
   const characterColor = profile?.character_color ?? 'default'
 
@@ -196,6 +197,7 @@ export default async function FishingPage() {
           hasAutoCaster={hasAutoCaster}
           hasAutoCatcher={hasAutoCatcher}
           gauntletDeepest={gauntletDeepest}
+          gauntletUpgrades={gauntletUpgrades}
           hasPerfectedSigil={hasPerfectedSigil}
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
           trophyCatches={(profile?.trophy_catches as number[] | null) ?? []}

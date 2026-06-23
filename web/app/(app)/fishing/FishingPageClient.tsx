@@ -48,7 +48,7 @@ export default function FishingPageClient({
   initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
   fishHoldTier, ownedRods, initialCompletionistEffects, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
-  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
+  initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
 }: {
   hookTier: number
@@ -86,6 +86,7 @@ export default function FishingPageClient({
   hasAutoCaster: boolean
   hasAutoCatcher: boolean
   gauntletDeepest: number
+  gauntletUpgrades: string[]
   hasPerfectedSigil: boolean
   prestigeLevels: Record<string, number>
   trophyCatches: number[]
@@ -250,6 +251,7 @@ export default function FishingPageClient({
       hasAutoCaster={hasAutoCaster}
       hasAutoCatcher={hasAutoCatcher}
       gauntletDeepest={gauntletDeepest}
+      gauntletUpgrades={gauntletUpgrades}
       hasPerfectedSigil={hasPerfectedSigil}
       initialPrestigeLevels={prestigeLevels}
       initialTrophyCatches={trophyCatches}

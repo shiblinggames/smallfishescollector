@@ -25,6 +25,7 @@ import { HATS, getHat } from '@/lib/hats'
 import { getPet, getPetOverlay } from '@/lib/pets'
 import { upgradeFishHold } from './holdActions'
 import { getFishHold, FISH_HOLD_TIERS } from '@/lib/fishHold'
+import { gauntletAutoCatchRares } from '@/lib/gauntletUpgrades'
 import { setFishingMusicMuted, playPerfectSfx, playCastSfx, playCast2Sfx, startDialLoop, stopDialLoop, getFishingSfxMuted, setFishingSfxMuted } from '@/lib/fishingMusic'
 import { CHARACTER_COLORS, getCharacterSprites } from '@/lib/characters'
 import { zoneRewardDoubloons } from '@/lib/zoneRewards'
@@ -2958,7 +2959,7 @@ export default function FishingGame({
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer,
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
-  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, hasPerfectedSigil,
+  hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
   initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
@@ -3011,6 +3012,7 @@ export default function FishingGame({
   hasAutoCaster: boolean
   hasAutoCatcher: boolean
   gauntletDeepest: number
+  gauntletUpgrades: string[]
   hasPerfectedSigil: boolean
   initialPrestigeLevels: Record<string, number>
   initialTrophyCatches: number[]
@@ -5209,7 +5211,10 @@ export default function FishingGame({
     if (equippedSpecial !== 'auto_catcher' || !ownedAutoCatcher || !autoEnabled) return
     if (phase !== 'catching' || !hookedFish) return
     if (hookedFish.fishId === CRATE_FISH_ID) return
-    if ((hookedFish.biteRarity ?? 1) > 2) return          // commons + uncommons only (tiers 1-2)
+    // Commons + uncommons (tiers 1-2) by default; Tireless Catcher (Gauntlet
+    // Locker Upgrade) extends it to rares (tier 3). Epic+ always need your hand.
+    const autoMaxRarity = gauntletAutoCatchRares(gauntletUpgrades) ? 3 : 2
+    if ((hookedFish.biteRarity ?? 1) > autoMaxRarity) return
     if (selectedZone === 'ancient_deep') return           // never the boss zone
     if (finnChallenge) return                             // don't auto-fail/skew a Finn challenge
     let raf = 0
@@ -5235,7 +5240,7 @@ export default function FishingGame({
     raf = requestAnimationFrame(tick)
     return () => { done = true; cancelAnimationFrame(raf) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, equippedSpecial, ownedAutoCatcher, autoEnabled, hookedFish, selectedZone, finnChallenge])
+  }, [phase, equippedSpecial, ownedAutoCatcher, autoEnabled, hookedFish, selectedZone, finnChallenge, gauntletUpgrades])
 
   // Golden catches force a Sell-or-Mount decision via a modal. Both
   // resolve through this helper to clear the catch result back to the
