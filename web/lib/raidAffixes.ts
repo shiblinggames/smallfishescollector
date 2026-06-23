@@ -23,6 +23,12 @@
 //   onSpeedRoll               → Fleet  (speed bonus, not a guarantee)
 //   onThisEnemyFire           → Frenzied
 //   onCritRoll                → Marksman
+//   onThisEnemyDamagedPlayer  → Vampiric, Scorching (burn), Glacial (freeze)
+//
+// Scorching / Glacial mirror the player's Incendiary / Frozen cannonballs onto
+// the elite: a per-hit chance to set the PLAYER ablaze (DoT, same BURN_TURNS /
+// BURN_TICK_PCT as the player's burn) or freeze them solid (lose their next
+// turn). Handled in RaidCombat via playerBurnRef / playerFrozenRef.
 
 export type AffixId =
   | 'ironclad'
@@ -33,6 +39,8 @@ export type AffixId =
   | 'reflective'
   | 'resilient'
   | 'marksman'
+  | 'scorching'
+  | 'glacial'
 
 export interface AffixDef {
   id: AffixId
@@ -71,6 +79,14 @@ export interface AffixDef {
 
   // ── Marksman — always-on crit chance multiplier ─────────────────────
   critMult?:           number  // 2 = doubles base crit chance
+
+  // ── Scorching — chance, each hit on the player, to set them ablaze ───
+  // Mirrors the player's Incendiary Cannonball (DoT scaled to the hit).
+  burnChance?:         number  // 0.20
+
+  // ── Glacial — chance, each hit on the player, to freeze them ─────────
+  // Mirrors the player's Frozen Cannonball (player loses their next turn).
+  freezeChance?:       number  // 0.20
 }
 
 export const AFFIXES: Record<AffixId, AffixDef> = {
@@ -118,6 +134,16 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
     id: 'marksman', name: 'Marksman',
     description: 'Doubles its crit chance against you.',
     critMult: 2,
+  },
+  scorching: {
+    id: 'scorching', name: 'Scorching',
+    description: '20% chance its shot sets you ablaze, burning for 2 turns.',
+    burnChance: 0.20,
+  },
+  glacial: {
+    id: 'glacial', name: 'Glacial',
+    description: '20% chance its shot freezes you solid, costing your next turn.',
+    freezeChance: 0.20,
   },
 }
 

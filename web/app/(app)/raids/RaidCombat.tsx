@@ -627,6 +627,10 @@ export default function RaidCombat({
   // frost tint while iced, between the activation flare and the tick/skip.
   const [enemyBurning, setEnemyBurning] = useState(false)
   const [enemyFrozen, setEnemyFrozen]   = useState(false)
+  // Player-side burn/freeze, set by elite Scorching/Glacial affixes (mirrors of
+  // the player's Incendiary/Frozen cannonballs).
+  const [playerBurning, setPlayerBurning] = useState(false)
+  const [playerFrozen, setPlayerFrozen]   = useState(false)
   // Lethal-save (Quartermaster's Anchor item) burst — fires the moment the
   // anchor catches a killing blow.
   const [anchorSaveFx, setAnchorSaveFx] = useState(0)
@@ -750,6 +754,8 @@ export default function RaidCombat({
   // both reset when the fight moves to a new enemy.
   const enemyBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
   const enemyFrozenRef = useRef(false)
+  const playerBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
+  const playerFrozenRef = useRef(false)
   // Carapace teaching line is logged only on the FIRST soak per enemy — the
   // deflect visual + reduced numbers carry every subsequent soak. Reset per enemy.
   const carapaceLoggedRef = useRef(false)
@@ -856,6 +862,7 @@ export default function RaidCombat({
     const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
     setEnemyHp(scaledHp); enemyHpRef.current = scaledHp
     enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; snareBlockedRef.current = false; carapaceLoggedRef.current = false
+    playerBurnRef.current = { turns: 0, dmg: 0 }; playerFrozenRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
     // via Spet's drops — a CHANCE to open each fight with one chambered (Spet's
@@ -898,6 +905,7 @@ export default function RaidCombat({
     setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
+    setPlayerBurning(false); setPlayerFrozen(false)
     enemyPatternIdxRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
@@ -1428,6 +1436,16 @@ export default function RaidCombat({
       steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`The ${enemy.name} is ablaze, burning for ${tick}.`], burnTurnsLeft: enemyBurnRef.current.turns })
     }
 
+    // Scorching burn (elite affix) ticks the PLAYER's hull at the top of the turn
+    // — the mirror of the enemy burn above. A tick that drops you to 0 ends the
+    // fight via the final death check (anchor save still applies).
+    if (playerBurnRef.current.turns > 0 && pHp > 0) {
+      const tick = playerBurnRef.current.dmg
+      pHp = Math.max(0, pHp - tick)
+      playerBurnRef.current = { turns: playerBurnRef.current.turns - 1, dmg: playerBurnRef.current.dmg }
+      steps.push({ who: 'enemy', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`Your ship is ablaze, burning for ${tick}.`], burnTurnsLeft: playerBurnRef.current.turns })
+    }
+
     for (const who of order) {
       if (pHp <= 0 || eHp <= 0) break
       // Frozen Cannonball: the enemy loses this whole turn (skips before its
@@ -1435,6 +1453,13 @@ export default function RaidCombat({
       if (who === 'enemy' && enemyFrozenRef.current) {
         enemyFrozenRef.current = false
         steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [`The ${enemy.name} is frozen solid and loses its turn.`], freezeEnds: true })
+        continue
+      }
+      // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
+      // mirror of the Frozen Cannonball. Your chosen action is forfeit.
+      if (who === 'player' && playerFrozenRef.current) {
+        playerFrozenRef.current = false
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid and loses its turn.'], freezeEnds: true })
         continue
       }
       const action = who === 'player' ? pAction : eAction
@@ -1811,6 +1836,22 @@ export default function RaidCombat({
               : `The abyssal shield soaks ${soaked} and shatters.`)
           }
           pHp = Math.max(0, pHp - dmg)
+          // Scorching / Glacial affixes: the elite's landed hit has a chance to
+          // set the player ablaze (DoT scaled to this hit, like the player's
+          // Incendiary) or freeze them (lose next turn, like Frozen Cannonball).
+          // Only on a hit that actually connected, and not on the killing blow.
+          if (dmg > 0 && pHp > 0) {
+            if (affix?.burnChance && Math.random() < affix.burnChance) {
+              const tickDmg = Math.max(1, Math.round(dmg * BURN_TICK_PCT))
+              playerBurnRef.current = { turns: BURN_TURNS, dmg: tickDmg }
+              procStatus = 'burn'
+              stepLines.push(`Scorching hit! Your ship catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
+            } else if (affix?.freezeChance && Math.random() < affix.freezeChance) {
+              playerFrozenRef.current = true
+              procStatus = 'freeze'
+              stepLines.push('Glacial hit! Your ship is frozen — you lose your next turn.')
+            }
+          }
           // Vampiric affix: 50% chance to heal a fraction of dealt
           // damage. Capped at its maxHP. Fires after the damage lands so
           // the heal feels like a follow-up, not a pre-emptive negation.
@@ -2178,6 +2219,15 @@ export default function RaidCombat({
             }
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
+          // Scorching lit / Glacial iced — flare the player hull aura + switch on
+          // the persistent burn glow / frost tint (mirror of the enemy procs).
+          if (step.procStatus) {
+            const ak = Date.now() + i + 9
+            setPlayerAura({ key: ak })
+            setTimeout(() => setPlayerAura(a => (a && a.key === ak ? null : a)), 950)
+            if (step.procStatus === 'burn') setPlayerBurning(true)
+            else setPlayerFrozen(true)
+          }
           // Vampiric drink-back — a green +N rises off the enemy hull a beat
           // after its hit lands, so the lifesteal reads instead of the HP bar
           // quietly creeping back up.
@@ -2228,6 +2278,19 @@ export default function RaidCombat({
             // until the ice breaks (this skip step).
             if (auraKind === 'burn') setEnemyBurning((step.burnTurnsLeft ?? 0) > 0)
             if (step.freezeEnds) setEnemyFrozen(false)
+          }
+          // Mirror of the above for the PLAYER's burn tick / frozen-skip steps.
+          if (step.splatTarget === 'player' && step.splatText) {
+            setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: false })
+            setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+            const auraKind = step.splatColor === BURN_COLOR ? 'burn' : step.splatColor === FREEZE_COLOR ? 'freeze' : null
+            if (auraKind) {
+              const ak = Date.now() + i + 6
+              setPlayerAura({ key: ak })
+              setTimeout(() => setPlayerAura(a => (a && a.key === ak ? null : a)), 900)
+            }
+            if (auraKind === 'burn') setPlayerBurning((step.burnTurnsLeft ?? 0) > 0)
+            if (step.freezeEnds) setPlayerFrozen(false)
           }
         }, PROJECTILE_FLIGHT_MS)
       }
@@ -2818,7 +2881,7 @@ export default function RaidCombat({
               }}
             />
             {/* Persistent burn/freeze tell — lingers between activation + tick */}
-            {(enemyBurning || enemyFrozen) && <EnemyPersistentStatus burning={enemyBurning} frozen={enemyFrozen} />}
+            {(enemyBurning || enemyFrozen) && <ShipStatusAura burning={enemyBurning} frozen={enemyFrozen} />}
             {/* Status aura — burning embers / freezing rime / snare jam over the hull */}
             <AnimatePresence>
               {enemyAura && <EnemyStatusAura key={`ea-${enemyAura.key}`} kind={enemyAura.kind} />}
@@ -2897,6 +2960,8 @@ export default function RaidCombat({
               <AnimatePresence>
                 {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} />}
               </AnimatePresence>
+              {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
+              {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} />}
               {/* Impact spray when the enemy's shot lands on the player hull */}
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
@@ -4357,7 +4422,7 @@ function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' }) {
 // Persistent enemy status — a low ambient tell that lingers between the
 // activation flare and the tick/skip. Burning: a base ember glow + slow rising
 // embers. Frozen: a cyan frost tint over the hull.
-function EnemyPersistentStatus({ burning, frozen }: { burning: boolean; frozen: boolean }) {
+function ShipStatusAura({ burning, frozen }: { burning: boolean; frozen: boolean }) {
   return (
     <>
       {burning && (
