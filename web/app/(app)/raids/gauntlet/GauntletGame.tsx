@@ -348,16 +348,10 @@ export default function GauntletGame(props: GauntletGameProps) {
           padding: '6px 0.85rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          {/* Kicker + title */}
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.34em', color: TEAL, marginTop: 6 }}>
-            The Endless Descent
-          </p>
+          {/* Title */}
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 26px rgba(240,192,64,0.32)' }}>
             Davy Jones Gauntlet
           </h1>
-          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#9a948a', marginTop: 6 }}>
-            One descent at a time. How deep do you dare?
-          </p>
 
           {/* The maw — the hole you drop into */}
           <div style={{ position: 'relative', width: 196, height: 196, margin: '14px auto 4px' }}>
