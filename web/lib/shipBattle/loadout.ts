@@ -14,10 +14,6 @@ import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
 import type { BattleLoadout, BattleCrew } from './resolver'
 
-// The duel Specials slice covers the 5 base crew classes; the legendary
-// signatures (Leviathan / Apex / Tidecaller) are deferred.
-const PVP_BASE_CLASSES = new Set(['mender', 'sharpshot', 'snare', 'anchor', 'navigator'])
-
 export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
   const stats = await getRaidPlayerStats(userId)
 
@@ -32,11 +28,12 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
   // Proc/parry chances aggregate by MAX across items (mirrors RaidCombat).
   const max  = (type: string) => effects.filter(e => e.type === type).reduce((a, e) => Math.max(a, e.value), 0)
 
-  // Crew Specials — only base-class crew that have already unlocked their
-  // ability (Lv 10+). Capped at 6 so the chooser stays tight.
+  // Crew Specials — any classed crew (base OR legendary signature) that has
+  // already unlocked its ability (Lv 10+). Capped at 6 so the chooser stays
+  // tight. The resolver handles all eight class shapes.
   const crew: BattleCrew[] = stats.crewMembers
     .map(c => ({ id: c.id, name: c.name, classId: classForSlug(c.slug), level: crewLevelFromXP(c.xp) }))
-    .filter((c): c is BattleCrew => !!c.classId && PVP_BASE_CLASSES.has(c.classId) && c.level >= CLASS_UNLOCK_LEVEL)
+    .filter((c): c is BattleCrew => !!c.classId && c.level >= CLASS_UNLOCK_LEVEL)
     .slice(0, 6)
 
   const kit = getRepairKit(stats.equippedRepairKit)

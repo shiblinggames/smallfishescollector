@@ -20,6 +20,7 @@ import { raidDamageProfile } from '@/lib/expeditions'
 import {
   CLASSES, currentMilestone, type CrewClass,
   type MenderMilestone, type NavigatorMilestone, type SnareMilestone, type AnchorMilestone,
+  type AbyssalTideMilestone, type LeviathanMilestone, type BlitzMilestone,
 } from '@/lib/crewClasses'
 
 export const MAX_CHARGES = 3
@@ -116,10 +117,12 @@ export interface BattleFx {
   burnDmg?: number
   /** Frozen: a freeze proc'd last round → this side skips its next round. */
   frozen?: boolean
+  /** Tidecaller shield buffer — soaks damage before HP, persists until spent. */
+  shield?: number
 }
 
 export function defaultFx(): BattleFx {
-  return { used: [], usedRepair: false, dodgeJammed: 0, anchorPct: 0, anchorAbsorbsCrit: false, burnTurns: 0, burnDmg: 0, frozen: false }
+  return { used: [], usedRepair: false, dodgeJammed: 0, anchorPct: 0, anchorAbsorbsCrit: false, burnTurns: 0, burnDmg: 0, frozen: false, shield: 0 }
 }
 function normFx(fx: Partial<BattleFx> | null | undefined): BattleFx {
   return {
@@ -131,6 +134,7 @@ function normFx(fx: Partial<BattleFx> | null | undefined): BattleFx {
     burnTurns: fx?.burnTurns ?? 0,
     burnDmg: fx?.burnDmg ?? 0,
     frozen: fx?.frozen ?? false,
+    shield: fx?.shield ?? 0,
   }
 }
 
@@ -264,6 +268,21 @@ export function resolveRound(
     log: '', ...over,
   })
 
+  // Apply damage to a side, depleting any Tidecaller shield first. Returns the
+  // HP actually lost + how much the shield soaked (for the log).
+  const dealDamage = (targetWho: Who, amount: number): { hpDmg: number; absorbed: number } => {
+    let dmg = Math.max(0, amount)
+    let absorbed = 0
+    const tf = fx[targetWho]
+    if ((tf.shield ?? 0) > 0 && dmg > 0) {
+      absorbed = Math.min(tf.shield!, dmg)
+      tf.shield = (tf.shield ?? 0) - absorbed
+      dmg -= absorbed
+    }
+    sides[targetWho].s.hp = Math.max(0, sides[targetWho].s.hp - dmg)
+    return { hpDmg: dmg, absorbed }
+  }
+
   // ── Pass 0: start-of-round statuses carried in from last round ──────────
   // Freeze consumes the side's whole turn (special + action) THIS round; burn
   // ticks now so a hit's DoT starts next round, not the round it landed.
@@ -274,10 +293,9 @@ export function resolveRound(
     const me = sides[who]
     const meFx = fx[who]
     if ((meFx.burnTurns ?? 0) > 0 && me.s.hp > 0) {
-      const tick = meFx.burnDmg ?? 0
-      me.s.hp = Math.max(0, me.s.hp - tick)
+      const { hpDmg } = dealDamage(who, meFx.burnDmg ?? 0)
       meFx.burnTurns = (meFx.burnTurns ?? 0) - 1
-      steps.push(snapshot({ actor: who, fx: 'burn', damage: tick, log: `${me.l.username}'s ship is ablaze — ${tick} burn damage.` }))
+      steps.push(snapshot({ actor: who, fx: 'burn', damage: hpDmg, log: `${me.l.username}'s ship is ablaze — ${hpDmg} burn damage.` }))
       if (me.s.hp <= 0) { winner = other(who); break }
     }
   }
@@ -347,6 +365,52 @@ export function resolveRound(
         // Effect is client-side (the firing player's crit zone widens on their
         // shot this round); the server just records the cast for the log.
         steps.push(snapshot({ actor: who, ability: true, log: `${crew.name} steadies the gunners' aim.` }))
+        break
+      }
+      // ── Legendary signatures ───────────────────────────────────────────
+      case 'abyssal_tide': {
+        // Tidecaller — heal + a persistent damage shield (soaks before HP).
+        const mm = m as AbyssalTideMilestone
+        const heal = Math.min(me.l.hpMax - me.s.hp, Math.floor(mm.pctMaxHp * me.l.hpMax))
+        me.s.hp += Math.max(0, heal)
+        const shieldAmt = Math.floor(mm.shieldPctMaxHp * me.l.hpMax)
+        meFx.shield = (meFx.shield ?? 0) + shieldAmt
+        steps.push(snapshot({ actor: who, ability: true, heal: Math.max(0, heal), log: `${crew.name} calls the tide — +${Math.max(0, heal)} HP and a ${shieldAmt}-pt shield.` }))
+        break
+      }
+      case 'leviathan': {
+        // Leviathan — one heavy extra cannon shot (guaranteed hit, autocrits at
+        // the capstone). A free salvo on top of the player's move.
+        const mm = m as LeviathanMilestone
+        const isCrit = !!mm.autoCrit
+        const res: ShotResult = isCrit ? 'critical' : 'hit'
+        const itemMult = isCrit ? me.l.critDamageMult : me.l.noncritDamageMult
+        const foeTakenMult = foe2.l.incomingDamageMult * (1 + (foe2.l.damageTakenPct ?? 0) / 100)
+        const rampMult = 1 + (me.l.rampDamagePerTurn ?? 0) * roundIndex
+        const raw = rollShotDamage(res, me.l.shipMinDamage, me.l.totalPower, me.l.damagePct)
+        const outgoing = Math.max(1, Math.floor(raw * me.l.classDamageMult * itemMult * foeTakenMult * rampMult * mm.dmgMult))
+        const { hpDmg, absorbed } = dealDamage(foeWho2, outgoing)
+        steps.push(snapshot({ actor: who, action: 'fire', damage: hpDmg, crit: isCrit, log: `${crew.name} looses a Heavy Salvo for ${hpDmg}${isCrit ? ' (critical!)' : ''}${absorbed ? ` (${absorbed} soaked)` : ''}.` }))
+        if (foe2.s.hp <= 0) winner = who
+        break
+      }
+      case 'blitz': {
+        // Apex — fires, then chains more shots until a roll fails (10-shot cap).
+        const mm = m as BlitzMilestone
+        const isCrit = !!mm.autoCrit
+        const res: ShotResult = isCrit ? 'critical' : 'hit'
+        const itemMult = isCrit ? me.l.critDamageMult : me.l.noncritDamageMult
+        const foeTakenMult = foe2.l.incomingDamageMult * (1 + (foe2.l.damageTakenPct ?? 0) / 100)
+        const rampMult = 1 + (me.l.rampDamagePerTurn ?? 0) * roundIndex
+        let shots = 0
+        do {
+          shots++
+          const raw = rollShotDamage(res, me.l.shipMinDamage, me.l.totalPower, me.l.damagePct)
+          const outgoing = Math.max(1, Math.floor(raw * me.l.classDamageMult * itemMult * foeTakenMult * rampMult))
+          const { hpDmg, absorbed } = dealDamage(foeWho2, outgoing)
+          steps.push(snapshot({ actor: who, action: 'fire', damage: hpDmg, crit: isCrit, log: `${crew.name} frenzies — shot ${shots} hits for ${hpDmg}${isCrit ? ' (crit!)' : ''}${absorbed ? ` (${absorbed} soaked)` : ''}.` }))
+          if (foe2.s.hp <= 0) { winner = who; break }
+        } while (shots < 10 && Math.random() < mm.chainChance)
         break
       }
     }
@@ -434,11 +498,12 @@ export function resolveRound(
       braced = true
     }
 
-    foe.s.hp = Math.max(0, foe.s.hp - dmg)
+    // Route through any Tidecaller shield; hpDmg is what actually hit HP.
+    const { hpDmg, absorbed } = dealDamage(foeWho, dmg)
 
-    // Incendiary / Frozen on-hit procs — only on a landed hit that didn't sink
-    // them. Burn refreshes to a fresh 2 turns (ticks at round start); freeze
-    // flags their NEXT round to skip.
+    // Incendiary / Frozen on-hit procs — only on a landed hit (the shot
+    // connected, even if a shield ate it) that didn't sink them. Burn refreshes
+    // to a fresh 2 turns (ticks at round start); freeze flags their NEXT round.
     let igniteNote = ''
     if (dmg > 0 && foe.s.hp > 0) {
       if ((me.l.burnChance ?? 0) > 0 && Math.random() < (me.l.burnChance ?? 0)) {
@@ -453,15 +518,16 @@ export function resolveRound(
       }
     }
 
+    const shieldNote = absorbed > 0 ? ` (${absorbed} soaked by shield)` : ''
     const verb = action === 'volley' ? 'unloads a volley' : 'fires'
     const log = dodged
       ? `${me.l.username} ${verb} — ${foe.l.username} evades!`
       : dodgeJammed
-        ? `${me.l.username} ${verb} for ${dmg} — ${foe.l.username}'s dodge is jammed!`
+        ? `${me.l.username} ${verb} for ${hpDmg} — ${foe.l.username}'s dodge is jammed!${shieldNote}`
         : result === 'miss'
           ? `${me.l.username} ${verb} and misses.`
-          : `${me.l.username} ${verb} for ${dmg}${crit ? ' (critical!)' : ''}${braced ? ' — braced!' : ''}.${igniteNote}`
-    steps.push(snapshot({ actor: who, action, aimResult: result, damage: dmg, dodged, crit, log }))
+          : `${me.l.username} ${verb} for ${hpDmg}${crit ? ' (critical!)' : ''}${braced ? ' — braced!' : ''}.${shieldNote}${igniteNote}`
+    steps.push(snapshot({ actor: who, action, aimResult: result, damage: hpDmg, dodged, crit, log }))
 
     if (foe.s.hp <= 0) { winner = who; continue }
 
@@ -470,8 +536,8 @@ export function resolveRound(
     // attacker, i.e. the actor of THIS parry step). Unmitigated; mirrors PvE.
     if (dodged && (foe.l.parryChance ?? 0) > 0 && (foe.l.parryReflectPct ?? 0) > 0 && wouldHit > 0 && Math.random() < (foe.l.parryChance ?? 0)) {
       const reflect = Math.max(1, Math.floor(wouldHit * (foe.l.parryReflectPct ?? 0)))
-      me.s.hp = Math.max(0, me.s.hp - reflect)
-      steps.push(snapshot({ actor: who, fx: 'parry', damage: reflect, log: `${foe.l.username} parries and turns the shot back for ${reflect}!` }))
+      const { hpDmg: reflectHp } = dealDamage(who, reflect)
+      steps.push(snapshot({ actor: who, fx: 'parry', damage: reflectHp, log: `${foe.l.username} parries and turns the shot back for ${reflectHp}!` }))
       if (me.s.hp <= 0) winner = foeWho
     }
   }
