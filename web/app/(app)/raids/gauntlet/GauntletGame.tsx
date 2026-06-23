@@ -1300,6 +1300,23 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
   )
 }
 
+// ── Modal scrim ───────────────────────────────────────────────────────────────
+// One backdrop for the popup modals. Centers content when it fits and scrolls
+// from the top when it's taller than the screen — the min-height wrapper sidesteps
+// the flexbox "centered overflow clips the top + won't scroll" trap. Respects iOS
+// safe areas + momentum scroll. Click the scrim (not the panel) to close.
+function ModalScrim({ zIndex, onClose, bg = 'rgba(2,6,12,0.85)', blur = 'blur(4px)', children }: {
+  zIndex: number; onClose: () => void; bg?: string; blur?: string; children: React.ReactNode
+}) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex, background: bg, backdropFilter: blur, WebkitBackdropFilter: blur, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // ── Haul modal ────────────────────────────────────────────────────────────────
 // "What's down there" — a popup on the intro so a player can see the chest
 // ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
@@ -1315,10 +1332,10 @@ function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doublo
   const deepOdds = Math.round(chestCannonDropChance(5) * 100)
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+    <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, margin: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
+        style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>What&apos;s Down There</p>
@@ -1389,7 +1406,7 @@ function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doublo
               </p>
         </div>
       </motion.div>
-    </div>
+    </ModalScrim>
   )
 }
 
@@ -1429,10 +1446,10 @@ function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; first
     { color: GOLD, title: 'Two shops to spend them', text: 'Run Upgrades sharpen your dives. Ship & Shore is permanent power for your raids, voyages, and fishing.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6" rx="6.5" ry="2.4" /><path d="M5.5 6v4c0 1.3 2.9 2.4 6.5 2.4S18.5 11.3 18.5 10V6" /><path d="M5.5 10v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /><path d="M5.5 14v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /></svg> },
   ]
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1400, background: 'rgba(2,6,12,0.88)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+    <ModalScrim zIndex={1400} onClose={onClose} bg="rgba(2,6,12,0.88)" blur="blur(5px)">
       <motion.div initial={{ opacity: 0, y: 18, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 250, damping: 23 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 420, margin: 'auto', borderRadius: 20, background: 'linear-gradient(180deg, rgba(12,18,30,0.99), rgba(6,9,16,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 50px ${TEAL}22, 0 18px 50px rgba(0,0,0,0.65)`, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center' }}>
+        style={{ width: '100%', maxWidth: 420, borderRadius: 20, background: 'linear-gradient(180deg, rgba(12,18,30,0.99), rgba(6,9,16,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 50px ${TEAL}22, 0 18px 50px rgba(0,0,0,0.65)`, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center' }}>
         <div style={{ position: 'relative', width: 92, height: 92, margin: '0 auto 6px' }}>
           <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}22 0%, ${TEAL}12 45%, transparent 72%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1458,7 +1475,7 @@ function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; first
           {firstTime ? 'Into the Locker' : 'Got it'}
         </button>
       </motion.div>
-    </div>
+    </ModalScrim>
   )
 }
 
@@ -1533,8 +1550,6 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
     }
   }
 
-  const SCOPE_LABEL: Record<string, string> = { account: 'Every raid', world: 'Out in the world', gauntlet: 'Gauntlet runs' }
-
   // One renderer for both kinds of row.
   function Card({ e }: { e: ShopEntry }) {
     if (!state) return null
@@ -1551,8 +1566,7 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
             {depthMet ? `Depth ${e.depthRequired} ✓` : `Depth ${state.deepest}/${e.depthRequired}`}
           </span>
         </div>
-        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'inline-block', marginTop: 6, fontSize: '0.46rem', color: `${TEAL}cc`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 5, padding: '0.12rem 0.4rem' }}>{SCOPE_LABEL[e.scope]}</span>
-        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.45, marginTop: 6 }}>{e.description}</p>
+        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 5 }}>{e.description}</p>
         {e.demo && <CannonballRackDemo />}
         {prereqLocked && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#caa05a', marginTop: 7 }}>{e.lockNote}</p>}
         <button
@@ -1580,10 +1594,10 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+    <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, margin: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
+        style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 44px ${TEAL}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
             <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>The Locker</p>
@@ -1634,7 +1648,7 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
             )
           })()}
       </motion.div>
-    </div>
+    </ModalScrim>
   )
 }
 

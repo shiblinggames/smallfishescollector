@@ -35,7 +35,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   {
     id: 'safe_voyages',
     name: 'Safe Passage',
-    description: 'Strike a bargain with the deep: your crew always comes home. Voyages on every route lose no crew, ever — sail the Shrouded Reach without burying a soul.',
+    description: 'Your crew never dies on voyages. Sail any route risk-free.',
     depthRequired: 8,
     cost: 45,
     scope: 'world',
@@ -43,7 +43,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   {
     id: 'cannonball_rack',
     name: 'Extra Cannonball Rack',
-    description: 'Bolt a fourth rack to the gun deck. Your ship stockpiles one more cannonball (4 instead of 3) in every raid. Volleys still fire at 3, so the extra is reserve — volley, and you keep a cannonball chambered.',
+    description: 'Hold 4 cannonballs in raids instead of 3, so one stays loaded right after you fire a volley.',
     depthRequired: 10,
     cost: 60,
     scope: 'account',
@@ -51,7 +51,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   {
     id: 'salvagers_eye',
     name: "Salvager's Eye",
-    description: 'You learn to read the wreckage. Every haul you cash out of the Gauntlet pays 15% more doubloons. Sink and you still lose it all — this only sweetens what you carry up.',
+    description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
     depthRequired: 12,
     cost: 70,
     scope: 'gauntlet',

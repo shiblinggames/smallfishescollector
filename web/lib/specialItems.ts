@@ -52,7 +52,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     name: 'Auto Catcher',
     color: '#46e0c0',
     image: '/autocaster.png',
-    description: 'Everything the Auto Caster does, plus it reels in common and uncommon fish on its own — the needle lands true on the catch band, no dial needed. Rarer fish still wait for your hand. Stops when your hold is full or your bait runs out.',
+    description: 'Auto-casts and reels in common and uncommon fish for you — no tapping. Rarer fish still need your hand. Stops when your hold or bait runs out.',
     effectLabel: 'Auto cast + catch commons & uncommons',
     costFathoms: 30,
     requiresItem: 'auto_caster',
