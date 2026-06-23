@@ -140,8 +140,8 @@ const ELITE_CHANCE_BASE   = 0.06
 const ELITE_CHANCE_GROWTH = 0.05 // per depth
 const ELITE_CHANCE_CAP    = 0.6
 
-const TIDE_CHANCE         = 0.34 // between-round chance
-const TIDE_PITY           = 4    // force a tide after this many tideless rounds
+const TIDE_CHANCE         = 0.25 // between-round chance
+const TIDE_PITY           = 6    // force a tide after this many tideless rounds
 const TIDE_HEAL_HP_PCT    = 0.4  // "low HP" threshold that biases the draw toward recovery
 
 /** Crew abilities + repair reset every this-many cleared rounds (the one
