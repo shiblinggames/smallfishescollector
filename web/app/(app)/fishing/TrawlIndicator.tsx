@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
 import {
-  TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs, TRAWL_BUMPERS,
+  TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs, TRAWL_BUMPERS, pickTrawlEvent,
   type TrawlState, type TrawlZoneKey, type ActiveTrawlView, type TrawlCrewView, type CollectTrawlResult,
 } from './trawls/constants'
 import { getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
@@ -169,6 +169,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const [picking, setPicking] = useState<TrawlZoneKey | null>(null)
   const [busy, setBusy] = useState(false)
   const [reveal, setReveal] = useState<CollectTrawlResult | null>(null)
+  const [revealEvent, setRevealEvent] = useState<string>('')
   const [coins, setCoins] = useState<{ id: number }[]>([])
   const [flashZone, setFlashZone] = useState<TrawlZoneKey | null>(null)
   const [sendingId, setSendingId] = useState<number | null>(null)
@@ -303,6 +304,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     const coinCount = tier === 'jackpot' ? 18 : tier === 'bumper' ? 14 : tier === 'good' ? 11 : tier === 'slim' ? 6 : 8
     setCoins(Array.from({ length: coinCount }, () => ({ id: pid.current++ })))
     setTimeout(() => setCoins([]), 900)
+    setRevealEvent(pickTrawlEvent(r.bumper))
     setReveal(r)
     // If this haul leveled the player up, the full level-up overlay (owned by
     // FishingGame) fires when the haul card is dismissed (see dismissReveal).
@@ -625,8 +627,6 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     : 0
   const bump = reveal ? TRAWL_BUMPERS[reveal.bumper] : null
   const isUp = !!reveal && (reveal.bumper === 'good' || reveal.bumper === 'bumper' || reveal.bumper === 'jackpot')
-  const isSlim = !!reveal && reveal.bumper === 'slim'
-  const isSpecial = isUp || isSlim
   const revAccent = isUp && bump ? bump.accent : GOLD
   const collectReveal = (
     <AnimatePresence>
@@ -635,17 +635,31 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
           style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
             style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18, background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${revAccent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${revAccent}${isUp ? '9a' : '5e'}`, boxShadow: isUp ? `0 0 40px ${revAccent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
-            {/* Haul tier — celebrated for the up-tiers, muted for a slim haul. */}
-            {isSpecial && bump && (
-              <motion.div initial={{ opacity: 0, scale: 0.5, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 17 }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0.32rem 0.95rem', borderRadius: 999, background: `${bump.accent}${isUp ? '22' : '16'}`, border: `1px solid ${bump.accent}${isUp ? 'ff' : '55'}`, boxShadow: isUp ? `0 0 20px ${bump.accent}66` : 'none' }}>
-                <span className="font-cinzel font-800 uppercase" style={{ fontSize: isUp ? '0.78rem' : '0.66rem', letterSpacing: '0.08em', color: bump.accent, textShadow: isUp ? `0 0 10px ${bump.accent}66` : 'none' }}>{isUp ? `✦ ${bump.label} ✦` : bump.label}</span>
-              </motion.div>
-            )}
+            {/* Haul chip — the band name + the exact multiplier, always shown so
+                the bonus they got is unmistakable (gold for a normal haul). */}
+            {bump && (() => {
+              // normal's accent is already gold, slim's grey, up-tiers their band colour.
+              const chipAccent = bump.accent
+              return (
+                <motion.div initial={{ opacity: 0, scale: 0.5, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 17 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0.34rem 1rem', borderRadius: 999, background: `${chipAccent}${isUp ? '22' : '16'}`, border: `1px solid ${chipAccent}${isUp ? 'ff' : '66'}`, boxShadow: isUp ? `0 0 20px ${chipAccent}66` : 'none' }}>
+                  <span className="font-cinzel font-800 uppercase" style={{ fontSize: isUp ? '0.82rem' : '0.72rem', letterSpacing: '0.06em', color: chipAccent, textShadow: isUp ? `0 0 10px ${chipAccent}66` : 'none' }}>
+                    {isUp ? '✦ ' : ''}{bump.label ? `${bump.label} ` : 'Haul '}×{reveal.mult.toFixed(2)}{isUp ? ' ✦' : ''}
+                  </span>
+                </motion.div>
+              )
+            })()}
             <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD }}>Haul secured.</p>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#dccba6', marginTop: 4 }}>
-              {reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.{isSpecial && bump ? ` ${bump.blurb}` : ''}
+              {reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.
             </p>
+            {/* Flavour event — a fresh little story for why the haul came in like it did */}
+            {revealEvent && (
+              <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.4 }}
+                className="font-karla" style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#b6a988', marginTop: 8, lineHeight: 1.5 }}>
+                &ldquo;{revealEvent}&rdquo;
+              </motion.p>
+            )}
 
             <div style={{ marginTop: 14 }} />
             <CountUp to={reveal.xpGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: GREEN, display: 'block', marginTop: 6 }} />

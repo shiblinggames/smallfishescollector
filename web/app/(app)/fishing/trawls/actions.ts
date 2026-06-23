@@ -213,5 +213,6 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
     fish,
     crewName: crew.name,
     bumper: haul.bumper,
+    mult: haul.mult,
   }
 }

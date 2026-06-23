@@ -134,7 +134,75 @@ export function bumperTierForMult(mult: number): BumperTier {
   return 'normal'
 }
 
-export interface TrawlHaul { xp: number; doubloons: number; bumper: BumperTier }
+export interface TrawlHaul { xp: number; doubloons: number; bumper: BumperTier; mult: number }
+
+// ── Haul flavour events ──────────────────────────────────────────────────────
+// One is rolled per collect, tied to the haul's band, to explain WHY it came in
+// big or light. Lots per band so it feels fresh every time. Voice: pirate, sea-
+// creatures as the crew (never "men"), funny-but-charming, no em-dashes.
+export const TRAWL_EVENTS: Record<BumperTier, string[]> = {
+  jackpot: [
+    "Your crew hauled up a sunken galleon's strongbox, still locked and heavy with gold.",
+    'A giant squid surfaced, dropped a chest it had been hoarding, and slipped back into the dark.',
+    "The nets snagged a merchant wreck's whole payroll, coins and all.",
+    'A whale breached clean over the deck and rained half the sea into the hold.',
+    'Your crew followed a lone gull to a reef no chart has ever marked.',
+    'They found the honey hole. The nets nearly tore loose from the weight of it.',
+    'A mermaid took a shine to the cook and pointed the crew straight to the motherlode.',
+    "Your crew won a kraken's hoard in a game of cards and didn't stick around to gloat.",
+    'A waterspout dropped a wriggling fortune right into the open hold.',
+    'The tide rolled in silver by the thousand, with a little gold besides.',
+  ],
+  bumper: [
+    'A whole school swam into the nets like they had somewhere to be.',
+    'The crew found a feeding frenzy and rode it until the hold groaned.',
+    'Fat tuna all morning. Nobody aboard is complaining.',
+    'The nets came up so full the crew had to bail just to stay afloat.',
+    'A pod of dolphins herded the catch right to the boat, the show-offs.',
+    'Warm sun, flat sea, and fish practically queueing to come aboard.',
+    'Your crew trawled clean over a sunken pier swarming with the things.',
+    'The bait was perfect today. The fish filed a complaint, then got caught anyway.',
+    'A deckhand sang a shanty so fine the fish surfaced to listen.',
+  ],
+  good: [
+    "Steady nets, steady fins, a good morning's work.",
+    'Nothing flashy, just a reliably heavy haul.',
+    'The crew read the current right and it paid them back.',
+    'A clean run. The fish cooperated for once in their lives.',
+    'Fair weather and willing fish. It adds up.',
+    'The crew found a good patch and had the sense to stay put.',
+    "A tidy haul, and the cook's already eyeing the biggest one.",
+  ],
+  normal: [
+    "An honest day's trawl. Nothing to write the captain about.",
+    'The crew did their job and came home for supper.',
+    "Fish were biting, then they weren't. An average sort of day.",
+    'Nets in, nets out, a bit of everything in between.',
+    "A respectable hold and a crew already asking what's for dinner.",
+    "Some came, some didn't. Fair is fair.",
+    'The usual. The sea gave what it felt like giving.',
+    'Quiet shift. One deckhand swears the big one got away.',
+  ],
+  slim: [
+    'A kraken spooked half the catch clean out of the nets.',
+    'The crew spent most of the cycle arguing about lunch.',
+    'A gull made off with the bait. All of it. Brazenly.',
+    'The fish unionised and refused to cooperate.',
+    'Your crew got into a staring contest with a grouper and lost track of the day.',
+    'Choppy water, tangled nets, and a great deal of swearing.',
+    'The crew swears they saw a sea serpent and rowed the other way.',
+    'Somebody forgot to actually lower the nets for a good hour.',
+    'The fish were biting somewhere else entirely. Typical.',
+    'A whale settled on the net for a nap. The crew waited. The whale won.',
+    'Half the crew got seasick. The other half found it hilarious.',
+  ],
+}
+
+/** Pick a random flavour event for a haul's band. */
+export function pickTrawlEvent(tier: BumperTier, rng: () => number = Math.random): string {
+  const pool = TRAWL_EVENTS[tier]
+  return pool[Math.floor(rng() * pool.length)] ?? ''
+}
 
 /** Expected (mean) haul for a 1h cycle — used for the panel preview (no bumper). */
 export function expectedTrawlHaul(zoneKey: TrawlZoneKey, savvy: number, fortune: number): { xp: number; doubloons: number } {
@@ -158,6 +226,7 @@ export function rollTrawlHaul(
     xp:        Math.max(0, Math.round(exp.xp * mult)),
     doubloons: Math.max(0, Math.round(exp.doubloons * mult)),
     bumper:    bumperTierForMult(mult),
+    mult,
   }
 }
 
@@ -201,5 +270,6 @@ export interface CollectTrawlResult {
   newDoubloons: number
   fish: string[]           // sample species names from the zone, for the haul reveal
   crewName: string
-  bumper: BumperTier       // 'normal' or an upgraded haul to celebrate
+  bumper: BumperTier       // the band the haul landed in (flavours the reveal)
+  mult: number             // the raw 0.8-1.2 luck multiplier this haul rolled
 }
