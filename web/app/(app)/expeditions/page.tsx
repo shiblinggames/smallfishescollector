@@ -10,6 +10,7 @@ import ShipHero from './ShipHero'
 import ExpeditionsTour from './ExpeditionsTour'
 import HubCards from './HubCards'
 import type { CampaignCardData, VoyageCardData, VoyageStatus } from './HubCards'
+import { gauntletUnlocked } from '@/lib/gauntlet'
 import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
@@ -204,7 +205,10 @@ async function ExpeditionHub() {
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
   // Next main-chain node: first non-cleared, non-sideBranch view.
   const next = raidMap.views.find(v => v.status !== 'cleared' && !v.node.sideBranch) ?? null
-  const cleared = raidMap.views.filter(v => v.status === 'cleared').length
+  const clearedViews = raidMap.views.filter(v => v.status === 'cleared')
+  const cleared = clearedViews.length
+  // Gauntlet door: admin-only until GAUNTLET_LIVE, then cleared-Chapter-2.
+  const gauntletOpen = gauntletUnlocked({ isAdmin: profile?.is_admin, clearedNodes: clearedViews.map(v => v.node.id) })
   const equippedRaidItems = (profile?.equipped_raid_items as string[] | null) ?? []
   const ownedRaidItems = (profile?.raid_items as string[] | null) ?? []
   const campaign: CampaignCardData = {
@@ -270,6 +274,7 @@ async function ExpeditionHub() {
       expeditionXP={profile?.expedition_xp ?? 0}
       voyageHistory={voyageHistory}
       isAdmin={isAdmin}
+      gauntletOpen={gauntletOpen}
       pvp={pvp}
     />
   )

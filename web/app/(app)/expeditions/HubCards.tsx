@@ -72,6 +72,9 @@ interface Props {
   // everyone else sees them locked. PvP data is only fetched + passed when
   // the viewer is an admin (null otherwise).
   isAdmin: boolean
+  /** Whether the Gauntlet door is open to this player (admin, or live + cleared
+   *  Chapter 2). Drives the Gauntlets card lock independently of PvP. */
+  gauntletOpen: boolean
   pvp: { battles: ShipBattleSummary[]; wins: number; losses: number; friends: SocialCrewMember[] } | null
 }
 
@@ -245,7 +248,7 @@ export default function HubCards({
   roster, shipCrewSlots,
   shipStats, raidScore,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  isAdmin, pvp,
+  isAdmin, gauntletOpen, pvp,
 }: Props) {
   const router = useRouter()
   // Compute each track's party once. Filtering by voyage_slot / raid_slot
@@ -434,8 +437,8 @@ export default function HubCards({
           image="/davyjones.png"
           title="Gauntlets"
           desc="Push your luck down a gauntlet for one swelling pot. Bank it or sink."
-          locked={!isAdmin}
-          onClick={isAdmin ? () => setModal('gauntlets') : undefined}
+          locked={!gauntletOpen}
+          onClick={gauntletOpen ? () => setModal('gauntlets') : undefined}
         />
       </div>
 
