@@ -38,12 +38,13 @@ export interface GauntletUpgrade {
 }
 
 export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
-  // ── Run Upgrades (scope 'gauntlet') — only touch Gauntlet runs ─────────────
+  // ── Run Upgrades (scope 'gauntlet') — only touch Gauntlet runs. NO depth
+  //    gate: just buy them with Fathoms (cost is the only ladder). ───────────
   {
     id: 'navigators_log',
     name: "Navigator's Log",
     description: 'Earn 20% more Nav XP every time you cash out a Gauntlet run.',
-    depthRequired: 6,
+    depthRequired: 0,
     cost: 40,
     scope: 'gauntlet',
   },
@@ -51,7 +52,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     id: 'diving_bell',
     name: 'Diving Bell',
     description: 'Start every Gauntlet run with 15% more max HP.',
-    depthRequired: 8,
+    depthRequired: 0,
     cost: 50,
     scope: 'gauntlet',
   },
@@ -59,7 +60,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     id: 'salvagers_eye',
     name: "Salvager's Eye",
     description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
-    depthRequired: 12,
+    depthRequired: 0,
     cost: 70,
     scope: 'gauntlet',
   },
@@ -67,7 +68,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     id: 'calm_before',
     name: 'Calm Before',
     description: "The Locker's curses take one depth longer to catch you.",
-    depthRequired: 16,
+    depthRequired: 0,
     cost: 90,
     scope: 'gauntlet',
   },
@@ -75,7 +76,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     id: 'lucky_locker',
     name: 'Lucky Locker',
     description: 'Earn 50% more Fathoms from every dive, win or lose.',
-    depthRequired: 18,
+    depthRequired: 0,
     cost: 100,
     scope: 'gauntlet',
   },
@@ -83,7 +84,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     id: 'iron_hide',
     name: 'Iron Hide',
     description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
-    depthRequired: 22,
+    depthRequired: 0,
     cost: 130,
     scope: 'gauntlet',
   },
