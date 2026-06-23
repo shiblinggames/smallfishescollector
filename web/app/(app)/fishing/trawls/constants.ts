@@ -103,10 +103,10 @@ export function trawlStatFactor(stat: number): number {
 export type BumperTier = 'normal' | 'good' | 'bumper' | 'jackpot'
 
 export const TRAWL_BUMPERS: Record<BumperTier, { mult: number; label: string; blurb: string; accent: string }> = {
-  normal:  { mult: 1,    label: '',              blurb: '',                              accent: '#f0c040' },
-  good:    { mult: 1.3,  label: 'Good Haul',     blurb: 'The nets came back heavy.',     accent: '#7fd49a' },
-  bumper:  { mult: 1.7,  label: 'Bumper Haul',   blurb: 'The nets came back full!',      accent: '#5ec8e8' },
-  jackpot: { mult: 2.4,  label: 'Jackpot Haul',  blurb: 'A once-in-a-voyage catch!',     accent: '#c4a0ff' },
+  normal:  { mult: 1,     label: '',              blurb: '',                              accent: '#f0c040' },
+  good:    { mult: 1.08,  label: 'Good Haul',     blurb: 'The nets came back heavy.',     accent: '#7fd49a' },
+  bumper:  { mult: 1.18,  label: 'Bumper Haul',   blurb: 'The nets came back full!',      accent: '#5ec8e8' },
+  jackpot: { mult: 1.35,  label: 'Jackpot Haul',  blurb: 'A once-in-a-voyage catch!',     accent: '#c4a0ff' },
 }
 
 /** Roll the bumper tier for a haul, weighted up by the crew's Fortune. */
