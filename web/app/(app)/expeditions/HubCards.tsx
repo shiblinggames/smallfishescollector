@@ -19,7 +19,6 @@ import type { ShipBattleSummary } from '@/app/(app)/social/shipBattleActions'
 import type { CrewMember as SocialCrewMember } from '@/app/(app)/social/actions'
 
 const CREW_IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
-const GAUNTLET_NEW_TAG = '#5eead4'   // bright teal "NEW" ribbon
 import type { DailyVoyage } from './voyageActions'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import type { ShipStats } from '@/lib/expeditions'
@@ -222,11 +221,10 @@ function SideHubCard({ accent, image, title, desc, locked, onClick, tag, lockLab
       }}
     >
       {tag && !locked && (
-        <span className="font-karla font-800 uppercase tracking-[0.14em]" style={{
+        <span className="font-karla font-700 uppercase tracking-[0.16em]" style={{
           position: 'absolute', top: 9, right: 9, zIndex: 2,
-          padding: '2px 7px', borderRadius: 999, fontSize: '0.46rem',
-          color: '#0a0e14', background: GAUNTLET_NEW_TAG, border: `1px solid ${GAUNTLET_NEW_TAG}`,
-          boxShadow: `0 0 12px ${GAUNTLET_NEW_TAG}88`,
+          padding: '2px 7px', borderRadius: 999, fontSize: '0.44rem',
+          color: accent, background: `${accent}1c`, border: `1px solid ${accent}55`,
         }}>{tag}</span>
       )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 56, marginBottom: 8 }}>
