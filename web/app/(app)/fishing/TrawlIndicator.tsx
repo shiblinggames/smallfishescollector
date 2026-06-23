@@ -7,7 +7,7 @@
 // Trawls panel / picker / collect reveal portal to <body> above everything.
 // Collecting fires the reveal (coins fly to the Nav purse, fishing XP ticks).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
@@ -39,7 +39,9 @@ const DEPTH_THEMES: Record<TrawlZoneKey, { accent: string; top: string; mid: str
 }
 
 // Rising bubbles over a running trawl card — the crew's down there working.
-function Bubbles({ color }: { color: string }) {
+// memo'd: its only prop (color) is stable across the per-second `now` ticks, so
+// the 4 infinite-animation motion divs don't reconcile every second.
+const Bubbles = memo(function Bubbles({ color }: { color: string }) {
   const seeds = [
     { l: 19, d: 0.0, s: 5,   dur: 3.6 },
     { l: 43, d: 1.3, s: 3.5, dur: 4.3 },
@@ -57,10 +59,10 @@ function Bubbles({ color }: { color: string }) {
       ))}
     </div>
   )
-}
+})
 
 // Expanding ripple rings — the splash when a crew is sent to the water.
-function SplashRings({ color }: { color: string }) {
+const SplashRings = memo(function SplashRings({ color }: { color: string }) {
   return (
     <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', pointerEvents: 'none' }}>
       {[0, 0.16].map((d, i) => (
@@ -72,7 +74,7 @@ function SplashRings({ color }: { color: string }) {
       ))}
     </div>
   )
-}
+})
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return 'Ready'
@@ -103,7 +105,9 @@ function CountUp({ to, prefix = '', className, style }: { to: number; prefix?: s
   return <span className={className} style={style}>{prefix}{v.toLocaleString()}</span>
 }
 
-function Portrait({ crew, size = 52, glow }: { crew: TrawlCrewView | null; size?: number; glow?: string }) {
+// memo'd: crew/size/glow are stable across `now` ticks (state identity is
+// unchanged), so the portrait <img>s don't reconcile every second.
+const Portrait = memo(function Portrait({ crew, size = 52, glow }: { crew: TrawlCrewView | null; size?: number; glow?: string }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
@@ -117,7 +121,7 @@ function Portrait({ crew, size = 52, glow }: { crew: TrawlCrewView | null; size?
         : <div style={{ width: '44%', height: '44%', borderRadius: '50%', border: '2px dashed rgba(196,169,106,0.45)' }} />}
     </div>
   )
-}
+})
 
 function CloseBtn({ onClick, label = 'Close' }: { onClick: () => void; label?: string }) {
   return (
@@ -209,11 +213,29 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     [state],
   )
 
+  // Clock for countdowns/progress. The readout only changes per-MINUTE except
+  // inside a trawl's final minute (see fmtCountdown), so a flat 1s tick spent
+  // the whole 45m–2h cycle re-rendering the fishing screen every second for no
+  // visible change. Adaptive cadence: tick by the second only when the panel is
+  // open (progress bars on screen) or a trawl is in its last minute; otherwise
+  // every 10s — enough to keep minute readouts fresh and flip to "ready"
+  // promptly, without competing with the fishing dial's frame loop.
   useEffect(() => {
     if (activeTrawls.length === 0) return
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [activeTrawls.length])
+    let id: ReturnType<typeof setTimeout>
+    const tick = () => {
+      const n = Date.now()
+      setNow(n)
+      const soonest = Math.min(...activeTrawls.map(t => new Date(t.endsAt).getTime() - n))
+      const fine = open || (soonest > 0 && soonest < 60_000)
+      id = setTimeout(tick, fine ? 1000 : 10_000)
+    }
+    // Stamp fresh on open so a just-opened panel's countdowns/bars aren't stale
+    // from the idle 10s cadence; otherwise let the first scheduled tick handle it.
+    if (open) setNow(Date.now())
+    id = setTimeout(tick, 1000)
+    return () => clearTimeout(id)
+  }, [activeTrawls, open])
 
   // A fishing OR nav level-up can unlock a new trawl slot. Re-check on a
   // fishing level-up (event) — nav unlocks are caught on next refresh/mount.
