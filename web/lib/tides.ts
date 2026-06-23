@@ -45,6 +45,13 @@ export type TideEffect =
   | { kind: 'critChanceBonus'; chance: number }
   /** Widens the gold critical zone on the aim bar (visual + math). */
   | { kind: 'critZoneScale'; mult: number }
+  // ── Aim-bar disruptors (visual + feel) — Gauntlet curses lean on these.
+  /** Drifting fog band over the aim bar (0-1 density), like the Mist Veil. */
+  | { kind: 'aimFog'; density: number }
+  /** Multiplier on the aim NEEDLE sweep speed (>1 = faster, harder to time). */
+  | { kind: 'aimSpeedMult'; mult: number }
+  /** Multiplier on the target-ZONE drift speed (>1 = the band lurches more). */
+  | { kind: 'zoneSpeedMult'; mult: number }
   // ── Incoming damage / mitigation ────────────────────────────────
   /** Multiplier on incoming damage rolls. <1 = mitigation. */
   | { kind: 'incomingDmgMult'; mult: number; scope: 'nextFight' | 'allRemaining' }
@@ -137,6 +144,9 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
       return e.n > 0 ? 'good' : 'bad' // n <= 0 (incl. the NO_CHARGES sentinel) is a downside
     case 'enemyStartChargesDelta':
       return e.n < 0 ? 'good' : e.n > 0 ? 'bad' : 'neutral'
+    case 'aimFog':       return e.density > 0 ? 'bad' : 'neutral'
+    case 'aimSpeedMult': return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
+    case 'zoneSpeedMult':return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
     default:
       return 'neutral'
   }
@@ -522,6 +532,9 @@ export function describeEffect(e: TideEffect): string {
     case 'enemyHpScale':          return `Next enemy ${pct(1 - e.mult)} weaker`
     case 'enemyStartChargesDelta':return `Next enemy starts with ${Math.abs(e.n)} fewer cannonball${Math.abs(e.n) === 1 ? '' : 's'}`
     case 'doubloonsAtRaidEnd':    return `${e.n >= 0 ? '+' : ''}${e.n} ⟡ at raid end`
+    case 'aimFog':                return 'Fog drifts over your aim bar'
+    case 'aimSpeedMult':          return e.mult > 1 ? `Aim needle ${pct(e.mult - 1)} faster` : `Aim needle ${pct(1 - e.mult)} slower`
+    case 'zoneSpeedMult':         return e.mult > 1 ? `Target band lurches ${pct(e.mult - 1)} faster` : `Target band ${pct(1 - e.mult)} steadier`
   }
 }
 

@@ -344,14 +344,6 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     effects: [{ kind: 'incomingDmgMult', mult: 1.25, scope: 'allRemaining' }],
   },
   {
-    id: 'maelstrom',
-    name: 'Maelstrom',
-    desc: 'Enemies deal 20% more damage',
-    detail: 'On top of anything else, every enemy hit deals a further 20% more damage for the rest of the run.',
-    flavor: 'A black current drags every broadside harder onto your decks.',
-    effects: [{ kind: 'incomingDmgMult', mult: 1.2, scope: 'allRemaining' }],
-  },
-  {
     id: 'becalmed',
     name: 'Becalmed',
     desc: '-3 ship speed',
@@ -360,20 +352,46 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     effects: [{ kind: 'speedDelta', n: -3, scope: 'allRemaining' }],
   },
   {
-    id: 'squall',
-    name: 'Squall',
-    desc: 'Your shots deal 10% less damage',
-    detail: 'Every shot you fire — aimed shots and volleys both — deals 10% less damage for the rest of the run.',
-    flavor: 'Salt-spray fouls your powder. Your shots land softer than they should.',
-    effects: [{ kind: 'damageMult', mult: 0.9 }],
-  },
-  {
     id: 'murk',
     name: 'Murk',
     desc: 'Your crit zone is 15% smaller',
     detail: 'The gold "perfect shot" band on your aim bar shrinks by 15%, so landing a critical hit is harder.',
     flavor: 'The dark closes over your sights. The perfect shot is a narrower thing now.',
     effects: [{ kind: 'critZoneScale', mult: 0.85 }],
+  },
+  // ── Aim-game disruptors — the deep messes with how you SHOOT, not just your
+  //    stats. These change the aim bar visually + by feel for the rest of the run.
+  {
+    id: 'sounding_fog',
+    name: 'Sounding Fog',
+    desc: 'Fog rolls over your aim bar',
+    detail: 'A bank of fog drifts back and forth across your aim bar, hiding the gold crit band as it passes. Lock your shots by rhythm, not by sight.',
+    flavor: 'The water goes blind at this depth. You fire at shapes in the murk.',
+    effects: [{ kind: 'aimFog', density: 0.55 }],
+  },
+  {
+    id: 'racing_tide',
+    name: 'Racing Tide',
+    desc: 'Your aim needle sweeps faster',
+    detail: 'Your aiming needle whips back and forth far quicker for the rest of the run, so the window to lock a clean shot is much tighter.',
+    flavor: 'A fast current rips down the deck. The wheel will not hold still.',
+    effects: [{ kind: 'aimSpeedMult', mult: 1.6 }],
+  },
+  {
+    id: 'roiling_sea',
+    name: 'Roiling Sea',
+    desc: 'The target band lurches',
+    detail: 'The gold target band slides across your aim bar much faster and wilder, so where the perfect shot sits is a moving guess every turn.',
+    flavor: 'The sea heaves under you. Nothing you aim at stays where you left it.',
+    effects: [{ kind: 'zoneSpeedMult', mult: 2.2 }],
+  },
+  {
+    id: 'riptide',
+    name: 'Riptide',
+    desc: 'Needle AND target both speed up',
+    detail: 'Both your aiming needle and the gold target band move faster for the rest of the run. Less time to lock, and a moving mark to lock onto.',
+    flavor: 'Two currents cross beneath the hull and tear the deck every way at once.',
+    effects: [{ kind: 'aimSpeedMult', mult: 1.3 }, { kind: 'zoneSpeedMult', mult: 1.6 }],
   },
 ]
 

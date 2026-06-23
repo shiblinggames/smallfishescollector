@@ -343,6 +343,10 @@ export default function RaidCombat({
     // Per-enemy one-shots applied at mount only.
     let enemyHpScaleMult = 1
     let enemyChargesDelta = 0
+    // Aim-bar disruptors (Gauntlet curses): fog density + needle/zone speed.
+    let aimFog        = 0
+    let aimSpeedMult  = 1
+    let zoneSpeedMult = 1
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -371,6 +375,9 @@ export default function RaidCombat({
         case 'guaranteedDodge':       guaranteedDodgeBank += e.n; break
         case 'enemyHpScale':          enemyHpScaleMult *= e.mult; break
         case 'enemyStartChargesDelta':enemyChargesDelta += e.n; break
+        case 'aimFog':                aimFog = Math.min(0.92, aimFog + e.density); break
+        case 'aimSpeedMult':          aimSpeedMult *= e.mult; break
+        case 'zoneSpeedMult':         zoneSpeedMult *= e.mult; break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
     }
@@ -381,6 +388,7 @@ export default function RaidCombat({
       chargesStart, hpStartDelta, everyFightHeal,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
+      aimFog, aimSpeedMult, zoneSpeedMult,
     }
   }, [tideEffects, isBoss])
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
@@ -901,8 +909,10 @@ export default function RaidCombat({
     let last = performance.now()
 
     // Zone drift: enemy ship speed sets the pace, player Navigation
-    // slows it back down.
-    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015))
+    // slows it back down. Gauntlet curses can lurch it (zoneSpeedMult).
+    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * tide.zoneSpeedMult
+    // Needle sweep, with the curse multiplier (Racing Tide etc.).
+    const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult
 
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
@@ -914,7 +924,7 @@ export default function RaidCombat({
       if (critFreezeRef.current) { rafRef.current = requestAnimationFrame(tick); return }
       const frames = dt / 16.67
 
-      firePosRef.current += INDICATOR_SPEED * frames * fireDirRef.current
+      firePosRef.current += NEEDLE_SPEED * frames * fireDirRef.current
       if (firePosRef.current >= 1) { firePosRef.current = 1; fireDirRef.current = -1 }
       if (firePosRef.current <= 0) { firePosRef.current = 0; fireDirRef.current = 1 }
 
@@ -940,7 +950,7 @@ export default function RaidCombat({
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [subPhase, enemy.shipSpeed, totalNavigation])
+  }, [subPhase, enemy.shipSpeed, totalNavigation, tide.aimSpeedMult, tide.zoneSpeedMult])
 
   // ─── Enemy AI: pick next action from pattern ───────────────────────────────
 
@@ -3233,7 +3243,8 @@ export default function RaidCombat({
         {subPhase === 'aiming' ? (
           <AimBarInline
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
-            aimFogDensity={enemy.aimFogDensity}
+            // Enemy Mist Veil + any Gauntlet fog curse stack into one band.
+            aimFogDensity={Math.min(0.95, (enemy.aimFogDensity ?? 0) + tide.aimFog)}
             // During the freeze, show the width the shot was judged at —
             // Sharpshot is consumed at lock and the live width would
             // shrink the band mid-freeze, making the picture lie.
