@@ -444,15 +444,15 @@ export default function GauntletGame(props: GauntletGameProps) {
             />
           </div>
 
-          {/* Active perks — a glance at what you've already unlocked from the
-              Locker, so the upgrades feel present even when their effect is
-              silent out in the world. */}
+          {/* Active run perks — only the gauntlet-scoped upgrades that change a
+              descent. Global Ship & Shore unlocks (cannonball rack, etc.) live
+              out in the world, so listing them here would just confuse. */}
           {(() => {
-            const owned = GAUNTLET_UPGRADES.filter(u => props.gauntletUpgrades.includes(u.id))
+            const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && props.gauntletUpgrades.includes(u.id))
             if (owned.length === 0) return null
             return (
               <div style={{ marginTop: 18 }}>
-                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#7a8e8a', marginBottom: 7 }}>Active Perks · {owned.length}</p>
+                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#7a8e8a', marginBottom: 7 }}>Active Run Perks · {owned.length}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
                   {owned.map(u => (
                     <span key={u.id} title={u.description} className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${TEAL}dd`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 999, padding: '0.2rem 0.6rem' }}>
