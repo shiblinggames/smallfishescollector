@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth } from '@/lib/gauntlet'
-import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult, gauntletChestLuck } from '@/lib/gauntletUpgrades'
+import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 
 /** Mail the player for each depth-unlock milestone they cross this run. Deepest
@@ -250,8 +250,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   // tier's chance, only for cannons not yet owned, and never once the player
   // has forged them into the Grand Cannon.
   const ownedItems = (profile.raid_items as string[] | null) ?? []
-  // Treasure Sense (Run Upgrade) lifts the Davy-cannon chest drop odds.
-  const dropChance = Math.min(1, chestCannonDropChance(chest.tier) * gauntletChestLuck(upgrades))
+  const dropChance = chestCannonDropChance(chest.tier)
   const droppedItems: string[] = []
   if (!ownedItems.includes(DAVY_FORGE.result)) {
     for (const cannon of DAVY_FORGE.components) {

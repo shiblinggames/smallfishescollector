@@ -39,56 +39,16 @@ export interface GauntletUpgrade {
 
 export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   // ── Run Upgrades (scope 'gauntlet') — only touch Gauntlet runs. NO depth
-  //    gate: cost is the only ladder, so it's tiered by progression value —
-  //    economy boosts cheapest, meta/QoL in the middle, survivability (which
-  //    lets you go deeper and compound EVERYTHING) as the premium capstones.
-  //    Ordered cheap → expensive so the shop reads as a clean ladder. ────────
-  {
-    id: 'navigators_log',
-    name: "Navigator's Log",
-    description: 'Earn 20% more Nav XP every time you cash out a Gauntlet run.',
-    depthRequired: 0,
-    cost: 25,
-    scope: 'gauntlet',
-  },
-  {
-    id: 'salvagers_eye',
-    name: "Salvager's Eye",
-    description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
-    depthRequired: 0,
-    cost: 40,
-    scope: 'gauntlet',
-  },
-  {
-    id: 'treasure_sense',
-    name: 'Treasure Sense',
-    description: 'Better odds of a Davy cannon dropping from the chests you crack in the Gauntlet.',
-    depthRequired: 0,
-    cost: 45,
-    scope: 'gauntlet',
-  },
+  //    gate: cost is the only ladder, capped at 100. The boosts that bank MAIN-
+  //    GAME currency (Nav XP, doubloons) cost the most since that value carries
+  //    out of the Gauntlet; the run-only combat/QoL perks are cheaper. Ordered
+  //    cheap → expensive so the shop reads as a clean ladder. ────────────────
   {
     id: 'calm_before',
     name: 'Calm Before',
     description: "The Locker's curses take one depth longer to catch you.",
     depthRequired: 0,
-    cost: 55,
-    scope: 'gauntlet',
-  },
-  {
-    id: 'lucky_locker',
-    name: 'Lucky Locker',
-    description: 'Earn 50% more Fathoms from every dive, win or lose.',
-    depthRequired: 0,
-    cost: 70,
-    scope: 'gauntlet',
-  },
-  {
-    id: 'vigor',
-    name: 'Vigor',
-    description: 'Patch up 8% of your max HP each time you sink a ship in the Gauntlet.',
-    depthRequired: 0,
-    cost: 80,
+    cost: 30,
     scope: 'gauntlet',
   },
   {
@@ -96,7 +56,15 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Diving Bell',
     description: 'Start every Gauntlet run with 15% more max HP.',
     depthRequired: 0,
-    cost: 85,
+    cost: 45,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'vigor',
+    name: 'Vigor',
+    description: 'Patch up 8% of your max HP each time you sink a ship in the Gauntlet.',
+    depthRequired: 0,
+    cost: 55,
     scope: 'gauntlet',
   },
   {
@@ -104,13 +72,37 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Iron Hide',
     description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
     depthRequired: 0,
-    cost: 100,
+    cost: 65,
     scope: 'gauntlet',
   },
   {
     id: 'gunners_eye',
     name: "Gunner's Eye",
     description: 'Deal 10% more damage to every enemy for the whole Gauntlet run.',
+    depthRequired: 0,
+    cost: 65,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'lucky_locker',
+    name: 'Lucky Locker',
+    description: 'Earn 50% more Fathoms from every dive, win or lose.',
+    depthRequired: 0,
+    cost: 75,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'salvagers_eye',
+    name: "Salvager's Eye",
+    description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
+    depthRequired: 0,
+    cost: 90,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'navigators_log',
+    name: "Navigator's Log",
+    description: 'Earn 20% more Nav XP every time you cash out a Gauntlet run.',
     depthRequired: 0,
     cost: 100,
     scope: 'gauntlet',
@@ -228,11 +220,6 @@ export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): n
 /** Gunner's Eye: bonus damage % DEALT during Gauntlet runs (into runRaidMods). */
 export function gauntletDamageMod(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('gunners_eye') ? 10 : 0
-}
-
-/** Treasure Sense: multiplier on the Davy-cannon chest drop chance (cash-out). */
-export function gauntletChestLuck(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('treasure_sense') ? 1.5 : 1
 }
 
 /** Vigor: fraction of max HP restored after each enemy sunk in a run. */
