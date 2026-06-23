@@ -802,7 +802,11 @@ export default function RaidCombat({
         setFleeResult({ natural, success: true })
       } else {
         const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
-        const dmg = Math.max(1, Math.round(base * (1 - (mods.damageTakenPct ?? 0) / 100)))
+        // damageTakenPct convention (see crewEffects bulwark/soft_shell): positive
+        // = MORE damage, so the incoming-damage multiplier is 1 + pct/100 — same
+        // as the other hit paths. This was inverted here (1 - pct/100); harmless
+        // while the value is 0, wrong the moment anything sets it.
+        const dmg = Math.max(1, Math.round(base * (1 + (mods.damageTakenPct ?? 0) / 100)))
         const next = Math.max(0, playerHpRef.current - dmg)
         setPlayerHp(next)
         setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })

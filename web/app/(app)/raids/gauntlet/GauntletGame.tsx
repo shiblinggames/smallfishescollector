@@ -26,7 +26,7 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletCurseDelay } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletCurseDelay, gauntletDamageTakenMod } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -102,6 +102,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run; every
   // HP reference below uses this boosted ceiling rather than the raw stat.
   const hpMax = Math.round(props.playerHPMax * gauntletRunHpMult(props.gauntletUpgrades))
+  // Iron Hide (Run Upgrade) folds a damage-taken reduction into the combat mods
+  // (negative damageTakenPct = less damage; RaidCombat applies 1 + pct/100).
+  const runRaidMods = { ...props.raidMods, damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(props.gauntletUpgrades) }
 
   const [phase, setPhase] = useState<Phase>(props.available ? 'intro' : 'usedup')
   const [starting, setStarting] = useState(false)
@@ -1004,7 +1007,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onEnemyDefeated={handleEnemyDefeated}
             onPlayerDefeated={handlePlayerDefeated}
             onLeave={() => { resolveGauntletDeath(rollStateRef.current.cleared).finally(() => router.push('/expeditions')) }}
-            raidMods={props.raidMods}
+            raidMods={runRaidMods}
             tideEffects={activeTideEffects}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}

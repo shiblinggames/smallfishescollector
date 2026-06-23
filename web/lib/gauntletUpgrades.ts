@@ -73,6 +73,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     cost: 100,
     scope: 'gauntlet',
   },
+  {
+    id: 'iron_hide',
+    name: 'Iron Hide',
+    description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
+    depthRequired: 22,
+    cost: 130,
+    scope: 'gauntlet',
+  },
   // ── Ship & Shore (scope 'account'/'world') — power for the wider game ───────
   {
     id: 'safe_voyages',
@@ -130,4 +138,11 @@ export function gauntletRunHpMult(unlocked: string[] | null | undefined): number
 /** Calm Before: how many depths later the Locker's curses begin. */
 export function gauntletCurseDelay(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('calm_before') ? 1 : 0
+}
+
+/** Iron Hide: damageTakenPct mod folded into the run's RaidMods. NEGATIVE =
+ *  less damage (matches the crewEffects convention; RaidCombat applies it as
+ *  1 + pct/100, so -10 → ×0.9 incoming). */
+export function gauntletDamageTakenMod(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('iron_hide') ? -10 : 0
 }
