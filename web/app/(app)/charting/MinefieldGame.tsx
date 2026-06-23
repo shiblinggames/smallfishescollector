@@ -135,6 +135,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
         handleWin(r.pointsWon, r.newPuzzlePoints)
         return 'clear'
       }
+      haptic(12) // soft confirm when open water is swept
       return 'ok'
     } finally {
       busy.current = false
@@ -181,12 +182,16 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
 
   // ── Touch/pointer press logic: tap vs long-press vs scroll ──────────────
   const press = useRef<{ i: number; x: number; y: number; t: ReturnType<typeof setTimeout> | null; moved: boolean; long: boolean } | null>(null)
+  // Which tile is held down right now — drives the pressed-in visual.
+  const [pressedIdx, setPressedIdx] = useState<number | null>(null)
 
   function onPointerDown(e: React.PointerEvent, i: number) {
     if (cleared) return
+    setPressedIdx(i)
+    haptic(7) // immediate tactile tick on press
     const t = setTimeout(() => {
       const p = press.current
-      if (p && !p.moved) { p.long = true; doFlag(i); haptic(18) }
+      if (p && !p.moved) { p.long = true; doFlag(i); haptic([0, 14, 30, 18]) }
     }, 330)
     press.current = { i, x: e.clientX, y: e.clientY, t, moved: false, long: false }
   }
@@ -195,12 +200,14 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
     if (!p || p.moved) return
     if (Math.abs(e.clientX - p.x) > 12 || Math.abs(e.clientY - p.y) > 12) {
       p.moved = true
+      setPressedIdx(null) // started scrolling — release the press visual
       if (p.t) { clearTimeout(p.t); p.t = null }
     }
   }
   function onPointerUp(i: number) {
     const p = press.current
     press.current = null
+    setPressedIdx(null)
     if (!p) return
     if (p.t) clearTimeout(p.t)
     if (p.moved || p.long) return // scrolled or already flagged via long-press
@@ -210,6 +217,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
     const p = press.current
     if (p?.t) clearTimeout(p.t)
     press.current = null
+    setPressedIdx(null)
   }
 
   const nextTier = useMemo(() => nextDenTier(puzzlePoints), [puzzlePoints])
@@ -273,7 +281,7 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
         transition={{ duration: 0.45 }}
         style={{
           width: boardW, margin: '0 auto',
-          display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 3,
+          display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 4,
           padding: 7, borderRadius: 12,
           background: 'linear-gradient(180deg, #0c2030 0%, #07151f 100%)',
           border: `1.5px solid ${boom ? '#c0392b' : 'rgba(196,169,106,0.34)'}`,
@@ -287,6 +295,15 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
           const adj = open ? adjMap.get(i)! : 0
           const isFlag = flagged.has(i)
           const isMine = mineAt === i
+          const pressed = pressedIdx === i && !cleared
+          // Unrevealed = a raised brass-and-steel deck plate (clearly a button).
+          // Pressed = it sinks in. Revealed = recessed chart paper / open water.
+          const unrevealedBg = pressed
+            ? 'linear-gradient(180deg, #1b3949 0%, #102330 100%)'
+            : 'linear-gradient(180deg, #3f677e 0%, #1d3a4c 55%, #16303f 100%)'
+          const unrevealedShadow = pressed
+            ? 'inset 0 3px 7px rgba(0,0,0,0.6)'
+            : 'inset 0 2px 0 rgba(176,214,240,0.32), inset 0 -3px 6px rgba(0,0,0,0.5), 0 2px 3px rgba(0,0,0,0.45)'
           return (
             <button
               key={i}
@@ -296,23 +313,24 @@ export default function Minefield({ initial }: { initial: MinefieldState }) {
               onPointerCancel={onPointerCancel}
               disabled={cleared}
               style={{
-                aspectRatio: '1 / 1', borderRadius: 5, padding: 0,
+                aspectRatio: '1 / 1', borderRadius: 6, padding: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: 'var(--font-cinzel), serif', fontWeight: 800,
                 fontSize: 'clamp(0.72rem, 3.6vw, 1.1rem)', lineHeight: 1,
                 cursor: cleared ? 'default' : 'pointer',
                 WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none',
-                border: open ? '1px solid rgba(120,170,210,0.14)' : '1px solid rgba(150,195,235,0.22)',
+                border: open ? '1px solid rgba(120,170,210,0.12)' : `1px solid ${pressed ? 'rgba(120,170,210,0.3)' : 'rgba(170,212,245,0.4)'}`,
                 background: isMine
                   ? 'radial-gradient(circle at 50% 50%, #ff7a59 0%, #c0392b 55%, #6a1a12 100%)'
                   : open
-                    ? (adj === 0 ? 'rgba(30,70,88,0.5)' : 'linear-gradient(180deg, #efe3c4 0%, #e3d3ad 100%)')
-                    : 'linear-gradient(180deg, #25485c 0%, #163040 100%)',
-                color: open ? (NUM_COLOR[adj] ?? '#1c140a') : '#cfe6f5',
+                    ? (adj === 0 ? 'rgba(20,52,66,0.55)' : 'linear-gradient(180deg, #efe3c4 0%, #e3d3ad 100%)')
+                    : unrevealedBg,
+                color: open ? (NUM_COLOR[adj] ?? '#1c140a') : '#dcefff',
                 boxShadow: open
-                  ? (adj === 0 ? 'inset 0 2px 5px rgba(0,0,0,0.4)' : 'inset 0 1px 0 rgba(255,255,255,0.5)')
-                  : 'inset 0 1.5px 0 rgba(255,255,255,0.14), inset 0 -2px 4px rgba(0,0,0,0.35)',
-                transition: 'transform 0.05s',
+                  ? (adj === 0 ? 'inset 0 2px 6px rgba(0,0,0,0.5)' : 'inset 0 1px 0 rgba(255,255,255,0.5)')
+                  : unrevealedShadow,
+                transform: pressed ? 'scale(0.9)' : 'scale(1)',
+                transition: 'transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease',
               }}
             >
               {isMine ? <MineIcon size={20} /> : open ? (adj > 0 ? adj : '') : isFlag ? <FlagIcon size={17} /> : ''}
