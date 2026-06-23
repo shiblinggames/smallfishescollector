@@ -26,6 +26,8 @@ import {
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen } from './actions'
 import { GAUNTLET_UPGRADES, bonusChargeSlots } from '@/lib/gauntletUpgrades'
+import { getSpecialItem } from '@/lib/specialItems'
+import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
@@ -1531,28 +1533,105 @@ function CannonballRackDemo() {
 }
 
 // ── Locker Upgrades ───────────────────────────────────────────────────────────
-// Permanent perks bought with hauled-up doubloons, each gated by how deep you've
-// gone. Server-validated on claim (depth + cost + no-double); the panel just
-// reflects state and disables what you can't take yet.
+// Permanent perks bought with Fathoms, each gated by how deep you've gone. Split
+// into two counters: "Run Upgrades" (scope 'gauntlet' — sharpen the descent) and
+// "Hauled to Shore" (scope account/world + the Auto Catcher special item — power
+// for the wider game). Server-validated on claim (depth + cost + prereq + no
+// double); the panel just reflects state and disables what you can't take yet.
+type LockerState = { deepest: number; fathoms: number; owned: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }
+/** A purchasable row in the Locker — either a Gauntlet upgrade or a special
+ *  item (the Auto Catcher) — normalized so both render through one card. */
+type ShopEntry = {
+  id: string; name: string; description: string; depthRequired: number; cost: number
+  scope: string; owned: boolean; lockNote: string | null; demo: boolean; special: boolean
+}
+
 function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onClaimed?: (owned: string[]) => void }) {
-  const [state, setState] = useState<{ deepest: number; fathoms: number; owned: string[] } | null>(null)
+  const [state, setState] = useState<LockerState | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => { getGauntletUpgradeState().then(setState) }, [])
 
-  async function claim(id: string) {
+  async function claim(id: string, special: boolean) {
     if (claiming) return
     setClaiming(id); setErr(null)
-    const res = await claimGauntletUpgrade(id)
-    setClaiming(null)
-    if ('error' in res) { setErr(res.error); return }
-    setState(s => (s ? { ...s, fathoms: res.fathoms, owned: res.owned } : s))
-    onClaimed?.(res.owned)
-    vibrate([0, 30, 50, 40])
+    if (special) {
+      // Special items (Auto Catcher) are bought via buySpecialItem, which sets
+      // its own profile column — refetch to pick up the new owned + Fathoms.
+      const res = await buySpecialItem(id)
+      setClaiming(null)
+      if ('error' in res) { setErr(res.error); return }
+      vibrate([0, 30, 50, 40])
+      const fresh = await getGauntletUpgradeState(); setState(fresh)
+    } else {
+      const res = await claimGauntletUpgrade(id)
+      setClaiming(null)
+      if ('error' in res) { setErr(res.error); return }
+      setState(s => (s ? { ...s, fathoms: res.fathoms, owned: res.owned } : s))
+      onClaimed?.(res.owned)
+      vibrate([0, 30, 50, 40])
+    }
   }
 
   const SCOPE_LABEL: Record<string, string> = { account: 'Every raid', world: 'Out in the world', gauntlet: 'Gauntlet runs' }
+
+  // One renderer for both kinds of row.
+  function Card({ e }: { e: ShopEntry }) {
+    if (!state) return null
+    const depthMet = state.deepest >= e.depthRequired
+    const canAfford = state.fathoms >= e.cost
+    const busy = claiming === e.id
+    const prereqLocked = !!e.lockNote && !e.owned
+    const claimable = !e.owned && depthMet && canAfford && !prereqLocked && !busy
+    return (
+      <div style={{ borderRadius: 14, padding: '0.85rem 0.9rem', background: e.owned ? `${TEAL}10` : 'rgba(255,255,255,0.03)', border: `1px solid ${e.owned ? `${TEAL}45` : 'rgba(255,255,255,0.1)'}` }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8' }}>{e.name}</p>
+          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            {depthMet ? `Depth ${e.depthRequired} ✓` : `Depth ${state.deepest}/${e.depthRequired}`}
+          </span>
+        </div>
+        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'inline-block', marginTop: 6, fontSize: '0.46rem', color: `${TEAL}cc`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 5, padding: '0.12rem 0.4rem' }}>{SCOPE_LABEL[e.scope]}</span>
+        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.45, marginTop: 6 }}>{e.description}</p>
+        {e.demo && <CannonballRackDemo />}
+        {prereqLocked && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#caa05a', marginTop: 7 }}>{e.lockNote}</p>}
+        <button
+          type="button"
+          onClick={claimable ? () => claim(e.id, e.special) : undefined}
+          disabled={!claimable}
+          className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
+          style={{
+            marginTop: 10, width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.74rem',
+            cursor: claimable ? 'pointer' : 'default',
+            color: e.owned ? TEAL : claimable ? TEAL : '#6a6764',
+            background: e.owned ? `${TEAL}1a` : claimable ? `${TEAL}1c` : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${e.owned ? `${TEAL}55` : claimable ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}`,
+          }}
+        >
+          {busy ? 'Claiming…'
+            : e.owned ? 'Unlocked ✓'
+            : !depthMet ? `Reach Depth ${e.depthRequired}`
+            : prereqLocked ? 'Auto Caster needed'
+            : !canAfford ? `Need ${fmt(e.cost)} Fathoms`
+            : `Claim · ${fmt(e.cost)} Fathoms`}
+        </button>
+      </div>
+    )
+  }
+
+  function Section({ title, blurb, entries }: { title: string; blurb: string; entries: ShopEntry[] }) {
+    if (entries.length === 0) return null
+    return (
+      <div style={{ marginTop: 18 }}>
+        <p className="font-cinzel font-800" style={{ fontSize: '1.02rem', color: TEAL, lineHeight: 1.1 }}>{title}</p>
+        <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 2, marginBottom: 11, lineHeight: 1.4 }}>{blurb}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {entries.map(e => <Card key={e.id} e={e} />)}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
@@ -1569,60 +1648,41 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
           </button>
         </div>
         <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
-          Permanent perks bought with Fathoms — earned by descending, banked whether you cash out or sink. Reach the depth, then pay the toll.
+          Everything here is bought with Fathoms — earned by descending, banked whether you cash out or sink. Two counters: one sharpens the descent, one arms the rest of your game.
         </p>
 
         {state === null ? (
           <p className="font-karla" style={{ fontSize: '0.8rem', color: '#7a766e', textAlign: 'center', padding: '2rem 0' }}>Reading the ledger…</p>
-        ) : (
+        ) : (() => {
+            const upgrades: ShopEntry[] = GAUNTLET_UPGRADES.map(u => ({
+              id: u.id, name: u.name, description: u.description, depthRequired: u.depthRequired,
+              cost: u.cost, scope: u.scope, owned: state.owned.includes(u.id), lockNote: null,
+              demo: u.id === 'cannonball_rack', special: false,
+            }))
+            const ac = getSpecialItem('auto_catcher')
+            const autoCatcher: ShopEntry | null = ac ? {
+              id: 'auto_catcher', name: ac.name, description: ac.description,
+              depthRequired: ac.requiresGauntletDepth ?? 5, cost: ac.costFathoms ?? 0,
+              scope: 'world', owned: state.hasAutoCatcher,
+              lockNote: state.hasAutoCaster ? null : 'Buy the Auto Caster in the fishing shop first.',
+              demo: false, special: true,
+            } : null
+            const runShop = upgrades.filter(e => e.scope === 'gauntlet')
+            const shoreShop = [...upgrades.filter(e => e.scope !== 'gauntlet'), ...(autoCatcher ? [autoCatcher] : [])]
+            return (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '12px 0', padding: '0.4rem 0', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '12px 0 0', padding: '0.4rem 0', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#8a8480' }}>Your Fathoms</span>
               <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: TEAL }}>{fmt(state.fathoms)} Fathoms</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {GAUNTLET_UPGRADES.map(u => {
-                const owned = state.owned.includes(u.id)
-                const depthMet = state.deepest >= u.depthRequired
-                const canAfford = state.fathoms >= u.cost
-                const busy = claiming === u.id
-                return (
-                  <div key={u.id} style={{ borderRadius: 14, padding: '0.85rem 0.9rem', background: owned ? `${TEAL}10` : 'rgba(255,255,255,0.03)', border: `1px solid ${owned ? `${TEAL}45` : 'rgba(255,255,255,0.1)'}` }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8' }}>{u.name}</p>
-                      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                        {depthMet ? `Depth ${u.depthRequired} ✓` : `Depth ${state.deepest}/${u.depthRequired}`}
-                      </span>
-                    </div>
-                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'inline-block', marginTop: 6, fontSize: '0.46rem', color: `${TEAL}cc`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 5, padding: '0.12rem 0.4rem' }}>{SCOPE_LABEL[u.scope]}</span>
-                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.45, marginTop: 6 }}>{u.description}</p>
-                    {u.id === 'cannonball_rack' && <CannonballRackDemo />}
-                    <button
-                      type="button"
-                      onClick={(!owned && depthMet && canAfford && !busy) ? () => claim(u.id) : undefined}
-                      disabled={owned || !depthMet || !canAfford || busy}
-                      className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
-                      style={{
-                        marginTop: 10, width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.74rem',
-                        cursor: (!owned && depthMet && canAfford && !busy) ? 'pointer' : 'default',
-                        color: owned ? TEAL : (depthMet && canAfford) ? TEAL : '#6a6764',
-                        background: owned ? `${TEAL}1a` : (depthMet && canAfford) ? `${TEAL}1c` : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${owned ? `${TEAL}55` : (depthMet && canAfford) ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}`,
-                      }}
-                    >
-                      {busy ? 'Claiming…'
-                        : owned ? 'Unlocked ✓'
-                        : !depthMet ? `Reach Depth ${u.depthRequired}`
-                        : !canAfford ? `Need ${fmt(u.cost)} Fathoms`
-                        : `Claim · ${fmt(u.cost)} Fathoms`}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+
+            <Section title="Run Upgrades" blurb="Perks that sharpen the descent itself — they only matter inside the Gauntlet." entries={runShop} />
+            <Section title="Hauled to Shore" blurb="Permanent power you carry topside — into raids, voyages, and fishing." entries={shoreShop} />
+
             {err && <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#fca5a5', textAlign: 'center', marginTop: 12 }}>{err}</p>}
           </>
-        )}
+            )
+          })()}
       </motion.div>
     </div>
   )

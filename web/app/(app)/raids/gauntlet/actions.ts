@@ -44,20 +44,22 @@ async function notifyDepthUnlocks(
 
 /** State for the Locker Upgrades panel: the player's deepest run, Fathoms purse,
  *  and which upgrades they've already claimed. */
-export async function getGauntletUpgradeState(): Promise<{ deepest: number; fathoms: number; owned: string[] }> {
+export async function getGauntletUpgradeState(): Promise<{ deepest: number; fathoms: number; owned: string[]; hasAutoCatcher: boolean; hasAutoCaster: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { deepest: 0, fathoms: 0, owned: [] }
+  if (!user) return { deepest: 0, fathoms: 0, owned: [], hasAutoCatcher: false, hasAutoCaster: false }
   const admin = createAdminClient()
   const { data } = await admin
     .from('profiles')
-    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades')
+    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades, has_auto_catcher, has_auto_caster')
     .eq('id', user.id)
     .single()
   return {
     deepest: (data?.gauntlet_deepest as number | null) ?? 0,
     fathoms: (data?.gauntlet_fathoms as number | null) ?? 0,
     owned: (data?.gauntlet_upgrades as string[] | null) ?? [],
+    hasAutoCatcher: data?.has_auto_catcher === true,
+    hasAutoCaster: data?.has_auto_caster === true,
   }
 }
 

@@ -2085,12 +2085,14 @@ export default function GearScreen({
                         : item.id === 'perfected_sigil' ? hasPerfectedSigil
                         : false
                       const isEquipped = equippedSpecial === item.id
-                      // Gate: Auto Catcher needs the Auto Caster owned + a deep
-                      // enough Gauntlet run before it can be bought.
+                      // The Auto Catcher is no longer bought here — it's a Shore
+                      // unlock in the Davy Jones Gauntlet's Locker (paid in
+                      // Fathoms). This card just shows it + points the way; once
+                      // owned it equips here like any special item.
                       const lockReason = !owned && item.id === 'auto_catcher'
-                        ? (!hasAutoCaster ? 'Requires the Auto Caster'
-                          : gauntletDeepest < (item.requiresGauntletDepth ?? 0) ? `Reach depth ${item.requiresGauntletDepth} in Davy Jones' Gauntlet`
-                          : null)
+                        ? (!hasAutoCaster
+                            ? 'Get the Auto Caster first, then unlock this in the Gauntlet’s Locker'
+                            : 'Unlock in Davy Jones’ Gauntlet — the Locker')
                         : null
                       return (
                         <SpecialItemRow
