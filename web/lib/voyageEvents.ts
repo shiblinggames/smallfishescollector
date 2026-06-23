@@ -243,7 +243,7 @@ function rollLureDrop(route: VoyageRoute): 'luminous' | 'golden' | null {
   return Math.random() < GOLDEN_SHARE ? 'golden' : 'luminous'
 }
 
-export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open'): VoyageResult {
+export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: VoyageRoute = 'open', noCrewRisk = false): VoyageResult {
   const rc = ROUTE_CONFIGS[route]
   const stats = computeTotalCrewStats(crew)
   const { power, dodge, fortune } = stats
@@ -277,9 +277,11 @@ export function generateVoyageEvents(crew: CrewCard[], shipTier: number, route: 
   // first failing encounter or danger event we generate. If the voyage
   // is clean enough that no fail event ever fires, we append a forced
   // casualty event at the end so the planned loss still lands.
+  // Safe Passage (Locker Upgrade) zeroes the risk outright — no victim is ever
+  // picked, so no casualty event is generated and the whole crew comes home.
   const lossEligibleCrew = crew.slice(1)
   const lossChance = effectiveCrewLossChance(route, fortune)
-  const lossVictim = lossEligibleCrew.length > 0 && Math.random() < lossChance
+  const lossVictim = !noCrewRisk && lossEligibleCrew.length > 0 && Math.random() < lossChance
     ? pick(lossEligibleCrew)
     : null
   let lossApplied = false

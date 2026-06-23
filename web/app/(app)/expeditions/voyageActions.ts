@@ -14,6 +14,7 @@ import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
+import { hasSafeVoyages } from '@/lib/gauntletUpgrades'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -124,7 +125,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   // Load profile for ship tier and expedition level
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, expedition_xp')
+    .select('ship_tier, expedition_xp, gauntlet_upgrades')
     .eq('id', user.id)
     .single()
 
@@ -177,7 +178,9 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
     }
   })
 
-  const result = generateVoyageEvents(crew, shipTier, route)
+  // Safe Passage (Davy Jones Gauntlet Locker Upgrade) removes all crew-loss risk.
+  const safeVoyages = hasSafeVoyages((profile.gauntlet_upgrades as string[] | null) ?? [])
+  const result = generateVoyageEvents(crew, shipTier, route, safeVoyages)
   const totalDoubloons = Math.round(result.totalDoubloons * (1 + resolved.voyage.doubloonPct / 100))
 
   const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)

@@ -54,6 +54,7 @@ export default async function GauntletPage() {
           raidMods={stats.raidMods}
           bonusChargeSlots={stats.bonusChargeSlots}
           deepest={daily.deepest}
+          fathoms={daily.fathoms}
           available={daily.available}
           nextAt={daily.nextAt}
           hasSeenIntro={profile?.has_seen_gauntlet_intro === true}

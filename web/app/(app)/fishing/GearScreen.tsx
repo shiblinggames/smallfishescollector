@@ -329,13 +329,18 @@ function SpecialItemRow({
   onRequestBuy: () => void
 }) {
   const locked = !owned && !!lockReason
+  // An item is "for sale" if it carries a price in either currency.
+  const isFathoms = typeof item.costFathoms === 'number'
+  const price = item.shopCost ?? item.costFathoms
+  const forSale = price != null
+  const priceLabel = isFathoms ? `${price} Fathoms` : `${(price ?? 0).toLocaleString()}`
   return (
     <div style={{
       background: isEquipped ? `${item.color}10` : 'rgba(255,255,255,0.03)',
       border: `1px solid ${isEquipped ? item.color + '50' : owned ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'}`,
       borderRadius: 14,
       padding: '0.75rem 0.9rem',
-      opacity: owned || item.shopCost ? 1 : 0.5,
+      opacity: owned || forSale ? 1 : 0.5,
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: owned ? 6 : 4 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1 }}>
@@ -356,10 +361,10 @@ function SpecialItemRow({
           )}
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: owned ? item.color : item.shopCost ? '#a09890' : '#4a4845', lineHeight: 1 }}>{item.name}</p>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: owned ? item.color : forSale ? '#a09890' : '#4a4845', lineHeight: 1 }}>{item.name}</p>
               <span className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: `${item.color}88`, background: `${item.color}14`, borderRadius: 4, padding: '0.08rem 0.3rem' }}>{item.effectLabel}</span>
             </div>
-            <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: owned ? '#7a7268' : item.shopCost ? '#6a6460' : '#4a4845', lineHeight: 1.45 }}>{item.description}</p>
+            <p className="font-karla font-300" style={{ fontSize: '0.68rem', color: owned ? '#7a7268' : forSale ? '#6a6460' : '#4a4845', lineHeight: 1.45 }}>{item.description}</p>
           </div>
         </div>
         {owned && (
@@ -382,7 +387,7 @@ function SpecialItemRow({
             {isEquipped ? 'Unequip' : 'Equip'}
           </button>
         )}
-        {!owned && item.shopCost && !locked && (
+        {!owned && forSale && !locked && (
           <button
             onClick={onRequestBuy}
             style={{
@@ -397,13 +402,13 @@ function SpecialItemRow({
             className="font-karla font-700 uppercase tracking-[0.08em]"
           >
             <span style={{ fontSize: '0.52rem', color: item.color, display: 'block', lineHeight: 1.2 }}>Buy</span>
-            <span style={{ fontSize: '0.58rem', color: '#f0c040', display: 'block', lineHeight: 1.3 }}>{item.shopCost.toLocaleString()}</span>
+            <span style={{ fontSize: '0.58rem', color: isFathoms ? item.color : '#f0c040', display: 'block', lineHeight: 1.3 }}>{priceLabel}</span>
           </button>
         )}
         {locked && (
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, padding: '0.3rem 0.55rem', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8f877a" strokeWidth="2.4" strokeLinecap="round"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-            <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#9a907c' }}>{item.shopCost?.toLocaleString()} ⟡</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: '#9a907c' }}>{isFathoms ? `${price} Fathoms` : `${(price ?? 0).toLocaleString()} ⟡`}</span>
           </div>
         )}
       </div>
@@ -418,7 +423,7 @@ function SpecialItemRow({
           <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: tideTurnerSkipsLeft > 0 ? item.color : '#4a4845', lineHeight: 1 }}>{tideTurnerSkipsLeft} / 3</p>
         </div>
       )}
-      {!owned && !item.shopCost && (
+      {!owned && !forSale && (
         <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: '#3a3835', marginTop: 2 }}>
           From: {item.obtainedFrom}
         </p>
@@ -807,6 +812,10 @@ export default function GearScreen({
     /** Reason the CTA is locked beyond price (e.g. a level gate) — shown on
      *  the disabled CTA in place of "Need X more". */
     lockedNote?: string
+    /** Currency the cost is denominated in. Defaults to doubloons (⟡). Fathoms
+     *  (the Gauntlet currency) skip the local doubloon-affordability check —
+     *  the server enforces the balance and returns its own error. */
+    currency?: 'doubloons' | 'fathoms'
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
@@ -2093,10 +2102,13 @@ export default function GearScreen({
                           lockReason={lockReason}
                           onEquip={() => onEquipSpecial(isEquipped ? null : item.id)}
                           onRequestBuy={() => {
-                            if (!item.shopCost) return
+                            // Price in either currency: doubloons (shopCost) or Fathoms.
+                            const cost = item.shopCost ?? item.costFathoms
+                            if (cost == null) return
+                            const fathoms = typeof item.costFathoms === 'number'
                             setPendingPurchase({
-                              name: item.name, color: item.color, cost: item.shopCost,
-                              onConfirm: async () => { flashPurchase(item.name, item.color, item.shopCost ?? 0, 'special'); await onBuySpecialItem(item.id) },
+                              name: item.name, color: item.color, cost, currency: fathoms ? 'fathoms' : 'doubloons',
+                              onConfirm: async () => { if (!fathoms) flashPurchase(item.name, item.color, cost, 'special'); await onBuySpecialItem(item.id) },
                             })
                           }}
                         />
@@ -2728,13 +2740,14 @@ export default function GearScreen({
                 const isSell = pendingPurchase.kind === 'sell'
                 const unaffordable = !isSell && pendingPurchase.affordable === false
                 const need = Math.max(0, pendingPurchase.cost - doubloons)
+                const unit = pendingPurchase.currency === 'fathoms' ? ' Fathoms' : ' ⟡'
                 const ctaBg     = isSell ? 'rgba(196,169,106,0.18)' : 'rgba(96,165,250,0.16)'
                 const ctaBorder = isSell ? 'rgba(196,169,106,0.6)'  : 'rgba(96,165,250,0.55)'
                 const ctaColor  = isSell ? '#f0d695'                : '#cfe2ff'
                 const verbing   = isSell ? 'Selling…' : 'Buying…'
                 const verbLabel = isSell
-                  ? `Sell for +${pendingPurchase.cost.toLocaleString()} ⟡`
-                  : `Buy for ${pendingPurchase.cost.toLocaleString()} ⟡`
+                  ? `Sell for +${pendingPurchase.cost.toLocaleString()}${unit}`
+                  : `Buy for ${pendingPurchase.cost.toLocaleString()}${unit}`
                 return (
                   <>
                     {pendingPurchase.details ? (

@@ -91,6 +91,14 @@ export function maxPotForDepth(depth: number): number {
   return total
 }
 
+/** Fathoms — the Gauntlet's own meta-currency — earned for reaching a given
+ *  depth on a run. Banked whether you cash out OR sink, so it rewards how deep
+ *  you got, not whether you played it safe. One Fathom per depth cleared. Spent
+ *  on permanent Locker Upgrades + the Auto Catcher. */
+export function fathomsForDepth(depth: number): number {
+  return Math.max(0, Math.floor(depth))
+}
+
 /** Honest floor estimate of the pot a run reaching `depth` banks: every
  *  cleared round at its non-boss contribution. Real runs land higher (bosses
  *  multiply), so this reads as a conservative "about" for the intro preview. */

@@ -8,7 +8,11 @@ export type SpecialItemDef = {
   description: string
   effectLabel: string
   obtainedFrom?: string
+  /** Doubloon price (the default shop currency). */
   shopCost?: number
+  /** Price in Fathoms — the Davy Jones Gauntlet currency. When set, the item is
+   *  bought with Fathoms instead of doubloons (mutually exclusive with shopCost). */
+  costFathoms?: number
   /** Other special item that must be owned before this one can be bought. */
   requiresItem?: SpecialItemId
   /** Minimum Davy Jones' Gauntlet depth required to unlock the purchase. */
@@ -50,7 +54,7 @@ export const SPECIAL_ITEMS: SpecialItemDef[] = [
     image: '/autocaster.png',
     description: 'Everything the Auto Caster does, plus it reels in common and uncommon fish on its own — the needle lands true on the catch band, no dial needed. Rarer fish still wait for your hand. Stops when your hold is full or your bait runs out.',
     effectLabel: 'Auto cast + catch commons & uncommons',
-    shopCost: 25000,
+    costFathoms: 30,
     requiresItem: 'auto_caster',
     requiresGauntletDepth: 5,
   },

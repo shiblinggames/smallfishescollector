@@ -1445,11 +1445,13 @@ export async function buySpecialItem(itemId: string): Promise<{ ok: true } | { e
   if (!column) return { error: 'Unknown item' }
 
   const def = getSpecialItem(itemId)
-  if (!def?.shopCost) return { error: 'Not for sale' }
+  // For sale if it has a price in either currency.
+  const usesFathoms = typeof def?.costFathoms === 'number'
+  if (!def || (!def.shopCost && !usesFathoms)) return { error: 'Not for sale' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('doubloons, has_auto_caster, has_auto_catcher, gauntlet_deepest')
+    .select('doubloons, gauntlet_fathoms, has_auto_caster, has_auto_catcher, gauntlet_deepest')
     .eq('id', user.id).single()
   if (!profile) return { error: 'Profile not found' }
   const owned: Record<string, boolean> = {
@@ -1465,9 +1467,15 @@ export async function buySpecialItem(itemId: string): Promise<{ ok: true } | { e
   if (def.requiresGauntletDepth && ((profile.gauntlet_deepest as number | null) ?? 0) < def.requiresGauntletDepth) {
     return { error: `Reach depth ${def.requiresGauntletDepth} in Davy Jones' Gauntlet first` }
   }
-  if ((profile.doubloons ?? 0) < def.shopCost) return { error: 'Not enough doubloons' }
 
-  await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) - def.shopCost, [column]: true }).eq('id', user.id)
+  if (usesFathoms) {
+    const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0
+    if (fathoms < def.costFathoms!) return { error: 'Not enough Fathoms' }
+    await admin.from('profiles').update({ gauntlet_fathoms: fathoms - def.costFathoms!, [column]: true }).eq('id', user.id)
+  } else {
+    if ((profile.doubloons ?? 0) < def.shopCost!) return { error: 'Not enough doubloons' }
+    await admin.from('profiles').update({ doubloons: (profile.doubloons ?? 0) - def.shopCost!, [column]: true }).eq('id', user.id)
+  }
   return { ok: true }
 }
 

@@ -79,6 +79,8 @@ export interface GauntletGameProps {
   /** Extra player cannonball slots from claimed Locker Upgrades. */
   bonusChargeSlots: number
   deepest: number
+  /** Fathoms balance — the Gauntlet's meta-currency, spent in the Locker. */
+  fathoms: number
   available: boolean
   /** ISO time the next run unlocks (cooldown), or null when available now. */
   nextAt: string | null
@@ -126,6 +128,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   >(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
+  // Fathoms salvaged from a sunk run (the meta-currency still pays for the dive).
+  const [deathFathoms, setDeathFathoms] = useState(0)
   // Locker Upgrades panel (permanent, depth-gated, doubloon-bought perks).
   const [upgradesOpen, setUpgradesOpen] = useState(false)
   const [haulOpen, setHaulOpen] = useState(false)
@@ -286,7 +290,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   function handlePlayerDefeated() {
     if (resolving) return
     setResolving(true)
-    resolveGauntletDeath(rollStateRef.current.cleared).finally(() => {
+    resolveGauntletDeath(rollStateRef.current.cleared).then(res => {
+      if (res?.ok) setDeathFathoms(res.earnedFathoms)
+    }).finally(() => {
       setResolving(false)
       setPhase('dead')
     })
@@ -358,6 +364,16 @@ export default function GauntletGame(props: GauntletGameProps) {
             <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD, lineHeight: 1 }}>
               {props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}
             </span>
+          </div>
+
+          {/* Fathoms purse — earned by descending, spent in the Locker. */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8,
+            padding: '0.38rem 0.95rem', borderRadius: 999,
+            background: `${TEAL}0e`, border: `1px solid ${TEAL}33`,
+          }}>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.18em', color: '#8aa39e' }}>Fathoms</span>
+            <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: TEAL, lineHeight: 1 }}>{fmt(props.fathoms)}</span>
           </div>
 
           {/* The name to beat — #1 deepest cashed-out descender of all. */}
@@ -555,8 +571,14 @@ export default function GauntletGame(props: GauntletGameProps) {
             ) : (
               <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a766e' }}>Deepest run: depth {best}</p>
             )}
+            {deathFathoms > 0 && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '0.36rem 0.85rem', borderRadius: 999, background: `${TEAL}0e`, border: `1px solid ${TEAL}3a` }}>
+                <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8aa39e' }}>Salvaged</span>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color: TEAL }}>+{fmt(deathFathoms)} Fathoms</span>
+              </div>
+            )}
             <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginTop: 8, lineHeight: 1.45 }}>
-              The pot is lost, but how deep you reached is not. Any depth unlocks you tore loose are yours to keep.
+              The pot is lost, but how deep you reached is not. The Fathoms you earned and any depth unlocks you tore loose are yours to keep.
             </p>
           </motion.div>
 
@@ -1205,6 +1227,7 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
               <RewardLine label="Doubloons" to={r.bankedDoubloons} suffix=" ⟡" color={GOLD} delay={0.2} run={counting} />
               <RewardLine label="Nav XP" to={r.bankedXp} color="#4ade80" delay={0.32} run={counting} />
               {r.gems > 0 && <RewardLine label="Gems" to={r.gems} suffix=" ◆" color="#a78bfa" delay={0.44} run={counting} />}
+              {r.earnedFathoms > 0 && <RewardLine label="Fathoms" to={r.earnedFathoms} suffix=" Fathoms" color={TEAL} delay={0.56} run={counting} />}
             </div>
 
             {/* Nav level + XP bar — the banked Nav XP flows into the bar as the
@@ -1512,7 +1535,7 @@ function CannonballRackDemo() {
 // gone. Server-validated on claim (depth + cost + no-double); the panel just
 // reflects state and disables what you can't take yet.
 function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onClaimed?: (owned: string[]) => void }) {
-  const [state, setState] = useState<{ deepest: number; doubloons: number; owned: string[] } | null>(null)
+  const [state, setState] = useState<{ deepest: number; fathoms: number; owned: string[] } | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
@@ -1524,11 +1547,12 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
     const res = await claimGauntletUpgrade(id)
     setClaiming(null)
     if ('error' in res) { setErr(res.error); return }
-    setState(s => (s ? { ...s, doubloons: res.doubloons, owned: res.owned } : s))
+    setState(s => (s ? { ...s, fathoms: res.fathoms, owned: res.owned } : s))
     onClaimed?.(res.owned)
     vibrate([0, 30, 50, 40])
-    window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
   }
+
+  const SCOPE_LABEL: Record<string, string> = { account: 'Every raid', world: 'Out in the world', gauntlet: 'Gauntlet runs' }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
@@ -1545,7 +1569,7 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
           </button>
         </div>
         <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
-          Permanent perks. Reach the depth in the Gauntlet, then pay the toll in doubloons.
+          Permanent perks bought with Fathoms — earned by descending, banked whether you cash out or sink. Reach the depth, then pay the toll.
         </p>
 
         {state === null ? (
@@ -1553,16 +1577,15 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '12px 0', padding: '0.4rem 0', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#8a8480' }}>Your Purse</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: GOLD }}>{fmt(state.doubloons)} ⟡</span>
+              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#8a8480' }}>Your Fathoms</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: TEAL }}>{fmt(state.fathoms)} Fathoms</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {GAUNTLET_UPGRADES.map(u => {
                 const owned = state.owned.includes(u.id)
                 const depthMet = state.deepest >= u.depthRequired
-                const canAfford = state.doubloons >= u.cost
+                const canAfford = state.fathoms >= u.cost
                 const busy = claiming === u.id
-                const accent = owned ? TEAL : '#d4ba78'
                 return (
                   <div key={u.id} style={{ borderRadius: 14, padding: '0.85rem 0.9rem', background: owned ? `${TEAL}10` : 'rgba(255,255,255,0.03)', border: `1px solid ${owned ? `${TEAL}45` : 'rgba(255,255,255,0.1)'}` }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
@@ -1571,7 +1594,8 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
                         {depthMet ? `Depth ${u.depthRequired} ✓` : `Depth ${state.deepest}/${u.depthRequired}`}
                       </span>
                     </div>
-                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.45, marginTop: 5 }}>{u.description}</p>
+                    <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ display: 'inline-block', marginTop: 6, fontSize: '0.46rem', color: `${TEAL}cc`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 5, padding: '0.12rem 0.4rem' }}>{SCOPE_LABEL[u.scope]}</span>
+                    <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a39a', lineHeight: 1.45, marginTop: 6 }}>{u.description}</p>
                     {u.id === 'cannonball_rack' && <CannonballRackDemo />}
                     <button
                       type="button"
@@ -1581,16 +1605,16 @@ function LockerUpgradesModal({ onClose, onClaimed }: { onClose: () => void; onCl
                       style={{
                         marginTop: 10, width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.74rem',
                         cursor: (!owned && depthMet && canAfford && !busy) ? 'pointer' : 'default',
-                        color: owned ? TEAL : (depthMet && canAfford) ? GOLD : '#6a6764',
-                        background: owned ? `${TEAL}1a` : (depthMet && canAfford) ? `${GOLD}1c` : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${owned ? `${TEAL}55` : (depthMet && canAfford) ? `${GOLD}66` : 'rgba(255,255,255,0.1)'}`,
+                        color: owned ? TEAL : (depthMet && canAfford) ? TEAL : '#6a6764',
+                        background: owned ? `${TEAL}1a` : (depthMet && canAfford) ? `${TEAL}1c` : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${owned ? `${TEAL}55` : (depthMet && canAfford) ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}`,
                       }}
                     >
                       {busy ? 'Claiming…'
                         : owned ? 'Unlocked ✓'
                         : !depthMet ? `Reach Depth ${u.depthRequired}`
-                        : !canAfford ? `Need ${fmt(u.cost)} ⟡`
-                        : `Claim · ${fmt(u.cost)} ⟡`}
+                        : !canAfford ? `Need ${fmt(u.cost)} Fathoms`
+                        : `Claim · ${fmt(u.cost)} Fathoms`}
                     </button>
                   </div>
                 )

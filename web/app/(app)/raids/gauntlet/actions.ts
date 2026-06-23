@@ -14,8 +14,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS } from '@/lib/gauntlet'
-import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth } from '@/lib/gauntlet'
+import { getGauntletUpgrade, gauntletHaulMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 
 /** Mail the player for each depth-unlock milestone they cross this run. Deepest
@@ -40,31 +40,31 @@ async function notifyDepthUnlocks(
   } catch { /* notification is best-effort; never block the payout */ }
 }
 
-// ── Locker Upgrades — permanent perks, depth-gated + doubloon-bought ──────────
+// ── Locker Upgrades — permanent perks, depth-gated + bought with Fathoms ───────
 
-/** State for the Locker Upgrades panel: the player's deepest run, purse, and
- *  which upgrades they've already claimed. */
-export async function getGauntletUpgradeState(): Promise<{ deepest: number; doubloons: number; owned: string[] }> {
+/** State for the Locker Upgrades panel: the player's deepest run, Fathoms purse,
+ *  and which upgrades they've already claimed. */
+export async function getGauntletUpgradeState(): Promise<{ deepest: number; fathoms: number; owned: string[] }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { deepest: 0, doubloons: 0, owned: [] }
+  if (!user) return { deepest: 0, fathoms: 0, owned: [] }
   const admin = createAdminClient()
   const { data } = await admin
     .from('profiles')
-    .select('gauntlet_deepest, doubloons, gauntlet_upgrades')
+    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades')
     .eq('id', user.id)
     .single()
   return {
     deepest: (data?.gauntlet_deepest as number | null) ?? 0,
-    doubloons: (data?.doubloons as number | null) ?? 0,
+    fathoms: (data?.gauntlet_fathoms as number | null) ?? 0,
     owned: (data?.gauntlet_upgrades as string[] | null) ?? [],
   }
 }
 
-/** Claim a Locker Upgrade. Server-validates the depth gate, the cost, and
- *  no-double-claim, then deducts doubloons + records the id. */
+/** Claim a Locker Upgrade. Server-validates the depth gate, the Fathoms cost,
+ *  and no-double-claim, then deducts Fathoms + records the id. */
 export async function claimGauntletUpgrade(id: string): Promise<
-  { ok: true; doubloons: number; owned: string[] } | { error: string }
+  { ok: true; fathoms: number; owned: string[] } | { error: string }
 > {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,7 +76,7 @@ export async function claimGauntletUpgrade(id: string): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_deepest, doubloons, gauntlet_upgrades')
+    .select('gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found.' }
@@ -85,16 +85,13 @@ export async function claimGauntletUpgrade(id: string): Promise<
   if (owned.includes(id)) return { error: 'Already unlocked.' }
   const deepest = (profile.gauntlet_deepest as number | null) ?? 0
   if (deepest < upgrade.depthRequired) return { error: `Reach depth ${upgrade.depthRequired} in the Gauntlet first.` }
-  const doubloons = (profile.doubloons as number | null) ?? 0
-  if (doubloons < upgrade.cost) return { error: 'Not enough doubloons.' }
+  const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0
+  if (fathoms < upgrade.cost) return { error: 'Not enough Fathoms.' }
 
-  const newDoubloons = doubloons - upgrade.cost
+  const newFathoms = fathoms - upgrade.cost
   const newOwned = [...owned, id]
-  await Promise.all([
-    admin.from('profiles').update({ doubloons: newDoubloons, gauntlet_upgrades: newOwned }).eq('id', user.id),
-    admin.from('doubloon_transactions').insert({ user_id: user.id, amount: -upgrade.cost, reason: `Locker Upgrade: ${upgrade.name}` }),
-  ])
-  return { ok: true, doubloons: newDoubloons, owned: newOwned }
+  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms, gauntlet_upgrades: newOwned }).eq('id', user.id)
+  return { ok: true, fathoms: newFathoms, owned: newOwned }
 }
 
 /** The single deepest run across all captains + this player's own deepest.
@@ -141,15 +138,15 @@ export async function getGauntletLeaderboard(): Promise<{
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
-export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; nextAt: string | null }> {
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, nextAt: null }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, is_admin')
     .eq('id', user.id)
     .single()
 
@@ -162,6 +159,7 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
   return {
     available,
     deepest: (profile?.gauntlet_deepest as number | null) ?? 0,
+    fathoms: (profile?.gauntlet_fathoms as number | null) ?? 0,
     nextAt: available ? null : new Date(nextMs).toISOString(),
   }
 }
@@ -213,6 +211,9 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
       newExpeditionXP: number
       deepest: number
       crewXP: CrewXPGrant[]
+      /** Fathoms banked this run (= depth reached) + new total. */
+      earnedFathoms: number
+      newFathoms: number
       /** Davy cannons that dropped this cash-out (chest chase items). */
       droppedItems: string[]
     }
@@ -224,7 +225,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, expedition_xp, doubloons, gems, ship_classes, raid_items')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_fathoms, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items')
     .eq('id', user.id)
     .single()
 
@@ -255,11 +256,17 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
   const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
+  // Salvager's Eye (Locker Upgrade): +% doubloons on every cash-out haul.
+  const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
+  const haulMult   = gauntletHaulMult(upgrades)
 
-  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult)
+  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * haulMult)
   const bankedXp        = Math.round(cleanPot * chest.potMult)
   const gems            = chest.gems
 
+  // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth.
+  const earnedFathoms    = fathomsForDepth(d)
+  const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
   const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
@@ -286,6 +293,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
       expedition_xp: newExpeditionXP,
       gauntlet_run_open: false,
       gauntlet_deepest: deepest,
+      gauntlet_fathoms: newFathoms,
       raid_items: newRaidItems,
       ...bestFields,
     }).eq('id', user.id),
@@ -311,40 +319,46 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
     newExpeditionXP,
     deepest,
     crewXP,
+    earnedFathoms,
+    newFathoms,
     droppedItems,
   }
 }
 
-/** Close an open run after a wipe. Banks nothing; still records deepest. */
-export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean; deepest: number }> {
+/** Close an open run after a wipe. Banks no doubloons; still records deepest and
+ *  still pays Fathoms for how deep you got (the meta-currency rewards the dive,
+ *  not the cash-out). */
+export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ok: false, deepest: 0 }
+  if (!user) return { ok: false, deepest: 0, earnedFathoms: 0, newFathoms: 0 }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_fathoms')
     .eq('id', user.id)
     .single()
 
   if (!profile || profile.gauntlet_run_open !== true) {
-    return { ok: false, deepest: (profile?.gauntlet_deepest as number | null) ?? 0 }
+    return { ok: false, deepest: (profile?.gauntlet_deepest as number | null) ?? 0, earnedFathoms: 0, newFathoms: (profile?.gauntlet_fathoms as number | null) ?? 0 }
   }
 
   const d = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(depth)))
   const prevDeepest = (profile.gauntlet_deepest as number | null) ?? 0
   const deepest = Math.max(prevDeepest, d)
+  const earnedFathoms = fathomsForDepth(d)
+  const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
 
   await admin
     .from('profiles')
-    .update({ gauntlet_run_open: false, gauntlet_deepest: deepest })
+    .update({ gauntlet_run_open: false, gauntlet_deepest: deepest, gauntlet_fathoms: newFathoms })
     .eq('id', user.id)
 
   // Sinking still records your deepest — and still unlocks what you reached.
   await notifyDepthUnlocks(admin, user.id, prevDeepest, deepest)
 
-  return { ok: true, deepest }
+  return { ok: true, deepest, earnedFathoms, newFathoms }
 }
 
 /** Mark the first-time explainer as seen so it doesn't auto-open again. */
