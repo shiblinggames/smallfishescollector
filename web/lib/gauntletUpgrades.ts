@@ -39,21 +39,16 @@ export interface GauntletUpgrade {
 
 export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   // ── Run Upgrades (scope 'gauntlet') — only touch Gauntlet runs. NO depth
-  //    gate: just buy them with Fathoms (cost is the only ladder). ───────────
+  //    gate: cost is the only ladder, so it's tiered by progression value —
+  //    economy boosts cheapest, meta/QoL in the middle, survivability (which
+  //    lets you go deeper and compound EVERYTHING) as the premium capstones.
+  //    Ordered cheap → expensive so the shop reads as a clean ladder. ────────
   {
     id: 'navigators_log',
     name: "Navigator's Log",
     description: 'Earn 20% more Nav XP every time you cash out a Gauntlet run.',
     depthRequired: 0,
-    cost: 40,
-    scope: 'gauntlet',
-  },
-  {
-    id: 'diving_bell',
-    name: 'Diving Bell',
-    description: 'Start every Gauntlet run with 15% more max HP.',
-    depthRequired: 0,
-    cost: 50,
+    cost: 30,
     scope: 'gauntlet',
   },
   {
@@ -61,7 +56,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: "Salvager's Eye",
     description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
     depthRequired: 0,
-    cost: 70,
+    cost: 50,
     scope: 'gauntlet',
   },
   {
@@ -69,7 +64,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Calm Before',
     description: "The Locker's curses take one depth longer to catch you.",
     depthRequired: 0,
-    cost: 90,
+    cost: 75,
     scope: 'gauntlet',
   },
   {
@@ -81,11 +76,19 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
+    id: 'diving_bell',
+    name: 'Diving Bell',
+    description: 'Start every Gauntlet run with 15% more max HP.',
+    depthRequired: 0,
+    cost: 130,
+    scope: 'gauntlet',
+  },
+  {
     id: 'iron_hide',
     name: 'Iron Hide',
     description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
     depthRequired: 0,
-    cost: 130,
+    cost: 160,
     scope: 'gauntlet',
   },
   // ── Ship & Shore (scope 'account'/'world') — power for the wider game ───────
