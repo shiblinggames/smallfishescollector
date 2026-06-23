@@ -23,6 +23,9 @@ import {
 } from '@/lib/crewClasses'
 
 export const MAX_CHARGES = 3
+// Incendiary burn — mirrors RaidCombat (2 turns at 30% of the igniting hit).
+const BURN_TURNS = 2
+const BURN_TICK_PCT = 0.30
 
 export type BattleAction = 'reload' | 'fire' | 'volley' | 'dodge'
 export type ShotResult = 'critical' | 'hit' | 'graze' | 'miss'
@@ -46,6 +49,16 @@ export interface BattleLoadout {
   noncritDamageMult: number   // product of noncrit_damage_mult raid items
   incomingDamageMult: number  // product of incoming_damage_mult raid items (defense)
   navSpeedBonusPct: number    // Navigator's Compass speed_roll_nav_pct
+  // ── Crew raid mods + on-hit item procs (all optional so pre-existing
+  //    snapshots still resolve as before). ──
+  firstStrike?: boolean       // crew First Strike — always acts first
+  damageTakenPct?: number     // crew bulwark/soft_shell (+ = takes MORE; raid convention)
+  parryChance?: number        // Astrolabe — chance, on a full dodge, to reflect
+  parryReflectPct?: number    // …this fraction of the dodged shot's damage roll
+  burnChance?: number         // Incendiary — chance each hit to set the foe ablaze
+  freezeChance?: number       // Frozen — chance each hit to freeze the foe a turn
+  startChargeChance?: number  // First Cut — handled at battle init (actions), not here
+  rampDamagePerTurn?: number  // extra damage fraction per round elapsed
   // ── Crew Specials slice — the firing player's usable abilities, frozen at
   //    accept-time. Only crew mapping to one of the 5 base classes AND already
   //    Lv 10+ (ability unlocked) are listed. repairKit is the equipped kit's
@@ -98,10 +111,15 @@ export interface BattleFx {
   anchorPct: number
   /** The pending brace also soaks crits (Anchor Lv 100). */
   anchorAbsorbsCrit?: boolean
+  /** Incendiary burn: remaining DoT turns + per-turn damage (ticks at round start). */
+  burnTurns?: number
+  burnDmg?: number
+  /** Frozen: a freeze proc'd last round → this side skips its next round. */
+  frozen?: boolean
 }
 
 export function defaultFx(): BattleFx {
-  return { used: [], usedRepair: false, dodgeJammed: 0, anchorPct: 0, anchorAbsorbsCrit: false }
+  return { used: [], usedRepair: false, dodgeJammed: 0, anchorPct: 0, anchorAbsorbsCrit: false, burnTurns: 0, burnDmg: 0, frozen: false }
 }
 function normFx(fx: Partial<BattleFx> | null | undefined): BattleFx {
   return {
@@ -110,6 +128,9 @@ function normFx(fx: Partial<BattleFx> | null | undefined): BattleFx {
     dodgeJammed: fx?.dodgeJammed ?? 0,
     anchorPct: fx?.anchorPct ?? 0,
     anchorAbsorbsCrit: fx?.anchorAbsorbsCrit ?? false,
+    burnTurns: fx?.burnTurns ?? 0,
+    burnDmg: fx?.burnDmg ?? 0,
+    frozen: fx?.frozen ?? false,
   }
 }
 
@@ -133,6 +154,9 @@ export interface RoundStep {
   crit: boolean
   /** This step is a free crew/repair Special cast, not a cannon action. */
   ability?: boolean
+  /** A status beat (not a cannon action): the damage/effect lands on the ACTOR
+   *  side. 'burn' = DoT tick, 'freeze' = lost turn, 'parry' = reflected shot. */
+  fx?: 'burn' | 'freeze' | 'parry'
   /** HP restored by a heal Special (drives the green heal splat). */
   heal?: number
   /** Resulting HP/charges AFTER this step, for both sides. */
@@ -207,6 +231,7 @@ export function resolveRound(
   oMove: BattleMove,
   cFx?: Partial<BattleFx> | null,
   oFx?: Partial<BattleFx> | null,
+  roundIndex = 0,   // 0-based; drives ramp_damage_per_turn (round 1 = +0)
 ): ResolvedRound {
   const sides = {
     challenger: { l: challenger, s: { ...cState }, m: cMove },
@@ -216,10 +241,18 @@ export function resolveRound(
   type Who = 'challenger' | 'opponent'
   const other = (w: Who): Who => (w === 'challenger' ? 'opponent' : 'challenger')
 
-  // Turn order — higher speed roll acts first; tie → challenger (the caller).
-  const cRoll = speedRollFor(challenger)
-  const oRoll = speedRollFor(opponent)
-  const order: Who[] = cRoll >= oRoll ? ['challenger', 'opponent'] : ['opponent', 'challenger']
+  // Turn order — First Strike (crew) trumps the speed roll; if both or neither
+  // have it, higher speed roll acts first, tie → challenger (the caller).
+  const cFirst = !!challenger.firstStrike
+  const oFirst = !!opponent.firstStrike
+  let order: Who[]
+  if (cFirst && !oFirst) order = ['challenger', 'opponent']
+  else if (oFirst && !cFirst) order = ['opponent', 'challenger']
+  else {
+    const cRoll = speedRollFor(challenger)
+    const oRoll = speedRollFor(opponent)
+    order = cRoll >= oRoll ? ['challenger', 'opponent'] : ['opponent', 'challenger']
+  }
 
   const steps: RoundStep[] = []
   let winner: Who | null = null
@@ -231,11 +264,31 @@ export function resolveRound(
     log: '', ...over,
   })
 
+  // ── Pass 0: start-of-round statuses carried in from last round ──────────
+  // Freeze consumes the side's whole turn (special + action) THIS round; burn
+  // ticks now so a hit's DoT starts next round, not the round it landed.
+  const frozenThisRound: Record<Who, boolean> = { challenger: fx.challenger.frozen!, opponent: fx.opponent.frozen! }
+  fx.challenger.frozen = false
+  fx.opponent.frozen = false
+  for (const who of order) {
+    const me = sides[who]
+    const meFx = fx[who]
+    if ((meFx.burnTurns ?? 0) > 0 && me.s.hp > 0) {
+      const tick = meFx.burnDmg ?? 0
+      me.s.hp = Math.max(0, me.s.hp - tick)
+      meFx.burnTurns = (meFx.burnTurns ?? 0) - 1
+      steps.push(snapshot({ actor: who, fx: 'burn', damage: tick, log: `${me.l.username}'s ship is ablaze — ${tick} burn damage.` }))
+      if (me.s.hp <= 0) { winner = other(who); break }
+    }
+  }
+
   // ── Pass 1: free Specials (heal / charges / snare / brace / steady aim) ──
   // Applied BEFORE any cannon fire so a brace soaks this round's incoming hit
   // and a snare jams this round's dodge. At most one per side (the move carries
   // a single `ability`). Mirrors the raid "abilities are free actions" rule.
   for (const who of order) {
+    if (winner) break
+    if (frozenThisRound[who]) continue // frozen → loses special + action this round
     const me = sides[who]
     const ab = me.m.ability
     if (!ab) continue
@@ -306,6 +359,10 @@ export function resolveRound(
     const foe = sides[foeWho]
     const foeFx = fx[foeWho]
     if (me.s.hp <= 0) continue // killed earlier this round — forfeits their action
+    if (frozenThisRound[who]) {
+      steps.push(snapshot({ actor: who, fx: 'freeze', log: `${me.l.username} is frozen solid and loses the turn.` }))
+      continue
+    }
 
     const action = me.m.action
 
@@ -356,8 +413,16 @@ export function resolveRound(
 
     const itemMult = crit ? me.l.critDamageMult : me.l.noncritDamageMult
     const volleyMult = action === 'volley' ? 2 : 1
+    // Defender's incoming-damage chain: item incoming mult × crew damageTakenPct
+    // (raid convention: positive = takes MORE). Attacker's ramp scales with the
+    // round elapsed.
+    const foeTakenMult = foe.l.incomingDamageMult * (1 + (foe.l.damageTakenPct ?? 0) / 100)
+    const rampMult = 1 + (me.l.rampDamagePerTurn ?? 0) * roundIndex
     const raw = rollShotDamage(result, me.l.shipMinDamage, me.l.totalPower, me.l.damagePct)
-    let dmg = Math.floor(raw * volleyMult * me.l.classDamageMult * itemMult * foe.l.incomingDamageMult * dodgeMult)
+    // The shot's full damage had it landed clean — used both for the actual hit
+    // (× dodgeMult) and for a parry reflect on a full dodge.
+    const wouldHit = Math.floor(raw * volleyMult * me.l.classDamageMult * itemMult * foeTakenMult * rampMult)
+    let dmg = Math.floor(wouldHit * dodgeMult)
 
     // Brace (Anchor): soak the next incoming hit. Crits bypass unless the
     // brace is the Lv 100 crit-absorbing tier. Consumed on use.
@@ -371,6 +436,23 @@ export function resolveRound(
 
     foe.s.hp = Math.max(0, foe.s.hp - dmg)
 
+    // Incendiary / Frozen on-hit procs — only on a landed hit that didn't sink
+    // them. Burn refreshes to a fresh 2 turns (ticks at round start); freeze
+    // flags their NEXT round to skip.
+    let igniteNote = ''
+    if (dmg > 0 && foe.s.hp > 0) {
+      if ((me.l.burnChance ?? 0) > 0 && Math.random() < (me.l.burnChance ?? 0)) {
+        const tick = Math.max(1, Math.round(dmg * BURN_TICK_PCT))
+        foeFx.burnTurns = BURN_TURNS
+        foeFx.burnDmg = tick
+        igniteNote += ` ${foe.l.username}'s hull catches fire (${tick}/turn).`
+      }
+      if ((me.l.freezeChance ?? 0) > 0 && Math.random() < (me.l.freezeChance ?? 0)) {
+        foeFx.frozen = true
+        igniteNote += ` ${foe.l.username} ices over and loses next turn.`
+      }
+    }
+
     const verb = action === 'volley' ? 'unloads a volley' : 'fires'
     const log = dodged
       ? `${me.l.username} ${verb} — ${foe.l.username} evades!`
@@ -378,10 +460,20 @@ export function resolveRound(
         ? `${me.l.username} ${verb} for ${dmg} — ${foe.l.username}'s dodge is jammed!`
         : result === 'miss'
           ? `${me.l.username} ${verb} and misses.`
-          : `${me.l.username} ${verb} for ${dmg}${crit ? ' (critical!)' : ''}${braced ? ' — braced!' : ''}.`
+          : `${me.l.username} ${verb} for ${dmg}${crit ? ' (critical!)' : ''}${braced ? ' — braced!' : ''}.${igniteNote}`
     steps.push(snapshot({ actor: who, action, aimResult: result, damage: dmg, dodged, crit, log }))
 
-    if (foe.s.hp <= 0) winner = who
+    if (foe.s.hp <= 0) { winner = who; continue }
+
+    // Astrolabe parry — on a FULL dodge, the dodger turns a slice of the shot
+    // they slipped back onto the attacker (a separate beat that lands on the
+    // attacker, i.e. the actor of THIS parry step). Unmitigated; mirrors PvE.
+    if (dodged && (foe.l.parryChance ?? 0) > 0 && (foe.l.parryReflectPct ?? 0) > 0 && wouldHit > 0 && Math.random() < (foe.l.parryChance ?? 0)) {
+      const reflect = Math.max(1, Math.floor(wouldHit * (foe.l.parryReflectPct ?? 0)))
+      me.s.hp = Math.max(0, me.s.hp - reflect)
+      steps.push(snapshot({ actor: who, fx: 'parry', damage: reflect, log: `${foe.l.username} parries and turns the shot back for ${reflect}!` }))
+      if (me.s.hp <= 0) winner = foeWho
+    }
   }
 
   // Snare ticks down at round end (the round it was cast counts as turn 1).

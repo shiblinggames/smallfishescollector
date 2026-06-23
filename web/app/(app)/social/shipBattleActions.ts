@@ -124,13 +124,19 @@ export async function acceptShipBattle(id: string): Promise<{ ok: true } | { err
   const cHp = b.challenger_loadout?.hpMax ?? 1
   const oHp = opponentLoadout.hpMax
 
+  // First Cut (start_charge_chance): each side rolls once to open with a
+  // cannon already loaded — mirrors the PvE per-fight roll.
+  const rollStartCharge = (chance?: number) => (chance && chance > 0 && Math.random() < chance ? 1 : 0)
+  const cStartCharges = rollStartCharge(b.challenger_loadout?.startChargeChance)
+  const oStartCharges = rollStartCharge(opponentLoadout.startChargeChance)
+
   const { error } = await admin.from('ship_battles').update({
     opponent_loadout: opponentLoadout,
     status: 'active',
     challenger_hp: cHp,
     opponent_hp: oHp,
-    challenger_charges: 0,
-    opponent_charges: 0,
+    challenger_charges: cStartCharges,
+    opponent_charges: oStartCharges,
     round: 1,
     current_round_started_at: new Date().toISOString(),
   }).eq('id', id).eq('status', 'pending').select('id').single()
@@ -211,6 +217,7 @@ export async function submitBattleMove(id: string, action: BattleAction, aimResu
     { hp: fresh.opponent_hp, charges: fresh.opponent_charges },
     fresh.challenger_move, fresh.opponent_move,
     fresh.challenger_fx, fresh.opponent_fx,
+    fresh.round - 1, // 0-based round index for ramp_damage_per_turn
   )
   // Keep only the recent rounds on the row — the clients animate by round
   // NUMBER (not array length), so trimming the tail keeps the JSONB bounded

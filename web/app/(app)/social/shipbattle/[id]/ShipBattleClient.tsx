@@ -44,7 +44,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [foeHp, setFoeHp] = useState(initial.foeHp)
   const [myCharges, setMyCharges] = useState(initial.myCharges)
   const [foeCharges, setFoeCharges] = useState(initial.foeCharges)
-  const [splat, setSplat] = useState<{ who: 'me' | 'foe'; dmg: number; crit: boolean; dodged: boolean; heal?: number } | null>(null)
+  const [splat, setSplat] = useState<{ who: 'me' | 'foe'; dmg: number; crit: boolean; dodged: boolean; heal?: number; burn?: boolean; frozen?: boolean } | null>(null)
   const [log, setLog] = useState<{ id: number; text: string }[]>([{ id: 0, text: 'The duel begins.' }])
   const logId = useRef(1)
   const pushLog = useCallback((text: string) => setLog(prev => [...prev, { id: logId.current++, text }].slice(-24)), [])
@@ -101,6 +101,22 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         const targetFoeHp = isChallenger ? s.opponentHp : s.challengerHp
         const targetMyCh = isChallenger ? s.challengerCharges : s.opponentCharges
         const targetFoeCh = isChallenger ? s.opponentCharges : s.challengerCharges
+        if (s.fx) {
+          // Status beat — burn tick / parry reflect / freeze. Lands on the
+          // ACTOR side (the one experiencing the effect).
+          if (s.fx === 'freeze') {
+            setSplat({ who: actorIsMe ? 'me' : 'foe', dmg: 0, crit: false, dodged: false, frozen: true })
+          } else if (s.damage > 0) {
+            setSplat({ who: actorIsMe ? 'me' : 'foe', dmg: s.damage, crit: false, dodged: false, burn: s.fx === 'burn' })
+            ;(actorIsMe ? myShip : foeShip).start(HIT_SHAKE)
+            vibrate(s.fx === 'burn' ? 30 : [20, 40])
+          }
+          setMyHp(targetMyHp); setFoeHp(targetFoeHp); setMyCharges(targetMyCh); setFoeCharges(targetFoeCh)
+          await sleep(680)
+          setSplat(null)
+          await sleep(160)
+          continue
+        }
         if (s.ability) {
           // Free Special cast — gentle beat, green heal splat if it healed.
           if (s.heal && s.heal > 0) setSplat({ who: actorIsMe ? 'me' : 'foe', dmg: 0, crit: false, dodged: false, heal: s.heal })
@@ -395,7 +411,7 @@ function LogBox({ lines }: { lines: { id: number; text: string }[] }) {
 function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, online }: {
   load: BattleLoadout; you?: boolean; hp: number; charges: number; accent: string; top?: boolean
   ctrl: ReturnType<typeof useAnimation>
-  splat: { dmg: number; crit: boolean; dodged: boolean; heal?: number } | null
+  splat: { dmg: number; crit: boolean; dodged: boolean; heal?: number; burn?: boolean; frozen?: boolean } | null
   onTap: () => void
   online?: boolean
 }) {
@@ -429,16 +445,16 @@ function ShipPanel({ load, you, hp, charges, accent, top, ctrl, splat, onTap, on
             {/* Damage splat — large, centered ON the ship, like the raid hitsplats. */}
             <AnimatePresence>
               {splat && (
-                <motion.div key={`${splat.dmg}-${splat.crit}-${splat.dodged}-${splat.heal ?? 0}`}
+                <motion.div key={`${splat.dmg}-${splat.crit}-${splat.dodged}-${splat.heal ?? 0}-${splat.burn ? 'b' : ''}${splat.frozen ? 'f' : ''}`}
                   initial={{ opacity: 0, scale: 0.5, y: 4 }} animate={{ opacity: 1, scale: 1, y: -8 }} exit={{ opacity: 0, scale: 1.25, y: -16 }}
                   transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                   className="font-cinzel font-700"
                   style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 3,
-                    fontSize: splat.heal ? '1.5rem' : splat.dodged ? '1.05rem' : splat.crit ? '2.1rem' : '1.6rem',
-                    color: splat.heal ? '#4ade80' : splat.dodged ? '#cbd5e1' : splat.crit ? '#fde047' : '#ffffff',
-                    WebkitTextStroke: splat.heal ? '1.5px rgba(6,78,38,0.9)' : splat.dodged ? undefined : '1.5px rgba(150,12,12,0.95)',
+                    fontSize: splat.frozen ? '1.05rem' : splat.heal || splat.burn ? '1.5rem' : splat.dodged ? '1.05rem' : splat.crit ? '2.1rem' : '1.6rem',
+                    color: splat.frozen ? '#7dd3fc' : splat.burn ? '#fb923c' : splat.heal ? '#4ade80' : splat.dodged ? '#cbd5e1' : splat.crit ? '#fde047' : '#ffffff',
+                    WebkitTextStroke: splat.frozen ? '1.5px rgba(8,47,73,0.9)' : splat.burn ? '1.5px rgba(124,45,18,0.95)' : splat.heal ? '1.5px rgba(6,78,38,0.9)' : splat.dodged ? undefined : '1.5px rgba(150,12,12,0.95)',
                     textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 14px rgba(0,0,0,0.6)' }}>
-                  {splat.heal ? `+${splat.heal}` : splat.dodged ? 'MISS' : `-${splat.dmg}${splat.crit ? '!' : ''}`}
+                  {splat.frozen ? 'FROZEN' : splat.heal ? `+${splat.heal}` : splat.dodged ? 'MISS' : `-${splat.dmg}${splat.crit ? '!' : ''}`}
                 </motion.div>
               )}
             </AnimatePresence>

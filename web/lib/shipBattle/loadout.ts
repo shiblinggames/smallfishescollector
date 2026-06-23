@@ -29,6 +29,8 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
   const effects = getActiveEffects(items)
   const prod = (type: string) => effects.filter(e => e.type === type).reduce((a, e) => a * e.value, 1)
   const sum  = (type: string) => effects.filter(e => e.type === type).reduce((a, e) => a + e.value, 0)
+  // Proc/parry chances aggregate by MAX across items (mirrors RaidCombat).
+  const max  = (type: string) => effects.filter(e => e.type === type).reduce((a, e) => Math.max(a, e.value), 0)
 
   // Crew Specials — only base-class crew that have already unlocked their
   // ability (Lv 10+). Capped at 6 so the chooser stays tight.
@@ -57,6 +59,19 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
     noncritDamageMult: prod('noncrit_damage_mult'),
     incomingDamageMult: prod('incoming_damage_mult'),
     navSpeedBonusPct: sum('speed_roll_nav_pct'),
+    // Crew raid mods that the resolver now honors (turn order + defense).
+    firstStrike: !!stats.raidMods.firstStrike,
+    damageTakenPct: stats.raidMods.damageTakenPct ?? 0,
+    // Astrolabe parry (reflect a slice of a dodged shot) — max across items.
+    parryChance: max('parry_chance'),
+    parryReflectPct: max('parry_reflect_pct'),
+    // Incendiary / Frozen cannonball on-hit procs — max across items.
+    burnChance: max('burn_chance'),
+    freezeChance: max('freeze_chance'),
+    // First Cut (open a fight with a charge loaded) — rolled at battle start.
+    startChargeChance: max('start_charge_chance'),
+    // Escalating damage per round elapsed — sum across items.
+    rampDamagePerTurn: sum('ramp_damage_per_turn'),
     crew,
     repairKit,
     // Display-only.
