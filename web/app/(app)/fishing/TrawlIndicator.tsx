@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
 import { getTrawlState, deployTrawl, collectTrawl } from './trawls/actions'
 import {
-  TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs,
+  TRAWL_MAX_SLOTS, expectedTrawlHaul, fmtTrawlDuration, trawlDurationMs, TRAWL_BUMPERS,
   type TrawlState, type TrawlZoneKey, type ActiveTrawlView, type TrawlCrewView, type CollectTrawlResult,
 } from './trawls/constants'
 import { getXPProgress, MAX_LEVEL } from '@/lib/fishingLevel'
@@ -295,10 +295,13 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     const r = await collectTrawl(zone)
     setBusy(false)
     if ('error' in r) return
-    haptic([0, 25, 40, 30])
+    // Bigger hauls land with a heavier haptic + more coins flung to the purse.
+    const tier = r.bumper
+    haptic(tier === 'jackpot' ? [0, 40, 30, 70, 30, 95] : tier === 'bumper' ? [0, 35, 30, 60, 30, 70] : tier === 'good' ? [0, 30, 35, 45] : [0, 25, 40, 30])
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     window.dispatchEvent(new CustomEvent('fishing-xp-changed', { detail: r.newFishingXP }))
-    setCoins(Array.from({ length: 8 }, () => ({ id: pid.current++ })))
+    const coinCount = tier === 'jackpot' ? 18 : tier === 'bumper' ? 14 : tier === 'good' ? 11 : 8
+    setCoins(Array.from({ length: coinCount }, () => ({ id: pid.current++ })))
     setTimeout(() => setCoins([]), 900)
     setReveal(r)
     // If this haul leveled the player up, the full level-up overlay (owned by
@@ -439,7 +442,7 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 // plate for legibility; filled gold for the standout Ready), not
                 // a full-width bordered header bar.
                 const status = {
-                  ready:    { c: GOLD,         label: 'Tap to collect',                filled: true,  dot: false },
+                  ready:    { c: '#fff1c8',     label: 'Tap to Collect',                filled: false, dot: false },
                   running:  { c: theme.accent, label: `Fishing · ${fmtCountdown(ms)}`, filled: false, dot: true  },
                   sendable: { c: theme.accent, label: 'Tap to send crew',              filled: false, dot: false },
                   noslot:   { c: '#9a958c',    label: 'No free slot',                  filled: false, dot: false },
@@ -458,14 +461,17 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                 const scrim = inert
                   ? 'linear-gradient(180deg, rgba(40,42,46,0.62) 0%, rgba(20,22,26,0.86) 55%, rgba(11,12,15,0.96) 100%)'
                   : ready
-                    ? 'linear-gradient(180deg, rgba(245,196,66,0.52) 0%, rgba(166,118,32,0.5) 50%, rgba(48,33,8,0.93) 100%)'
+                    // Near-opaque gold so a ready card is a wall of warm light —
+                    // the zone water no longer bleeds through, so it can't be
+                    // mistaken for a still-fishing card.
+                    ? 'linear-gradient(180deg, rgba(248,200,72,0.92) 0%, rgba(206,150,44,0.9) 46%, rgba(86,58,14,0.97) 100%)'
                     : `linear-gradient(180deg, ${topBand} 0%, ${theme.mid} 54%, ${theme.deep} 100%)`
                 const cardStyle: React.CSSProperties = {
                   position: 'relative',
                   borderRadius: 14, overflow: 'hidden', cursor: actionable ? 'pointer' : 'default',
                   backgroundColor: '#0c1018',
                   background: zoneArt ? `${scrim}, url(${zoneArt}) center / cover` : scrim,
-                  border: `1.5px solid ${flashing ? `${theme.accent}cc` : ready ? GOLD : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.1)'}`,
+                  border: `${ready ? 2 : 1.5}px solid ${flashing ? `${theme.accent}cc` : ready ? GOLD : running ? `${theme.accent}88` : sendable ? `${theme.accent}99` : 'rgba(255,255,255,0.1)'}`,
                   boxShadow: flashing ? `0 0 18px ${theme.accent}66` : sendable ? `0 0 10px ${theme.accent}33` : running ? `0 0 12px ${theme.accent}22` : 'none',
                   // …and desaturate the whole card (art + gradient) to gray + dim,
                   // so they read as plainly unavailable, not just a dark zone.
@@ -478,13 +484,13 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
                   animate: flashing
                     ? { opacity: 1, y: 0, scale: [1, 1.04, 1] }
                     : ready
-                      // Ready cards keep a breathing gold glow so "come collect me" is unmissable.
-                      ? { opacity: 1, y: 0, boxShadow: [`0 0 12px ${GOLD}45`, `0 0 26px ${GOLD}90`, `0 0 12px ${GOLD}45`] }
+                      // Ready cards keep a strong breathing gold glow so "come collect me" is unmissable.
+                      ? { opacity: 1, y: 0, scale: [1, 1.012, 1], boxShadow: [`0 0 16px ${GOLD}66`, `0 0 38px ${GOLD}`, `0 0 16px ${GOLD}66`] }
                       : { opacity: 1, y: 0, scale: 1 },
                   transition: flashing
                     ? { duration: 0.5, ease: 'easeOut' as const }
                     : ready
-                      ? { boxShadow: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' as const } }
+                      ? { boxShadow: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' as const }, scale: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' as const } }
                       : { delay: 0.04 * i, type: 'spring' as const, stiffness: 420, damping: 30 },
                   ...(actionable ? { whileTap: { scale: 0.96 } } : {}),
                   onClick: onTapCard,
@@ -617,15 +623,27 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
   const xpFromProgress = reveal
     ? (reveal.newFishingLevel > reveal.oldFishingLevel ? 0 : getXPProgress(reveal.newFishingXP - reveal.xpGained).progress)
     : 0
+  const bump = reveal ? TRAWL_BUMPERS[reveal.bumper] : null
+  const isBumper = !!reveal && reveal.bumper !== 'normal'
+  const revAccent = isBumper && bump ? bump.accent : GOLD
   const collectReveal = (
     <AnimatePresence>
       {reveal && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={dismissReveal}
           style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
-            style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18, background: ['radial-gradient(ellipse 80% 60% at 50% 22%, rgba(196,169,106,0.16) 0%, transparent 70%)', 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${GOLD}5e`, boxShadow: 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
+            style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18, background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${revAccent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${revAccent}${isBumper ? '9a' : '5e'}`, boxShadow: isBumper ? `0 0 40px ${revAccent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
+            {/* Bumper celebration — only above a normal haul */}
+            {isBumper && bump && (
+              <motion.div initial={{ opacity: 0, scale: 0.5, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 17 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0.32rem 0.95rem', borderRadius: 999, background: `${bump.accent}22`, border: `1px solid ${bump.accent}`, boxShadow: `0 0 20px ${bump.accent}66` }}>
+                <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.08em', color: bump.accent, textShadow: `0 0 10px ${bump.accent}66` }}>✦ {bump.label} ✦</span>
+              </motion.div>
+            )}
             <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD }}>Haul secured.</p>
-            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#dccba6', marginTop: 4 }}>{reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.</p>
+            <p className="font-karla" style={{ fontSize: '0.82rem', color: '#dccba6', marginTop: 4 }}>
+              {reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.{isBumper && bump ? ` ${bump.blurb}` : ''}
+            </p>
 
             <div style={{ marginTop: 14 }} />
             <CountUp to={reveal.xpGained} prefix="+" className="font-cinzel font-700" style={{ fontSize: '1.8rem', color: GREEN, display: 'block', marginTop: 6 }} />

@@ -96,10 +96,35 @@ export function trawlStatFactor(stat: number): number {
   return Math.max(TRAWL_FACTOR_FLOOR, Math.min(1, stat / TRAWL_STAT_REF))
 }
 
-export interface TrawlHaul { xp: number; doubloons: number }
+// ── Bumper hauls ─────────────────────────────────────────────────────────────
+// Most hauls are normal; a fortune-weighted roll can upgrade a haul to a bigger
+// one, multiplying BOTH xp + doubloons. The reveal celebrates anything above
+// 'normal'. Tuned so jackpots stay rare even on a maxed Fortune crew.
+export type BumperTier = 'normal' | 'good' | 'bumper' | 'jackpot'
 
-/** Expected (mean) haul for a 1h cycle — used for the panel preview. */
-export function expectedTrawlHaul(zoneKey: TrawlZoneKey, savvy: number, fortune: number): TrawlHaul {
+export const TRAWL_BUMPERS: Record<BumperTier, { mult: number; label: string; blurb: string; accent: string }> = {
+  normal:  { mult: 1,    label: '',              blurb: '',                              accent: '#f0c040' },
+  good:    { mult: 1.3,  label: 'Good Haul',     blurb: 'The nets came back heavy.',     accent: '#7fd49a' },
+  bumper:  { mult: 1.7,  label: 'Bumper Haul',   blurb: 'The nets came back full!',      accent: '#5ec8e8' },
+  jackpot: { mult: 2.4,  label: 'Jackpot Haul',  blurb: 'A once-in-a-voyage catch!',     accent: '#c4a0ff' },
+}
+
+/** Roll the bumper tier for a haul, weighted up by the crew's Fortune. */
+export function rollBumperTier(fortune: number, rng: () => number = Math.random): BumperTier {
+  const jackpotP = Math.min(0.05, 0.008 + fortune * 0.0009)  // ~1% weak → ~5% maxed
+  const bumperP  = Math.min(0.15, 0.04  + fortune * 0.0025)  // ~4% weak → ~15% maxed
+  const goodP    = Math.min(0.30, 0.13  + fortune * 0.004)   // ~13% weak → ~30% maxed
+  const r = rng()
+  if (r < jackpotP) return 'jackpot'
+  if (r < jackpotP + bumperP) return 'bumper'
+  if (r < jackpotP + bumperP + goodP) return 'good'
+  return 'normal'
+}
+
+export interface TrawlHaul { xp: number; doubloons: number; bumper: BumperTier }
+
+/** Expected (mean) haul for a 1h cycle — used for the panel preview (no bumper). */
+export function expectedTrawlHaul(zoneKey: TrawlZoneKey, savvy: number, fortune: number): { xp: number; doubloons: number } {
   const z = TRAWL_ZONE_BY_KEY[zoneKey]
   return {
     xp:        Math.round(z.activeXpHr  * TRAWL_XP_PCT  * trawlStatFactor(savvy)),
@@ -114,9 +139,12 @@ export function rollTrawlHaul(
 ): TrawlHaul {
   const exp = expectedTrawlHaul(zoneKey, savvy, fortune)
   const swing = () => 1 + (rng() * 2 - 1) * TRAWL_VARIANCE
+  const bumper = rollBumperTier(fortune, rng)
+  const mult = TRAWL_BUMPERS[bumper].mult
   return {
-    xp:        Math.max(0, Math.round(exp.xp * swing())),
-    doubloons: Math.max(0, Math.round(exp.doubloons * swing())),
+    xp:        Math.max(0, Math.round(exp.xp * swing() * mult)),
+    doubloons: Math.max(0, Math.round(exp.doubloons * swing() * mult)),
+    bumper,
   }
 }
 
@@ -160,4 +188,5 @@ export interface CollectTrawlResult {
   newDoubloons: number
   fish: string[]           // sample species names from the zone, for the haul reveal
   crewName: string
+  bumper: BumperTier       // 'normal' or an upgraded haul to celebrate
 }
