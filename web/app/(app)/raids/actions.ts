@@ -9,7 +9,7 @@ import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { getActiveEffects } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { getShipSkin } from '@/lib/shipSkins'
-import { bonusChargeSlots, gauntletHullMult } from '@/lib/gauntletUpgrades'
+import { bonusChargeSlots, gauntletRepairHealMult } from '@/lib/gauntletUpgrades'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -134,12 +134,10 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const shipClassPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
   const classEffects = aggregateShipClasses(shipClassPicks)
 
-  // Reinforced Hull (Gauntlet Locker Upgrade): account-wide +% max HP, stacks
-  // multiplicatively with raid-item and ship-class HP.
-  const hullMult = gauntletHullMult((profile?.gauntlet_upgrades as string[] | null) ?? [])
+  const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
 
   return {
-    playerHPMax:      Math.round((ship.durability + navBonus.hp) * hpMaxMult * classEffects.hpMult * hullMult),
+    playerHPMax:      Math.round((ship.durability + navBonus.hp) * hpMaxMult * classEffects.hpMult),
     shipMinDamage:    ship.minDamage,
     shipSpeed:        Math.max(0, ship.speed + classEffects.speedFlat),
     totalPower:       totalPower   + navBonus.power,
@@ -166,7 +164,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     shipClasses:          shipClassPicks,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
-    raidMods:             resolved.raid,
+    raidMods:             { ...resolved.raid, repairHealMult: gauntletRepairHealMult(gauntletUpgrades) },
     bonusChargeSlots:     bonusChargeSlots((profile?.gauntlet_upgrades as string[] | null) ?? []),
   }
 }

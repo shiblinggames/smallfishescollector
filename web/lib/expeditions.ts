@@ -247,6 +247,9 @@ export interface RaidMods {
   damageTakenPct: number
   critPct: number
   firstStrike: boolean
+  /** Repair-kit heal multiplier (Seasoned Timbers Gauntlet upgrade). Optional;
+   *  treated as 1 when absent. Not a crew effect — injected in getRaidPlayerStats. */
+  repairHealMult?: number
 }
 
 export interface RaidDamageProfile { hitMin: number; powerMax: number; critMax: number }

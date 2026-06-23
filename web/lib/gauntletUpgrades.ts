@@ -116,9 +116,9 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     category: 'voyages',
   },
   {
-    id: 'reinforced_hull',
-    name: 'Reinforced Hull',
-    description: 'Your ship carries 10% more max HP into every raid.',
+    id: 'seasoned_timbers',
+    name: 'Seasoned Timbers',
+    description: 'Your repair kit patches you up 25% more in every raid.',
     depthRequired: 14,
     cost: 80,
     scope: 'account',
@@ -150,9 +150,9 @@ export function hasSafeVoyages(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('safe_voyages')
 }
 
-/** Reinforced Hull: max-HP multiplier applied in EVERY raid (account-wide). */
-export function gauntletHullMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('reinforced_hull') ? 1.1 : 1
+/** Seasoned Timbers: repair-kit heal multiplier in EVERY raid (account-wide). */
+export function gauntletRepairHealMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('seasoned_timbers') ? 1.25 : 1
 }
 
 /** Swift Sails: voyage-duration multiplier (lower = faster). */

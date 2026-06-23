@@ -1498,7 +1498,8 @@ export default function RaidCombat({
         // half of this turn. Roll uses the kit's [min, max+Fortune*scale].
         // Enemy actions never include 'repair' so the else branch is dead.
         if (who === 'player' && repairKit) {
-          const roll = rollRepairKitHeal(repairKit, totalFortune)
+          // Seasoned Timbers (Gauntlet upgrade) boosts every repair heal.
+          const roll = Math.round(rollRepairKitHeal(repairKit, totalFortune) * (mods.repairHealMult ?? 1))
           const before = pHp
           pHp = Math.min(playerHpMax, pHp + roll)
           const healed = pHp - before
@@ -3283,7 +3284,10 @@ export default function RaidCombat({
               // Repair kit (existing, turn-consuming).
               if (repairKit) {
                 const atFull = playerHp >= playerHpMax
-                const range = repairKitRange(repairKit, totalFortune)
+                // Mirror the Seasoned Timbers heal boost in the preview range.
+                const rawRange = repairKitRange(repairKit, totalFortune)
+                const healMult = mods.repairHealMult ?? 1
+                const range = { min: Math.round(rawRange.min * healMult), max: Math.round(rawRange.max * healMult) }
                 items.push({
                   id: 'repair',
                   label: repairKit.name,
