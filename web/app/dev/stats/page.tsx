@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { notFound } from 'next/navigation'
 
 // Admin-only cross-player aggregate dashboard. Reads everything from the
@@ -21,14 +22,34 @@ export default async function DevStatsPage() {
   const { data: prof } = await admin.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!prof?.is_admin) notFound()
 
-  const [{ data }, { data: trawlData }] = await Promise.all([
+  const [{ data }, { data: trawlData }, { data: gauntletRows }] = await Promise.all([
     admin.rpc('admin_stats'),
     admin.rpc('trawl_admin_stats'),
+    admin.from('profiles')
+      .select('username, gauntlet_deepest, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_fathoms, gauntlet_upgrades')
+      .eq('is_admin', false),
   ])
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const s = (data ?? {}) as any
   const t = (trawlData ?? {}) as any
   const byIf = (v: number, name: unknown) => (v > 0 ? (name as string) : null)
+
+  // ── Davy Jones Gauntlet — computed in JS from the profile snapshot above
+  // (no admin_stats RPC change needed). gauntlet_deepest = lifetime deepest incl.
+  // deaths; gauntlet_best_depth = cash-out-only record (the leaderboard column).
+  type GRow = { username: string | null; gauntlet_deepest: number | null; gauntlet_best_depth: number | null; gauntlet_best_depth_ms: number | null; gauntlet_fathoms: number | null; gauntlet_upgrades: string[] | null }
+  const gRows = (gauntletRows ?? []) as GRow[]
+  const descenders = gRows.filter(r => (r.gauntlet_deepest ?? 0) > 0)
+  const deepestBanked = gRows.filter(r => (r.gauntlet_best_depth ?? 0) > 0).sort((a, b) => (b.gauntlet_best_depth ?? 0) - (a.gauntlet_best_depth ?? 0))[0] ?? null
+  const deepestReached = [...descenders].sort((a, b) => (b.gauntlet_deepest ?? 0) - (a.gauntlet_deepest ?? 0))[0] ?? null
+  const fathomsHeld = gRows.reduce((a, r) => a + (r.gauntlet_fathoms ?? 0), 0)
+  const upgradesOwned = gRows.reduce((a, r) => a + (r.gauntlet_upgrades?.length ?? 0), 0)
+  const avgDepth = descenders.length ? Math.round(descenders.reduce((a, r) => a + (r.gauntlet_deepest ?? 0), 0) / descenders.length) : 0
+  const upgradeTally: Record<string, number> = {}
+  for (const r of gRows) for (const id of (r.gauntlet_upgrades ?? [])) upgradeTally[id] = (upgradeTally[id] ?? 0) + 1
+  const topUpgrade = Object.entries(upgradeTally).sort((a, b) => b[1] - a[1])[0] ?? null
+  const upgradeName = (id: string) => GAUNTLET_UPGRADES.find(u => u.id === id)?.name ?? id
+  const fmtMs = (ms: number) => { const sec = Math.round(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` }
 
   // Trawls — crew passive fishing. Active trawls are a live snapshot (the
   // `trawls` table, cleared on collect); the rest is collection history from
@@ -79,6 +100,7 @@ export default async function DevStatsPage() {
     { label: 'Raids cleared',          value: s.raids?.cleared ?? 0 },
     { label: 'Crew recruited',         value: s.recruits?.lifetime ?? 0 },
     { label: 'Tide Run beacons',       value: s.tideRun?.beacons ?? 0 },
+    { label: 'Deepest Gauntlet descent', value: deepestBanked ? `Depth ${deepestBanked.gauntlet_best_depth}` : '—', by: deepestBanked?.username ?? null },
     {
       label: 'Biggest fish landed',
       value: biggestFish.length ? `${biggestFish.length}″ ${biggestFish.species ?? ''}`.trim() : '—',
@@ -142,6 +164,18 @@ export default async function DevStatsPage() {
         { label: 'Raids cleared', value: s.raids?.cleared ?? 0 },
         { label: 'Biggest hit',   value: s.raids?.biggestHit ?? 0, by: byIf(s.raids?.biggestHit ?? 0, s.raids?.biggestHitBy) },
         ...raidBossStats,
+      ],
+    },
+    {
+      title: 'Davy Jones Gauntlet', accent: '#2dd4bf',
+      stats: [
+        { label: 'Captains who descended', value: descenders.length },
+        { label: 'Deepest descent (banked)', value: deepestBanked ? `Depth ${deepestBanked.gauntlet_best_depth}` : '—', by: deepestBanked ? `${deepestBanked.username ?? '—'}${deepestBanked.gauntlet_best_depth_ms ? ' · ' + fmtMs(deepestBanked.gauntlet_best_depth_ms) : ''}` : null },
+        { label: 'Deepest reached (any run)', value: deepestReached ? `Depth ${deepestReached.gauntlet_deepest}` : '—', by: deepestReached?.username ?? null },
+        { label: 'Average depth reached', value: descenders.length ? `Depth ${avgDepth}` : '—' },
+        { label: 'Fathoms in circulation', value: fmt(fathomsHeld) },
+        { label: 'Locker upgrades owned', value: upgradesOwned },
+        ...(topUpgrade ? [{ label: 'Most-bought upgrade', value: upgradeName(topUpgrade[0]), by: `${topUpgrade[1]} captains` }] : []),
       ],
     },
     {
