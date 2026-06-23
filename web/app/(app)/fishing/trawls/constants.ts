@@ -89,7 +89,6 @@ export const TRAWL_XP_PCT = 0.40   // maxed crew = 40% of the zone's active xp/h
 export const TRAWL_DBL_PCT = 0.15  // maxed crew = 15% of the zone's active doubloons/hr
 export const TRAWL_STAT_REF = 40   // a maxed affinity-skewed Legendary's Savvy/Fortune
 export const TRAWL_FACTOR_FLOOR = 0.2
-export const TRAWL_VARIANCE = 0.15 // tight ±15% per-haul swing
 
 /** Stat → yield factor: weak crew floor at 0.2, maxed (stat ≥ 40) = 1.0. */
 export function trawlStatFactor(stat: number): number {
@@ -102,28 +101,36 @@ export function trawlStatFactor(stat: number): number {
 // 'normal'. Tuned so jackpots stay rare even on a maxed Fortune crew.
 export type BumperTier = 'slim' | 'normal' | 'good' | 'bumper' | 'jackpot'
 
-export const TRAWL_BUMPERS: Record<BumperTier, { mult: number; label: string; blurb: string; accent: string }> = {
-  // 'slim' is the gentle downside — flavour, not failure (no celebration glow).
-  slim:    { mult: 0.9,   label: 'Slim Haul',     blurb: 'Quiet waters today.',           accent: '#9a958c' },
-  normal:  { mult: 1,     label: '',              blurb: '',                              accent: '#f0c040' },
-  good:    { mult: 1.08,  label: 'Good Haul',     blurb: 'The nets came back heavy.',     accent: '#7fd49a' },
-  bumper:  { mult: 1.16,  label: 'Bumper Haul',   blurb: 'The nets came back full!',      accent: '#5ec8e8' },
-  jackpot: { mult: 1.25,  label: 'Jackpot Haul',  blurb: 'A once-in-a-voyage catch!',     accent: '#c4a0ff' },
+// The haul payout is a CONTINUOUS multiplier in [0.8, 1.2] (rollHaulMult). These
+// entries only label the band a haul landed in, to flavour the reveal — 'slim'
+// is the gentle downside (flavour, no celebration glow), normal is silent.
+export const TRAWL_BUMPERS: Record<BumperTier, { label: string; blurb: string; accent: string }> = {
+  slim:    { label: 'Slim Haul',     blurb: 'Quiet waters today.',           accent: '#9a958c' },
+  normal:  { label: '',              blurb: '',                              accent: '#f0c040' },
+  good:    { label: 'Good Haul',     blurb: 'The nets came back heavy.',     accent: '#7fd49a' },
+  bumper:  { label: 'Bumper Haul',   blurb: 'The nets came back full!',      accent: '#5ec8e8' },
+  jackpot: { label: 'Jackpot Haul',  blurb: 'A once-in-a-voyage catch!',     accent: '#c4a0ff' },
 }
 
-/** Roll the haul tier. Good/bumper/jackpot scale UP with Fortune; the gentle
- *  'slim' down-tier scales DOWN with Fortune (lucky crews rarely come up light),
- *  which also offsets the bumpers so the mean haul stays roughly neutral. */
-export function rollBumperTier(fortune: number, rng: () => number = Math.random): BumperTier {
-  const jackpotP = Math.min(0.05, 0.008 + fortune * 0.0009)  // ~1% weak → ~5% maxed
-  const bumperP  = Math.min(0.15, 0.04  + fortune * 0.0025)  // ~4% weak → ~15% maxed
-  const goodP    = Math.min(0.30, 0.13  + fortune * 0.004)   // ~13% weak → ~30% maxed
-  const slimP    = Math.max(0.04, 0.20  - fortune * 0.003)   // ~20% weak → ~4% maxed
-  const r = rng()
-  if (r < jackpotP) return 'jackpot'
-  if (r < jackpotP + bumperP) return 'bumper'
-  if (r < jackpotP + bumperP + goodP) return 'good'
-  if (r > 1 - slimP) return 'slim'
+export const TRAWL_MULT_MIN = 0.8
+export const TRAWL_MULT_MAX = 1.2
+
+/** Continuous haul multiplier in [0.8, 1.2]. Center-weighted (average of two
+ *  uniform rolls → triangular, so most hauls sit near 1.0 and the extremes are
+ *  rare), nudged upward by the crew's Fortune. */
+export function rollHaulMult(fortune: number, rng: () => number = Math.random): number {
+  const base = (rng() + rng()) / 2                              // triangular, peak 0.5
+  const fortuneShift = (Math.min(40, fortune) / 40) * 0.15 - 0.05  // -0.05 weak → +0.10 maxed
+  const t = Math.max(0, Math.min(1, base + fortuneShift))
+  return TRAWL_MULT_MIN + (TRAWL_MULT_MAX - TRAWL_MULT_MIN) * t
+}
+
+/** Band a rolled multiplier into a flavour tier for the reveal. */
+export function bumperTierForMult(mult: number): BumperTier {
+  if (mult >= 1.17) return 'jackpot'
+  if (mult >= 1.10) return 'bumper'
+  if (mult >= 1.04) return 'good'
+  if (mult <= 0.90) return 'slim'
   return 'normal'
 }
 
@@ -144,13 +151,13 @@ export function rollTrawlHaul(
   zoneKey: TrawlZoneKey, savvy: number, fortune: number, rng: () => number = Math.random,
 ): TrawlHaul {
   const exp = expectedTrawlHaul(zoneKey, savvy, fortune)
-  const swing = () => 1 + (rng() * 2 - 1) * TRAWL_VARIANCE
-  const bumper = rollBumperTier(fortune, rng)
-  const mult = TRAWL_BUMPERS[bumper].mult
+  // One continuous luck multiplier for the whole haul (xp + doubloons move
+  // together), banded only to flavour the reveal.
+  const mult = rollHaulMult(fortune, rng)
   return {
-    xp:        Math.max(0, Math.round(exp.xp * swing() * mult)),
-    doubloons: Math.max(0, Math.round(exp.doubloons * swing() * mult)),
-    bumper,
+    xp:        Math.max(0, Math.round(exp.xp * mult)),
+    doubloons: Math.max(0, Math.round(exp.doubloons * mult)),
+    bumper:    bumperTierForMult(mult),
   }
 }
 
