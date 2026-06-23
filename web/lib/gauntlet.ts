@@ -39,7 +39,10 @@ export const BOSS_POT_MULT = 3
 // Cooldown between Gauntlet runs. Measured from when a run STARTS
 // (consume-on-start), so a quit-retry can't dodge it. Tune here to make the
 // Gauntlet more or less farmable.
-export const GAUNTLET_COOLDOWN_HOURS = 1
+// REMOVED FOR NOW (2026-06-23): 0 = no cooldown, runs are unlimited. Set back
+// to 1 (or higher) to re-gate. The run-start stamp still fires, so the
+// leaderboard time keeps working with the cooldown off.
+export const GAUNTLET_COOLDOWN_HOURS = 0
 export const GAUNTLET_COOLDOWN_MS = GAUNTLET_COOLDOWN_HOURS * 60 * 60 * 1000
 
 // ── Launch gate ───────────────────────────────────────────────────────────────

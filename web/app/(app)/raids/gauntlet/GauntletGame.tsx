@@ -379,9 +379,11 @@ export default function GauntletGame(props: GauntletGameProps) {
               </>
             )}
           </button>
-          <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a766e', marginTop: 8 }}>
-            Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
-          </p>
+          {GAUNTLET_COOLDOWN_HOURS > 0 && (
+            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a766e', marginTop: 8 }}>
+              Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
+            </p>
+          )}
 
           {/* Secondary doors: rewards, unlocks, shop. */}
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
