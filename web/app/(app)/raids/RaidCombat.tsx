@@ -1406,6 +1406,8 @@ export default function RaidCombat({
       freezeEnds?: boolean
       // Astrolabe riposte: damage reflected into the enemy on a dodge.
       reflectDmg?: number
+      // Riposte affix: damage the enemy reflected into the PLAYER on its dodge.
+      riposteDmg?: number
       // Vampiric affix: HP the enemy drank back off the hit it landed.
       enemyHeal?: number
       // Krust's Carapace soaked this (non-volley) hit — drives a deflect cue.
@@ -1469,6 +1471,7 @@ export default function RaidCombat({
       let enemyCrit = false
       let procStatus: 'burn' | 'freeze' | undefined
       let reflectDmgOut: number | undefined
+      let riposteDmgOut: number | undefined
       let enemyHealOut: number | undefined
       let carapaceSoaked = false
       const stepLines: string[] = []
@@ -1730,6 +1733,7 @@ export default function RaidCombat({
               const takenMult = incomingDmgMult * (1 + mods.damageTakenPct / 100) * tide.inDmgMult
               if (takenMult !== 1) riposteDmg = Math.max(1, Math.floor(riposteDmg * takenMult))
               pHp = Math.max(0, pHp - riposteDmg)
+              riposteDmgOut = riposteDmg
               stepLines.push(`Riposte! ${enemy.name} turns your own ${dmg}-damage strike back for ${riposteDmg}.`)
             } else if (!isAttackerPlayer) {
               const parryEffects = getActiveEffects(equippedRaidItems)
@@ -1743,7 +1747,7 @@ export default function RaidCombat({
               }
             }
 
-            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut })
+            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut, riposteDmg: riposteDmgOut })
             continue
           } else {
             partialDodge = true
@@ -2119,6 +2123,20 @@ export default function RaidCombat({
               setEnemyImpact({ key: Date.now() + i + 9, kind: 'normal' })
               setTimeout(() => setEnemyImpact(null), 700)
               setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
+            }, 240)
+          }
+          // Riposte affix — the enemy turns your dodged shot back onto YOU.
+          // Mirror of the Astrolabe reflect: a red -N + shake + impact on the
+          // player hull, a beat after the dodge reads.
+          if (step.riposteDmg) {
+            setTimeout(() => {
+              setPlayerHp(step.pHp)
+              setPHitsplat({ key: Date.now() + i + 8, text: `-${step.riposteDmg}`, color: '#ef4444' })
+              setPlayerShakeKey(k => k + 1)
+              setPlayerImpact({ key: Date.now() + i + 9, kind: 'normal' })
+              setTimeout(() => setPlayerImpact(null), 700)
+              setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
+              vibrate([0, 30, 30, 45])
             }, 240)
           }
         }, PROJECTILE_FLIGHT_MS - 80)
