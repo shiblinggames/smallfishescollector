@@ -100,24 +100,30 @@ export function trawlStatFactor(stat: number): number {
 // Most hauls are normal; a fortune-weighted roll can upgrade a haul to a bigger
 // one, multiplying BOTH xp + doubloons. The reveal celebrates anything above
 // 'normal'. Tuned so jackpots stay rare even on a maxed Fortune crew.
-export type BumperTier = 'normal' | 'good' | 'bumper' | 'jackpot'
+export type BumperTier = 'slim' | 'normal' | 'good' | 'bumper' | 'jackpot'
 
 export const TRAWL_BUMPERS: Record<BumperTier, { mult: number; label: string; blurb: string; accent: string }> = {
+  // 'slim' is the gentle downside — flavour, not failure (no celebration glow).
+  slim:    { mult: 0.9,   label: 'Slim Haul',     blurb: 'Quiet waters today.',           accent: '#9a958c' },
   normal:  { mult: 1,     label: '',              blurb: '',                              accent: '#f0c040' },
   good:    { mult: 1.08,  label: 'Good Haul',     blurb: 'The nets came back heavy.',     accent: '#7fd49a' },
-  bumper:  { mult: 1.18,  label: 'Bumper Haul',   blurb: 'The nets came back full!',      accent: '#5ec8e8' },
-  jackpot: { mult: 1.35,  label: 'Jackpot Haul',  blurb: 'A once-in-a-voyage catch!',     accent: '#c4a0ff' },
+  bumper:  { mult: 1.16,  label: 'Bumper Haul',   blurb: 'The nets came back full!',      accent: '#5ec8e8' },
+  jackpot: { mult: 1.25,  label: 'Jackpot Haul',  blurb: 'A once-in-a-voyage catch!',     accent: '#c4a0ff' },
 }
 
-/** Roll the bumper tier for a haul, weighted up by the crew's Fortune. */
+/** Roll the haul tier. Good/bumper/jackpot scale UP with Fortune; the gentle
+ *  'slim' down-tier scales DOWN with Fortune (lucky crews rarely come up light),
+ *  which also offsets the bumpers so the mean haul stays roughly neutral. */
 export function rollBumperTier(fortune: number, rng: () => number = Math.random): BumperTier {
   const jackpotP = Math.min(0.05, 0.008 + fortune * 0.0009)  // ~1% weak → ~5% maxed
   const bumperP  = Math.min(0.15, 0.04  + fortune * 0.0025)  // ~4% weak → ~15% maxed
   const goodP    = Math.min(0.30, 0.13  + fortune * 0.004)   // ~13% weak → ~30% maxed
+  const slimP    = Math.max(0.04, 0.20  - fortune * 0.003)   // ~20% weak → ~4% maxed
   const r = rng()
   if (r < jackpotP) return 'jackpot'
   if (r < jackpotP + bumperP) return 'bumper'
   if (r < jackpotP + bumperP + goodP) return 'good'
+  if (r > 1 - slimP) return 'slim'
   return 'normal'
 }
 

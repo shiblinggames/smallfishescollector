@@ -297,10 +297,10 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     if ('error' in r) return
     // Bigger hauls land with a heavier haptic + more coins flung to the purse.
     const tier = r.bumper
-    haptic(tier === 'jackpot' ? [0, 40, 30, 70, 30, 95] : tier === 'bumper' ? [0, 35, 30, 60, 30, 70] : tier === 'good' ? [0, 30, 35, 45] : [0, 25, 40, 30])
+    haptic(tier === 'jackpot' ? [0, 40, 30, 70, 30, 95] : tier === 'bumper' ? [0, 35, 30, 60, 30, 70] : tier === 'good' ? [0, 30, 35, 45] : tier === 'slim' ? [0, 18, 30, 20] : [0, 25, 40, 30])
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
     window.dispatchEvent(new CustomEvent('fishing-xp-changed', { detail: r.newFishingXP }))
-    const coinCount = tier === 'jackpot' ? 18 : tier === 'bumper' ? 14 : tier === 'good' ? 11 : 8
+    const coinCount = tier === 'jackpot' ? 18 : tier === 'bumper' ? 14 : tier === 'good' ? 11 : tier === 'slim' ? 6 : 8
     setCoins(Array.from({ length: coinCount }, () => ({ id: pid.current++ })))
     setTimeout(() => setCoins([]), 900)
     setReveal(r)
@@ -624,25 +624,27 @@ export default function TrawlIndicator({ hidden = false }: { hidden?: boolean })
     ? (reveal.newFishingLevel > reveal.oldFishingLevel ? 0 : getXPProgress(reveal.newFishingXP - reveal.xpGained).progress)
     : 0
   const bump = reveal ? TRAWL_BUMPERS[reveal.bumper] : null
-  const isBumper = !!reveal && reveal.bumper !== 'normal'
-  const revAccent = isBumper && bump ? bump.accent : GOLD
+  const isUp = !!reveal && (reveal.bumper === 'good' || reveal.bumper === 'bumper' || reveal.bumper === 'jackpot')
+  const isSlim = !!reveal && reveal.bumper === 'slim'
+  const isSpecial = isUp || isSlim
+  const revAccent = isUp && bump ? bump.accent : GOLD
   const collectReveal = (
     <AnimatePresence>
       {reveal && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={dismissReveal}
           style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(4,8,14,0.86)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <motion.div initial={{ scale: 0.85, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 24 }} onClick={e => e.stopPropagation()}
-            style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18, background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${revAccent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${revAccent}${isBumper ? '9a' : '5e'}`, boxShadow: isBumper ? `0 0 40px ${revAccent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
-            {/* Bumper celebration — only above a normal haul */}
-            {isBumper && bump && (
+            style={{ maxWidth: 350, width: '100%', textAlign: 'center', padding: '1.7rem 1.5rem', borderRadius: 18, background: [`radial-gradient(ellipse 85% 62% at 50% 18%, ${revAccent}26 0%, transparent 70%)`, 'linear-gradient(180deg, rgba(40,32,16,0.97) 0%, rgba(20,14,7,0.98) 100%)'].join(', '), border: `1px solid ${revAccent}${isUp ? '9a' : '5e'}`, boxShadow: isUp ? `0 0 40px ${revAccent}33, inset 0 0 28px rgba(0,0,0,0.5)` : 'inset 0 0 28px rgba(0,0,0,0.5)' }}>
+            {/* Haul tier — celebrated for the up-tiers, muted for a slim haul. */}
+            {isSpecial && bump && (
               <motion.div initial={{ opacity: 0, scale: 0.5, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 17 }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0.32rem 0.95rem', borderRadius: 999, background: `${bump.accent}22`, border: `1px solid ${bump.accent}`, boxShadow: `0 0 20px ${bump.accent}66` }}>
-                <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.08em', color: bump.accent, textShadow: `0 0 10px ${bump.accent}66` }}>✦ {bump.label} ✦</span>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0.32rem 0.95rem', borderRadius: 999, background: `${bump.accent}${isUp ? '22' : '16'}`, border: `1px solid ${bump.accent}${isUp ? 'ff' : '55'}`, boxShadow: isUp ? `0 0 20px ${bump.accent}66` : 'none' }}>
+                <span className="font-cinzel font-800 uppercase" style={{ fontSize: isUp ? '0.78rem' : '0.66rem', letterSpacing: '0.08em', color: bump.accent, textShadow: isUp ? `0 0 10px ${bump.accent}66` : 'none' }}>{isUp ? `✦ ${bump.label} ✦` : bump.label}</span>
               </motion.div>
             )}
             <p className="font-cinzel font-700" style={{ fontSize: '1.4rem', color: GOLD }}>Haul secured.</p>
             <p className="font-karla" style={{ fontSize: '0.82rem', color: '#dccba6', marginTop: 4 }}>
-              {reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.{isBumper && bump ? ` ${bump.blurb}` : ''}
+              {reveal.crewName} trawled the {state.zones.find(z => z.key === reveal.zone)?.label}.{isSpecial && bump ? ` ${bump.blurb}` : ''}
             </p>
 
             <div style={{ marginTop: 14 }} />
