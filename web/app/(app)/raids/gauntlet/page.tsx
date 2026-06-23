@@ -1,7 +1,7 @@
-// The Davy Jones Gauntlet — Chapter 2.5 daily push-your-luck roguelike.
-// One run a day; depth-scaled enemies from Raids 1-4; pot banked only on
-// cash-out. The daily gate + payout are server-authoritative (see actions.ts);
-// the fight engine is the shared RaidCombat, hosted by GauntletGame.
+// The Davy Jones Gauntlet — Chapter 2.5 push-your-luck roguelike.
+// 1-hour cooldown between runs; depth-scaled enemies from Raids 1-4; pot banked
+// only on cash-out. The cooldown gate + payout are server-authoritative (see
+// actions.ts); the fight engine is the shared RaidCombat, hosted by GauntletGame.
 
 import { redirect } from 'next/navigation'
 import GauntletGame from './GauntletGame'
