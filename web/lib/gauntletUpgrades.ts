@@ -48,7 +48,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: "Navigator's Log",
     description: 'Earn 20% more Nav XP every time you cash out a Gauntlet run.',
     depthRequired: 0,
-    cost: 30,
+    cost: 25,
     scope: 'gauntlet',
   },
   {
@@ -56,7 +56,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: "Salvager's Eye",
     description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
     depthRequired: 0,
-    cost: 50,
+    cost: 40,
     scope: 'gauntlet',
   },
   {
@@ -64,7 +64,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Calm Before',
     description: "The Locker's curses take one depth longer to catch you.",
     depthRequired: 0,
-    cost: 75,
+    cost: 55,
     scope: 'gauntlet',
   },
   {
@@ -72,7 +72,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Lucky Locker',
     description: 'Earn 50% more Fathoms from every dive, win or lose.',
     depthRequired: 0,
-    cost: 100,
+    cost: 70,
     scope: 'gauntlet',
   },
   {
@@ -80,7 +80,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Diving Bell',
     description: 'Start every Gauntlet run with 15% more max HP.',
     depthRequired: 0,
-    cost: 130,
+    cost: 85,
     scope: 'gauntlet',
   },
   {
@@ -88,7 +88,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Iron Hide',
     description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
     depthRequired: 0,
-    cost: 160,
+    cost: 100,
     scope: 'gauntlet',
   },
   // ── Ship & Shore (scope 'account'/'world') — power for the wider game ───────
