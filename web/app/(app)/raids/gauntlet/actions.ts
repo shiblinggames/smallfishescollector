@@ -107,11 +107,14 @@ export async function getGauntletLeaderboard(): Promise<{
   const { data: { user } } = await supabase.auth.getUser()
 
   const admin = createAdminClient()
+  // #1 deepest CASHED-OUT descent (the leaderboard view excludes deaths +
+  // admins), with the same depth → fastest → first ordering as the board.
   const { data: top } = await admin
-    .from('profiles')
-    .select('username, ship_name, gauntlet_deepest')
-    .gt('gauntlet_deepest', 0)
-    .order('gauntlet_deepest', { ascending: false })
+    .from('leaderboard_gauntlet')
+    .select('username, score')
+    .order('score', { ascending: false })
+    .order('time_ms', { ascending: true })
+    .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
 
@@ -128,8 +131,8 @@ export async function getGauntletLeaderboard(): Promise<{
   return {
     top: top
       ? {
-          name: (top.username as string | null) ?? (top.ship_name as string | null) ?? 'A captain',
-          depth: (top.gauntlet_deepest as number | null) ?? 0,
+          name: (top.username as string | null) ?? 'A captain',
+          depth: Number(top.score),
         }
       : null,
     mine,

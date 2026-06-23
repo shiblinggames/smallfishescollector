@@ -84,6 +84,8 @@ export interface GauntletGameProps {
   nextAt: string | null
   /** Whether the player has seen the first-time explainer. */
   hasSeenIntro: boolean
+  /** #1 deepest cashed-out descender across all captains, or null if none yet. */
+  topDescender: { name: string; depth: number } | null
 }
 
 export default function GauntletGame(props: GauntletGameProps) {
@@ -358,8 +360,15 @@ export default function GauntletGame(props: GauntletGameProps) {
             </span>
           </div>
 
+          {/* The name to beat — #1 deepest cashed-out descender of all. */}
+          {props.topDescender && (
+            <p className="font-karla" style={{ fontSize: '0.7rem', color: '#9a948a', marginTop: 9 }}>
+              Deepest of all captains: <span className="font-700" style={{ color: TEAL }}>{props.topDescender.name}</span>, Depth {props.topDescender.depth}
+            </p>
+          )}
+
           {/* Leaderboard — deepest cashed-out descent across all captains. */}
-          <div style={{ marginTop: 9 }}>
+          <div style={{ marginTop: props.topDescender ? 6 : 9 }}>
             <LeaderboardModal boards={['gauntletDepth']} title="Deepest Descent" label="View the Ranks" />
           </div>
 

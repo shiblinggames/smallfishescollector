@@ -6,7 +6,7 @@
 import { redirect } from 'next/navigation'
 import GauntletGame from './GauntletGame'
 import { getRaidPlayerStats } from '../actions'
-import { getGauntletDailyState } from './actions'
+import { getGauntletDailyState, getGauntletLeaderboard } from './actions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { gauntletUnlocked } from '@/lib/gauntlet'
 
@@ -14,10 +14,11 @@ export default async function GauntletPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [profile, stats, daily] = await Promise.all([
+  const [profile, stats, daily, leaderboard] = await Promise.all([
     getCurrentProfile(),
     getRaidPlayerStats(user.id),
     getGauntletDailyState(),
+    getGauntletLeaderboard(),
   ])
 
   // Locked until GAUNTLET_LIVE flips (then: cleared Chapter 2). Admins always.
@@ -56,6 +57,7 @@ export default async function GauntletPage() {
           available={daily.available}
           nextAt={daily.nextAt}
           hasSeenIntro={profile?.has_seen_gauntlet_intro === true}
+          topDescender={leaderboard.top}
         />
       </div>
     </main>
