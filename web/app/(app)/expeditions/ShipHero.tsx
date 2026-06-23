@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useTransition, useEffect, useMemo, Fragment } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { vibrate } from '@/lib/haptics'
+import { RARITY_COLOR as ITEM_RARITY_COLOR } from '@/lib/bossRaids'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
@@ -622,6 +625,11 @@ export default function ShipHero({
   // confirm (the forge sacrifices the components).
   const [forging, setForging] = useState<string | null>(null)
   const [forgeArmed, setForgeArmed] = useState<string | null>(null)
+  // The cinematic forge overlay: holds the two component images + the result
+  // while the merge animation plays. `forgeReady` flips once the server forge
+  // lands so the reveal can settle on confirmed success.
+  const [forgeFx, setForgeFx] = useState<{ compImages: (string | null)[]; result: { name: string; image: string | null }; accent: string } | null>(null)
+  const [forgeReady, setForgeReady] = useState(false)
   function onForgeTap(resultId: string) {
     if (forging) return
     if (forgeArmed !== resultId) {
@@ -631,11 +639,22 @@ export default function ShipHero({
     }
     setForgeArmed(null)
     setForging(resultId)
+    const recipe = FORGE_RECIPES.find(r => r.result === resultId)
+    const result = getRaidItem(resultId)
+    if (recipe && result) {
+      setForgeReady(false)
+      setForgeFx({
+        compImages: recipe.components.map(id => getRaidItem(id)?.image ?? null),
+        result: { name: result.name, image: result.image ?? null },
+        accent: (ITEM_RARITY_COLOR as Record<string, string>)[result.rarity] ?? '#f0c040',
+      })
+      vibrate(16)   // confirm tick; the clash haptic + SFX fire in the animation
+    }
     startTransition(async () => {
       const res = await forgeRaidItem(resultId)
       setForging(null)
-      if ('error' in res) return
-      router.refresh()
+      if ('error' in res) { setForgeFx(null); return }
+      setForgeReady(true)
     })
   }
 
@@ -2017,6 +2036,20 @@ export default function ShipHero({
           />
         </motion.div>
       </PopupShell>
+
+      {/* Cinematic forge — the two components slam together and the forged item
+          erupts out. Portaled to body so the loadout drawer's transforms can't
+          anchor it. */}
+      {forgeFx && createPortal(
+        <ForgeAnimation
+          compImages={forgeFx.compImages}
+          result={forgeFx.result}
+          accent={forgeFx.accent}
+          ready={forgeReady}
+          onDone={() => { setForgeFx(null); router.refresh() }}
+        />,
+        document.body,
+      )}
     </>
   )
 }
@@ -2162,6 +2195,99 @@ function UpgradeShipPanel({
         </>
       ) : null}
     </>
+  )
+}
+
+// Cinematic raid-item forge. The component artworks fly in from the sides and
+// collide; a flash + ember burst fires; then the forged item springs out with
+// rays and a name reveal. Auto-reveals once `ready` (the server forge landed).
+function ForgeAnimation({ compImages, result, accent, ready, onDone }: {
+  compImages: (string | null)[]
+  result: { name: string; image: string | null }
+  accent: string
+  ready: boolean
+  onDone: () => void
+}) {
+  // merge (components fly in) → clash (collision flash/sparks) → reveal (forged
+  // item out). Reveal waits for the slam to finish AND the server to confirm,
+  // so a fast server never skips the clash beat.
+  const [clashed, setClashed] = useState(false)
+  const [slamDone, setSlamDone] = useState(false)
+  const revealed = slamDone && ready
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      setClashed(true)
+      vibrate([0, 40, 35, 70])
+      import('@/lib/fishingMusic').then(m => m.playForgeSfx(false)).catch(() => {})
+    }, 900)
+    const t2 = setTimeout(() => setSlamDone(true), 1180)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+  const sparks = useMemo(() => Array.from({ length: 18 }, (_, n) => {
+    const ang = (Math.PI * 2 * n) / 18 + (n % 2) * 0.3
+    const dist = 70 + (n % 4) * 22
+    return { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, size: 3 + (n % 3), dur: 0.5 + (n % 4) * 0.12, warm: n % 3 !== 0 }
+  }), [])
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1500, background: 'rgba(3,6,11,0.9)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}
+    >
+      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: `${accent}cc`, marginBottom: 24 }}>
+        {revealed ? 'Forged' : 'The Forge'}
+      </p>
+
+      <div style={{ position: 'relative', width: 240, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Clash flash */}
+        {clashed && (
+          <motion.div aria-hidden initial={{ scale: 0.3, opacity: 1 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}
+            style={{ position: 'absolute', width: 120, height: 120, borderRadius: '50%', background: `radial-gradient(circle, #fff 0%, ${accent}cc 36%, transparent 72%)` }} />
+        )}
+        {/* Ember burst */}
+        {clashed && sparks.map((s, n) => (
+          <motion.div key={n} aria-hidden initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} animate={{ x: s.x, y: s.y, opacity: 0, scale: 0.3 }} transition={{ duration: s.dur, ease: 'easeOut' }}
+            style={{ position: 'absolute', width: s.size, height: s.size, borderRadius: '50%', background: s.warm ? '#ffd27a' : accent, boxShadow: `0 0 6px ${s.warm ? '#ff9a3c' : accent}` }} />
+        ))}
+
+        {/* Components fly in + collide, then vanish */}
+        {!revealed && compImages.map((img, i) => (
+          <motion.img
+            key={i} src={img ?? undefined} alt="" aria-hidden
+            initial={{ x: i === 0 ? -150 : 150, opacity: 0, rotate: i === 0 ? -18 : 18 }}
+            animate={clashed ? { x: 0, opacity: 0, scale: 0.6 } : { x: i === 0 ? -52 : 52, opacity: 1, rotate: 0 }}
+            transition={clashed ? { duration: 0.2, ease: 'easeIn' } : { duration: 0.85, ease: [0.4, 0, 0.7, 1] }}
+            style={{ position: 'absolute', width: 92, height: 92, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}
+          />
+        ))}
+
+        {/* The forged item erupts out */}
+        {revealed && (
+          <>
+            <motion.div aria-hidden initial={{ opacity: 0, scale: 0.5, rotate: 0 }} animate={{ opacity: 0.5, scale: 1, rotate: 360 }}
+              transition={{ opacity: { duration: 0.5 }, scale: { duration: 0.6 }, rotate: { duration: 22, repeat: Infinity, ease: 'linear' } }}
+              style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: `conic-gradient(from 0deg, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00)` }} />
+            <motion.img
+              src={result.image ?? undefined} alt={result.name}
+              initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: [0.3, 1.18, 1], opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: [0.22, 1.3, 0.4, 1] }}
+              style={{ position: 'relative', width: 132, height: 132, objectFit: 'contain', filter: `drop-shadow(0 0 28px ${accent}aa) drop-shadow(0 6px 14px rgba(0,0,0,0.6))` }}
+            />
+          </>
+        )}
+      </div>
+
+      {revealed ? (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} style={{ textAlign: 'center', marginTop: 18 }}>
+          <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: accent, lineHeight: 1.1, textShadow: `0 0 22px ${accent}66` }}>{result.name}</p>
+          <button onClick={onDone} className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
+            style={{ marginTop: 20, padding: '0.7rem 1.7rem', borderRadius: 12, background: `${accent}26`, border: `1px solid ${accent}66`, color: accent, fontSize: '0.8rem', cursor: 'pointer' }}>
+            Claim it
+          </button>
+        </motion.div>
+      ) : (
+        <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8a8480', marginTop: 18 }}>Hammering it into one…</p>
+      )}
+    </motion.div>
   )
 }
 
