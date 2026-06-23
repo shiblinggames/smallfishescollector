@@ -221,7 +221,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, expedition_xp, doubloons, gems, ship_classes, raid_items')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, expedition_xp, doubloons, gems, ship_classes, raid_items')
     .eq('id', user.id)
     .single()
 
@@ -263,6 +263,19 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const prevDeepest      = (profile.gauntlet_deepest as number | null) ?? 0
   const deepest          = Math.max(prevDeepest, d)
 
+  // Leaderboard: deepest CASHED-OUT depth only (this path = cash-out, never
+  // death). Time is server-computed wall-clock from run start (gauntlet_last_run_at
+  // stamped on startGauntletRun) so it can't be faked client-side. A run counts
+  // if it goes deeper, or matches the best depth in a faster time.
+  const lastRunAt   = profile.gauntlet_last_run_at ? new Date(profile.gauntlet_last_run_at as string).getTime() : 0
+  const runMs       = lastRunAt > 0 ? Math.max(0, Date.now() - lastRunAt) : null
+  const prevBestDep = (profile.gauntlet_best_depth as number | null) ?? 0
+  const prevBestMs  = (profile.gauntlet_best_depth_ms as number | null) ?? null
+  const beatsBest   = runMs != null && (d > prevBestDep || (d === prevBestDep && (prevBestMs == null || runMs < prevBestMs)))
+  const bestFields  = beatsBest
+    ? { gauntlet_best_depth: d, gauntlet_best_depth_ms: runMs, gauntlet_best_depth_at: new Date().toISOString() }
+    : {}
+
   const [, , crewXP] = await Promise.all([
     admin.from('profiles').update({
       doubloons: newDoubloons,
@@ -271,6 +284,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
       gauntlet_run_open: false,
       gauntlet_deepest: deepest,
       raid_items: newRaidItems,
+      ...bestFields,
     }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,

@@ -14,11 +14,15 @@ export interface LeaderboardEntry {
   username: string
   score: number
   zone?: string | null
+  /** Optional pre-formatted secondary line; overrides the board's subUnit when
+   *  present (e.g. the Gauntlet's run time under "Depth N"). */
+  sub?: string
 }
 
 export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'chartingPoints'
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
+  | 'gauntletDepth'
 
 export type AvatarMap = Record<string, {
   characterColor: string | null
@@ -69,6 +73,7 @@ export const BOARD_META: Record<BoardKey, {
   expedition:    { label: 'Navigator Level',accent: '#7090c0', unit: n => `Lv ${getExpeditionLevel(n)}`, subUnit: n => `${n.toLocaleString()} XP` },
   raidProgress:  { label: 'Raid Progress',  accent: '#7fd0a0', unit: n => `${n.toLocaleString()}`,       subUnit: n => `${n === 1 ? 'node' : 'nodes'} cleared` },
   chartingPoints:{ label: 'Charting Points',accent: '#d8a24a', unit: n => `${n.toLocaleString()}`,       subUnit: n => `charting point${n === 1 ? '' : 's'}` },
+  gauntletDepth: { label: 'Deepest Descent', accent: '#5eead4', unit: n => `Depth ${n}`,                  subUnit: () => 'cashed out' },
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
@@ -265,7 +270,7 @@ export function LeaderboardSection({ accent, unit, subUnit, data, myScore, curre
                     {unit(entry.score)}
                   </p>
                   <p className="font-karla font-300" style={{ fontSize: '0.48rem', color: '#3a3835' }}>
-                    {subUnit(entry.score)}
+                    {entry.sub ?? subUnit(entry.score)}
                   </p>
                 </div>
               </Link>

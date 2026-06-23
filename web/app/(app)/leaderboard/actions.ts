@@ -54,6 +54,37 @@ async function fetchViewBoard(admin: Admin, view: string, userId: string) {
   return { top: topRows, myScore, myRank }
 }
 
+function fmtRunTime(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+// Gauntlet "Deepest Descent" — compound sort: deepest CASHED-OUT depth, then
+// fastest time to it, then who got there first (created_at). The view already
+// excludes deaths (only cash-outs write gauntlet_best_depth) + admins.
+async function fetchGauntlet(admin: Admin, userId: string) {
+  const [{ data: top }, { data: me }] = await Promise.all([
+    admin.from('leaderboard_gauntlet')
+      .select('user_id, username, score, time_ms')
+      .order('score', { ascending: false })
+      .order('time_ms', { ascending: true })
+      .order('created_at', { ascending: true })
+      .limit(50),
+    admin.from('leaderboard_gauntlet').select('score').eq('user_id', userId).single(),
+  ])
+  const topRows = ((top ?? []) as Array<{ user_id: string; username: string; score: number | string; time_ms: number | string | null }>)
+    .map(r => ({
+      user_id: r.user_id,
+      username: r.username,
+      score: Number(r.score),
+      sub: r.time_ms != null ? fmtRunTime(Number(r.time_ms)) : 'cashed out',
+    })) as LeaderboardEntry[]
+  const myRow = me as { score?: number | string } | null
+  const myScore = myRow === null ? null : Number(myRow.score)
+  const myRank = myScore === null ? null : await resolveMyRank(admin, 'leaderboard_gauntlet', userId, myScore, topRows)
+  return { top: topRows, myScore, myRank }
+}
+
 async function fetchPerfectStreak(admin: Admin, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from('leaderboard_perfect_streak')
@@ -160,6 +191,7 @@ export async function getLeaderboardBoards(
     if (key === 'perfectStreak')      res = await fetchPerfectStreak(admin, user.id)
     else if (key === 'raidProgress')  res = await fetchRaidProgress(admin, user.id)
     else if (key === 'chartingPoints') res = await fetchChartingPoints(admin, user.id)
+    else if (key === 'gauntletDepth') res = await fetchGauntlet(admin, user.id)
     else {
       const view = VIEW_BY_KEY[key]
       if (!view) return

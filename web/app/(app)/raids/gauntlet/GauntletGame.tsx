@@ -27,6 +27,7 @@ import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type Tide
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen } from './actions'
 import { GAUNTLET_UPGRADES, bonusChargeSlots } from '@/lib/gauntletUpgrades'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
+import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 
@@ -355,6 +356,11 @@ export default function GauntletGame(props: GauntletGameProps) {
             <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD, lineHeight: 1 }}>
               {props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}
             </span>
+          </div>
+
+          {/* Leaderboard — deepest cashed-out descent across all captains. */}
+          <div style={{ marginTop: 9 }}>
+            <LeaderboardModal boards={['gauntletDepth']} title="Deepest Descent" label="View the Ranks" />
           </div>
 
           {/* Descend — the start. Big and obvious. */}
