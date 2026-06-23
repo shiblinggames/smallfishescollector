@@ -368,16 +368,6 @@ export default function GauntletGame(props: GauntletGameProps) {
             </span>
           </div>
 
-          {/* Fathoms purse — earned by descending, spent in the Locker. */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8,
-            padding: '0.38rem 0.95rem', borderRadius: 999,
-            background: `${TEAL}0e`, border: `1px solid ${TEAL}33`,
-          }}>
-            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.18em', color: '#8aa39e' }}>Fathoms</span>
-            <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: TEAL, lineHeight: 1 }}>{fmt(props.fathoms)}</span>
-          </div>
-
           {/* The name to beat — #1 deepest cashed-out descender of all. */}
           {props.topDescender && (
             <p className="font-karla" style={{ fontSize: '0.7rem', color: '#9a948a', marginTop: 9 }}>
@@ -412,8 +402,14 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           )}
 
+          {/* Fathoms purse — the shop currency, sitting right above the shops. */}
+          <div style={{ marginTop: 22, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 7 }}>
+            <span className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: TEAL, lineHeight: 1 }}>{fmt(props.fathoms)}</span>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: '#8aa39e' }}>Fathoms to spend</span>
+          </div>
+
           {/* Secondary doors: the rewards guide + the two Fathoms shops. */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <ActionTile
               color={TEAL}
               onClick={() => setHaulOpen(true)}
@@ -1421,7 +1417,7 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
   return (
     <button onClick={disabled ? undefined : onClick} disabled={disabled} className="tap"
       style={{
-        flex: 1, minWidth: 0, padding: '0.95rem 0.4rem 0.8rem', borderRadius: 14,
+        flex: 1, minWidth: 0, padding: '0.95rem 0.25rem 0.8rem', borderRadius: 14,
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, textAlign: 'center',
         cursor: disabled ? 'wait' : 'pointer',
         background: primary ? `linear-gradient(180deg, ${color}2e, ${color}10)` : `${color}10`,
@@ -1430,7 +1426,7 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
         animation: primary && !disabled ? 'gauntCta 2.6s ease-in-out infinite' : 'none',
       }}>
       <span style={{ color }}>{icon}</span>
-      <span className="font-cinzel font-800 uppercase tracking-[0.05em]" style={{ fontSize: '0.84rem', color: primary ? color : '#f0ede8', lineHeight: 1 }}>{label}</span>
+      <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.76rem', letterSpacing: '0.02em', color: primary ? color : '#f0ede8', lineHeight: 1, whiteSpace: 'nowrap' }}>{label}</span>
       <span className="font-karla" style={{ fontSize: '0.58rem', color: '#9a948a', lineHeight: 1.25 }}>{line}</span>
     </button>
   )

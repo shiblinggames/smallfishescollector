@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth } from '@/lib/gauntlet'
-import { getGauntletUpgrade, gauntletHaulMult } from '@/lib/gauntletUpgrades'
+import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletBonusGems, gauntletChestLuck } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 
 /** Mail the player for each depth-unlock milestone they cross this run. Deepest
@@ -243,11 +243,14 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(d)))
   const chest = chestForDepth(d)
 
+  // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out.
+  const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
+
   // Davy cannon chest drops — each component rolls independently at the chest
-  // tier's chance, only for cannons not yet owned, and never once the player
-  // has forged them into the Grand Cannon.
+  // tier's chance (lifted by Lucky Locker), only for cannons not yet owned, and
+  // never once the player has forged them into the Grand Cannon.
   const ownedItems = (profile.raid_items as string[] | null) ?? []
-  const dropChance = chestCannonDropChance(chest.tier)
+  const dropChance = Math.min(1, chestCannonDropChance(chest.tier) * gauntletChestLuck(upgrades))
   const droppedItems: string[] = []
   if (!ownedItems.includes(DAVY_FORGE.result)) {
     for (const cannon of DAVY_FORGE.components) {
@@ -258,13 +261,10 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
   const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
-  // Salvager's Eye (Locker Upgrade): +% doubloons on every cash-out haul.
-  const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
-  const haulMult   = gauntletHaulMult(upgrades)
 
-  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * haulMult)
-  const bankedXp        = Math.round(cleanPot * chest.potMult)
-  const gems            = chest.gems
+  const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades))
+  const bankedXp        = Math.round(cleanPot * chest.potMult * gauntletXpMult(upgrades))
+  const gems            = chest.gems + gauntletBonusGems(upgrades)
 
   // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth.
   const earnedFathoms    = fathomsForDepth(d)

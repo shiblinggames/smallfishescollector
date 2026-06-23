@@ -32,6 +32,40 @@ export interface GauntletUpgrade {
 }
 
 export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
+  // ── Run Upgrades (scope 'gauntlet') — only touch Gauntlet runs ─────────────
+  {
+    id: 'navigators_log',
+    name: "Navigator's Log",
+    description: 'Earn 20% more Nav XP every time you cash out a Gauntlet run.',
+    depthRequired: 6,
+    cost: 40,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'pearl_diver',
+    name: 'Pearl Diver',
+    description: 'Every Gauntlet chest you crack open coughs up 1 extra gem.',
+    depthRequired: 10,
+    cost: 60,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'salvagers_eye',
+    name: "Salvager's Eye",
+    description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
+    depthRequired: 14,
+    cost: 80,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'lucky_locker',
+    name: 'Lucky Locker',
+    description: 'Better odds of a Davy cannon dropping from your Gauntlet chests.',
+    depthRequired: 20,
+    cost: 110,
+    scope: 'gauntlet',
+  },
+  // ── Ship & Shore (scope 'account'/'world') — power for the wider game ───────
   {
     id: 'safe_voyages',
     name: 'Safe Passage',
@@ -47,14 +81,6 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     depthRequired: 10,
     cost: 60,
     scope: 'account',
-  },
-  {
-    id: 'salvagers_eye',
-    name: "Salvager's Eye",
-    description: 'Bank 15% more doubloons every time you cash out a Gauntlet run.',
-    depthRequired: 12,
-    cost: 70,
-    scope: 'gauntlet',
   },
 ]
 
@@ -76,4 +102,19 @@ export function hasSafeVoyages(unlocked: string[] | null | undefined): boolean {
 /** Salvager's Eye: doubloon multiplier applied to a Gauntlet cash-out haul. */
 export function gauntletHaulMult(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('salvagers_eye') ? 1.15 : 1
+}
+
+/** Navigator's Log: Nav XP multiplier on a Gauntlet cash-out. */
+export function gauntletXpMult(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('navigators_log') ? 1.2 : 1
+}
+
+/** Pearl Diver: flat extra gems added to a Gauntlet cash-out chest. */
+export function gauntletBonusGems(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('pearl_diver') ? 1 : 0
+}
+
+/** Lucky Locker: multiplier on the Davy-cannon chest drop chance. */
+export function gauntletChestLuck(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('lucky_locker') ? 1.5 : 1
 }
