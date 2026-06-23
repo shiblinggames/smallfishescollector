@@ -40,7 +40,7 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
 }) {
   const gemBg = isWild ? WILD_RAINBOW : isInvalid ? gemSurface('#d6392a') : gemSurface(tok.color)
   const gemGlow = isWild
-    ? `${GEM_BEVEL} drop-shadow(0 0 9px #fff) drop-shadow(0 0 16px ${GOLD}) brightness(1.08) saturate(1.12)`
+    ? `${GEM_BEVEL} drop-shadow(0 0 8px ${GOLD}cc)`
     : isCommit
     ? `${GEM_BEVEL} drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px ${tok.color}) brightness(1.16) saturate(1.15)`
     : isSel ? `${GEM_BEVEL} drop-shadow(0 0 9px ${tok.color}) brightness(1.1)`
@@ -61,26 +61,33 @@ const Tile = memo(function Tile({ tok, isWild, isSel, isPop, isDrop, isCommit, i
       // `--tmf` = how many cells this tile actually fell, so tmSlide starts it
       // at the right height.
       ['--tmf' as string]: isDrop ? String(fall) : undefined,
-      animation: isPop ? 'tmPop 0.24s ease forwards'
-        : isDrop ? 'tmSlide 0.26s cubic-bezier(.2,.7,.4,1)'
+      animation: isPop ? 'tmPop 0.19s ease forwards'
+        : isDrop ? 'tmSlide 0.2s cubic-bezier(.2,.7,.4,1)'
         : isWild ? 'tmWildPulse 1.8s ease-in-out infinite'
         : undefined,
     } as CSSProperties}>
+      {/* Wild = a clean glossy rainbow ORB (circle), not a star — reads clearly
+          as the "any colour" color bomb. Normal tiles keep their shaped gem. */}
       <div aria-hidden style={{
         position: 'absolute', inset: 0,
-        clipPath: tok.clip || undefined, borderRadius: tok.clip ? 0 : '24%',
+        clipPath: isWild ? undefined : (tok.clip || undefined),
+        borderRadius: isWild ? '50%' : (tok.clip ? 0 : '24%'),
         background: gemBg, filter: gemGlow,
       }} />
-      <div aria-hidden style={{
-        position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '16%', width: '20%', height: '20%', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)', pointerEvents: 'none',
-      }} />
-      {/* The Compass shows the rainbow star alone (no fish) so it reads as the
-          "any colour" wildcard; normal tiles carry their fish sprite. */}
       {isWild ? (
-        <div aria-hidden style={{ position: 'absolute', inset: '30%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 45%, transparent 72%)', pointerEvents: 'none' }} />
+        // Glossy sphere highlight so the rainbow reads as a shiny orb.
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none',
+          background: 'radial-gradient(circle at 34% 27%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.12) 24%, transparent 48%), radial-gradient(circle at 50% 50%, transparent 56%, rgba(0,0,0,0.28) 100%)',
+        }} />
       ) : (
-        <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
+        <>
+          <div aria-hidden style={{
+            position: 'absolute', left: tok.glint?.left ?? '21%', top: tok.glint?.top ?? '16%', width: '20%', height: '20%', borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)', pointerEvents: 'none',
+          }} />
+          <img src={tok.img} alt="" draggable={false} style={{ position: 'relative', width: '70%', height: '70%', objectFit: 'contain', pointerEvents: 'none', transform: tok.nudge ? `translateY(${tok.nudge}%)` : undefined, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.62))' }} />
+        </>
       )}
     </div>
   )
@@ -186,7 +193,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         out.push({
           id: pid.current++, x: ctr.x, y: ctr.y,
           dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist - 22,
-          color: spark ? '#fff' : color,
+          color: spark ? '#ffffff' : color,
           size: spark ? 5 + Math.random() * 4 : 9 + Math.random() * 7,
         })
       }
@@ -238,9 +245,9 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
     // haptic so the move reads as *committed* before anything pops.
     setCommitted([a, b]); haptic(22)
     boardRef.current = res.swapped; setBoard(res.swapped)
-    await wait(150)
+    await wait(95)
     setCommitted(null)
-    await wait(45)
+    await wait(25)
 
     let localScore = scoreRef.current
     for (let s = 0; s < res.steps.length; s++) {
@@ -256,8 +263,8 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       setScoreFloat({ amount: step.gained, key: pid.current++ })
       // Hold for the pop, with a SMALL, CAPPED per-cascade lengthening so a
       // chain has a touch more weight without the old 4-second deep-chain drag.
-      const big = step.cleared.length >= 5 ? 50 : 0
-      await wait(230 + Math.min(cascade - 1, 3) * 30 + big)
+      const big = step.cleared.length >= 5 ? 40 : 0
+      await wait(160 + Math.min(cascade - 1, 3) * 20 + big)
       // 2) swap in the settled board; changed tiles slide down from their real
       //    fall height (tmSlide + per-tile --tmf).
       const before = boardRef.current
@@ -269,8 +276,8 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       setDropping(fell)
       localScore += step.gained; scoreRef.current = localScore; setScore(localScore)
       setScorePulse(p => p + 1)
-      // settle beat — long enough for the slide (0.26s) to land, capped growth.
-      await wait(265 + Math.min(cascade - 1, 3) * 15)
+      // settle beat — long enough for the slide (0.2s) to land, capped growth.
+      await wait(205 + Math.min(cascade - 1, 3) * 12)
       setDropping(new Set())
     }
     setFlash(null); setParticles([]) // combo clears on the next move so its burst can finish
@@ -469,8 +476,8 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
         {flash && (
           <div key={flash.key} aria-hidden style={{
             position: 'absolute', inset: 0, borderRadius: 14, pointerEvents: 'none', zIndex: 1,
-            background: `radial-gradient(ellipse at center, rgba(255,232,150,${0.55 * flash.intensity}) 0%, rgba(240,192,64,${0.3 * flash.intensity}) 42%, transparent 72%)`,
-            mixBlendMode: 'screen', animation: 'tmBoardFlash 0.5s ease-out forwards',
+            background: `radial-gradient(ellipse at center, rgba(255,232,150,${0.5 * flash.intensity}) 0%, rgba(240,192,64,${0.26 * flash.intensity}) 42%, transparent 72%)`,
+            animation: 'tmBoardFlash 0.5s ease-out forwards',
           }} />
         )}
 
@@ -523,8 +530,15 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
       {mounted && createPortal(
         bomb ? (
           <div key={bomb.key} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8800, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ position: 'absolute', width: 'min(135vw, 760px)', height: 'min(135vw, 760px)', borderRadius: '50%', animation: 'tmComboFlash 0.9s ease-out forwards', background: 'radial-gradient(circle, rgba(255,255,255,0.32) 0%, rgba(240,192,64,0.2) 34%, transparent 66%)' }} />
-            <div style={{ position: 'absolute', width: 'min(120vw, 680px)', height: 'min(120vw, 680px)', borderRadius: '50%', animation: 'tmComboBurst 0.9s cubic-bezier(.2,.8,.3,1) forwards', background: WILD_RAINBOW, opacity: 0.5, mixBlendMode: 'screen' }} />
+            <div style={{ position: 'absolute', width: 'min(135vw, 760px)', height: 'min(135vw, 760px)', borderRadius: '50%', animation: 'tmComboFlash 0.9s ease-out forwards', background: 'radial-gradient(circle, rgba(255,255,255,0.34) 0%, rgba(240,192,64,0.2) 34%, transparent 66%)' }} />
+            {/* Rainbow shockwave RING (masked to a band) — reads as a deliberate
+                color-bomb burst, not a full-screen rainbow wash. */}
+            <div style={{
+              position: 'absolute', width: 'min(120vw, 680px)', height: 'min(120vw, 680px)', borderRadius: '50%',
+              animation: 'tmComboBurst 0.9s cubic-bezier(.2,.8,.3,1) forwards', background: WILD_RAINBOW, opacity: 0.85,
+              WebkitMaskImage: 'radial-gradient(circle, transparent 40%, #000 48%, #000 58%, transparent 68%)',
+              maskImage: 'radial-gradient(circle, transparent 40%, #000 48%, #000 58%, transparent 68%)',
+            }} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'tmComboBurst 0.9s cubic-bezier(.2,.8,.3,1) forwards', transformOrigin: 'center' }}>
               <span className="font-cinzel font-700" style={{
                 fontSize: 'clamp(3rem, 19vw, 7rem)', lineHeight: 0.9, color: '#fff', letterSpacing: '0.01em',
@@ -569,7 +583,7 @@ export default function TreasureMatchGame({ initial }: { initial: MatchState }) 
                 animate={{ x: p.x + p.dx, y: [p.y, p.y + p.dy, p.y + p.dy + 72], opacity: [1, 1, 0], scale: [1.15, 1.1, 0.1] }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.72, ease: 'easeOut', times: [0, 0.42, 1] }}
-                style={{ position: 'absolute', left: -p.size / 2, top: -p.size / 2, width: p.size, height: p.size, borderRadius: '50%', background: p.color, boxShadow: `0 0 ${Math.round(p.size * 0.9)}px ${p.color}` }}
+                style={{ position: 'absolute', left: -p.size / 2, top: -p.size / 2, width: p.size, height: p.size, borderRadius: '50%', background: `radial-gradient(circle, ${p.color} 28%, ${p.color}00 72%)` }}
               />
             ))}
           </AnimatePresence>
