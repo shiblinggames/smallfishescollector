@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { BADGE_MAP, MAX_EQUIPPED_BADGES } from '@/lib/badges'
+import { BADGES, BADGE_MAP, BADGE_REWARD, badgeReward, MAX_EQUIPPED_BADGES } from '@/lib/badges'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
@@ -70,6 +70,57 @@ export async function reconcileBadges(): Promise<string[]> {
   const next = [...have, ...toGrant]
   await admin.from('profiles').update({ unlocked_badges: next }).eq('id', user.id)
   return next
+}
+
+/** Claim the doubloon reward for one earned badge. Atomic + idempotent: the
+ *  RPC only grants if the badge is unlocked AND not yet claimed. */
+export async function claimBadgeReward(badgeId: string): Promise<{ newDoubloons: number; claimed: string[]; amount: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const amount = badgeReward(badgeId)
+  if (!BADGE_MAP[badgeId] || amount <= 0) return { error: 'No reward for that badge' }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc('claim_badge_reward', { p_user: user.id, p_badge: badgeId, p_amount: amount })
+  if (error) return { error: 'Could not claim reward' }
+  const row = (Array.isArray(data) ? data[0] : data) as { new_doubloons: number; claimed: string[]; granted: boolean } | undefined
+  return {
+    newDoubloons: Number(row?.new_doubloons ?? 0),
+    claimed: row?.claimed ?? [],
+    amount: row?.granted ? amount : 0,
+  }
+}
+
+/** Claim every earned-but-unclaimed badge reward at once. */
+export async function claimAllBadgeRewards(): Promise<{ newDoubloons: number; claimed: string[]; totalGranted: number; count: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('doubloons, unlocked_badges, claimed_badge_rewards').eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found' }
+  const unlocked = new Set<string>((profile.unlocked_badges as string[] | null) ?? [])
+  const already = new Set<string>((profile.claimed_badge_rewards as string[] | null) ?? [])
+  const claimable = BADGES.filter(b => unlocked.has(b.id) && !already.has(b.id))
+  if (claimable.length === 0) {
+    return { newDoubloons: Number(profile.doubloons ?? 0), claimed: [...already], totalGranted: 0, count: 0 }
+  }
+
+  // Sequential so each RPC's read-add-write of doubloons is deterministic.
+  let newDoubloons = Number(profile.doubloons ?? 0)
+  let claimed: string[] = [...already]
+  let totalGranted = 0
+  for (const b of claimable) {
+    const amount = BADGE_REWARD[b.difficulty]
+    const { data } = await admin.rpc('claim_badge_reward', { p_user: user.id, p_badge: b.id, p_amount: amount })
+    const row = (Array.isArray(data) ? data[0] : data) as { new_doubloons: number; claimed: string[]; granted: boolean } | undefined
+    if (row?.granted) totalGranted += amount
+    newDoubloons = Number(row?.new_doubloons ?? newDoubloons)
+    claimed = row?.claimed ?? claimed
+  }
+  return { newDoubloons, claimed, totalGranted, count: claimable.length }
 }
 
 export async function getUnlockedBadges(): Promise<string[]> {

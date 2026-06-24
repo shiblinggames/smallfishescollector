@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { BADGE_MAP } from '@/lib/badges'
+import { BADGE_MAP, badgeReward } from '@/lib/badges'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { type JourneyGroup, type JourneyGoal } from './AchievementsClient'
@@ -76,10 +76,12 @@ export default async function AchievementsPage() {
   const streakBest = profile?.highest_perfect_streak ?? 0
   const tideBest = profile?.tide_run_best_distance ?? 0
   const doubloons = profile?.doubloons ?? 0
+  const claimed = new Set<string>((profile?.claimed_badge_rewards as string[] | null) ?? [])
 
   // ── Goal builders ───────────────────────────────────────────────────────
   // Badge-backed goal: shows live progress AND flips to "earned" once the
-  // badge is unlocked (badge = the cosmetic payoff for the pursuit).
+  // badge is unlocked (badge = the cosmetic payoff for the pursuit). Carries
+  // its difficulty + claimable doubloon reward + whether it's been claimed.
   function badgeGoal(
     badgeId: string, label: string, desc: string,
     current: number, target: number, href: string,
@@ -93,6 +95,9 @@ export default async function AchievementsPage() {
       badgeImage: BADGE_MAP[badgeId]?.imageUrl,
       binary: !!opts.binary,
       record: !!opts.record,
+      difficulty: BADGE_MAP[badgeId]?.difficulty,
+      reward: badgeReward(badgeId),
+      claimed: claimed.has(badgeId),
     }
   }
   // Pure progress goal (no badge art) — long arcs worth chasing that aren't
