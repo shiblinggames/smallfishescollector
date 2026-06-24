@@ -144,41 +144,42 @@ export default function AchievementsClient({ groups }: Props) {
         background: ['radial-gradient(ellipse 90% 80% at 0% 0%, rgba(240,192,64,0.16) 0%, transparent 62%)', 'linear-gradient(180deg, rgba(44,34,14,0.62) 0%, rgba(20,15,8,0.78) 100%)'].join(', '),
         border: '1px solid rgba(196,169,106,0.34)', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.35)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: GOLD }}>Achievement Points</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
-              <span className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: '#f4ecd8', lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
-                {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.05rem' }}> / {totalPoints}</span>
-              </span>
-              <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)' }}>
-                {earnedBadges} of {badgeGoals.length} badges earned
-              </span>
-            </div>
-          </div>
-
-          {claimableTotal > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-              <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 12px ${GOLD}55` }}>
-                {claimableTotal.toLocaleString()} ⟡
-              </p>
-              <motion.button whileTap={{ scale: 0.94 }} onClick={e => claimAll(rectCenter(e.currentTarget))} disabled={busy === 'all'}
-                className="font-cinzel font-700 uppercase tracking-[0.08em]"
-                style={{
-                  padding: '0.55rem 1rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer',
-                  background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.78rem',
-                  boxShadow: `0 0 16px ${GOLD}26`, opacity: busy === 'all' ? 0.6 : 1,
-                }}>
-                {busy === 'all' ? 'Claiming…' : `Claim All (${claimable.length})`}
-              </motion.button>
-            </div>
-          )}
+        {/* Score line — label + points + badges tally. No claim button here, so
+            nothing competes for width and this never wraps awkwardly. */}
+        <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: GOLD }}>Achievement Points</p>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
+          <span className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: '#f4ecd8', lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
+            {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.05rem' }}> / {totalPoints}</span>
+          </span>
+          <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)' }}>
+            {earnedBadges} of {badgeGoals.length} badges earned
+          </span>
         </div>
 
         {/* Thin points progress bar */}
         <div style={{ height: 6, borderRadius: 4, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 10 }}>
           <div style={{ height: '100%', width: `${totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0}%`, background: `linear-gradient(90deg, ${GOLD}, #f7e09a)`, borderRadius: 4, transition: 'width 0.5s ease' }} />
         </div>
+
+        {/* Claim-all banner — its own full-width row so the amount + button always
+            sit on one line regardless of phone width. */}
+        {claimableTotal > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 11, padding: '0.5rem 0.4rem 0.5rem 0.7rem', borderRadius: 10, background: `${GOLD}14`, border: `1px solid ${GOLD}40` }}>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD, fontVariantNumeric: 'tabular-nums' }}>{claimableTotal.toLocaleString()} ⟡</span>
+              <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.6)' }}> · {claimable.length} ready</span>
+            </span>
+            <motion.button whileTap={{ scale: 0.94 }} onClick={e => claimAll(rectCenter(e.currentTarget))} disabled={busy === 'all'}
+              className="font-cinzel font-700 uppercase tracking-[0.06em]"
+              style={{
+                flexShrink: 0, whiteSpace: 'nowrap', padding: '0.5rem 0.95rem', borderRadius: 9, cursor: busy ? 'default' : 'pointer',
+                background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.74rem',
+                opacity: busy === 'all' ? 0.6 : 1,
+              }}>
+              {busy === 'all' ? 'Claiming…' : 'Claim All'}
+            </motion.button>
+          </div>
+        )}
       </div>
 
       {/* ── Filters: category + tier dropdowns ─────────────────────────────── */}
