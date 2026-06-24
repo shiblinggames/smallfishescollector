@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { BADGE_MAP, badgeReward } from '@/lib/badges'
+import { BADGE_MAP, badgeReward, badgeDetail } from '@/lib/badges'
 import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import AchievementsClient, { type JourneyGroup, type JourneyGoal } from '@/app/(app)/achievements/AchievementsClient'
@@ -99,6 +99,7 @@ export default async function BadgesPage() {
       difficulty: BADGE_MAP[badgeId]?.difficulty,
       reward: badgeReward(badgeId),
       claimed: claimed.has(badgeId),
+      detail: badgeDetail(badgeId),
     }
   }
 

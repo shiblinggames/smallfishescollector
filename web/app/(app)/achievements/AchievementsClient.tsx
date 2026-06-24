@@ -22,6 +22,7 @@ export interface JourneyGoal {
   difficulty?: BadgeDifficulty
   reward?: number
   claimed?: boolean
+  detail?: string
 }
 
 export interface JourneyGroup {
@@ -54,6 +55,7 @@ export default function AchievementsClient({ groups }: Props) {
   )
   const [busy, setBusy] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
+  const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
   const [, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -197,7 +199,7 @@ export default function AchievementsClient({ groups }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {group.goals.map(g => (
                 <GoalRow key={g.id} g={g} groupAccent={group.accent} claimed={claimedIds.has(g.id)} busy={busy === g.id}
-                  onClaim={from => claimOne(g.id, from)} onOpen={() => router.push(g.href)} />
+                  onClaim={from => claimOne(g.id, from)} onOpen={() => setDetailGoal(g)} />
               ))}
             </div>
           </section>
@@ -208,6 +210,82 @@ export default function AchievementsClient({ groups }: Props) {
           </p>
         )}
       </div>
+
+      {/* Achievement detail modal — what it means + how to earn it. */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {detailGoal && (() => {
+            const g = detailGoal
+            const diff = g.difficulty ? DIFFICULTY_META[g.difficulty] : null
+            const accent = diff?.color ?? '#cbb98a'
+            const reward = g.reward ?? 0
+            const points = g.difficulty ? BADGE_POINTS[g.difficulty] : 0
+            const isClaimed = claimedIds.has(g.id)
+            const canClaim = g.done && reward > 0 && !isClaimed
+            const pct = g.target > 0 ? Math.min(1, g.current / g.target) : (g.done ? 1 : 0)
+            return (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onClick={() => setDetailGoal(null)}
+                style={{ position: 'fixed', inset: 0, zIndex: 9200, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
+                <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.94, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+                  style={{ width: '100%', maxWidth: 360, textAlign: 'center', background: 'linear-gradient(180deg, #16202e 0%, #0a121c 100%)', border: `1px solid ${g.done ? accent + '88' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '1.5rem 1.25rem', boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+                  {/* Badge art */}
+                  <div style={{ width: 88, height: 88, margin: '0 auto', borderRadius: 18, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.3)', border: `2px solid ${g.done ? accent : 'rgba(255,255,255,0.12)'}`, boxShadow: g.done ? `0 0 22px ${accent}55` : 'none' }}>
+                    {g.badgeImage ? (
+                      <img src={g.badgeImage} alt="" style={{ width: 62, height: 62, objectFit: 'contain', filter: g.done ? 'none' : 'grayscale(1)', opacity: g.done ? 1 : 0.3 }}
+                        onError={e => { const el = e.target as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.innerHTML = `<span style="font-size:2.2rem;opacity:${g.done ? 0.9 : 0.3}">🏅</span>` }} />
+                    ) : <span style={{ fontSize: '2.2rem', opacity: g.done ? 0.9 : 0.3 }}>🏅</span>}
+                  </div>
+
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f4ecd8', marginTop: 12 }}>{g.label}</p>
+
+                  {/* Tier · points · reward */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8, flexWrap: 'wrap' }}>
+                    {diff && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}66`, borderRadius: 999, padding: '0.18rem 0.6rem' }}>{diff.label}</span>}
+                    <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.75)' }}>{points} pt{points === 1 ? '' : 's'}</span>
+                    <span style={{ color: 'rgba(240,237,232,0.3)' }}>·</span>
+                    <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: GOLD }}>{reward.toLocaleString()} ⟡</span>
+                  </div>
+
+                  {/* In-depth blurb */}
+                  <p className="font-karla" style={{ fontSize: '0.86rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.55, marginTop: 14 }}>{g.detail || g.desc}</p>
+
+                  {/* Progress / state */}
+                  {!g.done && !g.binary && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct * 100}%`, background: accent, borderRadius: 4 }} />
+                      </div>
+                      <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.6)', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
+                        {g.record ? 'Best ' : ''}{g.current.toLocaleString()} / {g.target.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                  {g.done && (
+                    <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', letterSpacing: '0.08em', color: isClaimed ? '#7bbf7b' : GOLD, marginTop: 14 }}>
+                      {isClaimed ? 'Earned · reward claimed' : reward > 0 ? 'Earned · reward ready' : 'Earned'}
+                    </p>
+                  )}
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+                    {canClaim && (
+                      <motion.button whileTap={{ scale: 0.95 }} onClick={e => { e.stopPropagation(); claimOne(g.id, rectCenter(e.currentTarget)) }} disabled={busy === g.id}
+                        className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.7rem', borderRadius: 11, background: `${GOLD}22`, color: GOLD, border: `1px solid ${GOLD}`, cursor: 'pointer', fontSize: '0.82rem', opacity: busy === g.id ? 0.6 : 1 }}>
+                        {busy === g.id ? '…' : `Claim ${reward.toLocaleString()} ⟡`}
+                      </motion.button>
+                    )}
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => { const href = g.href; setDetailGoal(null); router.push(href) }}
+                      className="font-cinzel font-700 uppercase tracking-[0.06em]" style={{ flex: 1, padding: '0.7rem', borderRadius: 11, background: 'rgba(120,170,255,0.16)', color: '#bcd4ff', border: '1px solid rgba(120,170,255,0.4)', cursor: 'pointer', fontSize: '0.82rem' }}>
+                      Take me there
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>,
+        document.body,
+      )}
 
       {/* Coins flying from the claim button up into the Nav doubloon pill. */}
       {mounted && createPortal(

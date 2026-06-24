@@ -121,6 +121,61 @@ export function badgePoints(id: string): number {
   return b ? BADGE_POINTS[b.difficulty] : 0
 }
 
+// Longer "what it takes" blurb shown in the badge detail modal — a sentence or
+// two of context/tips beyond the one-line description.
+export const BADGE_DETAIL: Record<string, string> = {
+  prestige_i:       'Prestige a zone by maxing its catalogue, then resetting it for a permanent sell bonus. Your first prestige proves you have fully worked a fishing ground.',
+  trophy_catch:     'Every cast rolls a size, and roughly 1 in 30 lands in the top Trophy band. Keep fishing and one of the giants is yours.',
+  unbroken:         'String together 10 perfect reel-ins with no misses between them. A single slip resets the count to zero.',
+  relentless:       'Fifteen flawless catches back to back. The line never wavers.',
+  untouchable:      'Twenty perfect reels in a row — a streak only the steadiest hands ever reach.',
+  dead_eye:         'A lifetime tally of 1,000 perfect catches. It builds up cast by cast, no streak required.',
+  master_angler:    'Reach Fishing Level 100, the cap. The mark of a true angler.',
+  zone_legend:      'Reach Prestige at least once in all four main fishing zones, from the shallows to the abyss.',
+  prestige_stars:   'Earn every prestige star: all five in each of the four zones, twenty in total. The fishing endgame.',
+  half_the_sea:     'Catch 50 different fish species. A solid start on filling out the logbook.',
+  ancient_ones:     'Land all six Ancient Deep trophies — the rarest, oldest fish in the sea.',
+  full_collection:  'Catch every single species in the game. The ultimate collector’s feat.',
+  growing_crew:     'Recruit 25 crew over your career, living or lost.',
+  theres_a_grave:   'Lose a crew member for the first time. The sea takes its due eventually — a sobering milestone.',
+  legendary_recruit:'Add a legendary fish to your crew — Catfish, Doby Mick, or Mako. The rarest hands aboard.',
+  crewmaster:       'Upgrade the Crew Hall all the way to its top tier, the Hall of Legends.',
+  full_muster:      'Recruit 100 crew in total. A constant churn of fresh hands through the hall.',
+  old_salt:         'Level a single crew member all the way to 100 — hundreds of raids of XP poured into one soul.',
+  navigator:        'Reach Navigation Level 50, earned steadily on raids and voyages.',
+  fleet_admiral:    'Complete 100 voyages. Pure patience and a fleet that keeps sailing.',
+  opening_salvo:    'Land a single raid cannon hit for 50 or more damage. Your guns are finding their range.',
+  hard_hitter:      'Land a single raid hit for 100 or more. Your build is starting to bite.',
+  heavy_broadside:  'Land a single raid hit for 250 or more — a devastating broadside reserved for the top builds.',
+  swift_reckoning:  'Clear the normal Corsair’s Reckoning raid in under a minute and a half. A clean, fast run start to finish.',
+  corsairs_bane:    'Defeat Barnacle Pete in challenge mode — the harder, tuned-up version of the first raid.',
+  ghost_ship:       'Defeat Captain Krust in challenge mode.',
+  cartographers_fall:'Defeat the Cartographer in challenge mode. The normal clear is just the story — this is the real test.',
+  toll_paid:        'Defeat Tollmaster Spet in challenge mode, the hard version of the Chapter II finale.',
+  master_navigator: 'Reach Navigation Level 100, the navigation cap.',
+  finndicates_bane: 'Clear all four raids in challenge mode. The complete hard-mode gauntlet.',
+  into_the_deep:    'Descend to depth 5 in the Davy Jones Gauntlet on a single run.',
+  fathomless:       'Bank 500 Fathoms across all your Gauntlet runs.',
+  davy_jones:       'Reach depth 10 in the Gauntlet — about as deep as anyone has gone.',
+  first_blood:      'Win your first ship duel against another captain.',
+  brawler:          'Win 10 ship duels.',
+  duelist:          'Win 25 ship duels — a feared name on the ladder.',
+  quartermaster:    'Bank 40 charting points from the Chart Room puzzles.',
+  den_magnate:      'Bank 80 charting points — enough to push the Den buy-in cap to its maximum.',
+  catfish_jackpot:  'Hit the global Catfish Jackpot on the slots. Three catfish on one spin, and the whole pot is yours.',
+  tide_runner:      'Reach 300m in a single Tide Run.',
+  tide_champion:    'Reach 500m in a single Tide Run — contest-winning distance.',
+  tide_master:      'Reach 750m in a single Tide Run, out past anyone’s record.',
+  baby_steps:       'Hold 100,000 doubloons at once. Your first real nest egg.',
+  deep_pockets:     'Hold 1,000,000 doubloons at once.',
+  bilge_baron:      'Hold 2,500,000 doubloons at once. The hold is fit to burst.',
+}
+
+/** Detail blurb for a badge id (falls back to its short description). */
+export function badgeDetail(id: string): string {
+  return BADGE_DETAIL[id] ?? BADGE_MAP[id]?.description ?? ''
+}
+
 export const MAX_EQUIPPED_BADGES = 3
 
 // Per-slot, per-frame overlay positions (% relative to character container).
