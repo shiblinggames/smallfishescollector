@@ -765,7 +765,7 @@ export default function GearScreen({
   // so the list stays readable as new species ship. Sub-tab state
   // lives at the parent so the player's choice persists when they
   // bounce between the outer tabs.
-  const [petSpeciesTab, setPetSpeciesTab] = useState<'parrot' | 'monkey'>('parrot')
+  const [petSpeciesTab, setPetSpeciesTab] = useState<'parrot' | 'monkey' | 'seal'>('parrot')
   useEffect(() => { if (openSlot !== 'rod') setRodTab('owned') }, [openSlot])
 
   // Transient confirmation banner for cosmetic purchases. Clears itself after
@@ -2489,6 +2489,7 @@ export default function GearScreen({
                         {([
                           { key: 'parrot', label: 'Parrots' },
                           { key: 'monkey', label: 'Monkeys' },
+                          { key: 'seal',   label: 'Seals'   },
                         ] as const).map(t => {
                           const speciesPets = PETS.filter(p => p.species === t.key)
                           const ownedHere = speciesPets.filter(p => unlockedPets.includes(p.id)).length
