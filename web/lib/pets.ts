@@ -85,12 +85,11 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
     cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
   },
-  // Seal — starts as a copy of the monkey (sits low on the deck);
-  // tune on /fishing-test and paste the dump back here.
+  // Seal — tuned on /fishing-test (sits low + a touch left of the monkey).
   seal: {
-    rest: { top: 65.5, left: 62,   width: 41.4, rotate: 0 },
-    wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
-    cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
+    rest: { top: 63.2, left: 56.9, width: 41.4, rotate: 0 },
+    wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
+    cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
   },
 }
 

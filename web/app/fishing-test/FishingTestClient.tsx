@@ -103,9 +103,9 @@ const PET_DEFAULTS: Record<'parrot' | 'monkey' | 'seal', Record<Frame, { top: nu
     cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
   },
   seal: {
-    rest: { top: 65.5, left: 62,   width: 41.4, rotate: 0 },
-    wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
-    cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
+    rest: { top: 63.2, left: 56.9, width: 41.4, rotate: 0 },
+    wait: { top: 59.3, left: 63.5, width: 41.4, rotate: 0 },
+    cast: { top: 62.7, left: 62.4, width: 41.4, rotate: 0 },
   },
 }
 
