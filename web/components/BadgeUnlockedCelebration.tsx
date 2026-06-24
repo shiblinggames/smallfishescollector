@@ -33,7 +33,11 @@ export default function BadgeUnlockedCelebration({
         padding: '0 1rem',
       }}
     >
-      <AnimatePresence>
+      {/* mode="wait": when several badges unlock at once they queue through
+          this one slot. Without it the exiting badge and the incoming one are
+          both mounted in this centered flex row for a beat, so the new badge
+          renders shoved into the right half before snapping to center. */}
+      <AnimatePresence mode="wait">
         {badge && (
           <motion.div
             key={badge.id}
