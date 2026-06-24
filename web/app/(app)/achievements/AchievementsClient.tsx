@@ -144,25 +144,25 @@ export default function AchievementsClient({ groups }: Props) {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: GOLD }}>Achievement Points</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '2.4rem', color: '#f4ecd8', lineHeight: 0.95, marginTop: 3, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
-              {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.38)', fontSize: '1.1rem' }}> / {totalPoints}</span>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.66rem', color: GOLD }}>Achievement Points</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '2.6rem', color: '#f4ecd8', lineHeight: 0.95, marginTop: 3, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
+              {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.2rem' }}> / {totalPoints}</span>
             </p>
-            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: 'rgba(240,237,232,0.55)', marginTop: 4 }}>
+            <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.72)', marginTop: 5 }}>
               {earnedBadges} of {badgeGoals.length} badges earned
             </p>
           </div>
 
           {claimableTotal > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 7 }}>
-              <p className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 12px ${GOLD}55` }}>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 12px ${GOLD}55` }}>
                 {claimableTotal.toLocaleString()} ⟡
               </p>
               <motion.button whileTap={{ scale: 0.94 }} onClick={e => claimAll(rectCenter(e.currentTarget))} disabled={busy === 'all'}
                 className="font-cinzel font-700 uppercase tracking-[0.08em]"
                 style={{
-                  padding: '0.62rem 1.05rem', borderRadius: 11, cursor: busy ? 'default' : 'pointer',
-                  background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.74rem',
+                  padding: '0.65rem 1.1rem', borderRadius: 11, cursor: busy ? 'default' : 'pointer',
+                  background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.82rem',
                   boxShadow: `0 0 16px ${GOLD}26`, opacity: busy === 'all' ? 0.6 : 1,
                 }}>
                 {busy === 'all' ? 'Claiming…' : `Claim All (${claimable.length})`}
@@ -192,7 +192,7 @@ export default function AchievementsClient({ groups }: Props) {
           <section key={group.title}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: group.accent, flexShrink: 0, boxShadow: `0 0 8px ${group.accent}` }} />
-              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.74rem', color: group.accent }}>{group.title}</p>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.82rem', color: group.accent }}>{group.title}</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {group.goals.map(g => (
@@ -203,7 +203,7 @@ export default function AchievementsClient({ groups }: Props) {
           </section>
         ))}
         {visibleGroups.length === 0 && (
-          <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.4)', textAlign: 'center', padding: '2rem 0' }}>
+          <p className="font-karla" style={{ fontSize: '0.9rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '2rem 0' }}>
             No {filter !== 'all' ? DIFFICULTY_META[filter].label : ''} badges here.
           </p>
         )}
@@ -245,13 +245,13 @@ function FilterChip({ active, label, color, count, earned, onClick }: {
     <button onClick={onClick} className="font-karla font-700 uppercase tracking-[0.06em]"
       style={{
         flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-        padding: '0.42rem 0.75rem', borderRadius: 999, fontSize: '0.62rem',
+        padding: '0.46rem 0.85rem', borderRadius: 999, fontSize: '0.72rem',
         background: active ? `${color}26` : 'rgba(255,255,255,0.03)',
         border: `1px solid ${active ? color : 'rgba(255,255,255,0.1)'}`,
-        color: active ? color : 'rgba(240,237,232,0.55)',
+        color: active ? color : 'rgba(240,237,232,0.6)',
       }}>
       {label}
-      <span style={{ fontSize: '0.56rem', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>{earned}/{count}</span>
+      <span style={{ fontSize: '0.64rem', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>{earned}/{count}</span>
     </button>
   )
 }
@@ -316,18 +316,18 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
 
       {/* Body */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: g.done ? '#f0ede8' : 'rgba(240,237,232,0.8)' }}>{g.label}</p>
-        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.45)', lineHeight: 1.4, marginTop: 1 }}>{g.desc}</p>
+        <p className="font-karla font-700" style={{ fontSize: '1.02rem', color: g.done ? '#f4ecd8' : 'rgba(240,237,232,0.85)' }}>{g.label}</p>
+        <p className="font-karla" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.4, marginTop: 2 }}>{g.desc}</p>
 
         {/* Meta: tier · points · reward — always shown for badges. */}
         {isBadge && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
             {diff && (
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}55`, borderRadius: 999, padding: '0.12rem 0.45rem' }}>{diff.label}</span>
+              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}55`, borderRadius: 999, padding: '0.15rem 0.5rem' }}>{diff.label}</span>
             )}
-            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(240,237,232,0.6)' }}>{points} pt{points === 1 ? '' : 's'}</span>
-            <span style={{ color: 'rgba(240,237,232,0.22)', fontSize: '0.55rem' }}>·</span>
-            <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: GOLD, opacity: state === 'claimed' ? 0.5 : 1 }}>{reward.toLocaleString()} ⟡</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.72)' }}>{points} pt{points === 1 ? '' : 's'}</span>
+            <span style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.7rem' }}>·</span>
+            <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: GOLD, opacity: state === 'claimed' ? 0.5 : 1 }}>{reward.toLocaleString()} ⟡</span>
           </div>
         )}
 
@@ -343,17 +343,17 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         {state === 'ready' ? (
           <motion.button whileTap={{ scale: 0.92 }} onClick={e => { e.stopPropagation(); onClaim(rectCenter(e.currentTarget)) }} disabled={busy}
             className="font-cinzel font-700 uppercase tracking-[0.06em]"
-            style={{ padding: '0.5rem 0.85rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer', background: `${GOLD}22`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.7rem', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+            style={{ padding: '0.55rem 0.95rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer', background: `${GOLD}22`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.8rem', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap' }}>
             {busy ? '…' : 'Claim'}
           </motion.button>
         ) : state === 'claimed' ? (
-          <span className="font-karla font-700 uppercase" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.58rem', letterSpacing: '0.06em', color: '#7bbf7b' }}>Claimed</span>
+          <span className="font-karla font-700 uppercase" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', letterSpacing: '0.05em', color: '#7bbf7b' }}>Claimed</span>
         ) : state === 'done' ? (
-          <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#7bbf7b' }}>Complete</span>
+          <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#7bbf7b' }}>Complete</span>
         ) : g.binary ? (
-          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.06em', color: 'rgba(240,237,232,0.32)' }}>Locked</span>
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.05em', color: 'rgba(240,237,232,0.4)' }}>Locked</span>
         ) : (
-          <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.6)', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+          <span className="font-karla font-700" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.7)', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
             {g.record ? 'Best ' : ''}{g.current.toLocaleString()}<span style={{ opacity: 0.5 }}> / {g.target.toLocaleString()}</span>
           </span>
         )}
