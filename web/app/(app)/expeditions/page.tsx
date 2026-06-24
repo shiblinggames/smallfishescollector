@@ -18,6 +18,7 @@ import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
+import { isPvpTester } from '@/lib/shipBattle/access'
 import { getCrew } from '@/app/(app)/social/actions'
 
 // Streaming pattern: the page paints its shell + Nav as soon as the profile
@@ -190,11 +191,12 @@ async function ExpeditionHub() {
     cachedVoyageHistory(),
   ])
 
-  // PvP + Gauntlets hub cards are admin-only for now (released to public but
-  // locked as "Coming Soon"). Only fetch the PvP duel state when the viewer
-  // is an admin — non-admins never open it.
+  // PvP + Gauntlets hub cards are locked as "Coming Soon" for the public. The
+  // PvP door opens for admins AND the duel testers (isPvpTester); everyone else
+  // sees it locked. Only fetch the PvP duel state when the door is open.
   const isAdmin = profile?.is_admin === true
-  const pvp = isAdmin
+  const canPvp = isAdmin || isPvpTester(profile?.username)
+  const pvp = canPvp
     ? await (async () => {
         const [{ battles, wins, losses }, friends] = await Promise.all([getShipBattles(), getCrew()])
         return { battles, wins, losses, friends }
@@ -273,7 +275,7 @@ async function ExpeditionHub() {
       readyVoyage={'error' in dailyVoyageState ? null : dailyVoyageState.readyVoyage}
       expeditionXP={profile?.expedition_xp ?? 0}
       voyageHistory={voyageHistory}
-      isAdmin={isAdmin}
+      canPvp={canPvp}
       gauntletOpen={gauntletOpen}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
       pvp={pvp}

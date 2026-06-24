@@ -68,10 +68,10 @@ interface Props {
   readyVoyage: DailyVoyage | null
   expeditionXP: number
   voyageHistory: VoyageHistoryEntry[]
-  // Admin unlocks the two "coming soon" entry points (PvP + Gauntlets);
-  // everyone else sees them locked. PvP data is only fetched + passed when
-  // the viewer is an admin (null otherwise).
-  isAdmin: boolean
+  // Whether the PvP "coming soon" entry point is open to this viewer (admins +
+  // duel testers). Everyone else sees it locked. PvP data is only fetched +
+  // passed when this is true (null otherwise).
+  canPvp: boolean
   /** Whether the Gauntlet door is open to this player (admin, or live + cleared
    *  Chapter 2). Drives the Gauntlets card lock independently of PvP. */
   gauntletOpen: boolean
@@ -263,7 +263,7 @@ export default function HubCards({
   roster, shipCrewSlots,
   shipStats, raidScore,
   shipTier, todayVoyage, readyVoyage, expeditionXP, voyageHistory,
-  isAdmin, gauntletOpen, gauntletUpgrades, pvp,
+  canPvp, gauntletOpen, gauntletUpgrades, pvp,
 }: Props) {
   const router = useRouter()
   // Compute each track's party once. Filtering by voyage_slot / raid_slot
@@ -437,15 +437,15 @@ export default function HubCards({
         </button>
 
         {/* ── Row 2: PvP (under Campaign) + Gauntlets (under Voyages).
-            Both are admin-only for now; everyone else sees a "Coming Soon"
-            lock and the card doesn't open. ─────────────────────────────── */}
+            PvP opens for admins + duel testers (canPvp); Gauntlets for
+            gauntletOpen. Everyone else sees a "Coming Soon" lock. ───────── */}
         <SideHubCard
           accent={pvpAccent}
           image="/reefraider.png"
           title="PvP"
           desc="Trade broadsides with other captains. Climb the duelist ladder."
-          locked={!isAdmin}
-          onClick={isAdmin ? () => setModal('pvp') : undefined}
+          locked={!canPvp}
+          onClick={canPvp ? () => setModal('pvp') : undefined}
         />
         <SideHubCard
           accent={gauntletAccent}
