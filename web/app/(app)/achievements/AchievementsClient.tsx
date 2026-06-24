@@ -356,12 +356,21 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
 
   const statusColor = state === 'ready' ? GOLD : state === 'claimed' || state === 'done' ? '#7bbf7b' : 'rgba(255,255,255,0.12)'
 
+  // A banked (claimed/done) badge gets a gentle green gradient fill, anchored
+  // at its left status stripe and fading out — reads as "locked in" without
+  // out-shouting the gold "ready to claim" rows, which stay the loudest.
+  const rowBackground =
+    state === 'ready'   ? 'rgba(240,192,64,0.06)'
+    : state === 'claimed' || state === 'done'
+        ? 'linear-gradient(90deg, rgba(123,191,123,0.16) 0%, rgba(123,191,123,0.06) 58%, rgba(123,191,123,0.035) 100%)'
+    : 'rgba(255,255,255,0.022)'
+
   return (
     <div
       onClick={onOpen}
       style={{
         position: 'relative', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', overflow: 'hidden',
-        background: state === 'ready' ? 'rgba(240,192,64,0.06)' : state === 'claimed' || state === 'done' ? 'rgba(123,191,123,0.05)' : 'rgba(255,255,255,0.022)',
+        background: rowBackground,
         border: `1px solid ${state === 'ready' ? 'transparent' : state === 'claimed' || state === 'done' ? 'rgba(123,191,123,0.25)' : 'rgba(255,255,255,0.07)'}`,
         borderRadius: 14, padding: '0.75rem 0.85rem 0.75rem 0.95rem',
         animation: state === 'ready' ? 'badgeReadyPulse 2.1s ease-in-out infinite' : undefined,
