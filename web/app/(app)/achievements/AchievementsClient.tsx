@@ -54,7 +54,8 @@ export default function AchievementsClient({ groups }: Props) {
     () => new Set(allGoals.filter(g => g.claimed).map(g => g.id)),
   )
   const [busy, setBusy] = useState<string | null>(null)
-  const [filter, setFilter] = useState<Filter>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [tierFilter, setTierFilter] = useState<Filter>('all')
   const [detailGoal, setDetailGoal] = useState<JourneyGoal | null>(null)
   const [, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
@@ -71,14 +72,13 @@ export default function AchievementsClient({ groups }: Props) {
   const totalPoints = badgeGoals.reduce((s, g) => s + pointsOf(g), 0)
   const claimable = badgeGoals.filter(g => g.done && !claimedIds.has(g.id))
   const claimableTotal = claimable.reduce((s, g) => s + (g.reward ?? 0), 0)
-  const tierCount = (t: BadgeDifficulty) => badgeGoals.filter(g => g.difficulty === t).length
-  const tierEarned = (t: BadgeDifficulty) => badgeGoals.filter(g => g.difficulty === t && g.done).length
 
   const visibleGroups = useMemo(
     () => groups
-      .map(grp => ({ ...grp, goals: grp.goals.filter(g => filter === 'all' || g.difficulty === filter) }))
+      .filter(grp => categoryFilter === 'all' || grp.title === categoryFilter)
+      .map(grp => ({ ...grp, goals: grp.goals.filter(g => tierFilter === 'all' || g.difficulty === tierFilter) }))
       .filter(grp => grp.goals.length > 0),
-    [groups, filter],
+    [groups, categoryFilter, tierFilter],
   )
 
   const notifyDoubloons = (n: number) => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: n }))
@@ -140,31 +140,33 @@ export default function AchievementsClient({ groups }: Props) {
     <div>
       {/* ── Hero: achievement-point score + claim banner ─────────────────── */}
       <div style={{
-        borderRadius: 18, padding: '1.05rem 1.1rem', marginBottom: 16,
+        borderRadius: 16, padding: '0.8rem 1rem', marginBottom: 14,
         background: ['radial-gradient(ellipse 90% 80% at 0% 0%, rgba(240,192,64,0.16) 0%, transparent 62%)', 'linear-gradient(180deg, rgba(44,34,14,0.62) 0%, rgba(20,15,8,0.78) 100%)'].join(', '),
         border: '1px solid rgba(196,169,106,0.34)', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.35)',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.66rem', color: GOLD }}>Achievement Points</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '2.6rem', color: '#f4ecd8', lineHeight: 0.95, marginTop: 3, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
-              {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.2rem' }}> / {totalPoints}</span>
-            </p>
-            <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: 'rgba(240,237,232,0.72)', marginTop: 5 }}>
-              {earnedBadges} of {badgeGoals.length} badges earned
-            </p>
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.62rem', color: GOLD }}>Achievement Points</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
+              <span className="font-cinzel font-800" style={{ fontSize: '2.1rem', color: '#f4ecd8', lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 18px ${GOLD}33` }}>
+                {earnedPoints}<span style={{ color: 'rgba(240,237,232,0.42)', fontSize: '1.05rem' }}> / {totalPoints}</span>
+              </span>
+              <span className="font-karla font-600" style={{ fontSize: '0.78rem', color: 'rgba(240,237,232,0.62)' }}>
+                {earnedBadges} of {badgeGoals.length} badges earned
+              </span>
+            </div>
           </div>
 
           {claimableTotal > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 7 }}>
-              <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 12px ${GOLD}55` }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 12px ${GOLD}55` }}>
                 {claimableTotal.toLocaleString()} ⟡
               </p>
               <motion.button whileTap={{ scale: 0.94 }} onClick={e => claimAll(rectCenter(e.currentTarget))} disabled={busy === 'all'}
                 className="font-cinzel font-700 uppercase tracking-[0.08em]"
                 style={{
-                  padding: '0.65rem 1.1rem', borderRadius: 11, cursor: busy ? 'default' : 'pointer',
-                  background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.82rem',
+                  padding: '0.55rem 1rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer',
+                  background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.78rem',
                   boxShadow: `0 0 16px ${GOLD}26`, opacity: busy === 'all' ? 0.6 : 1,
                 }}>
                 {busy === 'all' ? 'Claiming…' : `Claim All (${claimable.length})`}
@@ -174,18 +176,17 @@ export default function AchievementsClient({ groups }: Props) {
         </div>
 
         {/* Thin points progress bar */}
-        <div style={{ height: 6, borderRadius: 4, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 12 }}>
+        <div style={{ height: 6, borderRadius: 4, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 10 }}>
           <div style={{ height: '100%', width: `${totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0}%`, background: `linear-gradient(90deg, ${GOLD}, #f7e09a)`, borderRadius: 4, transition: 'width 0.5s ease' }} />
         </div>
       </div>
 
-      {/* ── Mastery filter chips ───────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 18, WebkitOverflowScrolling: 'touch' }}>
-        <FilterChip active={filter === 'all'} label="All" color="#cbb98a" onClick={() => setFilter('all')} count={badgeGoals.length} earned={earnedBadges} />
-        {TIER_ORDER.map(t => (
-          <FilterChip key={t} active={filter === t} label={DIFFICULTY_META[t].label} color={DIFFICULTY_META[t].color}
-            onClick={() => setFilter(t)} count={tierCount(t)} earned={tierEarned(t)} />
-        ))}
+      {/* ── Filters: category + tier dropdowns ─────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        <FilterSelect value={categoryFilter} onChange={setCategoryFilter}
+          options={[{ value: 'all', label: 'All Categories' }, ...groups.map(g => ({ value: g.title, label: g.title }))]} />
+        <FilterSelect value={tierFilter} onChange={v => setTierFilter(v as Filter)}
+          options={[{ value: 'all', label: 'All Tiers' }, ...TIER_ORDER.map(t => ({ value: t, label: DIFFICULTY_META[t].label }))]} />
       </div>
 
       {/* ── Goal groups ────────────────────────────────────────────────────── */}
@@ -206,7 +207,7 @@ export default function AchievementsClient({ groups }: Props) {
         ))}
         {visibleGroups.length === 0 && (
           <p className="font-karla" style={{ fontSize: '0.9rem', color: 'rgba(240,237,232,0.5)', textAlign: 'center', padding: '2rem 0' }}>
-            No {filter !== 'all' ? DIFFICULTY_META[filter].label : ''} badges here.
+            No badges match these filters.
           </p>
         )}
       </div>
@@ -320,22 +321,31 @@ export default function AchievementsClient({ groups }: Props) {
   )
 }
 
-// ── Mastery filter chip ─────────────────────────────────────────────────────
-function FilterChip({ active, label, color, count, earned, onClick }: {
-  active: boolean; label: string; color: string; count: number; earned: number; onClick: () => void
+// ── Filter dropdown (category / tier) ───────────────────────────────────────
+function FilterSelect({ value, onChange, options }: {
+  value: string; onChange: (v: string) => void; options: { value: string; label: string }[]
 }) {
+  const active = value !== 'all'
   return (
-    <button onClick={onClick} className="font-karla font-700 uppercase tracking-[0.06em]"
-      style={{
-        flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-        padding: '0.46rem 0.85rem', borderRadius: 999, fontSize: '0.72rem',
-        background: active ? `${color}26` : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${active ? color : 'rgba(255,255,255,0.1)'}`,
-        color: active ? color : 'rgba(240,237,232,0.6)',
-      }}>
-      {label}
-      <span style={{ fontSize: '0.64rem', opacity: 0.8, fontVariantNumeric: 'tabular-nums' }}>{earned}/{count}</span>
-    </button>
+    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="font-karla font-700"
+        style={{
+          width: '100%', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', cursor: 'pointer',
+          padding: '0.6rem 2rem 0.6rem 0.85rem', borderRadius: 11, fontSize: '0.8rem',
+          background: active ? `${GOLD}1c` : 'rgba(255,255,255,0.04)',
+          color: active ? GOLD : '#e8e2d6',
+          border: `1px solid ${active ? `${GOLD}88` : 'rgba(196,169,106,0.34)'}`,
+          textOverflow: 'ellipsis',
+        }}>
+        {options.map(o => (
+          <option key={o.value} value={o.value} style={{ background: '#16100a', color: '#e8e2d6' }}>{o.label}</option>
+        ))}
+      </select>
+      <span style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: GOLD, fontSize: '0.55rem' }}>▼</span>
+    </div>
   )
 }
 
