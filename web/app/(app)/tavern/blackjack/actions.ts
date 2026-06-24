@@ -10,6 +10,7 @@ import {
 } from '@/lib/blackjack'
 import { BJ_MIN_BET, BJ_MAX_BET, denDailyCap } from '../constants'
 import { isPremiumActive } from '@/lib/premium'
+import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 
 // ── Server-side state shape (lives in blackjack_hands.state JSONB) ──
 
@@ -243,7 +244,7 @@ async function finalizeSettlement(
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net')
+    .select('doubloons, casino_chips, casino_session_buy_ins, blackjack_session_net, blackjack_win_streak, blackjack_dealer_bj_streak')
     .eq('id', userId)
     .single()
   const currentChips = (profile?.casino_chips as number | null) ?? 0
@@ -256,6 +257,13 @@ async function finalizeSettlement(
   const busted = newChips === 0
   const newSessionBuyIns = busted ? 0 : prevSessionBuyIns
   const newSessionNet = busted ? 0 : prevSessionNet + netDelta
+
+  // Badge streaks: a net-positive round extends the win streak (loss resets,
+  // push leaves it); the dealer's natural extends its own run (else resets).
+  const prevWinStreak = (profile?.blackjack_win_streak as number | null) ?? 0
+  const prevDealerBjStreak = (profile?.blackjack_dealer_bj_streak as number | null) ?? 0
+  const newWinStreak = netDelta > 0 ? prevWinStreak + 1 : netDelta < 0 ? 0 : prevWinStreak
+  const newDealerBjStreak = dealerNatural ? prevDealerBjStreak + 1 : 0
 
   const resultJson = {
     hands: settled,
@@ -288,6 +296,8 @@ async function finalizeSettlement(
       casino_chips: newChips,
       casino_session_buy_ins: newSessionBuyIns,
       blackjack_session_net: newSessionNet,
+      blackjack_win_streak: newWinStreak,
+      blackjack_dealer_bj_streak: newDealerBjStreak,
       ...(busted ? { roulette_session_net: 0, slots_session_net: 0 } : {}),
     }).eq('id', userId),
     admin.from('blackjack_hands').update({
@@ -299,6 +309,10 @@ async function finalizeSettlement(
     }).eq('id', handId),
   ])
   void reason
+
+  // Badge hooks (best-effort): 5-win streak and the dealer's back-to-back naturals.
+  if (newWinStreak >= 5) { try { await unlockBadge('unstoppable') } catch { /* best-effort */ } }
+  if (newDealerBjStreak >= 2) { try { await unlockBadge('stacked_deck') } catch { /* best-effort */ } }
 
   const [dailyWagered, dailyCap] = await Promise.all([getDailyBuyInTotal(userId), getDenCap(userId)])
   const currentDoubloons = (profile?.doubloons as number | null) ?? 0

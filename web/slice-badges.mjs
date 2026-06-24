@@ -79,6 +79,20 @@ const PLAN = [
   [10, 1, 0, 'beacon_breaker'],
   [10, 1, 1, 'long_haul'],
   [10, 1, 2, 'captains_colors'],
+  // ── batch 11 — expansion II (parlor + den) ──
+  [11, 0, 0, 'crowned'],
+  [11, 0, 1, 'throne_in_sight'],
+  [11, 0, 2, 'clean_sweep'],
+  [11, 1, 0, 'unstoppable'],
+  [11, 1, 1, 'stacked_deck'],
+  [11, 1, 2, 'called_it'],
+  // ── batch 12 — expansion II (fishing pet / ship / tide / trawling) ──
+  [12, 0, 0, 'friend_at_sea'],
+  [12, 0, 1, 'ship_of_the_line'],
+  [12, 0, 2, 'wrecking_crew'],
+  [12, 1, 0, 'first_haul'],
+  [12, 1, 1, 'steady_nets'],
+  [12, 1, 2, 'deep_trawler'],
 ]
 
 let skipped = 0

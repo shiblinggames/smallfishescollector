@@ -46,6 +46,9 @@ export interface BadgeProfileFields {
   tide_run_beacons_smashed?: number | null
   tide_run_total_distance?: number | string | null
   is_premium?: boolean | null
+  ship_tier?: number | null
+  trawls_collected?: number | null
+  unlocked_pets?: string[] | null
 }
 
 export interface BadgeJoinData {
@@ -134,6 +137,13 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     long_haul:      Number(p.tide_run_total_distance ?? 0) >= 100_000,
     salted_through: Number(p.fishing_casts ?? 0) >= 10_000,
     three_legends:  hasAllThreeLegends,
+    // ── 2026-06 expansion II (the 6 derivable ones; the other 6 are hooks) ──
+    friend_at_sea:  (p.unlocked_pets ?? []).length >= 1,
+    ship_of_the_line: Number(p.ship_tier ?? 0) >= 6,
+    wrecking_crew:  Number(p.tide_run_beacons_smashed ?? 0) >= 2000,
+    first_haul:     Number(p.trawls_collected ?? 0) >= 1,
+    steady_nets:    Number(p.trawls_collected ?? 0) >= 25,
+    deep_trawler:   Number(p.trawls_collected ?? 0) >= 100,
   }
 }
 
@@ -146,4 +156,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets'

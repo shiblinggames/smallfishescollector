@@ -202,6 +202,9 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
       : []),
   ])
 
+  // Lifetime trawl counter — powers First Haul / Steady Nets / Deep Trawler.
+  void admin.rpc('bump_profile_stat', { uid: user.id, col: 'trawls_collected', n: 1 }).then(() => {}, () => {})
+
   return {
     zone,
     xpGained: haul.xp,

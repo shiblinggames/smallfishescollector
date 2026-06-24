@@ -122,6 +122,20 @@ export const BADGES: Badge[] = [
   { id: 'beacon_breaker', name: 'Beacon Breaker',     description: 'Smash 500 beacons across all Tide Runs',          imageUrl: '/badges/beacon_breaker.png', difficulty: 'seasoned' },
   { id: 'long_haul',      name: 'The Long Haul',      description: 'Swim 100,000m total across Tide Runs',            imageUrl: '/badges/long_haul.png',      difficulty: 'veteran'  },
   { id: 'captains_colors', name: "Captain's Colors",  description: 'Become a Captain',                                imageUrl: '/badges/captains_colors.png', difficulty: 'rookie'  },
+
+  // ── 2026-06 expansion II (batches 11–12) ─────────────────────────────────
+  { id: 'crowned',        name: 'Crowned',            description: 'Make it all the way up the Pirate King ladder',   imageUrl: '/badges/crowned.png',        difficulty: 'master'   },
+  { id: 'throne_in_sight', name: 'Throne in Sight',   description: 'Reach rung 7 of the Pirate King ladder',          imageUrl: '/badges/throne_in_sight.png', difficulty: 'seasoned' },
+  { id: 'clean_sweep',    name: 'Clean Sweep',        description: "Clear a Captain's Board, every answer correct",   imageUrl: '/badges/clean_sweep.png',    difficulty: 'veteran'  },
+  { id: 'friend_at_sea',  name: 'A Friend at Sea',    description: 'Earn your first fishing pet',                     imageUrl: '/badges/friend_at_sea.png',  difficulty: 'rookie'   },
+  { id: 'unstoppable',    name: 'Unstoppable',        description: 'Win 5 blackjack hands in a row',                  imageUrl: '/badges/unstoppable.png',    difficulty: 'veteran'  },
+  { id: 'stacked_deck',   name: 'Stacked Deck',       description: 'Watch the dealer pull blackjack two hands running', imageUrl: '/badges/stacked_deck.png', difficulty: 'seasoned' },
+  { id: 'called_it',      name: 'Called It',          description: 'Win a straight-up single-number roulette bet',    imageUrl: '/badges/called_it.png',      difficulty: 'seasoned' },
+  { id: 'ship_of_the_line', name: 'Ship of the Line', description: 'Own the Man-o-War',                               imageUrl: '/badges/ship_of_the_line.png', difficulty: 'veteran' },
+  { id: 'wrecking_crew',  name: 'Wrecking Crew',      description: 'Smash 2,000 beacons across all Tide Runs',        imageUrl: '/badges/wrecking_crew.png',  difficulty: 'master'   },
+  { id: 'first_haul',     name: 'First Haul',         description: 'Collect your first trawl',                        imageUrl: '/badges/first_haul.png',     difficulty: 'rookie'   },
+  { id: 'steady_nets',    name: 'Steady Nets',        description: 'Collect 25 trawls',                               imageUrl: '/badges/steady_nets.png',    difficulty: 'seasoned' },
+  { id: 'deep_trawler',   name: 'Deep Trawler',       description: 'Collect 100 trawls',                              imageUrl: '/badges/deep_trawler.png',   difficulty: 'veteran'  },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -203,6 +217,18 @@ export const BADGE_DETAIL: Record<string, string> = {
   beacon_breaker:   'Smash 500 beacons across all your Tide Runs. Every run chips away at the total.',
   long_haul:        'Cover 100,000 meters in total across every Tide Run you have ever made. The long, steady grind of the open channel.',
   captains_colors:  'Become a Captain and back the studio. The badge worn by those who keep the seas afloat.',
+  crowned:          'Answer every rung of the weekly Pirate King ladder and take the crown. One wrong answer ends the run, so a clean climb to the top is a rare feat.',
+  throne_in_sight:  'Climb to the seventh rung of the Pirate King ladder. The crown is within reach, if your nerve holds.',
+  clean_sweep:      "Answer every card on a weekly Captain's Board correctly. No slip-ups, the whole board cleared.",
+  friend_at_sea:    'Earn your first fishing pet. A small companion to ride along on every cast.',
+  unstoppable:      'Win five blackjack hands in a row. The cards are running hot and you have not blinked.',
+  stacked_deck:     'Sit through the dealer drawing a natural blackjack two hands running. Brutal luck, but a story worth a badge.',
+  called_it:        'Win a straight-up bet on a single roulette number. One number, full odds, dead on.',
+  ship_of_the_line: 'Own the Man-o-War, the mightiest hull money can buy. A true ship of the line.',
+  wrecking_crew:    'Smash 2,000 beacons across every Tide Run you have ever made. A long trail of wreckage.',
+  first_haul:       'Send a crew member out to trawl a zone and collect the haul they bring back. Passive fishing, your first catch of many.',
+  steady_nets:      'Collect 25 trawls. The nets are always out, and the doubloons keep coming in.',
+  deep_trawler:     'Collect 100 trawls. A steady second income hauled up one cycle at a time.',
 }
 
 /** Detail blurb for a badge id (falls back to its short description). */

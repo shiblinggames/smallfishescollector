@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import {
   rollWinningNumber, settleSpin, validateBet,
   type Bet,
@@ -158,6 +159,11 @@ export async function placeBetsAndSpin(bets: Bet[]): Promise<SpinResult | { erro
       chips_after: chipsAfter,
     }),
   ])
+
+  // Called It badge (best-effort): won a straight-up single-number bet.
+  if (settlement.perBet.some(pb => pb.won && pb.bet.type === 'straight')) {
+    try { await unlockBadge('called_it') } catch { /* best-effort */ }
+  }
 
   return {
     winningNumber,
