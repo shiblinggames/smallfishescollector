@@ -245,18 +245,18 @@ export type BadgePos = { top: number; left: number; width: number; rotate: numbe
 
 export const BADGE_SLOT_POSITIONS: Record<number, Record<BadgeFrame, BadgePos>> = {
   0: {
-    rest: { top: 83, left: 36, width: 6, rotate: 0 },
-    wait: { top: 78, left: 43, width: 6, rotate: 0 },
-    cast: { top: 83, left: 43, width: 6, rotate: 0 },
+    rest: { top: 84,   left: 36,   width: 5.5, rotate: 0 },
+    wait: { top: 79.9, left: 43,   width: 5.5, rotate: 0 },
+    cast: { top: 84.1, left: 42.6, width: 5.5, rotate: 0 },
   },
   1: {
-    rest: { top: 84, left: 42, width: 6, rotate: 0 },
-    wait: { top: 79, left: 49, width: 6, rotate: 0 },
-    cast: { top: 84, left: 49, width: 6, rotate: 0 },
+    rest: { top: 85,   left: 41.6, width: 5.5, rotate: 0 },
+    wait: { top: 80.9, left: 48.7, width: 5.5, rotate: 0 },
+    cast: { top: 85,   left: 48.2, width: 5.5, rotate: 0 },
   },
   2: {
-    rest: { top: 84, left: 48, width: 6, rotate: 0 },
-    wait: { top: 79, left: 55, width: 6, rotate: 0 },
-    cast: { top: 84, left: 55, width: 6, rotate: 0 },
+    rest: { top: 85.4, left: 47.3, width: 5.5, rotate: 0 },
+    wait: { top: 81.3, left: 54.4, width: 5.5, rotate: 0 },
+    cast: { top: 85.4, left: 53.9, width: 5.5, rotate: 0 },
   },
 }
