@@ -74,12 +74,59 @@ for (const [batch, row, col, name] of PLAN) {
   const h    = Math.floor(meta.height / 2)
   const dest = `${OUT}/${name}.png`
 
-  await sharp(src)
+  // The generated sheets don't place each emblem dead-center in its cell, so
+  // an even 3x2 grid division leaves badges looking off-center. sharp's
+  // .trim() is unreliable here (the medallions nearly fill the cell height and
+  // can touch an edge), so we scan the cell's alpha channel for the true
+  // non-transparent bounding box, then re-center THAT on a square canvas.
+  const { data, info } = await sharp(src)
     .extract({ left: col * w, top: row * h, width: w, height: h })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const A = 24 // alpha cutoff: ignore faint anti-alias halo
+  let minX = info.width, minY = info.height, maxX = -1, maxY = -1
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      if (data[(y * info.width + x) * 4 + 3] > A) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+  const bw = maxX - minX + 1
+  const bh = maxY - minY + 1
+  const side = Math.round(Math.max(bw, bh) * 1.08) // ~4% breathing room each side
+
+  // Re-extract the tight emblem straight from the source at absolute coords.
+  const emblem = await sharp(src)
+    .extract({ left: col * w + minX, top: row * h + minY, width: bw, height: bh })
     .png()
+    .toBuffer()
+
+  // Center on a square canvas first (sharp applies composite AFTER resize
+  // regardless of call order, so resizing must happen in a separate pass —
+  // otherwise the full-size emblem composites onto an already-shrunk canvas).
+  const centered = await sharp({
+    create: { width: side, height: side, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .composite([{
+      input: emblem,
+      left: Math.round((side - bw) / 2),
+      top:  Math.round((side - bh) / 2),
+    }])
+    .png()
+    .toBuffer()
+
+  await sharp(centered)
+    .resize(256, 256, { fit: 'inside' })
+    .png({ compressionLevel: 9, quality: 90 })
     .toFile(dest)
 
-  console.log(`✓ ${dest}`)
+  console.log(`✓ ${dest}  (emblem ${bw}x${bh} → centered ${side})`)
 }
 
 if (skipped) console.log(`(skipped ${skipped} entries — their batch sheet wasn't found)`)
