@@ -1,5 +1,6 @@
 import sharp from 'sharp'
 import { mkdir } from 'fs/promises'
+import { existsSync } from 'fs'
 
 const OUT = 'public/badges'
 await mkdir(OUT, { recursive: true })
@@ -63,8 +64,11 @@ const PLAN = [
   [8, 0, 2, 'bilge_baron'],
 ]
 
+let skipped = 0
 for (const [batch, row, col, name] of PLAN) {
   const src  = `public/badgebatch${batch}.png`
+  // Skip sheets that haven't been uploaded yet (e.g. doing batches 1–7 first).
+  if (!existsSync(src)) { skipped++; continue }
   const meta = await sharp(src).metadata()
   const w    = Math.floor(meta.width  / 3)
   const h    = Math.floor(meta.height / 2)
@@ -78,4 +82,5 @@ for (const [batch, row, col, name] of PLAN) {
   console.log(`✓ ${dest}`)
 }
 
+if (skipped) console.log(`(skipped ${skipped} entries — their batch sheet wasn't found)`)
 console.log('Done.')
