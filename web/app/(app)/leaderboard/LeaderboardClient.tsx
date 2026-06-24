@@ -54,19 +54,19 @@ interface Props {
   avatars: AvatarMap
 }
 
-type SectionKey = 'fishing' | 'expeditions' | 'tavern' | 'den' | 'honors'
+type SectionKey = 'achievements' | 'fishing' | 'expeditions' | 'tavern' | 'den'
 
-/** Master sections. The Den owns the 3 gambling boards (all lifetime
- *  net winnings); Tavern keeps Tide Run. Honors is the cross-cutting
- *  meta board (achievement points across every system) and renders as a
- *  full-width tab below the 2×2. The board pill grid below adapts its
- *  column count to match each section's length. */
+/** Master sections. Achievements is the cross-cutting meta board (badge
+ *  points across every system) and leads as a full-width banner above the
+ *  2×2 — it's also the default tab on open. The Den owns the 3 gambling
+ *  boards (all lifetime net winnings); Tavern keeps Tide Run. The board
+ *  pill grid below adapts its column count to match each section's length. */
 const SECTIONS: Record<SectionKey, { label: string; boards: BoardKey[] }> = {
+  achievements: { label: 'Achievements', boards: ['achievementPoints'] },
   fishing:     { label: 'Fishing',     boards: ['perfectStreak', 'fishingLevel'] },
   expeditions: { label: 'Expeditions', boards: ['raidProgress', 'expedition'] },
   tavern:      { label: 'Tavern',      boards: ['tideRun', 'chartingPoints'] },
   den:         { label: 'The Den',     boards: ['blackjack', 'fishSlots', 'roulette'] },
-  honors:      { label: 'Honors',      boards: ['achievementPoints'] },
 }
 
 const PODIUM_COLORS: Record<number, string> = { 1: '#f0c040', 2: '#c0c8d4', 3: '#c47a3a' }
@@ -75,8 +75,8 @@ const NEUTRAL_BORDER = 'rgba(255,255,255,0.10)'
 const NEUTRAL_BORDER_TOP = 'rgba(255,255,255,0.18)'
 
 export default function LeaderboardClient({ fishing, perfectStreak, tideRun, chartingPoints, fishSlots, blackjack, roulette, expedition, raidProgress, achievementPoints, myScores, myRanks, currentUserId, avatars }: Props) {
-  const [section, setSection] = useState<SectionKey>('fishing')
-  const [activeTab, setActiveTab] = useState<BoardKey>(SECTIONS.fishing.boards[0])
+  const [section, setSection] = useState<SectionKey>('achievements')
+  const [activeTab, setActiveTab] = useState<BoardKey>(SECTIONS.achievements.boards[0])
 
   // BoardKey → its data array + the player's score/rank for that board.
   const dataOf = (k: BoardKey): LeaderboardEntry[] =>
@@ -134,9 +134,9 @@ export default function LeaderboardClient({ fishing, perfectStreak, tideRun, cha
               onClick={() => selectSection(key)}
               className="font-cinzel font-700 uppercase tracking-[0.10em]"
               style={{
-                // Honors is the odd 5th tab — span the full row so the 2×2
-                // grid above it stays balanced instead of leaving an orphan.
-                gridColumn: key === 'honors' ? '1 / -1' : undefined,
+                // Achievements leads as a full-width banner; the remaining
+                // four sections fill the 2×2 grid below it.
+                gridColumn: key === 'achievements' ? '1 / -1' : undefined,
                 padding: '0.55rem 0.5rem',
                 borderRadius: 10,
                 background: isActive
