@@ -1,9 +1,11 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DIFFICULTY_META, BADGE_POINTS, type BadgeDifficulty } from '@/lib/badges'
+import { vibrate } from '@/lib/haptics'
 import { claimBadgeReward, claimAllBadgeRewards } from './badgeActions'
 
 export interface JourneyGoal {
@@ -38,6 +40,11 @@ const GOLD = '#f0c040'
 const TIER_ORDER: BadgeDifficulty[] = ['rookie', 'seasoned', 'veteran', 'master']
 type Filter = 'all' | BadgeDifficulty
 
+const rectCenter = (el: Element) => {
+  const r = el.getBoundingClientRect()
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+}
+
 export default function AchievementsClient({ groups }: Props) {
   const router = useRouter()
   const allGoals = useMemo(() => groups.flatMap(g => g.goals), [groups])
@@ -46,9 +53,14 @@ export default function AchievementsClient({ groups }: Props) {
     () => new Set(allGoals.filter(g => g.claimed).map(g => g.id)),
   )
   const [busy, setBusy] = useState<string | null>(null)
-  const [toast, setToast] = useState<number | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [, startTransition] = useTransition()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  // Coins that fly from the claim button up into the Nav doubloon pill.
+  const [coins, setCoins] = useState<{ id: number; fromX: number; fromY: number; toX: number; toY: number; delay: number }[]>([])
+  const coinId = useRef(0)
 
   const badgeGoals = allGoals.filter(g => (g.reward ?? 0) > 0)
   const earnedBadges = badgeGoals.filter(g => g.done).length
@@ -68,9 +80,38 @@ export default function AchievementsClient({ groups }: Props) {
   )
 
   const notifyDoubloons = (n: number) => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: n }))
-  const showToast = (amt: number) => { setToast(amt); setTimeout(() => setToast(null), 1700) }
 
-  function claimOne(id: string) {
+  // Center of the (visible) Nav doubloon pill — the flight destination.
+  function navPillTarget(): { x: number; y: number } | null {
+    const pills = Array.from(document.querySelectorAll('[data-doubloon-pill]')) as HTMLElement[]
+    const vis = pills.find(p => { const r = p.getBoundingClientRect(); return r.width > 0 && r.top >= -10 && r.top < window.innerHeight })
+    if (!vis) return null
+    const r = vis.getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  }
+  function popNavPill() {
+    (Array.from(document.querySelectorAll('[data-doubloon-pill]')) as HTMLElement[])
+      .forEach(p => p.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.16)' }, { transform: 'scale(1)' }], { duration: 360, easing: 'ease-out' }))
+  }
+
+  // Spawn a coin burst flying from `from` → the nav pill; tick the count up +
+  // pop the pill as they land. Falls back to an instant update if no pill.
+  function flyCoins(from: { x: number; y: number }, amount: number, newDoubloons: number) {
+    const to = navPillTarget()
+    if (!to) { notifyDoubloons(newDoubloons); return }
+    const n = Math.min(16, Math.max(6, Math.round(amount / 1200) + 5))
+    const batch = Array.from({ length: n }, (_, i) => ({
+      id: coinId.current++, fromX: from.x, fromY: from.y,
+      toX: to.x + (Math.random() * 18 - 9), toY: to.y + (Math.random() * 8 - 4), delay: i * 0.045,
+    }))
+    setCoins(prev => [...prev, ...batch])
+    vibrate([0, 18, 40, 22])
+    const flightMs = 560 + n * 45
+    setTimeout(() => { notifyDoubloons(newDoubloons); popNavPill() }, Math.max(280, flightMs - 220))
+    setTimeout(() => setCoins(prev => prev.filter(c => !batch.some(b => b.id === c.id))), flightMs + 500)
+  }
+
+  function claimOne(id: string, from: { x: number; y: number }) {
     if (busy) return
     setBusy(id)
     startTransition(async () => {
@@ -78,10 +119,10 @@ export default function AchievementsClient({ groups }: Props) {
       setBusy(null)
       if ('error' in r) return
       setClaimedIds(prev => new Set(prev).add(id))
-      if (r.amount > 0) { notifyDoubloons(r.newDoubloons); showToast(r.amount) }
+      if (r.amount > 0) flyCoins(from, r.amount, r.newDoubloons)
     })
   }
-  function claimAll() {
+  function claimAll(from: { x: number; y: number }) {
     if (busy || claimable.length === 0) return
     setBusy('all')
     startTransition(async () => {
@@ -89,7 +130,7 @@ export default function AchievementsClient({ groups }: Props) {
       setBusy(null)
       if ('error' in r) return
       setClaimedIds(new Set(r.claimed))
-      if (r.totalGranted > 0) { notifyDoubloons(r.newDoubloons); showToast(r.totalGranted) }
+      if (r.totalGranted > 0) flyCoins(from, r.totalGranted, r.newDoubloons)
     })
   }
 
@@ -117,7 +158,7 @@ export default function AchievementsClient({ groups }: Props) {
               <p className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 12px ${GOLD}55` }}>
                 {claimableTotal.toLocaleString()} ⟡
               </p>
-              <motion.button whileTap={{ scale: 0.94 }} onClick={claimAll} disabled={busy === 'all'}
+              <motion.button whileTap={{ scale: 0.94 }} onClick={e => claimAll(rectCenter(e.currentTarget))} disabled={busy === 'all'}
                 className="font-cinzel font-700 uppercase tracking-[0.08em]"
                 style={{
                   padding: '0.62rem 1.05rem', borderRadius: 11, cursor: busy ? 'default' : 'pointer',
@@ -156,7 +197,7 @@ export default function AchievementsClient({ groups }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {group.goals.map(g => (
                 <GoalRow key={g.id} g={g} groupAccent={group.accent} claimed={claimedIds.has(g.id)} busy={busy === g.id}
-                  onClaim={() => claimOne(g.id)} onOpen={() => router.push(g.href)} />
+                  onClaim={from => claimOne(g.id, from)} onOpen={() => router.push(g.href)} />
               ))}
             </div>
           </section>
@@ -168,22 +209,30 @@ export default function AchievementsClient({ groups }: Props) {
         )}
       </div>
 
-      {/* Claim toast */}
-      <AnimatePresence>
-        {toast !== null && (
-          <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 26 }} aria-hidden
-            style={{
-              position: 'fixed', left: '50%', bottom: 'calc(86px + env(safe-area-inset-bottom))', transform: 'translateX(-50%)',
-              zIndex: 9000, pointerEvents: 'none', padding: '0.6rem 1.15rem', borderRadius: 999,
-              background: 'linear-gradient(180deg, rgba(44,34,14,0.97) 0%, rgba(22,16,8,0.98) 100%)', color: GOLD,
-              border: `1px solid ${GOLD}`, boxShadow: `0 6px 22px ${GOLD}33`,
-            }}>
-            <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', textShadow: `0 0 10px ${GOLD}55` }}>+{toast.toLocaleString()} ⟡ claimed</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Coins flying from the claim button up into the Nav doubloon pill. */}
+      {mounted && createPortal(
+        <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 9500, pointerEvents: 'none' }}>
+          <AnimatePresence>
+            {coins.map(c => (
+              <motion.div key={c.id}
+                initial={{ left: c.fromX, top: c.fromY, opacity: 0, scale: 0.4 }}
+                animate={{
+                  left: [c.fromX, (c.fromX + c.toX) / 2, c.toX],
+                  top: [c.fromY, Math.min(c.fromY, c.toY) - 46, c.toY],
+                  opacity: [0, 1, 0], scale: [0.4, 1, 0.5],
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.62, delay: c.delay, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute', width: 15, height: 15, marginLeft: -7.5, marginTop: -7.5, borderRadius: '50%',
+                  background: 'radial-gradient(circle at 35% 30%, #ffe79a, #e6b948 65%, #c4922f)',
+                  border: '1px solid #b9892e', boxShadow: '0 0 8px rgba(240,192,64,0.6)',
+                }} />
+            ))}
+          </AnimatePresence>
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }
@@ -209,7 +258,7 @@ function FilterChip({ active, label, color, count, earned, onClick }: {
 
 // ── One goal row ────────────────────────────────────────────────────────────
 function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
-  g: JourneyGoal; groupAccent: string; claimed: boolean; busy: boolean; onClaim: () => void; onOpen: () => void
+  g: JourneyGoal; groupAccent: string; claimed: boolean; busy: boolean; onClaim: (from: { x: number; y: number }) => void; onOpen: () => void
 }) {
   const diff = g.difficulty ? DIFFICULTY_META[g.difficulty] : null
   const accent = diff?.color ?? groupAccent
@@ -292,7 +341,7 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
       {/* Right action zone */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
         {state === 'ready' ? (
-          <motion.button whileTap={{ scale: 0.92 }} onClick={e => { e.stopPropagation(); onClaim() }} disabled={busy}
+          <motion.button whileTap={{ scale: 0.92 }} onClick={e => { e.stopPropagation(); onClaim(rectCenter(e.currentTarget)) }} disabled={busy}
             className="font-cinzel font-700 uppercase tracking-[0.06em]"
             style={{ padding: '0.5rem 0.85rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer', background: `${GOLD}22`, color: GOLD, border: `1px solid ${GOLD}`, fontSize: '0.7rem', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap' }}>
             {busy ? '…' : 'Claim'}
