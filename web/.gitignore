@@ -43,3 +43,6 @@ next-env.d.ts
 .vercel
 card-art-uploads/
 scripts/
+
+# Badge slicer source sheets (dev-only input for slice-badges.mjs; sliced output in public/badges/ is committed)
+public/badgebatch*.png
