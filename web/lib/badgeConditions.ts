@@ -41,6 +41,11 @@ export interface BadgeProfileFields {
   fishing_casts?: number | null
   fishing_double_catches?: number | null
   fishing_crates_opened?: number | null
+  fishing_snags?: number | null
+  fishing_jackpots?: number | null
+  tide_run_beacons_smashed?: number | null
+  tide_run_total_distance?: number | string | null
+  is_premium?: boolean | null
 }
 
 export interface BadgeJoinData {
@@ -56,6 +61,8 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const fastestCorsairs = Math.min(Infinity, ...j.raids.filter(r => r.raid_id === 'corsairs_reckoning').map(r => r.elapsed_ms ?? Infinity))
   const maxCrewLevel = j.crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
   const hasLegendaryCrew = j.crew.some(c => !!c.slug && LEGENDARY_SLUGS.has(c.slug))
+  const ownedLegendary = new Set(j.crew.map(c => c.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS.has(s)))
+  const hasAllThreeLegends = [...LEGENDARY_SLUGS].every(s => ownedLegendary.has(s))
   const hasLostCrew = j.crew.some(c => c.died_at != null)
   const prestige = p.prestige_levels ?? {}
   const totalStars = PRESTIGE_ZONES.reduce((s, z) => s + Math.min(5, prestige[z] ?? 0), 0)
@@ -114,6 +121,19 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     cartographers_fall: raidIds.has('cartographer_challenge'),
     toll_paid:      raidIds.has('tollmasters_cut_challenge'),
     finndicates_bane: CHALLENGE_RAID_IDS.every(id => raidIds.has(id)),
+    // ── 2026-06 expansion ──
+    got_away:       Number(p.fishing_snags ?? 0) >= 50,
+    maiden_voyage:  j.voyageCount >= 1,
+    captains_colors: !!p.is_premium,
+    two_fisted:     Number(p.fishing_double_catches ?? 0) >= 100,
+    sure_shot:      Number(p.total_perfects ?? 0) >= 250,
+    old_sea_dog:    j.voyageCount >= 50,
+    beacon_breaker: Number(p.tide_run_beacons_smashed ?? 0) >= 500,
+    reel_lucky:     Number(p.fishing_jackpots ?? 0) >= 1,
+    hundred_fins:   j.collectionCount >= 100,
+    long_haul:      Number(p.tide_run_total_distance ?? 0) >= 100_000,
+    salted_through: Number(p.fishing_casts ?? 0) >= 10_000,
+    three_legends:  hasAllThreeLegends,
   }
 }
 
@@ -126,4 +146,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium'

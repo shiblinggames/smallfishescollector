@@ -65,6 +65,20 @@ const PLAN = [
   [8, 1, 0, 'two_for_the_pot'],
   [8, 1, 1, 'saltlung'],
   [8, 1, 2, 'crate_digger'],
+  // ── batch 9 — 2026-06 expansion (fishing-heavy) ──
+  [9, 0, 0, 'got_away'],
+  [9, 0, 1, 'reel_lucky'],
+  [9, 0, 2, 'two_fisted'],
+  [9, 1, 0, 'sure_shot'],
+  [9, 1, 1, 'salted_through'],
+  [9, 1, 2, 'maiden_voyage'],
+  // ── batch 10 — 2026-06 expansion (voyages / collection / crew / tide / captain) ──
+  [10, 0, 0, 'old_sea_dog'],
+  [10, 0, 1, 'hundred_fins'],
+  [10, 0, 2, 'three_legends'],
+  [10, 1, 0, 'beacon_breaker'],
+  [10, 1, 1, 'long_haul'],
+  [10, 1, 2, 'captains_colors'],
 ]
 
 let skipped = 0

@@ -108,6 +108,20 @@ export const BADGES: Badge[] = [
   { id: 'baby_steps',     name: 'Baby Steps',         description: 'Hold 100,000 doubloons at once',                  imageUrl: '/badges/baby_steps.png',     difficulty: 'rookie'   },
   { id: 'deep_pockets',   name: 'Deep Pockets',       description: 'Hold 1,000,000 doubloons at once',                imageUrl: '/badges/deep_pockets.png',   difficulty: 'veteran'  },
   { id: 'bilge_baron',    name: 'Bilge Baron',        description: 'Hold 2,500,000 doubloons at once',                imageUrl: '/badges/bilge_baron.png',    difficulty: 'master'   },
+
+  // ── 2026-06 expansion (batches 9–10) ─────────────────────────────────────
+  { id: 'got_away',       name: 'The One That Got Away', description: 'Lose 50 fish to snapped lines',                imageUrl: '/badges/got_away.png',       difficulty: 'rookie'   },
+  { id: 'reel_lucky',     name: 'Reel Lucky',         description: 'Hit a fishing jackpot',                           imageUrl: '/badges/reel_lucky.png',     difficulty: 'veteran'  },
+  { id: 'two_fisted',     name: 'Two-Fisted',         description: 'Land 100 double catches',                         imageUrl: '/badges/two_fisted.png',     difficulty: 'seasoned' },
+  { id: 'sure_shot',      name: 'Sure Shot',          description: 'Land 250 perfect catches all-time',              imageUrl: '/badges/sure_shot.png',      difficulty: 'seasoned' },
+  { id: 'salted_through', name: 'Salted Through',     description: 'Cast your line 10,000 times',                     imageUrl: '/badges/salted_through.png', difficulty: 'master'   },
+  { id: 'maiden_voyage',  name: 'Maiden Voyage',      description: 'Complete your first voyage',                      imageUrl: '/badges/maiden_voyage.png',  difficulty: 'rookie'   },
+  { id: 'old_sea_dog',    name: 'Old Sea Dog',        description: 'Complete 50 voyages',                             imageUrl: '/badges/old_sea_dog.png',    difficulty: 'seasoned' },
+  { id: 'hundred_fins',   name: 'A Hundred Fins',     description: 'Catch 100 fish species',                          imageUrl: '/badges/hundred_fins.png',   difficulty: 'veteran'  },
+  { id: 'three_legends',  name: 'The Three Legends',  description: 'Own all three legendary crew at once',            imageUrl: '/badges/three_legends.png',  difficulty: 'master'   },
+  { id: 'beacon_breaker', name: 'Beacon Breaker',     description: 'Smash 500 beacons across all Tide Runs',          imageUrl: '/badges/beacon_breaker.png', difficulty: 'seasoned' },
+  { id: 'long_haul',      name: 'The Long Haul',      description: 'Swim 100,000m total across Tide Runs',            imageUrl: '/badges/long_haul.png',      difficulty: 'veteran'  },
+  { id: 'captains_colors', name: "Captain's Colors",  description: 'Become a Captain',                                imageUrl: '/badges/captains_colors.png', difficulty: 'rookie'  },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -177,6 +191,18 @@ export const BADGE_DETAIL: Record<string, string> = {
   baby_steps:       'Hold 100,000 doubloons at once. Your first real nest egg.',
   deep_pockets:     'Hold 1,000,000 doubloons at once.',
   bilge_baron:      'Hold 2,500,000 doubloons at once. The hold is fit to burst.',
+  got_away:         'Lose 50 fish to lines that snapped or slipped the hook. It happens to every angler who spends real time on the water.',
+  reel_lucky:       'Land a fishing jackpot, the rare cast that pays out many times over. You cannot chase it, only ride it when it comes.',
+  two_fisted:       'Pull up two fish on one cast 100 times over. The right gear makes it happen more often, but it always feels greedy.',
+  sure_shot:        'Bank 250 perfect catches across your career. No streak required, it builds one clean reel at a time.',
+  salted_through:   'Cast your line ten thousand times. A milestone only the most weathered hands ever reach.',
+  maiden_voyage:    'Send your crew out on their very first voyage. Every fleet starts with one ship leaving port.',
+  old_sea_dog:      'Complete 50 voyages. Patience, a steady fleet, and a lot of time at the wheel.',
+  hundred_fins:     'Catch 100 different fish species. The logbook is starting to look serious.',
+  three_legends:    'Have all three legendary crew aboard at once: Catfish, Doby Mick, and Mako. The rarest muster in the game.',
+  beacon_breaker:   'Smash 500 beacons across all your Tide Runs. Every run chips away at the total.',
+  long_haul:        'Cover 100,000 meters in total across every Tide Run you have ever made. The long, steady grind of the open channel.',
+  captains_colors:  'Become a Captain and back the studio. The badge worn by those who keep the seas afloat.',
 }
 
 /** Detail blurb for a badge id (falls back to its short description). */

@@ -42,6 +42,7 @@ export default async function BadgesPage() {
   const crew = (crewRes.data ?? []) as unknown as { xp: number | null; died_at: string | null; cards: { slug: string | null } | null }[]
   const maxCrewLevel = crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
   const hasLegendaryCrew = crew.some(c => !!c.cards?.slug && LEGENDARY_SLUGS.has(c.cards.slug))
+  const legendsOwned = new Set(crew.map(c => c.cards?.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS.has(s))).size
   const hasLostCrew = crew.some(c => c.died_at != null)
   const challengeCleared = CHALLENGE_RAID_IDS.filter(id => raidIds.has(id)).length
   const collectionCount = (collectionRes.data ?? []).length
@@ -57,6 +58,11 @@ export default async function BadgesPage() {
   const doubleCatches = Number(profile?.fishing_double_catches ?? 0)
   const casts = Number(profile?.fishing_casts ?? 0)
   const cratesOpened = Number(profile?.fishing_crates_opened ?? 0)
+  const snags = Number(profile?.fishing_snags ?? 0)
+  const jackpots = Number(profile?.fishing_jackpots ?? 0)
+  const beacons = Number(profile?.tide_run_beacons_smashed ?? 0)
+  const tideTotal = Number(profile?.tide_run_total_distance ?? 0)
+  const isPremium = !!profile?.is_premium
 
   const fishLevel = fishLevelFromXP(Number(profile?.fishing_xp ?? 0))
   const navLevel = navLevelFromXP(Number(profile?.expedition_xp ?? 0))
@@ -116,6 +122,7 @@ export default async function BadgesPage() {
         badgeGoal('unbroken', 'Unbroken', 'Land 10 perfect catches in a row', streakBest, 10, '/fishing'),
         badgeGoal('relentless', 'Relentless', 'Land 15 perfect catches in a row', streakBest, 15, '/fishing'),
         badgeGoal('untouchable', 'Untouchable', 'Land 20 perfect catches in a row', streakBest, 20, '/fishing'),
+        badgeGoal('sure_shot', 'Sure Shot', 'Land 250 perfect catches all-time', totalPerfects, 250, '/fishing'),
         badgeGoal('dead_eye', 'Dead-Eye', 'Land 1,000 perfect catches all-time', totalPerfects, 1000, '/fishing'),
         badgeGoal('master_angler', 'Master Angler', 'Reach Fishing Level 100', fishLevel, 100, '/fishing'),
         badgeGoal('zone_legend', 'Zone Legend', 'Reach Prestige in all 4 zones', prestigedZones, 4, '/fishing'),
@@ -126,9 +133,13 @@ export default async function BadgesPage() {
       title: 'Fishing Feats',
       accent: '#34d399',
       goals: [
+        badgeGoal('got_away', 'The One That Got Away', 'Lose 50 fish to snapped lines', snags, 50, '/fishing'),
         badgeGoal('two_for_the_pot', 'Two for the Pot', 'Reel in a double catch', doubleCatches, 1, '/fishing', { binary: true }),
+        badgeGoal('two_fisted', 'Two-Fisted', 'Land 100 double catches', doubleCatches, 100, '/fishing'),
         badgeGoal('saltlung', 'Saltlung', 'Cast your line 1,000 times', casts, 1000, '/fishing'),
+        badgeGoal('salted_through', 'Salted Through', 'Cast your line 10,000 times', casts, 10_000, '/fishing'),
         badgeGoal('crate_digger', 'Crate Digger', 'Open 50 supply crates', cratesOpened, 50, '/fishing'),
+        badgeGoal('reel_lucky', 'Reel Lucky', 'Hit a fishing jackpot', jackpots, 1, '/fishing', { binary: true }),
       ],
     },
     {
@@ -136,6 +147,7 @@ export default async function BadgesPage() {
       accent: '#60a5fa',
       goals: [
         badgeGoal('half_the_sea', 'Half the Sea', 'Catch 50 fish species', collectionCount, 50, '/fishing'),
+        badgeGoal('hundred_fins', 'A Hundred Fins', 'Catch 100 fish species', collectionCount, 100, '/fishing'),
         badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep trophies', trophies, 6, '/fishing'),
         badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/fishing'),
       ],
@@ -147,6 +159,7 @@ export default async function BadgesPage() {
         badgeGoal('growing_crew', 'Growing Crew', 'Recruit 25 crew', recruits, 25, '/crew'),
         badgeGoal('theres_a_grave', "There's a Grave?", 'Lose a crew member for the first time', hasLostCrew ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('legendary_recruit', 'Legendary Recruit', 'Recruit a legendary crew', hasLegendaryCrew ? 1 : 0, 1, '/crew', { binary: true }),
+        badgeGoal('three_legends', 'The Three Legends', 'Own all 3 legendary crew at once', legendsOwned, 3, '/crew'),
         badgeGoal('crewmaster', 'Crewmaster', 'Reach the top Crew Hall tier', crewHallTier, CREW_HALL_MAX_TIER, '/crew'),
         badgeGoal('full_muster', 'Full Muster', 'Recruit 100 crew', recruits, 100, '/crew'),
         badgeGoal('old_salt', 'Old Salt', 'Level a crew to 100', maxCrewLevel, CREW_MAX_LEVEL, '/crew'),
@@ -157,6 +170,8 @@ export default async function BadgesPage() {
       accent: '#c8704a',
       goals: [
         badgeGoal('navigator', 'Wayfinder', 'Reach Navigation Level 50', navLevel, 50, '/expeditions'),
+        badgeGoal('maiden_voyage', 'Maiden Voyage', 'Complete your first voyage', voyagesDone, 1, '/expeditions', { binary: true }),
+        badgeGoal('old_sea_dog', 'Old Sea Dog', 'Complete 50 voyages', voyagesDone, 50, '/expeditions'),
         badgeGoal('fleet_admiral', 'Fleet Admiral', 'Complete 100 voyages', voyagesDone, 100, '/expeditions'),
         badgeGoal('opening_salvo', 'Opening Salvo', 'Land a single raid hit for 50+', highestRaidDmg, 50, '/raids'),
         badgeGoal('hard_hitter', 'Hard Hitter', 'Land a single raid hit for 100+', highestRaidDmg, 100, '/raids'),
@@ -204,6 +219,8 @@ export default async function BadgesPage() {
         badgeGoal('tide_runner', 'Tide Runner', 'Reach 300m in a single Tide Run', tideBest, 300, '/tavern/tide-run', { record: true }),
         badgeGoal('tide_champion', 'Tide Champion', 'Reach 500m in a single Tide Run', tideBest, 500, '/tavern/tide-run', { record: true }),
         badgeGoal('tide_master', 'Tide Master', 'Reach 750m in a single Tide Run', tideBest, 750, '/tavern/tide-run', { record: true }),
+        badgeGoal('beacon_breaker', 'Beacon Breaker', 'Smash 500 beacons across all Tide Runs', beacons, 500, '/tavern/tide-run'),
+        badgeGoal('long_haul', 'The Long Haul', 'Swim 100,000m total across Tide Runs', tideTotal, 100_000, '/tavern/tide-run'),
       ],
     },
     {
@@ -213,6 +230,13 @@ export default async function BadgesPage() {
         badgeGoal('baby_steps', 'Baby Steps', 'Hold 100,000 doubloons at once', doubloons, 100_000, '/fishing'),
         badgeGoal('deep_pockets', 'Deep Pockets', 'Hold 1,000,000 doubloons at once', doubloons, 1_000_000, '/fishing'),
         badgeGoal('bilge_baron', 'Bilge Baron', 'Hold 2,500,000 doubloons at once', doubloons, 2_500_000, '/fishing'),
+      ],
+    },
+    {
+      title: 'Captain',
+      accent: '#e6b94a',
+      goals: [
+        badgeGoal('captains_colors', "Captain's Colors", 'Become a Captain', isPremium ? 1 : 0, 1, '/profile', { binary: true }),
       ],
     },
   ]
