@@ -55,6 +55,12 @@ export default function MobileTabBar() {
   const [trawls, setTrawls] = useState<{ ends_at: string }[]>([])
   const trawlsFetchedRef = useRef(false)
   const wasFishingRef    = useRef(false)
+  // Unclaimed badge rewards → pulse the Badges tab. Same cached-fetch pattern:
+  // network on first mount + around /badges visits (where you earn/claim),
+  // local derive everywhere else.
+  const [badgeIds, setBadgeIds] = useState<{ unlocked: string[]; claimed: string[] }>({ unlocked: [], claimed: [] })
+  const badgesFetchedRef = useRef(false)
+  const wasBadgesRef     = useRef(false)
 
   useEffect(() => {
     const inExpeditions = pathname.startsWith('/expeditions')
@@ -100,6 +106,27 @@ export default function MobileTabBar() {
     })
   }, [pathname])
 
+  useEffect(() => {
+    const inBadges = pathname.startsWith('/badges')
+    const needFetch = !badgesFetchedRef.current || wasBadgesRef.current || inBadges
+    wasBadgesRef.current = inBadges
+    if (!needFetch) return
+    badgesFetchedRef.current = true
+    const { createClient } = require('@/lib/supabase/client')
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string } } | null } }) => {
+      const user = session?.user
+      if (!user) return
+      supabase
+        .from('profiles')
+        .select('unlocked_badges, claimed_badge_rewards')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }: { data: { unlocked_badges: string[] | null; claimed_badge_rewards: string[] | null } | null }) =>
+          setBadgeIds({ unlocked: data?.unlocked_badges ?? [], claimed: data?.claimed_badge_rewards ?? [] }))
+    })
+  }, [pathname])
+
   // Readiness is derived from cached rows at render. Re-render on a slow tick
   // while anything is pending so a trawl/voyage that ripens lights the badge
   // WITHOUT needing a navigation (otherwise it'd only update on the next tap).
@@ -116,6 +143,9 @@ export default function MobileTabBar() {
   )
   // Any trawl whose cycle has finished → pulse the Fishing tab.
   const trawlReady = trawls.some(t => new Date(t.ends_at).getTime() <= voyageNow)
+  // Any earned-but-unclaimed badge reward → pulse the Badges tab.
+  const claimedSet = new Set(badgeIds.claimed)
+  const hasUnclaimedBadges = badgeIds.unlocked.some(b => !claimedSet.has(b))
 
   if (pathname === '/' || pathname === '/login') return null
   const tint = PAGE_TINTS.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1]
@@ -139,7 +169,7 @@ export default function MobileTabBar() {
       {LINKS.map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         const badge = href === '/expeditions' && voyageBadge ? true : null
-        const pulse = href === '/fishing' && trawlReady
+        const pulse = (href === '/fishing' && trawlReady) || (href === '/badges' && hasUnclaimedBadges)
         return (
           <Link
             key={href}
