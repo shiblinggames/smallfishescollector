@@ -9,7 +9,7 @@ import type { RaidRecords } from './raidMapActions'
 import { RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
-import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice } from './raidMapActions'
+import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
 import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
@@ -105,6 +105,8 @@ function NodeGlyph({ type, color, size = 22 }: { type: string; color: string; si
   if (type === 'puzzle') return <svg {...common}><path d="M12 2c1.6 3 5 4.6 5 9a5 5 0 0 1-10 0c0-2 .8-3.2 2-4.2.2 1.2 1 1.9 1.9 2.1C11.8 6.6 11 4.1 12 2z" /></svg>
   // event: forked path (a decision beat)
   if (type === 'event') return <svg {...common}><path d="M12 3v6M12 9l-5 6M12 9l5 6M5 17l2 4M19 17l-2 4M5 17h4M15 17h4" /></svg>
+  // fork: a road splitting two ways (a chosen route)
+  if (type === 'fork') return <svg {...common}><path d="M12 21v-7M12 14l-5-7M12 14l5-7M5 5l2 2 2-2M15 5l2 2 2-2" /></svg>
   // class_pick: ship wheel (Captain's Choice)
   if (type === 'class_pick') return (
     <svg {...common}>
@@ -131,6 +133,7 @@ function nodeTypeLabel(type: string): string {
     case 'class_pick': return 'Class'
     case 'event':      return 'Event'
     case 'gauntlet':   return 'Gauntlet'
+    case 'fork':       return 'Crossroads'
     default:           return type
   }
 }
@@ -729,6 +732,17 @@ function NodeDetailSheet({
       if (res.newDoubloons != null) {
         window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
       }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  function chooseFork(routeId: string) {
+    setErr(null)
+    startTransition(async () => {
+      const res = await pickForkRoute(node.id, routeId)
+      if ('error' in res) { setErr(res.error); return }
+      // Nav XP from the route reflects on the next refresh (no coin fly).
       router.refresh()
       onClose()
     })
@@ -1345,6 +1359,68 @@ function NodeDetailSheet({
                   {detail.dropsNote}
                 </p>
               )}
+            </div>
+          )
+        })()}
+
+        {/* Branching fork: pick ONE of two routes. Both shown until picked;
+            after, the taken route lights and the other dims to "Gone." Same
+            persistence as the event picker (choices[node.id] = route id). */}
+        {node.fork && !introGated && (() => {
+          const forkAccent = '#f59e0b' // amber — distinct from the violet event picker
+          const picked = pickedEventChoiceId // raidNodeChoices[node.id] = chosen route id
+          return (
+            <div style={{ marginTop: '1.1rem' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#7a7875', marginBottom: '0.55rem' }}>
+                {picked ? 'Your Route' : 'Choose Your Route'}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {node.fork.routes.map(r => {
+                  const isChosen = picked === r.id
+                  const dimmed = cleared && !isChosen
+                  return (
+                    <div key={r.id} style={{
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                      background: isChosen ? `${forkAccent}1f` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isChosen ? `${forkAccent}80` : `${forkAccent}26`}`,
+                      borderRadius: 10, padding: '0.7rem 0.75rem',
+                      opacity: dimmed ? 0.45 : 1,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <span className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '0.86rem', color: '#f0ede8' }}>
+                          {r.label}
+                        </span>
+                        {isChosen && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: forkAccent, flexShrink: 0 }}>Chosen ✓</span>
+                        )}
+                        {cleared && !isChosen && (
+                          <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.55rem', color: '#6a6764', flexShrink: 0 }}>Gone</span>
+                        )}
+                      </div>
+                      <span className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.62)', lineHeight: 1.45 }}>
+                        {r.description}
+                      </span>
+                      {!cleared && (
+                        <button
+                          onClick={() => chooseFork(r.id)}
+                          disabled={pending || locked}
+                          className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                          style={{
+                            marginTop: 2, padding: '0.6rem', borderRadius: 9,
+                            fontSize: '0.82rem',
+                            background: locked ? 'rgba(255,255,255,0.06)' : `${forkAccent}26`,
+                            border: `1px solid ${locked ? 'rgba(255,255,255,0.1)' : `${forkAccent}66`}`,
+                            color: locked ? '#5a5856' : forkAccent,
+                            cursor: pending ? 'wait' : locked ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {pending ? '…' : locked ? 'Locked' : `Take ${r.label}`}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )
         })()}

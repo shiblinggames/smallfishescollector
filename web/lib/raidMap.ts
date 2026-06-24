@@ -21,7 +21,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -118,6 +118,27 @@ export interface RaidDice {
   bonusPerLevels: number
   maxBonus: number
   options: RaidDiceOption[]
+}
+
+// ── Branching fork ───────────────────────────────────────────────────────────
+// A `fork` node splits the chapter into two chosen routes. The player commits to
+// ONE route (recorded in raid_node_progress.choices like an event/dice pick),
+// which clears the fork and grants Nav XP. Downstream nodes on each route gate on
+// that recorded choice so only the taken path opens (the other stays fogged).
+// First new map structure since Ch2 — adds agency + replay.
+export interface RaidForkRoute {
+  /** Stable id stored in raid_node_progress.choices[forkNodeId]. Don't reuse. */
+  id: string
+  /** CTA / heading for the route. Short verb-led phrase. */
+  label: string
+  /** One-sentence card body: what this path is + what it leads through. */
+  description: string
+}
+export interface RaidFork {
+  /** Exactly two diverging routes. */
+  routes: [RaidForkRoute, RaidForkRoute]
+  /** Nav XP granted for committing to a route (same either way). */
+  rewardNavXp: number
 }
 
 // ── Choice-gated payoff ──────────────────────────────────────────────────────
@@ -245,6 +266,8 @@ export interface RaidNode {
   puzzle?: RaidPuzzle
   /** dice: a d20 skill-check / risk-reward throw. Picking + rolling clears it. */
   dice?: RaidDice
+  /** fork: a two-route branch. Picking a route records the choice + clears it. */
+  fork?: RaidFork
   /** story-type payoff gated on an earlier choice (the freed-scout debt). */
   payoff?: RaidPayoff
   /** In-review gate: hide + hard-block this node for non-admins. Filtered out

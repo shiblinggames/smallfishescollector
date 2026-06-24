@@ -60,6 +60,17 @@ export interface BroadsideEnemy {
   parryChance?: number
   parryDamagePct?: number
   parryName?: string
+  /** The Coffers (Chapter 3) — "Decoys." During aim-bar lock-in the bar
+   *  is strewn with `decoyCount` extra gold-looking lure bands at fixed
+   *  positions; only the real (moving, green-backed) crit zone actually
+   *  crits. Purely VISUAL misdirection — getShotResult still judges the
+   *  single true center, so nothing about scoring changes; the player just
+   *  has to read the real gold center through the clutter (sibling to the
+   *  Mist Veil's fog). `decoyName` labels it on the nameplate (mirrors
+   *  `aimFogName`). Undefined on every other enemy = zero render cost.
+   *  Render lives in AimBarInline. */
+  decoyCount?: number
+  decoyName?: string
   /** Optional two-phase boss config. The phase 2 trigger is a "false
    *  defeat" — the boss appears to sink, then rises back at `revivePct`
    *  of their max HP with the alternate pattern, damage mult, and (if

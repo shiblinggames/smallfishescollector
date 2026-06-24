@@ -456,6 +456,181 @@ export const TIDE_POOL: TideEvent[] = [
       },
     ],
   },
+
+  // ── TIER 2 ────────────────────────────────────────────────────────────
+  // Same effect kinds as tier 1, ~2x the magnitudes (and steeper costs).
+  // Only drawn when a raid sets maxTier >= 2 (Chapter 3+). Authored 2026-06-24.
+  // ── 9 ─────────────────────────────────────────────────────────────
+  {
+    id: 'maelstrom_pull',
+    tier: 2,
+    title: "A Maelstrom's Pull",
+    flavor: 'The sea opens a slow grey throat off the bow. Ride its edge and it will hurl you forward, or swallow you whole.',
+    choices: [
+      {
+        id: 'ride',
+        label: 'Ride the current',
+        description: '+25% damage all run. Enemies hit you 20% harder all run.',
+        effects: [
+          { kind: 'damageMult', mult: 1.25 },
+          { kind: 'incomingDmgMult', mult: 1.20, scope: 'allRemaining' },
+        ],
+      },
+      {
+        id: 'bail',
+        label: 'Brace and bail',
+        description: '+50 HP now. Costs you 100 ⟡ at raid end.',
+        effects: [
+          { kind: 'instantHeal', n: 50 },
+          { kind: 'doubloonsAtRaidEnd', n: -100 },
+        ],
+      },
+      {
+        id: 'sail_past',
+        label: 'Sail wide',
+        description: 'Nothing happens. Clean wake.',
+        effects: [],
+      },
+    ],
+  },
+  // ── 10 ────────────────────────────────────────────────────────────
+  {
+    id: 'drowned_armory',
+    tier: 2,
+    title: 'The Drowned Armory',
+    flavor: "A sunken man-o-war's gun deck, still stocked, the powder somehow dry. Take what the sea was keeping.",
+    // Pure boon-pick — no opt-out. Each is a real trade.
+    choices: [
+      {
+        id: 'heavy_shot',
+        label: 'Load the heavy shot',
+        description: '+30% fire damage all run. Your aim needle runs faster all run.',
+        effects: [
+          { kind: 'fireDmgMult', mult: 1.30 },
+          { kind: 'aimSpeedMult', mult: 1.15 },
+        ],
+      },
+      {
+        id: 'powder',
+        label: 'Haul the powder aboard',
+        description: 'Every reload has a 20% chance to load +1 cannonball, all run. -20 HP next fight.',
+        effects: [
+          { kind: 'reloadProc', chance: 0.20, bonusCharges: 1 },
+          { kind: 'startHpDelta', n: -20, scope: 'nextFight' },
+        ],
+      },
+      {
+        id: 'plate',
+        label: 'Bolt on the hull plate',
+        description: 'Take 25% less damage all run. Your own damage drops 15% all run.',
+        effects: [
+          { kind: 'incomingDmgMult', mult: 0.75, scope: 'allRemaining' },
+          { kind: 'damageMult', mult: 0.85 },
+        ],
+      },
+    ],
+  },
+  // ── 11 ────────────────────────────────────────────────────────────
+  {
+    id: 'sirens_bargain',
+    tier: 2,
+    title: "A Siren's Bargain",
+    flavor: 'A voice in the swell offers a trade, sweet and certain. Bargains struck on open water are always paid in full.',
+    choices: [
+      {
+        id: 'sing_back',
+        label: 'Sing back',
+        description: '+20% crit chance all run. Enemies hit you 15% harder all run.',
+        effects: [
+          { kind: 'critChanceBonus', chance: 0.20 },
+          { kind: 'incomingDmgMult', mult: 1.15, scope: 'allRemaining' },
+        ],
+      },
+      {
+        id: 'ears',
+        label: 'Plug your ears',
+        description: 'Full HP now. The boss fight starts with 25 less HP for you.',
+        effects: [
+          { kind: 'fullHeal' },
+          { kind: 'startHpDelta', n: -25, scope: 'boss' },
+        ],
+      },
+      {
+        id: 'sail_past',
+        label: 'Sail past',
+        description: 'Nothing happens. Hold the line.',
+        effects: [],
+      },
+    ],
+  },
+  // ── 12 ────────────────────────────────────────────────────────────
+  {
+    id: 'king_tide',
+    tier: 2,
+    title: 'The King Tide',
+    flavor: 'The whole sea heaves at once, a wave with no weather behind it. Time it right and it carries you onto the boss like a battering ram.',
+    choices: [
+      {
+        id: 'crest',
+        label: 'Crest the wave',
+        description: '+40% damage in the boss fight. Next fight starts with 0 cannonballs.',
+        effects: [
+          { kind: 'bossDamageMult', mult: 1.40 },
+          { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
+        ],
+      },
+      {
+        id: 'trough',
+        label: 'Heal in the trough',
+        description: '+15 HP at the start of every remaining fight. -20% volley damage all run.',
+        effects: [
+          { kind: 'startOfFightHeal', n: 15 },
+          { kind: 'volleyDmgMult', mult: 0.80 },
+        ],
+      },
+      {
+        id: 'ride_out',
+        label: 'Ride it out',
+        description: '+2 ship speed all run (turn order and aim). -20 HP next fight.',
+        effects: [
+          { kind: 'speedDelta', n: 2, scope: 'allRemaining' },
+          { kind: 'startHpDelta', n: -20, scope: 'nextFight' },
+        ],
+      },
+    ],
+  },
+  // ── 13 ────────────────────────────────────────────────────────────
+  {
+    id: 'ghost_convoy',
+    tier: 2,
+    title: 'A Ghost Convoy',
+    flavor: 'A line of ships rides the horizon, lanterns lit, no crew at the rails. They hold formation as if still waiting on orders.',
+    choices: [
+      {
+        id: 'board',
+        label: 'Board the lead ship',
+        description: 'The next enemy starts at half HP. You take 15% more damage that fight.',
+        effects: [
+          { kind: 'enemyHpScale', mult: 0.50, scope: 'nextFight' },
+          { kind: 'incomingDmgMult', mult: 1.15, scope: 'nextFight' },
+        ],
+      },
+      {
+        id: 'flank',
+        label: 'Fall in behind them',
+        description: '+2 guaranteed dodges next fight (no roll needed).',
+        effects: [
+          { kind: 'guaranteedDodge', n: 2 },
+        ],
+      },
+      {
+        id: 'sail_past',
+        label: 'Let them sail on',
+        description: 'Nothing happens. Some things are best left to the fog.',
+        effects: [],
+      },
+    ],
+  },
 ]
 
 // ──────────────────────────────────────────────────────────────────────

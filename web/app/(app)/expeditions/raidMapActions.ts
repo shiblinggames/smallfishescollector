@@ -419,6 +419,53 @@ export async function pickRaidEventChoice(
   return { ok: true, newDoubloons, newExpeditionXp }
 }
 
+// Branching fork — the player commits to ONE of the two routes. Records the
+// choice in raid_node_progress.choices (same as an event pick) + clears the
+// node + grants Nav XP. Downstream nodes gate on the recorded choice so only
+// the taken route opens; the other stays fogged.
+export async function pickForkRoute(
+  nodeId: string,
+  routeId: string,
+): Promise<{ ok: true; newExpeditionXp: number } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'fork' || !node.fork) return { error: 'Invalid node' }
+  if (node.comingSoon) return { error: 'Coming soon' }
+  if (!node.fork.routes.some(r => r.id === routeId)) return { error: 'Invalid route' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { error: 'Already chosen' }
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  if (node.requiresNavLevel) {
+    const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+    if (navLevel < node.requiresNavLevel) return { error: 'Locked' }
+  }
+
+  const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+  const newChoices = { ...(prog.choices ?? {}), [nodeId]: routeId }
+  const newExpeditionXp = ((profile.expedition_xp as number | null) ?? 0) + node.fork.rewardNavXp
+
+  await admin.from('profiles').update({
+    expedition_xp: newExpeditionXp,
+    raid_node_progress: { ...prog, cleared: newCleared, choices: newChoices },
+  }).eq('id', user.id)
+
+  return { ok: true, newExpeditionXp }
+}
+
 // Dice node (a d20 skill-check throw). The player picks ONE approach; the server
 // rolls a real d20, adds a small Navigation bonus, and the total vs the option's
 // DC decides win or miss. Server-rolled so the throw can't be re-rolled or

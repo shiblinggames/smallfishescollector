@@ -3349,6 +3349,8 @@ export default function RaidCombat({
             // Shimmer the gold band while the buff is live (band is already
             // widened via liveCritW; the pulse makes the boon unmistakable).
             sharpshotActive={!!sharpshotBuff && !critFreeze}
+            // The Coffers — "Decoys": extra lure crit bands strewn on the bar.
+            decoyCount={enemy.decoyCount}
           />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
@@ -4982,7 +4984,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, sharpshotActive }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, sharpshotActive, decoyCount }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -4999,9 +5001,18 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
   /** Sharpshot buff live — pulse the gold crit band so the widened window
    *  reads as an active boon, not just a quietly bigger target. */
   sharpshotActive?: boolean
+  /** The Coffers — "Decoys": N static gold lure bands strewn across the bar.
+   *  Purely visual; the real crit is still only the moving zone. */
+  decoyCount?: number
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
+  // Decoys — evenly-spaced fixed lure positions across the bar (deterministic
+  // so they don't jitter on re-render). Real crit stays the moving zone band.
+  const decoys = Math.max(0, Math.min(6, decoyCount ?? 0))
+  const decoyPositions = decoys > 0
+    ? Array.from({ length: decoys }, (_, i) => 14 + (i + 1) * (72 / (decoys + 1)))
+    : []
   // The zone div spans ±(HIT_W + GRAZE_W) around its center, so the crit
   // band's share of it is critW / (HIT_W + GRAZE_W), centered.
   const critBandPct = (critW / (HIT_W + GRAZE_W)) * 100
@@ -5063,6 +5074,16 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
           <div className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
+        {/* Decoys — static gold lure bands. Look like the real crit but never
+            score; the true crit is only ever the moving zone band above. */}
+        {decoyPositions.map((pos, i) => (
+          <div key={`decoy-${i}`} aria-hidden style={{
+            position: 'absolute', top: '3px', bottom: '3px',
+            left: `${pos}%`, transform: 'translateX(-50%)',
+            width: '4%', background: 'rgba(251,191,36,0.30)', borderRadius: 2,
+            zIndex: 1, pointerEvents: 'none',
+          }} />
+        ))}
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
         {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
             fog band drifts back-and-forth across the bar, briefly
