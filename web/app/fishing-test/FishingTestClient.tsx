@@ -136,7 +136,7 @@ const ANIM_SEQUENCE: [Frame, number][] = [
 // using their production-tuned coords so the hook is tuned in proper
 // context. Flip back to false if a future pass needs to retune anything
 // other than the hook.
-const HOOK_TUNING_MODE = true
+const HOOK_TUNING_MODE = false
 
 export default function FishingTestClient() {
   const [frame, setFrame] = useState<Frame>('rest')
@@ -697,7 +697,7 @@ export default function FishingTestClient() {
           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
           color: '#94a3b8', fontWeight: 600, fontSize: 11, marginTop: 16, marginBottom: 14,
         }}>
-          {showLegacyControls ? '▾ Hide' : '▸ Show'} character / rod / hook / badge controls
+          {showLegacyControls ? '▾ Hide' : '▸ Show'} character / rod / hook controls
         </button>
 
         {showLegacyControls && (<>
@@ -737,8 +737,10 @@ export default function FishingTestClient() {
         <Slider label="left %"   value={hc.left}   min={-200} max={200} step={0.5} onChange={v => setHook('left',   v)} />
         <Slider label="width %"  value={hc.width}  min={1}    max={500} step={0.5} onChange={v => setHook('width',  v)} />
         <Slider label="rotate °" value={hc.rotate} min={-180} max={180} step={0.5} onChange={v => setHook('rotate', v)} />
+        </>)}
 
-        {/* Badge slots */}
+        {/* Badge slots — pulled out of the legacy toggle so badge tuning is
+            always front-and-center (current focus). */}
         <p style={{ fontWeight: 700, marginTop: 18, marginBottom: 6, color: '#fff' }}>Badges</p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
           {[0, 1, 2].map(s => (
@@ -776,7 +778,20 @@ export default function FishingTestClient() {
         <Slider label="width %"  value={bc.width}  min={2}   max={60}   onChange={v => setBadge('width',  v)} />
         <Slider label="rotate °" value={bc.rotate} min={-180} max={180} onChange={v => setBadge('rotate', v)} />
 
-        </>)}
+        {/* Paste-ready dump — copy straight into BADGE_SLOT_POSITIONS in lib/badges. */}
+        <details style={{ marginTop: 10 }}>
+          <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: 11 }}>Show badge config (copy to lib/badges)</summary>
+          <pre className="select-text" style={{ fontSize: 10, color: '#cbd5e1', background: '#0b1422', padding: 8, borderRadius: 6, marginTop: 6, whiteSpace: 'pre-wrap', cursor: 'text' }}>
+{`BADGE_SLOT_POSITIONS = {
+${[0, 1, 2].map(slot => `  ${slot}: {
+    rest: { top: ${badgeCfg[slot].rest.top}, left: ${badgeCfg[slot].rest.left}, width: ${badgeCfg[slot].rest.width}, rotate: ${badgeCfg[slot].rest.rotate} },
+    wait: { top: ${badgeCfg[slot].wait.top}, left: ${badgeCfg[slot].wait.left}, width: ${badgeCfg[slot].wait.width}, rotate: ${badgeCfg[slot].wait.rotate} },
+    cast: { top: ${badgeCfg[slot].cast.top}, left: ${badgeCfg[slot].cast.left}, width: ${badgeCfg[slot].cast.width}, rotate: ${badgeCfg[slot].cast.rotate} },
+  },`).join('\n')}
+}`}
+          </pre>
+        </details>
+
         </>)}
 
         {/* Config dump — in hook-tuning mode we only emit the HOOK block
