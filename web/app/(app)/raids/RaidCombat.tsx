@@ -855,6 +855,12 @@ export default function RaidCombat({
   // with flavor instead of a generic "What will you do?". Lines are
   // staggered (~600ms apart) so the player reads the intro, then the prompt
   // appears below — same rhythm as the in-fight action log.
+  // "Repossession" (The Coffers) — the raid item the crooked Quartermaster has
+  // reclaimed for the CURRENT fight (its combat effects don't apply). Set at
+  // fight start; null for every enemy without the trait. A ref so the per-shot
+  // effect reads see it without having to re-create resolveTurn.
+  const repossessedItemRef = useRef<string | null>(null)
+
   useEffect(() => {
     // Apply the next-fight tide HP scale here too — NOT just in the useState
     // initializer — since this reset runs on every encounter switch and the
@@ -895,6 +901,20 @@ export default function RaidCombat({
     }
     if ((enemy.aimFogDensity ?? 0) > 0) {
       introLines.push(`A ${(enemy.aimFogName ?? 'mist').toLowerCase()} drifts over your aim bar. Lock by rhythm, not by sight.`)
+    }
+    // "Repossession": the crooked Quartermaster reclaims one raid item he sold
+    // you for THIS fight. Prefer an item with an offensive (per-shot/proc)
+    // effect so the theft always bites; fall back to any equipped item.
+    if (enemy.repossess && equippedRaidItems.length > 0) {
+      const OFFENSIVE = new Set(['boss_damage_mult', 'crit_damage_mult', 'noncrit_damage_mult', 'nonboss_damage_mult', 'ramp_damage_per_turn', 'burn_chance', 'freeze_chance', 'parry_chance', 'parry_reflect_pct'])
+      const withEdge = equippedRaidItems.filter(id => getActiveEffects([id]).some(e => OFFENSIVE.has(e.type)))
+      const pool = withEdge.length > 0 ? withEdge : equippedRaidItems
+      const taken = pool[Math.floor(Math.random() * pool.length)]
+      repossessedItemRef.current = taken
+      const takenName = getRaidItem(taken)?.name ?? 'gear'
+      introLines.push(`${enemy.repossessName ?? 'Repossession'}: ${enemy.name} reclaims your ${takenName} for this fight.`)
+    } else {
+      repossessedItemRef.current = null
     }
     setResolveLog(introLines)
     const promptTimer = setTimeout(() => {
@@ -1558,11 +1578,15 @@ export default function RaidCombat({
         const defenderAction = isAttackerPlayer ? eAction         : pAction
         const defenderSpeed  = isAttackerPlayer ? enemy.shipSpeed : shipSpeed
         const defenderNav    = isAttackerPlayer ? 0               : totalNavigation
+        // Repossession: drop the reclaimed item from the per-shot effect reads
+        // for this fight (null ref = unchanged list, so every other raid is
+        // untouched). Fight-start stats above keep the full list intentionally.
+        const liveItems = equippedRaidItems.filter(id => id !== repossessedItemRef.current)
 
         let dmg: number
         if (isAttackerPlayer) {
           const bossMult = isBoss
-            ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'boss_damage_mult').reduce((a, e) => a * e.value, 1)
+            ? getActiveEffects(liveItems).filter(e => e.type === 'boss_damage_mult').reduce((a, e) => a * e.value, 1)
             : 1
           // Crit / non-crit damage mults from raid items (Gunner's Sight).
           // Only ONE branch applies per shot — crit shots multiply by the
@@ -1570,8 +1594,8 @@ export default function RaidCombat({
           // entirely on a miss (rollShotDamage already returns 0).
           const isCritShot = lockedAimResult === 'critical'
           const aimItemMult = isCritShot
-            ? getActiveEffects(equippedRaidItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
-            : getActiveEffects(equippedRaidItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
+            ? getActiveEffects(liveItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
+            : getActiveEffects(liveItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
           // classDamageMult: aggregated ship-class effect (Master Gunner
           // +15%, Ironside -10%, Buccaneer +5%, stacks across chapters).
           // Stacks multiplicatively with raid items + volley + crit, same
@@ -1586,11 +1610,11 @@ export default function RaidCombat({
           // Davy's Hand Cannon: +% damage vs NON-boss enemies (mobs / elites).
           const nonbossMult = isBoss
             ? 1
-            : getActiveEffects(equippedRaidItems).filter(e => e.type === 'nonboss_damage_mult').reduce((a, e) => a * e.value, 1)
+            : getActiveEffects(liveItems).filter(e => e.type === 'nonboss_damage_mult').reduce((a, e) => a * e.value, 1)
           // Davy's Heavy Cannon: damage ramps +value each turn this fight
           // (turn 1 = base; resets per enemy via turnRef reset in the encounter
           // effect). Sums if multiple ramp items are somehow equipped.
-          const rampPerTurn = getActiveEffects(equippedRaidItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0)
+          const rampPerTurn = getActiveEffects(liveItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0)
           const rampMult = 1 + rampPerTurn * Math.max(0, turnRef.current - 1)
           const mult = (isVolley ? 2 : 1) * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
                        * tide.dmgMult * tideActionMult * tideBossMult
@@ -1736,7 +1760,7 @@ export default function RaidCombat({
               riposteDmgOut = riposteDmg
               stepLines.push(`Riposte! ${enemy.name} turns your own ${dmg}-damage strike back for ${riposteDmg}.`)
             } else if (!isAttackerPlayer) {
-              const parryEffects = getActiveEffects(equippedRaidItems)
+              const parryEffects = getActiveEffects(liveItems)
               const parryChance      = parryEffects.filter(e => e.type === 'parry_chance').reduce((a, e) => Math.max(a, e.value), 0)
               const parryReflectPct  = parryEffects.filter(e => e.type === 'parry_reflect_pct').reduce((a, e) => Math.max(a, e.value), 0)
               if (parryChance > 0 && parryReflectPct > 0 && dmg > 0 && Math.random() < parryChance) {
@@ -1762,7 +1786,7 @@ export default function RaidCombat({
           // shot actually landed and didn't already sink them. Burn refreshes
           // to a fresh 2 turns; freeze flags the enemy's next turn to skip.
           if (dmg > 0 && eHp > 0) {
-            const onHitEffects = getActiveEffects(equippedRaidItems)
+            const onHitEffects = getActiveEffects(liveItems)
             const burnChance = onHitEffects.filter(e => e.type === 'burn_chance').reduce((a, e) => Math.max(a, e.value), 0)
             const freezeChance = onHitEffects.filter(e => e.type === 'freeze_chance').reduce((a, e) => Math.max(a, e.value), 0)
             if (burnChance > 0 && Math.random() < burnChance) {

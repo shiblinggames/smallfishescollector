@@ -71,6 +71,16 @@ export interface BroadsideEnemy {
    *  Render lives in AimBarInline. */
   decoyCount?: number
   decoyName?: string
+  /** The Coffers (Chapter 3) — "Repossession." At the START of this fight the
+   *  crooked Quartermaster reclaims ONE of the player's equipped raid items for
+   *  the whole fight: its COMBAT effects (the per-shot damage mults + on-hit
+   *  procs + parry) don't apply. Prefers an item with an offensive effect so
+   *  the theft always bites. One-time at fight start, no per-turn timer.
+   *  `repossessName` labels it on the nameplate / intro line. Fight-start stats
+   *  (HP, speed, starting cannonballs) stay baked — he takes your guns' edge,
+   *  not your hull. Undefined on every other enemy = no effect. */
+  repossess?: boolean
+  repossessName?: string
   /** Optional two-phase boss config. The phase 2 trigger is a "false
    *  defeat" — the boss appears to sink, then rises back at `revivePct`
    *  of their max HP with the alternate pattern, damage mult, and (if
