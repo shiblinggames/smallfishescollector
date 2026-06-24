@@ -13,7 +13,7 @@
 // Pet ids stay stable across releases. Persisted to
 // profiles.unlocked_pets (text[]) + profiles.equipped_pet (text).
 
-export type PetSpecies = 'parrot' | 'monkey'
+export type PetSpecies = 'parrot' | 'monkey' | 'seal'
 
 export interface PetDef {
   id: string
@@ -43,6 +43,11 @@ export const PETS: PetDef[] = [
   // via PET_SPECIES_WEIGHTS (75% parrot / 25% monkey).
   { id: 'monkey_brown',    species: 'monkey', name: 'Brown Monkey',    weight: 90, restImageUrl: '/monkey_brown.png',    accentColor: '#a78a6a' },
   { id: 'monkey_golden',   species: 'monkey', name: 'Golden Monkey',   weight: 10, restImageUrl: '/monkey_golden.png',   accentColor: '#f0c040' },
+  // Seals — brown common, gray mid, gold the trophy. Sit low on the
+  // boat deck like the monkey. Weights are relative within the seal pool.
+  { id: 'seal_brown',      species: 'seal',   name: 'Brown Seal',      weight: 60, restImageUrl: '/seal_brown.png',      accentColor: '#a78a6a' },
+  { id: 'seal_gray',       species: 'seal',   name: 'Gray Seal',       weight: 30, restImageUrl: '/seal_gray.png',       accentColor: '#94a3b8' },
+  { id: 'seal_gold',       species: 'seal',   name: 'Gold Seal',       weight: 10, restImageUrl: '/seal_gold.png',       accentColor: '#f0c040' },
 ]
 
 export function getPet(id: string | null | undefined): PetDef | undefined {
@@ -80,6 +85,13 @@ export const PET_OVERLAYS: Record<PetSpecies, Record<'rest' | 'wait' | 'cast', {
     wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
     cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
   },
+  // Seal — starts as a copy of the monkey (sits low on the deck);
+  // tune on /fishing-test and paste the dump back here.
+  seal: {
+    rest: { top: 65.5, left: 62,   width: 41.4, rotate: 0 },
+    wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
+    cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
+  },
 }
 
 /** Convenience for callsites that have a PetDef in hand. */
@@ -92,8 +104,9 @@ export function getPetOverlay(species: PetSpecies, frame: 'rest' | 'wait' | 'cas
  *  species's pool. Tune the species mix here; variant rarity stays
  *  in the PETS weights. */
 const PET_SPECIES_WEIGHTS: Record<PetSpecies, number> = {
-  parrot: 75,
-  monkey: 25,
+  parrot: 60,
+  monkey: 20,
+  seal: 20,
 }
 
 /** Roll a pet on a successful crate pet-roll. Returns the picked

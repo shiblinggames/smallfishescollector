@@ -91,16 +91,21 @@ const HAT_DEFAULT: Record<Frame, { top: number; left: number; width: number; rot
 // own coord set because parrots and monkeys have different silhouettes
 // (parrot perches on the shoulder; monkey sits low on the boat etc.).
 // Tune in the panel below and paste the dump back into lib/pets.
-const PET_DEFAULTS: Record<'parrot' | 'monkey', Record<Frame, { top: number; left: number; width: number; rotate: number }>> = {
+const PET_DEFAULTS: Record<'parrot' | 'monkey' | 'seal', Record<Frame, { top: number; left: number; width: number; rotate: number }>> = {
   parrot: {
     rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
     wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
     cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
   },
   monkey: {
-    rest: { top: 63.6, left: 62.6, width: 41.4, rotate: 0 },
-    wait: { top: 59.7, left: 69.5, width: 41.4, rotate: 0 },
-    cast: { top: 63.6, left: 68.3, width: 41.4, rotate: 0 },
+    rest: { top: 65.5, left: 62,   width: 41.4, rotate: 0 },
+    wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
+    cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
+  },
+  seal: {
+    rest: { top: 65.5, left: 62,   width: 41.4, rotate: 0 },
+    wait: { top: 61.7, left: 68.9, width: 41.4, rotate: 0 },
+    cast: { top: 65.5, left: 67.7, width: 41.4, rotate: 0 },
   },
 }
 
@@ -169,8 +174,8 @@ export default function FishingTestClient() {
   // Sliders bind to whichever species the currently-selected pet
   // belongs to, so switching from a parrot to a monkey swaps the
   // active config without losing either set's tuning.
-  const activePetSpecies: 'parrot' | 'monkey' =
-    (PETS.find(p => p.id === petId)?.species as 'parrot' | 'monkey') ?? 'parrot'
+  const activePetSpecies: 'parrot' | 'monkey' | 'seal' =
+    (PETS.find(p => p.id === petId)?.species as 'parrot' | 'monkey' | 'seal') ?? 'parrot'
   const [showLegacyControls, setShowLegacyControls] = useState(false)
   const [characterColor, setCharacterColor] = useState('default')
   const FRAMES = getCharacterSprites(characterColor) as Record<Frame, string>
@@ -362,7 +367,7 @@ export default function FishingTestClient() {
             {petEnabled && (() => {
               const pet = PETS.find(p => p.id === petId) ?? PETS[0]
               if (!pet) return null
-              const cfg = petCfg[pet.species as 'parrot' | 'monkey']?.[frame] ?? petCfg.parrot[frame]
+              const cfg = petCfg[pet.species as 'parrot' | 'monkey' | 'seal']?.[frame] ?? petCfg.parrot[frame]
               return (
                 <img
                   src={pet.restImageUrl}
@@ -550,6 +555,11 @@ export default function FishingTestClient() {
     rest: { top: ${petCfg.monkey.rest.top}, left: ${petCfg.monkey.rest.left}, width: ${petCfg.monkey.rest.width}, rotate: ${petCfg.monkey.rest.rotate} },
     wait: { top: ${petCfg.monkey.wait.top}, left: ${petCfg.monkey.wait.left}, width: ${petCfg.monkey.wait.width}, rotate: ${petCfg.monkey.wait.rotate} },
     cast: { top: ${petCfg.monkey.cast.top}, left: ${petCfg.monkey.cast.left}, width: ${petCfg.monkey.cast.width}, rotate: ${petCfg.monkey.cast.rotate} },
+  },
+  seal: {
+    rest: { top: ${petCfg.seal.rest.top}, left: ${petCfg.seal.rest.left}, width: ${petCfg.seal.rest.width}, rotate: ${petCfg.seal.rest.rotate} },
+    wait: { top: ${petCfg.seal.wait.top}, left: ${petCfg.seal.wait.left}, width: ${petCfg.seal.wait.width}, rotate: ${petCfg.seal.wait.rotate} },
+    cast: { top: ${petCfg.seal.cast.top}, left: ${petCfg.seal.cast.left}, width: ${petCfg.seal.cast.width}, rotate: ${petCfg.seal.cast.rotate} },
   },
 }`}
               </pre>
