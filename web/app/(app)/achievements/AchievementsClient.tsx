@@ -237,12 +237,12 @@ export default function AchievementsClient({ groups }: Props) {
                     style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cdd3db', cursor: 'pointer', padding: 0 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
                   </button>
-                  {/* Badge art */}
-                  <div style={{ width: 88, height: 88, margin: '0 auto', borderRadius: 18, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.3)', border: `2px solid ${g.done ? accent : 'rgba(255,255,255,0.12)'}`, boxShadow: g.done ? `0 0 22px ${accent}55` : 'none' }}>
+                  {/* Badge art — no box; the medallion is the focal element. */}
+                  <div style={{ width: 96, height: 96, margin: '0 auto', display: 'grid', placeItems: 'center' }}>
                     {g.badgeImage ? (
-                      <img src={g.badgeImage} alt="" style={{ width: 62, height: 62, objectFit: 'contain', filter: g.done ? 'none' : 'grayscale(1)', opacity: g.done ? 1 : 0.3 }}
-                        onError={e => { const el = e.target as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.innerHTML = `<span style="font-size:2.2rem;opacity:${g.done ? 0.9 : 0.3}">🏅</span>` }} />
-                    ) : <span style={{ fontSize: '2.2rem', opacity: g.done ? 0.9 : 0.3 }}>🏅</span>}
+                      <img src={g.badgeImage} alt="" style={{ width: 92, height: 92, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 2px 5px rgba(0,0,0,0.5))' : 'grayscale(1)', opacity: g.done ? 1 : 0.3 }}
+                        onError={e => { const el = e.target as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.innerHTML = `<span style="font-size:3rem;opacity:${g.done ? 0.9 : 0.3}">🏅</span>` }} />
+                    ) : <span style={{ fontSize: '3rem', opacity: g.done ? 0.9 : 0.3 }}>🏅</span>}
                   </div>
 
                   <p className="font-cinzel font-700" style={{ fontSize: '1.3rem', color: '#f4ecd8', marginTop: 12 }}>{g.label}</p>
@@ -392,28 +392,25 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
       {/* Left status stripe — scannable state colour. */}
       <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: statusColor }} />
 
-      {/* Badge art / marker */}
-      <div style={{
-        position: 'relative', width: 50, height: 50, borderRadius: 12, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.24)',
-        border: g.badgeImage && g.done ? `1.5px solid ${accent}` : '1.5px solid transparent',
-        boxShadow: g.badgeImage && g.done ? `0 0 14px ${accent}55` : 'none',
-      }}>
+      {/* Badge art — the medallion already has its own metal rim, so it stands
+          on its own with no box chrome. State reads off the left stripe +
+          brightness (locked = grayscale + dim). */}
+      <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {g.badgeImage ? (
           <img src={g.badgeImage} alt="" loading="lazy" decoding="async"
-            style={{ width: 36, height: 36, objectFit: 'contain', filter: g.done ? 'none' : 'grayscale(1)', opacity: g.done ? 1 : 0.28 }}
+            style={{ width: 48, height: 48, objectFit: 'contain', filter: g.done ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))' : 'grayscale(1)', opacity: g.done ? 1 : 0.3 }}
             onError={e => {
               const el = e.target as HTMLImageElement
               el.style.display = 'none'
               const p = el.parentElement
-              if (p) p.innerHTML = `<span style="font-size:1.3rem;opacity:${g.done ? 0.9 : 0.28}">🏅</span>`
+              if (p) p.innerHTML = `<span style="font-size:1.7rem;opacity:${g.done ? 0.9 : 0.3}">🏅</span>`
             }} />
         ) : (
-          <span style={{ width: 15, height: 15, borderRadius: '50%', background: g.done ? groupAccent : 'transparent', border: `2px solid ${groupAccent}`, opacity: g.done ? 1 : 0.5 }} />
+          <span style={{ width: 16, height: 16, borderRadius: '50%', background: g.done ? groupAccent : 'transparent', border: `2px solid ${groupAccent}`, opacity: g.done ? 1 : 0.5 }} />
         )}
         {/* Claimed check overlay */}
         {state === 'claimed' && (
-          <span style={{ position: 'absolute', bottom: -3, right: -3, width: 18, height: 18, borderRadius: '50%', background: '#1c2a1c', border: '1.5px solid #7bbf7b', display: 'grid', placeItems: 'center' }}>
+          <span style={{ position: 'absolute', bottom: -1, right: -1, width: 18, height: 18, borderRadius: '50%', background: '#1c2a1c', border: '1.5px solid #7bbf7b', display: 'grid', placeItems: 'center' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#7bbf7b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
           </span>
         )}
