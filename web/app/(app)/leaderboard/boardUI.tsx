@@ -22,7 +22,7 @@ export interface LeaderboardEntry {
 export type BoardKey =
   | 'fishingLevel' | 'perfectStreak' | 'tideRun' | 'chartingPoints'
   | 'fishSlots' | 'blackjack' | 'roulette' | 'expedition' | 'raidProgress'
-  | 'gauntletDepth'
+  | 'gauntletDepth' | 'achievementPoints'
 
 export type AvatarMap = Record<string, {
   characterColor: string | null
@@ -74,6 +74,7 @@ export const BOARD_META: Record<BoardKey, {
   raidProgress:  { label: 'Raid Progress',  accent: '#7fd0a0', unit: n => `${n.toLocaleString()}`,       subUnit: n => `${n === 1 ? 'node' : 'nodes'} cleared` },
   chartingPoints:{ label: 'Charting Points',accent: '#d8a24a', unit: n => `${n.toLocaleString()}`,       subUnit: n => `charting point${n === 1 ? '' : 's'}` },
   gauntletDepth: { label: 'Deepest Descent', accent: '#5eead4', unit: n => `Depth ${n}`,                  subUnit: () => 'cashed out' },
+  achievementPoints: { label: 'Achievement Points', accent: '#e6b94a', unit: n => `${n.toLocaleString()}`, subUnit: n => `point${n === 1 ? '' : 's'}` },
 }
 
 const AVATAR_COLORS = ['#0e7490', '#0d9488', '#7c3aed', '#b45309', '#0369a1', '#be185d']
