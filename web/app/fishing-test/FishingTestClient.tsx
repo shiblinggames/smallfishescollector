@@ -113,12 +113,22 @@ function Slider({ label, value, min, max, step = 1, onChange }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void
 }) {
   const display = step < 1 ? value.toFixed(step < 0.1 ? 2 : 1) : String(Math.round(value))
+  // Snap to the step grid to dodge float drift (0.1+0.1+0.1 = 0.300000004).
+  const clamp = (v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step))
+  const nudge = (dir: number) => onChange(clamp(value + dir * step))
+  const nudgeStyle: React.CSSProperties = {
+    width: 22, height: 22, flexShrink: 0, borderRadius: 5, cursor: 'pointer', lineHeight: 1,
+    background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)',
+    color: '#e2e8f0', fontSize: 14, fontWeight: 700, padding: 0,
+  }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-      <span style={{ width: 60, fontSize: 11, color: '#aaa', textAlign: 'right' }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+      <span style={{ width: 54, fontSize: 11, color: '#aaa', textAlign: 'right' }}>{label}</span>
+      <button onClick={() => nudge(-1)} style={nudgeStyle} title={`-${step}`}>−</button>
       <input type="range" min={min} max={max} step={step} value={value}
-        onChange={e => onChange(Number(e.target.value))} style={{ flex: 1 }} />
-      <span style={{ width: 44, fontSize: 11, color: '#fff', textAlign: 'right' }}>{display}</span>
+        onChange={e => onChange(Number(e.target.value))} style={{ flex: 1, minWidth: 0 }} />
+      <button onClick={() => nudge(1)} style={nudgeStyle} title={`+${step}`}>+</button>
+      <span style={{ width: 40, fontSize: 11, color: '#fff', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{display}</span>
     </div>
   )
 }
@@ -773,10 +783,10 @@ export default function FishingTestClient() {
         </div>
 
         <p style={{ fontWeight: 600, marginBottom: 4, color: '#fbbf24' }}>Slot {activeSlot + 1} position ({frame})</p>
-        <Slider label="top %"    value={bc.top}    min={-20} max={120}  onChange={v => setBadge('top',    v)} />
-        <Slider label="left %"   value={bc.left}   min={-20} max={100}  onChange={v => setBadge('left',   v)} />
-        <Slider label="width %"  value={bc.width}  min={2}   max={60}   onChange={v => setBadge('width',  v)} />
-        <Slider label="rotate °" value={bc.rotate} min={-180} max={180} onChange={v => setBadge('rotate', v)} />
+        <Slider label="top %"    value={bc.top}    min={-20} max={120}  step={0.1} onChange={v => setBadge('top',    v)} />
+        <Slider label="left %"   value={bc.left}   min={-20} max={100}  step={0.1} onChange={v => setBadge('left',   v)} />
+        <Slider label="width %"  value={bc.width}  min={2}   max={60}   step={0.1} onChange={v => setBadge('width',  v)} />
+        <Slider label="rotate °" value={bc.rotate} min={-180} max={180} step={0.5} onChange={v => setBadge('rotate', v)} />
 
         {/* Paste-ready dump — copy straight into BADGE_SLOT_POSITIONS in lib/badges. */}
         <details style={{ marginTop: 10 }}>
