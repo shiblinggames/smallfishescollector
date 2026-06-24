@@ -12,7 +12,7 @@ import { raidItemSlotsForTier } from '@/lib/expeditions'
 import { classForSlug, CLASS_UNLOCK_LEVEL } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getRepairKit, repairKitRange } from '@/lib/repairKits'
-import type { BattleLoadout, BattleCrew } from './resolver'
+import { MAX_CHARGES, type BattleLoadout, type BattleCrew } from './resolver'
 
 export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
   const stats = await getRaidPlayerStats(userId)
@@ -69,6 +69,9 @@ export async function snapshotLoadout(userId: string): Promise<BattleLoadout> {
     startChargeChance: max('start_charge_chance'),
     // Escalating damage per round elapsed — sum across items.
     rampDamagePerTurn: sum('ramp_damage_per_turn'),
+    // Cannonball cap = base 3 + the "Extra Cannonball Rack" Locker Upgrade
+    // (gauntlet bonusChargeSlots). Volley still costs 3; the extra is stockpile.
+    maxCharges: MAX_CHARGES + Math.max(0, stats.bonusChargeSlots ?? 0),
     crew,
     repairKit,
     // Display-only.

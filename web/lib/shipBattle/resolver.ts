@@ -60,6 +60,7 @@ export interface BattleLoadout {
   freezeChance?: number       // Frozen — chance each hit to freeze the foe a turn
   startChargeChance?: number  // First Cut — handled at battle init (actions), not here
   rampDamagePerTurn?: number  // extra damage fraction per round elapsed
+  maxCharges?: number         // cannonball cap = 3 + Extra Cannonball Rack slots
   // ── Crew Specials slice — the firing player's usable abilities, frozen at
   //    accept-time. Only crew mapping to one of the 5 base classes AND already
   //    Lv 10+ (ability unlocked) are listed. repairKit is the equipped kit's
@@ -347,7 +348,7 @@ export function resolveRound(
         let gain = 0
         if (Math.random() < mm.oneChargeChance) gain = 1
         if (Math.random() < mm.twoChargeChance) gain = 2
-        me.s.charges = Math.min(MAX_CHARGES, me.s.charges + gain)
+        me.s.charges = Math.min(me.l.maxCharges ?? MAX_CHARGES, me.s.charges + gain)
         steps.push(snapshot({ actor: who, ability: true, log: gain > 0 ? `${crew.name} works the reload — +${gain} charge${gain > 1 ? 's' : ''}.` : `${crew.name} works the reload, but the powder won't catch.` }))
         break
       }
@@ -434,7 +435,7 @@ export function resolveRound(
     const action = me.m.action
 
     if (action === 'reload') {
-      me.s.charges = Math.min(MAX_CHARGES, me.s.charges + 1)
+      me.s.charges = Math.min(me.l.maxCharges ?? MAX_CHARGES, me.s.charges + 1)
       steps.push(snapshot({ actor: who, action, log: `${me.l.username} reloads.` }))
       continue
     }
@@ -446,9 +447,9 @@ export function resolveRound(
 
     // fire / volley — guard charges (server is authoritative; a malformed move
     // that can't pay simply whiffs into a reload).
-    const cost = action === 'volley' ? MAX_CHARGES : 1
+    const cost = action === 'volley' ? MAX_CHARGES : 1 // volley still costs 3
     if (me.s.charges < cost) {
-      me.s.charges = Math.min(MAX_CHARGES, me.s.charges + 1)
+      me.s.charges = Math.min(me.l.maxCharges ?? MAX_CHARGES, me.s.charges + 1)
       steps.push(snapshot({ actor: who, action: 'reload', log: `${me.l.username} has no charge — reloads.` }))
       continue
     }

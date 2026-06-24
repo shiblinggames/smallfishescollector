@@ -8,6 +8,7 @@
 // feels exactly like a raid fight.
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -46,6 +47,8 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   const [foeCharges, setFoeCharges] = useState(initial.foeCharges)
   const [myShield, setMyShield] = useState(initial.myShield ?? 0)
   const [foeShield, setFoeShield] = useState(initial.foeShield ?? 0)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const [splat, setSplat] = useState<{ who: 'me' | 'foe'; dmg: number; crit: boolean; dodged: boolean; heal?: number; burn?: boolean; frozen?: boolean } | null>(null)
   const [log, setLog] = useState<{ id: number; text: string }[]>([{ id: 0, text: 'The duel begins.' }])
   const logId = useRef(1)
@@ -273,6 +276,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
   }
 
   const myTurn = phase === 'await_input'
+  const myMaxCharges = me.maxCharges ?? 3 // 3 + Extra Cannonball Rack slots
   const canFire = myCharges >= 1, canVolley = myCharges >= 3
   const critBandPct = (CRIT_W * aimCritMult / (HIT_W + GRAZE_W)) * 100
 
@@ -303,16 +307,22 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
         )}
       </AnimatePresence>
 
-      {/* Tap-a-ship stats popup */}
-      <AnimatePresence>
-        {statsFor && <StatsPopup info={statsFor} onClose={() => setStatsFor(null)} />}
-      </AnimatePresence>
-
-      {/* Specials chooser */}
-      <AnimatePresence>
-        {chooserOpen && <SpecialChooser crew={me.crew ?? []} repairKit={me.repairKit ?? null} myFx={myFx}
-          onPick={(a) => { setArmed(a); setChooserOpen(false) }} onClose={() => setChooserOpen(false)} />}
-      </AnimatePresence>
+      {/* Tap-a-ship stats popup + Specials chooser — portaled to <body> so
+          they escape any transformed ancestor (PageTransition) that would
+          otherwise break position:fixed and the modal's own scroll. */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {statsFor && <StatsPopup info={statsFor} onClose={() => setStatsFor(null)} />}
+        </AnimatePresence>,
+        document.body,
+      )}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {chooserOpen && <SpecialChooser crew={me.crew ?? []} repairKit={me.repairKit ?? null} myFx={myFx}
+            onPick={(a) => { setArmed(a); setChooserOpen(false) }} onClose={() => setChooserOpen(false)} />}
+        </AnimatePresence>,
+        document.body,
+      )}
 
       <div className="px-4 pt-4">
         <Link href="/expeditions" className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.1em', color: '#9a948a' }}>← Expeditions</Link>
@@ -385,7 +395,7 @@ export default function ShipBattleClient({ initial, id }: { initial: ShipBattleS
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <ActionBtn label="Reload" sub="+1 charge" color="#60a5fa" disabled={busy || myCharges >= 3} onClick={() => submit('reload')} />
+              <ActionBtn label="Reload" sub="+1 charge" color="#60a5fa" disabled={busy || myCharges >= myMaxCharges} onClick={() => submit('reload')} />
               <ActionBtn label="Dodge" sub={myLastAction === 'dodge' ? 'on cooldown' : 'evade their shot'} color="#a78bfa" disabled={busy || myLastAction === 'dodge'} onClick={() => submit('dodge')} />
               <ActionBtn label="Fire" sub={canFire ? (armed?.kind === 'crew' && armed.critMult > 1 ? 'aim · wide crit' : 'aim · 1 charge') : 'no charge'} color="#f0c040" disabled={busy || !canFire} onClick={() => beginAim('fire')} />
               <ActionBtn label="Volley" sub={canVolley ? 'aim · 3 · 2×' : 'need 3'} color="#fb923c" disabled={busy || !canVolley} onClick={() => beginAim('volley')} />
@@ -403,11 +413,11 @@ function LogBox({ lines }: { lines: { id: number; text: string }[] }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight }, [lines])
   return (
-    <div ref={ref} style={{ height: 108, overflow: 'hidden', background: '#04080e', border: '1px solid #1f2e42', borderRadius: 12, padding: '0.6rem 0.85rem', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 22px)', maskImage: 'linear-gradient(to bottom, transparent 0, #000 22px)' }}>
+    <div ref={ref} style={{ height: 126, overflow: 'hidden', background: '#04080e', border: '1px solid #1f2e42', borderRadius: 12, padding: '0.6rem 0.85rem', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 10px)', maskImage: 'linear-gradient(to bottom, transparent 0, #000 10px)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: '100%', gap: 5 }}>
         {lines.map(l => (
           <motion.p key={l.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}
-            className="font-karla font-500" style={{ fontSize: '0.74rem', color: '#cdd6e2', lineHeight: 1.3 }}>{l.text}</motion.p>
+            className="font-karla font-500" style={{ fontSize: '0.78rem', color: '#dbe3ee', lineHeight: 1.35 }}>{l.text}</motion.p>
         ))}
       </div>
     </div>
@@ -442,7 +452,7 @@ function ShipPanel({ load, you, hp, shield = 0, charges, accent, top, ctrl, spla
             )}
           </div>
           <div className="flex gap-1 flex-shrink-0">
-            {[0, 1, 2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i < charges ? accent : 'rgba(255,255,255,0.12)', boxShadow: i < charges ? `0 0 6px ${accent}` : 'none' }} />)}
+            {Array.from({ length: load.maxCharges ?? 3 }).map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i < charges ? accent : 'rgba(255,255,255,0.12)', boxShadow: i < charges ? `0 0 6px ${accent}` : 'none' }} />)}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -519,20 +529,6 @@ function StatsPopup({ info, onClose }: { info: { load: BattleLoadout; hp: number
   if (defensePct > 0) rows.push({ label: 'Defense', value: `${defensePct}% less taken`, color: '#a78bfa' })
   if (l.critPct > 0) rows.push({ label: 'Crit Chance', value: `+${Math.round(l.critPct)}%`, color: '#fbbf24' })
 
-  // Combat traits — the proc/trigger effects that actually fire in a duel, so
-  // both captains can read the threat before committing a move.
-  const pct = (n: number) => Math.round(n * 100)
-  const traits: { name: string; value: string; desc: string; color: string }[] = []
-  if (l.firstStrike) traits.push({ name: 'First Strike', value: '', desc: 'Always acts first each round.', color: '#fbbf24' })
-  const dt = l.damageTakenPct ?? 0
-  if (dt < 0) traits.push({ name: 'Bulwark', value: `${dt}%`, desc: 'Takes less damage from every hit.', color: '#a78bfa' })
-  else if (dt > 0) traits.push({ name: 'Soft Shell', value: `+${dt}%`, desc: 'Takes extra damage from every hit.', color: '#f87171' })
-  if ((l.parryChance ?? 0) > 0 && (l.parryReflectPct ?? 0) > 0) traits.push({ name: 'Parry', value: `${pct(l.parryChance!)}%`, desc: `On a clean dodge, turns ${pct(l.parryReflectPct!)}% of the shot back on you.`, color: '#67e8f9' })
-  if ((l.burnChance ?? 0) > 0) traits.push({ name: 'Incendiary', value: `${pct(l.burnChance!)}%`, desc: 'Their hits can set you ablaze (burns 2 turns).', color: '#fb923c' })
-  if ((l.freezeChance ?? 0) > 0) traits.push({ name: 'Frozen Shot', value: `${pct(l.freezeChance!)}%`, desc: 'Their hits can freeze you, costing your next turn.', color: '#7dd3fc' })
-  if ((l.startChargeChance ?? 0) > 0) traits.push({ name: 'First Cut', value: `${pct(l.startChargeChance!)}%`, desc: 'May open the duel with a cannon already loaded.', color: '#cbd5e1' })
-  if ((l.rampDamagePerTurn ?? 0) > 0) traits.push({ name: 'Escalation', value: `+${pct(l.rampDamagePerTurn!)}%/rd`, desc: 'Damage grows each round the duel drags on.', color: '#f472b6' })
-
   const crewSpecials = (l.crew ?? []).map(c => {
     const def = CLASSES[c.classId]
     const m = currentMilestone(def, c.level)
@@ -551,48 +547,29 @@ function StatsPopup({ info, onClose }: { info: { load: BattleLoadout; hp: number
             <div className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={l.shipImageUrl} alt="" style={{ width: 40, height: 28, objectFit: 'contain' }} />
-              <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a8aa0' }}>Tier {l.shipTier} hull</span>
+              <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#a3b6cb' }}>Tier {l.shipTier} hull</span>
             </div>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {rows.map(r => (
             <div key={r.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.55rem 0.7rem' }}>
-              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: '#7a8aa0' }}>{r.label}</p>
-              <p className="font-karla font-700" style={{ fontSize: '0.92rem', color: r.color, fontVariantNumeric: 'tabular-nums' }}>{r.value}</p>
+              <p className="font-karla font-600 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#a3b6cb' }}>{r.label}</p>
+              <p className="font-karla font-700" style={{ fontSize: '1.02rem', color: r.color, fontVariantNumeric: 'tabular-nums' }}>{r.value}</p>
             </div>
           ))}
         </div>
-        {traits.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7a8aa0', marginBottom: 5 }}>Combat Traits</p>
-            <div className="flex flex-col gap-1.5">
-              {traits.map(t => (
-                <div key={t.name} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.03)', border: `1px solid ${t.color}33`, borderRadius: 10, padding: '0.4rem 0.6rem' }}>
-                  <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: '50%', background: t.color, boxShadow: `0 0 6px ${t.color}` }} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="flex items-baseline gap-1.5">
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: t.color }}>{t.name}</p>
-                      {t.value && <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: t.color, fontVariantNumeric: 'tabular-nums' }}>{t.value}</span>}
-                    </div>
-                    <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#8a93a3', lineHeight: 1.35 }}>{t.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         {crewSpecials.length > 0 && (
           <div style={{ marginTop: 12 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7a8aa0', marginBottom: 5 }}>Crew Specials {info.you ? '' : '(once each)'}</p>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.64rem', color: '#a3b6cb', marginBottom: 6 }}>Crew Specials {info.you ? '' : '(once each)'}</p>
             <div className="flex flex-col gap-1.5">
               {crewSpecials.map(c => (
                 <div key={c.id} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${c.color}33`, borderRadius: 10, padding: '0.45rem 0.65rem' }}>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.74rem', color: '#f0ede8' }}>{c.name}</p>
-                    <span className="font-karla font-700 uppercase flex-shrink-0" style={{ fontSize: '0.48rem', letterSpacing: '0.08em', color: c.color, background: `${c.color}1f`, borderRadius: 999, padding: '0.08rem 0.4rem' }}>{c.label}</span>
+                    <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.84rem', color: '#f0ede8' }}>{c.name}</p>
+                    <span className="font-karla font-700 uppercase flex-shrink-0" style={{ fontSize: '0.54rem', letterSpacing: '0.08em', color: c.color, background: `${c.color}1f`, borderRadius: 999, padding: '0.1rem 0.45rem' }}>{c.label}</span>
                   </div>
-                  <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: '#8a93a3', lineHeight: 1.35, marginTop: 1 }}>{c.desc}</p>
+                  <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#b3bccb', lineHeight: 1.4, marginTop: 2 }}>{c.desc}</p>
                 </div>
               ))}
             </div>
@@ -600,20 +577,20 @@ function StatsPopup({ info, onClose }: { info: { load: BattleLoadout; hp: number
         )}
         {classNames.length > 0 && (
           <div style={{ marginTop: 12 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7a8aa0', marginBottom: 5 }}>Ship Classes</p>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.64rem', color: '#a3b6cb', marginBottom: 6 }}>Ship Classes</p>
             <div className="flex flex-wrap gap-1.5">
-              {classNames.map((n, i) => <span key={i} className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#bfe3ff', background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 999, padding: '0.14rem 0.5rem' }}>{n}</span>)}
+              {classNames.map((n, i) => <span key={i} className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#cfe6ff', background: 'rgba(96,165,250,0.14)', border: '1px solid rgba(96,165,250,0.34)', borderRadius: 999, padding: '0.18rem 0.55rem' }}>{n}</span>)}
             </div>
           </div>
         )}
         {items.length > 0 && (
           <div style={{ marginTop: 12 }}>
-            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#7a8aa0', marginBottom: 5 }}>Equipped Items</p>
+            <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.64rem', color: '#a3b6cb', marginBottom: 6 }}>Equipped Items</p>
             <div className="flex flex-col gap-1.5">
               {items.map(it => (
                 <div key={it.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.45rem 0.65rem' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: '#f0ede8' }}>{it.name}</p>
-                  <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: '#8a93a3', lineHeight: 1.4 }}>{it.description}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: '#f0ede8' }}>{it.name}</p>
+                  <p className="font-karla font-400" style={{ fontSize: '0.7rem', color: '#b3bccb', lineHeight: 1.4 }}>{it.description}</p>
                 </div>
               ))}
             </div>
