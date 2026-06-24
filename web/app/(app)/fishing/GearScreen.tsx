@@ -2687,7 +2687,7 @@ export default function GearScreen({
                       })}
                     </div>
                   )}
-                  <Link href="/achievements" onClick={() => { setOpenSlot(null); onClose() }} style={{
+                  <Link href="/badges" onClick={() => { setOpenSlot(null); onClose() }} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '0.7rem 0.9rem', borderRadius: 14, marginTop: 2,
                     background: 'rgba(240,192,64,0.06)', border: '1px solid rgba(240,192,64,0.18)',

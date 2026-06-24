@@ -339,6 +339,7 @@ export default function Nav({ doubloons, gems }: { packsAvailable?: number; doub
   ]
 
   const desktopOnlyLinks = [
+    { href: '/badges',       label: 'Badges',        badge: null },
     { href: '/achievements', label: "Captain's Log", badge: null },
     { href: '/social',       label: 'Social',        badge: null },
   ]

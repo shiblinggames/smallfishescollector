@@ -111,8 +111,8 @@ export default function AchievementsClient({ groups }: Props) {
                 className="font-cinzel font-700 uppercase tracking-[0.08em]"
                 style={{
                   padding: '0.7rem 1.1rem', borderRadius: 12, flexShrink: 0, cursor: busy ? 'default' : 'pointer',
-                  background: 'linear-gradient(180deg, #f7d978 0%, #e0b34a 100%)', color: '#2a1d06', border: 'none',
-                  fontSize: '0.8rem', boxShadow: `0 4px 14px ${GOLD}44, inset 0 -2px 0 rgba(0,0,0,0.18)`, opacity: busy === 'all' ? 0.6 : 1,
+                  background: `${GOLD}26`, color: GOLD, border: `1px solid ${GOLD}`,
+                  fontSize: '0.78rem', boxShadow: `0 0 14px ${GOLD}22`, opacity: busy === 'all' ? 0.6 : 1,
                 }}>
                 {busy === 'all' ? 'Claiming…' : `Claim All (${claimable.length})`}
               </motion.button>
@@ -161,11 +161,11 @@ export default function AchievementsClient({ groups }: Props) {
             style={{
               position: 'fixed', left: '50%', bottom: 'calc(86px + env(safe-area-inset-bottom))', transform: 'translateX(-50%)',
               zIndex: 9000, pointerEvents: 'none',
-              padding: '0.6rem 1.1rem', borderRadius: 999,
-              background: 'linear-gradient(180deg, #f7d978 0%, #e0b34a 100%)', color: '#2a1d06',
-              boxShadow: `0 6px 22px ${GOLD}66`,
+              padding: '0.6rem 1.15rem', borderRadius: 999,
+              background: 'linear-gradient(180deg, rgba(44,34,14,0.97) 0%, rgba(22,16,8,0.98) 100%)', color: GOLD,
+              border: `1px solid ${GOLD}`, boxShadow: `0 6px 22px ${GOLD}33`,
             }}>
-            <span className="font-cinzel font-800" style={{ fontSize: '0.95rem' }}>+{toast.toLocaleString()} ⟡ claimed</span>
+            <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', textShadow: `0 0 10px ${GOLD}55` }}>+{toast.toLocaleString()} ⟡ claimed</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -253,10 +253,10 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1, gap: 2,
               padding: '0.45rem 0.7rem', borderRadius: 10, cursor: busy ? 'default' : 'pointer',
-              background: 'linear-gradient(180deg, #f7d978 0%, #e0b34a 100%)', color: '#2a1d06', border: 'none',
-              boxShadow: `0 3px 10px ${GOLD}44`, opacity: busy ? 0.6 : 1,
+              background: `${GOLD}1f`, color: GOLD, border: `1px solid ${GOLD}88`,
+              opacity: busy ? 0.6 : 1,
             }}>
-            <span style={{ fontSize: '0.58rem', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.85 }}>{busy ? '…' : 'Claim'}</span>
+            <span style={{ fontSize: '0.54rem', letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>{busy ? '…' : 'Claim'}</span>
             <span style={{ fontSize: '0.78rem' }}>+{reward.toLocaleString()} ⟡</span>
           </motion.button>
         ) : claimed && reward > 0 ? (
