@@ -121,6 +121,7 @@ export default function AchievementsClient({ groups }: Props) {
       setBusy(null)
       if ('error' in r) return
       setClaimedIds(prev => new Set(prev).add(id))
+      window.dispatchEvent(new Event('badges-changed'))
       if (r.amount > 0) flyCoins(from, r.amount, r.newDoubloons)
     })
   }
@@ -132,6 +133,7 @@ export default function AchievementsClient({ groups }: Props) {
       setBusy(null)
       if ('error' in r) return
       setClaimedIds(new Set(r.claimed))
+      window.dispatchEvent(new Event('badges-changed'))
       if (r.totalGranted > 0) flyCoins(from, r.totalGranted, r.newDoubloons)
     })
   }

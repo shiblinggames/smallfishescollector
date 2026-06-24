@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 
 const PAGE_TINTS: [string, string][] = [
@@ -106,12 +106,7 @@ export default function MobileTabBar() {
     })
   }, [pathname])
 
-  useEffect(() => {
-    const inBadges = pathname.startsWith('/badges')
-    const needFetch = !badgesFetchedRef.current || wasBadgesRef.current || inBadges
-    wasBadgesRef.current = inBadges
-    if (!needFetch) return
-    badgesFetchedRef.current = true
+  const fetchBadgeState = useCallback(() => {
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: { user: { id: string } } | null } }) => {
@@ -125,7 +120,25 @@ export default function MobileTabBar() {
         .then(({ data }: { data: { unlocked_badges: string[] | null; claimed_badge_rewards: string[] | null } | null }) =>
           setBadgeIds({ unlocked: data?.unlocked_badges ?? [], claimed: data?.claimed_badge_rewards ?? [] }))
     })
-  }, [pathname])
+  }, [])
+
+  useEffect(() => {
+    const inBadges = pathname.startsWith('/badges')
+    const needFetch = !badgesFetchedRef.current || wasBadgesRef.current || inBadges
+    wasBadgesRef.current = inBadges
+    if (!needFetch) return
+    badgesFetchedRef.current = true
+    fetchBadgeState()
+  }, [pathname, fetchBadgeState])
+
+  // A badge unlocked (BadgeWatcher) or a reward was claimed (AchievementsClient)
+  // fires `badges-changed` → refresh the pill so it pulses the moment the badge
+  // is earned (not only after a /badges visit), and stops once claimed.
+  useEffect(() => {
+    const h = () => fetchBadgeState()
+    window.addEventListener('badges-changed', h)
+    return () => window.removeEventListener('badges-changed', h)
+  }, [fetchBadgeState])
 
   // Readiness is derived from cached rows at render. Re-render on a slow tick
   // while anything is pending so a trawl/voyage that ripens lights the badge

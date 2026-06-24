@@ -43,6 +43,8 @@ export default function BadgeWatcher() {
       if (fresh.length > 0) {
         for (const id of fresh) seenRef.current!.add(id)
         setQueue(q => [...q, ...fresh])
+        // Tell the nav (MobileTabBar) so the Badges pill pulses immediately.
+        window.dispatchEvent(new Event('badges-changed'))
       }
     } finally {
       inFlightRef.current = false
