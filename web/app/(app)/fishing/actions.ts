@@ -707,6 +707,9 @@ export async function reelIn(
       sizeTier = roll.tier
     }
 
+    // Trophy Catch badge — landing a top-size-tier fish (or a forced-shiny max).
+    if (sizeTier === 'trophy') { try { await unlockBadge('trophy_catch') } catch { /* best-effort */ } }
+
     const { data: pbRow } = await admin
       .from('fish_personal_bests')
       .select('best_length_in')

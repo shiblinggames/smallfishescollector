@@ -594,7 +594,7 @@ export default function ProfileClient({
                   {[0, 1, 2].map(slot => {
                     const badge = BADGE_MAP[equippedBadges[slot] ?? '']
                     return badge ? (
-                      <img key={slot} src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 4 }} />
+                      <img key={slot} src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" onError={e => { e.currentTarget.style.visibility = 'hidden' }} style={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 4 }} />
                     ) : (
                       <div key={slot} style={{ width: 26, height: 26, borderRadius: 4, border: '1px dashed rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.03)' }} />
                     )
@@ -641,7 +641,7 @@ export default function ProfileClient({
                           }}
                         >
                           {badge ? (
-                            <img src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                            <img src={badge.imageUrl} alt={badge.name} loading="lazy" decoding="async" onError={e => { e.currentTarget.style.visibility = 'hidden' }} style={{ width: 28, height: 28, objectFit: 'contain' }} />
                           ) : (
                             <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.55)' }}>Empty</span>
                           )}
@@ -674,7 +674,7 @@ export default function ProfileClient({
                               border: isEquipped ? '2px solid #f0c040' : '2px solid rgba(255,255,255,0.1)',
                               boxShadow: isEquipped ? '0 0 10px rgba(240,192,64,0.35)' : 'none',
                             }}>
-                              <img src={b.imageUrl} alt={b.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                              <img src={b.imageUrl} alt={b.name} loading="lazy" decoding="async" onError={e => { e.currentTarget.style.visibility = 'hidden' }} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
                               {!isUnlocked && (
                                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.52)' }}>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round">
