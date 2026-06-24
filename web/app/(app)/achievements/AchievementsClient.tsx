@@ -227,7 +227,12 @@ export default function AchievementsClient({ groups }: Props) {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onClick={() => setDetailGoal(null)}
                 style={{ position: 'fixed', inset: 0, zIndex: 9200, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}>
                 <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.94, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 360, damping: 26 }}
-                  style={{ width: '100%', maxWidth: 360, textAlign: 'center', background: 'linear-gradient(180deg, #16202e 0%, #0a121c 100%)', border: `1px solid ${g.done ? accent + '88' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '1.5rem 1.25rem', boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+                  style={{ position: 'relative', width: '100%', maxWidth: 360, textAlign: 'center', background: 'linear-gradient(180deg, #16202e 0%, #0a121c 100%)', border: `1px solid ${g.done ? accent + '88' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '1.5rem 1.25rem', boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+                  {/* Close */}
+                  <button onClick={() => setDetailGoal(null)} aria-label="Close"
+                    style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cdd3db', cursor: 'pointer', padding: 0 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                  </button>
                   {/* Badge art */}
                   <div style={{ width: 88, height: 88, margin: '0 auto', borderRadius: 18, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.3)', border: `2px solid ${g.done ? accent : 'rgba(255,255,255,0.12)'}`, boxShadow: g.done ? `0 0 22px ${accent}55` : 'none' }}>
                     {g.badgeImage ? (
