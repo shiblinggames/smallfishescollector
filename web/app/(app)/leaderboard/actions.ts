@@ -8,7 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { badgePoints } from '@/lib/badges'
+import { getAchievementPointsBoard } from '@/lib/achievementPoints'
 import type { LeaderboardEntry, BoardKey, AvatarMap } from './boardUI'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -167,26 +167,6 @@ async function fetchChartingPoints(admin: Admin, userId: string) {
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
-// Achievement Points: total badge points summed from unlocked_badges via the
-// tier→points map. Mirrors fetchAchievementPointsBoard in /leaderboard/page.tsx.
-async function fetchAchievementPoints(admin: Admin, userId: string) {
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, username, unlocked_badges')
-    .eq('is_admin', false)
-  const rows: LeaderboardEntry[] = ((profiles ?? []) as Array<{ id: string; username: string | null; unlocked_badges: string[] | null }>)
-    .map(p => ({
-      user_id: p.id,
-      username: p.username ?? '',
-      score: (p.unlocked_badges ?? []).reduce((s, id) => s + badgePoints(id), 0),
-    }))
-    .filter(r => r.score > 0)
-  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
-  const top = rows.slice(0, 50)
-  const myIdx = rows.findIndex(r => r.user_id === userId)
-  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
-}
-
 export interface LeaderboardBoardsResult {
   currentUserId: string
   boards: Partial<Record<BoardKey, LeaderboardEntry[]>>
@@ -212,7 +192,7 @@ export async function getLeaderboardBoards(
     if (key === 'perfectStreak')      res = await fetchPerfectStreak(admin, user.id)
     else if (key === 'raidProgress')  res = await fetchRaidProgress(admin, user.id)
     else if (key === 'chartingPoints') res = await fetchChartingPoints(admin, user.id)
-    else if (key === 'achievementPoints') res = await fetchAchievementPoints(admin, user.id)
+    else if (key === 'achievementPoints') res = await getAchievementPointsBoard(admin, user.id)
     else if (key === 'gauntletDepth') res = await fetchGauntlet(admin, user.id)
     else {
       const view = VIEW_BY_KEY[key]

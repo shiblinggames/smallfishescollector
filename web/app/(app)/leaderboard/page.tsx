@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import LeaderboardClient from './LeaderboardClient'
 import type { LeaderboardEntry } from './LeaderboardClient'
-import { badgePoints } from '@/lib/badges'
+import { getAchievementPointsBoard } from '@/lib/achievementPoints'
 
 /** Resolve the player's rank on a board. If they're in the top-50 array we
  *  already fetched, use that index (free). Otherwise run a count query for
@@ -118,28 +118,6 @@ async function fetchChartingPointsBoard(admin: ReturnType<typeof createAdminClie
   return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
 }
 
-// Achievement Points: total badge points across every system, summed from
-// each player's unlocked_badges via the tier→points map (badgePoints). The
-// single chaseable "overall standing" board. Highest total wins; ties broken
-// by username ASC (no per-badge timestamp). Admins + zero-point players hidden.
-async function fetchAchievementPointsBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, username, unlocked_badges')
-    .eq('is_admin', false)
-  const rows: LeaderboardEntry[] = ((profiles ?? []) as Array<{ id: string; username: string | null; unlocked_badges: string[] | null }>)
-    .map(p => ({
-      user_id: p.id,
-      username: p.username ?? '',
-      score: (p.unlocked_badges ?? []).reduce((s, id) => s + badgePoints(id), 0),
-    }))
-    .filter(r => r.score > 0)
-  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
-  const top = rows.slice(0, 50)
-  const myIdx = rows.findIndex(r => r.user_id === userId)
-  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
-}
-
 async function fetchPerfectStreakBoard(admin: ReturnType<typeof createAdminClient>, userId: string) {
   const [{ data: top }, { data: me }] = await Promise.all([
     admin.from('leaderboard_perfect_streak')
@@ -175,7 +153,7 @@ export default async function LeaderboardPage() {
     fetchBoard(admin, 'leaderboard_roulette', user.id),
     fetchBoard(admin, 'leaderboard_expedition', user.id),
     fetchRaidProgressBoard(admin, user.id),
-    fetchAchievementPointsBoard(admin, user.id),
+    getAchievementPointsBoard(admin, user.id),
   ])
 
   // Fetch avatar data (character_color + equipped_hat) for every user that

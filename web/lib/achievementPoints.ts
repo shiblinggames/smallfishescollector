@@ -1,0 +1,77 @@
+// Achievement Points leaderboard, computed LIVE for every player instead of
+// reading the stored unlocked_badges snapshot (which only refreshes when a
+// player opens the Badges page, so it goes badly stale — active grinders show
+// up under-counted while a long-idle player who once visited ranks above them).
+//
+// Per player we score badgePoints over union(stored unlocked_badges, derived):
+//   - derived  = every column-based badge whose condition is currently met
+//                (lib/badgeConditions) — always fresh, no reconcile needed
+//   - stored   = covers the handful of hook-only badges that aren't derivable
+//                (Trophy Catch, Catfish Jackpot, Full Collection)
+// so nothing is double-counted and nothing is missed.
+
+import type { createAdminClient } from '@/lib/supabase/admin'
+import { badgePoints } from './badges'
+import { earnedBadgeIds, BADGE_PROFILE_COLUMNS, type BadgeProfileFields } from './badgeConditions'
+
+type Admin = ReturnType<typeof createAdminClient>
+
+export interface AchievementPointsRow {
+  user_id: string
+  username: string
+  score: number
+}
+
+export interface AchievementPointsBoard {
+  top: AchievementPointsRow[]
+  myScore: number | null
+  myRank: number | null
+}
+
+export async function getAchievementPointsBoard(admin: Admin, userId: string): Promise<AchievementPointsBoard> {
+  const [{ data: profiles }, { data: raidRows }, { data: crewRows }, { data: voyageRows }, { data: collectionRows }] = await Promise.all([
+    admin.from('profiles').select(`id, username, unlocked_badges, ${BADGE_PROFILE_COLUMNS}`).eq('is_admin', false),
+    admin.from('raid_completions').select('user_id, raid_id, elapsed_ms'),
+    admin.from('user_crew').select('user_id, xp, died_at, cards(slug)'),
+    admin.from('daily_voyages').select('user_id').eq('status', 'revealed'),
+    admin.from('fish_collection').select('user_id'),
+  ])
+
+  // Bucket the joined rows by user so each player's conditions compute in memory.
+  const raidsBy = new Map<string, { raid_id: string; elapsed_ms: number | null }[]>()
+  for (const r of (raidRows ?? []) as Array<{ user_id: string; raid_id: string; elapsed_ms: number | null }>) {
+    const arr = raidsBy.get(r.user_id) ?? []
+    arr.push({ raid_id: r.raid_id, elapsed_ms: r.elapsed_ms })
+    raidsBy.set(r.user_id, arr)
+  }
+  // Supabase types cards as an array though it's a to-one object at runtime.
+  const crewBy = new Map<string, { xp: number | null; died_at: string | null; slug: string | null }[]>()
+  for (const c of (crewRows ?? []) as unknown as Array<{ user_id: string; xp: number | null; died_at: string | null; cards: { slug: string | null } | null }>) {
+    const arr = crewBy.get(c.user_id) ?? []
+    arr.push({ xp: c.xp, died_at: c.died_at, slug: c.cards?.slug ?? null })
+    crewBy.set(c.user_id, arr)
+  }
+  const voyageBy = new Map<string, number>()
+  for (const v of (voyageRows ?? []) as Array<{ user_id: string }>) voyageBy.set(v.user_id, (voyageBy.get(v.user_id) ?? 0) + 1)
+  const collectionBy = new Map<string, number>()
+  for (const f of (collectionRows ?? []) as Array<{ user_id: string }>) collectionBy.set(f.user_id, (collectionBy.get(f.user_id) ?? 0) + 1)
+
+  const rows: AchievementPointsRow[] = []
+  for (const p of (profiles ?? []) as Array<BadgeProfileFields & { id: string; username: string | null; unlocked_badges: string[] | null }>) {
+    const derived = earnedBadgeIds(p, {
+      raids: raidsBy.get(p.id) ?? [],
+      crew: crewBy.get(p.id) ?? [],
+      voyageCount: voyageBy.get(p.id) ?? 0,
+      collectionCount: collectionBy.get(p.id) ?? 0,
+    })
+    const all = new Set<string>([...(p.unlocked_badges ?? []), ...derived])
+    let score = 0
+    for (const id of all) score += badgePoints(id)
+    if (score > 0) rows.push({ user_id: p.id, username: p.username ?? '', score })
+  }
+
+  rows.sort((a, b) => b.score - a.score || (a.username < b.username ? -1 : a.username > b.username ? 1 : 0))
+  const top = rows.slice(0, 50)
+  const myIdx = rows.findIndex(r => r.user_id === userId)
+  return { top, myScore: myIdx >= 0 ? rows[myIdx].score : null, myRank: myIdx >= 0 ? myIdx + 1 : null }
+}
