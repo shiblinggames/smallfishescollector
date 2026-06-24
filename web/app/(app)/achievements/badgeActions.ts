@@ -26,50 +26,72 @@ export async function reconcileBadges(): Promise<string[]> {
   if (!user) return []
 
   const admin = createAdminClient()
-  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }] = await Promise.all([
+  const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }] = await Promise.all([
     admin.from('profiles').select('unlocked_badges, fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels').eq('id', user.id).single(),
-    admin.from('raid_completions').select('raid_id').eq('user_id', user.id),
-    admin.from('user_crew').select('xp, cards(slug)').eq('user_id', user.id).is('died_at', null),
+    admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
+    admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', user.id),
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
+    admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
   if (!profile) return []
 
   const have = new Set<string>((profile.unlocked_badges as string[] | null) ?? [])
-  const raidIds = new Set<string>(((raidRows ?? []) as { raid_id: string }[]).map(r => r.raid_id))
-  const crew = (crewRows ?? []) as unknown as { xp: number | null; cards: { slug: string | null } | null }[]
+  const raids = (raidRows ?? []) as { raid_id: string; elapsed_ms: number | null }[]
+  const raidIds = new Set<string>(raids.map(r => r.raid_id))
+  const fastestCorsairs = Math.min(Infinity, ...raids.filter(r => r.raid_id === 'corsairs_reckoning').map(r => r.elapsed_ms ?? Infinity))
+  const crew = (crewRows ?? []) as unknown as { xp: number | null; died_at: string | null; cards: { slug: string | null } | null }[]
   const maxCrewLevel = crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
   const hasLegendaryCrew = crew.some(c => !!c.cards?.slug && LEGENDARY_SLUGS.has(c.cards.slug))
+  const hasLostCrew = crew.some(c => c.died_at != null)
   const prestige = (profile.prestige_levels as Record<string, number> | null) ?? {}
   const totalStars = PRESTIGE_ZONES.reduce((s, z) => s + Math.min(5, prestige[z] ?? 0), 0)
   const navLevel = navLevelFromXP(Number(profile.expedition_xp ?? 0))
+  const streak = Number(profile.highest_perfect_streak ?? 0)
+  const raidDmg = Number(profile.highest_raid_damage ?? 0)
+  const pvpWins = Number(profile.pvp_wins ?? 0)
+  const doubloons = Number(profile.doubloons ?? 0)
+  const tideBest = Number(profile.tide_run_best_distance ?? 0)
+  const puzzlePoints = Number(profile.puzzle_points ?? 0)
+  const recruits = Number(profile.lifetime_recruits ?? 0)
 
   const cond: Record<string, boolean> = {
     master_angler:  fishLevelFromXP(Number(profile.fishing_xp ?? 0)) >= 100,
     navigator:      navLevel >= 50,
     master_navigator: navLevel >= 100,
-    unbroken:       Number(profile.highest_perfect_streak ?? 0) >= 10,
+    unbroken:       streak >= 10,
+    relentless:     streak >= 15,
+    untouchable:    streak >= 20,
     dead_eye:       Number(profile.total_perfects ?? 0) >= 1000,
-    deep_pockets:   Number(profile.doubloons ?? 0) >= 1_000_000,
-    bilge_baron:    Number(profile.doubloons ?? 0) >= 2_500_000,
+    half_the_sea:   (collectionCount ?? 0) >= 50,
+    baby_steps:     doubloons >= 100_000,
+    deep_pockets:   doubloons >= 1_000_000,
+    bilge_baron:    doubloons >= 2_500_000,
     prestige_i:     PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 1),
     zone_legend:    PRESTIGE_ZONES.every(z => (prestige[z] ?? 0) >= 1),
     prestige_stars: totalStars >= 20,
     ancient_ones:   ((profile.trophy_catches as number[] | null) ?? []).length >= 6,
     crewmaster:     Number(profile.crew_hall_tier ?? 0) >= CREW_HALL_MAX_TIER,
-    full_muster:    Number(profile.lifetime_recruits ?? 0) >= 100,
+    growing_crew:   recruits >= 25,
+    full_muster:    recruits >= 100,
     legendary_recruit: hasLegendaryCrew,
+    theres_a_grave: hasLostCrew,
     old_salt:       maxCrewLevel >= CREW_MAX_LEVEL,
     fleet_admiral:  (voyageCount ?? 0) >= 100,
-    heavy_broadside: Number(profile.highest_raid_damage ?? 0) >= 250,
-    first_blood:    Number(profile.pvp_wins ?? 0) >= 1,
-    duelist:        Number(profile.pvp_wins ?? 0) >= 25,
-    quartermaster:  Number(profile.puzzle_points ?? 0) >= 40,
-    den_magnate:    Number(profile.puzzle_points ?? 0) >= 80,
-    tide_champion:  Number(profile.tide_run_best_distance ?? 0) >= 500,
-    tide_master:    Number(profile.tide_run_best_distance ?? 0) >= 750,
+    opening_salvo:  raidDmg >= 50,
+    hard_hitter:    raidDmg >= 100,
+    heavy_broadside: raidDmg >= 250,
+    swift_reckoning: fastestCorsairs <= 90_000,
+    first_blood:    pvpWins >= 1,
+    brawler:        pvpWins >= 10,
+    duelist:        pvpWins >= 25,
+    quartermaster:  puzzlePoints >= 40,
+    den_magnate:    puzzlePoints >= 80,
+    tide_runner:    tideBest >= 300,
+    tide_champion:  tideBest >= 500,
+    tide_master:    tideBest >= 750,
     into_the_deep:  Number(profile.gauntlet_deepest ?? 0) >= 5,
     davy_jones:     Number(profile.gauntlet_deepest ?? 0) >= 10,
-    fathomless:     Number(profile.gauntlet_fathoms ?? 0) >= 1000,
+    fathomless:     Number(profile.gauntlet_fathoms ?? 0) >= 500,
     corsairs_bane:  raidIds.has('corsairs_reckoning_challenge'),
     ghost_ship:     raidIds.has('captain_krust_challenge'),
     cartographers_fall: raidIds.has('cartographer_challenge'),

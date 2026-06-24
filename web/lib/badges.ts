@@ -39,17 +39,22 @@ export const BADGES: Badge[] = [
   // ── Fishing mastery ──────────────────────────────────────────────────────
   { id: 'prestige_i',     name: 'Prestige I',        description: 'Reach Prestige in any fishing zone',              imageUrl: '/badges/prestige_i.png',     difficulty: 'rookie'   },
   { id: 'trophy_catch',   name: 'Trophy Catch',       description: 'Land a Trophy-tier fish',                         imageUrl: '/badges/trophy_catch.png',   difficulty: 'veteran'  },
-  { id: 'unbroken',       name: 'Unbroken',           description: 'Land 10 consecutive perfect catches in a row',    imageUrl: '/badges/unbroken.png',       difficulty: 'seasoned' },
+  { id: 'unbroken',       name: 'Unbroken',           description: 'Land 10 perfect catches in a row',                imageUrl: '/badges/unbroken.png',       difficulty: 'seasoned' },
+  { id: 'relentless',     name: 'Relentless',         description: 'Land 15 perfect catches in a row',                imageUrl: '/badges/relentless.png',     difficulty: 'veteran'  },
+  { id: 'untouchable',    name: 'Untouchable',        description: 'Land 20 perfect catches in a row',                imageUrl: '/badges/untouchable.png',    difficulty: 'master'   },
   { id: 'dead_eye',       name: 'Dead-Eye',           description: 'Land 1,000 perfect catches all-time',            imageUrl: '/badges/dead_eye.png',       difficulty: 'veteran'  },
   { id: 'master_angler',  name: 'Master Angler',      description: 'Reach Fishing Level 100',                         imageUrl: '/badges/master_angler.png',  difficulty: 'master'   },
-  { id: 'zone_legend',    name: 'Zone Legend',        description: 'Reach Prestige in all 4 fishing zones',           imageUrl: '/badges/zone_legend.png',    difficulty: 'master'   },
+  { id: 'zone_legend',    name: 'Zone Legend',        description: 'Reach Prestige in all 4 fishing zones',           imageUrl: '/badges/zone_legend.png',    difficulty: 'veteran'  },
   { id: 'prestige_stars', name: 'Prestige Stars',     description: 'Earn all 20 prestige stars (5 per zone)',         imageUrl: '/badges/prestige_stars.png', difficulty: 'master'   },
 
   // ── The collection ───────────────────────────────────────────────────────
+  { id: 'half_the_sea',   name: 'Half the Sea',       description: 'Catch 50 fish species',                           imageUrl: '/badges/half_the_sea.png',   difficulty: 'rookie'   },
   { id: 'ancient_ones',   name: 'Ancient Ones',       description: 'Catch all 6 Ancient Deep trophies',               imageUrl: '/badges/ancient_ones.png',   difficulty: 'master'   },
   { id: 'full_collection',name: 'Full Collection',    description: 'Catch every fish species in the game',             imageUrl: '/badges/full_collection.png', difficulty: 'master'  },
 
   // ── Crew ─────────────────────────────────────────────────────────────────
+  { id: 'growing_crew',     name: 'Growing Crew',      description: 'Recruit 25 crew',                                imageUrl: '/badges/growing_crew.png',     difficulty: 'rookie'   },
+  { id: 'theres_a_grave',   name: "There's a Grave?",  description: 'Lose a crew member for the first time',          imageUrl: '/badges/theres_a_grave.png',   difficulty: 'rookie'   },
   { id: 'crewmaster',       name: 'Crewmaster',        description: 'Reach the top Crew Hall tier',                   imageUrl: '/badges/crewmaster.png',       difficulty: 'veteran'  },
   { id: 'full_muster',      name: 'Full Muster',       description: 'Recruit 100 crew',                               imageUrl: '/badges/full_muster.png',      difficulty: 'veteran'  },
   { id: 'legendary_recruit', name: 'Legendary Recruit', description: 'Recruit a legendary crew',                      imageUrl: '/badges/legendary_recruit.png', difficulty: 'seasoned' },
@@ -67,17 +72,21 @@ export const BADGES: Badge[] = [
   { id: 'ghost_ship',     name: "Krust's Crutch",     description: 'Defeat Captain Krust in challenge mode',          imageUrl: '/badges/ghost_ship.png',     difficulty: 'seasoned' },
   { id: 'cartographers_fall', name: "The Cartographer's Fall", description: 'Defeat the Cartographer in challenge mode', imageUrl: '/badges/cartographers_fall.png', difficulty: 'seasoned' },
   { id: 'toll_paid',      name: 'Toll Paid',          description: 'Defeat Tollmaster Spet in challenge mode',        imageUrl: '/badges/toll_paid.png',      difficulty: 'seasoned' },
-  { id: 'finndicates_bane', name: "Finndicate's Bane", description: 'Clear all four raids in challenge mode',         imageUrl: '/badges/finndicates_bane.png', difficulty: 'veteran' },
+  { id: 'swift_reckoning', name: 'Swift Reckoning',   description: "Clear Corsair's Reckoning in under 1:30",         imageUrl: '/badges/swift_reckoning.png', difficulty: 'veteran' },
+  { id: 'opening_salvo',  name: 'Opening Salvo',      description: 'Land a single raid hit for 50 or more',           imageUrl: '/badges/opening_salvo.png',  difficulty: 'rookie'   },
+  { id: 'hard_hitter',    name: 'Hard Hitter',        description: 'Land a single raid hit for 100 or more',          imageUrl: '/badges/hard_hitter.png',    difficulty: 'seasoned' },
   { id: 'heavy_broadside', name: 'Heavy Broadside',   description: 'Land a single raid hit for 250 or more',          imageUrl: '/badges/heavy_broadside.png', difficulty: 'veteran'  },
+  { id: 'finndicates_bane', name: "Finndicate's Bane", description: 'Clear all four raids in challenge mode',         imageUrl: '/badges/finndicates_bane.png', difficulty: 'veteran' },
 
   // ── The Gauntlet ─────────────────────────────────────────────────────────
   { id: 'into_the_deep',  name: 'Into the Deep',      description: 'Descend to depth 5 in the Gauntlet',              imageUrl: '/badges/into_the_deep.png',  difficulty: 'seasoned' },
-  { id: 'fathomless',     name: 'Fathomless',         description: 'Bank 1,000 Fathoms all-time',                     imageUrl: '/badges/fathomless.png',     difficulty: 'veteran'  },
+  { id: 'fathomless',     name: 'Fathomless',         description: 'Bank 500 Fathoms all-time',                       imageUrl: '/badges/fathomless.png',     difficulty: 'veteran'  },
   // Repointed from the retired "Davy Jones' Victor" (old Locker raid).
   { id: 'davy_jones',     name: "Davy Jones' Locker", description: 'Descend to depth 10 in the Gauntlet',             imageUrl: '/badges/davy_jones.png',     difficulty: 'veteran'  },
 
   // ── Broadsides (PvP) ─────────────────────────────────────────────────────
   { id: 'first_blood',    name: 'First Blood',        description: 'Win a ship duel',                                 imageUrl: '/badges/first_blood.png',    difficulty: 'rookie'   },
+  { id: 'brawler',        name: 'Broadside Brawler',  description: 'Win 10 ship duels',                               imageUrl: '/badges/brawler.png',        difficulty: 'seasoned' },
   { id: 'duelist',        name: 'Duelist',            description: 'Win 25 ship duels',                               imageUrl: '/badges/duelist.png',        difficulty: 'veteran'  },
 
   // ── The Chart Room ───────────────────────────────────────────────────────
@@ -86,10 +95,12 @@ export const BADGES: Badge[] = [
 
   // ── The Den & records ────────────────────────────────────────────────────
   { id: 'catfish_jackpot', name: 'Catfish Jackpot',   description: 'Win the slots Catfish Jackpot',                   imageUrl: '/badges/catfish_jackpot.png', difficulty: 'seasoned' },
+  { id: 'tide_runner',    name: 'Tide Runner',        description: 'Reach 300m in a single Tide Run',                 imageUrl: '/badges/tide_runner.png',    difficulty: 'rookie'   },
   { id: 'tide_champion',  name: 'Tide Champion',      description: 'Reach 500m in a single Tide Run',                 imageUrl: '/badges/tide_champion.png',  difficulty: 'veteran'  },
   { id: 'tide_master',    name: 'Tide Master',        description: 'Reach 750m in a single Tide Run',                 imageUrl: '/badges/tide_master.png',    difficulty: 'master'   },
 
   // ── Wealth ───────────────────────────────────────────────────────────────
+  { id: 'baby_steps',     name: 'Baby Steps',         description: 'Hold 100,000 doubloons at once',                  imageUrl: '/badges/baby_steps.png',     difficulty: 'rookie'   },
   { id: 'deep_pockets',   name: 'Deep Pockets',       description: 'Hold 1,000,000 doubloons at once',                imageUrl: '/badges/deep_pockets.png',   difficulty: 'veteran'  },
   { id: 'bilge_baron',    name: 'Bilge Baron',        description: 'Hold 2,500,000 doubloons at once',                imageUrl: '/badges/bilge_baron.png',    difficulty: 'master'   },
 ]
