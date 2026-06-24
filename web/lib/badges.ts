@@ -47,6 +47,11 @@ export const BADGES: Badge[] = [
   { id: 'zone_legend',    name: 'Zone Legend',        description: 'Reach Prestige in all 4 fishing zones',           imageUrl: '/badges/zone_legend.png',    difficulty: 'veteran'  },
   { id: 'prestige_stars', name: 'Prestige Stars',     description: 'Earn all 20 prestige stars (5 per zone)',         imageUrl: '/badges/prestige_stars.png', difficulty: 'master'   },
 
+  // ── Fishing feats ────────────────────────────────────────────────────────
+  { id: 'two_for_the_pot', name: 'Two for the Pot',   description: 'Reel in a double catch',                          imageUrl: '/badges/two_for_the_pot.png', difficulty: 'rookie'   },
+  { id: 'saltlung',       name: 'Saltlung',           description: 'Cast your line 1,000 times',                      imageUrl: '/badges/saltlung.png',       difficulty: 'seasoned' },
+  { id: 'crate_digger',   name: 'Crate Digger',       description: 'Open 50 supply crates',                           imageUrl: '/badges/crate_digger.png',   difficulty: 'seasoned' },
+
   // ── The collection ───────────────────────────────────────────────────────
   { id: 'half_the_sea',   name: 'Half the Sea',       description: 'Catch 50 fish species',                           imageUrl: '/badges/half_the_sea.png',   difficulty: 'rookie'   },
   { id: 'ancient_ones',   name: 'Ancient Ones',       description: 'Catch all 6 Ancient Deep trophies',               imageUrl: '/badges/ancient_ones.png',   difficulty: 'master'   },
@@ -133,6 +138,9 @@ export const BADGE_DETAIL: Record<string, string> = {
   master_angler:    'Reach Fishing Level 100, the cap. The mark of a true angler.',
   zone_legend:      'Reach Prestige at least once in all four main fishing zones, from the shallows to the abyss.',
   prestige_stars:   'Earn every prestige star: all five in each of the four zones, twenty in total. The fishing endgame.',
+  two_for_the_pot:  'Pull up two fish on a single cast. It happens on its own from time to time, more often with the right gear running. Lucky, and a little greedy.',
+  saltlung:         'Cast your line a thousand times across your whole career. Pure time on the water, one cast at a time.',
+  crate_digger:     'Crack open 50 supply crates. They wash up from voyages, raids, and the daily haul, and you have hauled in fifty of them.',
   half_the_sea:     'Catch 50 different fish species. A solid start on filling out the logbook.',
   ancient_ones:     'Land all six Ancient Deep trophies — the rarest, oldest fish in the sea.',
   full_collection:  'Catch every single species in the game. The ultimate collector’s feat.',

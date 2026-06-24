@@ -54,6 +54,9 @@ export default async function BadgesPage() {
   const puzzlePoints = Number(profile?.puzzle_points ?? 0)
   const highestRaidDmg = Number(profile?.highest_raid_damage ?? 0)
   const totalPerfects = Number(profile?.total_perfects ?? 0)
+  const doubleCatches = Number(profile?.fishing_double_catches ?? 0)
+  const casts = Number(profile?.fishing_casts ?? 0)
+  const cratesOpened = Number(profile?.fishing_crates_opened ?? 0)
 
   const fishLevel = fishLevelFromXP(Number(profile?.fishing_xp ?? 0))
   const navLevel = navLevelFromXP(Number(profile?.expedition_xp ?? 0))
@@ -117,6 +120,15 @@ export default async function BadgesPage() {
         badgeGoal('master_angler', 'Master Angler', 'Reach Fishing Level 100', fishLevel, 100, '/fishing'),
         badgeGoal('zone_legend', 'Zone Legend', 'Reach Prestige in all 4 zones', prestigedZones, 4, '/fishing'),
         badgeGoal('prestige_stars', 'Prestige Stars', 'Earn all 20 prestige stars (5 per zone)', totalStars, 20, '/fishing'),
+      ],
+    },
+    {
+      title: 'Fishing Feats',
+      accent: '#34d399',
+      goals: [
+        badgeGoal('two_for_the_pot', 'Two for the Pot', 'Reel in a double catch', doubleCatches, 1, '/fishing', { binary: true }),
+        badgeGoal('saltlung', 'Saltlung', 'Cast your line 1,000 times', casts, 1000, '/fishing'),
+        badgeGoal('crate_digger', 'Crate Digger', 'Open 50 supply crates', cratesOpened, 50, '/fishing'),
       ],
     },
     {

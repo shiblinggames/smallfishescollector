@@ -27,7 +27,7 @@ export async function reconcileBadges(): Promise<string[]> {
 
   const admin = createAdminClient()
   const [{ data: profile }, { data: raidRows }, { data: crewRows }, { count: voyageCount }, { count: collectionCount }] = await Promise.all([
-    admin.from('profiles').select('unlocked_badges, fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels').eq('id', user.id).single(),
+    admin.from('profiles').select('unlocked_badges, fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened').eq('id', user.id).single(),
     admin.from('raid_completions').select('raid_id, elapsed_ms').eq('user_id', user.id),
     admin.from('user_crew').select('xp, died_at, cards(slug)').eq('user_id', user.id),
     admin.from('daily_voyages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'revealed'),
@@ -69,6 +69,9 @@ export async function reconcileBadges(): Promise<string[]> {
     prestige_i:     PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 1),
     zone_legend:    PRESTIGE_ZONES.every(z => (prestige[z] ?? 0) >= 1),
     prestige_stars: totalStars >= 20,
+    two_for_the_pot: Number(profile.fishing_double_catches ?? 0) >= 1,
+    saltlung:       Number(profile.fishing_casts ?? 0) >= 1000,
+    crate_digger:   Number(profile.fishing_crates_opened ?? 0) >= 50,
     ancient_ones:   ((profile.trophy_catches as number[] | null) ?? []).length >= 6,
     crewmaster:     Number(profile.crew_hall_tier ?? 0) >= CREW_HALL_MAX_TIER,
     growing_crew:   recruits >= 25,

@@ -58,10 +58,13 @@ const PLAN = [
   [7, 1, 0, 'tide_runner'],
   [7, 1, 1, 'tide_champion'],
   [7, 1, 2, 'tide_master'],
-  // ── batch 8 — Wealth (3 only; bottom row blank) ──
+  // ── batch 8 — Wealth (top row) + Fishing feats (bottom row) ──
   [8, 0, 0, 'baby_steps'],
   [8, 0, 1, 'deep_pockets'],
   [8, 0, 2, 'bilge_baron'],
+  [8, 1, 0, 'two_for_the_pot'],
+  [8, 1, 1, 'saltlung'],
+  [8, 1, 2, 'crate_digger'],
 ]
 
 let skipped = 0
