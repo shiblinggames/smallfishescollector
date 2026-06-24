@@ -310,9 +310,18 @@ export const ZONE_JACKPOT_CHANCE: Record<string, number> = {
   ancient_deep: 0.013,
 }
 
+// ── TEMP toggle ──────────────────────────────────────────────────────────────
+// true  → YOLO rod runs its ORIGINAL flat jackpot rate (rod.jackpotChance, ~10%)
+//         in EVERY zone — the pre-nerf behavior, for a side-by-side test.
+// false → live per-zone balance (ZONE_JACKPOT_CHANCE).
+// Flip this one line + redeploy to switch back. Only YOLO-rod owners are
+// affected, and effectively only Yoon has it.
+export const YOLO_FLAT_RATE_TEST = true
+
 /** Jackpot chance for a rod in a given zone. 0 unless the rod actually has a
  *  jackpot. Falls back to the rod's flat chance for any unlisted zone. */
 export function jackpotChanceForZone(rod: RodDef, habitat: string): number {
   if (!rod.jackpotChance) return 0
+  if (YOLO_FLAT_RATE_TEST) return rod.jackpotChance
   return ZONE_JACKPOT_CHANCE[habitat] ?? rod.jackpotChance
 }
