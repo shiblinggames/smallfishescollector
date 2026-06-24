@@ -19,6 +19,14 @@ export const BADGE_REWARD: Record<BadgeDifficulty, number> = {
   master:   10_000,
 }
 
+// Achievement points per tier (1–4) — a skill score summed over earned badges.
+export const BADGE_POINTS: Record<BadgeDifficulty, number> = {
+  rookie:   1,
+  seasoned: 2,
+  veteran:  3,
+  master:   4,
+}
+
 // Display meta for each tier (pill label + accent colour, a low→high progression).
 export const DIFFICULTY_META: Record<BadgeDifficulty, { label: string; color: string }> = {
   rookie:   { label: 'Rookie',   color: '#7fae8f' },
@@ -87,6 +95,12 @@ export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
 export function badgeReward(id: string): number {
   const b = BADGE_MAP[id]
   return b ? BADGE_REWARD[b.difficulty] : 0
+}
+
+/** Achievement points (1–4) for a badge id (0 if unknown). */
+export function badgePoints(id: string): number {
+  const b = BADGE_MAP[id]
+  return b ? BADGE_POINTS[b.difficulty] : 0
 }
 
 export const MAX_EQUIPPED_BADGES = 3
