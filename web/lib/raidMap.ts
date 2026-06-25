@@ -426,6 +426,19 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     // picks a class. Chapter III starts with a new entry.
     lastNodeId: 'chapter_2_class',
   },
+  {
+    id:         'the_coffers',
+    number:     3,
+    romanNumeral: 'III',
+    title:      'The Coffers',
+    subtitle:   'Follow the coin to its vault, and learn who you have been buying from.',
+    // coffers_heading → coffers_fork → coffers_fleet (Raid 5, comingSoon) →
+    // quartermaster_turn (the Cache betrayal) → the_quartermaster (Raid 6,
+    // comingSoon) → finleone_named (names Don Finleone) → chapter_3_class.
+    // ADMIN-ONLY until tested (every node carries adminOnly: true); the two
+    // raids are comingSoon stubs until their configs land in step 3.
+    lastNodeId: 'chapter_3_class',
+  },
 ]
 
 /** Which chapter does this node belong to? Walks RAID_CHAPTERS in
@@ -1152,6 +1165,166 @@ export const RAID_MAP: RaidNode[] = [
       description:
         "You read the Cartographer's seas, cracked the Gullet's cipher, and put its collector under. Pick a class for the deep water ahead. Once it's chosen it stays with you for every raid from here on, stacking with the captain you already are.",
       dropsNote: 'Deepen the class you already sail (a Mark II that stacks on top of it) or branch into a fresh one. Permanent, and the other options are gone for good.',
+      ctaLabel: 'Pick a class',
+    },
+  },
+
+  // ── CHAPTER III — The Coffers (raids 5 & 6) ──────────────────────────────
+  // ADMIN-ONLY until tested: every node carries adminOnly: true. The two raids
+  // ship as comingSoon stubs until their BossRaidConfigs land (step 3), so the
+  // chain reads end-to-end but stays gated behind the unbuilt bosses. Story
+  // spine: the Quartermaster's Cache (the shop you've bought from since Ch I) is
+  // revealed a Finndicate front, and names Don Finleone — the Ch IV hook.
+  {
+    id: 'coffers_heading',    type: 'story',
+    label: 'Where the Coin Sleeps',
+    flavor: "Spet weighed everything the Gullet swallowed, but he never kept it. His manifests all point the same way, to a harbour with no name on any honest chart.",
+    bridge: "You have the name now: the Coffers, where every coin the sea swallowed surfaces again in the wrong hands. The only ways in are a blockade or a bribe.",
+    requiresNode: 'chapter_2_class',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "Tollmaster Spet weighed every crate the Gullet swallowed. He never kept a coin of it." },
+      { text: "His manifests all point past the throat, to a harbour no honest chart will name." },
+      { text: "A drowned market, they say, where the whole sea's plunder gets counted and sold twice over." },
+      { text: "The crews who've seen it call it the Coffers." },
+      { text: "Everything the Finndicate ever took off the weak is stacked down there, behind a wall of guns." },
+      { text: "And somewhere in that market is the hand that's been counting it all." },
+    ],
+    detail: {
+      description:
+        "Every manifest off Spet's deck points the same way: past the Gullet to a harbour the honest charts leave blank, a drowned black market where the whole sea's plunder gets counted and sold again. The crews call it the Coffers. Whatever the Finndicate has taken off the weak for years is stacked down there behind a wall of guns, and the hand that's been counting it is somewhere in the stalls.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment VIII", sublabel: "\"They don't spend the plunder. They shelve it, and sell it back to the next captain coming up.\"", rarity: 'uncommon' },
+      ],
+      dropsNote: 'A market with a name at last, and two ways through its door.',
+      ctaLabel: 'Read the Manifests →',
+      summary: "Spet's manifests led you to the Coffers, the Finndicate's drowned market where the whole sea's plunder is counted and sold twice. The way in is a blockade or a bribe.",
+    },
+  },
+  {
+    id: 'coffers_fork',    type: 'fork',
+    label: 'The Door to the Coffers',
+    flavor: "Two ways past the harbour wall: run the gun-line at the mouth, or grease the dockmaster who waves ships through. One costs you a fight. The other costs you coin.",
+    bridge: "However you came through the wall, you're inside the Coffers now, and the market's war-fleet is already turning to meet you.",
+    requiresNode: 'coffers_heading',
+    adminOnly: true,
+    fork: {
+      rewardNavXp: 400,
+      routes: [
+        { id: 'blockade', label: 'Run the Blockade', description: "Sail straight through the gun-line at the harbour mouth. Loud, fast, and you make no friends doing it." },
+        { id: 'dockmaster', label: 'Bribe the Dockmaster', description: "Find the shark who waves ships through and make it worth his while. Quiet, and you keep your powder dry." },
+      ],
+    },
+    detail: {
+      description:
+        "The Coffers sit behind a harbour wall with two ways past it. Run the Blockade and you punch through the gun-line at the mouth, fast and loud, and the market knows you're coming. Bribe the Dockmaster and you slip in quiet on a greased palm, powder dry, owing a favour to exactly the wrong sort. Either way you come out the same water, in the market with the war-fleet turning your way.",
+      dropsNote: 'Pick your way in. The route stays on the record; both come out in the same water.',
+      ctaLabel: 'Choose Your Route',
+    },
+  },
+  {
+    // Raid 5 — coming-soon stub. The escort-fleet admiral guarding the Coffers,
+    // the player's first capital-ship fight (Galleon-tier art). Signature trait:
+    // Decoys (false crit bands on the aim bar) + a phase 2. Full BossRaidConfig +
+    // art + balance land in step 3; comingSoon until then.
+    id: 'coffers_fleet',    type: 'raid',
+    label: 'The Harbour Fleet',
+    flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
+    requiresNode: 'coffers_fork',
+    requiresNavLevel: 40,
+    adminOnly: true,
+    comingSoon: true,
+    detail: {
+      description:
+        "The Coffers' war-fleet, and the admiral who has never lost a ship. His crews fight under false colours: decoy muzzles and feint volleys that leave you guessing which gun is the live one. The biggest hulls you've faced yet, and the first that won't go down in a single push.",
+      dropsNote: 'Coming soon. The harbour fleet is still being drilled.',
+    },
+  },
+  {
+    id: 'quartermaster_turn',    type: 'story',
+    label: 'The Cache Turns',
+    flavor: "You put in at the Quartermaster's Cache to re-arm, the same shady stall that's kitted you out since the coast. This time the keeper's smiling, and the guns behind the counter are pointed your way.",
+    bridge: "The Cache was theirs the whole time. Every blade they sold you was a leash, and the keeper answers to a name you've not heard yet: Don Finleone.",
+    requiresNode: 'coffers_fleet',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "You put in at the Quartermaster's Cache to re-arm. Same stall that's kitted you out since the coast." },
+      { speaker: 'The Quartermaster', text: "Captain. Knew you'd wash up here eventually. They all do." },
+      { speaker: 'The Quartermaster', text: "Every hook, every cannon, every clever little trick. You bought it all off me." },
+      { speaker: 'The Quartermaster', text: "The Cache was never neutral, captain. There's no such thing out here." },
+      { text: "The guns behind the counter swing your way. The shelves you've trusted since the coast were Finndicate all along." },
+      { speaker: 'The Quartermaster', text: "I armed you because they let me. And whatever I sold you, I can take back." },
+    ],
+    detail: {
+      description:
+        "The Quartermaster's Cache, the shady stall that's armed you since the coast, sits in the heart of the Coffers, and the keeper's been expecting you. It was a Finndicate front the whole time. Every piece of kit you bought was a leash, and the merchant who sold it can yank it back. He answers to the don who runs the market, the first time you hear the name: Don Finleone.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment IX", sublabel: "\"The man who arms you and the man who hunts you were always the same man.\"", rarity: 'rare' },
+      ],
+      dropsNote: 'The betrayal at the heart of the Coffers: the shop was theirs, and it names the don above it.',
+      ctaLabel: 'Face the Keeper →',
+      summary: "The Quartermaster's Cache, the stall that armed you since the coast, was a Finndicate front all along. The keeper turned his guns on you, and named the don he answers to: Don Finleone.",
+    },
+  },
+  {
+    // Raid 6 — coming-soon stub. The Quartermaster (chapter finale, Galleon-tier).
+    // Signature trait: Repossession (reclaims one equipped raid item at fight
+    // start) + a phase 2. Full BossRaidConfig + art land in step 3.
+    id: 'the_quartermaster',    type: 'raid',
+    label: 'The Quartermaster',
+    flavor: "The keeper of the Cache fights the way he sells: he opens by taking back a piece of your own kit, then makes you buy your life off him one shot at a time.",
+    requiresNode: 'quartermaster_turn',
+    requiresNavLevel: 48,
+    adminOnly: true,
+    comingSoon: true,
+    detail: {
+      description:
+        "The Quartermaster himself, behind the guns of the market he runs. He fights the way he trades: he opens by repossessing one of the raid items he sold you, leaving you a piece short for the whole fight, then grinds you down and rises again when you think he's beaten. Put him under and the Cache's hold falls open.",
+      dropsNote: 'Coming soon. The keeper is still counting his stock.',
+    },
+  },
+  {
+    id: 'finleone_named',    type: 'story',
+    label: 'The Name Above the Counter',
+    flavor: "The Quartermaster's strongbox spills its ledgers, and every page settles a debt up to one signature. A hammerhead don who runs the Coffers and everything that feeds them: Don Finleone.",
+    bridge: "You have the don's name now. Finleone runs the Coffers, the Caches, the whole drowned market. Chapter's end, and the deepest water is the last that's left.",
+    requiresNode: 'the_quartermaster',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "The Quartermaster's strongbox cracks, and the ledgers spill across the deck." },
+      { text: "Every page settles the same way, every debt running up to one signature." },
+      { text: "A hammerhead don who runs the Coffers and every Cache that feeds them." },
+      { text: "Don Finleone. The head of the Finndicate, as far as any ledger knows." },
+      { text: "Three captains under the water, a market in ruins, and now a name at the top of it." },
+      { text: "Whatever waits past the Coffers answers to him. And so, soon, will you." },
+    ],
+    detail: {
+      description:
+        "The Quartermaster's strongbox spills its ledgers, and every page runs up to one signature: Don Finleone, a hammerhead crime-don who runs the Coffers and every Cache that feeds them. As far as any ledger in the market knows, he is the head of the Finndicate. You have the name at the top now, and the only water left to chase him into is the deepest there is.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment X", sublabel: "\"Every debt in the market runs up to one name. Finleone. The head of the whole Hand.\"", rarity: 'rare' },
+      ],
+      dropsNote: 'The don at the top of the Coffers, named at last. The chapter closes on his shadow.',
+      ctaLabel: 'Read the Ledgers →',
+      summary: "The Quartermaster's ledgers all ran up to one name: Don Finleone, the hammerhead don who runs the Coffers and the whole Finndicate. The chapter closes with the don named and the deep water ahead.",
+    },
+  },
+  {
+    // Chapter III's closing class pick. Gated on the Quartermaster (the boss).
+    // Writes profiles.ship_classes['the_coffers'], stacking with chapters I + II.
+    id: 'chapter_3_class',    type: 'class_pick',
+    label: "Captain's Choice",
+    flavor: "The Coffers in ruins, the Quartermaster under, and a don's name at the top of every ledger. Time to set what your colours mean before the deepest water.",
+    requiresNode: 'the_quartermaster',
+    adminOnly: true,
+    classPick: { chapterId: 'the_coffers' },
+    detail: {
+      description:
+        "You ran the harbour wall, faced the market's fleet, and put the Quartermaster under his own counter. Pick a class for the deep water where Finleone waits. It stays with you for every raid from here on, stacking with the captain you already are.",
+      dropsNote: 'Deepen the class you already sail or branch into a fresh one. Permanent, and the other options are gone for good.',
       ctaLabel: 'Pick a class',
     },
   },
