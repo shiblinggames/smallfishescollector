@@ -88,6 +88,10 @@ export interface RaidMirrorPuzzle {
   walls: { x: number; y: number }[]
   /** Rotatable mirror tiles. */
   mirrors: RaidMirrorTile[]
+  /** "Par" — how many fires the player gets to light the lens. Burning them all
+   *  without a hit resets the mirrors to their start (planning beats guessing).
+   *  Omit for unlimited. */
+  fireBudget?: number
 }
 
 export interface RaidPuzzle {
@@ -1266,21 +1270,25 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 650,
       mirror: {
-        // 7x7. Beam: (0,0)r -> (2,0) fixed-\\ down -> (2,3)\\ right -> (4,3)/ up
-        //   -> (4,1)/ right -> (6,1) lens. Three central mirrors must be set
-        //   right; (1,3)/(4,5) are decoys off the path. Verified non-greedy
-        //   (both orientations keep the beam on the board) via verify-mirror.mjs.
-        cols: 7, rows: 7,
+        // 9x9. Beam: (0,0)r -> (2,0) fixed-\\ down -> (2,4)\\ right -> (5,4)/ up
+        //   -> (5,1)/ right -> (7,1)\\ down -> (7,6)\\ right -> (8,6) lens. FIVE
+        //   central mirrors must be set right; (4,2)/(3,6)/(1,6) are decoys off
+        //   the path. Verified solvable + non-greedy via verify-mirror.mjs.
+        cols: 9, rows: 9,
         source: { x: 0, y: 0, dir: 'right' },
-        target: { x: 6, y: 1 },
-        walls: [{ x: 6, y: 0 }, { x: 0, y: 6 }, { x: 3, y: 5 }, { x: 6, y: 6 }],
+        target: { x: 8, y: 6 },
+        walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 0, y: 5 }],
+        fireBudget: 6,
         mirrors: [
           { x: 2, y: 0, init: '\\', fixed: true },
-          { x: 2, y: 3, init: '/' },
-          { x: 4, y: 3, init: '\\' },
-          { x: 4, y: 1, init: '\\' },
-          { x: 1, y: 3, init: '/' },
-          { x: 4, y: 5, init: '/' },
+          { x: 2, y: 4, init: '/' },
+          { x: 5, y: 4, init: '\\' },
+          { x: 5, y: 1, init: '\\' },
+          { x: 7, y: 1, init: '/' },
+          { x: 7, y: 6, init: '/' },
+          { x: 4, y: 2, init: '/' },
+          { x: 3, y: 6, init: '/' },
+          { x: 1, y: 6, init: '/' },
         ],
       },
       reveal:
@@ -1377,22 +1385,26 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 750,
       mirror: {
-        // 8x8, the chapter's hardest. Beam: (0,0)r -> (2,0) fixed-\\ down
-        //   -> (2,5)\\ right -> (5,5)/ up -> (5,2)/ right -> (6,2)\\ down
-        //   -> (6,6) lens. Four central mirrors must be set right; (3,2)/(1,5)
-        //   are decoys. Verified non-greedy + uniquely pathed via verify-mirror.mjs.
-        cols: 8, rows: 8,
+        // 10x10, the chapter's hardest. Beam: (0,0)r -> (2,0) fixed-\\ down
+        //   -> (2,4)\\ right -> (4,4)/ up -> (4,1)/ right -> (6,1)\\ down
+        //   -> (6,5)\\ right -> (8,5)/ up -> (8,2) lens. SIX central mirrors must
+        //   be set right; (3,7)/(1,6)/(7,3) are decoys. Verified via verify-mirror.mjs.
+        cols: 10, rows: 10,
         source: { x: 0, y: 0, dir: 'right' },
-        target: { x: 6, y: 6 },
-        walls: [{ x: 0, y: 7 }, { x: 7, y: 0 }, { x: 7, y: 7 }, { x: 0, y: 3 }],
+        target: { x: 8, y: 2 },
+        walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 0, y: 6 }],
+        fireBudget: 7,
         mirrors: [
           { x: 2, y: 0, init: '\\', fixed: true },
-          { x: 2, y: 5, init: '/' },
-          { x: 5, y: 5, init: '\\' },
-          { x: 5, y: 2, init: '\\' },
-          { x: 6, y: 2, init: '/' },
-          { x: 3, y: 2, init: '/' },
-          { x: 1, y: 5, init: '\\' },
+          { x: 2, y: 4, init: '/' },
+          { x: 4, y: 4, init: '\\' },
+          { x: 4, y: 1, init: '\\' },
+          { x: 6, y: 1, init: '/' },
+          { x: 6, y: 5, init: '/' },
+          { x: 8, y: 5, init: '\\' },
+          { x: 3, y: 7, init: '/' },
+          { x: 1, y: 6, init: '/' },
+          { x: 7, y: 3, init: '/' },
         ],
       },
       reveal:

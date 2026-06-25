@@ -4,16 +4,17 @@
 // a beam across the grid; the player taps mirror tiles to rotate them between
 // '/' and '\\', bending the beam around walls onto the target lens. The beam is
 // hidden while planning: you commit a layout and tap Fire to test it (no
-// steer-by-sight). When a FIRED beam reaches the lens the puzzle is solved
-// (onSolved → solvePuzzleNode grants the Nav XP). Pure client logic; no server
-// validation (PvE, XP-only).
+// steer-by-sight). You get a limited number of fires (fireBudget) — burn them
+// all without lighting the lens and the mirrors reset, so guessing loses to
+// planning. A FIRED beam that reaches the lens solves it (onSolved →
+// solvePuzzleNode grants Nav XP). Pure client logic; no server validation.
 //
-// NOTE: the beam is drawn instantly on fire — NO per-frame animation (no
-// stroke-dashoffset transition, no rAF) and NO CSS filter. An earlier
-// "beam travels along the path" version pinned the main thread and froze the
-// whole webview on iOS PWA after repeated fires (see feedback_perf_debugging:
-// per-frame animated/filtered SVG is a hard cliff there). Glow is a static wide
-// halo stroke, which is cheap. Keep it this way.
+// ANIMATION SAFETY: the "beam travels along the path" effect is a STAGGERED
+// per-segment OPACITY reveal (each short sub-segment fades in on a delay) — all
+// compositor-cheap. It does NOT animate SVG geometry (stroke-dashoffset/dasharray)
+// or use a CSS filter: an earlier version that did froze the whole iOS PWA
+// webview after repeated fires (see feedback_perf_debugging). The fire budget
+// also bounds how many reveals ever run. Keep it opacity/transform-only.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RaidPuzzle, MirrorOrient, BeamDir } from '@/lib/raidMap'
@@ -39,26 +40,28 @@ function edgePoint(x: number, y: number, d: BeamDir): [number, number] {
 
 const GOLD = '#fbbf24'
 const RED  = '#e2674a'
+const HOT  = '#ffe9b0' // beam colour in flight, before it settles
 
 export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzzle; onSolved: () => void }) {
   const lvl = puzzle.mirror
-  const [orient, setOrient] = useState<Record<string, MirrorOrient>>(() => {
+  const initialOrient = useMemo(() => {
     const o: Record<string, MirrorOrient> = {}
     lvl?.mirrors.forEach(m => { o[`${m.x},${m.y}`] = m.init })
     return o
-  })
+  }, [lvl])
+  const [orient, setOrient] = useState<Record<string, MirrorOrient>>(() => ({ ...initialOrient }))
   const solvedRef = useRef(false)
   // onSolved kept in a ref so the solve effect doesn't depend on its identity —
   // the parent recreates it every render, and depending on it would let a stray
   // re-render's cleanup cancel the pending solve timeout (puzzle never completes).
   const onSolvedRef = useRef(onSolved)
   useEffect(() => { onSolvedRef.current = onSolved })
-  // The beam is hidden while planning. The player commits a layout and taps Fire
-  // to test it; only then is the beam shown. You can't steer by sight.
-  const [revealed, setRevealed] = useState(false)
-  // Bumped each fire ONLY to re-key the one-shot ignite animation so it replays.
-  // No timing logic hangs off this (that's what froze iOS before).
-  const [fireSeq, setFireSeq] = useState(0)
+
+  const [revealed, setRevealed] = useState(false)  // a beam is fired + showing
+  const [fireSeq, setFireSeq]   = useState(0)       // re-keys the travel animation
+  const [arrived, setArrived]   = useState(false)   // beam reached its end
+  const [firesUsed, setFiresUsed] = useState(0)     // toward fireBudget
+  const [failed, setFailed]     = useState(false)   // out of fires → resetting
 
   const wallSet   = useMemo(() => new Set((lvl?.walls ?? []).map(w => `${w.x},${w.y}`)), [lvl])
   const mirrorSet = useMemo(() => new Set((lvl?.mirrors ?? []).map(m => `${m.x},${m.y}`)), [lvl])
@@ -91,11 +94,11 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     return { segs, hit }
   }, [lvl, orient, mirrorSet, wallSet])
 
-  // Beam geometry — polyline points (cell units) + its SVG string. Adaptive CELL
-  // keeps bigger grids on a phone (~300px wide cap).
+  // Beam geometry — polyline points (cell units), pixel length, SVG string.
+  // Adaptive CELL keeps bigger grids on a phone (~300px wide cap).
   const geo = useMemo(() => {
-    if (!lvl) return { CELL: 0, W: 0, H: 0, str: '' }
-    const CELL = Math.min(46, Math.floor(300 / Math.max(lvl.cols, lvl.rows)))
+    if (!lvl) return { CELL: 0, W: 0, H: 0, pts: [] as [number, number][], lenPx: 0, str: '' }
+    const CELL = Math.min(44, Math.floor(320 / Math.max(lvl.cols, lvl.rows)))
     const pts: [number, number][] = []
     for (const s of trace.segs) {
       const inPt  = edgePoint(s.x, s.y, OPP[s.from])
@@ -104,38 +107,87 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       if (pts.length === 0) pts.push(inPt)
       pts.push(ctr, outPt)
     }
+    let lenPx = 0
+    for (let i = 1; i < pts.length; i++) lenPx += Math.hypot((pts[i][0] - pts[i - 1][0]) * CELL, (pts[i][1] - pts[i - 1][1]) * CELL)
     const str = pts.map(([px, py]) => `${px * CELL},${py * CELL}`).join(' ')
-    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, str }
+    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, pts, lenPx, str }
   }, [lvl, trace])
 
-  // Solve resolves only once the player has FIRED a correct layout.
+  // Travel time scales with path length (~0.85px/ms), clamped.
+  const travelMs = Math.min(1100, Math.max(360, Math.round(geo.lenPx / 0.85)))
+  const budget = lvl?.fireBudget ?? null
+
+  // Each fire: let the beam travel, then mark it arrived (lens flare / haptic /
+  // solve / fire-budget check all hang off arrival).
   useEffect(() => {
-    if (revealed && trace.hit && !solvedRef.current) {
-      solvedRef.current = true
-      vibrate([0, 30, 45, 70])
-      const t = setTimeout(() => onSolvedRef.current(), 700) // savor the lit lens
+    if (!revealed) { setArrived(false); return }
+    setArrived(false)
+    const t = setTimeout(() => setArrived(true), travelMs)
+    return () => clearTimeout(t)
+  }, [fireSeq, revealed, travelMs])
+
+  // Arrival outcome: solve on a hit, else (if the fire budget is spent) reset
+  // the mirrors so the player re-plans rather than brute-forcing.
+  useEffect(() => {
+    if (!arrived) return
+    if (trace.hit) {
+      if (!solvedRef.current) {
+        solvedRef.current = true
+        vibrate([0, 30, 45, 70])
+        const t = setTimeout(() => onSolvedRef.current(), 720)
+        return () => clearTimeout(t)
+      }
+      return
+    }
+    vibrate(16)
+    if (budget != null && firesUsed >= budget) {
+      setFailed(true)
+      const t = setTimeout(() => {
+        setOrient({ ...initialOrient })
+        setFiresUsed(0)
+        setRevealed(false)
+        setArrived(false)
+        setFailed(false)
+      }, 1150)
       return () => clearTimeout(t)
     }
-  }, [revealed, trace.hit])
+  }, [arrived, trace.hit, budget, firesUsed, initialOrient])
 
   if (!lvl) return null
   const { cols, rows, source, target } = lvl
   const { CELL, W, H } = geo
-  const solved = revealed && trace.hit
-  const missed = revealed && !trace.hit
-  const beamColor = solved ? GOLD : RED
+  const solved    = arrived && trace.hit
+  const missed    = arrived && !trace.hit && !failed
+  const traveling = revealed && !arrived
+  const locked    = traveling || failed
+  const beamColor = !arrived ? HOT : trace.hit ? GOLD : RED
+  const firesLeft = budget != null ? Math.max(0, budget - firesUsed) : null
+
+  // Pixel sub-segments of the beam, each with a reveal delay proportional to its
+  // distance along the path — this is the "light advances through the maze".
+  const ppts = geo.pts.map(([x, y]) => [x * CELL, y * CELL] as [number, number])
+  const segments: { x1: number; y1: number; x2: number; y2: number; delay: number }[] = []
+  {
+    let acc = 0
+    for (let i = 1; i < ppts.length; i++) {
+      const d = Math.hypot(ppts[i][0] - ppts[i - 1][0], ppts[i][1] - ppts[i - 1][1])
+      segments.push({ x1: ppts[i - 1][0], y1: ppts[i - 1][1], x2: ppts[i][0], y2: ppts[i][1], delay: geo.lenPx > 0 ? (acc / geo.lenPx) * travelMs : 0 })
+      acc += d
+    }
+  }
 
   // Turning any mirror hides the beam again — back to planning, no steer-by-sight.
   function rotate(key: string) {
-    if (solvedRef.current || fixedSet.has(key)) return
+    if (solvedRef.current || locked || fixedSet.has(key)) return
     vibrate(12)
     setRevealed(false)
     setOrient(prev => ({ ...prev, [key]: prev[key] === '/' ? '\\' : '/' }))
   }
 
   function fire() {
-    if (solvedRef.current) return
+    if (solvedRef.current || locked) return
     vibrate(18)
+    setFiresUsed(n => n + 1)
     setFireSeq(s => s + 1)
     setRevealed(true)
   }
@@ -145,7 +197,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       {/* One-shot, compositor-only juice (opacity/transform). NO per-frame SVG
           geometry or filters — that's what froze iOS PWA. See feedback_perf_debugging. */}
       <style>{`
-        @keyframes mrun-ignite { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes mrun-seg { from { opacity: 0 } to { opacity: 1 } }
         @keyframes mrun-lens-pop { 0% { transform: translate(-50%,-50%) scale(0.45); opacity: 0.8 } 100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0 } }
         @keyframes mrun-lens-bounce { 0% { transform: scale(0.7) } 55% { transform: scale(1.2) } 100% { transform: scale(1) } }
       `}</style>
@@ -184,8 +236,6 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                     position: 'relative', width: CELL, height: CELL,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {/* Bright tappable mirrors get a faint disc so they read as
-                        interactive; fixed maze mirrors stay flat + dull. */}
                     {!isFixed && <div style={{ position: 'absolute', width: '70%', height: '70%', borderRadius: '50%', background: 'rgba(205,214,226,0.07)', border: '1px solid rgba(205,214,226,0.14)' }} />}
                     <div style={{
                       width: isFixed ? 4 : 3, height: '70%', borderRadius: 2,
@@ -201,18 +251,29 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             )
           }),
         )}
-        {/* Beam overlay — drawn instantly on fire, but the whole group fades in
-            once (opacity-only ignite, re-keyed per fire). Glow is a static wide
-            halo stroke under the core line (NOT a CSS filter, NOT animated). */}
+        {/* Beam overlay. In flight: staggered per-segment opacity reveal (the
+            light advancing). Arrived: a static halo + core polyline (glow at
+            rest). Neither animates SVG geometry or uses a filter. */}
         <svg width={W} height={H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {revealed && geo.str && (
-            <g key={fireSeq} style={{ animation: 'mrun-ignite 180ms ease-out' }}>
-              <polyline points={geo.str} fill="none" stroke={beamColor} strokeOpacity={0.2}
-                strokeWidth={solved ? 11 : 8} strokeLinejoin="round" strokeLinecap="round" />
-              <polyline points={geo.str} fill="none" stroke={beamColor}
-                strokeOpacity={solved ? 0.95 : 0.82} strokeWidth={solved ? 4 : 2.5}
-                strokeLinejoin="round" strokeLinecap="round" />
-            </g>
+          {revealed && (arrived
+            ? (
+              <>
+                <polyline points={geo.str} fill="none" stroke={beamColor} strokeOpacity={0.2}
+                  strokeWidth={solved ? 11 : 8} strokeLinejoin="round" strokeLinecap="round" />
+                <polyline points={geo.str} fill="none" stroke={beamColor}
+                  strokeOpacity={solved ? 0.95 : 0.82} strokeWidth={solved ? 4 : 2.5}
+                  strokeLinejoin="round" strokeLinecap="round" />
+              </>
+            )
+            : (
+              <g key={fireSeq}>
+                {segments.map((s, i) => (
+                  <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
+                    stroke={beamColor} strokeWidth={3.5} strokeLinecap="round"
+                    style={{ opacity: 0, animation: 'mrun-seg 110ms ease-out forwards', animationDelay: `${s.delay}ms` }} />
+                ))}
+              </g>
+            )
           )}
         </svg>
         {/* Lens flare — a single ring that expands + fades when the beam lands. */}
@@ -226,12 +287,16 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         )}
       </div>
 
-      {/* Fire / status. A miss shows the path it DID take so the player can
-          re-plan, then any mirror turn hides it. */}
+      {/* Status line */}
       <div style={{ minHeight: 18 }}>
         {missed && (
           <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: RED, textAlign: 'center', margin: 0 }}>
             The beam misses the lens. Turn the mirrors and fire again.
+          </p>
+        )}
+        {failed && (
+          <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: RED, textAlign: 'center', margin: 0 }}>
+            Out of fires. The mirrors reset — plan it through.
           </p>
         )}
         {solved && (
@@ -240,18 +305,32 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
           </p>
         )}
       </div>
-      <button onClick={fire} disabled={solved}
+
+      {/* Fire budget pips */}
+      {budget != null && !solved && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: '#7d8694' }}>Fires</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {Array.from({ length: budget }).map((_, i) => {
+              const spent = i >= (firesLeft ?? 0)
+              return <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: spent ? 'rgba(120,130,150,0.22)' : GOLD, boxShadow: spent ? 'none' : `0 0 5px ${GOLD}99`, transition: 'background 0.2s, box-shadow 0.2s' }} />
+            })}
+          </div>
+        </div>
+      )}
+
+      <button onClick={fire} disabled={solved || locked}
         className="font-karla font-700"
         style={{
           padding: '9px 26px', borderRadius: 10, fontSize: '0.82rem', letterSpacing: '0.02em',
-          color: solved ? '#6b7a52' : '#1a1206',
-          background: solved ? 'rgba(120,130,150,0.18)' : `linear-gradient(180deg, ${GOLD} 0%, #e09c1c 100%)`,
-          border: solved ? '1px solid rgba(150,160,180,0.25)' : '1px solid #f6c34a',
-          boxShadow: solved ? 'none' : `0 2px 0 #b87d10, 0 0 14px ${GOLD}66`,
-          cursor: solved ? 'default' : 'pointer',
+          color: (solved || locked) ? '#6b7a52' : '#1a1206',
+          background: (solved || locked) ? 'rgba(120,130,150,0.18)' : `linear-gradient(180deg, ${GOLD} 0%, #e09c1c 100%)`,
+          border: (solved || locked) ? '1px solid rgba(150,160,180,0.25)' : '1px solid #f6c34a',
+          boxShadow: (solved || locked) ? 'none' : `0 2px 0 #b87d10, 0 0 14px ${GOLD}66`,
+          cursor: (solved || locked) ? 'default' : 'pointer',
           transition: 'all 0.15s',
         }}>
-        {solved ? 'Lens Lit' : revealed ? 'Fire Again' : 'Fire the Lantern'}
+        {solved ? 'Lens Lit' : failed ? 'Resetting…' : traveling ? 'Firing…' : revealed ? 'Fire Again' : 'Fire the Lantern'}
       </button>
     </div>
   )

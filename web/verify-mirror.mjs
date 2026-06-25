@@ -40,28 +40,37 @@ function analyze(name, lvl) {
 }
 
 const B = BS
-analyze('coffers_lens (L1)', { cols: 7, rows: 7, source: { x: 0, y: 0, dir: 'right' }, target: { x: 6, y: 1 },
-  walls: [{ x: 6, y: 0 }, { x: 0, y: 6 }, { x: 3, y: 5 }, { x: 6, y: 6 }],
+// LEVEL 1 — 9x9, 5 required non-greedy turns + 1 fixed + 3 decoys.
+// Path: (0,0)r -> (2,0)FIX\ down -> (2,4)\ right -> (5,4)/ up -> (5,1)/ right
+//   -> (7,1)\ down -> (7,6)\ right -> (8,6) target.
+analyze('coffers_lens (L1)', { cols: 9, rows: 9, source: { x: 0, y: 0, dir: 'right' }, target: { x: 8, y: 6 },
+  walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 0, y: 5 }],
   mirrors: [
     { x: 2, y: 0, init: B, fixed: true },
-    { x: 2, y: 3, init: '/' },
-    { x: 4, y: 3, init: B },
-    { x: 4, y: 1, init: B },
-    { x: 1, y: 3, init: '/' },
-    { x: 4, y: 5, init: '/' },
+    { x: 2, y: 4, init: '/' },
+    { x: 5, y: 4, init: B },
+    { x: 5, y: 1, init: B },
+    { x: 7, y: 1, init: '/' },
+    { x: 7, y: 6, init: '/' },
+    { x: 4, y: 2, init: '/' },
+    { x: 3, y: 6, init: '/' },
+    { x: 1, y: 6, init: '/' },
   ] })
 
-// LEVEL 2 (Vault Beam, hardest) — 8x8, 4 required non-greedy turns + decoys.
-// Intended path: (0,0)r -> (2,0)FIX\\ down -> (2,5)\\ right -> (5,5)/ up
-//   -> (5,2)/ right -> (6,2)\\ down -> (6,6) target.
-analyze('coffers_vault_lens (L2)', { cols: 8, rows: 8, source: { x: 0, y: 0, dir: 'right' }, target: { x: 6, y: 6 },
-  walls: [{ x: 0, y: 7 }, { x: 7, y: 0 }, { x: 7, y: 7 }, { x: 0, y: 3 }],
+// LEVEL 2 — 10x10, 6 required non-greedy turns + 1 fixed + 3 decoys.
+// Path: (0,0)r -> (2,0)FIX\ down -> (2,4)\ right -> (4,4)/ up -> (4,1)/ right
+//   -> (6,1)\ down -> (6,5)\ right -> (8,5)/ up -> (8,2) target.
+analyze('coffers_vault_lens (L2)', { cols: 10, rows: 10, source: { x: 0, y: 0, dir: 'right' }, target: { x: 8, y: 2 },
+  walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 0, y: 6 }],
   mirrors: [
     { x: 2, y: 0, init: B, fixed: true },
-    { x: 2, y: 5, init: '/' },
-    { x: 5, y: 5, init: B },
-    { x: 5, y: 2, init: B },
-    { x: 6, y: 2, init: '/' },
-    { x: 3, y: 2, init: '/' },
-    { x: 1, y: 5, init: B },
+    { x: 2, y: 4, init: '/' },
+    { x: 4, y: 4, init: B },
+    { x: 4, y: 1, init: B },
+    { x: 6, y: 1, init: '/' },
+    { x: 6, y: 5, init: '/' },
+    { x: 8, y: 5, init: B },
+    { x: 3, y: 7, init: '/' },
+    { x: 1, y: 6, init: '/' },
+    { x: 7, y: 3, init: '/' },
   ] })
