@@ -220,14 +220,13 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     setFiring(true)
     // Slow travel: ~0.42 px/ms, clamped. One rAF loop, imperative canvas paint.
     const dur = Math.min(1900, Math.max(650, total / 0.42))
-    const tail = geo.CELL * 2.6           // short comet streak — hides the full route
     const start = performance.now()
     cancelRaf()
     const step = (now: number) => {
       const c = canvasRef.current
       if (!c) { rafRef.current = null; finish(hit, used); return }
       const t = total > 0 ? Math.min(1, (now - start) / dur) : 1
-      paintBeam(c, W, H, pts, t * total, HOT, true, tail)
+      paintBeam(c, W, H, pts, t * total, HOT, true)   // full persisting trail
       if (t < 1) rafRef.current = requestAnimationFrame(step)
       else { rafRef.current = null; finish(hit, used, pts) }
     }
