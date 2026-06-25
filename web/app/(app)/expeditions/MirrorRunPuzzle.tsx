@@ -240,7 +240,10 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                     <div style={{
                       width: isFixed ? 4 : 3, height: '70%', borderRadius: 2,
                       background: isFixed ? '#566173' : (solved ? GOLD : '#dbe3ee'),
-                      transform: `rotate(${orient[key] === '/' ? -45 : 45}deg)`,
+                      // CSS rotate is clockwise: +45deg tilts the vertical bar
+                      // into a "/" shape, -45deg into "\". Must match REFLECT so
+                      // the drawn angle agrees with how the beam actually bends.
+                      transform: `rotate(${orient[key] === '/' ? 45 : -45}deg)`,
                       transition: 'transform 0.18s cubic-bezier(.34,1.4,.5,1)',
                       boxShadow: isFixed ? 'none' : '0 0 7px rgba(219,227,238,0.6)',
                       opacity: isFixed ? 0.85 : 1,
