@@ -70,8 +70,12 @@ export type BeamDir = 'up' | 'down' | 'left' | 'right'
 export interface RaidMirrorTile {
   x: number
   y: number
-  /** Orientation the tile STARTS in (the player rotates it from here). */
+  /** Orientation the tile STARTS in (the player rotates it from here). For a
+   *  fixed tile this is its permanent orientation. */
   init: MirrorOrient
+  /** A locked maze mirror the player CANNOT rotate — pure structure the beam
+   *  must be routed around/through. Omit/false = a normal rotatable mirror. */
+  fixed?: boolean
 }
 export interface RaidMirrorPuzzle {
   cols: number
@@ -1262,15 +1266,21 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 650,
       mirror: {
-        cols: 6, rows: 6,
+        // 7x7. Beam: (0,0)r -> (2,0) fixed-\\ down -> (2,3)\\ right -> (4,3)/ up
+        //   -> (4,1)/ right -> (6,1) lens. Three central mirrors must be set
+        //   right; (1,3)/(4,5) are decoys off the path. Verified non-greedy
+        //   (both orientations keep the beam on the board) via verify-mirror.mjs.
+        cols: 7, rows: 7,
         source: { x: 0, y: 0, dir: 'right' },
-        target: { x: 5, y: 5 },
-        walls: [{ x: 0, y: 5 }, { x: 5, y: 0 }, { x: 3, y: 3 }],
+        target: { x: 6, y: 1 },
+        walls: [{ x: 6, y: 0 }, { x: 0, y: 6 }, { x: 3, y: 5 }, { x: 6, y: 6 }],
         mirrors: [
-          { x: 4, y: 0, init: '/' },
-          { x: 4, y: 2, init: '\\' },
-          { x: 1, y: 2, init: '\\' },
-          { x: 1, y: 5, init: '/' },
+          { x: 2, y: 0, init: '\\', fixed: true },
+          { x: 2, y: 3, init: '/' },
+          { x: 4, y: 3, init: '\\' },
+          { x: 4, y: 1, init: '\\' },
+          { x: 1, y: 3, init: '/' },
+          { x: 4, y: 5, init: '/' },
         ],
       },
       reveal:
@@ -1367,15 +1377,22 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 750,
       mirror: {
-        cols: 6, rows: 6,
+        // 8x8, the chapter's hardest. Beam: (0,0)r -> (2,0) fixed-\\ down
+        //   -> (2,5)\\ right -> (5,5)/ up -> (5,2)/ right -> (6,2)\\ down
+        //   -> (6,6) lens. Four central mirrors must be set right; (3,2)/(1,5)
+        //   are decoys. Verified non-greedy + uniquely pathed via verify-mirror.mjs.
+        cols: 8, rows: 8,
         source: { x: 0, y: 0, dir: 'right' },
-        target: { x: 5, y: 1 },
-        walls: [{ x: 5, y: 0 }, { x: 0, y: 3 }, { x: 3, y: 5 }],
+        target: { x: 6, y: 6 },
+        walls: [{ x: 0, y: 7 }, { x: 7, y: 0 }, { x: 7, y: 7 }, { x: 0, y: 3 }],
         mirrors: [
-          { x: 2, y: 0, init: '/' },
-          { x: 2, y: 3, init: '/' },
-          { x: 4, y: 3, init: '\\' },
-          { x: 4, y: 1, init: '\\' },
+          { x: 2, y: 0, init: '\\', fixed: true },
+          { x: 2, y: 5, init: '/' },
+          { x: 5, y: 5, init: '\\' },
+          { x: 5, y: 2, init: '\\' },
+          { x: 6, y: 2, init: '/' },
+          { x: 3, y: 2, init: '/' },
+          { x: 1, y: 5, init: '\\' },
         ],
       },
       reveal:

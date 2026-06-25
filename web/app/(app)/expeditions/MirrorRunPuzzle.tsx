@@ -41,6 +41,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
 
   const wallSet   = useMemo(() => new Set((lvl?.walls ?? []).map(w => `${w.x},${w.y}`)), [lvl])
   const mirrorSet = useMemo(() => new Set((lvl?.mirrors ?? []).map(m => `${m.x},${m.y}`)), [lvl])
+  const fixedSet  = useMemo(() => new Set((lvl?.mirrors ?? []).filter(m => m.fixed).map(m => `${m.x},${m.y}`)), [lvl])
 
   // Trace the beam from the lantern, reflecting off mirrors, until it hits the
   // target (solved), a wall, the grid edge, or loops out (step cap).
@@ -80,12 +81,13 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
 
   if (!lvl) return null
   const { cols, rows, source, target } = lvl
-  const CELL = 46
+  // Adaptive cell size so bigger grids still fit a phone (~300px wide cap).
+  const CELL = Math.min(46, Math.floor(300 / Math.max(cols, rows)))
   const W = cols * CELL, H = rows * CELL
   const solved = trace.hit
 
   function rotate(key: string) {
-    if (solvedRef.current) return
+    if (solvedRef.current || fixedSet.has(key)) return
     vibrate(12)
     setOrient(prev => ({ ...prev, [key]: prev[key] === '/' ? '\\' : '/' }))
   }
@@ -113,16 +115,17 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             const key = `${gx},${gy}`
             const isWall   = wallSet.has(key)
             const isMirror = mirrorSet.has(key)
+            const isFixed  = fixedSet.has(key)
             const isSource = gx === source.x && gy === source.y
             const isTarget = gx === target.x && gy === target.y
             return (
               <div key={key}
-                onClick={isMirror ? () => rotate(key) : undefined}
+                onClick={isMirror && !isFixed ? () => rotate(key) : undefined}
                 style={{
                   position: 'absolute', left: gx * CELL, top: gy * CELL, width: CELL, height: CELL,
                   boxSizing: 'border-box', borderRight: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: isMirror && !solved ? 'pointer' : 'default',
+                  cursor: isMirror && !isFixed && !solved ? 'pointer' : 'default',
                   background: isWall ? 'rgba(120,130,150,0.18)' : 'transparent',
                 }}>
                 {isWall && <div style={{ width: '64%', height: '64%', borderRadius: 5, background: 'rgba(150,160,180,0.32)', border: '1px solid rgba(180,190,210,0.25)' }} />}
@@ -134,12 +137,21 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                 )}
                 {isMirror && (
                   <div style={{
-                    width: 3, height: '74%', borderRadius: 2,
-                    background: solved ? GOLD : '#cdd6e2',
-                    transform: `rotate(${orient[key] === '/' ? -45 : 45}deg)`,
-                    transition: 'transform 0.18s cubic-bezier(.34,1.4,.5,1)',
-                    boxShadow: '0 0 6px rgba(205,214,226,0.5)',
-                  }} />
+                    position: 'relative', width: CELL, height: CELL,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {/* Bright tappable mirrors get a faint disc so they read as
+                        interactive; fixed maze mirrors stay flat + dull. */}
+                    {!isFixed && <div style={{ position: 'absolute', width: '70%', height: '70%', borderRadius: '50%', background: 'rgba(205,214,226,0.07)', border: '1px solid rgba(205,214,226,0.14)' }} />}
+                    <div style={{
+                      width: isFixed ? 4 : 3, height: '70%', borderRadius: 2,
+                      background: isFixed ? '#566173' : (solved ? GOLD : '#dbe3ee'),
+                      transform: `rotate(${orient[key] === '/' ? -45 : 45}deg)`,
+                      transition: 'transform 0.18s cubic-bezier(.34,1.4,.5,1)',
+                      boxShadow: isFixed ? 'none' : '0 0 7px rgba(219,227,238,0.6)',
+                      opacity: isFixed ? 0.85 : 1,
+                    }} />
+                  </div>
                 )}
               </div>
             )
