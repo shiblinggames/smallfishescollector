@@ -1614,6 +1614,11 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         // Same scroll behaviour as the playing phase (see .raid-combat-region)
         // so the Return to Port button is always reachable.
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)',
+        // The region only ever scrolls vertically; overflow-y:auto makes the
+        // browser compute overflow-x to auto too, so any sub-pixel horizontal
+        // bleed shows a stray scrollbar. Pin it off.
+        overflowX: 'hidden',
+        maxWidth: '100%',
       }}>
         <div style={{ width: '100%', flexShrink: 0 }}>
           <NavLevelBar xp={navXP} />
@@ -1653,9 +1658,17 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 clearRecordedRef.current = true
                 recordRaidClear(config.raidId, elapsedMs).catch(() => { clearRecordedRef.current = false })
               }
+              // Cap the wait so a slow/stuck network roundtrip (claimRaidLoot
+              // does getUser + select + update, none with a timeout) can't pin
+              // the player on "Saving…" forever. The claim still completes
+              // server-side; we just route after at most a few seconds. The
+              // player already tapped Return to Port, so routing is expected.
               try {
-                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId)
-                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+                const res = await Promise.race([
+                  claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId),
+                  new Promise<null>(resolve => setTimeout(() => resolve(null), 4000)),
+                ])
+                if (res) window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
               } catch { /* save failed, route anyway */ }
               router.push('/expeditions')
             }}

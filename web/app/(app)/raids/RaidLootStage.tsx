@@ -246,7 +246,7 @@ export default function RaidLootStage(props: Props) {
                     const delta = c.newXP - c.oldXP
                     return (
                       <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, padding: '0.25rem 0' }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: '#f3ede2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.84rem', color: '#f3ede2', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
                         <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: GOLD, flexShrink: 0, whiteSpace: 'nowrap' }}>
                           +{delta.toLocaleString()} XP
                           {c.newLevel > c.oldLevel && <span style={{ color: '#7fd49a' }}> · Lv {c.oldLevel} → {c.newLevel}</span>}
