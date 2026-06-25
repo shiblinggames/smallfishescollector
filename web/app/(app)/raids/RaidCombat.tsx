@@ -5114,14 +5114,19 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
         {decoyPositions.map((pos, i) => (
           <div key={`decoy-${i}`} aria-hidden style={{
             position: 'absolute', top: '3px', bottom: '3px',
-            left: `${pos}%`,
-            width: '4%', background: 'rgba(251,191,36,0.32)', borderRadius: 2,
+            left: `${pos}%`, width: '9%',
             zIndex: 1, pointerEvents: 'none',
             // Each drifts at its own pace + phase so they sweep independently,
-            // sometimes crossing the real (zone-anchored) gold band.
+            // sometimes crossing the real (zone-anchored) target.
             animation: `rc-decoy-drift ${(1.6 + i * 0.5).toFixed(2)}s ease-in-out infinite`,
             animationDelay: `${(i * 0.37).toFixed(2)}s`,
-          }} />
+          }}>
+            {/* A muted copy of the real target — green hit band + gold crit
+                band, dimmer than the live zone — so it reads as another ship
+                you could be firing on, not an obvious overlay. */}
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(74,222,128,0.12)', borderRadius: 3 }} />
+            <div style={{ position: 'absolute', top: 0, bottom: 0, left: '32%', width: '36%', background: 'rgba(251,191,36,0.26)', borderRadius: 2 }} />
+          </div>
         ))}
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
         {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
