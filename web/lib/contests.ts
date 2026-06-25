@@ -16,8 +16,9 @@ export interface ContestBoard {
   statColumn: string
   /** tiebreak column — first to reach the score ranks higher. */
   tiebreakColumn: string
-  /** Target to win. */
-  goal: number
+  /** Target to win, for "first to X" races. Omitted for deadline/leaderboard
+   *  contests (`endsAt`), where the highest score when the clock runs out wins. */
+  goal?: number
   /** Render a raw score for display (e.g. 470.9 -> "470.9m"). */
   unit: string
 }
@@ -38,9 +39,29 @@ export interface ContestDef {
   /** Live standings source. Omitted for contests that are already decided
    *  and need no live leaderboard (just the winner card). */
   board?: ContestBoard
+  /** ISO deadline. When set, this is a "highest score by the deadline" contest
+   *  (not "first to X") — the UI shows a countdown + a ranked board, and the
+   *  winner is resolved by the dev at the deadline (bespoke prize). */
+  endsAt?: string
 }
 
 export const CONTESTS: ContestDef[] = [
+  {
+    id: 'gauntlet_deepest_30d',
+    name: 'The Deepest Descent',
+    tagline: "Davy's Gauntlet drags the bold ever downward. For the next thirty days, haul the Locker deeper than any captain alive — the furthest descent on the board when the clock runs out takes the prize.",
+    goalLabel: 'Deepest Gauntlet run by July 25',
+    prize: 'A free custom item — your own one-of-a-kind cosmetic',
+    prizeCode: 'GAUNTLET-DEEPEST-30D',
+    status: 'active',
+    accent: '#2dd4bf',
+    endsAt: '2026-07-25T23:59:00.000Z',
+    board: {
+      statColumn: 'gauntlet_contest_depth',
+      tiebreakColumn: 'gauntlet_contest_depth_at',
+      unit: '',
+    },
+  },
   {
     id: 'tide_champion',
     name: 'Tide Champion',
@@ -73,6 +94,12 @@ export const CONTESTS: ContestDef[] = [
 export const TIDE_CHAMPION_CONTEST_ID = 'tide_champion'
 export const TIDE_CHAMPION_GOAL_M = 500
 export const TIDE_CHAMPION_PRIZE_CODE = 'TIDE-CHAMPION-500'
+
+/** The Deepest Descent contest — referenced by the standings hook in
+ *  raids/gauntlet/actions (cashOutGauntlet updates gauntlet_contest_depth while
+ *  the clock is running). No atomic winner; the dev resolves it at the deadline. */
+export const GAUNTLET_DEEPEST_CONTEST_ID = 'gauntlet_deepest_30d'
+export const GAUNTLET_DEEPEST_CONTEST_ENDS_AT = '2026-07-25T23:59:00.000Z'
 
 export function formatContestScore(board: ContestBoard, raw: number): string {
   const n = board.unit === 'm' ? (Math.round(raw * 10) / 10) : Math.floor(raw)

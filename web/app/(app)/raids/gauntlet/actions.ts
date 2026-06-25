@@ -17,6 +17,7 @@ import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth } from '@/lib/gauntlet'
 import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
+import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 
 /** Mail the player for each depth-unlock milestone they cross this run. Deepest
  *  only ever climbs, so each milestone fires exactly once. Best-effort. */
@@ -227,7 +228,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_fathoms, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items')
     .eq('id', user.id)
     .single()
 
@@ -289,6 +290,14 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
     ? { gauntlet_best_depth: d, gauntlet_best_depth_ms: runMs, gauntlet_best_depth_at: new Date().toISOString() }
     : {}
 
+  // The Deepest Descent contest — windowed deepest CASHED-OUT depth, only while
+  // the 30-day clock is still running. Frozen automatically once it ends.
+  const contestActive = Date.now() < Date.parse(GAUNTLET_DEEPEST_CONTEST_ENDS_AT)
+  const prevContestDep = (profile.gauntlet_contest_depth as number | null) ?? 0
+  const contestFields = contestActive && d > prevContestDep
+    ? { gauntlet_contest_depth: d, gauntlet_contest_depth_at: new Date().toISOString() }
+    : {}
+
   const [, , crewXP] = await Promise.all([
     admin.from('profiles').update({
       doubloons: newDoubloons,
@@ -299,6 +308,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
       gauntlet_fathoms: newFathoms,
       raid_items: newRaidItems,
       ...bestFields,
+      ...contestFields,
     }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,

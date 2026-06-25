@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import CharacterAvatar from '@/components/CharacterAvatar'
@@ -134,6 +135,7 @@ function ContestCard({ def, view, decided }: { def: ContestDef; view: ContestVie
         </div>
         <p className="font-karla font-700" style={{ fontSize: '0.7rem', color: accent, marginBottom: 6 }}>{def.goalLabel}</p>
         <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', lineHeight: 1.5 }}>{def.tagline}</p>
+        {!decided && def.endsAt && <Countdown endsAt={def.endsAt} accent={accent} />}
       </div>
 
       {/* Body */}
@@ -152,11 +154,13 @@ function ContestCard({ def, view, decided }: { def: ContestDef; view: ContestVie
             <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#7a756c', marginBottom: 9 }}>Leading the chase</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {standings.map(s => (
-                <StandingRow key={s.rank} s={s} accent={accent} def={def} />
+                <StandingRow key={s.rank} s={s} accent={accent} def={def} topScore={standings[0].score} />
               ))}
             </div>
             <p className="font-karla" style={{ fontSize: '0.7rem', color: '#7a756c', marginTop: 11, textAlign: 'center' }}>
-              No champion yet. First to {def.board ? formatContestScore(def.board, def.board.goal) : 'the mark'} takes the prize.
+              {def.endsAt
+                ? 'The deepest run on the board when the clock runs out takes the prize.'
+                : `No champion yet. First to ${def.board?.goal != null ? formatContestScore(def.board, def.board.goal) : 'the mark'} takes the prize.`}
             </p>
           </>
         ) : (
@@ -165,6 +169,36 @@ function ContestCard({ def, view, decided }: { def: ContestDef; view: ContestVie
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+// Deadline strip for "highest by the clock" contests. Static date on the server
+// (avoids a hydration mismatch); the live "N days left" fills in once mounted.
+function Countdown({ endsAt, accent }: { endsAt: string; accent: string }) {
+  const [now, setNow] = useState<number | null>(null)
+  useEffect(() => {
+    setNow(Date.now())
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const end = Date.parse(endsAt)
+  const dateLabel = new Date(end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  let left = `Ends ${dateLabel}`
+  if (now != null) {
+    const ms = Math.max(0, end - now)
+    if (ms <= 0) left = 'Contest closed'
+    else {
+      const days = Math.floor(ms / 86_400_000)
+      const hrs = Math.floor((ms % 86_400_000) / 3_600_000)
+      left = days >= 1 ? `${days} day${days === 1 ? '' : 's'} left` : `${hrs} hr${hrs === 1 ? '' : 's'} left`
+    }
+  }
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 9, padding: '0.28rem 0.62rem', borderRadius: 999, background: `${accent}18`, border: `1px solid ${accent}55` }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+      <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.56rem', color: accent }}>{left}</span>
+      <span className="font-karla font-600" style={{ fontSize: '0.56rem', color: 'rgba(240,237,232,0.45)' }}>· Ends {dateLabel}</span>
     </div>
   )
 }
@@ -191,11 +225,13 @@ function WinnerBanner({ winner }: { winner: NonNullable<ContestView['winner']> }
   )
 }
 
-function StandingRow({ s, accent, def }: { s: ContestStanding; accent: string; def: ContestDef }) {
-  const goal = def.board?.goal ?? 0
+function StandingRow({ s, accent, def, topScore }: { s: ContestStanding; accent: string; def: ContestDef; topScore: number }) {
   const medalColor = MEDAL_COLORS[s.rank - 1] ?? '#9a948a'
-  const pct = goal > 0 ? Math.min(100, (s.score / goal) * 100) : 0
-  const scoreLabel = def.board ? formatContestScore(def.board, s.score) : `${s.score}`
+  // Deadline contests have no fixed goal — scale each bar to the current leader.
+  // "First to X" races scale to the goal.
+  const denom = def.endsAt ? (topScore || 1) : (def.board?.goal ?? 0)
+  const pct = denom > 0 ? Math.min(100, (s.score / denom) * 100) : 0
+  const scoreLabel = def.endsAt ? `Depth ${Math.floor(s.score)}` : (def.board ? formatContestScore(def.board, s.score) : `${s.score}`)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{ fontSize: '1.05rem', width: 22, textAlign: 'center', flexShrink: 0 }}>{MEDALS[s.rank - 1] ?? `${s.rank}`}</span>
