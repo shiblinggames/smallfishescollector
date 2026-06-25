@@ -2,9 +2,18 @@
 
 // Mirror Run — a Zelda-style light-beam dungeon puzzle. A signal-lantern fires
 // a beam across the grid; the player taps mirror tiles to rotate them between
-// '/' and '\\', bending the beam around walls onto the target lens. When the
-// traced beam reaches the lens the puzzle is solved (onSolved → solvePuzzleNode
-// grants the Nav XP). Pure client logic; no server validation (PvE, XP-only).
+// '/' and '\\', bending the beam around walls onto the target lens. The beam is
+// hidden while planning: you commit a layout and tap Fire to test it (no
+// steer-by-sight). When a FIRED beam reaches the lens the puzzle is solved
+// (onSolved → solvePuzzleNode grants the Nav XP). Pure client logic; no server
+// validation (PvE, XP-only).
+//
+// NOTE: the beam is drawn instantly on fire — NO per-frame animation (no
+// stroke-dashoffset transition, no rAF) and NO CSS filter. An earlier
+// "beam travels along the path" version pinned the main thread and froze the
+// whole webview on iOS PWA after repeated fires (see feedback_perf_debugging:
+// per-frame animated/filtered SVG is a hard cliff there). Glow is a static wide
+// halo stroke, which is cheap. Keep it this way.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RaidPuzzle, MirrorOrient, BeamDir } from '@/lib/raidMap'
@@ -29,6 +38,7 @@ function edgePoint(x: number, y: number, d: BeamDir): [number, number] {
 }
 
 const GOLD = '#fbbf24'
+const RED  = '#e2674a'
 
 export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzzle; onSolved: () => void }) {
   const lvl = puzzle.mirror
@@ -43,13 +53,9 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   // re-render's cleanup cancel the pending solve timeout (puzzle never completes).
   const onSolvedRef = useRef(onSolved)
   useEffect(() => { onSolvedRef.current = onSolved })
-  // The beam is hidden while planning. The player commits a layout and taps
-  // Fire to test it; only then is the beam traced + shown. This is the whole
-  // difficulty: you can't steer the beam by sight, you have to plan the path.
+  // The beam is hidden while planning. The player commits a layout and taps Fire
+  // to test it; only then is the beam shown. You can't steer by sight.
   const [revealed, setRevealed] = useState(false)
-  const [fireSeq, setFireSeq]   = useState(0)      // bumps each fire to replay the travel
-  const [drawn, setDrawn]       = useState(false)  // beam dash-draw has kicked off
-  const [arrived, setArrived]   = useState(false)  // beam reached its end (lens or dead end)
 
   const wallSet   = useMemo(() => new Set((lvl?.walls ?? []).map(w => `${w.x},${w.y}`)), [lvl])
   const mirrorSet = useMemo(() => new Set((lvl?.mirrors ?? []).map(m => `${m.x},${m.y}`)), [lvl])
@@ -82,11 +88,10 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     return { segs, hit }
   }, [lvl, orient, mirrorSet, wallSet])
 
-  // Beam geometry — the polyline points (in cell units), its SVG string, and its
-  // total pixel length (drives travel duration + the dash-draw). Adaptive CELL
+  // Beam geometry — polyline points (cell units) + its SVG string. Adaptive CELL
   // keeps bigger grids on a phone (~300px wide cap).
   const geo = useMemo(() => {
-    if (!lvl) return { CELL: 0, W: 0, H: 0, pts: [] as [number, number][], str: '', lenPx: 0 }
+    if (!lvl) return { CELL: 0, W: 0, H: 0, str: '' }
     const CELL = Math.min(46, Math.floor(300 / Math.max(lvl.cols, lvl.rows)))
     const pts: [number, number][] = []
     for (const s of trace.segs) {
@@ -97,78 +102,42 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       pts.push(ctr, outPt)
     }
     const str = pts.map(([px, py]) => `${px * CELL},${py * CELL}`).join(' ')
-    let lenPx = 0
-    for (let i = 1; i < pts.length; i++) lenPx += Math.hypot((pts[i][0] - pts[i - 1][0]) * CELL, (pts[i][1] - pts[i - 1][1]) * CELL)
-    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, pts, str, lenPx }
+    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, str }
   }, [lvl, trace])
 
-  // Beam crawl speed ~0.85px/ms, clamped so short paths still read and long ones
-  // don't drag. This is the whole "it travels" feel.
-  const travelMs = Math.min(820, Math.max(300, Math.round(geo.lenPx / 0.85)))
-
-  // On each fire, dash-draw the beam from the lantern to its end, then mark it
-  // arrived — that lights the lens (or fizzles on a miss) and fires the haptic.
+  // Solve resolves only once the player has FIRED a correct layout.
   useEffect(() => {
-    if (!revealed) { setDrawn(false); setArrived(false); return }
-    setDrawn(false); setArrived(false)
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setDrawn(true)))
-    const t = setTimeout(() => {
-      setArrived(true)
-      vibrate(trace.hit ? [0, 30, 45, 70] : 16)
-    }, travelMs)
-    return () => { cancelAnimationFrame(raf); clearTimeout(t) }
-  }, [fireSeq, revealed, travelMs, trace.hit])
-
-  // Solve resolves only once a FIRED beam has actually reached the lens.
-  useEffect(() => {
-    if (arrived && trace.hit && !solvedRef.current) {
+    if (revealed && trace.hit && !solvedRef.current) {
       solvedRef.current = true
-      const t = setTimeout(() => onSolvedRef.current(), 620) // savor the lit lens before the reveal
+      vibrate([0, 30, 45, 70])
+      const t = setTimeout(() => onSolvedRef.current(), 700) // savor the lit lens
       return () => clearTimeout(t)
     }
-  }, [arrived, trace.hit])
+  }, [revealed, trace.hit])
 
   if (!lvl) return null
   const { cols, rows, source, target } = lvl
   const { CELL, W, H } = geo
-  const solved    = arrived && trace.hit
-  const missed    = arrived && !trace.hit
-  const traveling = revealed && !arrived
-  const btnOff    = solved || traveling
-  // Hot white-gold while in flight; settles gold on a hit, red on a miss.
-  const beamColor = !arrived ? '#ffe9b0' : trace.hit ? GOLD : '#e2674a'
-  // Shared dash-draw style for both beam strokes (halo + core). Transition off
-  // while resetting so a re-fire snaps to hidden, then animates forward.
-  const dashStyle = {
-    strokeDasharray: geo.lenPx || 1,
-    strokeDashoffset: drawn ? 0 : (geo.lenPx || 1),
-    transition: drawn ? `stroke-dashoffset ${travelMs}ms linear` : 'none',
-  } as const
-  // Arrival burst anchor: lens center on a hit, the dead-end edge on a miss.
-  const endPt: [number, number] | null =
-    geo.pts.length === 0 ? null
-    : trace.hit ? [(target.x + 0.5) * CELL, (target.y + 0.5) * CELL]
-    : [geo.pts[geo.pts.length - 1][0] * CELL, geo.pts[geo.pts.length - 1][1] * CELL]
+  const solved = revealed && trace.hit
+  const missed = revealed && !trace.hit
+  const beamColor = solved ? GOLD : RED
 
   // Turning any mirror hides the beam again — back to planning, no steer-by-sight.
   function rotate(key: string) {
-    if (solvedRef.current || traveling || fixedSet.has(key)) return
+    if (solvedRef.current || fixedSet.has(key)) return
     vibrate(12)
     setRevealed(false)
     setOrient(prev => ({ ...prev, [key]: prev[key] === '/' ? '\\' : '/' }))
   }
 
   function fire() {
-    if (solvedRef.current || traveling) return
+    if (solvedRef.current) return
     vibrate(18)
-    setDrawn(false); setArrived(false)
-    setFireSeq(s => s + 1)
     setRevealed(true)
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-      <style>{`@keyframes mrun-burst { 0% { transform: translate(-50%,-50%) scale(0.25); opacity: 0.9 } 70% { opacity: 0.5 } 100% { transform: translate(-50%,-50%) scale(2.3); opacity: 0 } }`}</style>
       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', lineHeight: 1.5 }}>
         Turn the mirrors to plan the beam&apos;s path, then fire the lantern. The beam stays dark until you fire.
       </p>
@@ -197,7 +166,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                   <div style={{ width: '58%', height: '58%', borderRadius: '50%', background: `radial-gradient(circle, ${GOLD} 0%, ${GOLD}66 55%, transparent 75%)`, boxShadow: `0 0 12px ${GOLD}aa` }} />
                 )}
                 {isTarget && (
-                  <div style={{ width: '58%', height: '58%', borderRadius: '50%', border: `2px solid ${solved ? GOLD : '#5a7a9a'}`, background: solved ? `radial-gradient(circle, ${GOLD}cc 0%, transparent 70%)` : 'rgba(90,122,154,0.18)', boxShadow: solved ? `0 0 18px ${GOLD}` : 'none', transition: 'all 0.3s' }} />
+                  <div style={{ width: '58%', height: '58%', borderRadius: '50%', border: `2px solid ${solved ? GOLD : '#5a7a9a'}`, background: solved ? `radial-gradient(circle, ${GOLD}cc 0%, transparent 70%)` : 'rgba(90,122,154,0.18)', boxShadow: solved ? `0 0 18px ${GOLD}` : 'none', transition: 'background 0.25s, box-shadow 0.25s' }} />
                 )}
                 {isMirror && (
                   <div style={{
@@ -221,46 +190,26 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             )
           }),
         )}
-        {/* Beam overlay — fired beam shoots ALONG the path (dash-draw), then
-            settles its colour on arrival. The glow is a WIDE translucent halo
-            stroke underneath the core line, NOT a CSS filter: animating a
-            drop-shadow filter per frame pins the main thread on iOS PWA and
-            eventually hangs the whole webview. Transition is off while resetting
-            so a re-fire snaps to hidden instead of un-drawing backwards. */}
+        {/* Beam overlay — drawn instantly on fire. Glow is a wide translucent
+            halo stroke under the core line (NOT a CSS filter, NOT animated). */}
         <svg width={W} height={H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {revealed && geo.str && (
             <>
-              <polyline
-                points={geo.str} fill="none" stroke={beamColor} strokeOpacity={0.2}
-                strokeWidth={arrived ? (trace.hit ? 11 : 8) : 9}
-                strokeLinejoin="round" strokeLinecap="round" style={dashStyle}
-              />
-              <polyline
-                points={geo.str} fill="none" stroke={beamColor}
-                strokeOpacity={arrived ? (trace.hit ? 0.95 : 0.82) : 0.95}
-                strokeWidth={arrived ? (trace.hit ? 4 : 2.5) : 3}
-                strokeLinejoin="round" strokeLinecap="round" style={dashStyle}
-              />
+              <polyline points={geo.str} fill="none" stroke={beamColor} strokeOpacity={0.2}
+                strokeWidth={solved ? 11 : 8} strokeLinejoin="round" strokeLinecap="round" />
+              <polyline points={geo.str} fill="none" stroke={beamColor}
+                strokeOpacity={solved ? 0.95 : 0.82} strokeWidth={solved ? 4 : 2.5}
+                strokeLinejoin="round" strokeLinecap="round" />
             </>
           )}
         </svg>
-        {/* Arrival burst — gold flare on the lens, red fizzle on a dead end. */}
-        {arrived && endPt && (
-          <div key={fireSeq} style={{
-            position: 'absolute', left: endPt[0], top: endPt[1],
-            width: CELL * 1.1, height: CELL * 1.1, borderRadius: '50%', pointerEvents: 'none',
-            transform: 'translate(-50%, -50%)',
-            background: `radial-gradient(circle, ${trace.hit ? GOLD : '#e2674a'} 0%, transparent 68%)`,
-            animation: 'mrun-burst 560ms ease-out forwards',
-          }} />
-        )}
       </div>
 
-      {/* Fire / status. The beam is dark until fired; a miss shows the path it
-          DID take so the player can re-plan, then any mirror turn hides it. */}
+      {/* Fire / status. A miss shows the path it DID take so the player can
+          re-plan, then any mirror turn hides it. */}
       <div style={{ minHeight: 18 }}>
         {missed && (
-          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#e2674a', textAlign: 'center', margin: 0 }}>
+          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: RED, textAlign: 'center', margin: 0 }}>
             The beam misses the lens. Turn the mirrors and fire again.
           </p>
         )}
@@ -270,18 +219,18 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
           </p>
         )}
       </div>
-      <button onClick={fire} disabled={btnOff}
+      <button onClick={fire} disabled={solved}
         className="font-karla font-700"
         style={{
           padding: '9px 26px', borderRadius: 10, fontSize: '0.82rem', letterSpacing: '0.02em',
-          color: btnOff ? '#6b7a52' : '#1a1206',
-          background: btnOff ? 'rgba(120,130,150,0.18)' : `linear-gradient(180deg, ${GOLD} 0%, #e09c1c 100%)`,
-          border: btnOff ? '1px solid rgba(150,160,180,0.25)' : '1px solid #f6c34a',
-          boxShadow: btnOff ? 'none' : `0 2px 0 #b87d10, 0 0 14px ${GOLD}66`,
-          cursor: btnOff ? 'default' : 'pointer',
+          color: solved ? '#6b7a52' : '#1a1206',
+          background: solved ? 'rgba(120,130,150,0.18)' : `linear-gradient(180deg, ${GOLD} 0%, #e09c1c 100%)`,
+          border: solved ? '1px solid rgba(150,160,180,0.25)' : '1px solid #f6c34a',
+          boxShadow: solved ? 'none' : `0 2px 0 #b87d10, 0 0 14px ${GOLD}66`,
+          cursor: solved ? 'default' : 'pointer',
           transition: 'all 0.15s',
         }}>
-        {solved ? 'Lens Lit' : traveling ? 'Firing…' : revealed ? 'Fire Again' : 'Fire the Lantern'}
+        {solved ? 'Lens Lit' : revealed ? 'Fire Again' : 'Fire the Lantern'}
       </button>
     </div>
   )
