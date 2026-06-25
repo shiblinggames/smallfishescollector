@@ -1459,6 +1459,13 @@ export default function RaidCombat({
     // affect the round it landed on — it always skips the actor's next turn.
     if (enemyFreezePendingRef.current) { enemyFrozenRef.current = true; enemyFreezePendingRef.current = false }
     if (playerFreezePendingRef.current) { playerFrozenRef.current = true; playerFreezePendingRef.current = false }
+    // Round-scoped freeze flags. The per-actor ref above gets CONSUMED when that
+    // actor's turn is skipped, which (with a faster opponent) happens before the
+    // other side fires — so we snapshot "frozen this round" here and use it to
+    // also suppress the frozen side's DODGE (reactive, resolved on the attacker's
+    // shot). A frozen ship can't weave aside no matter the turn order.
+    const enemyFrozenThisRound  = enemyFrozenRef.current
+    const playerFrozenThisRound = playerFrozenRef.current
 
     // Incendiary burn ticks at the top of the turn. It reads the burn set on a
     // PRIOR turn (a burn lit this turn ticks next turn, not now), and a tick
@@ -1712,7 +1719,14 @@ export default function RaidCombat({
         // itself a little. Combined with the dodge cooldown above, this
         // turns dodge into a soft mitigation read instead of a binary.
         let partialDodge = false
-        if (defenderAction === 'dodge') {
+        // A frozen defender can't weave aside — its dodge stance is forfeit this
+        // round (mirrors its skipped turn), so the shot lands clean.
+        const defenderFrozen = isAttackerPlayer ? enemyFrozenThisRound : playerFrozenThisRound
+        if (defenderAction === 'dodge' && defenderFrozen) {
+          stepLines.push(isAttackerPlayer
+            ? `The ${enemy.name} is frozen solid — it can't weave aside.`
+            : `Your ship is frozen solid — you can't weave aside.`)
+        } else if (defenderAction === 'dodge') {
           // Tide dodge effects only help the PLAYER (when the player is the
           // one defending = the enemy is attacking = !isAttackerPlayer).
           const playerDefending = !isAttackerPlayer
