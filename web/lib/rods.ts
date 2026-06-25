@@ -297,17 +297,17 @@ export function isCaptainRod(rod: RodDef): boolean {
 
 // ── YOLO Rod — per-zone jackpot odds ─────────────────────────────────────────
 // The jackpot pays its full ×100 in every zone; the CHANCE is scaled per zone
-// so the expected haul lands ~150k doubloons/hr everywhere instead of spiking
+// so the expected haul lands ~175k doubloons/hr everywhere instead of spiking
 // in the richest zone. Richer zones earn more per catch, so they need a smaller
 // chance to hit the same ceiling (and it kills the old "farm the Abyss to dodge
 // the Ancient Deep cap" loophole). Tuned 2026-06-19 against live fish values +
-// endgame catch rates; retune here if zone values change.
+// endgame catch rates (bumped 150k -> 175k on 2026-06-25); retune if values change.
 export const ZONE_JACKPOT_CHANCE: Record<string, number> = {
-  shallows:     0.172,
-  open_waters:  0.131,
-  deep:         0.087,
-  abyss:        0.042,
-  ancient_deep: 0.013,
+  shallows:     0.203,
+  open_waters:  0.155,
+  deep:         0.103,
+  abyss:        0.050,
+  ancient_deep: 0.015,
 }
 
 // ── TEMP toggle ──────────────────────────────────────────────────────────────
