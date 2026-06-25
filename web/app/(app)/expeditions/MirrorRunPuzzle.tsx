@@ -71,11 +71,15 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   // target (solved), a wall, the grid edge, or loops out (step cap).
   const trace = useMemo(() => {
     const segs: { x: number; y: number; from: BeamDir; to: BeamDir }[] = []
-    if (!lvl) return { segs, hit: false }
-    const { cols, rows, source, target } = lvl
+    if (!lvl) return { segs, hit: false, crossed: new Set<string>() }
+    const { cols, rows, source, targets } = lvl
+    // The beam passes STRAIGHT through lenses (not mirrors) and must cross EVERY
+    // lens. It keeps going until it dies (wall/edge/cap), collecting which
+    // lenses it crossed — solved when all of them are lit in one path.
+    const need = new Set(targets.map(t => `${t.x},${t.y}`))
+    const crossed = new Set<string>()
     let x = source.x, y = source.y
     let dir: BeamDir = source.dir
-    let hit = false
     const cap = cols * rows * 4
     for (let i = 0; i < cap; i++) {
       const key = `${x},${y}`
@@ -83,15 +87,15 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       if (!(i === 0 && x === source.x && y === source.y) && mirrorSet.has(key)) {
         dir = REFLECT[orient[key] ?? '/'][dir]
       }
+      if (need.has(key)) crossed.add(key)
       segs.push({ x, y, from: entry, to: dir })
-      if (x === target.x && y === target.y) { hit = true; break }
       const { dx, dy } = STEP[dir]
       const nx = x + dx, ny = y + dy
       if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) break
       if (wallSet.has(`${nx},${ny}`)) break
       x = nx; y = ny
     }
-    return { segs, hit }
+    return { segs, hit: crossed.size === need.size, crossed }
   }, [lvl, orient, mirrorSet, wallSet])
 
   // Beam geometry — polyline points (cell units), pixel length, SVG string.
@@ -154,7 +158,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   }, [arrived, trace.hit, budget, firesUsed, initialOrient])
 
   if (!lvl) return null
-  const { cols, rows, source, target } = lvl
+  const { cols, rows, source, targets } = lvl
   const { CELL, W, H } = geo
   const solved    = arrived && trace.hit
   const missed    = arrived && !trace.hit && !failed
@@ -162,6 +166,10 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   const locked    = traveling || failed
   const beamColor = !arrived ? HOT : trace.hit ? GOLD : RED
   const firesLeft = budget != null ? Math.max(0, budget - firesUsed) : null
+  const targetSet = new Set(targets.map(t => `${t.x},${t.y}`))
+  // A lens is "lit" once a FIRED beam has reached its end and crossed it (shows
+  // partial progress on a miss too — which lenses you did/didn't catch).
+  const litLens = (key: string) => arrived && trace.crossed.has(key)
 
   // Pixel sub-segments of the beam, each with a reveal delay proportional to its
   // distance along the path — this is the "light advances through the maze".
@@ -202,7 +210,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         @keyframes mrun-lens-bounce { 0% { transform: scale(0.7) } 55% { transform: scale(1.2) } 100% { transform: scale(1) } }
       `}</style>
       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', lineHeight: 1.5 }}>
-        Turn the mirrors to plan the beam&apos;s path, then fire the lantern. The beam stays dark until you fire.
+        Plan one beam path that passes through <b style={{ color: '#c9c2b6' }}>all {targets.length} lenses</b>, then fire the lantern. The beam stays dark until you fire.
       </p>
       <div style={{ position: 'relative', width: W, height: H, borderRadius: 12, overflow: 'hidden', background: '#0a1320', border: '1px solid #1f2e42', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.5)' }}>
         {/* Grid cells */}
@@ -213,7 +221,8 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             const isMirror = mirrorSet.has(key)
             const isFixed  = fixedSet.has(key)
             const isSource = gx === source.x && gy === source.y
-            const isTarget = gx === target.x && gy === target.y
+            const isTarget = targetSet.has(key)
+            const lensLit  = isTarget && litLens(key)
             return (
               <div key={key}
                 onClick={isMirror && !isFixed ? () => rotate(key) : undefined}
@@ -229,7 +238,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                   <div style={{ width: '58%', height: '58%', borderRadius: '50%', background: `radial-gradient(circle, ${GOLD} 0%, ${GOLD}66 55%, transparent 75%)`, boxShadow: `0 0 12px ${GOLD}aa` }} />
                 )}
                 {isTarget && (
-                  <div style={{ width: '58%', height: '58%', borderRadius: '50%', border: `2px solid ${solved ? GOLD : '#5a7a9a'}`, background: solved ? `radial-gradient(circle, ${GOLD}cc 0%, transparent 70%)` : 'rgba(90,122,154,0.18)', boxShadow: solved ? `0 0 22px ${GOLD}` : 'none', transition: 'background 0.25s, box-shadow 0.25s', animation: solved ? 'mrun-lens-bounce 460ms ease-out' : undefined }} />
+                  <div style={{ width: '58%', height: '58%', borderRadius: '50%', border: `2px solid ${lensLit ? GOLD : '#5a7a9a'}`, background: lensLit ? `radial-gradient(circle, ${GOLD}cc 0%, transparent 70%)` : 'rgba(90,122,154,0.18)', boxShadow: lensLit ? `0 0 22px ${GOLD}` : 'none', transition: 'background 0.25s, box-shadow 0.25s', animation: lensLit ? 'mrun-lens-bounce 460ms ease-out' : undefined }} />
                 )}
                 {isMirror && (
                   <div style={{
@@ -279,22 +288,22 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             )
           )}
         </svg>
-        {/* Lens flare — a single ring that expands + fades when the beam lands. */}
-        {solved && (
-          <div style={{
-            position: 'absolute', left: (target.x + 0.5) * CELL, top: (target.y + 0.5) * CELL,
+        {/* Lens flare — a ring that expands + fades from each lens on solve. */}
+        {solved && targets.map((t, i) => (
+          <div key={i} style={{
+            position: 'absolute', left: (t.x + 0.5) * CELL, top: (t.y + 0.5) * CELL,
             width: CELL * 1.3, height: CELL * 1.3, borderRadius: '50%', pointerEvents: 'none',
             border: `2px solid ${GOLD}`, transform: 'translate(-50%, -50%)',
             animation: 'mrun-lens-pop 520ms ease-out forwards',
           }} />
-        )}
+        ))}
       </div>
 
       {/* Status line */}
       <div style={{ minHeight: 18 }}>
         {missed && (
           <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: RED, textAlign: 'center', margin: 0 }}>
-            The beam misses the lens. Turn the mirrors and fire again.
+            Lit {trace.crossed.size} of {targets.length} lenses. Turn the mirrors and fire again.
           </p>
         )}
         {failed && (

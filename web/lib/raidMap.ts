@@ -82,8 +82,10 @@ export interface RaidMirrorPuzzle {
   rows: number
   /** Lantern: cell it sits in + the direction it fires into the grid. */
   source: { x: number; y: number; dir: BeamDir }
-  /** Target lens the beam must reach. */
-  target: { x: number; y: number }
+  /** Lenses the beam must pass through. The beam goes STRAIGHT through a lens
+   *  (it isn't a mirror) and must cross EVERY lens in one fired path to solve.
+   *  Multiple lenses force a threaded route — no single obvious trace. */
+  targets: { x: number; y: number }[]
   /** Solid pillars the beam dies against (also just maze dressing). */
   walls: { x: number; y: number }[]
   /** Rotatable mirror tiles. */
@@ -1270,25 +1272,27 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 650,
       mirror: {
-        // 9x9. Beam: (0,0)r -> (2,0) fixed-\\ down -> (2,4)\\ right -> (5,4)/ up
-        //   -> (5,1)/ right -> (7,1)\\ down -> (7,6)\\ right -> (8,6) lens. FIVE
-        //   central mirrors must be set right; (4,2)/(3,6)/(1,6) are decoys off
-        //   the path. Verified solvable + non-greedy via verify-mirror.mjs.
+        // 9x9, THREE lenses the beam must thread in one path. Solution path:
+        //   (0,0)r -> (2,0) fixed-\\ down [lens 2,2] -> (2,6)\\ right -> (4,6)/ up
+        //   [lens 4,3] -> (4,1)/ right -> (6,1)\\ down -> (6,4)\\ right [lens 7,4].
+        //   FIVE required mirrors; (3,4)/(7,1)/(1,6)/(5,3) are decoys. Verified
+        //   solvable (16 sols, 112 two-lens near-misses) via verify-mirror.mjs.
         cols: 9, rows: 9,
         source: { x: 0, y: 0, dir: 'right' },
-        target: { x: 8, y: 6 },
-        walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 0, y: 5 }],
+        targets: [{ x: 2, y: 2 }, { x: 4, y: 3 }, { x: 7, y: 4 }],
+        walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 7, y: 0 }],
         fireBudget: 6,
         mirrors: [
           { x: 2, y: 0, init: '\\', fixed: true },
-          { x: 2, y: 4, init: '/' },
-          { x: 5, y: 4, init: '\\' },
-          { x: 5, y: 1, init: '\\' },
+          { x: 2, y: 6, init: '/' },
+          { x: 4, y: 6, init: '\\' },
+          { x: 4, y: 1, init: '\\' },
+          { x: 6, y: 1, init: '/' },
+          { x: 6, y: 4, init: '/' },
+          { x: 3, y: 4, init: '/' },
           { x: 7, y: 1, init: '/' },
-          { x: 7, y: 6, init: '/' },
-          { x: 4, y: 2, init: '/' },
-          { x: 3, y: 6, init: '/' },
           { x: 1, y: 6, init: '/' },
+          { x: 5, y: 3, init: '/' },
         ],
       },
       reveal:
@@ -1296,11 +1300,11 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        "The market keeps its harbour-lantern fed through a maze of mirror-tiles set deliberately crooked, so no stranger can light the signal that drops the boom-chain. Turn the mirrors to bend the lantern's beam around the pillars and onto the lens.",
+        "The market keeps its harbour-lantern fed through a maze of mirror-tiles set deliberately crooked, so no stranger can light the signal that drops the boom-chain. Turn the mirrors to bend the lantern's beam around the pillars and through every signal-lens at once.",
       drops: [
         { emoji: '🧭', label: '650 Nav XP', sublabel: 'Lighting the signal sharpens your navigation. No coin in it, just the way through.', rarity: 'rare' },
       ],
-      dropsNote: 'Tap a mirror to turn it. Bend the lantern beam onto the lens. One-time, no cost, no fight.',
+      dropsNote: 'Plan one beam path through all three lenses, then fire. You get a limited number of fires before the mirrors reset. One-time, no cost, no fight.',
     },
   },
   {
@@ -1385,26 +1389,27 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 750,
       mirror: {
-        // 10x10, the chapter's hardest. Beam: (0,0)r -> (2,0) fixed-\\ down
-        //   -> (2,4)\\ right -> (4,4)/ up -> (4,1)/ right -> (6,1)\\ down
-        //   -> (6,5)\\ right -> (8,5)/ up -> (8,2) lens. SIX central mirrors must
-        //   be set right; (3,7)/(1,6)/(7,3) are decoys. Verified via verify-mirror.mjs.
+        // 10x10, the chapter's hardest — THREE lenses, longer snake. Solution:
+        //   (0,0)r -> (2,0) fixed-\\ down [lens 2,2] -> (2,7)\\ right -> (5,7)/ up
+        //   [lens 5,4] -> (5,2)/ right -> (7,2)\\ down -> (7,6)\\ right [lens 8,6].
+        //   FIVE required mirrors; (3,4)/(8,2)/(1,6)/(4,3) are decoys. Verified
+        //   solvable (16 sols, 112 two-lens near-misses) via verify-mirror.mjs.
         cols: 10, rows: 10,
         source: { x: 0, y: 0, dir: 'right' },
-        target: { x: 8, y: 2 },
-        walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 0, y: 6 }],
+        targets: [{ x: 2, y: 2 }, { x: 5, y: 4 }, { x: 8, y: 6 }],
+        walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 0, y: 8 }],
         fireBudget: 7,
         mirrors: [
           { x: 2, y: 0, init: '\\', fixed: true },
-          { x: 2, y: 4, init: '/' },
-          { x: 4, y: 4, init: '\\' },
-          { x: 4, y: 1, init: '\\' },
-          { x: 6, y: 1, init: '/' },
-          { x: 6, y: 5, init: '/' },
-          { x: 8, y: 5, init: '\\' },
-          { x: 3, y: 7, init: '/' },
+          { x: 2, y: 7, init: '/' },
+          { x: 5, y: 7, init: '\\' },
+          { x: 5, y: 2, init: '\\' },
+          { x: 7, y: 2, init: '/' },
+          { x: 7, y: 6, init: '/' },
+          { x: 3, y: 4, init: '/' },
+          { x: 8, y: 2, init: '/' },
           { x: 1, y: 6, init: '/' },
-          { x: 7, y: 3, init: '/' },
+          { x: 4, y: 3, init: '/' },
         ],
       },
       reveal:
@@ -1412,11 +1417,11 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        "The Quartermaster bars his strongroom behind a lock of light, a sunbeam bent down through a row of mirrors he keeps crooked from behind his counter. Turn the mirrors to straighten the beam onto the vault-eye and the bars slide back.",
+        "The Quartermaster bars his strongroom behind a lock of light, a sunbeam bent down through a row of mirrors he keeps crooked from behind his counter. Turn the mirrors to thread the beam through all three vault-eyes at once and the bars slide back.",
       drops: [
         { emoji: '🧭', label: '750 Nav XP', sublabel: "Picking the keeper's light-lock sharpens your navigation. No coin, just the way in.", rarity: 'rare' },
       ],
-      dropsNote: 'Tap a mirror to turn it. Strike the vault-eye with the beam. One-time, no cost, no fight.',
+      dropsNote: 'Plan one beam path through all three lenses, then fire. You get a limited number of fires before the mirrors reset. One-time, no cost, no fight.',
     },
   },
   {
