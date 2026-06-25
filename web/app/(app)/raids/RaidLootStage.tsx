@@ -195,10 +195,6 @@ export default function RaidLootStage(props: Props) {
               <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 5 }}>
                 It went down with the wreck. Crack it open and claim your spoils.
               </p>
-              <button onClick={open} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
-                style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: 'pointer', boxShadow: `0 0 20px ${GOLD}1f` }}>
-                Crack It Open
-              </button>
             </>
           ) : (
             <>
@@ -260,17 +256,26 @@ export default function RaidLootStage(props: Props) {
                   })}
                 </motion.div>
               )}
-
-              <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
-                onPointerDown={() => { if (!claiming) onClaim() }}
-                disabled={claiming}
-                className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
-                style={{ marginTop: 18, width: '100%', padding: '0.95rem', borderRadius: 13, fontSize: '0.9rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}1e, ${GOLD}08)`, border: `1px solid ${GOLD}55`, cursor: claiming ? 'default' : 'pointer', opacity: claiming ? 0.6 : 1 }}>
-                {claiming ? 'Saving…' : 'Return to Port'}
-              </motion.button>
             </>
           )}
         </div>
+      </div>
+
+      {/* Pinned action footer — always reachable without scrolling past the
+          haul + crew-XP list (which can run long with a full crew). */}
+      <div style={{ flexShrink: 0, padding: '0.6rem 0.85rem', borderTop: '1px solid #1f2e42', background: '#04080e' }}>
+        {!opened ? (
+          <button onClick={open} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+            style={{ width: '100%', padding: '0.95rem', borderRadius: 13, fontSize: '1rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: 'pointer', boxShadow: `0 0 20px ${GOLD}1f` }}>
+            Crack It Open
+          </button>
+        ) : (
+          <button onPointerDown={() => { if (!claiming) onClaim() }} disabled={claiming}
+            className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
+            style={{ width: '100%', padding: '0.95rem', borderRadius: 13, fontSize: '0.9rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}1e, ${GOLD}08)`, border: `1px solid ${GOLD}55`, cursor: claiming ? 'default' : 'pointer', opacity: claiming ? 0.6 : 1 }}>
+            {claiming ? 'Saving…' : 'Return to Port'}
+          </button>
+        )}
       </div>
     </div>
   )

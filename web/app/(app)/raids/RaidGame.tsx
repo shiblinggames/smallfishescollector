@@ -1653,9 +1653,16 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 clearRecordedRef.current = true
                 recordRaidClear(config.raidId, elapsedMs).catch(() => { clearRecordedRef.current = false })
               }
+              // Persist the loot, but never let a slow/hung save strand the
+              // player on "Saving…": race the claim against a 6s timeout, then
+              // route either way. The grant persists server-side; /expeditions
+              // reloads the real doubloon total on its own.
               try {
-                const res = await claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId)
-                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
+                await Promise.race([
+                  claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId)
+                    .then(res => window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))),
+                  new Promise(resolve => setTimeout(resolve, 6000)),
+                ])
               } catch { /* save failed, route anyway */ }
               router.push('/expeditions')
             }}

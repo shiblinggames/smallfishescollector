@@ -5067,6 +5067,17 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
           }
         `}</style>
       )}
+      {/* Decoy lure bands drift side to side (the -50% centering is baked into
+          the keyframe so the animation doesn't clobber it) — a moving fake is
+          far more distracting than a static one. */}
+      {decoys > 0 && (
+        <style>{`
+          @keyframes rc-decoy-drift {
+            0%, 100% { transform: translateX(calc(-50% - 18px)); }
+            50%      { transform: translateX(calc(-50% + 18px)); }
+          }
+        `}</style>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexShrink: 0 }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#fbbf24' }}>
@@ -5103,9 +5114,13 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
         {decoyPositions.map((pos, i) => (
           <div key={`decoy-${i}`} aria-hidden style={{
             position: 'absolute', top: '3px', bottom: '3px',
-            left: `${pos}%`, transform: 'translateX(-50%)',
-            width: '4%', background: 'rgba(251,191,36,0.30)', borderRadius: 2,
+            left: `${pos}%`,
+            width: '4%', background: 'rgba(251,191,36,0.32)', borderRadius: 2,
             zIndex: 1, pointerEvents: 'none',
+            // Each drifts at its own pace + phase so they sweep independently,
+            // sometimes crossing the real (zone-anchored) gold band.
+            animation: `rc-decoy-drift ${(1.6 + i * 0.5).toFixed(2)}s ease-in-out infinite`,
+            animationDelay: `${(i * 0.37).toFixed(2)}s`,
           }} />
         ))}
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />

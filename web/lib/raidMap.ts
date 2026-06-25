@@ -1224,6 +1224,64 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    id: 'coffers_run',    type: 'dice',
+    label: 'A Barge Adrift',
+    flavor: "A Finndicate tithe-barge rides at anchor inside the wall, low in the water with the week's takings and her watch ashore drinking the market's wine. How you rob her is down to the bones.",
+    bridge: "The barge is stripped and the harbour fleet has marked you for it. Time to meet the admiral.",
+    requiresNode: 'coffers_fork',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "Just inside the wall a Finndicate tithe-barge sits low at anchor, fat with the week's takings." },
+      { text: "Her watch is ashore drinking the market's wine. She won't sit this quiet for long." },
+      { text: "Pick your play and roll the bones." },
+    ],
+    dice: {
+      bonusPerLevels: 10,
+      maxBonus: 4,
+      options: [
+        {
+          id: 'skim',
+          label: 'Skim the deck',
+          description: "Grab the loose coin off the open deck. Easy, nothing clever.",
+          dc: 8,
+          win: { doubloons: 1000 },
+          miss: { doubloons: 350 },
+          winText: "Clean lift. Your hold's heavier and nobody ashore even stirs.",
+          missText: "A board creaks and you grab what you can before the watch looks up.",
+        },
+        {
+          id: 'ledgers',
+          label: 'Take the ledgers',
+          description: "Leave the coin, take the tithe-ledgers. They name half the market.",
+          dc: 12,
+          win: { navXp: 700, doubloons: 250 },
+          miss: { navXp: 200 },
+          winText: "You come away with the market's books dry and readable. Worth more than the coin out here.",
+          missText: "Half the pages tear loose in the wind. A few names survive.",
+        },
+        {
+          id: 'hold',
+          label: 'Crack the hold',
+          description: "Force the strongroom below before the watch returns. All of it, or none of it.",
+          dc: 16,
+          requiresDoubloons: 500,
+          win: { doubloons: 3000, navXp: 500 },
+          miss: { doubloons: -500 },
+          winText: "The hold gives all at once. You haul up more than the rest of the barge twice over.",
+          missText: "The watch comes back early. You cut the grapples and run, lighter for the trouble.",
+        },
+      ],
+    },
+    detail: {
+      description:
+        "A Finndicate tithe-barge anchored inside the wall, fat with the week's takings and her watch ashore. Pick how you rob her and throw the bones: a d20 plus a little of your Navigation, beat the mark to pull it off. Skim the deck for easy coin, take the ledgers, or force the hold for everything she's got, knowing a bad throw on that one costs you.",
+      dropsNote: 'Pick one approach and roll once. The safe play always pays something; forcing the hold can cost doubloons on a miss, and only opens to a captain who can cover the loss.',
+      ctaLabel: 'Throw the Bones →',
+      summary: "You robbed a Finndicate tithe-barge on a single throw of the bones, and the harbour fleet marked you for it.",
+    },
+  },
+  {
     // Raid 5. The escort-fleet admiral guarding the Coffers — the player's first
     // capital-ship fight (Galleon-tier). Signature: Decoys (false crit bands) +
     // the admiral's phase 2 + tier-2 tides. LIVE config (THE_COFFERS_FLEET), but
@@ -1233,7 +1291,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Harbour Fleet',
     flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
     bridge: "The admiral's fleet is wreckage on the harbour floor, and the way to the market's heart is open. Time to re-arm at the Cache before the last push.",
-    requiresNode: 'coffers_fork',
+    requiresNode: 'coffers_run',
     requiresNavLevel: 40,
     adminOnly: true,
     route: '/raids/coffers-fleet',
@@ -1295,6 +1353,31 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    id: 'coffers_vault',    type: 'puzzle',
+    label: "The Keeper's Lock",
+    flavor: "The Quartermaster bolts himself behind the Cache's vault door, a row of wax cipher dials sunk into the iron. Line them up and the door, and the keeper behind it, are yours.",
+    bridge: "The dials drop into line, the vault door swings, and the Quartermaster is cornered behind his own counter with nowhere left to sell you out.",
+    requiresNode: 'quartermaster_turn',
+    adminOnly: true,
+    puzzle: {
+      kind: 'cipher',
+      dials: 5,
+      positions: 3,
+      scrambleTurns: 10,
+      rewardNavXp: 700,
+      reveal:
+        "The last seal drops into line and the vault door groans open. The Quartermaster is backed against his own strongroom now, guns run out and nowhere left to run.\n\nCorner him.",
+    },
+    detail: {
+      description:
+        "The Quartermaster bolts the Cache's vault behind a row of wax cipher dials, rigged so no single turn gives the code away: turn one dial and the dials beside it turn with it. Line every seal to the brass index at once and the door swings open, with the keeper cornered behind it.",
+      drops: [
+        { emoji: '🧭', label: '700 Nav XP', sublabel: "Cracking the keeper's lock sharpens your navigation. No coin in it, just the way through.", rarity: 'rare' },
+      ],
+      dropsNote: 'Turn the dials to line every seal to the index at once. Each turn also nudges the dials beside it. One-time, no cost, no fight.',
+    },
+  },
+  {
     // Raid 6 — the chapter finale. The Quartermaster (Galleon-tier). Signature:
     // Repossession (reclaims one equipped raid item at fight start) + a phase 2 +
     // tier-2 tides. LIVE config (THE_QUARTERMASTER), adminOnly until tested AND
@@ -1303,7 +1386,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Quartermaster',
     flavor: "The keeper of the Cache fights the way he sells: he opens by taking back a piece of your own kit, then makes you buy your life off him one shot at a time.",
     bridge: "The Quartermaster goes down under his own counter and the Cache's hold falls open, ledgers and all. Every debt in them runs up to one name.",
-    requiresNode: 'quartermaster_turn',
+    requiresNode: 'coffers_vault',
     requiresNavLevel: 48,
     adminOnly: true,
     route: '/raids/quartermaster',
