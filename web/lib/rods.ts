@@ -316,7 +316,7 @@ export const ZONE_JACKPOT_CHANCE: Record<string, number> = {
 // false → live per-zone balance (ZONE_JACKPOT_CHANCE).
 // Flip this one line + redeploy to switch back. Only YOLO-rod owners are
 // affected, and effectively only Yoon has it.
-export const YOLO_FLAT_RATE_TEST = true
+export const YOLO_FLAT_RATE_TEST = false
 
 /** Jackpot chance for a rod in a given zone. 0 unless the rod actually has a
  *  jackpot. Falls back to the rod's flat chance for any unlisted zone. */
