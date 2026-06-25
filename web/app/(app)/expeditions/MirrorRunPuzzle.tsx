@@ -78,6 +78,11 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     // lenses it crossed — solved when all of them are lit in one path.
     const need = new Set(targets.map(t => `${t.x},${t.y}`))
     const crossed = new Set<string>()
+    // Cycle guard: if the beam ever re-enters the same (cell, direction) it's in
+    // a loop and will repeat forever — stop immediately. Without this a looping
+    // layout runs to the full cols*rows*4 cap and emits hundreds of segments,
+    // which can hard-stall the render on that one fire (the intermittent freeze).
+    const seen = new Set<string>()
     let x = source.x, y = source.y
     let dir: BeamDir = source.dir
     const cap = cols * rows * 4
@@ -89,6 +94,9 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       }
       if (need.has(key)) crossed.add(key)
       segs.push({ x, y, from: entry, to: dir })
+      const state = `${x},${y},${dir}`
+      if (seen.has(state)) break
+      seen.add(state)
       const { dx, dy } = STEP[dir]
       const nx = x + dx, ny = y + dy
       if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) break
@@ -101,7 +109,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   // Beam geometry — polyline points (cell units), pixel length, SVG string.
   // Adaptive CELL keeps bigger grids on a phone (~300px wide cap).
   const geo = useMemo(() => {
-    if (!lvl) return { CELL: 0, W: 0, H: 0, pts: [] as [number, number][], lenPx: 0, str: '' }
+    if (!lvl) return { CELL: 0, W: 0, H: 0, corners: [] as [number, number][], lenPx: 0, str: '' }
     const CELL = Math.min(44, Math.floor(320 / Math.max(lvl.cols, lvl.rows)))
     const pts: [number, number][] = []
     for (const s of trace.segs) {
@@ -111,10 +119,22 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       if (pts.length === 0) pts.push(inPt)
       pts.push(ctr, outPt)
     }
+    // Collapse the per-half-cell points down to just the CORNERS (turn points).
+    // The travel animation renders one <line> per straight run instead of one
+    // per sub-segment, so a long/looping path is a handful of lines, not 800.
+    const corners: [number, number][] = []
+    for (const p of pts) {
+      const n = corners.length
+      if (n < 2) { corners.push(p); continue }
+      const a = corners[n - 2], b = corners[n - 1]
+      const collinear = Math.abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) < 1e-6
+      if (collinear) corners[n - 1] = p          // extend the current run
+      else corners.push(p)                        // a real turn
+    }
     let lenPx = 0
-    for (let i = 1; i < pts.length; i++) lenPx += Math.hypot((pts[i][0] - pts[i - 1][0]) * CELL, (pts[i][1] - pts[i - 1][1]) * CELL)
-    const str = pts.map(([px, py]) => `${px * CELL},${py * CELL}`).join(' ')
-    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, pts, lenPx, str }
+    for (let i = 1; i < corners.length; i++) lenPx += Math.hypot((corners[i][0] - corners[i - 1][0]) * CELL, (corners[i][1] - corners[i - 1][1]) * CELL)
+    const str = corners.map(([px, py]) => `${px * CELL},${py * CELL}`).join(' ')
+    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, corners, lenPx, str }
   }, [lvl, trace])
 
   // Travel time scales with path length (~0.85px/ms), clamped.
@@ -171,15 +191,17 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   // partial progress on a miss too — which lenses you did/didn't catch).
   const litLens = (key: string) => arrived && trace.crossed.has(key)
 
-  // Pixel sub-segments of the beam, each with a reveal delay proportional to its
-  // distance along the path — this is the "light advances through the maze".
-  const ppts = geo.pts.map(([x, y]) => [x * CELL, y * CELL] as [number, number])
-  const segments: { x1: number; y1: number; x2: number; y2: number; delay: number }[] = []
+  // One line per straight RUN (corner to corner), each revealed on a delay
+  // proportional to its distance along the path — the "light advances" feel,
+  // but only a handful of elements no matter how long/looping the beam is.
+  const ppts = geo.corners.map(([x, y]) => [x * CELL, y * CELL] as [number, number])
+  const segments: { x1: number; y1: number; x2: number; y2: number; delay: number; dur: number }[] = []
   {
     let acc = 0
     for (let i = 1; i < ppts.length; i++) {
       const d = Math.hypot(ppts[i][0] - ppts[i - 1][0], ppts[i][1] - ppts[i - 1][1])
-      segments.push({ x1: ppts[i - 1][0], y1: ppts[i - 1][1], x2: ppts[i][0], y2: ppts[i][1], delay: geo.lenPx > 0 ? (acc / geo.lenPx) * travelMs : 0 })
+      const frac = geo.lenPx > 0 ? d / geo.lenPx : 0
+      segments.push({ x1: ppts[i - 1][0], y1: ppts[i - 1][1], x2: ppts[i][0], y2: ppts[i][1], delay: geo.lenPx > 0 ? (acc / geo.lenPx) * travelMs : 0, dur: Math.max(70, frac * travelMs) })
       acc += d
     }
   }
@@ -205,7 +227,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
       {/* One-shot, compositor-only juice (opacity/transform). NO per-frame SVG
           geometry or filters — that's what froze iOS PWA. See feedback_perf_debugging. */}
       <style>{`
-        @keyframes mrun-seg { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes mrun-sweep { 0% { opacity: 0 } 32% { opacity: 1 } 60% { opacity: 1 } 100% { opacity: 0 } }
         @keyframes mrun-lens-pop { 0% { transform: translate(-50%,-50%) scale(0.45); opacity: 0.8 } 100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0 } }
         @keyframes mrun-lens-bounce { 0% { transform: scale(0.7) } 55% { transform: scale(1.2) } 100% { transform: scale(1) } }
       `}</style>
@@ -263,26 +285,31 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             )
           }),
         )}
-        {/* Beam overlay. In flight: staggered per-segment opacity reveal (the
-            light advancing). Arrived: a static halo + core polyline (glow at
-            rest). Neither animates SVG geometry or uses a filter. */}
+        {/* Beam overlay. In flight: per-run reveal (the light advancing,
+            corridor by corridor). Arrived: the static beam is drawn ONLY on a
+            solve — on a miss the path vanishes, so you can't fire-and-read your
+            way to the answer; you get only which lenses lit. Opacity-only, no
+            SVG-geometry animation or filter. */}
         <svg width={W} height={H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {revealed && (arrived
-            ? (
+            ? (solved ? (
               <>
-                <polyline points={geo.str} fill="none" stroke={beamColor} strokeOpacity={0.2}
-                  strokeWidth={solved ? 11 : 8} strokeLinejoin="round" strokeLinecap="round" />
-                <polyline points={geo.str} fill="none" stroke={beamColor}
-                  strokeOpacity={solved ? 0.95 : 0.82} strokeWidth={solved ? 4 : 2.5}
+                <polyline points={geo.str} fill="none" stroke={GOLD} strokeOpacity={0.2}
+                  strokeWidth={11} strokeLinejoin="round" strokeLinecap="round" />
+                <polyline points={geo.str} fill="none" stroke={GOLD}
+                  strokeOpacity={0.95} strokeWidth={4}
                   strokeLinejoin="round" strokeLinecap="round" />
               </>
-            )
+            ) : null)
             : (
               <g key={fireSeq}>
+                {/* A sweeping front: each run lights then fades, so the FULL
+                    path is never on screen at once — you can't read the route
+                    off the travel, only watch the light snake through. */}
                 {segments.map((s, i) => (
                   <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
                     stroke={beamColor} strokeWidth={3.5} strokeLinecap="round"
-                    style={{ opacity: 0, animation: 'mrun-seg 110ms ease-out forwards', animationDelay: `${s.delay}ms` }} />
+                    style={{ opacity: 0, animation: `mrun-sweep ${Math.round(s.dur + 340)}ms ease-out`, animationDelay: `${s.delay}ms` }} />
                 ))}
               </g>
             )

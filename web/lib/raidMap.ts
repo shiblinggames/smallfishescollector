@@ -1272,27 +1272,27 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 650,
       mirror: {
-        // 9x9, THREE lenses the beam must thread in one path. Solution path:
-        //   (0,0)r -> (2,0) fixed-\\ down [lens 2,2] -> (2,6)\\ right -> (4,6)/ up
-        //   [lens 4,3] -> (4,1)/ right -> (6,1)\\ down -> (6,4)\\ right [lens 7,4].
-        //   FIVE required mirrors; (3,4)/(7,1)/(1,6)/(5,3) are decoys. Verified
-        //   solvable (16 sols, 112 two-lens near-misses) via verify-mirror.mjs.
+        // 9x9, THREE spread lenses; the route DOUBLES BACK (right, then left,
+        // then right) so there's no obvious staircase to read. Solution:
+        //   (0,0)r -> (5,0) fixed-\\ down -> (5,3)/ LEFT [lens 2,3] -> (1,3)/ down
+        //   -> (1,6)\\ right [lens 4,6] -> (7,6)/ up [lens 7,2] -> dies top.
+        //   FOUR required mirrors; (3,1)/(6,4)/(3,7)/(8,5) are decoys. Verified
+        //   solvable (16 sols, not pre-solved) via verify-mirror.mjs.
         cols: 9, rows: 9,
         source: { x: 0, y: 0, dir: 'right' },
-        targets: [{ x: 2, y: 2 }, { x: 4, y: 3 }, { x: 7, y: 4 }],
-        walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 7, y: 0 }],
+        targets: [{ x: 2, y: 3 }, { x: 4, y: 6 }, { x: 7, y: 2 }],
+        walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 0, y: 7 }],
         fireBudget: 6,
         mirrors: [
-          { x: 2, y: 0, init: '\\', fixed: true },
-          { x: 2, y: 6, init: '/' },
-          { x: 4, y: 6, init: '\\' },
-          { x: 4, y: 1, init: '\\' },
-          { x: 6, y: 1, init: '/' },
-          { x: 6, y: 4, init: '/' },
-          { x: 3, y: 4, init: '/' },
-          { x: 7, y: 1, init: '/' },
+          { x: 5, y: 0, init: '\\', fixed: true },
+          { x: 5, y: 3, init: '\\' },
+          { x: 1, y: 3, init: '\\' },
           { x: 1, y: 6, init: '/' },
-          { x: 5, y: 3, init: '/' },
+          { x: 7, y: 6, init: '\\' },
+          { x: 3, y: 1, init: '/' },
+          { x: 6, y: 4, init: '/' },
+          { x: 3, y: 7, init: '/' },
+          { x: 8, y: 5, init: '/' },
         ],
       },
       reveal:
@@ -1389,27 +1389,27 @@ export const RAID_MAP: RaidNode[] = [
       kind: 'mirror',
       rewardNavXp: 750,
       mirror: {
-        // 10x10, the chapter's hardest — THREE lenses, longer snake. Solution:
-        //   (0,0)r -> (2,0) fixed-\\ down [lens 2,2] -> (2,7)\\ right -> (5,7)/ up
-        //   [lens 5,4] -> (5,2)/ right -> (7,2)\\ down -> (7,6)\\ right [lens 8,6].
-        //   FIVE required mirrors; (3,4)/(8,2)/(1,6)/(4,3) are decoys. Verified
-        //   solvable (16 sols, 112 two-lens near-misses) via verify-mirror.mjs.
+        // 10x10, the chapter's hardest — THREE spread lenses, wide doubling-back
+        // snake. Solution:
+        //   (0,0)r -> (6,0) fixed-\\ down -> (6,4)/ LEFT [lens 3,4] -> (1,4)/ down
+        //   -> (1,7)\\ right [lens 4,7] -> (8,7)/ up [lens 8,3] -> dies top.
+        //   FOUR required mirrors; (3,1)/(6,6)/(4,2)/(9,5) are decoys. Verified
+        //   solvable (16 sols, not pre-solved) via verify-mirror.mjs.
         cols: 10, rows: 10,
         source: { x: 0, y: 0, dir: 'right' },
-        targets: [{ x: 2, y: 2 }, { x: 5, y: 4 }, { x: 8, y: 6 }],
+        targets: [{ x: 3, y: 4 }, { x: 4, y: 7 }, { x: 8, y: 3 }],
         walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 0, y: 8 }],
         fireBudget: 7,
         mirrors: [
-          { x: 2, y: 0, init: '\\', fixed: true },
-          { x: 2, y: 7, init: '/' },
-          { x: 5, y: 7, init: '\\' },
-          { x: 5, y: 2, init: '\\' },
-          { x: 7, y: 2, init: '/' },
-          { x: 7, y: 6, init: '/' },
-          { x: 3, y: 4, init: '/' },
-          { x: 8, y: 2, init: '/' },
-          { x: 1, y: 6, init: '/' },
-          { x: 4, y: 3, init: '/' },
+          { x: 6, y: 0, init: '\\', fixed: true },
+          { x: 6, y: 4, init: '\\' },
+          { x: 1, y: 4, init: '\\' },
+          { x: 1, y: 7, init: '/' },
+          { x: 8, y: 7, init: '\\' },
+          { x: 3, y: 1, init: '/' },
+          { x: 6, y: 6, init: '/' },
+          { x: 4, y: 2, init: '/' },
+          { x: 9, y: 5, init: '/' },
         ],
       },
       reveal:

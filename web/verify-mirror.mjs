@@ -50,40 +50,38 @@ function analyze(name, lvl) {
 }
 
 const B = BS
-// LEVEL 1 — 9x9, 3 LENSES, 5 required turns. Path:
-// (0,0)r -> (2,0)FIX\ down [lens A 2,2] -> (2,6)\ right -> (4,6)/ up [lens B 4,3]
-//   -> (4,1)/ right -> (6,1)\ down -> (6,4)\ right [lens C 7,4] -> dies right.
+// LEVEL 1 — 9x9, 3 SPREAD lenses, route DOUBLES BACK (right, then left, then
+// right). Path: (0,0)r -> (5,0)FIX\ down -> (5,3)/ LEFT [lens A 2,3] -> (1,3)/
+//   down -> (1,6)\ right [lens B 4,6] -> (7,6)/ up [lens C 7,2] -> dies top.
 analyze('coffers_lens (L1)', { cols: 9, rows: 9, source: { x: 0, y: 0, dir: 'right' },
-  targets: [{ x: 2, y: 2 }, { x: 4, y: 3 }, { x: 7, y: 4 }],
-  walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 7, y: 0 }],
+  targets: [{ x: 2, y: 3 }, { x: 4, y: 6 }, { x: 7, y: 2 }],
+  walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 0, y: 7 }],
   mirrors: [
-    { x: 2, y: 0, init: B, fixed: true },
-    { x: 2, y: 6, init: '/' },
-    { x: 4, y: 6, init: B },
-    { x: 4, y: 1, init: B },
-    { x: 6, y: 1, init: '/' },
-    { x: 6, y: 4, init: '/' },
-    { x: 3, y: 4, init: '/' },
-    { x: 7, y: 1, init: '/' },
+    { x: 5, y: 0, init: B, fixed: true },
+    { x: 5, y: 3, init: B },
+    { x: 1, y: 3, init: B },
     { x: 1, y: 6, init: '/' },
-    { x: 5, y: 3, init: '/' },
+    { x: 7, y: 6, init: B },
+    { x: 3, y: 1, init: '/' },
+    { x: 6, y: 4, init: '/' },
+    { x: 3, y: 7, init: '/' },
+    { x: 8, y: 5, init: '/' },
   ] })
 
-// LEVEL 2 — 10x10, 3 LENSES, 5 required turns, longer snake. Path:
-// (0,0)r -> (2,0)FIX\ down [lens A 2,2] -> (2,7)\ right -> (5,7)/ up [lens B 5,4]
-//   -> (5,2)/ right -> (7,2)\ down -> (7,6)\ right [lens C 8,6] -> dies right.
+// LEVEL 2 — 10x10, 3 SPREAD lenses, wide doubling-back snake. Path:
+// (0,0)r -> (6,0)FIX\ down -> (6,4)/ LEFT [lens A 3,4] -> (1,4)/ down
+//   -> (1,7)\ right [lens B 4,7] -> (8,7)/ up [lens C 8,3] -> dies top.
 analyze('coffers_vault_lens (L2)', { cols: 10, rows: 10, source: { x: 0, y: 0, dir: 'right' },
-  targets: [{ x: 2, y: 2 }, { x: 5, y: 4 }, { x: 8, y: 6 }],
+  targets: [{ x: 3, y: 4 }, { x: 4, y: 7 }, { x: 8, y: 3 }],
   walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 0, y: 8 }],
   mirrors: [
-    { x: 2, y: 0, init: B, fixed: true },
-    { x: 2, y: 7, init: '/' },
-    { x: 5, y: 7, init: B },
-    { x: 5, y: 2, init: B },
-    { x: 7, y: 2, init: '/' },
-    { x: 7, y: 6, init: '/' },
-    { x: 3, y: 4, init: '/' },
-    { x: 8, y: 2, init: '/' },
-    { x: 1, y: 6, init: '/' },
-    { x: 4, y: 3, init: '/' },
+    { x: 6, y: 0, init: B, fixed: true },
+    { x: 6, y: 4, init: B },
+    { x: 1, y: 4, init: B },
+    { x: 1, y: 7, init: '/' },
+    { x: 8, y: 7, init: B },
+    { x: 3, y: 1, init: '/' },
+    { x: 6, y: 6, init: '/' },
+    { x: 4, y: 2, init: '/' },
+    { x: 9, y: 5, init: '/' },
   ] })
