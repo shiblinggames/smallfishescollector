@@ -14,6 +14,7 @@ import { repairShip } from '@/app/(app)/raids/actions'
 import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 import CipherDialsPuzzle from './CipherDialsPuzzle'
+import MirrorRunPuzzle from './MirrorRunPuzzle'
 import DiceRollNode from './DiceRollNode'
 import StoryScene from './StoryScene'
 import { getGauntletLeaderboard } from '@/app/(app)/raids/gauntlet/actions'
@@ -1119,7 +1120,9 @@ function NodeDetailSheet({
         {/* Puzzle: beacon-chain (Lights Out) or cipher dials, live when available */}
         {node.type === 'puzzle' && node.puzzle && status === 'available' && !revealed && (
           <div style={{ marginTop: '1.1rem' }}>
-            {node.puzzle.kind === 'cipher'
+            {node.puzzle.kind === 'mirror'
+              ? <MirrorRunPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
+              : node.puzzle.kind === 'cipher'
               ? <CipherDialsPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />
               : <BeaconChainPuzzle puzzle={node.puzzle} onSolved={solvePuzzle} />}
           </div>
@@ -1148,7 +1151,7 @@ function NodeDetailSheet({
             boxShadow: `0 0 20px ${accent}22`, padding: '1.1rem 1rem',
           }}>
             <p className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.62rem', color: accent, marginBottom: '0.6rem', textAlign: 'center' }}>
-              {node.puzzle.kind === 'cipher' ? 'The Cipher Reads True' : 'The Network Reads True'}
+              {node.puzzle.kind === 'cipher' ? 'The Cipher Reads True' : node.puzzle.kind === 'mirror' ? 'The Beam Strikes True' : 'The Network Reads True'}
             </p>
             <p className="font-karla" style={{ fontSize: '0.84rem', lineHeight: 1.6, color: 'rgba(240,237,232,0.8)', whiteSpace: 'pre-line', textAlign: 'center' }}>
               {node.puzzle.reveal}

@@ -60,12 +60,38 @@ export function isCombatNode(t: RaidNodeType): boolean {
 // answer to leak, so the solve is checked client-side and the server just records
 // completion + pays the reward (same trust level as the "mark story read" nodes).
 // Difficulty knobs = grid size + scrambleTaps.
+// ── Mirror Run (a Zelda-style light-beam puzzle) ─────────────────────────────
+// A signal-lantern fires a beam across a grid; the player rotates mirror tiles
+// (each toggles between '/' and '\\') to bend the beam around walls onto the
+// target lens. Solved client-side (the beam trace detects the hit); reuses
+// solvePuzzleNode to grant the Nav XP, like the other puzzle kinds.
+export type MirrorOrient = '/' | '\\'
+export type BeamDir = 'up' | 'down' | 'left' | 'right'
+export interface RaidMirrorTile {
+  x: number
+  y: number
+  /** Orientation the tile STARTS in (the player rotates it from here). */
+  init: MirrorOrient
+}
+export interface RaidMirrorPuzzle {
+  cols: number
+  rows: number
+  /** Lantern: cell it sits in + the direction it fires into the grid. */
+  source: { x: number; y: number; dir: BeamDir }
+  /** Target lens the beam must reach. */
+  target: { x: number; y: number }
+  /** Solid pillars the beam dies against (also just maze dressing). */
+  walls: { x: number; y: number }[]
+  /** Rotatable mirror tiles. */
+  mirrors: RaidMirrorTile[]
+}
+
 export interface RaidPuzzle {
   /** Which puzzle engine renders this node. 'beacon' = Lights Out (default,
    *  back-compat for the existing smuggler's-chart node). 'cipher' = the
    *  coupled wax dials (turn one, its neighbours turn too; line every seal
-   *  to the index at once). */
-  kind?: 'beacon' | 'cipher'
+   *  to the index at once). 'mirror' = the light-beam redirection grid. */
+  kind?: 'beacon' | 'cipher' | 'mirror'
   /** beacon: grid columns. */
   cols?: number
   /** beacon: grid rows. */
@@ -78,6 +104,8 @@ export interface RaidPuzzle {
   positions?: number
   /** cipher: random turns applied from the aligned board to scramble it. */
   scrambleTurns?: number
+  /** mirror: the light-beam grid layout. */
+  mirror?: RaidMirrorPuzzle
   /** Nav XP granted on solve (no doubloons — this is a navigation discovery). */
   rewardNavXp: number
   /** Story payoff shown the moment the puzzle resolves: where the freight runs,
@@ -1224,6 +1252,40 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    id: 'coffers_lens',    type: 'puzzle',
+    label: 'The Signal Maze',
+    flavor: "The way past the harbour wall is to light the smugglers' own signal-lens, and the lantern that feeds it fires its beam through a maze of mirrors the market keeps deliberately crooked.",
+    bridge: "The lens flares green and the boom-chain drops into the water. The harbour fleet is dead ahead now.",
+    requiresNode: 'coffers_fork',
+    adminOnly: true,
+    puzzle: {
+      kind: 'mirror',
+      rewardNavXp: 650,
+      mirror: {
+        cols: 6, rows: 6,
+        source: { x: 0, y: 0, dir: 'right' },
+        target: { x: 5, y: 5 },
+        walls: [{ x: 0, y: 5 }, { x: 5, y: 0 }, { x: 3, y: 3 }],
+        mirrors: [
+          { x: 4, y: 0, init: '/' },
+          { x: 4, y: 2, init: '\\' },
+          { x: 1, y: 2, init: '\\' },
+          { x: 1, y: 5, init: '/' },
+        ],
+      },
+      reveal:
+        "The beam lands true on the lens and the whole signal flares green. Out past the wall, the harbour boom-chain groans down into the water.\n\nThe way in is open. The fleet is waiting.",
+    },
+    detail: {
+      description:
+        "The market keeps its harbour-lantern fed through a maze of mirror-tiles set deliberately crooked, so no stranger can light the signal that drops the boom-chain. Turn the mirrors to bend the lantern's beam around the pillars and onto the lens.",
+      drops: [
+        { emoji: '🧭', label: '650 Nav XP', sublabel: 'Lighting the signal sharpens your navigation. No coin in it, just the way through.', rarity: 'rare' },
+      ],
+      dropsNote: 'Tap a mirror to turn it. Bend the lantern beam onto the lens. One-time, no cost, no fight.',
+    },
+  },
+  {
     // Raid 5. The escort-fleet admiral guarding the Coffers — the player's first
     // capital-ship fight (Galleon-tier). Signature: Decoys (false crit bands) +
     // the admiral's phase 2 + tier-2 tides. LIVE config (THE_COFFERS_FLEET), but
@@ -1233,7 +1295,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Harbour Fleet',
     flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
     bridge: "The admiral's fleet is wreckage on the harbour floor, and the way to the market's heart is open. Time to re-arm at the Cache before the last push.",
-    requiresNode: 'coffers_fork',
+    requiresNode: 'coffers_lens',
     requiresNavLevel: 40,
     adminOnly: true,
     route: '/raids/coffers-fleet',
@@ -1295,6 +1357,40 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    id: 'coffers_vault_lens',    type: 'puzzle',
+    label: 'The Vault Beam',
+    flavor: "The Quartermaster's strongroom answers to a lock of light: a sunbeam channelled down through the market's roof, off a row of mirrors he can crook from behind his counter. Straighten them and the vault opens.",
+    bridge: "The beam strikes the vault-eye and the strongroom bars grind back. The keeper is cornered behind them now.",
+    requiresNode: 'quartermaster_turn',
+    adminOnly: true,
+    puzzle: {
+      kind: 'mirror',
+      rewardNavXp: 750,
+      mirror: {
+        cols: 6, rows: 6,
+        source: { x: 0, y: 0, dir: 'right' },
+        target: { x: 5, y: 1 },
+        walls: [{ x: 5, y: 0 }, { x: 0, y: 3 }, { x: 3, y: 5 }],
+        mirrors: [
+          { x: 2, y: 0, init: '/' },
+          { x: 2, y: 3, init: '/' },
+          { x: 4, y: 3, init: '\\' },
+          { x: 4, y: 1, init: '\\' },
+        ],
+      },
+      reveal:
+        "The beam threads the last mirror and strikes the vault-eye dead centre. Deep in the iron, the strongroom bars grind back.\n\nThe Quartermaster's behind them, cornered, with nowhere left to run.",
+    },
+    detail: {
+      description:
+        "The Quartermaster bars his strongroom behind a lock of light, a sunbeam bent down through a row of mirrors he keeps crooked from behind his counter. Turn the mirrors to straighten the beam onto the vault-eye and the bars slide back.",
+      drops: [
+        { emoji: '🧭', label: '750 Nav XP', sublabel: "Picking the keeper's light-lock sharpens your navigation. No coin, just the way in.", rarity: 'rare' },
+      ],
+      dropsNote: 'Tap a mirror to turn it. Strike the vault-eye with the beam. One-time, no cost, no fight.',
+    },
+  },
+  {
     // Raid 6 — the chapter finale. The Quartermaster (Galleon-tier). Signature:
     // Repossession (reclaims one equipped raid item at fight start) + a phase 2 +
     // tier-2 tides. LIVE config (THE_QUARTERMASTER), adminOnly until tested AND
@@ -1303,7 +1399,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Quartermaster',
     flavor: "The keeper of the Cache fights the way he sells: he opens by taking back a piece of your own kit, then makes you buy your life off him one shot at a time.",
     bridge: "The Quartermaster goes down under his own counter and the Cache's hold falls open, ledgers and all. Every debt in them runs up to one name.",
-    requiresNode: 'quartermaster_turn',
+    requiresNode: 'coffers_vault_lens',
     requiresNavLevel: 48,
     adminOnly: true,
     route: '/raids/quartermaster',
