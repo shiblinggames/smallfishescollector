@@ -106,7 +106,7 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('casino_chips, casino_session_buy_ins, slots_session_net, username, is_admin')
+    .select('casino_chips, casino_session_buy_ins, slots_session_net, username, is_admin, slots_force_next')
     .eq('id', user.id)
     .single()
   if (!profile) return { error: 'Profile not found' }
@@ -116,7 +116,15 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
   // a catfish triple pays them a normal big win instead, pot left intact.
   const isAdmin = (profile as { is_admin?: boolean | null }).is_admin === true
 
-  const reels = slotRollReels()
+  // One-time forced outcome (admin rig/gift): if profiles.slots_force_next holds
+  // a valid symbol, THIS spin lands that symbol as a triple, then the flag is
+  // cleared in the persist below. Otherwise a normal random roll.
+  const forcedSym = (profile as { slots_force_next?: string | null }).slots_force_next ?? null
+  const FORCEABLE = new Set<string>(['common', 'rare', 'legendary', 'catfish', 'anchor'])
+  const isForced = forcedSym !== null && FORCEABLE.has(forcedSym)
+  const reels: SlotSymbolId[] = isForced
+    ? [forcedSym as SlotSymbolId, forcedSym as SlotSymbolId, forcedSym as SlotSymbolId]
+    : slotRollReels()
   const [a, b, c] = reels
   const allSame = a === b && b === c
   const hookCount = reels.filter(r => r === 'anchor').length
@@ -234,6 +242,8 @@ export async function spinSlots(wager: number): Promise<SlotSpinResult | { error
     admin.from('profiles').update({
       casino_chips: newChips,
       slots_session_net: newSessionNet,
+      // Consume the one-time forced-spin override so it only fires once.
+      ...(isForced ? { slots_force_next: null } : {}),
       ...(busted ? { casino_session_buy_ins: 0, blackjack_session_net: 0, roulette_session_net: 0 } : {}),
     }).eq('id', user.id),
     admin.from('slot_spins').insert({ user_id: user.id, wager, reels, outcome, payout }),
