@@ -56,6 +56,9 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   // The beam is hidden while planning. The player commits a layout and taps Fire
   // to test it; only then is the beam shown. You can't steer by sight.
   const [revealed, setRevealed] = useState(false)
+  // Bumped each fire ONLY to re-key the one-shot ignite animation so it replays.
+  // No timing logic hangs off this (that's what froze iOS before).
+  const [fireSeq, setFireSeq] = useState(0)
 
   const wallSet   = useMemo(() => new Set((lvl?.walls ?? []).map(w => `${w.x},${w.y}`)), [lvl])
   const mirrorSet = useMemo(() => new Set((lvl?.mirrors ?? []).map(m => `${m.x},${m.y}`)), [lvl])
@@ -133,11 +136,19 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   function fire() {
     if (solvedRef.current) return
     vibrate(18)
+    setFireSeq(s => s + 1)
     setRevealed(true)
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      {/* One-shot, compositor-only juice (opacity/transform). NO per-frame SVG
+          geometry or filters — that's what froze iOS PWA. See feedback_perf_debugging. */}
+      <style>{`
+        @keyframes mrun-ignite { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes mrun-lens-pop { 0% { transform: translate(-50%,-50%) scale(0.45); opacity: 0.8 } 100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0 } }
+        @keyframes mrun-lens-bounce { 0% { transform: scale(0.7) } 55% { transform: scale(1.2) } 100% { transform: scale(1) } }
+      `}</style>
       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', lineHeight: 1.5 }}>
         Turn the mirrors to plan the beam&apos;s path, then fire the lantern. The beam stays dark until you fire.
       </p>
@@ -166,7 +177,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                   <div style={{ width: '58%', height: '58%', borderRadius: '50%', background: `radial-gradient(circle, ${GOLD} 0%, ${GOLD}66 55%, transparent 75%)`, boxShadow: `0 0 12px ${GOLD}aa` }} />
                 )}
                 {isTarget && (
-                  <div style={{ width: '58%', height: '58%', borderRadius: '50%', border: `2px solid ${solved ? GOLD : '#5a7a9a'}`, background: solved ? `radial-gradient(circle, ${GOLD}cc 0%, transparent 70%)` : 'rgba(90,122,154,0.18)', boxShadow: solved ? `0 0 18px ${GOLD}` : 'none', transition: 'background 0.25s, box-shadow 0.25s' }} />
+                  <div style={{ width: '58%', height: '58%', borderRadius: '50%', border: `2px solid ${solved ? GOLD : '#5a7a9a'}`, background: solved ? `radial-gradient(circle, ${GOLD}cc 0%, transparent 70%)` : 'rgba(90,122,154,0.18)', boxShadow: solved ? `0 0 22px ${GOLD}` : 'none', transition: 'background 0.25s, box-shadow 0.25s', animation: solved ? 'mrun-lens-bounce 460ms ease-out' : undefined }} />
                 )}
                 {isMirror && (
                   <div style={{
@@ -190,19 +201,29 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             )
           }),
         )}
-        {/* Beam overlay — drawn instantly on fire. Glow is a wide translucent
+        {/* Beam overlay — drawn instantly on fire, but the whole group fades in
+            once (opacity-only ignite, re-keyed per fire). Glow is a static wide
             halo stroke under the core line (NOT a CSS filter, NOT animated). */}
         <svg width={W} height={H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {revealed && geo.str && (
-            <>
+            <g key={fireSeq} style={{ animation: 'mrun-ignite 180ms ease-out' }}>
               <polyline points={geo.str} fill="none" stroke={beamColor} strokeOpacity={0.2}
                 strokeWidth={solved ? 11 : 8} strokeLinejoin="round" strokeLinecap="round" />
               <polyline points={geo.str} fill="none" stroke={beamColor}
                 strokeOpacity={solved ? 0.95 : 0.82} strokeWidth={solved ? 4 : 2.5}
                 strokeLinejoin="round" strokeLinecap="round" />
-            </>
+            </g>
           )}
         </svg>
+        {/* Lens flare — a single ring that expands + fades when the beam lands. */}
+        {solved && (
+          <div style={{
+            position: 'absolute', left: (target.x + 0.5) * CELL, top: (target.y + 0.5) * CELL,
+            width: CELL * 1.3, height: CELL * 1.3, borderRadius: '50%', pointerEvents: 'none',
+            border: `2px solid ${GOLD}`, transform: 'translate(-50%, -50%)',
+            animation: 'mrun-lens-pop 520ms ease-out forwards',
+          }} />
+        )}
       </div>
 
       {/* Fire / status. A miss shows the path it DID take so the player can
