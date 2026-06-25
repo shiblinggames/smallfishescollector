@@ -38,6 +38,11 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     return o
   })
   const solvedRef = useRef(false)
+  // onSolved kept in a ref so the solve effect doesn't depend on its identity —
+  // the parent recreates it every render, and depending on it would let a stray
+  // re-render's cleanup cancel the pending solve timeout (puzzle never completes).
+  const onSolvedRef = useRef(onSolved)
+  useEffect(() => { onSolvedRef.current = onSolved })
   // The beam is hidden while planning. The player commits a layout and taps
   // Fire to test it; only then is the beam traced + shown. This is the whole
   // difficulty: you can't steer the beam by sight, you have to plan the path.
@@ -118,10 +123,10 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   useEffect(() => {
     if (arrived && trace.hit && !solvedRef.current) {
       solvedRef.current = true
-      const t = setTimeout(onSolved, 620) // savor the lit lens before the reveal
+      const t = setTimeout(() => onSolvedRef.current(), 620) // savor the lit lens before the reveal
       return () => clearTimeout(t)
     }
-  }, [arrived, trace.hit, onSolved])
+  }, [arrived, trace.hit])
 
   if (!lvl) return null
   const { cols, rows, source, target } = lvl
@@ -132,6 +137,13 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   const btnOff    = solved || traveling
   // Hot white-gold while in flight; settles gold on a hit, red on a miss.
   const beamColor = !arrived ? '#ffe9b0' : trace.hit ? GOLD : '#e2674a'
+  // Shared dash-draw style for both beam strokes (halo + core). Transition off
+  // while resetting so a re-fire snaps to hidden, then animates forward.
+  const dashStyle = {
+    strokeDasharray: geo.lenPx || 1,
+    strokeDashoffset: drawn ? 0 : (geo.lenPx || 1),
+    transition: drawn ? `stroke-dashoffset ${travelMs}ms linear` : 'none',
+  } as const
   // Arrival burst anchor: lens center on a hit, the dead-end edge on a miss.
   const endPt: [number, number] | null =
     geo.pts.length === 0 ? null
@@ -210,23 +222,26 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
           }),
         )}
         {/* Beam overlay — fired beam shoots ALONG the path (dash-draw), then
-            settles its colour on arrival. Transition is off while resetting so
-            a re-fire snaps to hidden instead of un-drawing backwards. */}
+            settles its colour on arrival. The glow is a WIDE translucent halo
+            stroke underneath the core line, NOT a CSS filter: animating a
+            drop-shadow filter per frame pins the main thread on iOS PWA and
+            eventually hangs the whole webview. Transition is off while resetting
+            so a re-fire snaps to hidden instead of un-drawing backwards. */}
         <svg width={W} height={H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {revealed && geo.str && (
-            <polyline
-              points={geo.str} fill="none"
-              stroke={beamColor}
-              strokeOpacity={arrived ? (trace.hit ? 0.95 : 0.8) : 0.95}
-              strokeWidth={arrived ? (trace.hit ? 5 : 3) : 3.5}
-              strokeLinejoin="round" strokeLinecap="round"
-              style={{
-                strokeDasharray: geo.lenPx || 1,
-                strokeDashoffset: drawn ? 0 : (geo.lenPx || 1),
-                transition: drawn ? `stroke-dashoffset ${travelMs}ms linear` : 'none',
-                filter: `drop-shadow(0 0 ${arrived && trace.hit ? 7 : 4}px ${beamColor})`,
-              }}
-            />
+            <>
+              <polyline
+                points={geo.str} fill="none" stroke={beamColor} strokeOpacity={0.2}
+                strokeWidth={arrived ? (trace.hit ? 11 : 8) : 9}
+                strokeLinejoin="round" strokeLinecap="round" style={dashStyle}
+              />
+              <polyline
+                points={geo.str} fill="none" stroke={beamColor}
+                strokeOpacity={arrived ? (trace.hit ? 0.95 : 0.82) : 0.95}
+                strokeWidth={arrived ? (trace.hit ? 4 : 2.5) : 3}
+                strokeLinejoin="round" strokeLinecap="round" style={dashStyle}
+              />
+            </>
           )}
         </svg>
         {/* Arrival burst — gold flare on the lens, red fizzle on a dead end. */}
