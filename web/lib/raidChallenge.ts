@@ -11,7 +11,7 @@
 // raid_id so completions track in their own bucket on the leaderboard.
 // PHASE 2: elite enemy variants + the affix system. PHASE 3: boss phases.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
 
 /** Multipliers applied by buildChallengeRaid. Tweak here, not per-raid. */
 export const CHALLENGE_MODS = {
@@ -306,3 +306,11 @@ const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
 
 export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_TOLLMASTER, TOLLMASTER_CHALLENGE_LOOT)
+
+// The Harbour Fleet's challenge — Chapter III, Raid 5. The admiral's normal
+// phase 2 carries through scaleEnemy automatically (it spreads ...e), so the
+// challenge flagship still drops the false colours at half HP. Loot is the
+// scaffold's currency-only table; scaleLoot bumps the gem rows. Real loot +
+// override land in step 4.
+export const THE_COFFERS_FLEET_CHALLENGE: BossRaidConfig =
+  buildChallengeRaid(THE_COFFERS_FLEET)

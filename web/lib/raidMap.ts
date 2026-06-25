@@ -10,8 +10,8 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -1224,21 +1224,47 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Raid 5 — coming-soon stub. The escort-fleet admiral guarding the Coffers,
-    // the player's first capital-ship fight (Galleon-tier art). Signature trait:
-    // Decoys (false crit bands on the aim bar) + a phase 2. Full BossRaidConfig +
-    // art + balance land in step 3; comingSoon until then.
+    // Raid 5. The escort-fleet admiral guarding the Coffers — the player's first
+    // capital-ship fight (Galleon-tier). Signature: Decoys (false crit bands) +
+    // the admiral's phase 2 + tier-2 tides. LIVE config (THE_COFFERS_FLEET), but
+    // adminOnly until tested AND the route page guards is_admin. Names/art are
+    // placeholders pending step 4.
     id: 'coffers_fleet',    type: 'raid',
     label: 'The Harbour Fleet',
     flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
+    bridge: "The admiral's fleet is wreckage on the harbour floor, and the way to the market's heart is open. Time to re-arm at the Cache before the last push.",
     requiresNode: 'coffers_fork',
     requiresNavLevel: 40,
     adminOnly: true,
-    comingSoon: true,
+    route: '/raids/coffers-fleet',
+    raidId: THE_COFFERS_FLEET.raidId,
+    image: THE_COFFERS_FLEET.enemies.admiral.portrait,
     detail: {
       description:
-        "The Coffers' war-fleet, and the admiral who has never lost a ship. His crews fight under false colours: decoy muzzles and feint volleys that leave you guessing which gun is the live one. The biggest hulls you've faced yet, and the first that won't go down in a single push.",
-      dropsNote: 'Coming soon. The harbour fleet is still being drilled.',
+        "The Coffers' war-fleet, and the admiral who has never lost a ship. His crews fight under false colours: decoy gun-bands strewn across your aim so you can't tell the live shot from the feint. The biggest hulls you've faced yet, and the admiral rises again when you think you've sunk him.",
+      enemies: ['Feint ×2', 'Sham ×2', 'Bulwark ×2', 'Mirage ×2', 'Admiral Ruse'],
+      drops: lootDrops(THE_COFFERS_FLEET.loot),
+      clearReward: clearPayout(THE_COFFERS_FLEET),
+      dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. Every kill pays gold + Nav XP, and the run carries two stronger Tide events between fights.',
+    },
+  },
+  {
+    id: 'coffers_fleet_challenge',    type: 'raid',
+    label: 'Challenge: The Harbour Fleet',
+    flavor: "The same fleet, drilled harder and flying meaner colours. The admiral does not lose his wall twice.",
+    requiresNode: 'coffers_fleet',
+    adminOnly: true,
+    route: '/raids/coffers-fleet/challenge',
+    raidId: THE_COFFERS_FLEET_CHALLENGE.raidId,
+    sideBranch: { parentId: 'coffers_fleet' },
+    image: THE_COFFERS_FLEET.enemies.admiral.portrait,
+    detail: {
+      description:
+        "The harbour fleet again, harder for the loss. More HP, sharper guns, the same wall of false colours, and the admiral's phase 2 bites deeper. The chase rewards roll richer for the trouble.",
+      enemies: ['Feint ×2', 'Sham ×2', 'Bulwark ×2', 'Mirage ×2', 'Admiral Ruse'],
+      drops: lootDrops(THE_COFFERS_FLEET_CHALLENGE.loot),
+      clearReward: clearPayout(THE_COFFERS_FLEET_CHALLENGE),
+      dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
     },
   },
   {

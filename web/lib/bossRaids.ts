@@ -743,6 +743,106 @@ export const THE_TOLLMASTER: BossRaidConfig = {
   ],
 }
 
+// ── CHAPTER III, Raid 5 — The Harbour Fleet (The Coffers) ────────────────────
+// ADMIN-ONLY (the map node is adminOnly + the route page guards is_admin). The
+// Coffers' escort fleet + its admiral. GALLEON-tier hulls — the player's first
+// capital-ship fight. SIGNATURE: "Decoys" (decoyCount) — the crew run false
+// colours, strewing fake gold crit bands across the aim bar so you can't trust
+// which gun is the live one (purely visual; the real crit is still the moving
+// zone). Scales across the crew (1 on the quick hulls → 3 on the admiral), the
+// way the Cartographer's Mist Veil deepened toward the boss. The admiral also
+// runs a PHASE 2 (normal-boss two-phase starts this chapter). Tier-2 tides.
+// NAMES + ART ARE PLACEHOLDERS (working names; Ch2 hull art reused as stand-ins)
+// until step 4. Caps at Galleon — Man-o-War held for Chapter IV.
+export const THE_COFFERS_FLEET: BossRaidConfig = {
+  raidId: 'coffers_fleet',
+  raidTitle: 'The Harbour Fleet',
+  bossDefeatedText: 'Admiral Ruse Defeated',  // NAME TBD (placeholder)
+  atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
+  enemies: {
+    // Working names (Feint/Sham/Bulwark/Mirage/Admiral Ruse) + Ch2 hull art are
+    // placeholders. Decoys scale 1 → 3 toward the flagship.
+    scout: {
+      id: 'scout', name: 'Feint', hpBase: 78, minDmg: 8, maxDmg: 15,
+      shipSpeed: 8, actionMs: 3500,
+      pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
+      critChance: 0.07,
+      decoyCount: 1, decoyName: 'False Colours',
+      image: '/enemychapter2schooner_v2.png',
+      portrait: '/enemychapter2schooner_v2.png',
+    },
+    reg: {
+      id: 'reg', name: 'Sham', hpBase: 104, minDmg: 10, maxDmg: 18,
+      shipSpeed: 6, actionMs: 4400,
+      pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+      critChance: 0.08,
+      decoyCount: 1, decoyName: 'False Colours',
+      image: '/enemychapter2brigantine_v2.png',
+      portrait: '/enemychapter2brigantine_v2.png',
+    },
+    brute: {
+      id: 'brute', name: 'Bulwark', hpBase: 152, minDmg: 14, maxDmg: 24,
+      shipSpeed: 3, actionMs: 5400,
+      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
+      critChance: 0.06,
+      decoyCount: 2, decoyName: 'False Colours',
+      image: '/enemychapter2galleon_v2.png',
+      portrait: '/enemychapter2galleon_v2.png',
+    },
+    elite: {
+      id: 'elite', name: 'Mirage', hpBase: 132, minDmg: 13, maxDmg: 22,
+      shipSpeed: 9, actionMs: 3300,
+      pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+      critChance: 0.13,
+      decoyCount: 2, decoyName: 'False Colours',
+      image: '/enemychapter2galleon_v2.png',
+      portrait: '/enemychapter2galleon_v2.png',
+    },
+    admiral: {
+      id: 'admiral', name: 'Admiral Ruse', hpBase: 270, minDmg: 20, maxDmg: 36,
+      shipSpeed: 7, actionMs: 4200,
+      // Flagship — heaviest Decoys (3 fake bands). Phase 2: at half HP he drops
+      // the false colours and fights for real, faster and meaner.
+      pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
+      critChance: 0.12,
+      decoyCount: 3, decoyName: 'False Colours',
+      phase2: {
+        revivePct: 0.5,
+        damageMult: 1.2,
+        pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+        dialogueLine: "Enough games. Run out the real guns.",
+      },
+      image: '/enemychapter2galleon_v2.png',
+      portrait: '/enemychapter2galleon_v2.png',
+    },
+  },
+  sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
+  bossId: 'admiral',
+  tides: { slots: [3, 6], maxTier: 2 },  // tier-2 tides — Chapter III's bigger swings
+  // PLACEHOLDER loot: currency only for the scaffold (no ITEM_GRANTS needed).
+  // Real Coffers special drops + a chapter trophy skin land in step 4.
+  loot: [
+    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 34 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 26 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 28 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 12 },
+  ],
+  killRewards: {
+    scout:   { gold: 75,  xp: 75  },
+    reg:     { gold: 100, xp: 110 },
+    brute:   { gold: 135, xp: 150 },
+    elite:   { gold: 165, xp: 180 },
+    admiral: { gold: 600, xp: 600 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: "Past the harbour wall the Coffers open up: a drowned market ringed by guns, and a line of Galleons already coming about to meet you." },
+    { speaker: 'boss', text: "Far enough, captain. Nobody sails into the Coffers uninvited and lives to count the take." },
+    { speaker: 'player', text: "You're a long way from the docks for a harbourmaster." },
+    { speaker: 'boss', text: "Admiral, to you. I keep this wall, and my gunners fly whatever colours the market needs. You'll never know which gun is the live one until it's already in you." },
+    { speaker: 'boss', text: "Run out your guns. Mine are already lying to you." },
+  ],
+}
+
 // ── Raid completion bonus ────────────────────────────────────────────────────
 // Clearing a full raid (every mob + the boss) pays a bonus on top of the
 // per-kill Nav XP: 25% of the run's total kill XP. Granted once per clear in
