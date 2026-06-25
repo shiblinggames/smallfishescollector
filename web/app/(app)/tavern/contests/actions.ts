@@ -1,7 +1,18 @@
 'use server'
 
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CONTESTS, type ContestView, type ContestStanding } from '@/lib/contests'
+
+/** Clear the "new contest" pulse on the tavern tile once the player opens this
+ *  page. Re-arm by resetting has_seen_contests when a new contest launches. */
+export async function markContestsSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ has_seen_contests: true }).eq('id', user.id)
+}
 
 type AvatarRow = {
   username: string | null

@@ -50,11 +50,11 @@ async function DenCard() {
 
 // Top-of-page features grid: Login Bonus + Contests (Contests took Tide Run's
 // old slot here on 2026-06-18).
-function FeaturesSection({ dailyClaimed }: { dailyClaimed: boolean }) {
+function FeaturesSection({ dailyClaimed, contestsUnseen }: { dailyClaimed: boolean; contestsUnseen: boolean }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <DailyBonusCard claimed={dailyClaimed} />
-      <ContestsHubCard />
+      <ContestsHubCard hasNew={contestsUnseen} />
     </div>
   )
 }
@@ -115,7 +115,7 @@ export default async function TavernPage() {
               cards. Daily Bonus took Recruit Crew's slot here on
               2026-06-11. */}
           <div>
-            <FeaturesSection dailyClaimed={dailyClaimed} />
+            <FeaturesSection dailyClaimed={dailyClaimed} contestsUnseen={profile?.has_seen_contests !== true} />
           </div>
 
           {/* Games — the Den + the Parlor, one door each into their
