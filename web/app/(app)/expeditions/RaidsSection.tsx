@@ -2445,6 +2445,18 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
               const main = b.views.filter(v => !v.node.sideBranch && !v.node.comingSoon)
               mainClearedById.set(c.id, main.length > 0 && main.every(v => v.status === 'cleared'))
             }
+            // The "current" chapter is the highest-index VISIBLE one (future
+            // chapters are hidden until the prior main path clears, so the last
+            // visible chapter is always the frontier the player is in). Mirrors
+            // the visibility gate in the map below. Everything before it
+            // collapses by default; the current chapter stays open.
+            let currentChapterId: string | null = null
+            for (let i = 0; i < RAID_CHAPTERS.length; i++) {
+              if (i > 0 && !mainClearedById.get(RAID_CHAPTERS[i - 1].id)) break
+              const cb = groups.get(RAID_CHAPTERS[i].id)
+              if (!cb || cb.views.length === 0) break
+              currentChapterId = RAID_CHAPTERS[i].id
+            }
             // Iterate in the canonical RAID_CHAPTERS order, not the Map
             // insertion order — guards against a partial dataset showing
             // chapter II before chapter I.
@@ -2473,19 +2485,15 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
               // specifically — locked ones aren't "yet to do", they're
               // "yet to unlock", which is a different signal.
               const challengesRemaining = sideViews.filter(v => v.status === 'available').length
-              // Fully cleared = main + every side branch the player has
-              // access to. Drives the DEFAULT collapsed state: fully
-              // cleared → collapsed; main cleared but a challenge raid
-              // is still hanging → expanded (so the player sees the
-              // node sitting there). Either default can be flipped by
-              // the player via the chevron.
-              const fullyCleared = chapterCleared && challengesRemaining === 0
               const chapterStarted = bucket.views.some(v => v.status !== 'locked')
               // Collapsible the moment the main path is done. Player
               // can close a chapter even if challenges remain — the
               // header still advertises them, so they're never lost.
               const collapsible = chapterCleared
-              const defaultCollapsed = fullyCleared
+              // Default: collapse every chapter EXCEPT the current (frontier)
+              // one, so the player lands focused on where they are. Earlier
+              // cleared chapters fold away (chevron re-opens them).
+              const defaultCollapsed = c.id !== currentChapterId
               const toggled = chaptersToggled.has(c.id)
               const collapsed = collapsible && (defaultCollapsed !== toggled) // XOR
               const toggle = () => {
