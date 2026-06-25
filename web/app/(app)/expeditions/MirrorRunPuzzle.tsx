@@ -38,6 +38,10 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     return o
   })
   const solvedRef = useRef(false)
+  // The beam is hidden while planning. The player commits a layout and taps
+  // Fire to test it; only then is the beam traced + shown. This is the whole
+  // difficulty: you can't steer the beam by sight, you have to plan the path.
+  const [revealed, setRevealed] = useState(false)
 
   const wallSet   = useMemo(() => new Set((lvl?.walls ?? []).map(w => `${w.x},${w.y}`)), [lvl])
   const mirrorSet = useMemo(() => new Set((lvl?.mirrors ?? []).map(m => `${m.x},${m.y}`)), [lvl])
@@ -70,26 +74,37 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     return { segs, hit }
   }, [lvl, orient, mirrorSet, wallSet])
 
+  // Solve only resolves once the player has FIRED a correct layout. Setting the
+  // mirrors right while planning isn't enough; they have to commit and fire.
   useEffect(() => {
-    if (trace.hit && !solvedRef.current) {
+    if (revealed && trace.hit && !solvedRef.current) {
       solvedRef.current = true
       vibrate([0, 30, 45, 70])
       const t = setTimeout(onSolved, 750) // let the lit beam land before the reveal
       return () => clearTimeout(t)
     }
-  }, [trace.hit, onSolved])
+  }, [revealed, trace.hit, onSolved])
 
   if (!lvl) return null
   const { cols, rows, source, target } = lvl
   // Adaptive cell size so bigger grids still fit a phone (~300px wide cap).
   const CELL = Math.min(46, Math.floor(300 / Math.max(cols, rows)))
   const W = cols * CELL, H = rows * CELL
-  const solved = trace.hit
+  const solved = revealed && trace.hit
+  const missed = revealed && !trace.hit
 
+  // Turning any mirror hides the beam again — back to planning, no steer-by-sight.
   function rotate(key: string) {
     if (solvedRef.current || fixedSet.has(key)) return
     vibrate(12)
+    setRevealed(false)
     setOrient(prev => ({ ...prev, [key]: prev[key] === '/' ? '\\' : '/' }))
+  }
+
+  function fire() {
+    if (solvedRef.current) return
+    vibrate(18)
+    setRevealed(true)
   }
 
   // Beam polyline points (in cell units) — entry edge → center → exit edge per seg.
@@ -106,7 +121,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', lineHeight: 1.5 }}>
-        Tap the mirrors to turn them. Bend the lantern&apos;s beam around the pillars onto the lens.
+        Turn the mirrors to plan the beam&apos;s path, then fire the lantern. The beam stays dark until you fire.
       </p>
       <div style={{ position: 'relative', width: W, height: H, borderRadius: 12, overflow: 'hidden', background: '#0a1320', border: '1px solid #1f2e42', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.5)' }}>
         {/* Grid cells */}
@@ -157,15 +172,41 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             )
           }),
         )}
-        {/* Beam overlay */}
+        {/* Beam overlay — only drawn after the player fires the lantern. */}
         <svg width={W} height={H} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {beamStr && (
-            <>
-              <polyline points={beamStr} fill="none" stroke={GOLD} strokeOpacity={solved ? 0.9 : 0.62} strokeWidth={solved ? 5 : 3} strokeLinejoin="round" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 ${solved ? 7 : 4}px ${GOLD})` }} />
-            </>
+          {revealed && beamStr && (
+            <polyline points={beamStr} fill="none" stroke={solved ? GOLD : '#e2674a'} strokeOpacity={solved ? 0.9 : 0.78} strokeWidth={solved ? 5 : 3} strokeLinejoin="round" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 ${solved ? 7 : 4}px ${solved ? GOLD : '#e2674a'})` }} />
           )}
         </svg>
       </div>
+
+      {/* Fire / status. The beam is dark until fired; a miss shows the path it
+          DID take so the player can re-plan, then any mirror turn hides it. */}
+      <div style={{ minHeight: 18 }}>
+        {missed && (
+          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#e2674a', textAlign: 'center', margin: 0 }}>
+            The beam misses the lens. Turn the mirrors and fire again.
+          </p>
+        )}
+        {solved && (
+          <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: GOLD, textAlign: 'center', margin: 0 }}>
+            The beam strikes true.
+          </p>
+        )}
+      </div>
+      <button onClick={fire} disabled={solved}
+        className="font-karla font-700"
+        style={{
+          padding: '9px 26px', borderRadius: 10, fontSize: '0.82rem', letterSpacing: '0.02em',
+          color: solved ? '#6b7a52' : '#1a1206',
+          background: solved ? 'rgba(120,130,150,0.18)' : `linear-gradient(180deg, ${GOLD} 0%, #e09c1c 100%)`,
+          border: solved ? '1px solid rgba(150,160,180,0.25)' : '1px solid #f6c34a',
+          boxShadow: solved ? 'none' : `0 2px 0 #b87d10, 0 0 14px ${GOLD}66`,
+          cursor: solved ? 'default' : 'pointer',
+          transition: 'all 0.15s',
+        }}>
+        {solved ? 'Lens Lit' : revealed ? 'Fire Again' : 'Fire the Lantern'}
+      </button>
     </div>
   )
 }
