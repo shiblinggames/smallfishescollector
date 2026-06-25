@@ -38,16 +38,29 @@ const HOT  = '#ffe9b0'
 
 // ── Canvas beam painters (pure, no React) ───────────────────────────────────
 type Pt = [number, number]
-function strokeUpTo(ctx: CanvasRenderingContext2D, pts: Pt[], dist: number) {
-  ctx.beginPath()
-  ctx.moveTo(pts[0][0], pts[0][1])
+// Stroke only the portion of the path in distance window [from, to]. With
+// from=0 this is the full trail; with from=to-tail it's a short "comet" streak
+// so the WHOLE route is never drawn at once (you can't read it off one fire).
+function strokeRange(ctx: CanvasRenderingContext2D, pts: Pt[], from: number, to: number) {
+  if (to <= from || pts.length < 2) return
+  const out: Pt[] = []
   let acc = 0
   for (let i = 1; i < pts.length; i++) {
     const [ax, ay] = pts[i - 1], [bx, by] = pts[i]
     const seg = Math.hypot(bx - ax, by - ay)
-    if (acc + seg <= dist) { ctx.lineTo(bx, by); acc += seg }
-    else { const r = seg > 0 ? (dist - acc) / seg : 0; ctx.lineTo(ax + (bx - ax) * r, ay + (by - ay) * r); break }
+    const segStart = acc, segEnd = acc + seg
+    if (seg > 0 && segEnd >= from && segStart <= to) {
+      const ra = Math.max(0, (from - segStart) / seg)
+      const rb = Math.min(1, (to - segStart) / seg)
+      out.push([ax + (bx - ax) * ra, ay + (by - ay) * ra])
+      out.push([ax + (bx - ax) * rb, ay + (by - ay) * rb])
+    }
+    acc = segEnd
   }
+  if (out.length < 2) return
+  ctx.beginPath()
+  ctx.moveTo(out[0][0], out[0][1])
+  for (let i = 1; i < out.length; i++) ctx.lineTo(out[i][0], out[i][1])
   ctx.stroke()
 }
 function pointAt(pts: Pt[], dist: number): Pt {
@@ -60,13 +73,15 @@ function pointAt(pts: Pt[], dist: number): Pt {
   }
   return pts[pts.length - 1]
 }
-function paintBeam(canvas: HTMLCanvasElement, W: number, H: number, pts: Pt[], dist: number, color: string, head: boolean) {
+// tail = length of the visible streak behind the head (undefined = full trail).
+function paintBeam(canvas: HTMLCanvasElement, W: number, H: number, pts: Pt[], dist: number, color: string, head: boolean, tail?: number) {
   const ctx = canvas.getContext('2d'); if (!ctx) return
   ctx.clearRect(0, 0, W, H)
   if (pts.length < 2 || dist <= 0) return
+  const from = tail != null ? Math.max(0, dist - tail) : 0
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = color
-  ctx.globalAlpha = 0.18; ctx.lineWidth = 9;   strokeUpTo(ctx, pts, dist)
-  ctx.globalAlpha = 0.95; ctx.lineWidth = 3.2; strokeUpTo(ctx, pts, dist)
+  ctx.globalAlpha = 0.18; ctx.lineWidth = 9;   strokeRange(ctx, pts, from, dist)
+  ctx.globalAlpha = 0.95; ctx.lineWidth = 3.2; strokeRange(ctx, pts, from, dist)
   ctx.globalAlpha = 1
   if (head) {
     const p = pointAt(pts, dist)
@@ -205,13 +220,14 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     setFiring(true)
     // Slow travel: ~0.42 px/ms, clamped. One rAF loop, imperative canvas paint.
     const dur = Math.min(1900, Math.max(650, total / 0.42))
+    const tail = geo.CELL * 2.6           // short comet streak — hides the full route
     const start = performance.now()
     cancelRaf()
     const step = (now: number) => {
       const c = canvasRef.current
       if (!c) { rafRef.current = null; finish(hit, used); return }
       const t = total > 0 ? Math.min(1, (now - start) / dur) : 1
-      paintBeam(c, W, H, pts, t * total, HOT, true)
+      paintBeam(c, W, H, pts, t * total, HOT, true, tail)
       if (t < 1) rafRef.current = requestAnimationFrame(step)
       else { rafRef.current = null; finish(hit, used, pts) }
     }
