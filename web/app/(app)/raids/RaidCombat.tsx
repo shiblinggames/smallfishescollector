@@ -753,9 +753,15 @@ export default function RaidCombat({
   // Refs (not state) so the precomputed turn loop reads them synchronously;
   // both reset when the fight moves to a new enemy.
   const enemyBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
+  // Freeze is a two-stage flag so it NEVER affects the round it procs on,
+  // regardless of who acts first: a hit sets *Pending*, which promotes to the
+  // active *Frozen* flag at the top of the NEXT round, and that round's turn is
+  // the one skipped. Clear-cut: "your hit freezes their next turn."
   const enemyFrozenRef = useRef(false)
+  const enemyFreezePendingRef = useRef(false)
   const playerBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
   const playerFrozenRef = useRef(false)
+  const playerFreezePendingRef = useRef(false)
   // Carapace teaching line is logged only on the FIRST soak per enemy — the
   // deflect visual + reduced numbers carry every subsequent soak. Reset per enemy.
   const carapaceLoggedRef = useRef(false)
@@ -867,8 +873,8 @@ export default function RaidCombat({
     // enemyHpScale tide always targets a LATER enemy.
     const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
     setEnemyHp(scaledHp); enemyHpRef.current = scaledHp
-    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; snareBlockedRef.current = false; carapaceLoggedRef.current = false
-    playerBurnRef.current = { turns: 0, dmg: 0 }; playerFrozenRef.current = false
+    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; enemyFreezePendingRef.current = false; snareBlockedRef.current = false; carapaceLoggedRef.current = false
+    playerBurnRef.current = { turns: 0, dmg: 0 }; playerFrozenRef.current = false; playerFreezePendingRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
     // via Spet's drops — a CHANCE to open each fight with one chambered (Spet's
@@ -1448,6 +1454,12 @@ export default function RaidCombat({
     let eCharges = enemyCharges
     const steps: Step[] = []
 
+    // Promote any freeze armed LAST round into the active skip for THIS round.
+    // A freeze procced during this round only set the pending flag, so it can't
+    // affect the round it landed on — it always skips the actor's next turn.
+    if (enemyFreezePendingRef.current) { enemyFrozenRef.current = true; enemyFreezePendingRef.current = false }
+    if (playerFreezePendingRef.current) { playerFrozenRef.current = true; playerFreezePendingRef.current = false }
+
     // Incendiary burn ticks at the top of the turn. It reads the burn set on a
     // PRIOR turn (a burn lit this turn ticks next turn, not now), and a tick
     // that drops the enemy to 0 ends the fight via the final-step death check.
@@ -1471,17 +1483,18 @@ export default function RaidCombat({
     for (const who of order) {
       if (pHp <= 0 || eHp <= 0) break
       // Frozen Cannonball: the enemy loses this whole turn (skips before its
-      // turn-start heal + action). One turn, then the ice breaks.
+      // turn-start heal + action). This is the turn AFTER the proc; one turn,
+      // then the ice breaks.
       if (who === 'enemy' && enemyFrozenRef.current) {
         enemyFrozenRef.current = false
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [`The ${enemy.name} is frozen solid and loses its turn.`], freezeEnds: true })
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [`The ${enemy.name} is frozen solid — its turn is skipped.`], freezeEnds: true })
         continue
       }
       // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
       // mirror of the Frozen Cannonball. Your chosen action is forfeit.
       if (who === 'player' && playerFrozenRef.current) {
         playerFrozenRef.current = false
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid and loses its turn.'], freezeEnds: true })
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid — your turn is skipped.'], freezeEnds: true })
         continue
       }
       const action = who === 'player' ? pAction : eAction
@@ -1796,8 +1809,8 @@ export default function RaidCombat({
               procStatus = 'burn'
             }
             if (freezeChance > 0 && Math.random() < freezeChance) {
-              enemyFrozenRef.current = true
-              stepLines.push(`Frozen shot! The ${enemy.name} ices over and loses a turn.`)
+              enemyFreezePendingRef.current = true
+              stepLines.push(`Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
               procStatus = 'freeze'
             }
           }
@@ -1884,9 +1897,9 @@ export default function RaidCombat({
               procStatus = 'burn'
               stepLines.push(`Scorching hit! Your ship catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
             } else if (affix?.freezeChance && Math.random() < affix.freezeChance) {
-              playerFrozenRef.current = true
+              playerFreezePendingRef.current = true
               procStatus = 'freeze'
-              stepLines.push('Glacial hit! Your ship is frozen — you lose your next turn.')
+              stepLines.push('Glacial hit! Your ship ices over — your next turn is frozen.')
             }
           }
           // Vampiric affix: 50% chance to heal a fraction of dealt
