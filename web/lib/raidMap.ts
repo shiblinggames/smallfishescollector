@@ -10,8 +10,8 @@
 // gated by `requiresNode` (+ optional Nav level); a cleared combat node
 // stays farmable.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
-import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE } from '@/lib/raidChallenge'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, GEM_GLYPH, raidCompletionBonusXp, type RaidLootItem, type BossRaidConfig } from '@/lib/bossRaids'
+import { CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE, THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE, THE_COFFERS_FLEET_CHALLENGE, THE_QUARTERMASTER_CHALLENGE } from '@/lib/raidChallenge'
 import { getShipSkin } from '@/lib/shipSkins'
 import { getRaidItem } from '@/lib/raidItems'
 
@@ -1295,20 +1295,46 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Raid 6 — coming-soon stub. The Quartermaster (chapter finale, Galleon-tier).
-    // Signature trait: Repossession (reclaims one equipped raid item at fight
-    // start) + a phase 2. Full BossRaidConfig + art land in step 3.
+    // Raid 6 — the chapter finale. The Quartermaster (Galleon-tier). Signature:
+    // Repossession (reclaims one equipped raid item at fight start) + a phase 2 +
+    // tier-2 tides. LIVE config (THE_QUARTERMASTER), adminOnly until tested AND
+    // the route page guards is_admin. Names/art placeholders pending step 4.
     id: 'the_quartermaster',    type: 'raid',
     label: 'The Quartermaster',
     flavor: "The keeper of the Cache fights the way he sells: he opens by taking back a piece of your own kit, then makes you buy your life off him one shot at a time.",
+    bridge: "The Quartermaster goes down under his own counter and the Cache's hold falls open, ledgers and all. Every debt in them runs up to one name.",
     requiresNode: 'quartermaster_turn',
     requiresNavLevel: 48,
     adminOnly: true,
-    comingSoon: true,
+    route: '/raids/quartermaster',
+    raidId: THE_QUARTERMASTER.raidId,
+    image: THE_QUARTERMASTER.enemies.quartermaster.portrait,
     detail: {
       description:
-        "The Quartermaster himself, behind the guns of the market he runs. He fights the way he trades: he opens by repossessing one of the raid items he sold you, leaving you a piece short for the whole fight, then grinds you down and rises again when you think he's beaten. Put him under and the Cache's hold falls open.",
-      dropsNote: 'Coming soon. The keeper is still counting his stock.',
+        "The Quartermaster himself, behind the guns of the market he runs. He fights the way he trades: he opens by repossessing one of the raid items he sold you, leaving you a piece short for the whole fight, then opens a reserve deck and rises again when you think he's beaten. Put him under and the Cache's hold falls open.",
+      enemies: ['Tally ×2', 'Ledger ×2', 'Strongbox ×2', 'Collector ×2', 'The Quartermaster'],
+      drops: lootDrops(THE_QUARTERMASTER.loot),
+      clearReward: clearPayout(THE_QUARTERMASTER),
+      dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. He opens by reclaiming one of your equipped raid items for the whole fight. Two stronger Tide events between fights.',
+    },
+  },
+  {
+    id: 'the_quartermaster_challenge',    type: 'raid',
+    label: 'Challenge: The Quartermaster',
+    flavor: "The keeper again, angrier for the loss, and he reclaims more than you can spare. He does not get robbed twice.",
+    requiresNode: 'the_quartermaster',
+    adminOnly: true,
+    route: '/raids/quartermaster/challenge',
+    raidId: THE_QUARTERMASTER_CHALLENGE.raidId,
+    sideBranch: { parentId: 'the_quartermaster' },
+    image: THE_QUARTERMASTER.enemies.quartermaster.portrait,
+    detail: {
+      description:
+        "The Quartermaster's finale again, harder for the loss. More HP, sharper guns, the same opening theft and the same reserve-deck phase 2, all of it meaner. The chase rewards roll richer.",
+      enemies: ['Tally ×2', 'Ledger ×2', 'Strongbox ×2', 'Collector ×2', 'The Quartermaster'],
+      drops: lootDrops(THE_QUARTERMASTER_CHALLENGE.loot),
+      clearReward: clearPayout(THE_QUARTERMASTER_CHALLENGE),
+      dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
     },
   },
   {

@@ -11,7 +11,7 @@
 // raid_id so completions track in their own bucket on the leaderboard.
 // PHASE 2: elite enemy variants + the affix system. PHASE 3: boss phases.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
 
 /** Multipliers applied by buildChallengeRaid. Tweak here, not per-raid. */
 export const CHALLENGE_MODS = {
@@ -314,3 +314,11 @@ export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
 // override land in step 4.
 export const THE_COFFERS_FLEET_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_COFFERS_FLEET)
+
+// The Quartermaster's challenge — Chapter III, Raid 6 (the chapter finale).
+// Repossession + phase 2 both carry through scaleEnemy automatically (it
+// spreads ...e), so the challenge keeper still reclaims an item at the start and
+// opens the reserve deck at half HP. Scaffold currency-only loot; real override
+// in step 4.
+export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig =
+  buildChallengeRaid(THE_QUARTERMASTER)

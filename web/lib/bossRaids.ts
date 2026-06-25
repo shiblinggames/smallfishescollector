@@ -843,6 +843,101 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   ],
 }
 
+// ── CHAPTER III, Raid 6 — The Quartermaster (The Coffers finale) ─────────────
+// ADMIN-ONLY (map node adminOnly + route page guards is_admin). The keeper of
+// the Cache and his hired guns, behind the counter of the market he runs.
+// GALLEON-tier. SIGNATURE: "Repossession" (repossess) — at fight start the boss
+// reclaims ONE of the player's equipped raid items for the whole fight (the
+// merchant takes back the edge he sold you). PLUS a phase 2 (the chapter's
+// two-phase finale): at half HP he opens the reserve deck. Tier-2 tides. Only
+// the boss carries Repossession; the crew are clean (the theft is his identity).
+// NAMES + ART ARE PLACEHOLDERS until step 4. Caps at Galleon.
+export const THE_QUARTERMASTER: BossRaidConfig = {
+  raidId: 'the_quartermaster',
+  raidTitle: 'The Quartermaster',
+  bossDefeatedText: 'The Quartermaster Defeated',
+  atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
+  enemies: {
+    // Working names (Tally/Ledger/Strongbox/Collector/the Quartermaster) + Ch2
+    // hull art are placeholders. The Cache's hired enforcers.
+    scout: {
+      id: 'scout', name: 'Tally', hpBase: 86, minDmg: 9, maxDmg: 16,
+      shipSpeed: 8, actionMs: 3500,
+      pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
+      critChance: 0.08,
+      image: '/enemychapter2schooner_v2.png',
+      portrait: '/enemychapter2schooner_v2.png',
+    },
+    reg: {
+      id: 'reg', name: 'Ledger', hpBase: 114, minDmg: 11, maxDmg: 19,
+      shipSpeed: 6, actionMs: 4400,
+      pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+      critChance: 0.08,
+      image: '/enemychapter2brigantine_v2.png',
+      portrait: '/enemychapter2brigantine_v2.png',
+    },
+    brute: {
+      id: 'brute', name: 'Strongbox', hpBase: 168, minDmg: 15, maxDmg: 26,
+      shipSpeed: 3, actionMs: 5400,
+      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
+      critChance: 0.06,
+      image: '/enemychapter2galleon_v2.png',
+      portrait: '/enemychapter2galleon_v2.png',
+    },
+    elite: {
+      id: 'elite', name: 'Collector', hpBase: 144, minDmg: 14, maxDmg: 24,
+      shipSpeed: 9, actionMs: 3300,
+      pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+      critChance: 0.13,
+      image: '/enemychapter2galleon_v2.png',
+      portrait: '/enemychapter2galleon_v2.png',
+    },
+    quartermaster: {
+      id: 'quartermaster', name: 'The Quartermaster', hpBase: 300, minDmg: 22, maxDmg: 38,
+      shipSpeed: 7, actionMs: 4200,
+      // The keeper himself. REPOSSESSION: opens by reclaiming one of your raid
+      // items for the fight. PHASE 2: at half HP he opens the reserve deck and
+      // fights harder. The theft + the two phases are the fight.
+      pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
+      critChance: 0.12,
+      repossess: true, repossessName: 'Repossession',
+      phase2: {
+        revivePct: 0.5,
+        damageMult: 1.2,
+        pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+        dialogueLine: "You think the shelves are empty? I've a reserve deck for captains like you.",
+      },
+      image: '/enemychapter2galleon_v2.png',
+      portrait: '/enemychapter2galleon_v2.png',
+    },
+  },
+  sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
+  bossId: 'quartermaster',
+  tides: { slots: [3, 6], maxTier: 2 },  // tier-2 tides
+  // PLACEHOLDER loot: currency only for the scaffold. Real Coffers finale drops
+  // + the chapter trophy skin land in step 4.
+  loot: [
+    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 32 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 26 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 28 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 14 },
+  ],
+  killRewards: {
+    scout:         { gold: 85,  xp: 85  },
+    reg:           { gold: 110, xp: 125 },
+    brute:         { gold: 150, xp: 165 },
+    elite:         { gold: 180, xp: 200 },
+    quartermaster: { gold: 680, xp: 680 },
+  },
+  preFightDialogue: [
+    { speaker: 'narrator', text: "The Cache's shutters roll up into a gun-deck, and the keeper stands behind a counter of run-out cannon, smiling like he's already counted your coin." },
+    { speaker: 'boss', text: "Every captain who ever beat me bought the means to do it off my own shelf. You included." },
+    { speaker: 'player', text: "Then I'll do it again with whatever you leave me." },
+    { speaker: 'boss', text: "Generous of you to think I'll leave you anything. First thing I do, captain, is take back what's mine. You'll fight this one a piece short." },
+    { speaker: 'boss', text: "Run out your guns. I'll be running out the ones you can't reach for." },
+  ],
+}
+
 // ── Raid completion bonus ────────────────────────────────────────────────────
 // Clearing a full raid (every mob + the boss) pays a bonus on top of the
 // per-kill Nav XP: 25% of the run's total kill XP. Granted once per clear in
