@@ -72,6 +72,9 @@ export default function AchievementsClient({ groups }: Props) {
   const totalPoints = badgeGoals.reduce((s, g) => s + pointsOf(g), 0)
   const claimable = badgeGoals.filter(g => g.done && !claimedIds.has(g.id))
   const claimableTotal = claimable.reduce((s, g) => s + (g.reward ?? 0), 0)
+  // Surfaced at the very top (filter-independent) so players see exactly what
+  // they earned without hunting down the category list. Richest reward first.
+  const claimableSorted = [...claimable].sort((a, b) => (b.reward ?? 0) - (a.reward ?? 0))
 
   const visibleGroups = useMemo(
     () => groups
@@ -183,6 +186,25 @@ export default function AchievementsClient({ groups }: Props) {
           </div>
         )}
       </div>
+
+      {/* ── Ready to Claim: every earned-but-unclaimed badge, surfaced up top so
+            players see what they got without scrolling the category list. Always
+            shows all of them (ignores the filters below). Rows drop off as they
+            get claimed. ─────────────────────────────────────────────────────── */}
+      {claimableSorted.length > 0 && (
+        <section style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: GOLD, flexShrink: 0, boxShadow: `0 0 8px ${GOLD}` }} />
+            <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.82rem', color: GOLD }}>Ready to Claim · {claimableSorted.length}</p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {claimableSorted.map(g => (
+              <GoalRow key={`ready-${g.id}`} g={g} groupAccent={GOLD} claimed={false} busy={busy === g.id}
+                onClaim={from => claimOne(g.id, from)} onOpen={() => setDetailGoal(g)} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Filters: category + tier dropdowns ─────────────────────────────── */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
