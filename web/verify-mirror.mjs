@@ -4,24 +4,37 @@ const REFLECT = {
   [BS]: { right: 'down', down: 'right', left: 'up', up: 'left' },
 }
 const STEP = { up: { dx: 0, dy: -1 }, down: { dx: 0, dy: 1 }, left: { dx: -1, dy: 0 }, right: { dx: 1, dy: 0 } }
-// Multi-lens: the beam passes THROUGH lenses (they aren't mirrors) and must
-// cross EVERY target cell. It keeps going until it dies (wall/edge/cap).
+// A prism splits an incoming beam into the two PERPENDICULAR directions.
+const PERP = { right: ['up', 'down'], left: ['up', 'down'], up: ['left', 'right'], down: ['left', 'right'] }
+// Multi-beam: beam passes THROUGH lenses (must cross EVERY one, by ANY branch),
+// reflects off mirrors, SPLITS at prisms into two perpendicular beams. Global
+// (cell,dir) seen-set bounds the whole tree.
 function trace(lvl, orient) {
   const wall = new Set(lvl.walls.map(w => `${w.x},${w.y}`))
   const mir = new Set(lvl.mirrors.map(m => `${m.x},${m.y}`))
+  const prism = new Set((lvl.prisms ?? []).map(p => `${p.x},${p.y}`))
   const targets = lvl.targets ?? [lvl.target]
   const need = new Set(targets.map(t => `${t.x},${t.y}`))
   const crossed = new Set()
-  let x = lvl.source.x, y = lvl.source.y, dir = lvl.source.dir
-  const cap = lvl.cols * lvl.rows * 4
-  for (let i = 0; i < cap; i++) {
-    const key = `${x},${y}`
-    if (!(i === 0 && x === lvl.source.x && y === lvl.source.y) && mir.has(key)) dir = REFLECT[orient[key] ?? '/'][dir]
-    if (need.has(key)) crossed.add(key)
-    const { dx, dy } = STEP[dir]; const nx = x + dx, ny = y + dy
-    if (nx < 0 || ny < 0 || nx >= lvl.cols || ny >= lvl.rows) break
-    if (wall.has(`${nx},${ny}`)) break
-    x = nx; y = ny
+  const seen = new Set()
+  const queue = [{ x: lvl.source.x, y: lvl.source.y, dir: lvl.source.dir, first: true }]
+  let guard = lvl.cols * lvl.rows * 16
+  while (queue.length && guard-- > 0) {
+    let { x, y, dir, first } = queue.shift()
+    while (guard-- > 0) {
+      const key = `${x},${y}`
+      if (!first && mir.has(key)) dir = REFLECT[orient[key] ?? '/'][dir]
+      if (!first && prism.has(key)) { for (const nd of PERP[dir]) queue.push({ x, y, dir: nd, first: true }); break }
+      if (need.has(key)) crossed.add(key)
+      const state = `${x},${y},${dir}`
+      if (seen.has(state)) break
+      seen.add(state)
+      first = false
+      const { dx, dy } = STEP[dir]; const nx = x + dx, ny = y + dy
+      if (nx < 0 || ny < 0 || nx >= lvl.cols || ny >= lvl.rows) break
+      if (wall.has(`${nx},${ny}`)) break
+      x = nx; y = ny
+    }
   }
   return { hit: crossed.size === need.size, crossed: crossed.size }
 }
@@ -50,38 +63,39 @@ function analyze(name, lvl) {
 }
 
 const B = BS
-// LEVEL 1 — 9x9, 3 SPREAD lenses, route DOUBLES BACK (right, then left, then
-// right). Path: (0,0)r -> (5,0)FIX\ down -> (5,3)/ LEFT [lens A 2,3] -> (1,3)/
-//   down -> (1,6)\ right [lens B 4,6] -> (7,6)/ up [lens C 7,2] -> dies top.
+// LEVEL 1 — 9x9, PRISM splits the trunk into two arms; 3 lenses (one trunk,
+// one per arm). Trunk: (0,0)r -> (3,0)\ down [lens A 3,2] -> (3,5) PRISM.
+//   RIGHT arm: right -> (6,5)/ up -> (6,1)\ LEFT [lens B 4,1].
+//   LEFT arm:  left  -> (1,5)/ down -> (1,7)\ RIGHT [lens C 3,7].
+// FIVE required mirrors (trunk choice + 2 per arm); 4 decoys.
 analyze('coffers_lens (L1)', { cols: 9, rows: 9, source: { x: 0, y: 0, dir: 'right' },
-  targets: [{ x: 2, y: 3 }, { x: 4, y: 6 }, { x: 7, y: 2 }],
-  walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 0, y: 7 }],
+  targets: [{ x: 3, y: 2 }, { x: 4, y: 1 }, { x: 3, y: 7 }],
+  prisms: [{ x: 3, y: 5 }],
+  walls: [{ x: 8, y: 0 }, { x: 0, y: 8 }, { x: 8, y: 8 }, { x: 7, y: 0 }],
   mirrors: [
-    { x: 5, y: 0, init: B, fixed: true },
-    { x: 5, y: 3, init: B },
-    { x: 1, y: 3, init: B },
-    { x: 1, y: 6, init: '/' },
-    { x: 7, y: 6, init: B },
-    { x: 3, y: 1, init: '/' },
-    { x: 6, y: 4, init: '/' },
-    { x: 3, y: 7, init: '/' },
-    { x: 8, y: 5, init: '/' },
+    { x: 3, y: 0, init: '/' },
+    { x: 6, y: 5, init: B },
+    { x: 6, y: 1, init: '/' },
+    { x: 1, y: 5, init: B },
+    { x: 1, y: 7, init: '/' },
+    { x: 5, y: 7, init: '/' },
+    { x: 7, y: 3, init: '/' },
   ] })
 
-// LEVEL 2 — 10x10, 3 SPREAD lenses, wide doubling-back snake. Path:
-// (0,0)r -> (6,0)FIX\ down -> (6,4)/ LEFT [lens A 3,4] -> (1,4)/ down
-//   -> (1,7)\ right [lens B 4,7] -> (8,7)/ up [lens C 8,3] -> dies top.
+// LEVEL 2 — 10x10, PRISM split, longer arms; 3 lenses. Trunk:
+// (0,0)r -> (4,0)\ down [lens A 4,2] -> (4,6) PRISM.
+//   RIGHT arm: right -> (7,6)/ up -> (7,2)\ LEFT [lens B 5,2].
+//   LEFT arm:  left  -> (1,6)/ down -> (1,8)\ RIGHT [lens C 4,8].
 analyze('coffers_vault_lens (L2)', { cols: 10, rows: 10, source: { x: 0, y: 0, dir: 'right' },
-  targets: [{ x: 3, y: 4 }, { x: 4, y: 7 }, { x: 8, y: 3 }],
-  walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 0, y: 8 }],
+  targets: [{ x: 4, y: 2 }, { x: 5, y: 2 }, { x: 4, y: 8 }],
+  prisms: [{ x: 4, y: 6 }],
+  walls: [{ x: 9, y: 0 }, { x: 0, y: 9 }, { x: 9, y: 9 }, { x: 8, y: 0 }],
   mirrors: [
-    { x: 6, y: 0, init: B, fixed: true },
-    { x: 6, y: 4, init: B },
-    { x: 1, y: 4, init: B },
-    { x: 1, y: 7, init: '/' },
-    { x: 8, y: 7, init: B },
-    { x: 3, y: 1, init: '/' },
-    { x: 6, y: 6, init: '/' },
-    { x: 4, y: 2, init: '/' },
-    { x: 9, y: 5, init: '/' },
+    { x: 4, y: 0, init: '/' },
+    { x: 7, y: 6, init: B },
+    { x: 7, y: 2, init: '/' },
+    { x: 1, y: 6, init: B },
+    { x: 1, y: 8, init: '/' },
+    { x: 6, y: 8, init: '/' },
+    { x: 8, y: 4, init: '/' },
   ] })

@@ -1,17 +1,18 @@
 'use client'
 
 // Mirror Run — a Zelda-style light-beam dungeon puzzle. Rotate '/' <-> '\\'
-// mirror tiles to bend the lantern beam through EVERY lens in one path. Beam is
-// hidden while planning (commit, tap Fire to test), limited fires (fireBudget)
-// before the mirrors reset, a miss shows only which lenses lit. Solve = all
-// lenses crossed → onSolved (solvePuzzleNode grants Nav XP).
+// mirror tiles to bend the lantern beam through EVERY lens in one fired shot.
+// PRISM tiles SPLIT the beam into two perpendicular branches, so the beam is a
+// branching TREE you can't trace at a glance — and the branches share the trunk
+// mirrors, so fixing one arm can break another. Beam hidden while planning,
+// limited fires (fireBudget) before the mirrors reset, a miss shows only which
+// lenses lit. Solve = all lenses crossed by any branch → onSolved (Nav XP).
 //
-// THE TRAVELLING BEAM IS DRAWN ON A <canvas> via ONE requestAnimationFrame loop
-// (imperative). This is deliberate: every React/CSS/SVG-animation version of the
-// "light travels" effect intermittently froze the iOS PWA webview. Canvas keeps
-// the per-frame work off React and off the DOM entirely — React state changes
-// only at the START and END of a fire, never per frame. The rAF handle is
-// rigorously cancelled (new fire / rotate / unmount) so loops can't stack.
+// The travelling beam tree is drawn on a <canvas> via ONE requestAnimationFrame
+// loop (imperative paint). Deliberate: every React/CSS/SVG-animation version of
+// the travel effect intermittently froze the iOS PWA webview. Canvas keeps the
+// per-frame work off React + off the DOM; state changes only at fire start/end.
+// rAF handle is cancelled on new-fire / rotate / unmount so loops can't stack.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RaidPuzzle, MirrorOrient, BeamDir } from '@/lib/raidMap'
@@ -24,45 +25,19 @@ const REFLECT: Record<MirrorOrient, Record<BeamDir, BeamDir>> = {
 const STEP: Record<BeamDir, { dx: number; dy: number }> = {
   up: { dx: 0, dy: -1 }, down: { dx: 0, dy: 1 }, left: { dx: -1, dy: 0 }, right: { dx: 1, dy: 0 },
 }
-const OPP: Record<BeamDir, BeamDir> = { up: 'down', down: 'up', left: 'right', right: 'left' }
-function edgePoint(x: number, y: number, d: BeamDir): [number, number] {
-  if (d === 'up')    return [x + 0.5, y]
-  if (d === 'down')  return [x + 0.5, y + 1]
-  if (d === 'left')  return [x, y + 0.5]
-  return [x + 1, y + 0.5] // right
+// A prism splits an incoming beam into the two PERPENDICULAR directions.
+const PERP: Record<BeamDir, [BeamDir, BeamDir]> = {
+  right: ['up', 'down'], left: ['up', 'down'], up: ['left', 'right'], down: ['left', 'right'],
 }
 
 const GOLD = '#fbbf24'
 const RED  = '#e2674a'
 const HOT  = '#ffe9b0'
 
-// ── Canvas beam painters (pure, no React) ───────────────────────────────────
 type Pt = [number, number]
-// Stroke only the portion of the path in distance window [from, to]. With
-// from=0 this is the full trail; with from=to-tail it's a short "comet" streak
-// so the WHOLE route is never drawn at once (you can't read it off one fire).
-function strokeRange(ctx: CanvasRenderingContext2D, pts: Pt[], from: number, to: number) {
-  if (to <= from || pts.length < 2) return
-  const out: Pt[] = []
-  let acc = 0
-  for (let i = 1; i < pts.length; i++) {
-    const [ax, ay] = pts[i - 1], [bx, by] = pts[i]
-    const seg = Math.hypot(bx - ax, by - ay)
-    const segStart = acc, segEnd = acc + seg
-    if (seg > 0 && segEnd >= from && segStart <= to) {
-      const ra = Math.max(0, (from - segStart) / seg)
-      const rb = Math.min(1, (to - segStart) / seg)
-      out.push([ax + (bx - ax) * ra, ay + (by - ay) * ra])
-      out.push([ax + (bx - ax) * rb, ay + (by - ay) * rb])
-    }
-    acc = segEnd
-  }
-  if (out.length < 2) return
-  ctx.beginPath()
-  ctx.moveTo(out[0][0], out[0][1])
-  for (let i = 1; i < out.length; i++) ctx.lineTo(out[i][0], out[i][1])
-  ctx.stroke()
-}
+type Stroke = { pts: Pt[]; startPx: number }
+
+function polylineLen(pts: Pt[]) { let l = 0; for (let i = 1; i < pts.length; i++) l += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return l }
 function pointAt(pts: Pt[], dist: number): Pt {
   let acc = 0
   for (let i = 1; i < pts.length; i++) {
@@ -73,21 +48,42 @@ function pointAt(pts: Pt[], dist: number): Pt {
   }
   return pts[pts.length - 1]
 }
-// tail = length of the visible streak behind the head (undefined = full trail).
-function paintBeam(canvas: HTMLCanvasElement, W: number, H: number, pts: Pt[], dist: number, color: string, head: boolean, tail?: number) {
+function strokeUpTo(ctx: CanvasRenderingContext2D, pts: Pt[], to: number) {
+  if (to <= 0 || pts.length < 2) return
+  ctx.beginPath()
+  ctx.moveTo(pts[0][0], pts[0][1])
+  let acc = 0
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i]
+    const seg = Math.hypot(bx - ax, by - ay)
+    if (acc + seg <= to) { ctx.lineTo(bx, by); acc += seg }
+    else { const r = seg > 0 ? (to - acc) / seg : 0; ctx.lineTo(ax + (bx - ax) * r, ay + (by - ay) * r); break }
+  }
+  ctx.stroke()
+}
+// Paint the beam TREE up to a global front distance: each branch draws from its
+// own start (the prism it split from) once the front passes it; a glowing head
+// rides every branch that's still advancing.
+function paintTree(canvas: HTMLCanvasElement, W: number, H: number, strokes: Stroke[], front: number, color: string, head: boolean) {
   const ctx = canvas.getContext('2d'); if (!ctx) return
   ctx.clearRect(0, 0, W, H)
-  if (pts.length < 2 || dist <= 0) return
-  const from = tail != null ? Math.max(0, dist - tail) : 0
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = color
-  ctx.globalAlpha = 0.18; ctx.lineWidth = 9;   strokeRange(ctx, pts, from, dist)
-  ctx.globalAlpha = 0.95; ctx.lineWidth = 3.2; strokeRange(ctx, pts, from, dist)
+  for (const s of strokes) {
+    const vis = front - s.startPx
+    if (vis <= 0) continue
+    ctx.globalAlpha = 0.18; ctx.lineWidth = 9;   strokeUpTo(ctx, s.pts, vis)
+    ctx.globalAlpha = 0.95; ctx.lineWidth = 3.2; strokeUpTo(ctx, s.pts, vis)
+  }
   ctx.globalAlpha = 1
   if (head) {
-    const p = pointAt(pts, dist)
-    const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], 11)
-    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, color); g.addColorStop(1, 'rgba(0,0,0,0)')
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p[0], p[1], 11, 0, Math.PI * 2); ctx.fill()
+    for (const s of strokes) {
+      const vis = front - s.startPx
+      if (vis <= 0 || vis >= polylineLen(s.pts)) continue
+      const p = pointAt(s.pts, vis)
+      const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], 11)
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, color); g.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p[0], p[1], 11, 0, Math.PI * 2); ctx.fill()
+    }
   }
 }
 
@@ -103,8 +99,8 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   const onSolvedRef = useRef(onSolved)
   useEffect(() => { onSolvedRef.current = onSolved })
 
-  const [revealed, setRevealed]   = useState(false)  // a finished fire is showing its result
-  const [firing, setFiring]       = useState(false)  // beam is travelling (button locked)
+  const [revealed, setRevealed]   = useState(false)
+  const [firing, setFiring]       = useState(false)
   const [firesUsed, setFiresUsed] = useState(0)
   const [failed, setFailed]       = useState(false)
 
@@ -117,59 +113,61 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   const wallSet   = useMemo(() => new Set((lvl?.walls ?? []).map(w => `${w.x},${w.y}`)), [lvl])
   const mirrorSet = useMemo(() => new Set((lvl?.mirrors ?? []).map(m => `${m.x},${m.y}`)), [lvl])
   const fixedSet  = useMemo(() => new Set((lvl?.mirrors ?? []).filter(m => m.fixed).map(m => `${m.x},${m.y}`)), [lvl])
+  const prismSet  = useMemo(() => new Set((lvl?.prisms ?? []).map(p => `${p.x},${p.y}`)), [lvl])
 
-  // Trace: straight through lenses (must cross all), reflect off mirrors, die at
-  // wall/edge, cycle-guard stops the instant a (cell,direction) repeats.
+  // Multi-beam trace: reflect at mirrors, SPLIT at prisms into two perpendicular
+  // beams, pass through lenses (must cross all). Returns the beam-tree strokes
+  // (cell-unit polylines + start distance) for drawing. Global (cell,dir) seen
+  // set + guard bound the whole tree (cycles can't run away).
   const trace = useMemo(() => {
-    const segs: { x: number; y: number; from: BeamDir; to: BeamDir }[] = []
-    if (!lvl) return { segs, hit: false, crossed: new Set<string>() }
+    if (!lvl) return { strokes: [] as { pts: Pt[]; startDist: number }[], hit: false, crossed: new Set<string>() }
     const { cols, rows, source, targets } = lvl
     const need = new Set(targets.map(t => `${t.x},${t.y}`))
     const crossed = new Set<string>()
     const seen = new Set<string>()
-    let x = source.x, y = source.y
-    let dir: BeamDir = source.dir
-    const cap = cols * rows * 4
-    for (let i = 0; i < cap; i++) {
-      const key = `${x},${y}`
-      const entry = dir
-      if (!(i === 0 && x === source.x && y === source.y) && mirrorSet.has(key)) {
-        dir = REFLECT[orient[key] ?? '/'][dir]
+    const strokes: { pts: Pt[]; startDist: number }[] = []
+    const queue: { x: number; y: number; dir: BeamDir; first: boolean; startDist: number }[] =
+      [{ x: source.x, y: source.y, dir: source.dir, first: true, startDist: 0 }]
+    let guard = cols * rows * 16
+    while (queue.length && guard-- > 0) {
+      const b = queue.shift()!
+      let x = b.x, y = b.y, dir = b.dir, first = b.first
+      const pts: Pt[] = [[x + 0.5, y + 0.5]]
+      let len = 0
+      while (guard-- > 0) {
+        const key = `${x},${y}`
+        if (!first && mirrorSet.has(key)) dir = REFLECT[orient[key] ?? '/'][dir]
+        if (!first && prismSet.has(key)) {
+          for (const nd of PERP[dir]) queue.push({ x, y, dir: nd, first: true, startDist: b.startDist + len })
+          break
+        }
+        if (need.has(key)) crossed.add(key)
+        const state = `${x},${y},${dir}`
+        if (seen.has(state)) break
+        seen.add(state)
+        first = false
+        const { dx, dy } = STEP[dir]
+        const nx = x + dx, ny = y + dy
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) break
+        if (wallSet.has(`${nx},${ny}`)) break
+        x = nx; y = ny; len += 1
+        pts.push([x + 0.5, y + 0.5])
       }
-      if (need.has(key)) crossed.add(key)
-      segs.push({ x, y, from: entry, to: dir })
-      const state = `${x},${y},${dir}`
-      if (seen.has(state)) break
-      seen.add(state)
-      const { dx, dy } = STEP[dir]
-      const nx = x + dx, ny = y + dy
-      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) break
-      if (wallSet.has(`${nx},${ny}`)) break
-      x = nx; y = ny
+      if (pts.length >= 2) strokes.push({ pts, startDist: b.startDist })
     }
-    return { segs, hit: crossed.size === need.size, crossed }
-  }, [lvl, orient, mirrorSet, wallSet])
+    return { strokes, hit: crossed.size === need.size, crossed }
+  }, [lvl, orient, mirrorSet, wallSet, prismSet])
 
-  // Beam path in PIXELS (for the canvas) + its length.
   const geo = useMemo(() => {
-    if (!lvl) return { CELL: 0, W: 0, H: 0, ptsPx: [] as Pt[], lenPx: 0 }
+    if (!lvl) return { CELL: 0, W: 0, H: 0, strokes: [] as Stroke[], totalPx: 0 }
     const CELL = Math.min(44, Math.floor(320 / Math.max(lvl.cols, lvl.rows)))
-    const cells: Pt[] = []
-    for (const s of trace.segs) {
-      const inPt  = edgePoint(s.x, s.y, OPP[s.from])
-      const ctr: Pt = [s.x + 0.5, s.y + 0.5]
-      const outPt = edgePoint(s.x, s.y, s.to)
-      if (cells.length === 0) cells.push(inPt)
-      cells.push(ctr, outPt)
-    }
-    const ptsPx = cells.map(([x, y]) => [x * CELL, y * CELL] as Pt)
-    let lenPx = 0
-    for (let i = 1; i < ptsPx.length; i++) lenPx += Math.hypot(ptsPx[i][0] - ptsPx[i - 1][0], ptsPx[i][1] - ptsPx[i - 1][1])
-    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, ptsPx, lenPx }
+    const strokes: Stroke[] = trace.strokes.map(s => ({ pts: s.pts.map(([x, y]) => [x * CELL, y * CELL] as Pt), startPx: s.startDist * CELL }))
+    let totalPx = 0
+    for (const s of strokes) totalPx = Math.max(totalPx, s.startPx + polylineLen(s.pts))
+    return { CELL, W: lvl.cols * CELL, H: lvl.rows * CELL, strokes, totalPx }
   }, [lvl, trace])
   const { CELL, W, H } = geo
 
-  // Size the canvas to its box at device resolution (crisp), once per W/H.
   useEffect(() => {
     const c = canvasRef.current
     if (!c || !W || !H) return
@@ -178,7 +176,6 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
     const ctx = c.getContext('2d'); if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }, [W, H])
 
-  // Solve resolves once a FIRED, finished layout crosses every lens.
   useEffect(() => {
     if (revealed && trace.hit && !solvedRef.current) {
       solvedRef.current = true
@@ -198,7 +195,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   const targetSet = new Set(targets.map(t => `${t.x},${t.y}`))
   const litLens = (key: string) => revealed && trace.crossed.has(key)
 
-  function clearCanvas() { const c = canvasRef.current; if (c) paintBeam(c, W, H, [], 0, HOT, false) }
+  function clearCanvas() { const c = canvasRef.current; if (c) paintTree(c, W, H, [], 0, HOT, false) }
 
   function rotate(key: string) {
     if (solvedRef.current || locked || fixedSet.has(key)) return
@@ -211,37 +208,35 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
   function fire() {
     if (solvedRef.current || locked) return
     vibrate(18)
-    const pts = geo.ptsPx
-    const total = geo.lenPx
-    const hit = trace.hit              // orient is locked through travel, so stable
+    const strokes = geo.strokes
+    const total = geo.totalPx
+    const hit = trace.hit
     const used = firesUsed + 1
     setFiresUsed(used)
-    setRevealed(false)                 // hide prior result while the beam travels
+    setRevealed(false)
     setFiring(true)
-    // Slow travel: ~0.42 px/ms, clamped. One rAF loop, imperative canvas paint.
-    const dur = Math.min(1900, Math.max(650, total / 0.42))
+    const dur = Math.min(2100, Math.max(700, total / 0.42))
     const start = performance.now()
     cancelRaf()
     const step = (now: number) => {
       const c = canvasRef.current
       if (!c) { rafRef.current = null; finish(hit, used); return }
       const t = total > 0 ? Math.min(1, (now - start) / dur) : 1
-      paintBeam(c, W, H, pts, t * total, HOT, true)   // full persisting trail
+      paintTree(c, W, H, strokes, t * total, HOT, true)
       if (t < 1) rafRef.current = requestAnimationFrame(step)
-      else { rafRef.current = null; finish(hit, used, pts) }
+      else { rafRef.current = null; finish(hit, used, strokes) }
     }
     rafRef.current = requestAnimationFrame(step)
   }
 
-  function finish(hit: boolean, used: number, pts?: Pt[]) {
+  function finish(hit: boolean, used: number, strokes?: Stroke[]) {
     setFiring(false)
-    setRevealed(true)                  // light the lenses it crossed / show result
+    setRevealed(true)
     const c = canvasRef.current
     if (hit) {
-      if (c && pts) paintBeam(c, W, H, pts, geo.lenPx, GOLD, false)  // full gold beam stays
-      // solve handled by the effect on [revealed, trace.hit]
+      if (c && strokes) paintTree(c, W, H, strokes, geo.totalPx, GOLD, false)
     } else {
-      clearCanvas()                    // hide the path on a miss
+      clearCanvas()
       if (budget != null && used >= budget) {
         setFailed(true)
         failTimer.current = setTimeout(() => {
@@ -259,16 +254,16 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         @keyframes mrun-lens-bounce { 0% { transform: scale(0.7) } 55% { transform: scale(1.2) } 100% { transform: scale(1) } }
       `}</style>
       <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', textAlign: 'center', lineHeight: 1.5 }}>
-        Plan one beam path that passes through <b style={{ color: '#c9c2b6' }}>all {targets.length} lenses</b>, then fire the lantern. The beam stays dark until you fire.
+        Bend the beam through <b style={{ color: '#c9c2b6' }}>all {targets.length} lenses</b> — the prism splits it in two, so both branches must land. Plan it, then fire.
       </p>
       <div style={{ position: 'relative', width: W, height: H, borderRadius: 12, overflow: 'hidden', background: '#0a1320', border: '1px solid #1f2e42', boxShadow: 'inset 0 0 26px rgba(0,0,0,0.5)' }}>
-        {/* Grid cells */}
         {Array.from({ length: lvl.rows }).map((_, gy) =>
           Array.from({ length: lvl.cols }).map((_, gx) => {
             const key = `${gx},${gy}`
             const isWall   = wallSet.has(key)
             const isMirror = mirrorSet.has(key)
             const isFixed  = fixedSet.has(key)
+            const isPrism  = prismSet.has(key)
             const isSource = gx === source.x && gy === source.y
             const isTarget = targetSet.has(key)
             const lit      = isTarget && litLens(key)
@@ -286,6 +281,9 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                 {isSource && (
                   <div style={{ width: '58%', height: '58%', borderRadius: '50%', background: `radial-gradient(circle, ${GOLD} 0%, ${GOLD}66 55%, transparent 75%)`, boxShadow: `0 0 12px ${GOLD}aa` }} />
                 )}
+                {isPrism && (
+                  <div style={{ width: '52%', height: '52%', transform: 'rotate(45deg)', borderRadius: 4, background: 'linear-gradient(135deg, rgba(125,211,252,0.85), rgba(56,189,248,0.35))', border: '1.5px solid rgba(186,230,253,0.9)', boxShadow: '0 0 10px rgba(125,211,252,0.6)' }} />
+                )}
                 {isTarget && (
                   <div style={{ width: '58%', height: '58%', borderRadius: '50%', border: `2px solid ${lit ? GOLD : '#5a7a9a'}`, background: lit ? `radial-gradient(circle, ${GOLD}cc 0%, transparent 70%)` : 'rgba(90,122,154,0.18)', boxShadow: lit ? `0 0 22px ${GOLD}` : 'none', transition: 'background 0.2s, box-shadow 0.2s, border-color 0.2s', animation: solved ? 'mrun-lens-bounce 460ms ease-out' : undefined }} />
                 )}
@@ -295,7 +293,6 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
                     <div style={{
                       width: isFixed ? 4 : 3, height: '70%', borderRadius: 2,
                       background: isFixed ? '#566173' : (solved ? GOLD : '#dbe3ee'),
-                      // CSS rotate is clockwise: +45deg draws "/", -45deg draws "\".
                       transform: `rotate(${orient[key] === '/' ? 45 : -45}deg)`,
                       transition: 'transform 0.18s cubic-bezier(.34,1.4,.5,1)',
                       boxShadow: isFixed ? 'none' : '0 0 7px rgba(219,227,238,0.6)',
@@ -307,9 +304,7 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
             )
           }),
         )}
-        {/* Travelling beam — painted imperatively on canvas (see header note). */}
         <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: W, height: H, pointerEvents: 'none' }} />
-        {/* Lens flare — a ring that expands + fades from each lens on solve. */}
         {solved && targets.map((t, i) => (
           <div key={i} style={{
             position: 'absolute', left: (t.x + 0.5) * CELL, top: (t.y + 0.5) * CELL,
@@ -320,7 +315,6 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         ))}
       </div>
 
-      {/* Status line */}
       <div style={{ minHeight: 18 }}>
         {missed && (
           <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: RED, textAlign: 'center', margin: 0 }}>
@@ -339,7 +333,6 @@ export default function MirrorRunPuzzle({ puzzle, onSolved }: { puzzle: RaidPuzz
         )}
       </div>
 
-      {/* Fire budget pips */}
       {budget != null && !solved && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.14em', color: '#7d8694' }}>Fires</span>
