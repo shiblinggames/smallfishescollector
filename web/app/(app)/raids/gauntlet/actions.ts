@@ -212,7 +212,7 @@ export async function startGauntletRun(): Promise<{ started: boolean; reason?: '
 
 /** Cash out an open run at the reached depth, banking the (clamped) pot ×
  *  chest multiplier + the chest's gem bonus. Closes the run. */
-export async function cashOutGauntlet(depth: number, pot: number): Promise<
+export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, pot: number): Promise<
   | { ok: false }
   | {
       ok: true
@@ -246,15 +246,20 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 
   if (!profile || profile.gauntlet_run_open !== true) return { ok: false }
 
-  const d = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(depth)))
-  if (d <= 0) {
+  // Two depths (Veteran's Start decouples them): rewardDepth = ships actually
+  // sunk (drives chest + pot, so the head start is no loot shortcut); combatDepth
+  // = how deep you reached (drives Fathoms + deepest record + contest, so the
+  // skip DOES count toward depth). Equal for everyone without Veteran's Start.
+  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
+  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
+  if (rd <= 0) {
     // Nothing cleared — just close the run.
     await admin.from('profiles').update({ gauntlet_run_open: false }).eq('id', user.id)
     return { ok: false }
   }
 
-  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(d)))
-  const chest = chestForDepth(d)
+  const cleanPot = Math.max(0, Math.min(Math.floor(pot), maxPotForDepth(rd)))
+  const chest = chestForDepth(rd)
 
   // Run Upgrades (Locker, scope 'gauntlet') that sweeten the cash-out.
   const upgrades   = (profile.gauntlet_upgrades as string[] | null) ?? []
@@ -281,13 +286,16 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 
   // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth
   // (Lucky Locker boosts the payout).
-  const earnedFathoms    = Math.round(fathomsForDepth(d) * gauntletFathomsMult(upgrades))
+  // Fathoms (meta-currency) bank on ships SUNK (rewardDepth), so Veteran's Start
+  // never farms the currency that buys upgrades — only the deepest record /
+  // contest / leaderboard below count the combat depth.
+  const earnedFathoms    = Math.round(fathomsForDepth(rd) * gauntletFathomsMult(upgrades))
   const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
   const newGems          = (profile.gems ?? 0) + gems
   const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
   const prevDeepest      = (profile.gauntlet_deepest as number | null) ?? 0
-  const deepest          = Math.max(prevDeepest, d)
+  const deepest          = Math.max(prevDeepest, cd)
 
   // Leaderboard: deepest CASHED-OUT depth only (this path = cash-out, never
   // death). Time is server-computed wall-clock from run start (gauntlet_last_run_at
@@ -297,17 +305,17 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
   const runMs       = lastRunAt > 0 ? Math.max(0, Date.now() - lastRunAt) : null
   const prevBestDep = (profile.gauntlet_best_depth as number | null) ?? 0
   const prevBestMs  = (profile.gauntlet_best_depth_ms as number | null) ?? null
-  const beatsBest   = runMs != null && (d > prevBestDep || (d === prevBestDep && (prevBestMs == null || runMs < prevBestMs)))
+  const beatsBest   = runMs != null && (cd > prevBestDep || (cd === prevBestDep && (prevBestMs == null || runMs < prevBestMs)))
   const bestFields  = beatsBest
-    ? { gauntlet_best_depth: d, gauntlet_best_depth_ms: runMs, gauntlet_best_depth_at: new Date().toISOString() }
+    ? { gauntlet_best_depth: cd, gauntlet_best_depth_ms: runMs, gauntlet_best_depth_at: new Date().toISOString() }
     : {}
 
   // The Deepest Descent contest — windowed deepest CASHED-OUT depth, only while
   // the 30-day clock is still running. Frozen automatically once it ends.
   const contestActive = Date.now() < Date.parse(GAUNTLET_DEEPEST_CONTEST_ENDS_AT)
   const prevContestDep = (profile.gauntlet_contest_depth as number | null) ?? 0
-  const contestFields = contestActive && d > prevContestDep
-    ? { gauntlet_contest_depth: d, gauntlet_contest_depth_at: new Date().toISOString() }
+  const contestFields = contestActive && cd > prevContestDep
+    ? { gauntlet_contest_depth: cd, gauntlet_contest_depth_at: new Date().toISOString() }
     : {}
 
   const [, , crewXP] = await Promise.all([
@@ -325,7 +333,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
       amount: bankedDoubloons,
-      reason: `Davy Jones Gauntlet: depth ${d}`,
+      reason: `Davy Jones Gauntlet: depth ${cd}`,
     }),
     grantXPToAssignedCrew(admin, user.id, bankedXp),
   ])
@@ -334,7 +342,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 
   return {
     ok: true,
-    depth: d,
+    depth: cd,
     chest: { tier: chest.tier, label: chest.label, potMult: chest.potMult },
     bankedDoubloons,
     bankedXp,
@@ -353,7 +361,7 @@ export async function cashOutGauntlet(depth: number, pot: number): Promise<
 /** Close an open run after a wipe. Banks no doubloons; still records deepest and
  *  still pays Fathoms for how deep you got (the meta-currency rewards the dive,
  *  not the cash-out). */
-export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
+export async function resolveGauntletDeath(rewardDepth: number, combatDepth: number = rewardDepth): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, deepest: 0, earnedFathoms: 0, newFathoms: 0 }
@@ -369,11 +377,15 @@ export async function resolveGauntletDeath(depth: number): Promise<{ ok: boolean
     return { ok: false, deepest: (profile?.gauntlet_deepest as number | null) ?? 0, earnedFathoms: 0, newFathoms: (profile?.gauntlet_fathoms as number | null) ?? 0 }
   }
 
-  const d = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(depth)))
+  // rewardDepth = ships sunk (Fathoms); combatDepth = how deep you reached
+  // (deepest record). Equal without Veteran's Start.
+  const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
+  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
   const prevDeepest = (profile.gauntlet_deepest as number | null) ?? 0
-  const deepest = Math.max(prevDeepest, d)
-  // Lucky Locker boosts Fathoms win or lose, so it applies on a sink too.
-  const earnedFathoms = Math.round(fathomsForDepth(d) * gauntletFathomsMult((profile.gauntlet_upgrades as string[] | null) ?? []))
+  const deepest = Math.max(prevDeepest, cd)
+  // Lucky Locker boosts Fathoms win or lose, so it applies on a sink too. Banked
+  // on ships sunk (rd) so the head start never farms the meta-currency.
+  const earnedFathoms = Math.round(fathomsForDepth(rd) * gauntletFathomsMult((profile.gauntlet_upgrades as string[] | null) ?? []))
   const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
 
   await admin

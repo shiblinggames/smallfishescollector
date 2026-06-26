@@ -390,7 +390,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function handlePlayerDefeated() {
     if (resolving) return
     setResolving(true)
-    resolveGauntletDeath(rollStateRef.current.cleared).then(res => {
+    resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0).then(res => {
       if (res?.ok) setDeathFathoms(res.earnedFathoms)
     }).finally(() => {
       setResolving(false)
@@ -415,7 +415,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function cashOut() {
     if (resolving) return
     setResolving(true)
-    cashOutGauntlet(rollStateRef.current.cleared, potRef.current).then(res => {
+    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current).then(res => {
       setResolving(false)
       setReward(res)
       setPhase('reward')
@@ -435,7 +435,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         setConfirmLeave(false)
         const go = pendingNavRef.current ?? (() => router.push('/expeditions'))
         pendingNavRef.current = null
-        resolveGauntletDeath(rollStateRef.current.cleared).finally(go)
+        resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0).finally(go)
       }}
     />
   ) : null
@@ -688,12 +688,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Dead ────────────────────────────────────────────────────────────────
   if (phase === 'dead') {
     const cleared = rollStateRef.current.cleared
-    // Death "depth" is the COMBAT depth you fell at (matches the fight you lost),
-    // even though your record/Fathoms below count only the ships you sank.
-    const diedAt = cleared + 1 + skipOffset
+    // Combat depth: the deepest you cleared (reached) and the depth you fell at.
+    // The deepest record counts combat depth, so Veteran's Start counts toward it.
+    const reached = cleared + skipOffset
+    const diedAt = reached + 1
     const lost = potRef.current
-    const newRecord = cleared > 0 && cleared > props.deepest
-    const best = Math.max(cleared, props.deepest)
+    const newRecord = cleared > 0 && reached > props.deepest
+    const best = Math.max(reached, props.deepest)
     const CRIMSON = '#ef4444'
     return (
       <>
@@ -750,7 +751,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {newRecord ? (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.4rem 0.9rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}55` }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: TEAL }}>New deepest — depth {cleared}</span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: TEAL }}>New deepest — depth {reached}</span>
               </div>
             ) : (
               <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a766e' }}>Deepest run: depth {best}</p>
