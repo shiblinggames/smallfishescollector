@@ -1015,8 +1015,8 @@ export default function GauntletGame(props: GauntletGameProps) {
             Plunder of the Deep
           </motion.p>
           <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 17 }}
-            className="font-cinzel font-800" style={{ fontSize: '2.35rem', color: '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: `0 0 32px ${TEAL}55` }}>
-            Choose Your Power
+            className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', whiteSpace: 'nowrap', color: '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: `0 0 32px ${TEAL}55` }}>
+            Choose a Power
           </motion.h1>
           <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#b6c7c2', marginTop: 9, marginBottom: 20, lineHeight: 1.4 }}>
             Three powers surface. One is yours for the rest of the dive.
