@@ -309,28 +309,26 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Crew/repair cooldown: abilities refresh every N cleared rounds.
     if (clearedNow % GAUNTLET_COOLDOWN_ROUNDS === 0) setUsedAbilityIds(new Set())
 
-    // Curse milestone — descending INTO a CURSE_DEPTH imposes a new curse.
-    // Takes priority over a tide this round so the two interstitials never
-    // stack; the tide pity counter still ticks so recovery isn't starved.
-    // Calm Before (Run Upgrade) pushes every curse one or more depths deeper.
+    // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
+    // BOON_DEPTH). Normally these fall on different depths — curses sit one off
+    // from boons so the run alternates toll and gift. BUT the Calm Before
+    // upgrade pushes curses one depth deeper, landing them squarely on boon
+    // depths. When both come due the same round we must fire BOTH — curse
+    // first, then the boon — or the curse's early-out swallows the boon (which
+    // starved boons to almost nothing for anyone running Calm Before). The tide
+    // pity counter ticks once for the shared round either way.
     const nextDepth = clearedNow + 1
-    if (CURSE_DEPTHS.includes(nextDepth - gauntletCurseDelay(props.gauntletUpgrades))) {
-      const curse = drawCurse(activeCursesRef.current.map(c => c.id))
-      if (curse) {
-        roundsSinceTideRef.current += 1
-        setPendingCurse(curse)
-        setPhase('curse')
-        return
-      }
-    }
-
-    // Boon draft — descending past a BOON_DEPTH lets the player claim a power.
-    // Offset from curse depths so the run alternates gift and toll; also takes
-    // priority over a tide this round so interstitials never stack.
-    if (BOON_DEPTHS.includes(nextDepth)) {
+    const curse = CURSE_DEPTHS.includes(nextDepth - gauntletCurseDelay(props.gauntletUpgrades))
+      ? drawCurse(activeCursesRef.current.map(c => c.id))
+      : null
+    const boonDue = BOON_DEPTHS.includes(nextDepth)
+    if (curse || boonDue) {
       roundsSinceTideRef.current += 1
-      setPendingBoons(drawBoons(3, boonTiers))
-      setPhase('boon')
+      // Draw the boon now even on a curse round, so applyCurse can hand off to
+      // the boon screen (it routes to 'boon' whenever pendingBoons is set).
+      if (boonDue) setPendingBoons(drawBoons(3, boonTiers))
+      if (curse) { setPendingCurse(curse); setPhase('curse') }
+      else setPhase('boon')
       return
     }
 
@@ -356,7 +354,9 @@ export default function GauntletGame(props: GauntletGameProps) {
       setActiveTideEffects(prev => [...prev, ...curse.effects!])
     }
     setPendingCurse(null)
-    setPhase('between')
+    // If a boon was drawn for this same depth (Calm Before lands a curse on a
+    // boon depth), show it next instead of dropping straight to the breather.
+    setPhase(pendingBoons ? 'boon' : 'between')
   }
 
   // Claim a drafted boon — its effect rides the active-effect channel (run-wide,
