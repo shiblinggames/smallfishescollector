@@ -1720,10 +1720,16 @@ export default function RaidCombat({
         else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
 
         const isAttackerPlayer = who === 'player'
-        const attackerSpeed  = isAttackerPlayer ? shipSpeed       : enemy.shipSpeed
-        const defenderAction = isAttackerPlayer ? eAction         : pAction
-        const defenderSpeed  = isAttackerPlayer ? enemy.shipSpeed : shipSpeed
-        const defenderNav    = isAttackerPlayer ? 0               : totalNavigation
+        // The player's effective ship speed folds in tide.speedDelta (Following
+        // Sea boon, Becalmed curse, etc.) so a speed boost makes you nimbler in
+        // the dodge contest too — slipping more shots when you defend and
+        // landing more when you attack — not just winning turn order. Floored at
+        // 1 so a heavy speed drop can't invert the roll. Enemy speed is raw.
+        const playerDodgeSpeed = Math.max(1, shipSpeed + tide.speedDelta)
+        const attackerSpeed  = isAttackerPlayer ? playerDodgeSpeed : enemy.shipSpeed
+        const defenderAction = isAttackerPlayer ? eAction          : pAction
+        const defenderSpeed  = isAttackerPlayer ? enemy.shipSpeed  : playerDodgeSpeed
+        const defenderNav    = isAttackerPlayer ? 0                : totalNavigation
         // Repossession: drop the reclaimed item from the per-shot effect reads
         // for this fight (null ref = unchanged list, so every other raid is
         // untouched). Fight-start stats above keep the full list intentionally.
@@ -1852,10 +1858,10 @@ export default function RaidCombat({
 
         splatTarget = isAttackerPlayer ? 'enemy' : 'player'
 
-        // Dodge outcomes: success = 0 dmg, failure = "partial dodge" at 50%.
-        // No more "fully ate the shot" — the dodge button always pays for
-        // itself a little. Combined with the dodge cooldown above, this
-        // turns dodge into a soft mitigation read instead of a binary.
+        // Dodge outcomes: success = 0 dmg, failure = "partial dodge" at 30% of
+        // the hit (70% reduction). No more "fully ate the shot" — the dodge
+        // button always pays for itself, and a failed dodge now still shrugs off
+        // most of the blow. Symmetric: applies to both player and enemy dodges.
         let partialDodge = false
         // A frozen defender can't weave aside — its dodge stance is forfeit this
         // round (mirrors its skipped turn), so the shot lands clean.
@@ -1948,7 +1954,7 @@ export default function RaidCombat({
             continue
           } else {
             partialDodge = true
-            dmg = Math.max(1, Math.floor(dmg * 0.5))
+            dmg = Math.max(1, Math.floor(dmg * 0.3))
           }
         }
 
