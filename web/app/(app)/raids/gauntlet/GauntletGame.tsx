@@ -2067,14 +2067,13 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
           type="button"
           onClick={claimable ? () => claim(e.id, e.special) : undefined}
           disabled={!claimable}
-          className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+          className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
           style={{
-            marginTop: 11, width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.78rem',
+            marginTop: 11, width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.76rem',
             cursor: claimable ? 'pointer' : 'default',
-            color: claimable ? '#1a1206' : '#6a6764',
-            background: claimable ? `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)` : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${claimable ? GOLD : 'rgba(255,255,255,0.1)'}`,
-            boxShadow: claimable ? `0 0 16px ${GOLD}33` : 'none',
+            color: claimable ? TEAL : '#6a6764',
+            background: claimable ? `${TEAL}1c` : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${claimable ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}`,
           }}
         >
           {busy ? 'Buying…'
