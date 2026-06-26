@@ -386,6 +386,7 @@ export default function RaidCombat({
     let hpStartDelta  = 0
     let reloadProc    = { chance: 0, bonus: 0 }
     let everyFightHeal = 0
+    let everyFightHealPct = 0
     let guaranteedDodgeBank = 0
     // Per-enemy one-shots applied at mount only.
     let enemyHpScaleMult = 1
@@ -437,6 +438,7 @@ export default function RaidCombat({
           else if (e.scope === 'boss' && isBoss) hpStartDelta += e.n
           break
         case 'startOfFightHeal':      everyFightHeal += e.n; break
+        case 'startOfFightHealPct':   everyFightHealPct += e.pctMax; break
         case 'reloadProc':
           // Procs stack additively on chance + bonus (simple model;
           // future tier 4 tides could replace with a more nuanced curve).
@@ -457,7 +459,7 @@ export default function RaidCombat({
       dmgMult, fireDmgMult, volleyDmgMult, bossDmgMult, bossVolMult,
       critBonus, critZoneMult, inDmgMult, inCritReduce,
       dodgeBonus, speedDelta,
-      chargesStart, hpStartDelta, everyFightHeal,
+      chargesStart, hpStartDelta, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
       aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, noncritDmgMult,
@@ -586,7 +588,7 @@ export default function RaidCombat({
   // Upgrade slots. Enemies always cap at MAX_CHARGES.
   const playerMaxCharges = MAX_CHARGES + Math.max(0, bonusChargeSlots)
   const [playerHp, setPlayerHp]       = useState(() =>
-    Math.max(0, Math.min(playerHpMax, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal))
+    Math.max(0, Math.min(playerHpMax, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal + Math.round(tide.everyFightHealPct * playerHpMax)))
   )
   const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
   // The enemy's ACTUAL max HP this fight = base × any enemyHpScale (Barnacled

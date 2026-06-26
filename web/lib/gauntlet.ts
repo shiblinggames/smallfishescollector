@@ -626,9 +626,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+7 ship speed', detail: 'Your ship is 7 faster — you act first more often and your aim bar sweeps faster.', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
   ] },
   { id: 'bilge_pump', name: 'Bilge Pump', flavor: 'Patch the seams in the lull before the next gun.', tiers: [
-    { desc: 'Heal 6 HP each fight', detail: 'At the start of every fight, your ship repairs 6 HP.', effect: { kind: 'startOfFightHeal', n: 6 } },
-    { desc: 'Heal 13 HP each fight', detail: 'At the start of every fight, your ship repairs 13 HP.', effect: { kind: 'startOfFightHeal', n: 13 } },
-    { desc: 'Heal 22 HP each fight', detail: 'At the start of every fight, your ship repairs 22 HP.', effect: { kind: 'startOfFightHeal', n: 22 } },
+    { desc: 'Heal 5% max HP each fight', detail: 'At the start of every fight, your ship repairs 5% of its maximum HP. Scales with your hull, so it keeps mattering as you go deeper.', effect: { kind: 'startOfFightHealPct', pctMax: 0.05 } },
+    { desc: 'Heal 9% max HP each fight', detail: 'At the start of every fight, your ship repairs 9% of its maximum HP.', effect: { kind: 'startOfFightHealPct', pctMax: 0.09 } },
+    { desc: 'Heal 14% max HP each fight', detail: 'At the start of every fight, your ship repairs 14% of its maximum HP.', effect: { kind: 'startOfFightHealPct', pctMax: 0.14 } },
   ] },
   { id: 'ghostward', name: 'Ghostward', flavor: 'Salt and cold iron at the rails. The drowned aim wide.', tiers: [
     { desc: 'Enemies crit 12% less', detail: 'Enemies are 12% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.12 } },

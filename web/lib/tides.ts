@@ -72,8 +72,11 @@ export type TideEffect =
   | { kind: 'fullHeal' }
   /** Delta applied at the START of the next fight (negative = wound). */
   | { kind: 'startHpDelta'; n: number; scope: 'nextFight' | 'boss' }
-  /** Passive heal at the START of each REMAINING fight. */
+  /** Passive heal at the START of each REMAINING fight (flat HP). */
   | { kind: 'startOfFightHeal'; n: number }
+  /** Passive heal at the START of each REMAINING fight, as a fraction of max
+   *  HP — scales with the hull so it doesn't fall off late (Bilge Pump). */
+  | { kind: 'startOfFightHealPct'; pctMax: number }
   // ── Charges (cannonballs) ───────────────────────────────────────
   /** Extra charges at the START of fights. scope=allRemaining for run,
    *  oneFight for a single upcoming encounter.
@@ -160,6 +163,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
       return e.pct > 0 ? 'good' : 'neutral'
     case 'lowHpDamage':  return e.maxBonus > 0 ? 'good' : 'neutral'
     case 'fightShield':  return e.pctMax > 0 ? 'good' : 'neutral'
+    case 'startOfFightHealPct': return e.pctMax > 0 ? 'good' : 'neutral'
     case 'chargeCarryover': return 'good'
     case 'incomingDmgMult':
     case 'enemyHpScale':
@@ -730,6 +734,7 @@ export function describeEffect(e: TideEffect): string {
       return `${sign}${e.n} HP entering ${scope}`
     }
     case 'startOfFightHeal':      return `+${e.n} HP at every fight start`
+    case 'startOfFightHealPct':   return `Heal ${Math.round(e.pctMax * 100)}% max HP each fight`
     case 'startCharges': {
       const scope = e.scope === 'nextFight' ? 'next fight' : 'every fight'
       if (e.n <= -10) return `0 cannonballs ${scope}`
