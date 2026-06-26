@@ -1797,7 +1797,9 @@ export default function RaidCombat({
           const baseCrit = enemy.critChance ?? 0
           let effCrit    = affix?.critMult ? Math.min(1, baseCrit * affix.critMult) : baseCrit
           // Tide: incomingCritReduction lowers the enemy's crit chance vs you.
-          if (tide.inCritReduce > 0) effCrit = Math.max(0, effCrit - tide.inCritReduce)
+          // Positive = Ghostward boon (enemies crit less); negative = Sharpshooters
+          // curse (enemies crit MORE). Clamped to a valid 0-1 chance.
+          if (tide.inCritReduce !== 0) effCrit = Math.max(0, Math.min(1, effCrit - tide.inCritReduce))
           if (Math.random() < effCrit) {
             enemyCrit = true
             dmg = Math.floor(dmg * 1.5)

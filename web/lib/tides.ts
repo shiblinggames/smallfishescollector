@@ -92,9 +92,9 @@ export type TideEffect =
   | { kind: 'bossVolleyDmgMult'; mult: number }
   // ── Enemy-side effects (next fight) ─────────────────────────────
   /** Scales next enemy's max HP. <1 = weakened. Applied once. */
-  | { kind: 'enemyHpScale'; mult: number; scope: 'nextFight' }
+  | { kind: 'enemyHpScale'; mult: number; scope: 'nextFight' | 'allRemaining' }
   /** Next enemy starts with N fewer cannonballs (clamped to 0). */
-  | { kind: 'enemyStartChargesDelta'; n: number; scope: 'nextFight' }
+  | { kind: 'enemyStartChargesDelta'; n: number; scope: 'nextFight' | 'allRemaining' }
   // ── Legendary one-of-a-kind effects (Gauntlet boons) ────────────
   /** Instantly sink an enemy the moment its HP drops to <= pct of its max. */
   | { kind: 'executeThreshold'; pct: number }
@@ -123,8 +123,8 @@ export type TideEffect =
 // can't drift on which effects are one-shot.
 export function expireAfterFight(effects: TideEffect[]): TideEffect[] {
   return effects.flatMap<TideEffect>(e => {
-    if (e.kind === 'enemyHpScale')                                return []
-    if (e.kind === 'enemyStartChargesDelta')                      return []
+    if (e.kind === 'enemyHpScale'          && e.scope === 'nextFight') return []
+    if (e.kind === 'enemyStartChargesDelta' && e.scope === 'nextFight') return []
     if (e.kind === 'guaranteedDodge')                             return []
     if (e.kind === 'startCharges'    && e.scope === 'nextFight')  return []
     if (e.kind === 'startHpDelta'    && e.scope === 'nextFight')  return []
@@ -711,7 +711,9 @@ export function describeEffect(e: TideEffect): string {
       if (e.mult > 1) return `Take ${pct(e.mult - 1)} more damage, ${scope}`
       return `Take ${pct(1 - e.mult)} less damage, ${scope}`
     }
-    case 'incomingCritReduction': return `Enemies crit ${pct(e.chance)} less often`
+    case 'incomingCritReduction': return e.chance >= 0
+      ? `Enemies crit ${Math.round(e.chance * 100)}% less often`
+      : `Enemies crit ${Math.round(-e.chance * 100)}% more often`
     case 'instantHeal':           return `+${e.n} HP now`
     case 'fullHeal':              return 'Full HP restored'
     case 'startHpDelta': {
@@ -739,8 +741,16 @@ export function describeEffect(e: TideEffect): string {
     }
     case 'bossDamageMult':        return `${pct(e.mult - 1)} damage to boss`
     case 'bossVolleyDmgMult':     return `${pct(e.mult - 1)} Volley damage to boss`
-    case 'enemyHpScale':          return `Next enemy ${pct(1 - e.mult)} weaker`
-    case 'enemyStartChargesDelta':return `Next enemy starts with ${Math.abs(e.n)} fewer cannonball${Math.abs(e.n) === 1 ? '' : 's'}`
+    case 'enemyHpScale': {
+      const who = e.scope === 'allRemaining' ? 'Enemies' : 'Next enemy'
+      return e.mult >= 1 ? `${who} ${Math.round((e.mult - 1) * 100)}% tougher` : `${who} ${Math.round((1 - e.mult) * 100)}% weaker`
+    }
+    case 'enemyStartChargesDelta': {
+      const who = e.scope === 'allRemaining' ? 'Enemies' : 'Next enemy'
+      return e.n < 0
+        ? `${who} start with ${Math.abs(e.n)} fewer cannonball${Math.abs(e.n) === 1 ? '' : 's'}`
+        : `${who} open every fight loaded (+${e.n} cannonball${e.n === 1 ? '' : 's'})`
+    }
     case 'doubloonsAtRaidEnd':    return `${e.n >= 0 ? '+' : ''}${e.n} ⟡ at raid end`
     case 'aimFog':                return 'Fog drifts over your aim bar'
     case 'aimSpeedMult':          return e.mult > 1 ? `Aim needle ${pct(e.mult - 1)} faster` : `Aim needle ${pct(1 - e.mult)} slower`
