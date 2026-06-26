@@ -823,7 +823,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {chest.label}{chest.potMult > 1 ? ` ×${chest.potMult} chest` : ''}
             </p>
             <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-              style={{ width: '100%', marginTop: 16, padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#0e0a04', background: `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)`, border: `1px solid ${GOLD}`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 28px ${GOLD}44`, textShadow: '0 1px 0 rgba(255,255,255,0.25)' }}>
+              style={{ width: '100%', marginTop: 16, padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}0e)`, border: `1px solid ${GOLD}77`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}1e` }}>
               {resolving ? '…' : 'Claim Now and Leave'}
             </button>
           </div>
