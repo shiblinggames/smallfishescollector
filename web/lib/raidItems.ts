@@ -105,7 +105,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'gunners_sight',
     name: "Gunner's Sight",
-    description: '+15% crit damage, but normal shots hit for 15% less. A trade for the steady-handed.',
+    description: '+15% damage on critical hits, but non-critical shots hit for 15% less. A trade for the steady-handed.',
     image: '/gunnerssight.png',
     emoji: '🎯',
     rarity: 'epic',

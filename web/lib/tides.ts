@@ -244,7 +244,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'sail_wide',
         label: 'Sail wide of the bell',
-        description: '+15% volley damage in the boss fight. Next fight starts with 0 cannonballs.',
+        description: '+15% Volley damage in the boss fight. Next fight starts with 0 cannonballs.',
         effects: [
           { kind: 'bossVolleyDmgMult', mult: 1.15 },
           { kind: 'startCharges', n: NO_CHARGES, scope: 'nextFight' },
@@ -332,7 +332,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'cut_loose',
         label: 'Cut it loose',
-        description: '+5 HP next fight. +10% volley damage all run.',
+        description: '+5 HP next fight. +10% Volley damage all run.',
         effects: [
           { kind: 'startHpDelta', n: 5, scope: 'nextFight' },
           { kind: 'volleyDmgMult', mult: 1.10 },
@@ -341,7 +341,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'harvest',
         label: 'Harvest it',
-        description: '+10% fire damage all run. -10% dodge next fight (cries draw attention).',
+        description: '+10% Fire damage all run. -10% dodge next fight (cries draw attention).',
         effects: [
           { kind: 'fireDmgMult', mult: 1.10 },
           { kind: 'dodgeBonus', chance: -0.10, scope: 'nextFight' },
@@ -367,7 +367,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'trim',
         label: 'Trim sails for speed',
-        description: '+15% fire damage all run. -2 ship speed for the next 2 fights.',
+        description: '+15% Fire damage all run. -2 ship speed for the next 2 fights.',
         effects: [
           { kind: 'fireDmgMult', mult: 1.15 },
           { kind: 'speedDelta', n: -2, scope: 'next2Fights' },
@@ -504,7 +504,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'heavy_shot',
         label: 'Load the heavy shot',
-        description: '+30% fire damage all run. Your aim needle runs faster all run.',
+        description: '+30% Fire damage all run. Your aim needle runs faster all run.',
         effects: [
           { kind: 'fireDmgMult', mult: 1.30 },
           { kind: 'aimSpeedMult', mult: 1.15 },
@@ -582,7 +582,7 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'trough',
         label: 'Heal in the trough',
-        description: '+15 HP at the start of every remaining fight. -20% volley damage all run.',
+        description: '+15 HP at the start of every remaining fight. -20% Volley damage all run.',
         effects: [
           { kind: 'startOfFightHeal', n: 15 },
           { kind: 'volleyDmgMult', mult: 0.80 },
@@ -667,8 +667,8 @@ export function drawTides(n: number, maxTier: number): TideEvent[] {
 export function describeEffect(e: TideEffect): string {
   switch (e.kind) {
     case 'damageMult':            return `${pct(e.mult - 1)} damage all run`
-    case 'fireDmgMult':           return `${pct(e.mult - 1)} fire damage`
-    case 'volleyDmgMult':         return `${pct(e.mult - 1)} volley damage`
+    case 'fireDmgMult':           return `${pct(e.mult - 1)} Fire damage`
+    case 'volleyDmgMult':         return `${pct(e.mult - 1)} Volley damage`
     case 'critChanceBonus':       return `${pct(e.chance)} crit chance`
     case 'critZoneScale':         return `Crit zone ${pct(e.mult - 1)} wider`
     case 'incomingDmgMult': {
@@ -703,7 +703,7 @@ export function describeEffect(e: TideEffect): string {
       return `${e.n >= 0 ? '+' : ''}${e.n} ship speed, ${scope}`
     }
     case 'bossDamageMult':        return `${pct(e.mult - 1)} damage to boss`
-    case 'bossVolleyDmgMult':     return `${pct(e.mult - 1)} volley damage to boss`
+    case 'bossVolleyDmgMult':     return `${pct(e.mult - 1)} Volley damage to boss`
     case 'enemyHpScale':          return `Next enemy ${pct(1 - e.mult)} weaker`
     case 'enemyStartChargesDelta':return `Next enemy starts with ${Math.abs(e.n)} fewer cannonball${Math.abs(e.n) === 1 ? '' : 's'}`
     case 'doubloonsAtRaidEnd':    return `${e.n >= 0 ? '+' : ''}${e.n} ⟡ at raid end`
