@@ -723,12 +723,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   if (phase === 'dead') {
     const cleared = rollStateRef.current.cleared
     // Combat depth: the deepest you cleared (reached) and the depth you fell at.
-    // The deepest record counts combat depth, so Veteran's Start counts toward it.
+    // A death does NOT set the deepest record — that belongs to cash-outs — so
+    // there is no "new deepest" celebration here, only the standing record.
     const reached = cleared + skipOffset
     const diedAt = reached + 1
     const lost = potRef.current
-    const newRecord = cleared > 0 && reached > props.deepest
-    const best = Math.max(reached, props.deepest)
     const CRIMSON = '#ef4444'
     return (
       <>
@@ -780,16 +779,10 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           </motion.div>
 
-          {/* Silver lining — depth still counts. */}
+          {/* Silver lining — the Fathoms you salvaged. Your deepest record is
+              unchanged: only surviving and cashing out sets it. */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} style={{ marginTop: 14 }}>
-            {newRecord ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.4rem 0.9rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}55` }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
-                <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: TEAL }}>New deepest — depth {reached}</span>
-              </div>
-            ) : (
-              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a766e' }}>Deepest run: depth {best}</p>
-            )}
+            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#7a766e' }}>Deepest run: depth {props.deepest}</p>
             {deathFathoms > 0 && (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10, padding: '0.36rem 0.85rem', borderRadius: 999, background: `${TEAL}0e`, border: `1px solid ${TEAL}3a` }}>
                 <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8aa39e' }}>Salvaged</span>
@@ -1582,6 +1575,20 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
                 </motion.div>
               )
             })}
+
+            {/* Depth-milestone unlocks earned by SURVIVING to this depth. Shown
+                here, in the moment, instead of a piece of mail after the fact. */}
+            {r.unlockedThisRun.map((u, i) => (
+              <motion.div key={u.name} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.15, type: 'spring', stiffness: 260, damping: 18 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${TEAL}12`, border: `1px solid ${TEAL}55`, boxShadow: `0 0 22px ${TEAL}1c` }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 11V7a5 5 0 0 1 10 0v4" /><rect x="3" y="11" width="18" height="11" rx="2" /></svg>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: TEAL }}>Depth unlocked · {u.where}</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#eaf5f2', lineHeight: 1.1 }}>{u.name}</p>
+                  <p className="font-karla" style={{ fontSize: '0.66rem', color: '#a8b6b2', lineHeight: 1.35, marginTop: 1 }}>{u.blurb}</p>
+                </div>
+              </motion.div>
+            ))}
 
             <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
               onClick={onBack} className="font-karla font-600 tap"

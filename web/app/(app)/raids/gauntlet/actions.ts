@@ -19,28 +19,6 @@ import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletFathomsMu
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 
-/** Mail the player for each depth-unlock milestone they cross this run. Deepest
- *  only ever climbs, so each milestone fires exactly once. Best-effort. */
-async function notifyDepthUnlocks(
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-  prevDeepest: number,
-  newDeepest: number,
-): Promise<void> {
-  const crossed = GAUNTLET_DEPTH_UNLOCKS.filter(u => prevDeepest < u.depth && u.depth <= newDeepest)
-  if (crossed.length === 0) return
-  try {
-    await admin.from('mail_messages').insert(
-      crossed.map(u => ({
-        subject: `Depth ${u.depth} cleared — ${u.name} unlocked`,
-        body: `You dragged the Locker down to depth ${u.depth} and tore something loose: the ${u.name}.\n\n${u.blurb}\n\n${u.where}.\n\nThe deep keeps its prizes for those who go after them. Descend further and you'll find more.\n\n— Davy Jones`,
-        sender_label: 'Davy Jones',
-        target_user_id: userId,
-      })),
-    )
-  } catch { /* notification is best-effort; never block the payout */ }
-}
-
 /** Record a single gauntlet hit; persists the all-time biggest via greatest()
  *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
  *  so the Biggest Hit board reflects the largest blow ever landed in a descent. */
@@ -252,6 +230,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       newFathoms: number
       /** Davy cannons that dropped this cash-out (chest chase items). */
       droppedItems: string[]
+      /** Depth-milestone unlocks crossed by this CASH-OUT (surfaced on the
+       *  reward screen — the Gauntlet no longer mails these). */
+      unlockedThisRun: { name: string; blurb: string; where: string }[]
     }
 > {
   const supabase = await createClient()
@@ -364,7 +345,11 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     grantXPToAssignedCrew(admin, user.id, bankedXp),
   ])
 
-  await notifyDepthUnlocks(admin, user.id, prevDeepest, deepest)
+  // Depth-milestone unlocks crossed by SURVIVING to this depth (cash-out only —
+  // dying deep no longer counts). Surfaced on the reward screen instead of mail.
+  const unlockedThisRun = GAUNTLET_DEPTH_UNLOCKS
+    .filter(u => prevDeepest < u.depth && u.depth <= deepest)
+    .map(u => ({ name: u.name, blurb: u.blurb, where: u.where }))
 
   return {
     ok: true,
@@ -381,13 +366,16 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     earnedFathoms,
     newFathoms,
     droppedItems,
+    unlockedThisRun,
   }
 }
 
-/** Close an open run after a wipe. Banks no doubloons; still records deepest and
- *  still pays Fathoms for how deep you got (the meta-currency rewards the dive,
- *  not the cash-out). */
-export async function resolveGauntletDeath(rewardDepth: number, combatDepth: number = rewardDepth, runSnapshot?: GauntletRunSnapshot): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
+/** Close an open run after a wipe. Banks no doubloons. Pays Fathoms for the
+ *  ships you sank (the meta-currency rewards the dive itself), but a death does
+ *  NOT touch your deepest record, the run recap, the leaderboard, the contest,
+ *  or any depth-gated unlock — those advance only when you SURVIVE and cash out
+ *  the depth (see cashOutGauntlet). Dying deep is not a shortcut to anything. */
+export async function resolveGauntletDeath(rewardDepth: number, _combatDepth: number = rewardDepth, _runSnapshot?: GauntletRunSnapshot): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, deepest: 0, earnedFathoms: 0, newFathoms: 0 }
@@ -399,34 +387,26 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
     .eq('id', user.id)
     .single()
 
+  const prevDeepest = (profile?.gauntlet_deepest as number | null) ?? 0
   if (!profile || profile.gauntlet_run_open !== true) {
-    return { ok: false, deepest: (profile?.gauntlet_deepest as number | null) ?? 0, earnedFathoms: 0, newFathoms: (profile?.gauntlet_fathoms as number | null) ?? 0 }
+    return { ok: false, deepest: prevDeepest, earnedFathoms: 0, newFathoms: (profile?.gauntlet_fathoms as number | null) ?? 0 }
   }
 
-  // rewardDepth = ships sunk (Fathoms); combatDepth = how deep you reached
-  // (deepest record). Equal without Veteran's Start.
+  // Fathoms bank on ships SUNK (rewardDepth) — earned win or lose, since they
+  // reward descending, not surviving (Lucky Locker boosts the payout). Veteran's
+  // Start's head start is excluded here, same as on cash-out.
   const rd = Math.max(0, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(rewardDepth)))
-  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
-  const prevDeepest = (profile.gauntlet_deepest as number | null) ?? 0
-  const deepest = Math.max(prevDeepest, cd)
-  // Lucky Locker boosts Fathoms win or lose, so it applies on a sink too. Banked
-  // on ships sunk (rd) so the head start never farms the meta-currency.
   const earnedFathoms = Math.round(fathomsForDepth(rd) * gauntletFathomsMult((profile.gauntlet_upgrades as string[] | null) ?? []))
   const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
-  // On a new deepest, snapshot the run for the home recap (even on a sink).
-  const snapFields = cd > prevDeepest
-    ? { gauntlet_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) }
-    : {}
 
+  // Close the run + bank Fathoms ONLY. Deepest record / recap / unlocks are left
+  // untouched — they belong to cash-outs.
   await admin
     .from('profiles')
-    .update({ gauntlet_run_open: false, gauntlet_deepest: deepest, gauntlet_fathoms: newFathoms, ...snapFields })
+    .update({ gauntlet_run_open: false, gauntlet_fathoms: newFathoms })
     .eq('id', user.id)
 
-  // Sinking still records your deepest — and still unlocks what you reached.
-  await notifyDepthUnlocks(admin, user.id, prevDeepest, deepest)
-
-  return { ok: true, deepest, earnedFathoms, newFathoms }
+  return { ok: true, deepest: prevDeepest, earnedFathoms, newFathoms }
 }
 
 /** Mark the first-time explainer as seen so it doesn't auto-open again. */
