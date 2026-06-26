@@ -822,6 +822,10 @@ export default function GauntletGame(props: GauntletGameProps) {
             <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#b0a890', marginTop: 8 }}>
               +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {chest.label}{chest.potMult > 1 ? ` ×${chest.potMult} chest` : ''}
             </p>
+            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+              style={{ width: '100%', marginTop: 16, padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#0e0a04', background: `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)`, border: `1px solid ${GOLD}`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 28px ${GOLD}44`, textShadow: '0 1px 0 rgba(255,255,255,0.25)' }}>
+              {resolving ? '…' : 'Claim Now and Leave'}
+            </button>
           </div>
 
           {/* Hull bar */}
@@ -878,12 +882,8 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           )}
 
-          {/* The fork — bank the safe haul, or gamble it deeper. */}
+          {/* Push deeper — the gamble against the banked haul above. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: 22 }}>
-            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-              style={{ width: '100%', padding: '1.1rem', borderRadius: 15, fontSize: '1.08rem', color: '#0e0a04', background: `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)`, border: `1px solid ${GOLD}`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 28px ${GOLD}44`, textShadow: '0 1px 0 rgba(255,255,255,0.25)' }}>
-              {resolving ? '…' : `Haul Up & Bank ${fmt(previewDoubloons)} ⟡`}
-            </button>
             <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.05em] tap"
               style={{ width: '100%', padding: '1.05rem', borderRadius: 15, fontSize: '1.05rem', background: `${TEAL}1e`, border: `1px solid ${TEAL}77`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               Risk It · Dive to Depth {nextDepth}
