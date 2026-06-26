@@ -18,6 +18,40 @@
 //   - Dodge (no damage dealt, defensive)
 //
 // Per-enemy AI follows BroadsideEnemy.pattern cycle.
+//
+// ── MODIFIER PIPELINE (where every buff source lands) ────────────────────────
+// KEY FACT: Gauntlet BOONS are NOT a separate layer. They're compiled into the
+// SAME bucket as Tides — GauntletGame passes tideEffects={[...tides, ...boons]},
+// and the `tide` useMemo below aggregates them together. A boon and a tide of
+// the same kind STACK (multiplicatively for damage mults, additively for crit/
+// dodge CHANCES). And because the damage stack is pure multiplication, the order
+// of the factors does NOT change the result.
+//
+// Two phases:
+//   Phase 1 — STAT AGGREGATION (upstream, before this component): ship + crew +
+//     ship-class picks + stat-type items are summed into the props passed in:
+//     totalPower, shipMinDamage, shipSpeed, totalNavigation, totalFortune,
+//     classDamageMult, and `mods` (crew raid-damage %). This is the "base".
+//
+//   Phase 2 — PER-SHOT MATH (here, in resolveTurn/resolveRound):
+//     1. Aim result decided first (miss/graze/hit/crit). A green HIT can upgrade
+//        to a crit via crewCritPct + tide.critBonus (Dead-Eye etc.) — ADDITIVE.
+//     2. Base damage ROLL from ship stats + crew dmg% (raidDamageProfile),
+//        ranged by the aim result.
+//     3. MULTIPLIER STACK on top, all multiplicative (commutative):
+//          base × volley(×2) × itemBoss × itemNonboss × itemRamp
+//               × itemCritOrNoncrit × classDamageMult
+//               × tide.dmgMult × tide.fire/volleyMult × tide.bossMult × tide.critDmgMult
+//        (items = getActiveEffects(equippedRaidItems); tide.* = tides AND boons.)
+//     4. Enemy-side MITIGATION: carapace (damageReduction), Ironclad affix, phase-2 soak.
+//     5. DODGE resolves last (full = 0, partial = ½) — unless the defender is frozen.
+//     6. EXECUTE (Executioner boon) sinks the enemy if now ≤ threshold; LIFESTEAL
+//        (Leviathan's Hunger boon) heals you off the damage dealt.
+//
+// Separate sub-systems, each its own stack (boons fold in alongside tides on all):
+//   crit CHANCE (additive) · crit ZONE width (critZoneScale, mult) · turn order
+//   (shipSpeed + speedDelta) · dodge (rollDodge vs attacker) · incoming-damage
+//   mitigation (incomingDmgMult). Nothing "overrides"; it's one big multiply.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
