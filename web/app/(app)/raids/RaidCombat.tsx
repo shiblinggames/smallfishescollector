@@ -273,8 +273,14 @@ export interface RaidCombatProps {
   /** Gold + XP awarded for killing this enemy; streamed into the log on kill
    *  Pokemon-style so the parent doesn't need a separate "Round Clear" overlay. */
   killReward?: { gold: number; xp: number }
-  onEnemyDefeated: (remainingPlayerHp: number) => void
+  /** leftoverCharges = unfired cannonballs at the kill, for the Powder Hoard
+   *  boon (the Gauntlet host carries them into the next fight). Optional, so
+   *  hosts that don't carry charges just ignore it. */
+  onEnemyDefeated: (remainingPlayerHp: number, leftoverCharges?: number) => void
   onPlayerDefeated: () => void
+  /** Cannonballs to start this fight already loaded (Powder Hoard carryover).
+   *  Folded on top of any Primer / start-charge tide, capped to the magazine. */
+  initialCharges?: number
   /** Fires with each damage value the player lands, so the parent can track
    *  the biggest hit of the run (career stat). */
   onPlayerHit?: (dmg: number) => void
@@ -344,6 +350,7 @@ export default function RaidCombat({
   equippedRepairKit,
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
+  initialCharges = 0,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
@@ -387,6 +394,13 @@ export default function RaidCombat({
     let critDmgMult     = 1
     let executeThreshold = 0
     let lifestealPct    = 0
+    // Spiteful Wake (thorns, additive), Wounded Fury (low-HP damage, take the
+    // highest tier), Powder Hoard (charge carryover cap), Stormward (fight
+    // shield as a fraction of max HP, take the highest).
+    let retaliatePct    = 0
+    let lowHpDamage     = 0
+    let chargeCarryover = 0
+    let fightShieldPct  = 0
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -399,6 +413,10 @@ export default function RaidCombat({
         case 'critDmgMult':           critDmgMult *= e.mult; break
         case 'executeThreshold':      executeThreshold = Math.max(executeThreshold, e.pct); break
         case 'lifestealPct':          lifestealPct += e.pct; break
+        case 'retaliatePct':          retaliatePct += e.pct; break
+        case 'lowHpDamage':           lowHpDamage = Math.max(lowHpDamage, e.maxBonus); break
+        case 'chargeCarryover':       chargeCarryover = Math.max(chargeCarryover, e.cap); break
+        case 'fightShield':           fightShieldPct = Math.max(fightShieldPct, e.pctMax); break
         case 'incomingDmgMult':       inDmgMult *= e.mult; break
         case 'incomingCritReduction': inCritReduce += e.chance; break
         case 'dodgeBonus':            dodgeBonus += e.chance; break
@@ -433,6 +451,7 @@ export default function RaidCombat({
       enemyHpScaleMult, enemyChargesDelta,
       aimFog, aimSpeedMult, zoneSpeedMult,
       critDmgMult, executeThreshold, lifestealPct,
+      retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
     }
   }, [tideEffects, isBoss])
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
@@ -451,6 +470,12 @@ export default function RaidCombat({
   // seed and the tide silently does nothing.
   const chargesStartRef = useRef(tide.chargesStart)
   chargesStartRef.current = tide.chargesStart
+  // Stormward boon: shield worth a % of max HP, reformed each fight. Mirror the
+  // computed amount so the tight-deps reset effect can seed it (it feeds the
+  // same soak pool the Abyssal Tide ability uses). Only seeded when > 0, so
+  // regular raids without boons are untouched.
+  const fightShieldMaxRef = useRef(Math.round(tide.fightShieldPct * playerHpMax))
+  fightShieldMaxRef.current = Math.round(tide.fightShieldPct * playerHpMax)
   // Guaranteed-dodge tide (one-shot "next fight" token). Mirror the bank size
   // so the tight-deps reset effect can refill it per fight, and track how many
   // are LEFT this fight in a separate ref the dodge resolver decrements.
@@ -554,8 +579,12 @@ export default function RaidCombat({
   )
   const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
   const [playerCharges, setPlayerCharges] = useState(() =>
-    Math.max(0, Math.min(playerMaxCharges, tide.chargesStart))
+    Math.max(0, Math.min(playerMaxCharges, tide.chargesStart + initialCharges))
   )
+  // Mirror for the kill callback, which reports leftover charges to the host
+  // (Powder Hoard carryover) from a setTimeout closure.
+  const playerChargesRef = useRef(playerCharges)
+  playerChargesRef.current = playerCharges
   const [enemyCharges, setEnemyCharges]   = useState(() =>
     Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + tide.enemyChargesDelta))
   )
@@ -934,9 +963,17 @@ export default function RaidCombat({
     // Fold in the start-charge TIDE (e.g. "+2 cannonballs next fight"). The
     // NO_CHARGES sentinel (-99) drives the total below 0 → clamps to 0 ("start
     // with 0"). Without this the reset wiped the tide's opening cannonballs.
-    setPlayerCharges(Math.max(0, Math.min(playerMaxCharges, playerStartCharges + chargesStartRef.current)))
+    // Powder Hoard carryover (initialCharges) folds in on top of any Primer
+    // proc + start-charge tide, capped to the magazine.
+    setPlayerCharges(Math.max(0, Math.min(playerMaxCharges, playerStartCharges + chargesStartRef.current + initialCharges)))
     setEnemyCharges(Math.max(0, Math.min(MAX_CHARGES, (enemy.startCharges ?? 0) + enemyChargesDeltaRef.current)))
     guaranteedDodgeLeftRef.current = guaranteedDodgeBankRef.current
+    // Stormward: reform the fight shield into the soak pool. Only when active,
+    // so non-boon raids never touch the Abyssal Tide pool here.
+    if (fightShieldMaxRef.current > 0) {
+      abyssalShieldRef.current = fightShieldMaxRef.current
+      setAbyssalShieldHp(fightShieldMaxRef.current)
+    }
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
     setLastPlayerAction(null)
@@ -1263,7 +1300,7 @@ export default function RaidCombat({
         setTimeout(() => setResolveLog(prev => [...prev, `Nav XP: +${killReward.xp}`]), 800)
         cbDelay = 1600
       }
-      setTimeout(() => onEnemyDefeated(playerHpRef.current), cbDelay)
+      setTimeout(() => onEnemyDefeated(playerHpRef.current, playerChargesRef.current), cbDelay)
     }
   }
 
@@ -1685,8 +1722,14 @@ export default function RaidCombat({
           const rampMult = 1 + rampPerTurn * Math.max(0, turnRef.current - 1)
           // Cold Fury (boon): crit hits hit harder. Only on a crit shot.
           const critTideMult = isCritShot ? tide.critDmgMult : 1
+          // Wounded Fury (boon): bonus damage scaling with MISSING HP — 0 at full
+          // hull, up to lowHpDamage at the brink. Reads the player's HP at the
+          // moment of the shot (pHp), so it climbs as the fight wears you down.
+          const lowHpMult = tide.lowHpDamage > 0
+            ? 1 + tide.lowHpDamage * Math.max(0, 1 - pHp / playerHpMax)
+            : 1
           const mult = (isVolley ? 2 : 1) * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
@@ -1951,18 +1994,27 @@ export default function RaidCombat({
             anchorReductionRef.current = null
             anchorConsumed = true
           }
-          // Abyssal Tide shield — soaks from the pool before HP, carries across
-          // turns until drained.
+          // Shield pool — soaks from the pool before HP. Seeded by the Stormward
+          // boon at fight start and/or topped up by the Abyssal Tide ability;
+          // carries across turns until drained.
           if (abyssalShieldRef.current > 0 && dmg > 0) {
             const soaked = Math.min(abyssalShieldRef.current, dmg)
             abyssalShieldRef.current -= soaked
             dmg -= soaked
             shieldChanged = true
             stepLines.push(abyssalShieldRef.current > 0
-              ? `The abyssal shield soaks ${soaked}.`
-              : `The abyssal shield soaks ${soaked} and shatters.`)
+              ? `Your shield soaks ${soaked}.`
+              : `Your shield soaks ${soaked} and shatters.`)
           }
           pHp = Math.max(0, pHp - dmg)
+          // Spiteful Wake (boon): the attacker takes a slice of what it dealt
+          // straight back. Reads the post-shield, post-mitigation damage (what
+          // actually hit the hull); never reflects onto an already-sunk enemy.
+          if (tide.retaliatePct > 0 && dmg > 0 && eHp > 0) {
+            const thorns = Math.max(1, Math.round(dmg * tide.retaliatePct))
+            eHp = Math.max(0, eHp - thorns)
+            stepLines.push(`Spiteful Wake bites back for ${thorns}.`)
+          }
           // Scorching / Glacial affixes: the elite's landed hit has a chance to
           // set the player ablaze (DoT scaled to this hit, like the player's
           // Incendiary) or freeze them (lose next turn, like Frozen Cannonball).
@@ -2171,7 +2223,7 @@ export default function RaidCombat({
               setTimeout(() => setResolveLog(prev => [...prev, `Nav XP: +${killReward.xp}`]), 800)
               cbDelay = 1600
             }
-            setTimeout(() => onEnemyDefeated(pHp), cbDelay)
+            setTimeout(() => onEnemyDefeated(pHp, pCharges), cbDelay)
             return
           }
           turnRef.current++; setTurn(turnRef.current)

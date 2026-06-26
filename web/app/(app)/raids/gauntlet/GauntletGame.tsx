@@ -163,6 +163,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const roundsSinceTideRef = useRef(0)
   const playerHPRef = useRef(hpMax)
   const potRef = useRef(0)
+  // Powder Hoard carryover: cannonballs to seed the next fight with (set at each
+  // kill from the leftover charges, capped by the boon tier). Reset each run.
+  const carriedChargesRef = useRef(0)
   // Where a guard-intercepted exit should go once the player confirms the
   // abandon (the tapped nav link, or /expeditions for a Back press).
   const pendingNavRef = useRef<(() => void) | null>(null)
@@ -248,6 +251,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       roundsSinceTideRef.current = 0
       playerHPRef.current = hpMax
       potRef.current = 0
+      carriedChargesRef.current = 0
       runMaxHitRef.current = 0
       setPlayerHP(hpMax)
       setPot(0)
@@ -286,9 +290,15 @@ export default function GauntletGame(props: GauntletGameProps) {
     return () => clearTimeout(t)
   }, [phase, fight])
 
-  function handleEnemyDefeated(remainingHp: number) {
+  function handleEnemyDefeated(remainingHp: number, leftoverCharges = 0) {
     const f = fight
     if (!f) return
+    // Powder Hoard boon: carry unfired cannonballs into the next fight, up to
+    // the boon's cap. Stored here and fed to the next RaidCombat as initialCharges.
+    const carryEffect = boonEffects(boonTiers).find(e => e.kind === 'chargeCarryover')
+    carriedChargesRef.current = carryEffect && carryEffect.kind === 'chargeCarryover'
+      ? Math.max(0, Math.min(leftoverCharges, carryEffect.cap))
+      : 0
     // Vigor (Run Upgrade): patch up a slice of max HP for every ship you sink.
     const vigorHeal = Math.round(hpMax * gauntletKillHealPct(props.gauntletUpgrades))
     const healedHp = vigorHeal > 0 ? Math.min(hpMax, remainingHp + vigorHeal) : remainingHp
@@ -1139,6 +1149,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             shipClasses={props.shipClasses}
             equippedRepairKit={props.equippedRepairKit}
             onEnemyDefeated={handleEnemyDefeated}
+            initialCharges={carriedChargesRef.current}
             onPlayerDefeated={handlePlayerDefeated}
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onLeave={() => setConfirmLeave(true)}

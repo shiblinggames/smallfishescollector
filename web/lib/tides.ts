@@ -100,6 +100,17 @@ export type TideEffect =
   | { kind: 'executeThreshold'; pct: number }
   /** Heal the player for pct of the damage they deal. */
   | { kind: 'lifestealPct'; pct: number }
+  /** Reflect pct of the damage an enemy lands on you back into it (thorns). */
+  | { kind: 'retaliatePct'; pct: number }
+  /** Bonus damage that scales with MISSING HP. `maxBonus` is the damage bonus
+   *  at 0 HP (e.g. 0.45 = up to +45%); it tapers linearly to 0 at full HP. */
+  | { kind: 'lowHpDamage'; maxBonus: number }
+  /** Carry unfired cannonballs into the next fight, up to `cap` (99 = carry
+   *  all, still capped at magazine size). Gauntlet host plumbing. */
+  | { kind: 'chargeCarryover'; cap: number }
+  /** Start every fight with a damage-absorbing shield worth `pctMax` of max HP;
+   *  it soaks incoming hits before the hull does and reforms each fight. */
+  | { kind: 'fightShield'; pctMax: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -138,8 +149,11 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'bossDamageMult': case 'bossVolleyDmgMult': case 'critZoneScale':
     case 'critDmgMult':
       return e.mult > 1 ? 'good' : e.mult < 1 ? 'bad' : 'neutral'
-    case 'executeThreshold': case 'lifestealPct':
+    case 'executeThreshold': case 'lifestealPct': case 'retaliatePct':
       return e.pct > 0 ? 'good' : 'neutral'
+    case 'lowHpDamage':  return e.maxBonus > 0 ? 'good' : 'neutral'
+    case 'fightShield':  return e.pctMax > 0 ? 'good' : 'neutral'
+    case 'chargeCarryover': return 'good'
     case 'incomingDmgMult':
     case 'enemyHpScale':
       return e.mult < 1 ? 'good' : e.mult > 1 ? 'bad' : 'neutral'
@@ -688,6 +702,10 @@ export function describeEffect(e: TideEffect): string {
     case 'critDmgMult':           return `${pct(e.mult - 1)} critical damage`
     case 'executeThreshold':      return `Sink enemies below ${Math.round(e.pct * 100)}% HP`
     case 'lifestealPct':          return `Heal ${pct(e.pct)} of damage dealt`
+    case 'retaliatePct':          return `Reflect ${Math.round(e.pct * 100)}% of damage taken`
+    case 'lowHpDamage':           return `Up to ${pct(e.maxBonus)} damage as your HP drops`
+    case 'chargeCarryover':       return e.cap >= 99 ? 'Carry all unfired cannonballs to the next fight' : `Carry up to ${e.cap} cannonball${e.cap === 1 ? '' : 's'} to the next fight`
+    case 'fightShield':           return `Shield each fight worth ${Math.round(e.pctMax * 100)}% of max HP`
     case 'incomingDmgMult': {
       const scope = e.scope === 'nextFight' ? 'next fight' : 'all run'
       if (e.mult > 1) return `Take ${pct(e.mult - 1)} more damage, ${scope}`
