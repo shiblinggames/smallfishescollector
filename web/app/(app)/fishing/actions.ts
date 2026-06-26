@@ -8,6 +8,7 @@ import { getFishHold } from '@/lib/fishHold'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
+import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
 import { getEffectiveDailyChallenges, getTodayUTC, challengeIncrement } from '@/lib/dailyChallenges'
@@ -651,10 +652,13 @@ export async function reelIn(
   const oldFishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
   const newFishingLevel = getLevelFromXP(newXP)
   {
+    // STATE-based, not transition-based: grant any fishing-level color the
+    // player has earned but doesn't own yet. The old `oldFishingLevel < N`
+    // guard silently missed anyone who crossed the threshold via a trawl (also
+    // grants fishing XP) or before the color existed — they never re-crossed,
+    // so it never fired. This self-heals on the next catch. See fishingColorsToGrant.
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
-    const toAdd: string[] = []
-    if (oldFishingLevel < 50 && newFishingLevel >= 50 && !currentUnlocked.includes('forest')) toAdd.push('forest')
-    if (oldFishingLevel < 75 && newFishingLevel >= 75 && !currentUnlocked.includes('ice')) toAdd.push('ice')
+    const toAdd = fishingColorsToGrant(newFishingLevel, currentUnlocked)
     if (toAdd.length > 0) {
       profileUpdates.unlocked_character_colors = [...currentUnlocked, ...toAdd]
       reelInUnlockedSkin = toAdd[toAdd.length - 1]

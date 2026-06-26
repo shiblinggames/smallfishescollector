@@ -26,6 +26,23 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
 ]
 
+/** Character colors earned purely by reaching a fishing level. Single source
+ *  for the unlock so EVERY fishing-XP path (catches, trawls) grants them the
+ *  same way. */
+export const FISHING_LEVEL_COLORS: { level: number; id: string }[] = [
+  { level: 50, id: 'forest' },
+  { level: 75, id: 'ice' },
+]
+
+/** Which fishing-level colors a player at `fishingLevel` should have but is
+ *  missing. STATE-based, not transition-based: it returns anything earned-but-
+ *  unowned regardless of HOW the level was reached, so it self-heals players who
+ *  crossed the threshold via a trawl, an admin grant, or before the color
+ *  existed. The `!includes` guard keeps it idempotent (no duplicate grants). */
+export function fishingColorsToGrant(fishingLevel: number, unlocked: string[]): string[] {
+  return FISHING_LEVEL_COLORS.filter(c => fishingLevel >= c.level && !unlocked.includes(c.id)).map(c => c.id)
+}
+
 export function getCharacterSprites(colorId: string) {
   const id = CHARACTER_COLORS.find(c => c.id === colorId) ? colorId : 'default'
   const prefix = id === 'default' ? 'fishing' : `fishing_${id}`

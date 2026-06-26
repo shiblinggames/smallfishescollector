@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { getLevelFromXP as fishingLevelFromXP } from '@/lib/fishingLevel'
+import { fishingColorsToGrant } from '@/lib/characters'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { applyLevelBonuses, crewLevelFromXP } from '@/lib/crewLevel'
 import { netTraitStats } from '@/lib/crewEffects'
@@ -175,7 +176,7 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
 
   const [{ data: crewRow }, { data: profile }, { data: pool }] = await Promise.all([
     admin.from('user_crew').select(CREW_COLS).eq('id', (trawl as any).crew_id).maybeSingle(),
-    admin.from('profiles').select('fishing_xp, doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('fishing_xp, doubloons, unlocked_character_colors').eq('id', user.id).single(),
     admin.from('fish_species').select('name').eq('habitat', zone).limit(40),
   ])
 
@@ -193,9 +194,16 @@ export async function collectTrawl(zone: string): Promise<CollectTrawlResult | {
     fish.push(names.splice(Math.floor(Math.random() * names.length), 1)[0])
   }
 
+  // A trawl can cross a fishing-level color threshold (Forest @ 50, Ice @ 75)
+  // just like a catch can — grant state-based so the unlock fires either way.
+  const currentUnlocked = (profile?.unlocked_character_colors as string[] | null) ?? []
+  const colorsToAdd = fishingColorsToGrant(fishingLevelFromXP(newFishingXP), currentUnlocked)
+  const profileUpdate: Record<string, unknown> = { fishing_xp: newFishingXP, doubloons: newDoubloons }
+  if (colorsToAdd.length > 0) profileUpdate.unlocked_character_colors = [...currentUnlocked, ...colorsToAdd]
+
   const z = TRAWL_ZONE_BY_KEY[zone]
   await Promise.all([
-    admin.from('profiles').update({ fishing_xp: newFishingXP, doubloons: newDoubloons }).eq('id', user.id),
+    admin.from('profiles').update(profileUpdate).eq('id', user.id),
     admin.from('trawls').delete().eq('id', (trawl as any).id),
     ...(haul.doubloons > 0
       ? [admin.from('doubloon_transactions').insert({ user_id: user.id, amount: haul.doubloons, reason: `Crew trawl: ${z.label}` })]
