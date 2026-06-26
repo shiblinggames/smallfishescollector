@@ -519,8 +519,8 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   ] },
   // ── LEGENDARY (rare; bigger, one-of-a-kind effects, fewer tiers) ────────────
   { id: 'executioner', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
-    { desc: 'Sink enemies below 10% HP', detail: 'The instant any hit drops an enemy to 10% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.10 } },
-    { desc: 'Sink enemies below 15% HP', detail: 'The instant any hit drops an enemy to 15% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.15 } },
+    { desc: 'Sink enemies below 5% HP', detail: 'The instant any hit drops an enemy to 5% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.05 } },
+    { desc: 'Sink enemies below 8% HP', detail: 'The instant any hit drops an enemy to 8% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.08 } },
   ] },
   { id: 'leviathans_hunger', name: "Leviathan's Hunger", flavor: 'Every wound you open, the deep drinks — and feeds it back to your hull.', rarity: 'legendary', tiers: [
     { desc: 'Heal 10% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 10% of that damage. Sustain that climbs with how hard you hit.', effect: { kind: 'lifestealPct', pct: 0.10 } },
