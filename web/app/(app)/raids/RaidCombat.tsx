@@ -87,6 +87,11 @@ const ENEMY_COLOR  = '#ef4444'
 // damage scaled to your damage").
 const BURN_TURNS = 2
 const BURN_TICK_PCT = 0.30
+// Per-tick burn is capped at this fraction of the TARGET's max HP, so a huge
+// crit/volley doesn't also burn for an unbounded chunk (the DoT scaled 1:1 with
+// hit damage before, which ran away on high-damage builds). Normal hits stay
+// at the 30% of the hit; only hits above ~1/3 of the target's HP get clamped.
+const BURN_CAP_PCT = 0.10
 const BURN_COLOR = '#fb923c'
 const FREEZE_COLOR = '#7dd3fc'
 
@@ -1933,7 +1938,7 @@ export default function RaidCombat({
             const burnChance = onHitEffects.filter(e => e.type === 'burn_chance').reduce((a, e) => Math.max(a, e.value), 0)
             const freezeChance = onHitEffects.filter(e => e.type === 'freeze_chance').reduce((a, e) => Math.max(a, e.value), 0)
             if (burnChance > 0 && Math.random() < burnChance) {
-              const tickDmg = Math.max(1, Math.round(dmg * BURN_TICK_PCT))
+              const tickDmg = Math.max(1, Math.min(Math.round(dmg * BURN_TICK_PCT), Math.round(enemyHpMaxRef.current * BURN_CAP_PCT)))
               enemyBurnRef.current = { turns: BURN_TURNS, dmg: tickDmg }
               stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
               procStatus = 'burn'
@@ -2031,7 +2036,7 @@ export default function RaidCombat({
           // Only on a hit that actually connected, and not on the killing blow.
           if (dmg > 0 && pHp > 0) {
             if (affix?.burnChance && Math.random() < affix.burnChance) {
-              const tickDmg = Math.max(1, Math.round(dmg * BURN_TICK_PCT))
+              const tickDmg = Math.max(1, Math.min(Math.round(dmg * BURN_TICK_PCT), Math.round(playerHpMax * BURN_CAP_PCT)))
               playerBurnRef.current = { turns: BURN_TURNS, dmg: tickDmg }
               procStatus = 'burn'
               stepLines.push(`Scorching hit! Your ship catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
