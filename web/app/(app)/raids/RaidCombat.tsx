@@ -3074,10 +3074,11 @@ export default function RaidCombat({
                 </span>
               )}
             </div>
-            {/* Affix label sits under the name when elite — players see at
-                a glance what twist this elite has, and can tap into the
-                stats popup for the full description. */}
-            {isElite && affix && (
+            {/* Affix label sits under the name whenever the enemy carries one
+                (elites always; deep Gauntlet bosses too) — players see at a
+                glance what twist this fight has, and can tap into the stats
+                popup for the full description. */}
+            {affix && (
               <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', color: '#a78bfa', letterSpacing: '0.14em', marginBottom: 3 }}>
                 {affix.name}
               </p>
@@ -4245,14 +4246,14 @@ function EnemyStatsPopup({
           ))}
         </div>
 
-        {/* Elite affix card — appears above the themed-ability card so the
-            twist for THIS specific elite reads first. Uses the same shape
-            as the ability card with a violet palette so the two feel
-            sibling but distinct. */}
-        {isElite && affix && (
+        {/* Affix card — appears above the themed-ability card so the twist for
+            THIS specific enemy reads first. Shows for elites and for the deep
+            Gauntlet bosses that carry an affix. Violet palette so it feels
+            sibling-but-distinct from the ability card. */}
+        {affix && (
           <div style={{ marginBottom: 14 }}>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#a78bfa', letterSpacing: '0.16em', marginBottom: 6 }}>
-              Elite Affix
+              {isBoss ? 'Affix' : 'Elite Affix'}
             </p>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,

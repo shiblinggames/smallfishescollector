@@ -135,6 +135,7 @@ const BOSS_CHANCE_BASE    = 0.08 // at FIRST_BOSS_EARLIEST
 const BOSS_CHANCE_GROWTH  = 0.05 // per depth past earliest
 const BOSS_CHANCE_CAP     = 0.55
 const BOSS_PITY           = 6    // force a boss after this many bossless rounds (past earliest)
+const BOSS_AFFIX_DEPTH    = 12   // past this COMBAT depth, every boss also carries an elite affix
 
 const ELITE_CHANCE_BASE   = 0.06
 const ELITE_CHANCE_GROWTH = 0.05 // per depth
@@ -252,7 +253,11 @@ export function generateFight(state: GauntletRollState, skipOffset = 0): Gauntle
 
   if (isBoss) {
     const enemy = scaleToCurve(pick(BOSS_POOL), depth, true)
-    return { enemy, isBoss: true, isElite: false, potContribution: roundContribution(rewardDepth, true), depth }
+    // Deep bosses also carry an elite affix on top of their boss stats — the
+    // affix's twist (Vampiric, Reflective, Fleet…) layers onto the boss fight
+    // without the elite HP/damage multipliers (the boss curve is already steep).
+    const affix = depth > BOSS_AFFIX_DEPTH ? AFFIXES[rollAffix()] : undefined
+    return { enemy, isBoss: true, isElite: false, affix, potContribution: roundContribution(rewardDepth, true), depth }
   }
 
   // Mob — independent elite roll, chance scaling with depth.

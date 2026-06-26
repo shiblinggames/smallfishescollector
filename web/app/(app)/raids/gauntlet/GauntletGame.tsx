@@ -2221,7 +2221,9 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
 }
 
 function DepthBar({ depth, pot, isBoss, isElite, affixName, curses }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number }) {
-  const tag = isBoss ? 'BOSS' : isElite ? `ELITE${affixName ? ` · ${affixName}` : ''}` : null
+  const tag = isBoss
+    ? `BOSS${affixName ? ` · ${affixName}` : ''}`
+    : isElite ? `ELITE${affixName ? ` · ${affixName}` : ''}` : null
   const tagColor = isBoss ? '#f87171' : '#c084fc'
   return (
     <div className="flex items-center justify-between"
