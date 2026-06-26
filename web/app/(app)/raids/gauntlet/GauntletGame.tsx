@@ -163,6 +163,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const roundsSinceTideRef = useRef(0)
   const playerHPRef = useRef(hpMax)
   const potRef = useRef(0)
+  // Where a guard-intercepted exit should go once the player confirms the
+  // abandon (the tapped nav link, or /expeditions for a Back press).
+  const pendingNavRef = useRef<(() => void) | null>(null)
   // Biggest single blow landed this descent — fed to the Biggest Hit board the
   // moment it's beaten (persists even on death). Reset each run in begin().
   const runMaxHitRef = useRef(0)
@@ -175,6 +178,46 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Extra cannonball slots from claimed Locker Upgrades. Seeded from the server
   // prop but kept in state so a purchase mid-session applies without a refresh.
   const [bonusSlots, setBonusSlots] = useState(props.bonusChargeSlots)
+
+  // ── Mid-run exit guard ─────────────────────────────────────────────────────
+  // Same shape as RaidGame's: any attempt to leave a live descent (tab bar, nav
+  // link, browser Back) is intercepted and routed through the abandon confirm
+  // instead of silently forfeiting the pot. beforeunload covers a hard refresh /
+  // tab close with the browser's native prompt. Active across the whole run
+  // (every in-fight + interstitial phase) so the Back sentinel is pushed once.
+  const runLive = phase === 'descending' || phase === 'fighting' || phase === 'tide'
+    || phase === 'curse' || phase === 'boon' || phase === 'between'
+  useEffect(() => {
+    if (!runLive) return
+    window.history.pushState(null, '', window.location.href) // Back sentinel
+    const signal = (nav: () => void) => { pendingNavRef.current = nav; setConfirmLeave(true) }
+    const onClickCapture = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as HTMLElement | null)?.closest('a')
+      if (!a) return
+      const tgt = a.getAttribute('target')
+      if (tgt && tgt !== '_self') return
+      const href = a.getAttribute('href')
+      if (!href || !href.startsWith('/')) return                 // same-app routes only
+      if (href.split(/[?#]/)[0] === window.location.pathname) return // same page
+      e.preventDefault()
+      e.stopPropagation()
+      signal(() => router.push(href))
+    }
+    const onPop = () => {
+      window.history.pushState(null, '', window.location.href)   // re-arm; stay put
+      signal(() => router.push('/expeditions'))
+    }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    document.addEventListener('click', onClickCapture, true)
+    window.addEventListener('popstate', onPop)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      document.removeEventListener('click', onClickCapture, true)
+      window.removeEventListener('popstate', onPop)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [runLive, router])
 
   // Body-scroll lock in installed PWA only, and ONLY during combat (keeps the
   // action buttons reachable — same reasoning as RaidGame). The meta screens
@@ -365,6 +408,21 @@ export default function GauntletGame(props: GauntletGameProps) {
       // top purse counts up in sync with the chest reveal (see GauntletReward).
     })
   }
+
+  // Abandon-run confirm, shared across every live-run phase (it portals to
+  // body, so one element dropped into each return covers the whole descent).
+  const exitModal = confirmLeave ? (
+    <AbandonRunModal
+      pot={potRef.current}
+      onStay={() => { pendingNavRef.current = null; setConfirmLeave(false) }}
+      onAbandon={() => {
+        setConfirmLeave(false)
+        const go = pendingNavRef.current ?? (() => router.push('/expeditions'))
+        pendingNavRef.current = null
+        resolveGauntletDeath(rollStateRef.current.cleared).finally(go)
+      }}
+    />
+  ) : null
 
   // ── Intro ──────────────────────────────────────────────────────────────
   if (phase === 'intro') {
@@ -810,6 +868,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             )
           })()}
         </AnimatePresence>
+        {exitModal}
       </>
     )
   }
@@ -817,7 +876,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Tide interstitial ────────────────────────────────────────────────────
   if (phase === 'tide' && pendingTide) {
     return (
-      <TideModal
+      <>
+        {exitModal}
+        <TideModal
           tide={pendingTide}
           onPicked={(choice: TideChoice) => {
             let healDelta = 0
@@ -839,6 +900,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             setPhase('between')
           }}
         />
+      </>
     )
   }
 
@@ -896,6 +958,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             Bear It · Descend
           </button>
         </div>
+        {exitModal}
       </>
     )
   }
@@ -981,6 +1044,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             })}
           </div>
         </div>
+        {exitModal}
       </>
     )
   }
@@ -1031,6 +1095,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             ))}
           </div>
         </div>
+        {exitModal}
       </>
     )
   }
@@ -1090,13 +1155,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             openingNote={fight.depth > 1 && (fight.depth - 1) % GAUNTLET_COOLDOWN_ROUNDS === 0 ? 'Your crew catch their breath. Abilities refreshed.' : undefined}
           />
         </div>
-        {confirmLeave && (
-          <AbandonRunModal
-            pot={potRef.current}
-            onStay={() => setConfirmLeave(false)}
-            onAbandon={() => { setConfirmLeave(false); resolveGauntletDeath(rollStateRef.current.cleared).finally(() => router.push('/expeditions')) }}
-          />
-        )}
+        {exitModal}
       </div>
     )
   }
