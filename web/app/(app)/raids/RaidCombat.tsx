@@ -589,6 +589,10 @@ export default function RaidCombat({
     Math.max(0, Math.min(playerHpMax, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal))
   )
   const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
+  // The enemy's ACTUAL max HP this fight = base × any enemyHpScale (Barnacled
+  // Hull curse, half-HP tides). Drives the HP bar denominator + stat sheet so
+  // they don't read against the raw base while enemyHp is the scaled value.
+  const enemyHpMax = Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult))
   const [playerCharges, setPlayerCharges] = useState(() =>
     Math.max(0, Math.min(playerMaxCharges, tide.chargesStart + initialCharges))
   )
@@ -1626,13 +1630,13 @@ export default function RaidCombat({
       if (
         who === 'enemy'
         && (affix?.turnStartHealBase || affix?.turnStartHealMaxPct)
-        && eHp > 0 && eHp < enemy.hpBase
+        && eHp > 0 && eHp < enemyHpMaxRef.current
         && Math.random() < (affix.turnStartHealChance ?? 1)
       ) {
         const flat = affix.turnStartHealBase ?? 0
-        const pct  = affix.turnStartHealMaxPct ? Math.round(enemy.hpBase * affix.turnStartHealMaxPct) : 0
+        const pct  = affix.turnStartHealMaxPct ? Math.round(enemyHpMaxRef.current * affix.turnStartHealMaxPct) : 0
         const healAmount = Math.max(1, flat, pct)
-        const healed = Math.min(healAmount, enemy.hpBase - eHp)
+        const healed = Math.min(healAmount, enemyHpMaxRef.current - eHp)
         if (healed > 0) {
           eHp += healed
           stepLines.push(`${enemy.name} patches up ${healed} HP.`)
@@ -2052,10 +2056,10 @@ export default function RaidCombat({
           if (
             affix?.lifestealPct
             && dmg > 0
-            && eHp > 0 && eHp < enemy.hpBase
+            && eHp > 0 && eHp < enemyHpMaxRef.current
             && Math.random() < (affix.lifestealChance ?? 1)
           ) {
-            const stolen = Math.min(enemy.hpBase - eHp, Math.max(1, Math.round(dmg * affix.lifestealPct)))
+            const stolen = Math.min(enemyHpMaxRef.current - eHp, Math.max(1, Math.round(dmg * affix.lifestealPct)))
             if (stolen > 0) {
               eHp += stolen
               enemyHealOut = stolen
@@ -2116,7 +2120,7 @@ export default function RaidCombat({
       ) {
         enemyPhaseRef.current = 2
         enemyPatternIdxRef.current = 0
-        const revivedHp = Math.max(1, Math.floor(enemy.hpBase * enemy.phase2.revivePct))
+        const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * enemy.phase2.revivePct))
         eHp = revivedHp
         steps.push({
           who: 'enemy',
@@ -2166,11 +2170,11 @@ export default function RaidCombat({
         // can occasionally lifesteal from the bonus shot too.
         if (
           dmg2 > 0
-          && eHp > 0 && eHp < enemy.hpBase
+          && eHp > 0 && eHp < enemyHpMaxRef.current
           && affix.lifestealPct
           && Math.random() < (affix.lifestealChance ?? 1)
         ) {
-          const stolen2 = Math.min(enemy.hpBase - eHp, Math.max(1, Math.round(dmg2 * affix.lifestealPct)))
+          const stolen2 = Math.min(enemyHpMaxRef.current - eHp, Math.max(1, Math.round(dmg2 * affix.lifestealPct)))
           eHp += stolen2
         }
         steps.push({
@@ -3019,7 +3023,7 @@ export default function RaidCombat({
                 Dodge Locked{snareDodgeTurns > 0 ? ` · ${snareDodgeTurns}` : ''}
               </span>
             )}
-            <HPBar current={enemyHp} max={enemy.hpBase} accent={ENEMY_COLOR} compact />
+            <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
         </motion.button>
@@ -3693,6 +3697,7 @@ export default function RaidCombat({
           <EnemyStatsPopup
             enemy={enemy}
             currentHp={enemyHp}
+            maxHp={enemyHpMax}
             isBoss={isBoss}
             isElite={isElite}
             affix={affix}
@@ -4051,10 +4056,12 @@ function PlayerStatsPopup({
 // speed, the themed ability if any, and the full behavior pattern as chips so
 // the cycle is legible. Tapping the backdrop or Close dismisses.
 function EnemyStatsPopup({
-  enemy, currentHp, isBoss, isElite, affix, onClose,
+  enemy, currentHp, maxHp, isBoss, isElite, affix, onClose,
 }: {
   enemy: BroadsideEnemy
   currentHp: number
+  /** Actual max HP this fight (base × enemyHpScale), so the sheet matches the bar. */
+  maxHp: number
   isBoss: boolean
   isElite?: boolean
   affix?: AffixDef
@@ -4070,7 +4077,7 @@ function EnemyStatsPopup({
   const abilityName = enemy.abilityName
 
   const rows: { label: string; value: string; hint: string; color: string }[] = [
-    { label: 'HP',          value: `${currentHp} / ${enemy.hpBase}`,   hint: 'remaining / total hull',         color: '#86efac' },
+    { label: 'HP',          value: `${currentHp} / ${maxHp}`,          hint: 'remaining / total hull',         color: '#86efac' },
     { label: 'Damage',      value: `${enemy.minDmg}–${enemy.maxDmg}`,  hint: 'per normal shot',                color: '#f87171' },
     { label: 'Volley',      value: `${minVolley}–${maxVolley}`,        hint: '3-charge heavy shot',            color: '#fb923c' },
     { label: 'Speed',       value: String(enemy.shipSpeed),            hint: 'turn order',                     color: '#60a5fa' },
