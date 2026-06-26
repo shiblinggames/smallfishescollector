@@ -140,10 +140,6 @@ const ELITE_CHANCE_BASE   = 0.06
 const ELITE_CHANCE_GROWTH = 0.05 // per depth
 const ELITE_CHANCE_CAP    = 0.6
 
-/** Crew abilities + repair reset every this-many cleared rounds (the one
- *  predictable resource the player plans around). Slower = abilities matter
- *  more, you ration them across a longer stretch. */
-export const GAUNTLET_COOLDOWN_ROUNDS = 5
 
 // ── Enemy pools ──────────────────────────────────────────────────────────────
 // Every non-boss enemy across the four raids (variety of pattern + signature

@@ -22,7 +22,7 @@ import {
   BOON_DEPTHS, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
-  GAUNTLET_COOLDOWN_ROUNDS, GAUNTLET_COOLDOWN_HOURS,
+  GAUNTLET_COOLDOWN_HOURS,
   CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
@@ -339,8 +339,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     rollStateRef.current = advanceRollState(rollStateRef.current, f)
     const clearedNow = rollStateRef.current.cleared
 
-    // Crew/repair cooldown: abilities refresh every N cleared rounds.
-    if (clearedNow % GAUNTLET_COOLDOWN_ROUNDS === 0) setUsedAbilityIds(new Set())
+    // Crew abilities refresh after each BOSS kill (a natural "catch your breath"
+    // beat) plus at run start. Keys off the actual fight, not a depth counter,
+    // so Veteran's Start can't desync it. The on-demand Reprieve fills the gaps.
+    if (f.isBoss) setUsedAbilityIds(new Set())
 
     // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
     // BOON_DEPTH). They sit on different depths so the run alternates toll and
@@ -1325,7 +1327,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               const next = new Set(prev); next.add(crewId); return next
             })}
             usedAbilitySub="Used — back soon."
-            openingNote={fight.depth > 1 && (fight.depth - 1) % GAUNTLET_COOLDOWN_ROUNDS === 0 ? 'Your crew catch their breath. Abilities refreshed.' : undefined}
+            openingNote={rollStateRef.current.prevWasBoss ? 'Your crew catch their breath. Abilities refreshed.' : undefined}
           />
         </div>
         {exitModal}
