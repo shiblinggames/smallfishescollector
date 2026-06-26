@@ -446,24 +446,24 @@ export interface GauntletBoon {
 
 export const GAUNTLET_BOONS: GauntletBoon[] = [
   { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', tiers: [
-    { desc: '+15% damage', detail: 'Every shot you fire — aimed shots and volleys — deals 15% more damage.', effect: { kind: 'damageMult', mult: 1.15 } },
-    { desc: '+30% damage', detail: 'Every shot you fire — aimed shots and volleys — deals 30% more damage.', effect: { kind: 'damageMult', mult: 1.30 } },
-    { desc: '+50% damage', detail: 'Every shot you fire — aimed shots and volleys — deals 50% more damage.', effect: { kind: 'damageMult', mult: 1.50 } },
+    { desc: '+15% all damage', detail: 'Every shot deals 15% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.15 } },
+    { desc: '+30% all damage', detail: 'Every shot deals 30% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.30 } },
+    { desc: '+50% all damage', detail: 'Every shot deals 50% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.50 } },
   ] },
-  { id: 'powder_and_shot', name: 'Powder & Shot', flavor: 'Dry powder, packed tight. Your aimed shots punch through.', tiers: [
-    { desc: '+20% aimed-shot damage', detail: 'Your single aimed shots (the Fire action) deal 20% more damage. Volleys unaffected.', effect: { kind: 'fireDmgMult', mult: 1.20 } },
-    { desc: '+40% aimed-shot damage', detail: 'Your single aimed shots deal 40% more damage. Volleys unaffected.', effect: { kind: 'fireDmgMult', mult: 1.40 } },
-    { desc: '+65% aimed-shot damage', detail: 'Your single aimed shots deal 65% more damage. Volleys unaffected.', effect: { kind: 'fireDmgMult', mult: 1.65 } },
+  { id: 'powder_and_shot', name: 'Powder & Shot', flavor: 'Dry powder, packed tight. Your single shots punch through.', tiers: [
+    { desc: '+20% Fire damage', detail: 'The single-shot Fire action deals 20% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.20 } },
+    { desc: '+40% Fire damage', detail: 'The single-shot Fire action deals 40% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.40 } },
+    { desc: '+65% Fire damage', detail: 'The single-shot Fire action deals 65% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.65 } },
   ] },
   { id: 'grapeshot', name: 'Grapeshot', flavor: 'A scatter of iron off the rails. Your volleys shred.', tiers: [
-    { desc: '+20% volley damage', detail: 'Your volleys (the double-shot) deal 20% more damage. Aimed shots unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.20 } },
-    { desc: '+40% volley damage', detail: 'Your volleys deal 40% more damage. Aimed shots unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.40 } },
-    { desc: '+65% volley damage', detail: 'Your volleys deal 65% more damage. Aimed shots unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.65 } },
+    { desc: '+20% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 20% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.20 } },
+    { desc: '+40% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 40% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.40 } },
+    { desc: '+65% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 65% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.65 } },
   ] },
   { id: 'dead_eye', name: 'Dead-Eye', flavor: 'You learn exactly where a hull wants to break.', tiers: [
-    { desc: '+8% crit chance', detail: 'Every shot has an extra 8% chance to land as a critical hit.', effect: { kind: 'critChanceBonus', chance: 0.08 } },
-    { desc: '+16% crit chance', detail: 'Every shot has an extra 16% chance to land as a critical hit.', effect: { kind: 'critChanceBonus', chance: 0.16 } },
-    { desc: '+26% crit chance', detail: 'Every shot has an extra 26% chance to land as a critical hit.', effect: { kind: 'critChanceBonus', chance: 0.26 } },
+    { desc: '+8% crit on clean hits', detail: 'Each clean hit (a green-zone landing, not the gold band) has an extra 8% chance to upgrade into a critical — your way to crit even when you miss the gold. Grazes and shots that already crit are unaffected.', effect: { kind: 'critChanceBonus', chance: 0.08 } },
+    { desc: '+16% crit on clean hits', detail: 'Each clean hit (a green-zone landing, not the gold band) has an extra 16% chance to upgrade into a critical — your way to crit even when you miss the gold. Grazes and shots that already crit are unaffected.', effect: { kind: 'critChanceBonus', chance: 0.16 } },
+    { desc: '+26% crit on clean hits', detail: 'Each clean hit (a green-zone landing, not the gold band) has an extra 26% chance to upgrade into a critical — your way to crit even when you miss the gold. Grazes and shots that already crit are unaffected.', effect: { kind: 'critChanceBonus', chance: 0.26 } },
   ] },
   { id: 'wide_sights', name: 'Wide Sights', flavor: 'The perfect shot stops being luck.', tiers: [
     { desc: 'Bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 12% wider, so landing a crit is easier.', effect: { kind: 'critZoneScale', mult: 1.12 } },
