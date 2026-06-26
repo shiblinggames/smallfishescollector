@@ -60,11 +60,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
-    id: 'vigor',
-    name: 'Vigor',
-    description: 'Patch up 8% of your max HP each time you sink a ship in the Gauntlet.',
+    // The economy accelerator — priced cheap + early on purpose so a smart
+    // player grabs it first and it actually speeds the rest of the grind (its
+    // whole point). Bonus trimmed 50% → 33% to match the lower price.
+    id: 'lucky_locker',
+    name: 'Lucky Locker',
+    description: 'Earn 33% more Fathoms from every dive, win or lose.',
     depthRequired: 0,
-    cost: 55,
+    cost: 50,
     scope: 'gauntlet',
   },
   {
@@ -84,11 +87,21 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
-    id: 'lucky_locker',
-    name: 'Lucky Locker',
-    description: 'Earn 50% more Fathoms from every dive, win or lose.',
+    // Per-kill heal compounds over a long run — the strongest sustain perk, so
+    // it sits above the flat combat perks on price.
+    id: 'vigor',
+    name: 'Vigor',
+    description: 'Patch up 8% of your max HP each time you sink a ship in the Gauntlet.',
     depthRequired: 0,
-    cost: 100,
+    cost: 70,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'veterans_start',
+    name: "Veteran's Start",
+    description: 'Begin every dive at depth 5: tougher ships, with boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink, so it is no reward shortcut.',
+    depthRequired: 0,
+    cost: 75,
     scope: 'gauntlet',
   },
   {
@@ -105,14 +118,6 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     description: 'Earn 20% more Nav XP every time you cash out a Gauntlet run.',
     depthRequired: 0,
     cost: 100,
-    scope: 'gauntlet',
-  },
-  {
-    id: 'veterans_start',
-    name: "Veteran's Start",
-    description: 'Begin every dive at depth 5: tougher ships, with boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink, so it is no reward shortcut.',
-    depthRequired: 0,
-    cost: 75,
     scope: 'gauntlet',
   },
   // ── Ship & Shore (scope 'account'/'world') — PERMANENT power for the wider
@@ -210,7 +215,7 @@ export function gauntletXpMult(unlocked: string[] | null | undefined): number {
 
 /** Lucky Locker: multiplier on Fathoms earned per run (cash-out AND death). */
 export function gauntletFathomsMult(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('lucky_locker') ? 1.5 : 1
+  return (unlocked ?? []).includes('lucky_locker') ? 1.33 : 1
 }
 
 /** Diving Bell: max-HP multiplier applied for the whole Gauntlet run. */
