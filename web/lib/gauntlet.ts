@@ -322,135 +322,207 @@ export function chestCannonDropChance(chestTier: number): number {
 // player's active-effects channel — the exact pipeline the Tides already use,
 // so they apply + persist for free. The one exception is Crushing Depth, an
 // attrition clock the host applies between fights (hpDrainPct).
-export interface GauntletCurse {
-  id: string
-  name: string
+export interface GauntletCurseTier {
   /** Short, plain mechanical summary — the chip + interstitial headline. */
   desc: string
   /** Full plain-English explanation for the details popup (no jargon). */
   detail: string
-  /** One-line dread, shown on the curse interstitial. */
-  flavor: string
-  /** Run-wide effects appended to the tide-effect channel when imposed. */
+  /** Run-wide effects applied while the curse is active at this tier. */
   effects?: TideEffect[]
   /** % of MAX HP the hull sheds at the start of every fight while active. */
   hpDrainPct?: number
+}
+
+export interface GauntletCurse {
+  id: string
+  name: string
+  /** One-line dread, shown on the curse interstitial (shared across tiers). */
+  flavor: string
+  /** Tier ladder [tier1, tier2]. Tier 2 only DEEPENS a curse already taken at
+   *  tier 1, and only from CURSE_TIER2_DEPTH on (mirrors how boons upgrade). */
+  tiers: GauntletCurseTier[]
+}
+
+/** A resolved curse the Locker imposes this milestone — a specific tier of a
+ *  family. `isUpgrade` = deepening one already on you (tier > 1). */
+export interface CurseOffer {
+  id: string
+  name: string
+  flavor: string
+  tier: number
+  desc: string
+  detail: string
+  effects?: TideEffect[]
+  hpDrainPct?: number
+  isUpgrade: boolean
 }
 
 export const GAUNTLET_CURSES: GauntletCurse[] = [
   {
     id: 'crushing_depth',
     name: 'Crushing Depth',
-    desc: 'Lose 8% max HP before every fight',
-    detail: 'At the start of every fight from now on, your ship loses 8% of its maximum HP. It can never land the killing blow itself (you stop at 1 HP), but it steadily wears you down — this is what caps how deep you can really push.',
     flavor: 'The water itself leans on your hull. Every fight begins a little closer to the breaking point.',
-    hpDrainPct: 0.08,
+    tiers: [
+      { desc: 'Lose 8% max HP before every fight', detail: 'At the start of every fight from now on, your ship loses 8% of its maximum HP. It can never land the killing blow itself (you stop at 1 HP), but it steadily wears you down.', hpDrainPct: 0.08 },
+      { desc: 'Lose 13% max HP before every fight', detail: 'The pressure deepens. Your ship now sheds 13% of its maximum HP at the start of every fight (still never below 1).', hpDrainPct: 0.13 },
+    ],
   },
   {
     id: 'bloodthirst',
     name: 'Bloodthirst',
-    desc: 'Enemies deal 25% more damage',
-    detail: 'Every hit an enemy lands on you deals 25% more damage for the rest of the run.',
     flavor: 'The drowned smell your wake. Every gun down here is aimed to kill, not to warn.',
-    effects: [{ kind: 'incomingDmgMult', mult: 1.25, scope: 'allRemaining' }],
+    tiers: [
+      { desc: 'Enemies deal 20% more damage', detail: 'Every hit an enemy lands on you deals 20% more damage for the rest of the run.', effects: [{ kind: 'incomingDmgMult', mult: 1.20, scope: 'allRemaining' }] },
+      { desc: 'Enemies deal 30% more damage', detail: 'The frenzy spreads. Every enemy hit now lands for 30% more damage.', effects: [{ kind: 'incomingDmgMult', mult: 1.30, scope: 'allRemaining' }] },
+    ],
   },
   {
     id: 'becalmed',
     name: 'Becalmed',
-    desc: '-3 ship speed',
-    detail: 'Your ship is 3 slower. Speed decides who fires first each turn and how fast your aim bar sweeps, so you will act after the enemy more often and have less time to line up a shot.',
     flavor: 'The wind died at this depth. Your ship answers the wheel a beat too slow.',
-    effects: [{ kind: 'speedDelta', n: -3, scope: 'allRemaining' }],
+    tiers: [
+      { desc: '-3 ship speed', detail: 'Your ship is 3 slower. Speed decides who fires first each turn and how fast your aim bar sweeps, so you will act after the enemy more often and have less time to line up a shot.', effects: [{ kind: 'speedDelta', n: -3, scope: 'allRemaining' }] },
+      { desc: '-5 ship speed', detail: 'The calm thickens. Your ship is 5 slower now, ceding the first shot far more often.', effects: [{ kind: 'speedDelta', n: -5, scope: 'allRemaining' }] },
+    ],
   },
   {
     id: 'murk',
     name: 'Murk',
-    desc: 'Your crit zone is 15% smaller',
-    detail: 'The gold "perfect shot" band on your aim bar shrinks by 15%, so landing a critical hit is harder.',
     flavor: 'The dark closes over your sights. The perfect shot is a narrower thing now.',
-    effects: [{ kind: 'critZoneScale', mult: 0.85 }],
+    tiers: [
+      { desc: 'Your crit zone is 15% smaller', detail: 'The gold "perfect shot" band on your aim bar shrinks by 15%, so landing a critical hit is harder.', effects: [{ kind: 'critZoneScale', mult: 0.85 }] },
+      { desc: 'Your crit zone is 32% smaller', detail: 'The dark all but closes the window. The gold "perfect shot" band shrinks by 32%.', effects: [{ kind: 'critZoneScale', mult: 0.68 }] },
+    ],
   },
-  // ── Aim-game disruptors — the deep messes with how you SHOOT, not just your
-  //    stats. These change the aim bar visually + by feel for the rest of the run.
+  // ── Aim-game disruptors — the deep messes with how you SHOOT, not just stats. ─
   {
     id: 'sounding_fog',
     name: 'Sounding Fog',
-    desc: 'Fog rolls over your aim bar',
-    detail: 'A bank of fog drifts back and forth across your aim bar, hiding the gold crit band as it passes. Lock your shots by rhythm, not by sight.',
     flavor: 'The water goes blind at this depth. You fire at shapes in the murk.',
-    effects: [{ kind: 'aimFog', density: 0.55 }],
+    tiers: [
+      { desc: 'Fog rolls over your aim bar', detail: 'A bank of fog drifts back and forth across your aim bar, hiding the gold crit band as it passes. Lock your shots by rhythm, not by sight.', effects: [{ kind: 'aimFog', density: 0.55 }] },
+      { desc: 'Thick fog smothers your aim bar', detail: 'The fog rolls in heavy, hiding the gold band for longer and leaving only narrow slivers of clear sight.', effects: [{ kind: 'aimFog', density: 0.69 }] },
+    ],
   },
   {
     id: 'racing_tide',
     name: 'Racing Tide',
-    desc: 'Your aim needle sweeps faster',
-    detail: 'Your aiming needle whips back and forth far quicker for the rest of the run, so the window to lock a clean shot is much tighter.',
     flavor: 'A fast current rips down the deck. The wheel will not hold still.',
-    effects: [{ kind: 'aimSpeedMult', mult: 1.6 }],
+    tiers: [
+      { desc: 'Your aim needle sweeps faster', detail: 'Your aiming needle whips back and forth far quicker for the rest of the run, so the window to lock a clean shot is much tighter.', effects: [{ kind: 'aimSpeedMult', mult: 1.6 }] },
+      { desc: 'Your aim needle tears across the bar', detail: 'The current rips harder. Your needle blurs back and forth, leaving a razor-thin window to lock anything clean.', effects: [{ kind: 'aimSpeedMult', mult: 2.2 }] },
+    ],
   },
   {
     id: 'roiling_sea',
     name: 'Roiling Sea',
-    desc: 'The target band lurches',
-    detail: 'The gold target band slides across your aim bar much faster and wilder, so where the perfect shot sits is a moving guess every turn.',
     flavor: 'The sea heaves under you. Nothing you aim at stays where you left it.',
-    effects: [{ kind: 'zoneSpeedMult', mult: 1.9 }],
+    tiers: [
+      { desc: 'The target band lurches', detail: 'The gold target band slides across your aim bar much faster and wilder, so where the perfect shot sits is a moving guess every turn.', effects: [{ kind: 'zoneSpeedMult', mult: 1.9 }] },
+      { desc: 'The target band thrashes', detail: 'The sea goes violent. The gold band careens across the bar, almost never where it was a beat ago.', effects: [{ kind: 'zoneSpeedMult', mult: 2.6 }] },
+    ],
+  },
+  {
+    id: 'inkfall',
+    name: 'Inkfall',
+    flavor: 'Something vast empties its ink into the water, and the world goes black in lurches.',
+    tiers: [
+      { desc: 'Your aim bar blacks out in fits', detail: 'A dark veil falls over your aim bar in short, random fits, swallowing the needle and the gold band for a beat at a time. Lock by rhythm when the dark takes it.', effects: [{ kind: 'aimBlackout', intensity: 0.55 }] },
+      { desc: 'Your aim bar drowns in dark', detail: 'The ink comes harder and blacker, blotting out the whole aim bar in fits. You will fire half-blind.', effects: [{ kind: 'aimBlackout', intensity: 0.78 }] },
+    ],
   },
   // ── Stat / economy curses — the deep hits your numbers, not just your aim. ───
   {
     id: 'waterlogged_powder',
     name: 'Waterlogged Powder',
-    desc: 'Your shots deal 15% less damage',
-    detail: 'Damp powder and weak charges. Every shot you fire deals 15% less damage for the rest of the run.',
     flavor: 'Seawater finds the magazine. Your guns cough where they used to roar.',
-    effects: [{ kind: 'damageMult', mult: 0.85 }],
+    tiers: [
+      { desc: 'Your shots deal 15% less damage', detail: 'Damp powder and weak charges. Every shot you fire deals 15% less damage for the rest of the run.', effects: [{ kind: 'damageMult', mult: 0.85 }] },
+      { desc: 'Your shots deal 28% less damage', detail: 'The whole magazine is soaked through. Every shot you fire now deals 28% less damage.', effects: [{ kind: 'damageMult', mult: 0.72 }] },
+    ],
+  },
+  {
+    id: 'all_or_nothing',
+    name: 'All or Nothing',
+    flavor: 'The deep has no patience for a near miss. Land it true or do not bother.',
+    tiers: [
+      { desc: 'Non-crit shots deal 18% less', detail: 'Anything short of a gold critical hits soft. Your hit and graze shots deal 18% less damage; only perfect crits land at full force.', effects: [{ kind: 'noncritDmgMult', mult: 0.82 }] },
+      { desc: 'Non-crit shots deal 32% less', detail: 'The margin for error vanishes. Non-crit shots now deal 32% less damage; only a gold crit truly bites.', effects: [{ kind: 'noncritDmgMult', mult: 0.68 }] },
+    ],
   },
   {
     id: 'leaden_hands',
     name: 'Leaden Hands',
-    desc: 'Your dodges fail more often',
-    detail: 'The cold sinks into the crew. Your ship is 15% less likely to weave aside from an enemy shot for the rest of the run.',
     flavor: 'Numb fingers, slow heave. The wheel comes around a moment too late.',
-    effects: [{ kind: 'dodgeBonus', chance: -0.15, scope: 'allRemaining' }],
+    tiers: [
+      { desc: 'Your dodges fail more often', detail: 'The cold sinks into the crew. Your ship is 15% less likely to weave aside from an enemy shot for the rest of the run.', effects: [{ kind: 'dodgeBonus', chance: -0.15, scope: 'allRemaining' }] },
+      { desc: 'Your dodges fail far more often', detail: 'The crew goes leaden to the bone. Your ship is 28% less likely to weave aside from an enemy shot.', effects: [{ kind: 'dodgeBonus', chance: -0.28, scope: 'allRemaining' }] },
+    ],
   },
   {
     id: 'sharpshooters',
     name: 'Sharpshooters',
-    desc: 'Enemies crit you 10% more often',
-    detail: 'The drowned gunners find the gaps in your hull. Every enemy is 10% more likely to land a critical hit on you for the rest of the run.',
     flavor: 'They have done this longer than you have been alive, and they know exactly where to aim.',
-    effects: [{ kind: 'incomingCritReduction', chance: -0.10 }],
+    tiers: [
+      { desc: 'Enemies crit you 10% more often', detail: 'The drowned gunners find the gaps in your hull. Every enemy is 10% more likely to land a critical hit on you for the rest of the run.', effects: [{ kind: 'incomingCritReduction', chance: -0.10 }] },
+      { desc: 'Enemies crit you 20% more often', detail: 'They have your range cold. Every enemy is 20% more likely to land a critical hit on you.', effects: [{ kind: 'incomingCritReduction', chance: -0.20 }] },
+    ],
   },
   {
     id: 'barnacled_hull',
     name: 'Barnacled Hull',
-    desc: 'Enemies are 20% tougher',
-    detail: 'The deep grows thick over every hull down here. Enemies have 20% more HP for the rest of the run, so every fight drags on longer.',
     flavor: 'Crusted iron and dead coral. These ships have been sinking for a hundred years and still will not go under.',
-    effects: [{ kind: 'enemyHpScale', mult: 1.2, scope: 'allRemaining' }],
+    tiers: [
+      { desc: 'Enemies are 15% tougher', detail: 'The deep grows thick over every hull down here. Enemies have 15% more HP for the rest of the run, so every fight drags on longer.', effects: [{ kind: 'enemyHpScale', mult: 1.15, scope: 'allRemaining' }] },
+      { desc: 'Enemies are 25% tougher', detail: 'The crust grows inches thick. Enemies have 25% more HP for the rest of the run.', effects: [{ kind: 'enemyHpScale', mult: 1.25, scope: 'allRemaining' }] },
+    ],
   },
   {
     id: 'loaded_guns',
     name: 'Loaded Guns',
-    desc: 'Enemies open every fight already loaded',
-    detail: 'Every enemy from now on starts each fight with a cannonball already chambered, so the ones that lead with their guns can fire on you from the opening bell.',
     flavor: 'No warning shot, no parley. The drowned were aiming before you ever drew alongside.',
-    effects: [{ kind: 'enemyStartChargesDelta', n: 1, scope: 'allRemaining' }],
+    tiers: [
+      { desc: 'Enemies open every fight already loaded', detail: 'Every enemy from now on starts each fight with a cannonball already chambered, so the ones that lead with their guns can fire on you from the opening bell.', effects: [{ kind: 'enemyStartChargesDelta', n: 1, scope: 'allRemaining' }] },
+      { desc: 'Enemies open every fight loaded for a volley', detail: 'Every enemy now starts each fight with two cannonballs chambered, ready to open with their heaviest shot.', effects: [{ kind: 'enemyStartChargesDelta', n: 2, scope: 'allRemaining' }] },
+    ],
   },
 ]
 
-// Depths at which the Locker imposes its next curse. One curse per milestone,
-// drawn at random from those not yet active; runs deep enough to exhaust the
-// list (depth 19+) simply keep every curse stacked.
+// Depths at which the Locker imposes its next curse. One per milestone, drawn at
+// random from the eligible pool (see drawCurse).
 export const CURSE_DEPTHS = [4, 7, 10, 13, 16, 19]
+// Tier-2 curses (deepenings of one you already carry) only become eligible from
+// this depth on.
+export const CURSE_TIER2_DEPTH = 13
 
-/** Pick the next curse to impose, given the ids already active. Returns null
- *  once every curse is in play. */
-export function drawCurse(activeIds: string[]): GauntletCurse | null {
-  const remaining = GAUNTLET_CURSES.filter(c => !activeIds.includes(c.id))
-  if (remaining.length === 0) return null
-  return remaining[Math.floor(Math.random() * remaining.length)]
+/** Pick the next curse the Locker imposes. Eligible = a fresh tier-1 curse you
+ *  don't have, OR (from CURSE_TIER2_DEPTH on) a tier-2 deepening of one you do.
+ *  Uniform random among eligible; null if none remain. */
+export function drawCurse(curseTiers: Record<string, number>, depth: number): CurseOffer | null {
+  const eligible = GAUNTLET_CURSES
+    .map(c => ({ c, next: (curseTiers[c.id] ?? 0) + 1 }))
+    .filter(x => x.next <= x.c.tiers.length && (x.next === 1 || depth >= CURSE_TIER2_DEPTH))
+  if (eligible.length === 0) return null
+  const { c, next } = eligible[Math.floor(Math.random() * eligible.length)]
+  const t = c.tiers[next - 1]
+  return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, isUpgrade: next > 1 }
 }
+
+/** Run-wide combat effects from every curse currently on the player, at its
+ *  active tier. Fed into the combat effect pipeline (mirrors boonEffects). */
+export function curseEffects(curseTiers: Record<string, number>): TideEffect[] {
+  return Object.entries(curseTiers).flatMap(([id, tier]) =>
+    GAUNTLET_CURSES.find(c => c.id === id)?.tiers[tier - 1]?.effects ?? [])
+}
+
+/** Total per-fight HP drain (Crushing Depth) from the active curse tiers. */
+export function curseHpDrain(curseTiers: Record<string, number>): number {
+  return Object.entries(curseTiers).reduce((a, [id, tier]) =>
+    a + (GAUNTLET_CURSES.find(c => c.id === id)?.tiers[tier - 1]?.hpDrainPct ?? 0), 0)
+}
+
+/** Roman tier marker for curse chips ('' for tier 1, 'II' for tier 2). */
+export function curseTierLabel(tier: number): string { return tier >= 2 ? 'II' : '' }
 
 // ── Boons — the descent's gifts ───────────────────────────────────────────────
 // The flip side of Curses: at each BOON_DEPTH the player DRAFTS one of three

@@ -39,6 +39,9 @@ export type TideEffect =
   | { kind: 'fireDmgMult'; mult: number }
   /** Volley damage only — does NOT affect base fire. Rewards volley-saving. */
   | { kind: 'volleyDmgMult'; mult: number }
+  /** Damage multiplier on NON-crit shots only (hit + graze). <1 = the
+   *  "All or Nothing" curse: anything short of a gold crit hits soft. */
+  | { kind: 'noncritDmgMult'; mult: number }
   // ── Crit-specific ───────────────────────────────────────────────
   /** Flat % bonus to player crit chance. Aim bar UNAFFECTED visually;
    *  the bonus is rolled into the post-lock outcome math. */
@@ -54,6 +57,9 @@ export type TideEffect =
   | { kind: 'aimSpeedMult'; mult: number }
   /** Multiplier on the target-ZONE drift speed (>1 = the band lurches more). */
   | { kind: 'zoneSpeedMult'; mult: number }
+  /** Aim bar randomly blacks out for a beat (0-1 intensity = how dark/often),
+   *  like the abyss reel going dark. The "Inkfall" curse. */
+  | { kind: 'aimBlackout'; intensity: number }
   // ── Incoming damage / mitigation ────────────────────────────────
   /** Multiplier on incoming damage rolls. <1 = mitigation. */
   | { kind: 'incomingDmgMult'; mult: number; scope: 'nextFight' | 'allRemaining' }
@@ -147,8 +153,9 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
   switch (e.kind) {
     case 'damageMult': case 'fireDmgMult': case 'volleyDmgMult':
     case 'bossDamageMult': case 'bossVolleyDmgMult': case 'critZoneScale':
-    case 'critDmgMult':
+    case 'critDmgMult': case 'noncritDmgMult':
       return e.mult > 1 ? 'good' : e.mult < 1 ? 'bad' : 'neutral'
+    case 'aimBlackout':  return e.intensity > 0 ? 'bad' : 'neutral'
     case 'executeThreshold': case 'lifestealPct': case 'retaliatePct':
       return e.pct > 0 ? 'good' : 'neutral'
     case 'lowHpDamage':  return e.maxBonus > 0 ? 'good' : 'neutral'
@@ -752,6 +759,8 @@ export function describeEffect(e: TideEffect): string {
         : `${who} open every fight loaded (+${e.n} cannonball${e.n === 1 ? '' : 's'})`
     }
     case 'doubloonsAtRaidEnd':    return `${e.n >= 0 ? '+' : ''}${e.n} ⟡ at raid end`
+    case 'noncritDmgMult':        return `Non-crit shots deal ${Math.round((1 - e.mult) * 100)}% less`
+    case 'aimBlackout':           return 'Your aim bar goes dark in fits'
     case 'aimFog':                return 'Fog drifts over your aim bar'
     case 'aimSpeedMult':          return e.mult > 1 ? `Aim needle ${pct(e.mult - 1)} faster` : `Aim needle ${pct(1 - e.mult)} slower`
     case 'zoneSpeedMult':         return e.mult > 1 ? `Target band lurches ${pct(e.mult - 1)} faster` : `Target band ${pct(1 - e.mult)} steadier`

@@ -385,10 +385,14 @@ export default function RaidCombat({
     // Per-enemy one-shots applied at mount only.
     let enemyHpScaleMult = 1
     let enemyChargesDelta = 0
-    // Aim-bar disruptors (Gauntlet curses): fog density + needle/zone speed.
+    // Aim-bar disruptors (Gauntlet curses): fog density + needle/zone speed +
+    // random blackout intensity.
     let aimFog        = 0
     let aimSpeedMult  = 1
     let zoneSpeedMult = 1
+    let aimBlackout   = 0
+    // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
+    let noncritDmgMult = 1
     // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
     // lifesteal (heal % of damage dealt).
     let critDmgMult     = 1
@@ -439,6 +443,8 @@ export default function RaidCombat({
         case 'aimFog':                aimFog = Math.min(0.92, aimFog + e.density); break
         case 'aimSpeedMult':          aimSpeedMult *= e.mult; break
         case 'zoneSpeedMult':         zoneSpeedMult *= e.mult; break
+        case 'aimBlackout':           aimBlackout = Math.min(0.95, Math.max(aimBlackout, e.intensity)); break
+        case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
     }
@@ -449,7 +455,7 @@ export default function RaidCombat({
       chargesStart, hpStartDelta, everyFightHeal,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
-      aimFog, aimSpeedMult, zoneSpeedMult,
+      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, noncritDmgMult,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
     }
@@ -1728,8 +1734,10 @@ export default function RaidCombat({
           const lowHpMult = tide.lowHpDamage > 0
             ? 1 + tide.lowHpDamage * Math.max(0, 1 - pHp / playerHpMax)
             : 1
+          // All-or-Nothing curse: anything short of a gold crit hits soft.
+          const noncritTideMult = isCritShot ? 1 : tide.noncritDmgMult
           const mult = (isVolley ? 2 : 1) * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
@@ -3510,6 +3518,8 @@ export default function RaidCombat({
             indicatorRef={indicatorRef} zoneRef={zoneRef} flashRef={barFlashRef}
             // Enemy Mist Veil + any Gauntlet fog curse stack into one band.
             aimFogDensity={Math.min(0.95, (enemy.aimFogDensity ?? 0) + tide.aimFog)}
+            // Inkfall curse: the bar randomly blacks out for a beat.
+            aimBlackout={tide.aimBlackout}
             // During the freeze, show the width the shot was judged at —
             // Sharpshot is consumed at lock and the live width would
             // shrink the band mid-freeze, making the picture lie.
@@ -5179,10 +5189,13 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, sharpshotActive, decoyCount }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
+  /** Inkfall curse — 0-1 intensity of a random blackout that briefly swallows
+   *  the whole bar (needle + zone), like the abyss reel going dark. */
+  aimBlackout?: number
   /** The Cartographer's "Mist Veil" — 0–1 opacity of a drifting fog
    *  band overlaid on the aim bar. Undefined / 0 = no fog (every other
    *  raid). ~0.4 thin (his crew tier), ~0.7 deep (the boss himself).
@@ -5202,6 +5215,11 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
+  // Inkfall: peak darkness of the blackout, scaled by intensity. The keyframe
+  // is mostly clear with two short, unevenly-spaced dark beats so it reads as
+  // random rather than a metronome.
+  const inkOpacity = Math.max(0, Math.min(0.95, aimBlackout ?? 0))
+  const hasInk = inkOpacity > 0
   // Decoys — evenly-spaced fixed lure positions across the bar (deterministic
   // so they don't jitter on re-render). Real crit stays the moving zone band.
   const decoys = Math.max(0, Math.min(6, decoyCount ?? 0))
@@ -5235,6 +5253,19 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
             0%   { transform: translateX(-55%); }
             50%  { transform: translateX(218%); }
             100% { transform: translateX(-55%); }
+          }
+        `}</style>
+      )}
+      {/* Inkfall blackout — two short, unevenly-spaced dark beats per cycle so
+          the bar drops dark "randomly" rather than on a steady pulse. */}
+      {hasInk && (
+        <style>{`
+          @keyframes rc-inkfall {
+            0%, 20%   { opacity: 0; }
+            25%, 31%  { opacity: ${inkOpacity}; }
+            36%, 67%  { opacity: 0; }
+            72%, 77%  { opacity: ${inkOpacity}; }
+            82%, 100% { opacity: 0; }
           }
         `}</style>
       )}
@@ -5324,13 +5355,24 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, critW, s
             }} />
           </div>
         )}
+        {/* Inkfall blackout — a full-bar dark veil at zIndex 4 (over the zone +
+            needle, under the lock-flash at 5) that pulses dark on the keyframe. */}
+        {hasInk && (
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
+            borderRadius: 10, background: '#02060c',
+            animation: 'rc-inkfall 3.4s ease-in-out infinite',
+          }} />
+        )}
       </div>
 
       {/* Footer hint — when the fog's up, swap to a fog-specific cue
           so the player understands why the bar is blurring out. */}
-      <p className="font-karla" style={{ fontSize: '0.6rem', color: hasFog ? '#7a9ab5' : '#5a7a9a', textAlign: 'center', flexShrink: 0 }}>
+      <p className="font-karla" style={{ fontSize: '0.6rem', color: hasFog || hasInk ? '#7a9ab5' : '#5a7a9a', textAlign: 'center', flexShrink: 0 }}>
         {hasFog
           ? 'Lock through the mist. The gold center won\'t stay visible.'
+          : hasInk
+          ? 'The dark keeps swallowing the bar. Lock by rhythm.'
           : 'Tap LOCK when the marker hits the gold center.'}
       </p>
     </div>

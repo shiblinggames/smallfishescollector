@@ -18,11 +18,12 @@ import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import {
   generateFight, advanceRollState, shouldFireTide, chestForDepth,
-  CURSE_DEPTHS, drawCurse, BOON_DEPTHS, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
+  CURSE_DEPTHS, drawCurse, curseEffects, curseHpDrain, curseTierLabel, GAUNTLET_CURSES,
+  BOON_DEPTHS, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT, GAUNTLET_COOLDOWN_HOURS,
   CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
-  type GauntletFight, type GauntletRollState, type GauntletCurse, type BoonOffer,
+  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
@@ -132,9 +133,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
   const [pendingTide, setPendingTide] = useState<TideEvent | null>(null)
   // Curses — the Locker's escalating, permanent run modifiers.
-  const [activeCurses, setActiveCurses] = useState<GauntletCurse[]>([])
-  const [pendingCurse, setPendingCurse] = useState<GauntletCurse | null>(null)
-  const activeCursesRef = useRef<GauntletCurse[]>([])
+  // Active curses as id -> tier (1 or 2), mirroring the boon system. Tier 2
+  // deepens a curse already on you (from CURSE_TIER2_DEPTH). The ref backs the
+  // tight-deps reads (draw + hp drain).
+  const [curseTiers, setCurseTiers] = useState<Record<string, number>>({})
+  const [pendingCurse, setPendingCurse] = useState<CurseOffer | null>(null)
+  const curseTiersRef = useRef<Record<string, number>>({})
   // Boons — drafted as TIERS (family id → highest tier owned, 1..3). Drafting a
   // higher tier replaces the lower; no infinite single-boon stacking.
   const [boonTiers, setBoonTiers] = useState<Record<string, number>>({})
@@ -258,7 +262,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setBossesDefeated(0)
       setActiveTideEffects([])
       setUsedAbilityIds(new Set())
-      setActiveCurses([]); activeCursesRef.current = []
+      setCurseTiers({}); curseTiersRef.current = {}
       setPendingCurse(null)
       setBoonTiers({}); setPendingBoons(null)
       anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
@@ -328,7 +332,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const nextDepth = clearedNow + 1
     const skipFirstCurse = nextDepth === CURSE_DEPTHS[0] && gauntletSkipsFirstCurse(props.gauntletUpgrades)
     const curse = (CURSE_DEPTHS.includes(nextDepth) && !skipFirstCurse)
-      ? drawCurse(activeCursesRef.current.map(c => c.id))
+      ? drawCurse(curseTiersRef.current, nextDepth)
       : null
     const boonDue = BOON_DEPTHS.includes(nextDepth)
     if (curse || boonDue) {
@@ -352,16 +356,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
   }
 
-  // Apply a freshly-imposed curse, then drop into the breather screen. Curse
-  // effects ride the same active-effect channel the Tides use (they're
-  // allRemaining, so they persist + apply for free).
-  function applyCurse(curse: GauntletCurse) {
-    const next = [...activeCursesRef.current, curse]
-    activeCursesRef.current = next
-    setActiveCurses(next)
-    if (curse.effects && curse.effects.length > 0) {
-      setActiveTideEffects(prev => [...prev, ...curse.effects!])
-    }
+  // Record a freshly-imposed curse (or its tier-2 deepening) at its tier, then
+  // drop into the breather. Effects are resolved live from curseTiers via
+  // curseEffects() and threaded into the combat pipeline, so nothing is pushed
+  // into the tide channel here (mirrors how boons work).
+  function applyCurse(offer: CurseOffer) {
+    const next = { ...curseTiersRef.current, [offer.id]: offer.tier }
+    curseTiersRef.current = next
+    setCurseTiers(next)
     setPendingCurse(null)
     // If a boon was drawn for this same depth (Calm Before lands a curse on a
     // boon depth), show it next instead of dropping straight to the breather.
@@ -395,7 +397,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Crushing Depth (and any future drain curse): the hull sheds a slice of
     // max HP before each new fight. Clamped to leave at least 1 — the curse
     // squeezes how deep you can go, but the sea never lands the kill itself.
-    const drainPct = activeCursesRef.current.reduce((a, c) => a + (c.hpDrainPct ?? 0), 0)
+    const drainPct = curseHpDrain(curseTiersRef.current)
     if (drainPct > 0) {
       const drained = Math.max(1, Math.round(playerHPRef.current - hpMax * drainPct))
       playerHPRef.current = drained
@@ -778,6 +780,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     const ownedBoons = GAUNTLET_BOONS
       .map(fam => ({ fam, tier: boonTiers[fam.id] ?? 0 }))
       .filter(x => x.tier >= 1)
+    const ownedCurses = GAUNTLET_CURSES
+      .map(c => ({ c, tier: curseTiers[c.id] ?? 0 }))
+      .filter(x => x.tier >= 1)
     // A line of voice for the breather, keyed to the run's state — bleeding hull,
     // a fat haul, a record depth, or just the quiet before the next gun.
     const breathLine =
@@ -841,7 +846,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
 
           {/* Powers + Curses tallies — each chip taps to a plain-English detail. */}
-          {(ownedBoons.length > 0 || activeCurses.length > 0) && (
+          {(ownedBoons.length > 0 || ownedCurses.length > 0) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: 16, textAlign: 'left' }}>
               {ownedBoons.length > 0 && (
                 <div>
@@ -863,19 +868,23 @@ export default function GauntletGame(props: GauntletGameProps) {
                   </div>
                 </div>
               )}
-              {activeCurses.length > 0 && (
+              {ownedCurses.length > 0 && (
                 <div>
                   <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f87171', marginBottom: 6 }}>
-                    Curses · {activeCurses.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
+                    Curses · {ownedCurses.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {activeCurses.map(c => (
-                      <button key={c.id} className="font-karla font-700 tap"
-                        onClick={() => setDetailEffect({ kind: 'curse', name: c.name, desc: c.desc, detail: c.detail, flavor: c.flavor, count: 1 })}
-                        style={{ cursor: 'pointer', fontSize: '0.68rem', padding: '0.28rem 0.66rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
-                        {c.name}
-                      </button>
-                    ))}
+                    {ownedCurses.map(({ c, tier }) => {
+                      const t = c.tiers[tier - 1]
+                      const label = curseTierLabel(tier)
+                      return (
+                        <button key={c.id} className="font-karla font-700 tap"
+                          onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length })}
+                          style={{ cursor: 'pointer', fontSize: '0.68rem', padding: '0.28rem 0.66rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
+                          {c.name}{label ? ` ${label}` : ''}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -936,6 +945,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   if (phase === 'curse' && pendingCurse) {
     const c = pendingCurse
     const CRIM = '#ef4444'
+    // For the "N curses upon you" tally: a brand-new curse adds one; a tier-2
+    // deepening (isUpgrade) just intensifies one you already carry.
+    const curseCount = Object.keys(curseTiers).length
+    const curseTotalAfter = c.isUpgrade ? curseCount : curseCount + 1
     return (
       <>
         <AbyssBackdrop />
@@ -949,7 +962,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         }}>
           <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={{ duration: 0.9 }}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', color: CRIM, marginTop: 16, textShadow: `0 0 18px ${CRIM}66` }}>
-            The Locker Curses You
+            {c.isUpgrade ? 'The Locker Tightens Its Grip' : 'The Locker Curses You'}
           </motion.p>
 
           {/* Skull sigil, sinking in from above like it's surfacing for you. */}
@@ -965,8 +978,13 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 220, damping: 18 }}
             className="font-cinzel font-800" style={{ fontSize: '2.2rem', color: '#fdecec', lineHeight: 1.06, marginTop: 8, textShadow: `0 0 30px ${CRIM}55` }}>
-            {c.name}
+            {c.name}{c.isUpgrade ? ' II' : ''}
           </motion.h1>
+          {c.isUpgrade && (
+            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: `${CRIM}cc`, marginTop: 6 }}>
+              The curse deepens
+            </p>
+          )}
           {/* What it does, plain and loud — the headline, not buried in flavor. */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 14, padding: '0.42rem 1rem', borderRadius: 999, background: `${CRIM}22`, border: `1px solid ${CRIM}66` }}>
             <span aria-hidden style={{ fontSize: '0.85rem', color: CRIM }}>▼</span>
@@ -979,7 +997,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             {c.flavor}
           </p>
           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#c98a8a', marginTop: 16 }}>
-            It holds for the rest of the dive · {activeCurses.length + 1} {activeCurses.length === 0 ? 'curse' : 'curses'} upon you
+            It holds for the rest of the dive · {curseTotalAfter} {curseTotalAfter === 1 ? 'curse' : 'curses'} upon you
           </p>
 
           <button onClick={() => applyCurse(c)} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
@@ -1167,7 +1185,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none"
         style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
         <div style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={activeCurses.length} />
+          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} />
         </div>
         <div style={{ width: '100%' }}>
           <RaidCombat
@@ -1206,7 +1224,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onLeave={() => setConfirmLeave(true)}
             raidMods={runRaidMods}
-            tideEffects={[...activeTideEffects, ...boonEffects(boonTiers)]}
+            tideEffects={[...activeTideEffects, ...boonEffects(boonTiers), ...curseEffects(curseTiers)]}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
             onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
