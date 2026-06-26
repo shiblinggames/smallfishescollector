@@ -23,7 +23,7 @@ import {
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS,
-  CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
+  CHEST_TIERS, chestCannonDropChance,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
@@ -680,7 +680,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <BackLink router={router} label="Not today" />
         </div>
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
-        {haulOpen && <HaulModal deepest={props.deepest} doubloonMult={props.classDoubloonMult} onClose={() => setHaulOpen(false)} />}
+        {haulOpen && <HaulModal onClose={() => setHaulOpen(false)} />}
         {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </>
@@ -1796,10 +1796,7 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 // "What's down there" — a popup on the intro so a player can see the chest
 // ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
 // BEFORE committing a descent (and burning the cooldown).
-function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doubloonMult: number; onClose: () => void }) {
-  // The floor guide lights up the rows the player can already reach; before any
-  // run, treat depth 8 as a realistic first goal.
-  const target = deepest > 0 ? deepest : 8
+function HaulModal({ onClose }: { onClose: () => void }) {
   const cannons = ['davys_heavy_cannon', 'davys_hand_cannon']
     .map(getRaidItem)
     .filter((it): it is NonNullable<ReturnType<typeof getRaidItem>> => !!it)
@@ -1834,32 +1831,31 @@ function HaulModal({ deepest, doubloonMult, onClose }: { deepest: number; doublo
                 </p>
               </div>
 
-              {/* Floor guide — concrete earnings at each floor (no multipliers).
-                  Sampled at a depth inside each chest's band; rows you can already
-                  reach are lit gold. */}
-              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 14, marginBottom: 6 }}>What you bank by depth</p>
+              {/* The cash-out chest ladder. Keyed to SHIPS SUNK (= the chest
+                  tier's minDepth threshold), which is what actually drives the
+                  reward — so it stays accurate even with Veteran's Start, where
+                  combat depth runs ahead of ships sunk. The chest multiplies the
+                  pot you've built; richer tiers also drop gems. */}
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 15, marginBottom: 3 }}>The cash-out chest</p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a948a', lineHeight: 1.45, marginBottom: 7 }}>
+                The more ships you sink, the richer the chest that multiplies your pot.
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {CHEST_TIERS.map(c => {
-                  const d = c.minDepth === 0 ? 5 : c.minDepth + 2
-                  const pot = estimatePotForDepth(d)
-                  const rowDoubloons = Math.round(pot * c.potMult * doubloonMult)
-                  const reached = target >= d
-                  return (
-                    <div key={c.tier} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0.4rem 0.6rem', borderRadius: 9, background: reached ? `${GOLD}10` : 'rgba(255,255,255,0.02)', border: `1px solid ${reached ? `${GOLD}33` : 'rgba(255,255,255,0.06)'}` }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0 }}>
-                        <span className="font-karla font-700" style={{ fontSize: '0.55rem', color: reached ? GOLD : '#6b6760', flexShrink: 0, width: 48 }}>Depth {d}</span>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: reached ? '#f0ede8' : '#7a766e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.74rem', color: reached ? GOLD : '#6b6760' }}>~{fmt(rowDoubloons)} ⟡</span>
-                        {c.gems > 0 && <span className="font-karla font-700" style={{ fontSize: '0.56rem', color: reached ? '#a78bfa' : '#5a5566' }}>+{c.gems} ◆</span>}
-                      </div>
+                {CHEST_TIERS.map(c => (
+                  <div key={c.tier} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0.46rem 0.6rem', borderRadius: 9, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.06em', color: '#7a766e', flexShrink: 0, width: 56, whiteSpace: 'nowrap' }}>{c.minDepth === 0 ? 'From start' : `Sink ${c.minDepth}`}</span>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: '#f0ede8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
                     </div>
-                  )
-                })}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: c.potMult > 1 ? GOLD : '#9a948a' }}>×{c.potMult.toFixed(2)}</span>
+                      {c.gems > 0 && <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: '#a78bfa' }}>+{c.gems} ◆</span>}
+                    </div>
+                  </div>
+                ))}
               </div>
               <p className="font-karla" style={{ fontSize: '0.6rem', color: '#7a766e', marginTop: 5, lineHeight: 1.4 }}>
-                The deeper you cash out, the bigger the haul. Plus the same in Nav XP. Sink before you cash out and it all goes to the deep.
+                The pot itself grows with every ship; the chest multiplies it the moment you cash out.
               </p>
 
               {/* The named chase */}
@@ -2034,46 +2030,58 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
     }
   }
 
-  // One renderer for both kinds of row.
+  // A shop line item for an UN-OWNED upgrade: name + description on the left,
+  // a Fathoms price tag on the right, a status accent stripe, and a buy button
+  // whose label spells out exactly why you can or can't take it. (Owned upgrades
+  // are surfaced as chips up top, not here.)
   function Card({ e }: { e: ShopEntry }) {
     if (!state) return null
     const depthMet = state.deepest >= e.depthRequired
     const canAfford = state.fathoms >= e.cost
     const busy = claiming === e.id
-    const prereqLocked = !!e.lockNote && !e.owned
-    const claimable = !e.owned && depthMet && canAfford && !prereqLocked && !busy
+    const prereqLocked = !!e.lockNote
+    const claimable = depthMet && canAfford && !prereqLocked && !busy
+    const accent = claimable ? GOLD : (!depthMet || prereqLocked) ? '#caa05a' : '#6a6764'
     return (
-      <div style={{ borderRadius: 14, padding: '0.85rem 0.9rem', background: e.owned ? `${TEAL}10` : 'rgba(255,255,255,0.03)', border: `1px solid ${e.owned ? `${TEAL}45` : 'rgba(255,255,255,0.1)'}` }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f0ede8' }}>{e.name}</p>
-          {e.depthRequired > 0 && (
-            <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              {depthMet ? `Depth ${e.depthRequired} ✓` : `Depth ${state.deepest}/${e.depthRequired}`}
-            </span>
-          )}
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.8rem 1rem', background: 'rgba(255,255,255,0.035)', border: `1px solid ${claimable ? `${GOLD}3a` : 'rgba(255,255,255,0.1)'}`, boxShadow: claimable ? `0 0 18px ${GOLD}12` : 'none' }}>
+        <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
+            {e.depthRequired > 0 && (
+              <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a' }}>
+                {depthMet ? `Depth ${e.depthRequired} reached` : `Locked · reach depth ${e.depthRequired}`}
+              </span>
+            )}
+          </div>
+          {/* Price tag */}
+          <div style={{ flexShrink: 0, textAlign: 'right', lineHeight: 1 }}>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: canAfford ? GOLD : '#8a8480' }}>{fmt(e.cost)}</p>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.12em', color: '#7a766e', marginTop: 2 }}>Fathoms</p>
+          </div>
         </div>
-        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 5 }}>{e.description}</p>
+        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 5 }}>{e.description}</p>
         {e.demo && <CannonballRackDemo />}
         {prereqLocked && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#caa05a', marginTop: 7 }}>{e.lockNote}</p>}
         <button
           type="button"
           onClick={claimable ? () => claim(e.id, e.special) : undefined}
           disabled={!claimable}
-          className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
+          className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
           style={{
-            marginTop: 10, width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.74rem',
+            marginTop: 11, width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.78rem',
             cursor: claimable ? 'pointer' : 'default',
-            color: e.owned ? TEAL : claimable ? TEAL : '#6a6764',
-            background: e.owned ? `${TEAL}1a` : claimable ? `${TEAL}1c` : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${e.owned ? `${TEAL}55` : claimable ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}`,
+            color: claimable ? '#1a1206' : '#6a6764',
+            background: claimable ? `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)` : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${claimable ? GOLD : 'rgba(255,255,255,0.1)'}`,
+            boxShadow: claimable ? `0 0 16px ${GOLD}33` : 'none',
           }}
         >
-          {busy ? 'Claiming…'
-            : e.owned ? 'Unlocked ✓'
-            : !depthMet ? `Reach Depth ${e.depthRequired}`
+          {busy ? 'Buying…'
+            : !depthMet ? `Reach depth ${e.depthRequired}`
             : prereqLocked ? 'Auto Caster needed'
-            : !canAfford ? `Need ${fmt(e.cost)} Fathoms`
-            : `Claim · ${fmt(e.cost)} Fathoms`}
+            : !canAfford ? `Need ${fmt(e.cost - state.fathoms)} more Fathoms`
+            : 'Buy'}
         </button>
       </div>
     )
@@ -2118,22 +2126,50 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
             const runShop = upgrades.filter(e => e.scope === 'gauntlet')
             const shoreShop = [...upgrades.filter(e => e.scope !== 'gauntlet'), ...(autoCatcher ? [autoCatcher] : [])]
             const entries = section === 'run' ? runShop : shoreShop
+            const owned = entries.filter(e => e.owned)
+            const forSale = entries.filter(e => !e.owned)
             return (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '12px 0 14px', padding: '0.4rem 0', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              <span className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.54rem', color: '#8a8480' }}>Your Fathoms</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: TEAL }}>{fmt(state.fathoms)} Fathoms</span>
+            {/* Fathoms wallet — the currency you're spending, up top. */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '13px 0 0', padding: '0.65rem 0.85rem', borderRadius: 12, background: `${TEAL}10`, border: `1px solid ${TEAL}33` }}>
+              <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: `${TEAL}cc` }}>Your Fathoms</span>
+              <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: TEAL }}>{fmt(state.fathoms)}</span>
             </div>
 
-            {entries.length === 0 ? (
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#7a766e', textAlign: 'center', padding: '1.5rem 0' }}>Nothing in this shop yet — more coming.</p>
+            {/* What you already own — surfaced as chips so the loadout is obvious. */}
+            {owned.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginBottom: 7 }}>
+                  {section === 'run' ? `Active every dive · ${owned.length}` : `Owned · ${owned.length}`}
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {owned.map(e => (
+                    <span key={e.id} className="font-karla font-700" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', color: '#bdeee5', background: `${TEAL}16`, border: `1px solid ${TEAL}4a`, borderRadius: 999, padding: '0.28rem 0.62rem' }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      {e.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* For sale */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '17px 0 9px' }}>
+              <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480' }}>For sale</p>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+
+            {forSale.length === 0 ? (
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#7a766e', textAlign: 'center', padding: '1.2rem 0' }}>
+                {entries.length === 0 ? 'Nothing in this shop yet — more coming.' : 'You own everything here. Dive deeper for what comes next.'}
+              </p>
             ) : section === 'run' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{entries.map(e => <Card key={e.id} e={e} />)}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{forSale.map(e => <Card key={e.id} e={e} />)}</div>
             ) : (
               // Ship & Shore — grouped by what each upgrade affects.
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {SHORE_CATEGORIES.map(cat => {
-                  const group = entries.filter(e => e.category === cat.id)
+                  const group = forSale.filter(e => e.category === cat.id)
                   if (group.length === 0) return null
                   return (
                     <div key={cat.id}>
