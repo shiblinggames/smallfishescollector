@@ -14,6 +14,14 @@ export interface BroadsideEnemy {
   maxDmg: number
   /** Ship speed: used in the speed roll for turn order, dodge roll, and aim-bar target speed. */
   shipSpeed: number
+  /** Gunnery accuracy — a flat +/- modifier on this enemy's roll to land a shot
+   *  through the PLAYER's dodge. The engine already auto-scales every enemy's
+   *  accuracy to track the player's evasion (so dodge is strong but never a free
+   *  0), so this is just the per-enemy flavour on top: positive = a crack-shot
+   *  crew that's harder to dodge, negative = a lumbering gunner that's easier.
+   *  Default 0 = baseline. Only matters on the turns the enemy fires at a
+   *  dodging player; ignored everywhere else. */
+  accuracy?: number
   /** Legacy: real-time action interval. Kept for backwards-compat readouts; no longer drives combat. */
   actionMs: number
   /** Scripted action loop. Cycles in order every turn. */

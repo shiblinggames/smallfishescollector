@@ -151,9 +151,16 @@ function rollSpeed(shipSpeed: number, navigation: number) {
 function rollDodge(shipSpeed: number, navigation: number) {
   return d20() + shipSpeed + navigation
 }
-function rollAttackerVsDodge(attackerSpeed: number) {
-  return d20() + attackerSpeed
+function rollAttackerVsDodge(attackerSpeed: number, accuracy = 0) {
+  return d20() + attackerSpeed + accuracy
 }
+// How far the player's evasion (shipSpeed + full nav) is allowed to outrun the
+// enemy's accuracy in the dodge contest. The enemy auto-closes the gap to within
+// this many points, so a maxed-nav captain can't fully negate every shot the way
+// raw nav used to guarantee. Lower = enemies hit through dodge more often.
+// At 6, a high-nav player lands a clean (0-dmg) dodge ~77% of the time; the rest
+// graze for 50%. Per-enemy `accuracy` shifts this band up/down.
+const DODGE_EDGE = 6
 
 // Lock-moment feel helpers — mirror the existing real-time raid.
 function snapIndicator(el: HTMLDivElement | null) {
@@ -1874,8 +1881,17 @@ export default function RaidCombat({
             guaranteedDodgeLeftRef.current -= 1
             dodged = true
           } else {
+            // Enemy accuracy: only when the ENEMY is the one firing at a dodging
+            // player (playerDefending). It auto-closes the gap to the player's
+            // evasion to within DODGE_EDGE so dodge stays strong but not a free
+            // 0, then layers the enemy's own +/- `accuracy` flavour on top. When
+            // the PLAYER is attacking a dodging enemy, accuracy stays 0 — that
+            // contest (single-digit speeds both sides) was already a fair ~50/50.
+            const attackerAccuracy = playerDefending
+              ? Math.max(0, defenderSpeed + defenderNav - attackerSpeed - DODGE_EDGE) + (enemy.accuracy ?? 0)
+              : 0
             const def = rollDodge(defenderSpeed, defenderNav)
-            const atk = rollAttackerVsDodge(attackerSpeed)
+            const atk = rollAttackerVsDodge(attackerSpeed, attackerAccuracy)
             dodged = def >= atk
             // dodgeBonus: flat % shift on the player's dodge outcome.
             // Positive saves a would-be miss; negative spoils a would-be dodge.
