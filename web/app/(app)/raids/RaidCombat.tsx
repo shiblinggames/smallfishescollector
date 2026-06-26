@@ -1559,6 +1559,8 @@ export default function RaidCombat({
       riposteDmg?: number
       // Vampiric affix: HP the enemy drank back off the hit it landed.
       enemyHeal?: number
+      // Leviathan's Hunger (boon): HP you drank back off the hit you landed.
+      lifestealHeal?: number
       // Krust's Carapace soaked this (non-volley) hit — drives a deflect cue.
       carapaceSoak?: boolean
     }
@@ -1636,6 +1638,7 @@ export default function RaidCombat({
       let reflectDmgOut: number | undefined
       let riposteDmgOut: number | undefined
       let enemyHealOut: number | undefined
+      let lifestealHealedOut = 0
       let carapaceSoaked = false
       const stepLines: string[] = []
 
@@ -1945,12 +1948,14 @@ export default function RaidCombat({
           eHp = Math.max(0, eHp - dmg)
           if (dmg > 0) onPlayerHit?.(dmg)
           // Leviathan's Hunger (boon): heal a slice of the damage you deal. The
-          // step carries the new pHp so the HP bar climbs; a log line tells why.
+          // step carries the new pHp so the HP bar climbs + a +HP splat on your
+          // hull; the log line is pushed AFTER the "you fire" line below so it
+          // reads in order (the hit lands, then the wound is drunk).
           if (dmg > 0 && tide.lifestealPct > 0 && pHp > 0) {
             const healed = Math.max(1, Math.round(dmg * tide.lifestealPct))
             const before = pHp
             pHp = Math.min(playerHpMax, pHp + healed)
-            if (pHp > before) stepLines.push(`Leviathan's Hunger drinks the wound — +${pHp - before} HP.`)
+            lifestealHealedOut = pHp - before
           }
           // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
           // it's sunk outright (only when it actually landed + isn't already dead).
@@ -2020,6 +2025,9 @@ export default function RaidCombat({
             splatText = `-${dmg}`
             splatColor = '#ef4444'
           }
+          // Leviathan's Hunger heal line — pushed here so it follows the shot
+          // it fed on, not before it.
+          if (lifestealHealedOut > 0) stepLines.push(`Leviathan's Hunger drinks the wound — +${lifestealHealedOut} HP.`)
         } else {
           // Hull plating (raid items) + crew survivability effects (Bulwark
           // cuts, Soft Shell adds) both scale incoming damage here.
@@ -2122,6 +2130,7 @@ export default function RaidCombat({
         logLines: stepLines,
         procStatus,
         enemyHeal: enemyHealOut,
+        lifestealHeal: lifestealHealedOut || undefined,
         carapaceSoak: carapaceSoaked,
       })
 
@@ -2421,6 +2430,12 @@ export default function RaidCombat({
               setPlayerRecoilKey(k => k + 1)
             }
             setTimeout(() => setEHitsplat(null), SPLAT_HOLD_MS)
+          }
+          // Leviathan's Hunger — a green +HP splat pops on YOUR hull as the
+          // shot lands, so the heal is felt, not just read in the log.
+          if (step.lifestealHeal && step.lifestealHeal > 0) {
+            setPHitsplat({ key: Date.now() + i + 5, text: `+${step.lifestealHeal}`, color: '#34d399' })
+            setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
         }, PROJECTILE_FLIGHT_MS)
       } else if (isAttack && step.who === 'enemy') {
