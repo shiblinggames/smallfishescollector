@@ -412,7 +412,7 @@ export default function RaidCombat({
         case 'reloadProc':
           // Procs stack additively on chance + bonus (simple model;
           // future tier 4 tides could replace with a more nuanced curve).
-          reloadProc = { chance: reloadProc.chance + e.chance, bonus: reloadProc.bonus + e.bonusCharges }
+          reloadProc = { chance: Math.min(1, reloadProc.chance + e.chance), bonus: reloadProc.bonus + e.bonusCharges }
           break
         case 'guaranteedDodge':       guaranteedDodgeBank += e.n; break
         case 'enemyHpScale':          enemyHpScaleMult *= e.mult; break

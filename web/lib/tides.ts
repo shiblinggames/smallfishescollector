@@ -535,10 +535,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'plate',
         label: 'Bolt on the hull plate',
-        description: 'Take 25% less damage all run. Your own damage drops 15% all run.',
+        description: 'Take 30% less damage all run. The added weight slows your guns — -10% damage all run.',
         effects: [
-          { kind: 'incomingDmgMult', mult: 0.75, scope: 'allRemaining' },
-          { kind: 'damageMult', mult: 0.85 },
+          { kind: 'incomingDmgMult', mult: 0.70, scope: 'allRemaining' },
+          { kind: 'damageMult', mult: 0.90 },
         ],
       },
     ],
