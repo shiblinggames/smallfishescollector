@@ -3993,22 +3993,32 @@ function EnemyStatsPopup({
   // (volleys, dodges, aggression) without giving away turn-by-turn timing.
   const behaviorHint = enemyBehaviorHint(enemy.pattern)
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
       onClick={onClose}
+      // Portaled to <body> + scrim-owns-scroll so the fixed overlay escapes the
+      // transformed combat region (otherwise it anchored to that box, the bottom
+      // clipped, and it couldn't scroll). Mirrors PlayerStatsPopup.
       style={{
         position: 'fixed', inset: 0, zIndex: 95,
         background: 'rgba(0,0,0,0.82)',
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1.25rem',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       }}
     >
+      <div style={{
+        minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.25rem',
+        paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))',
+      }}>
       <motion.div
         onClick={e => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -4022,8 +4032,6 @@ function EnemyStatsPopup({
           borderRadius: 20,
           padding: '1.1rem 1rem 1rem',
           boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
-          maxHeight: 'calc(100dvh - 4rem)',
-          overflowY: 'auto',
         }}
       >
         {/* Header — portrait + name */}
@@ -4241,7 +4249,9 @@ function EnemyStatsPopup({
           Close
         </button>
       </motion.div>
-    </motion.div>
+      </div>
+    </motion.div>,
+    document.body,
   )
 }
 
