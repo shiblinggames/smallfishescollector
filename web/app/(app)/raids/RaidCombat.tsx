@@ -3165,6 +3165,27 @@ export default function RaidCombat({
               </AnimatePresence>
               {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
               {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} />}
+              {/* Wounded Fury (boon) — a crimson rage rim around the hull that
+                  grows as HP drops, mirroring the boon's "harder the lower you
+                  get" damage. Its own ambient lane (an edge halo, not rising
+                  embers like burn) so it composites cleanly with status auras.
+                  Transparent center = the ship reads through it untouched. */}
+              {tide.lowHpDamage > 0 && (() => {
+                const ragePct = Math.max(0, 1 - playerHp / playerHpMax)
+                if (ragePct < 0.12) return null // only once a real chunk is gone
+                const peak = Math.min(0.8, 0.22 + ragePct * 0.72)
+                return (
+                  <motion.div aria-hidden
+                    animate={{ opacity: [peak * 0.6, peak, peak * 0.6] }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{
+                      position: 'absolute', inset: '-7%', borderRadius: '50%',
+                      pointerEvents: 'none', zIndex: 1, mixBlendMode: 'screen',
+                      background: 'radial-gradient(ellipse at center, transparent 46%, rgba(220,38,38,0.85) 64%, transparent 82%)',
+                    }}
+                  />
+                )
+              })()}
               {/* Impact spray when the enemy's shot lands on the player hull */}
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
