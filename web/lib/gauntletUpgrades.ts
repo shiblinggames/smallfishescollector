@@ -88,7 +88,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Lucky Locker',
     description: 'Earn 50% more Fathoms from every dive, win or lose.',
     depthRequired: 0,
-    cost: 75,
+    cost: 100,
     scope: 'gauntlet',
   },
   {
