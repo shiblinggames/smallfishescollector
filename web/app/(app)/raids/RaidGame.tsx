@@ -603,6 +603,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // strands the player on a locked next node. The ref guarantees one
   // insert per run even if handleEnemyDefeated is re-entered.
   const clearRecordedRef      = useRef(false)
+  // Crate loot is granted at boss-kill (so closing the app on the loot screen
+  // can't lose it). lootGrantedRef guarantees claimRaidLoot runs exactly once
+  // per run (it adds doubloons every call); lootResultRef holds the result so
+  // the Collect button can fire the purse-update event from it.
+  const lootGrantedRef        = useRef(false)
+  const lootResultRef         = useRef<Awaited<ReturnType<typeof claimRaidLoot>> | null>(null)
   const dodgePrimedRef        = useRef(false)
   const dodgeCooldownRef      = useRef(false)
   const actionLockedRef       = useRef(false)
@@ -663,6 +669,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     consecutiveDodgesRef.current = 0
     roundEndingRef.current       = false
     clearRecordedRef.current     = false
+    lootGrantedRef.current       = false
+    lootResultRef.current        = null
 
     resetEnemyForRound(0)
 
@@ -1139,6 +1147,21 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             // path can still try once as a fallback.
             clearRecordedRef.current = false
           })
+        }
+        // Grant the crate loot NOW (boss is dead) so it can never be lost if the
+        // player closes the app on the loot screen before tapping Collect — the
+        // same reason the clear above persists at kill. `total` + `final` are the
+        // rolled doubloons + item index from just above. Fire-and-forget, guarded
+        // so claimRaidLoot runs exactly once (it adds doubloons every call); on
+        // failure the guard resets so the Collect button retries as a fallback.
+        // The purse-update event is deferred to Collect (from lootResultRef) so
+        // the Nav total ticks up in sync with the reveal, not mid-animation.
+        if (!lootGrantedRef.current) {
+          lootGrantedRef.current = true
+          const lootElapsedMs = performance.now() - raidStartTimeRef.current
+          claimRaidLoot(total, [config.loot[final].id], lootElapsedMs, playerHPMax - playerHP, config.raidId)
+            .then(res => { lootResultRef.current = res })
+            .catch(() => { lootGrantedRef.current = false })
         }
         // Award the boss kill XP + the full-clear bonus (25% of the run's kill
         // XP) in one persisted call, but animate the bar in two steps: the kill
@@ -1658,18 +1681,25 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 clearRecordedRef.current = true
                 recordRaidClear(config.raidId, elapsedMs).catch(() => { clearRecordedRef.current = false })
               }
-              // Cap the wait so a slow/stuck network roundtrip (claimRaidLoot
-              // does getUser + select + update, none with a timeout) can't pin
-              // the player on "Saving…" forever. The claim still completes
-              // server-side; we just route after at most a few seconds. The
-              // player already tapped Return to Port, so routing is expected.
-              try {
-                const res = await Promise.race([
-                  claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId),
-                  new Promise<null>(resolve => setTimeout(() => resolve(null), 4000)),
-                ])
-                if (res) window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloonTotal }))
-              } catch { /* save failed, route anyway */ }
+              // The crate loot was already granted at boss-kill, so Collect just
+              // fires the purse-update event from the stored result and routes —
+              // instant in the normal case. Fallback: if the kill-time grant
+              // failed (lootGrantedRef reset), claim once here, capped so a stuck
+              // network can't pin the player on "Saving…" (the claim still
+              // finishes server-side; routing is expected once they've tapped).
+              if (!lootGrantedRef.current) {
+                lootGrantedRef.current = true
+                try {
+                  const res = await Promise.race([
+                    claimRaidLoot(lootAmount, [config.loot[slotFinal].id], elapsedMs, playerHPMax - playerHP, config.raidId),
+                    new Promise<null>(resolve => setTimeout(() => resolve(null), 4000)),
+                  ])
+                  if (res) lootResultRef.current = res
+                } catch { lootGrantedRef.current = false /* save failed, route anyway */ }
+              }
+              if (lootResultRef.current) {
+                window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: lootResultRef.current.newDoubloonTotal }))
+              }
               router.push('/expeditions')
             }}
           />
