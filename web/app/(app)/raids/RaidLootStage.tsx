@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { type BroadsideEnemy, type RaidLootItem, RARITY_COLOR, GEM_GLYPH, GEM_COLOR } from '@/lib/bossRaids'
 import { getShipSkin } from '@/lib/shipSkins'
 import { vibrate } from '@/lib/haptics'
-import { playChestSfx } from '@/lib/fishingMusic'
+import { playChestSfx, playChestCreakSfx } from '@/lib/fishingMusic'
 
 const GOLD = '#f0c040'
 
@@ -113,6 +113,9 @@ function ChestOpenFx({ tier, color }: { tier: number; color: string }) {
 
 // How long the chest "reveals" before the haul starts ticking into the panel.
 const REVEAL_DELAY = 850
+// The wind-up beat before the crate bursts — it rattles + creaks, glow builds,
+// so the crack lands as a payoff (mirrors the Gauntlet cash-out).
+const ANTICIPATION_MS = 750
 
 export default function RaidLootStage(props: Props) {
   const {
@@ -123,6 +126,7 @@ export default function RaidLootStage(props: Props) {
     crewXP = [],
   } = props
 
+  const [opening, setOpening]   = useState(false)
   const [opened, setOpened]     = useState(false)
   const [counting, setCounting] = useState(false)
 
@@ -155,12 +159,19 @@ export default function RaidLootStage(props: Props) {
   }
 
   function open() {
-    if (opened) return
-    setOpened(true)
-    vibrate(grand ? [0, 40, 35, 70, 35, 95] : [0, 30, 55, 45])
-    playChestSfx(grand)
-    // Let the chest reveal first, THEN tick the haul into the panel.
-    window.setTimeout(() => setCounting(true), REVEAL_DELAY)
+    if (opening || opened) return
+    // Beat 1 — the wind-up: the crate rattles + creaks as the lid strains.
+    setOpening(true)
+    vibrate([0, 10, 28, 14, 34, 18])
+    playChestCreakSfx()
+    window.setTimeout(() => {
+      // Beat 2 — the crack: burst + open art + reward sting.
+      setOpened(true)
+      vibrate(grand ? [0, 40, 35, 70, 35, 95] : [0, 30, 55, 45])
+      playChestSfx(grand)
+      // Beat 3 — let the chest reveal first, THEN tick the haul into the panel.
+      window.setTimeout(() => setCounting(true), REVEAL_DELAY)
+    }, ANTICIPATION_MS)
   }
 
   return (
@@ -187,9 +198,19 @@ export default function RaidLootStage(props: Props) {
               <div style={{ position: 'relative', width: 188, height: 188, margin: '22px auto 6px' }}>
                 <motion.div aria-hidden animate={{ opacity: [0.4, 0.8, 0.4], scale: [1, 1.07, 1] }} transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}26 0%, transparent 68%)` }} />
+                {/* Building glow as the lid strains in the wind-up beat. */}
+                {opening && (
+                  <motion.div aria-hidden initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: [0, 0.9], scale: [0.75, 1.45] }} transition={{ duration: ANTICIPATION_MS / 1000, ease: 'easeIn' }}
+                    style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, ${accent}77 0%, transparent 70%)`, pointerEvents: 'none' }} />
+                )}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <motion.img src="/plunderclosed.png" alt="Plunder crate" loading="eager" decoding="async"
-                  animate={{ y: [0, -6, 0] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                  animate={opening
+                    ? { x: [0, -4, 4, -4, 4, -3, 3, -2, 2, 0], rotate: [0, -2, 2, -2, 2, -1.5, 1.5, 0], scale: [1, 1.05, 1.04, 1.08, 1.12] }
+                    : { y: [0, -6, 0] }}
+                  transition={opening
+                    ? { duration: ANTICIPATION_MS / 1000, ease: 'easeInOut' }
+                    : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 26px ${GOLD}33)` }} />
               </div>
               <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#f3ead2', lineHeight: 1.1, marginTop: 4, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
@@ -268,9 +289,9 @@ export default function RaidLootStage(props: Props) {
           haul + crew-XP list (which can run long with a full crew). */}
       <div style={{ flexShrink: 0, padding: '0.6rem 0.85rem', borderTop: '1px solid #1f2e42', background: '#04080e' }}>
         {!opened ? (
-          <button onClick={open} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
-            style={{ width: '100%', padding: '0.95rem', borderRadius: 13, fontSize: '1rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: 'pointer', boxShadow: `0 0 20px ${GOLD}1f` }}>
-            Crack It Open
+          <button onClick={open} disabled={opening} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+            style={{ width: '100%', padding: '0.95rem', borderRadius: 13, fontSize: '1rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: opening ? 'default' : 'pointer', opacity: opening ? 0.55 : 1, boxShadow: `0 0 20px ${GOLD}1f` }}>
+            {opening ? 'Prising It Open…' : 'Crack It Open'}
           </button>
         ) : (
           <button onPointerDown={() => { if (!claiming) onClaim() }} disabled={claiming}

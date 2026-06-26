@@ -1403,8 +1403,13 @@ function ChestOpenFx({ tier, color }: { tier: number; color: string }) {
 
 // How long the chest "reveals" before the haul starts ticking into your purse.
 const REVEAL_DELAY = 900
+// The wind-up beat before the lid bursts — chest rattles + creaks, glow builds.
+const ANTICIPATION_MS = 750
 
 function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
+  // Three beats: closed -> opening (a wind-up rattle + creak) -> open (burst +
+  // reveal). The anticipation phase makes the crack land as a payoff.
+  const [opening, setOpening] = useState(false)
   const [opened, setOpened] = useState(false)
   // Counting starts a beat AFTER opening: chest cracks + reveals, then the
   // doubloons / XP increment (count-up + purse tick + bar fill).
@@ -1432,20 +1437,27 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
     : { duration: 1, ease: 'easeOut' as const }
 
   function open() {
-    if (opened) return
-    setOpened(true)
+    if (opening || opened) return
     const grand = r.chest.tier >= 4    // the richest chests open louder
-    vibrate(grand ? [0, 40, 35, 70, 35, 95] : [0, 30, 55, 45])
-    import('@/lib/fishingMusic').then(m => m.playChestSfx(grand)).catch(() => {})
-    // Let the chest reveal first, THEN start everything incrementing: the
-    // count-ups, the purse tick (the Nav listens for these), and the XP bar.
+    // Beat 1 — the wind-up: a building rattle + wooden creak while the lid strains.
+    setOpening(true)
+    vibrate([0, 10, 28, 14, 34, 18])
+    import('@/lib/fishingMusic').then(m => m.playChestCreakSfx()).catch(() => {})
     window.setTimeout(() => {
-      setCounting(true)
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
-      if (r.gems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
-      // A second haptic punch when the bar reaches the new level.
-      if (leveledUp) window.setTimeout(() => vibrate([0, 45, 70, 45]), 1000)
-    }, REVEAL_DELAY)
+      // Beat 2 — the crack: burst, open art, the reward sting.
+      setOpened(true)
+      vibrate(grand ? [0, 40, 35, 70, 35, 95] : [0, 30, 55, 45])
+      import('@/lib/fishingMusic').then(m => m.playChestSfx(grand)).catch(() => {})
+      // Beat 3 — let the chest reveal first, THEN start everything incrementing:
+      // the count-ups, the purse tick (the Nav listens), and the XP bar.
+      window.setTimeout(() => {
+        setCounting(true)
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: r.newDoubloons }))
+        if (r.gems > 0) window.dispatchEvent(new CustomEvent('gems-changed', { detail: r.newGems }))
+        // A second haptic punch when the bar reaches the new level.
+        if (leveledUp) window.setTimeout(() => vibrate([0, 45, 70, 45]), 1000)
+      }, REVEAL_DELAY)
+    }, ANTICIPATION_MS)
   }
 
   return (
@@ -1463,9 +1475,19 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
             </p>
             <div style={{ position: 'relative', width: 200, height: 200, margin: '20px auto 6px' }}>
               <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}33 0%, transparent 68%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
+              {/* Building glow as the lid strains in the wind-up beat. */}
+              {opening && (
+                <motion.div aria-hidden initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: [0, 0.95], scale: [0.75, 1.45] }} transition={{ duration: ANTICIPATION_MS / 1000, ease: 'easeIn' }}
+                  style={{ position: 'absolute', inset: -22, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}77 0%, transparent 70%)`, pointerEvents: 'none' }} />
+              )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <motion.img src={art.closed} alt="" loading="eager" decoding="async"
-                animate={{ y: [0, -6, 0] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                animate={opening
+                  ? { x: [0, -4, 4, -4, 4, -3, 3, -2, 2, 0], rotate: [0, -2, 2, -2, 2, -1.5, 1.5, 0], scale: [1, 1.05, 1.04, 1.08, 1.12] }
+                  : { y: [0, -6, 0] }}
+                transition={opening
+                  ? { duration: ANTICIPATION_MS / 1000, ease: 'easeInOut' }
+                  : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                 style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 26px ${art.color}44)` }} />
             </div>
             <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: art.color, lineHeight: 1.1, marginTop: 4, textShadow: `0 0 22px ${art.color}44` }}>
@@ -1474,9 +1496,9 @@ function GauntletReward({ r, onBack }: { r: RewardOk; onBack: () => void }) {
             <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 5 }}>
               Hauled up from depth {r.depth}{r.chest.potMult > 1 ? ` · ×${r.chest.potMult} haul` : ''}
             </p>
-            <button onClick={open} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
-              style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: 'pointer', boxShadow: `0 0 20px ${GOLD}1f` }}>
-              Crack It Open
+            <button onClick={open} disabled={opening} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+              style={{ marginTop: 24, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: opening ? 'default' : 'pointer', opacity: opening ? 0.55 : 1, boxShadow: `0 0 20px ${GOLD}1f` }}>
+              {opening ? 'Prising It Open…' : 'Crack It Open'}
             </button>
           </>
         ) : (

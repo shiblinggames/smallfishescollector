@@ -756,6 +756,51 @@ export function playChestSfx(grand = false): void {
   } catch {}
 }
 
+/** Wind-up "creak" for the beat BEFORE a chest pops — a low wooden groan that
+ *  bends upward as the lid strains, with a few hinge ticks. Builds anticipation
+ *  so the burst (playChestSfx) lands as a payoff, not a jump-cut. */
+export function playChestCreakSfx(): void {
+  if (!audioCtx) return
+  const out = sfxOut(); if (!out) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const ctx = audioCtx
+    const t0 = ctx.currentTime
+
+    // Wooden groan — a low sawtooth bending slowly upward under a lowpass, like
+    // old timbers taking strain.
+    const groan = ctx.createOscillator()
+    const gg = ctx.createGain()
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'; lp.frequency.value = 900
+    groan.type = 'sawtooth'
+    groan.frequency.setValueAtTime(68, t0)
+    groan.frequency.exponentialRampToValueAtTime(132, t0 + 0.6)
+    gg.gain.setValueAtTime(0.0001, t0)
+    gg.gain.exponentialRampToValueAtTime(0.1, t0 + 0.12)
+    gg.gain.exponentialRampToValueAtTime(0.16, t0 + 0.52)
+    gg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.68)
+    groan.connect(lp).connect(gg).connect(out)
+    groan.start(t0); groan.stop(t0 + 0.7)
+
+    // Hinge ticks — short band-passed noise blips, like strained iron giving.
+    ;[0.08, 0.27, 0.46].forEach((off, k) => {
+      const noise = ctx.createBufferSource()
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate)
+      const data = buf.getChannelData(0)
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+      noise.buffer = buf
+      const bp = ctx.createBiquadFilter()
+      bp.type = 'bandpass'; bp.frequency.value = 2200 + k * 650; bp.Q.value = 1.3
+      const ng = ctx.createGain()
+      ng.gain.setValueAtTime(0.055, t0 + off)
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.07)
+      noise.connect(bp).connect(ng).connect(out)
+      noise.start(t0 + off); noise.stop(t0 + off + 0.08)
+    })
+  } catch {}
+}
+
 /** Mute/unmute SFX independently of the music. Persisted to localStorage. */
 export function getFishingSfxMuted(): boolean { return sfxMuted }
 export function setFishingSfxMuted(muted: boolean): void {
