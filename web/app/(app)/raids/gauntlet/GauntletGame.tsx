@@ -4,28 +4,28 @@
 // cash-out vs push-on, the daily gate) and mounts the existing RaidCombat
 // engine one fight at a time. No combat rewrite: RaidCombat fights a single
 // generated enemy, hands back the player's remaining HP, and we carry it into
-// the next fight. Bosses / elites / Tides fire on the randomized guardrails in
-// lib/gauntlet. The pot is only banked on cash-out; a wipe loses everything.
+// the next fight. Bosses / elites fire on the randomized guardrails in
+// lib/gauntlet; boons + curses are the run-modifier layer (Tides are raids-only).
+// The pot is only banked on cash-out; a wipe loses everything.
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import RaidCombat from '../RaidCombat'
-import TideModal from '../TideModal'
 import { getShipSkin } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import {
-  generateFight, advanceRollState, shouldFireTide, chestForDepth,
+  generateFight, advanceRollState, chestForDepth,
   CURSE_DEPTHS, drawCurse, curseEffects, curseHpDrain, curseTierLabel, GAUNTLET_CURSES,
   BOON_DEPTHS, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
+  REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
-  GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT, GAUNTLET_COOLDOWN_HOURS,
+  GAUNTLET_COOLDOWN_ROUNDS, GAUNTLET_COOLDOWN_HOURS,
   CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
-import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
 import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -35,7 +35,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 
-type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'tide' | 'curse' | 'boon' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'curse' | 'boon' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -50,7 +50,7 @@ function fmt(n: number) { return Math.round(n).toLocaleString() }
 
 // The deep gets heavier the further you fall. RaidCombat's sky/water palette
 // shifts with depth: murk (fog) → cold gloom (overcast) → the blood-dark
-// bottom (sunset). Depth 12 also unlocks tier-2 Tides, so the dread palette
+// bottom (sunset). Depth 12 also unlocks tier-2 Curses, so the dread palette
 // lands exactly when the run turns truly dangerous.
 function atmosphereForDepth(depth: number): 'fog' | 'overcast' | 'sunset' {
   if (depth >= 12) return 'sunset'
@@ -141,9 +141,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ref is the source of truth pushOn reads.
   const [peekFight, setPeekFight] = useState<GauntletFight | null>(null)
   const peekFightRef = useRef<GauntletFight | null>(null)
-  const [activeTideEffects, setActiveTideEffects] = useState<TideEffect[]>([])
   const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
-  const [pendingTide, setPendingTide] = useState<TideEvent | null>(null)
+  // Reprieve — an optional one-time relief card (heal / crew refresh) that can
+  // surface alongside the boons in later rounds. Taking it means forgoing the
+  // boon draft (give up upgrade potential for immediate relief).
+  const [pendingReprieve, setPendingReprieve] = useState<Reprieve | null>(null)
   // Curses — the Locker's escalating, permanent run modifiers.
   // Active curses as id -> tier (1 or 2), mirroring the boon system. Tier 2
   // deepens a curse already on you (from CURSE_TIER2_DEPTH). The ref backs the
@@ -178,14 +180,11 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // Guardrail counters live in refs (read inside combat callbacks).
   const rollStateRef = useRef<GauntletRollState>({ cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 })
-  const roundsSinceTideRef = useRef(0)
   const playerHPRef = useRef(hpMax)
   const potRef = useRef(0)
   // Powder Hoard carryover: cannonballs to seed the next fight with (set at each
   // kill from the leftover charges, capped by the boon tier). Reset each run.
   const carriedChargesRef = useRef(0)
-  // Tides picked this run (title + chosen option), for the deepest-run snapshot.
-  const runTidesRef = useRef<{ title: string; choice: string }[]>([])
   // Where a guard-intercepted exit should go once the player confirms the
   // abandon (the tapped nav link, or /expeditions for a Back press).
   const pendingNavRef = useRef<(() => void) | null>(null)
@@ -208,7 +207,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // instead of silently forfeiting the pot. beforeunload covers a hard refresh /
   // tab close with the browser's native prompt. Active across the whole run
   // (every in-fight + interstitial phase) so the Back sentinel is pushed once.
-  const runLive = phase === 'descending' || phase === 'fighting' || phase === 'tide'
+  const runLive = phase === 'descending' || phase === 'fighting'
     || phase === 'curse' || phase === 'boon' || phase === 'between'
   useEffect(() => {
     if (!runLive) return
@@ -250,7 +249,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       window.matchMedia?.('(display-mode: standalone)').matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true
     if (!standalone) return
-    if (phase !== 'fighting' && phase !== 'tide') return
+    if (phase !== 'fighting') return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
@@ -268,20 +267,17 @@ export default function GauntletGame(props: GauntletGameProps) {
       if (!res.started) { if (res.nextAt) setCooldownUntil(res.nextAt); setPhase('usedup'); setStarting(false); return }
       // Fresh run.
       rollStateRef.current = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
-      roundsSinceTideRef.current = 0
       playerHPRef.current = hpMax
       potRef.current = 0
       carriedChargesRef.current = 0
-      runTidesRef.current = []
       runMaxHitRef.current = 0
       setPlayerHP(hpMax)
       setPot(0)
       setBossesDefeated(0)
-      setActiveTideEffects([])
       setUsedAbilityIds(new Set())
       setCurseTiers({}); curseTiersRef.current = {}
       setPendingCurse(null)
-      setBoonTiers({}); setPendingBoons(null)
+      setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
       peekFightRef.current = null; setPeekFight(null)
       anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
@@ -343,11 +339,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     rollStateRef.current = advanceRollState(rollStateRef.current, f)
     const clearedNow = rollStateRef.current.cleared
 
-    // Expire one-shot ("next enemy") tide effects now that this fight ended,
-    // so e.g. the half-health tide hits only the next ship, not every ship
-    // for the rest of the run. Same rule the boss-raid host uses.
-    setActiveTideEffects(expireAfterFight)
-
     // Crew/repair cooldown: abilities refresh every N cleared rounds.
     if (clearedNow % GAUNTLET_COOLDOWN_ROUNDS === 0) setUsedAbilityIds(new Set())
 
@@ -355,9 +346,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     // BOON_DEPTH). They sit on different depths so the run alternates toll and
     // gift. Calm Before lets the FIRST curse milestone pass uncursed — the
     // player descends curse-free until the second. The curse/boon both-fire
-    // branch below is kept defensive in case the two ever share a depth; the
-    // tide pity counter ticks once for the shared round either way.
-    // Combat depth (Veteran's Start shifts the boon/curse/tide cadence up too).
+    // branch below is kept defensive in case the two ever share a depth.
+    // Combat depth (Veteran's Start shifts the boon/curse cadence up too).
     const nextDepth = clearedNow + 1 + skipOffset
     const skipFirstCurse = nextDepth === CURSE_DEPTHS[0] && gauntletSkipsFirstCurse(props.gauntletUpgrades)
     const curse = (CURSE_DEPTHS.includes(nextDepth) && !skipFirstCurse)
@@ -365,24 +355,21 @@ export default function GauntletGame(props: GauntletGameProps) {
       : null
     const boonDue = BOON_DEPTHS.includes(nextDepth)
     if (curse || boonDue) {
-      roundsSinceTideRef.current += 1
       // Draw the boon now even on a curse round, so applyCurse can hand off to
       // the boon screen (it routes to 'boon' whenever pendingBoons is set).
-      if (boonDue) setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
+      if (boonDue) {
+        setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
+        // Reprieve: in later rounds, sometimes a one-time relief card surfaces
+        // alongside the boons (replacing the old random heal-tide's job, but as
+        // a deliberate choice). Taking it forgoes the boon draft.
+        setPendingReprieve(nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE ? drawReprieve() : null)
+      }
       if (curse) { setPendingCurse(curse); setPhase('curse') }
       else setPhase('boon')
       return
     }
 
-    // Tide between rounds (guardrail pity floor).
-    if (shouldFireTide({ roundsSinceTide: roundsSinceTideRef.current })) {
-      roundsSinceTideRef.current = 0
-      setPendingTide(drawGauntletTide(clearedNow + skipOffset, remainingHp, hpMax))
-      setPhase('tide')
-    } else {
-      roundsSinceTideRef.current += 1
-      setPhase('between')
-    }
+    setPhase('between')
   }
 
   // Record a freshly-imposed curse (or its tier-2 deepening) at its tier, then
@@ -408,17 +395,32 @@ export default function GauntletGame(props: GauntletGameProps) {
   function applyBoon(offer: BoonOffer) {
     setBoonTiers(prev => ({ ...prev, [offer.id]: offer.tier }))
     setPendingBoons(null)
+    setPendingReprieve(null) // chose the boon over the relief
     setPhase('between')
   }
 
-  // Snapshot the run's boons / curses / tides for the deepest-run recap. The
-  // server stamps the real depth + time and only keeps it on a new record.
+  // Take the Reprieve instead of a boon — apply its one-time effect now and
+  // forgo the draft entirely (the give-up-upgrade-potential trade).
+  function applyReprieve(r: Reprieve) {
+    if (r.kind === 'heal') {
+      const healed = Math.min(hpMax, Math.round(playerHPRef.current + hpMax * r.amount))
+      playerHPRef.current = healed
+      setPlayerHP(healed)
+    } else if (r.kind === 'crew') {
+      setUsedAbilityIds(new Set()) // every crew ability loaded fresh
+    }
+    setPendingReprieve(null)
+    setPendingBoons(null)
+    setPhase('between')
+  }
+
+  // Snapshot the run's boons + curses for the deepest-run recap. The server
+  // stamps the real depth + time and only keeps it on a new record.
   function buildRunSnapshot(): GauntletRunSnapshot {
     return {
       depth: rollStateRef.current.cleared + skipOffset,
       boons: boonTiers,
       curses: curseTiers,
-      tides: runTidesRef.current,
     }
   }
 
@@ -990,39 +992,6 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
   }
 
-  // ── Tide interstitial ────────────────────────────────────────────────────
-  if (phase === 'tide' && pendingTide) {
-    return (
-      <>
-        {exitModal}
-        <TideModal
-          tide={pendingTide}
-          onPicked={(choice: TideChoice) => {
-            // Log the pick for the deepest-run recap (skip the pure opt-outs).
-            if (choice.effects.length > 0) runTidesRef.current.push({ title: pendingTide.title, choice: choice.label })
-            let healDelta = 0
-            let fullHealTriggered = false
-            const persisted: TideEffect[] = []
-            for (const e of choice.effects) {
-              if (e.kind === 'instantHeal') healDelta += e.n
-              else if (e.kind === 'fullHeal') fullHealTriggered = true
-              else if (e.kind === 'doubloonsAtRaidEnd') { potRef.current = Math.max(0, potRef.current + e.n); setPot(potRef.current) }
-              else persisted.push(e)
-            }
-            if (fullHealTriggered) { playerHPRef.current = hpMax; setPlayerHP(hpMax) }
-            else if (healDelta !== 0) {
-              const next = Math.min(hpMax, Math.max(0, playerHPRef.current + healDelta))
-              playerHPRef.current = next; setPlayerHP(next)
-            }
-            if (persisted.length > 0) setActiveTideEffects(prev => [...prev, ...persisted])
-            setPendingTide(null)
-            setPhase('between')
-          }}
-        />
-      </>
-    )
-  }
-
   // ── Curse interstitial — the Locker imposes a permanent run modifier ────────
   if (phase === 'curse' && pendingCurse) {
     const c = pendingCurse
@@ -1099,6 +1068,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // ── Boon draft — claim one of three powers ──────────────────────────────────
   if (phase === 'boon' && pendingBoons) {
+    const RELIEF = '#e7b667' // warm amber — distinct from the boon rarity palette
     return (
       <>
         <AbyssBackdrop />
@@ -1202,6 +1172,47 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </motion.button>
               )
             })}
+
+            {/* Reprieve — an optional one-time relief, taken INSTEAD of a boon.
+                Surfaces in later rounds; the warm amber + "you forgo the draft"
+                cue keep the trade clear. */}
+            {pendingReprieve && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a8480' }}>or take a reprieve</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                </div>
+                <motion.button
+                  initial={{ opacity: 0, y: 22, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.12 + pendingBoons.length * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
+                  whileTap={{ scale: 0.945 }}
+                  whileHover={{ scale: 1.015 }}
+                  onClick={() => applyReprieve(pendingReprieve)}
+                  className="tap"
+                  style={{
+                    position: 'relative', textAlign: 'left', overflow: 'hidden',
+                    padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
+                    background: `linear-gradient(180deg, ${RELIEF}26 0%, rgba(8,14,22,0.62) 74%)`,
+                    border: `1.5px solid ${RELIEF}88`, color: '#f6efe2', cursor: 'pointer',
+                    boxShadow: `0 0 20px ${RELIEF}2e`,
+                  }}
+                >
+                  <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(180deg, ${RELIEF}, ${RELIEF}33)`, boxShadow: `0 0 16px ${RELIEF}` }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f8f1e4', lineHeight: 1.16 }}>{pendingReprieve.name}</p>
+                    <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: RELIEF, background: `${RELIEF}22`, border: `1px solid ${RELIEF}`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>Reprieve</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 7 }}>
+                    <span aria-hidden style={{ fontSize: '0.92rem', color: RELIEF, lineHeight: 1 }}>✦</span>
+                    <span className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#f3d9a6', lineHeight: 1.1, textShadow: `0 0 14px ${RELIEF}55` }}>{pendingReprieve.desc}</span>
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(246,239,226,0.6)', lineHeight: 1.4, fontStyle: 'italic', marginTop: 6 }}>{pendingReprieve.flavor}</p>
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#b89a6a', marginTop: 7 }}>You forgo the draft</p>
+                </motion.button>
+              </>
+            )}
           </div>
         </div>
         {detailModal}
@@ -1306,7 +1317,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onLeave={() => setConfirmLeave(true)}
             raidMods={runRaidMods}
-            tideEffects={[...activeTideEffects, ...boonEffects(boonTiers), ...curseEffects(curseTiers)]}
+            tideEffects={[...boonEffects(boonTiers), ...curseEffects(curseTiers)]}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
             onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
@@ -1323,19 +1334,6 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   return null
-}
-
-// ── Tide draw with low-HP heal weighting ──────────────────────────────────────
-function drawGauntletTide(depth: number, hp: number, hpMax: number): TideEvent {
-  const maxTier = depth >= 12 ? 2 : 1
-  const candidates = drawTides(4, maxTier as 1 | 2)
-  const lowHp = hp / hpMax < TIDE_HEAL_HP_PCT
-  if (lowHp) {
-    const healing = candidates.filter(t =>
-      t.choices.some(c => c.effects.some(e => e.kind === 'instantHeal' || e.kind === 'fullHeal' || e.kind === 'startOfFightHeal')))
-    if (healing.length > 0) return healing[Math.floor(Math.random() * healing.length)]
-  }
-  return candidates[Math.floor(Math.random() * candidates.length)] ?? candidates[0]
 }
 
 // ── Cash-out chest reveal ─────────────────────────────────────────────────────

@@ -140,10 +140,6 @@ const ELITE_CHANCE_BASE   = 0.06
 const ELITE_CHANCE_GROWTH = 0.05 // per depth
 const ELITE_CHANCE_CAP    = 0.6
 
-const TIDE_CHANCE         = 0.25 // between-round chance
-const TIDE_PITY           = 6    // force a tide after this many tideless rounds
-const TIDE_HEAL_HP_PCT    = 0.4  // "low HP" threshold that biases the draw toward recovery
-
 /** Crew abilities + repair reset every this-many cleared rounds (the one
  *  predictable resource the player plans around). Slower = abilities matter
  *  more, you ration them across a longer stretch. */
@@ -195,7 +191,7 @@ function drownedName(name: string): string {
 }
 
 /** Snapshot of one gauntlet run, kept for the player's DEEPEST dive so the home
- *  screen can recap the boons / curses / tides they ran. Stored in
+ *  screen can recap the boons / curses they ran. Stored in
  *  profiles.gauntlet_deepest_run, written server-side on a new record. */
 export interface GauntletRunSnapshot {
   depth: number
@@ -203,8 +199,9 @@ export interface GauntletRunSnapshot {
   boons: Record<string, number>
   /** curse id -> tier */
   curses: Record<string, number>
-  /** tides picked, in order: the event title + the option label chosen */
-  tides: { title: string; choice: string }[]
+  /** tides picked (LEGACY — the Gauntlet no longer runs Tides; kept optional so
+   *  old stored snapshots still recap, and the server sanitiser still accepts it) */
+  tides?: { title: string; choice: string }[]
   /** ISO timestamp, set server-side */
   at?: string
 }
@@ -282,18 +279,34 @@ export function advanceRollState(state: GauntletRollState, fight: GauntletFight)
   }
 }
 
-// ── Tides between rounds ─────────────────────────────────────────────────────
-export interface TideRollState {
-  roundsSinceTide: number
+// ── Reprieve ─────────────────────────────────────────────────────────────────
+// A one-time relief card that can surface ALONGSIDE the boons in later rounds.
+// Taking it forgoes the boon draft (give up upgrade potential for immediate
+// relief), so it's the deliberate replacement for the old random heal-tide. The
+// host (GauntletGame) reads `kind` to apply the effect, then drops to the
+// breather. Pool intentionally tiny + high-value; tune the gate/odds below.
+export interface Reprieve {
+  id: string
+  name: string
+  flavor: string
+  /** Short plain effect line shown on the card. */
+  desc: string
+  kind: 'heal' | 'crew'
+  /** For 'heal': fraction of MAX HP restored. Ignored otherwise. */
+  amount: number
 }
-/** Decide whether a Tide fires after THIS round clear (guardrails: pity floor
- *  so recovery is never starved too long). `lowHp` biases nothing here — the
- *  heal-weighting happens at draw time in the host. */
-export function shouldFireTide(state: TideRollState): boolean {
-  if (state.roundsSinceTide >= TIDE_PITY) return true
-  return Math.random() < TIDE_CHANCE
+export const REPRIEVES: Reprieve[] = [
+  { id: 'patch_hull',       name: 'Patch the Hull',   flavor: 'A frantic hour at the pumps buys back the worst of the damage.', desc: 'Heal 75% of your max HP', kind: 'heal', amount: 0.75 },
+  { id: 'beat_to_quarters', name: 'Beat to Quarters', flavor: 'The bosun pipes all hands. Every gun and trick comes up loaded.',  desc: 'Refresh every crew ability',  kind: 'crew', amount: 0 },
+]
+/** Combat depth at/after which a Reprieve can appear on a boon screen. */
+export const REPRIEVE_MIN_DEPTH = 9
+/** Chance a Reprieve surfaces on an eligible boon screen. */
+export const REPRIEVE_CHANCE = 0.55
+/** Pick one Reprieve to offer. */
+export function drawReprieve(): Reprieve {
+  return REPRIEVES[Math.floor(Math.random() * REPRIEVES.length)]
 }
-export { TIDE_HEAL_HP_PCT }
 
 // ── Cash-out chest ───────────────────────────────────────────────────────────
 // Depth-tiered. The multiplier rides on the banked pot; the gem bonus is the
