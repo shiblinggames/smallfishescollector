@@ -27,7 +27,7 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -103,6 +103,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run; every
   // HP reference below uses this boosted ceiling rather than the raw stat.
   const hpMax = Math.round(props.playerHPMax * gauntletRunHpMult(props.gauntletUpgrades))
+  // Veteran's Start: combat depth = cleared + 1 + skipOffset (enemies, boon/curse
+  // cadence, displayed depth). Rewards stay on the cleared count, so the head
+  // start never inflates pot / chests / Fathoms / record.
+  const skipOffset = gauntletSkipOffset(props.gauntletUpgrades)
   // Run Upgrades that fold into the combat mods: Iron Hide (−damage taken) +
   // Gunner's Eye (+damage dealt).
   const runRaidMods = {
@@ -267,7 +271,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setBoonTiers({}); setPendingBoons(null)
       anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
-      setFight(generateFight(rollStateRef.current))
+      setFight(generateFight(rollStateRef.current, skipOffset))
       setPhase('descending')
       setStarting(false)
     })
@@ -329,7 +333,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     // player descends curse-free until the second. The curse/boon both-fire
     // branch below is kept defensive in case the two ever share a depth; the
     // tide pity counter ticks once for the shared round either way.
-    const nextDepth = clearedNow + 1
+    // Combat depth (Veteran's Start shifts the boon/curse/tide cadence up too).
+    const nextDepth = clearedNow + 1 + skipOffset
     const skipFirstCurse = nextDepth === CURSE_DEPTHS[0] && gauntletSkipsFirstCurse(props.gauntletUpgrades)
     const curse = (CURSE_DEPTHS.includes(nextDepth) && !skipFirstCurse)
       ? drawCurse(curseTiersRef.current, nextDepth)
@@ -348,7 +353,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Tide between rounds (guardrail pity floor).
     if (shouldFireTide({ roundsSinceTide: roundsSinceTideRef.current })) {
       roundsSinceTideRef.current = 0
-      setPendingTide(drawGauntletTide(clearedNow, remainingHp, hpMax))
+      setPendingTide(drawGauntletTide(clearedNow + skipOffset, remainingHp, hpMax))
       setPhase('tide')
     } else {
       roundsSinceTideRef.current += 1
@@ -403,7 +408,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       playerHPRef.current = drained
       setPlayerHP(drained)
     }
-    setFight(generateFight(rollStateRef.current))
+    setFight(generateFight(rollStateRef.current, skipOffset))
     setPhase('descending')
   }
 
@@ -683,7 +688,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Dead ────────────────────────────────────────────────────────────────
   if (phase === 'dead') {
     const cleared = rollStateRef.current.cleared
-    const diedAt = cleared + 1
+    // Death "depth" is the COMBAT depth you fell at (matches the fight you lost),
+    // even though your record/Fathoms below count only the ships you sank.
+    const diedAt = cleared + 1 + skipOffset
     const lost = potRef.current
     const newRecord = cleared > 0 && cleared > props.deepest
     const best = Math.max(cleared, props.deepest)
@@ -770,13 +777,16 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Between rounds: cash out or push on ──────────────────────────────────
   if (phase === 'between') {
     const cleared = rollStateRef.current.cleared
-    const nextDepth = cleared + 1
+    // Display depth is the COMBAT depth (Veteran's Start shifts it up); chest +
+    // pot stay on `cleared` so the head start is no reward shortcut.
+    const combatDepth = cleared + skipOffset
+    const nextDepth = combatDepth + 1
     const chest = chestForDepth(cleared)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
     const previewXp = Math.round(pot * chest.potMult)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
-    const band = bandForDepth(cleared)
+    const band = bandForDepth(combatDepth)
     const ownedBoons = GAUNTLET_BOONS
       .map(fam => ({ fam, tier: boonTiers[fam.id] ?? 0 }))
       .filter(x => x.tier >= 1)
@@ -786,10 +796,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     // A line of voice for the breather, keyed to the run's state — bleeding hull,
     // a fat haul, a record depth, or just the quiet before the next gun.
     const breathLine =
-      hpPct < 30        ? 'Your hull groans. The deep can smell blood in the water.'
-      : cleared >= 14   ? 'Few ships sail this deep. Fewer ever sail back.'
+      hpPct < 30          ? 'Your hull groans. The deep can smell blood in the water.'
+      : combatDepth >= 14 ? 'Few ships sail this deep. Fewer ever sail back.'
       : previewDoubloons >= 5000 ? "A captain's ransom rides in your hold now."
-      : cleared <= 2    ? 'Early yet. The Locker is only just stirring below.'
+      : combatDepth <= 2  ? 'Early yet. The Locker is only just stirring below.'
       :                   'The water stills. The Locker waits on your nerve.'
     return (
       <>
@@ -804,7 +814,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             Catch Your Breath
           </motion.p>
           <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#ece5d7', marginTop: 8, lineHeight: 1.1 }}>
-            Depth {cleared} · {band.name}
+            Depth {combatDepth} · {band.name}
           </p>
           {/* A line of voice so the breather has a pulse, keyed to how the run's going. */}
           <p className="font-karla" style={{ fontSize: '0.88rem', fontStyle: 'italic', color: 'rgba(150,205,194,0.82)', lineHeight: 1.45, marginTop: 9, maxWidth: 350, marginInline: 'auto' }}>

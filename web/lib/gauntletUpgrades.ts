@@ -107,6 +107,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     cost: 100,
     scope: 'gauntlet',
   },
+  {
+    id: 'veterans_start',
+    name: "Veteran's Start",
+    description: 'Skip the easy opening and begin every dive at depth 5. Tougher ships, and the deep’s gifts and curses come sooner. Your pot, chests, Fathoms and recorded depth still count only the ships you actually sink, so it is no shortcut on the rewards, just on the boredom.',
+    depthRequired: 0,
+    cost: 150,
+    scope: 'gauntlet',
+  },
   // ── Ship & Shore (scope 'account'/'world') — PERMANENT power for the wider
   //    game. These outrank the Run Upgrades on price (all sit above the 100-cap
   //    run ceiling) because they carry out of the Gauntlet forever. Gated by
@@ -208,6 +216,18 @@ export function gauntletFathomsMult(unlocked: string[] | null | undefined): numb
 /** Diving Bell: max-HP multiplier applied for the whole Gauntlet run. */
 export function gauntletRunHpMult(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('diving_bell') ? 1.15 : 1
+}
+
+/** Veteran's Start: the COMBAT depth the run opens at (enemies + boon/curse
+ *  cadence + the displayed depth). Rewards stay keyed to ships actually sunk,
+ *  so this never inflates pot / chests / Fathoms / record. */
+export function gauntletStartDepth(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('veterans_start') ? 5 : 1
+}
+
+/** The depth offset Veteran's Start adds to the combat depth (0 without it). */
+export function gauntletSkipOffset(unlocked: string[] | null | undefined): number {
+  return gauntletStartDepth(unlocked) - 1
 }
 
 /** Calm Before: the Locker's first curse milestone passes without a curse. */

@@ -207,9 +207,13 @@ export interface GauntletRollState {
 }
 
 /** Generate the next fight. Pure given Math.random; the caller threads the
- *  running guardrail state and updates it from the returned fight. */
-export function generateFight(state: GauntletRollState): GauntletFight {
-  const depth = state.cleared + 1
+ *  running guardrail state and updates it from the returned fight.
+ *  `skipOffset` (Veteran's Start) raises the COMBAT depth — enemy scaling, boss
+ *  / elite odds, and the displayed depth — while the pot stays keyed to the
+ *  REWARD depth (ships actually sunk), so the head start is no reward shortcut. */
+export function generateFight(state: GauntletRollState, skipOffset = 0): GauntletFight {
+  const rewardDepth = state.cleared + 1
+  const depth = rewardDepth + skipOffset
 
   // Boss decision — rising chance, never back-to-back, pity ceiling.
   let isBoss = false
@@ -227,7 +231,7 @@ export function generateFight(state: GauntletRollState): GauntletFight {
 
   if (isBoss) {
     const enemy = scaleToCurve(pick(BOSS_POOL), depth, true)
-    return { enemy, isBoss: true, isElite: false, potContribution: roundContribution(depth, true), depth }
+    return { enemy, isBoss: true, isElite: false, potContribution: roundContribution(rewardDepth, true), depth }
   }
 
   // Mob — independent elite roll, chance scaling with depth.
@@ -245,7 +249,7 @@ export function generateFight(state: GauntletRollState): GauntletFight {
       maxDmg: Math.max(2, Math.round(enemy.maxDmg * ELITE_DMG_MULT)),
     }
   }
-  return { enemy, isBoss: false, isElite, affix, potContribution: roundContribution(depth, false), depth }
+  return { enemy, isBoss: false, isElite, affix, potContribution: roundContribution(rewardDepth, false), depth }
 }
 
 /** Advance the guardrail state after a fight is generated. */
