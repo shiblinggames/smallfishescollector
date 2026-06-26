@@ -54,16 +54,17 @@
 //   mitigation (incomingDmgMult). Nothing "overrides"; it's one big multiply.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
-import { describeEffect, type TideEffect } from '@/lib/tides'
+import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
-import { getShipClass } from '@/lib/shipClasses'
+import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
 import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
 
@@ -3720,30 +3721,96 @@ function PlayerStatsPopup({
     { label: 'Fortune',     value: String(totalFortune),           hint: 'better odds at rare loot',        color: '#f0c040' },
   ]
 
-  // Special — scalable bonus list pulled from every equipped raid item.
-  // Each equipped item surfaces as its own card with name + description, so
-  // new items (any effect type) automatically appear here as they're added.
-  // The legacy Boss-Dmg multiplier is folded into the item's own description.
-  const specialItems = equippedRaidItems
+  // Equipped Items — every raid item the player has on, surfaced as its own
+  // card with name + description, so new items (any effect type) appear here
+  // automatically as they're added.
+  const equippedItems = equippedRaidItems
     .map(id => getRaidItem(id))
     .filter((i): i is NonNullable<ReturnType<typeof getRaidItem>> => !!i)
 
-  return (
+  // Run effects (tides + gauntlet boons + curses) all ride one flat list by the
+  // time they reach here, which is exactly what made the old "Active Tides"
+  // block confusing — a curse sat next to a boon under one heading. Split by
+  // tone so good and bad read apart at a glance.
+  const buffs: string[] = []
+  const penalties: string[] = []
+  for (const e of tideEffects) {
+    const text = describeEffect(e)
+    if (!text) continue // marker-only effects render no row
+    if (effectTone(e) === 'bad') penalties.push(text)
+    else buffs.push(text)
+  }
+
+  // Classes — chapter-end picks. Rather than a row per class (repetitive and
+  // tall), sum every pick into one combined-effect line. `pct` turns a 1.18
+  // multiplier into "+18%".
+  const classAgg = aggregateShipClasses(shipClasses)
+  const classNames = Object.values(shipClasses)
+    .map(id => getShipClass(id))
+    .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
+    .map(c => c.name)
+  const pct = (m: number) => `${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`
+  const classChips: { label: string; positive: boolean }[] = []
+  if (classAgg.damageMult !== 1)   classChips.push({ label: `${pct(classAgg.damageMult)} Damage`,    positive: classAgg.damageMult > 1 })
+  if (classAgg.hpMult !== 1)       classChips.push({ label: `${pct(classAgg.hpMult)} Max HP`,        positive: classAgg.hpMult > 1 })
+  if (classAgg.speedFlat !== 0)    classChips.push({ label: `${classAgg.speedFlat > 0 ? '+' : ''}${classAgg.speedFlat} Speed`, positive: classAgg.speedFlat > 0 })
+  if (classAgg.doubloonMult !== 1) classChips.push({ label: `${pct(classAgg.doubloonMult)} Doubloons`, positive: classAgg.doubloonMult > 1 })
+
+  // A run-effects sub-list (Buffs / Penalties), shared shape for both groups.
+  const effectGroup = (title: string, lines: string[], accent: string) => lines.length === 0 ? null : (
+    <div>
+      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color: accent, letterSpacing: '0.14em', marginBottom: 5 }}>
+        {title}
+      </p>
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 5,
+        padding: '0.6rem 0.7rem',
+        background: `${accent}12`,
+        border: `1px solid ${accent}33`,
+        borderRadius: 12,
+      }}>
+        {lines.map((label, i) => (
+          <p key={i} className="font-karla" style={{ display: 'flex', gap: 6, fontSize: '0.78rem', color: 'rgba(240,237,232,0.82)', lineHeight: 1.4 }}>
+            <span style={{ color: accent, flexShrink: 0 }}>•</span>
+            <span>{label}</span>
+          </p>
+        ))}
+      </div>
+    </div>
+  )
+
+  const sectionHeading = (text: string, color: string) => (
+    <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', color, letterSpacing: '0.16em', marginBottom: 8 }}>{text}</p>
+  )
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
       onClick={onClose}
+      // Scrim owns the scroll; the inner min-height wrapper centers the card
+      // when it fits and lets it scroll from the top when it's taller than the
+      // screen (the centered-flex-overflow fix). Portaled to <body> so the
+      // fixed scrim escapes the transformed combat region — otherwise it
+      // anchored to that box and the bottom got clipped + couldn't scroll.
       style={{
         position: 'fixed', inset: 0, zIndex: 95,
         background: 'rgba(0,0,0,0.82)',
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1.25rem',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       }}
     >
+      <div style={{
+        minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.25rem',
+        paddingTop: 'calc(1.25rem + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))',
+      }}>
       <motion.div
         onClick={e => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -3757,13 +3824,9 @@ function PlayerStatsPopup({
           borderRadius: 20,
           padding: '1.1rem 1rem 1rem',
           boxShadow: '0 18px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset',
-          maxHeight: 'calc(100dvh - 4rem)',
-          overflowY: 'auto',
         }}
       >
-        {/* Header — ship art + name. No "Captain's Ledger" label; the popup
-            speaks for itself, and the smaller label was the most antiquated
-            part of the old design. */}
+        {/* Header — ship art + name. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={shipImageUrl} alt="" style={{ width: 60, height: 60, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 3px 8px rgba(0,0,0,0.5))${shipFilter && shipFilter !== 'none' ? ` ${shipFilter}` : ''}` }} />
@@ -3775,7 +3838,7 @@ function PlayerStatsPopup({
 
         {/* Stat cards — 2-column grid feels less list-y and more dashboard-y. */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: specialItems.length > 0 ? 16 : 12,
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
         }}>
           {rows.map(r => (
             <div key={r.label} style={{
@@ -3793,99 +3856,52 @@ function PlayerStatsPopup({
           ))}
         </div>
 
-        {/* Active Tides — mid-raid event picks the player has banked
-            this run. Each row shows the friendly description per
-            effect from lib/tides.describeEffect, grouped under one
-            "Active Tides" header. Hidden when no tides have fired. */}
-        {(() => {
-          // Skip marker effects whose describeEffect returns '' — they
-          // shouldn't surface as a blank ledger row.
-          const lines = tideEffects
-            .map(e => describeEffect(e))
-            .filter(s => s.length > 0)
-          if (lines.length === 0) return null
-          return (
-            <div style={{ marginBottom: 14 }}>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#bae6fd', letterSpacing: '0.16em', marginBottom: 6 }}>
-                Active Tides
-              </p>
-              <div style={{
-                display: 'flex', flexDirection: 'column', gap: 4,
-                padding: '0.65rem 0.75rem',
-                background: 'rgba(125,211,252,0.06)',
-                border: '1px solid rgba(125,211,252,0.22)',
-                borderRadius: 12,
-              }}>
-                {lines.map((label, i) => (
-                  <p key={i} className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(231,238,246,0.78)', lineHeight: 1.4 }}>
-                    <span style={{ color: '#bae6fd' }}>•</span> {label}
-                  </p>
+        {/* Run effects — split by tone so boons/positive picks (Buffs) read
+            apart from curses/costs (Penalties). */}
+        {(buffs.length > 0 || penalties.length > 0) && (
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {effectGroup('Buffs', buffs, '#5eead4')}
+            {effectGroup('Penalties', penalties, '#f08a8a')}
+          </div>
+        )}
+
+        {/* Classes — one consolidated card: combined stat chips + which picks
+            are stacked, instead of a tall row per class. */}
+        {classChips.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            {sectionHeading(classNames.length > 1 ? `Classes · ${classNames.length}` : 'Class', '#7dd3fc')}
+            <div style={{
+              padding: '0.7rem 0.75rem',
+              background: 'rgba(125,211,252,0.07)',
+              border: '1px solid rgba(125,211,252,0.22)',
+              borderRadius: 12,
+            }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {classChips.map((c, i) => (
+                  <span key={i} className="font-karla font-700" style={{
+                    fontSize: '0.72rem',
+                    color: c.positive ? '#7adf9a' : '#f08a8a',
+                    background: c.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                    border: `1px solid ${c.positive ? 'rgba(74,222,128,0.32)' : 'rgba(248,113,113,0.32)'}`,
+                    borderRadius: 7, padding: '0.22rem 0.5rem',
+                  }}>{c.label}</span>
                 ))}
               </div>
+              {classNames.length > 0 && (
+                <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(125,211,252,0.7)', marginTop: 8, lineHeight: 1.4 }}>
+                  {classNames.join(' · ')}
+                </p>
+              )}
             </div>
-          )
-        })()}
+          </div>
+        )}
 
-        {/* Classes — chapter-end picks. Read-only summary so the
-            player can confirm mid-fight which classes are scaling
-            their numbers. Glyph + name + bullet pills, same shape
-            as the loadout-drawer Class section. */}
-        {(() => {
-          const picks = Object.values(shipClasses)
-            .map(id => getShipClass(id))
-            .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
-          if (picks.length === 0) return null
-          return (
-            <div style={{ marginBottom: 14 }}>
-              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#7dd3fc', letterSpacing: '0.16em', marginBottom: 6 }}>
-                Classes
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {picks.map(cls => (
-                  <div key={cls.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '0.6rem 0.7rem',
-                    background: `${cls.color}10`,
-                    border: `1px solid ${cls.color}33`,
-                    borderRadius: 12,
-                  }}>
-                    <div style={{
-                      width: 32, height: 32, flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `${cls.color}18`, border: `1px solid ${cls.color}45`,
-                      borderRadius: 9, fontSize: '1.15rem', color: cls.color, lineHeight: 1,
-                    }}>
-                      {cls.emoji}
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#f0ede8', lineHeight: 1.15 }}>{cls.name}</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
-                        {cls.bullets.map((b, i) => (
-                          <span key={i} className="font-karla font-700 uppercase tracking-[0.05em]" style={{
-                            fontSize: '0.56rem',
-                            color: b.positive ? '#7adf9a' : '#f08a8a',
-                            background: b.positive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-                            border: `1px solid ${b.positive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
-                            borderRadius: 4, padding: '0.15rem 0.38rem',
-                          }}>{b.label}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })()}
-
-        {/* Special — scales with however many raid items are equipped */}
-        {specialItems.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.7rem', color: '#fbbf24', letterSpacing: '0.16em', marginBottom: 6 }}>
-              Special
-            </p>
+        {/* Equipped Items — scales with however many raid items are on. */}
+        {equippedItems.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            {sectionHeading('Equipped Items', '#fbbf24')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {specialItems.map(item => (
+              {equippedItems.map(item => (
                 <div key={item.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '0.65rem 0.75rem',
@@ -3923,7 +3939,7 @@ function PlayerStatsPopup({
           onClick={onClose}
           className="font-karla font-700"
           style={{
-            width: '100%', padding: '0.85rem',
+            width: '100%', padding: '0.85rem', marginTop: 16,
             background: 'rgba(96,165,250,0.14)',
             border: '1px solid rgba(96,165,250,0.45)',
             color: '#90c0ff', borderRadius: 12,
@@ -3933,7 +3949,9 @@ function PlayerStatsPopup({
           Close
         </button>
       </motion.div>
-    </motion.div>
+      </div>
+    </motion.div>,
+    document.body,
   )
 }
 
