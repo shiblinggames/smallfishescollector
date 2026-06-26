@@ -176,7 +176,13 @@ function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean): Broa
   const hp  = isBoss ? Math.round(mobHp(depth) * BOSS_HP_MULT) : mobHp(depth)
   const min = Math.round(mobMinDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
   const max = Math.round(mobMaxDmg(depth) * (isBoss ? BOSS_DMG_MULT : 1))
-  return { ...src, name: drownedName(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max) }
+  // Gunnery accuracy climbs with depth so dodge stays a real read as a
+  // high-nav endgame captain keeps descending (the fixed per-raid accuracy on
+  // the source enemy would fall behind). Gauntlet players are already post-
+  // Chapter-2, so this opens near the late-raid band (~24) and ramps. Bosses
+  // shoot a touch straighter. See BroadsideEnemy.accuracy for the dodge math.
+  const accuracy = Math.round(22 + depth * 1.4) + (isBoss ? 3 : 0)
+  return { ...src, name: drownedName(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
 }
 
 /** Reframe an enemy as a drowned Locker creature. A leading "The" keeps its

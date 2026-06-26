@@ -1399,9 +1399,14 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             // Challenge-mode elite check. Resolved per round so each
             // encounter remount picks up the right scaled enemy + affix.
             const eliteAffix = getEliteAffixForRound(roundRef.current, config, eliteAffixesRef.current)
+            // Stamp the raid's baseline gunnery accuracy onto the enemy (a
+            // per-enemy `accuracy` still wins if set), so the dodge contest can
+            // actually land shots through a high-nav captain's dodge.
+            const baseEnemy = getEnemyForRound(roundRef.current, config)
+            const enemyWithAccuracy = { ...baseEnemy, accuracy: baseEnemy.accuracy ?? config.enemyAccuracy ?? 0 }
             const enemyForCombat = eliteAffix
-              ? buildEliteEnemy(getEnemyForRound(roundRef.current, config))
-              : getEnemyForRound(roundRef.current, config)
+              ? buildEliteEnemy(enemyWithAccuracy)
+              : enemyWithAccuracy
             return (
               <RaidCombat
                 key={`combat-r${roundDisplay}`}

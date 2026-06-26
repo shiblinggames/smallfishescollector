@@ -14,13 +14,15 @@ export interface BroadsideEnemy {
   maxDmg: number
   /** Ship speed: used in the speed roll for turn order, dodge roll, and aim-bar target speed. */
   shipSpeed: number
-  /** Gunnery accuracy — a flat +/- modifier on this enemy's roll to land a shot
-   *  through the PLAYER's dodge. The engine already auto-scales every enemy's
-   *  accuracy to track the player's evasion (so dodge is strong but never a free
-   *  0), so this is just the per-enemy flavour on top: positive = a crack-shot
-   *  crew that's harder to dodge, negative = a lumbering gunner that's easier.
-   *  Default 0 = baseline. Only matters on the turns the enemy fires at a
-   *  dodging player; ignored everywhere else. */
+  /** Gunnery accuracy — a flat bonus added to this enemy's roll to land a shot
+   *  through the PLAYER's dodge. The player's dodge roll adds their FULL nav
+   *  (15-40+), so without this a single-digit ship speed could never punch
+   *  through dodge and every dodge was a free 0. Size it to the navigation a
+   *  player realistically has by the time they reach this enemy: accuracy ≈
+   *  (their nav) − ~6 lands a clean dodge ~77% of the time, with the rest
+   *  grazing for 50%. Higher = harder to dodge, lower = easier. Default 0 =
+   *  no help (old behaviour, dodge ≈ free). Only matters on the turns the enemy
+   *  fires at a dodging player; ignored everywhere else. */
   accuracy?: number
   /** Legacy: real-time action interval. Kept for backwards-compat readouts; no longer drives combat. */
   actionMs: number
@@ -170,6 +172,14 @@ export interface BossRaidConfig {
     slots: number[]
     maxTier: 1 | 2 | 3 | 4
   }
+  /** Baseline gunnery accuracy for EVERY enemy in this raid (see
+   *  BroadsideEnemy.accuracy). Set once per raid, sized to the navigation a
+   *  player has by the time they reach it, so dodge stays a strong read
+   *  (~75-80% clean) instead of a free 0. Within the raid, faster ships are
+   *  naturally harder to dodge (their shipSpeed is also in the roll), so one
+   *  number gives a built-in spread. An individual enemy can still override
+   *  with its own `accuracy`. Undefined = 0 (dodge ≈ free, pre-2026-06 behaviour). */
+  enemyAccuracy?: number
 }
 
 // The one true gem look: the purple ◆ glyph from the Nav currency display.
@@ -188,6 +198,7 @@ export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
 
 export const CORSAIRS_RECKONING: BossRaidConfig = {
   raidId: 'corsairs_reckoning',
+  enemyAccuracy: 8,
   raidTitle: "The Corsair's Reckoning",
   bossDefeatedText: 'Barnacle Pete Defeated',
   atmosphere: 'sunset',
@@ -304,6 +315,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
 
 export const CAPTAIN_KRUST: BossRaidConfig = {
   raidId: 'captain_krust',
+  enemyAccuracy: 13,
   raidTitle: "Krust's Consignment",
   bossDefeatedText: 'Captain Krust Defeated',
   atmosphere: 'overcast',
@@ -435,6 +447,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
 
 export const THE_CARTOGRAPHER: BossRaidConfig = {
   raidId: 'cartographer',
+  enemyAccuracy: 18,
   raidTitle: "The Cartographer's Survey",
   bossDefeatedText: 'The Cartographer Defeated',
   atmosphere: 'fog',
@@ -629,6 +642,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
 
 export const THE_TOLLMASTER: BossRaidConfig = {
   raidId: 'tollmasters_cut',
+  enemyAccuracy: 23,
   raidTitle: "The Tollmaster's Cut",
   bossDefeatedText: 'Tollmaster Spet Defeated',
   atmosphere: 'overcast',
@@ -764,6 +778,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
 // until step 4. Caps at Galleon — Man-o-War held for Chapter IV.
 export const THE_COFFERS_FLEET: BossRaidConfig = {
   raidId: 'coffers_fleet',
+  enemyAccuracy: 28,
   raidTitle: 'The Harbour Fleet',
   bossDefeatedText: 'Admiral Ruse Defeated',  // NAME TBD (placeholder)
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
@@ -862,6 +877,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // NAMES + ART ARE PLACEHOLDERS until step 4. Caps at Galleon.
 export const THE_QUARTERMASTER: BossRaidConfig = {
   raidId: 'the_quartermaster',
+  enemyAccuracy: 32,
   raidTitle: 'The Quartermaster',
   bossDefeatedText: 'The Quartermaster Defeated',
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
