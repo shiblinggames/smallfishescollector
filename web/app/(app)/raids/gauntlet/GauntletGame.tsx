@@ -433,6 +433,59 @@ export default function GauntletGame(props: GauntletGameProps) {
     />
   ) : null
 
+  // Plain-English explainer for a tapped power/curse. Shared by the breather
+  // tallies AND the boon-draft "learn more" buttons (it portals via fixed
+  // position, so one element dropped into either screen covers both).
+  const detailModal = (
+    <AnimatePresence>
+      {detailEffect && (() => {
+        const isBoon = detailEffect.kind === 'boon'
+        const accent = isBoon ? TEAL : '#f87171'
+        const fg = isBoon ? '#aef3e6' : '#fca5a5'
+        return (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+            onClick={() => setDetailEffect(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+           <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', paddingTop: 'calc(1.5rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
+            <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+              <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: `${accent}cc` }}>
+                {isBoon ? 'Your Power' : 'The Locker’s Curse'}
+              </p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f5f2ec', lineHeight: 1.12, marginTop: 6 }}>
+                {detailEffect.name}
+              </p>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 11, padding: '0.36rem 0.9rem', borderRadius: 999, background: `${accent}20`, border: `1px solid ${accent}5e` }}>
+                <span aria-hidden style={{ fontSize: '0.78rem', color: accent }}>{isBoon ? '▲' : '▼'}</span>
+                <span className="font-karla font-800" style={{ fontSize: '0.86rem', color: fg }}>{detailEffect.desc}</span>
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.85)', marginTop: 13 }}>
+                {detailEffect.detail}
+              </p>
+              {isBoon && (() => {
+                const max = detailEffect.maxTier ?? 3
+                return (
+                  <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: accent, marginTop: 9 }}>
+                    {detailEffect.count >= max ? `Tier ${detailEffect.count} of ${max} — fully upgraded.` : `Tier ${detailEffect.count} of ${max} — draft it again to upgrade.`}
+                  </p>
+                )
+              })()}
+              <p className="font-karla" style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.52)', lineHeight: 1.5, marginTop: 13 }}>
+                {detailEffect.flavor}
+              </p>
+              <button onClick={() => setDetailEffect(null)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+                style={{ marginTop: 16, width: '100%', padding: '0.75rem', borderRadius: 12, fontSize: '0.72rem', background: `${accent}1c`, border: `1px solid ${accent}55`, color: fg, cursor: 'pointer' }}>
+                Got It
+              </button>
+            </motion.div>
+           </div>
+          </motion.div>
+        )
+      })()}
+    </AnimatePresence>
+  )
+
   // ── Intro ──────────────────────────────────────────────────────────────
   if (phase === 'intro') {
     return (
@@ -842,54 +895,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
         </div>
 
-        {/* Detail popup — plain-English explanation of a tapped power / curse. */}
-        <AnimatePresence>
-          {detailEffect && (() => {
-            const isBoon = detailEffect.kind === 'boon'
-            const accent = isBoon ? TEAL : '#f87171'
-            const fg = isBoon ? '#aef3e6' : '#fca5a5'
-            return (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
-                onClick={() => setDetailEffect(null)}
-                style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-               <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', paddingTop: 'calc(1.5rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
-                <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-                  onClick={e => e.stopPropagation()}
-                  style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
-                  <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: `${accent}cc` }}>
-                    {isBoon ? 'Your Power' : 'The Locker’s Curse'}
-                  </p>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f5f2ec', lineHeight: 1.12, marginTop: 6 }}>
-                    {detailEffect.name}
-                  </p>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 11, padding: '0.36rem 0.9rem', borderRadius: 999, background: `${accent}20`, border: `1px solid ${accent}5e` }}>
-                    <span aria-hidden style={{ fontSize: '0.78rem', color: accent }}>{isBoon ? '▲' : '▼'}</span>
-                    <span className="font-karla font-800" style={{ fontSize: '0.86rem', color: fg }}>{detailEffect.desc}</span>
-                  </div>
-                  <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.85)', marginTop: 13 }}>
-                    {detailEffect.detail}
-                  </p>
-                  {isBoon && (() => {
-                    const max = detailEffect.maxTier ?? 3
-                    return (
-                      <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: accent, marginTop: 9 }}>
-                        {detailEffect.count >= max ? `Tier ${detailEffect.count} of ${max} — fully upgraded.` : `Tier ${detailEffect.count} of ${max} — draft it again to upgrade.`}
-                      </p>
-                    )
-                  })()}
-                  <p className="font-karla" style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.52)', lineHeight: 1.5, marginTop: 13 }}>
-                    {detailEffect.flavor}
-                  </p>
-                  <button onClick={() => setDetailEffect(null)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
-                    style={{ marginTop: 16, width: '100%', padding: '0.75rem', borderRadius: 12, fontSize: '0.72rem', background: `${accent}1c`, border: `1px solid ${accent}55`, color: fg, cursor: 'pointer' }}>
-                    Got It
-                  </button>
-                </motion.div>
-               </div>
-              </motion.div>
-            )
-          })()}
-        </AnimatePresence>
+        {detailModal}
         {exitModal}
       </>
     )
@@ -1021,28 +1027,31 @@ export default function GauntletGame(props: GauntletGameProps) {
               const rm = BOON_RARITY_META[b.rarity]
               const legendary = b.rarity === 'legendary'
               const rare = b.rarity === 'rare'
+              const maxTier = GAUNTLET_BOONS.find(f => f.id === b.id)?.tiers.length ?? 3
               return (
                 <motion.button
                   key={b.id}
-                  initial={{ opacity: 0, y: 24, scale: 0.94 }}
+                  initial={{ opacity: 0, y: 22, scale: 0.94 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: 0.12 + idx * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
-                  whileTap={{ scale: 0.96 }}
+                  whileTap={{ scale: 0.945 }}
+                  whileHover={{ scale: 1.015 }}
                   onClick={() => applyBoon(b)}
                   className="tap"
                   style={{
                     position: 'relative', textAlign: 'left', overflow: 'hidden',
-                    padding: '1.1rem 1.15rem 1.05rem 1.3rem', borderRadius: 18,
-                    background: `linear-gradient(180deg, ${rm.color}28 0%, rgba(8,14,22,0.62) 72%)`,
+                    padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
+                    background: `linear-gradient(180deg, ${rm.color}28 0%, rgba(8,14,22,0.62) 74%)`,
                     border: `1.5px solid ${rm.color}${legendary ? 'dd' : rare ? '99' : '66'}`,
                     color: '#eef7f4', cursor: 'pointer',
-                    boxShadow: legendary ? `0 0 44px ${rm.color}66, inset 0 0 42px ${rm.color}1e`
-                             : rare       ? `0 0 26px ${rm.color}3a`
-                             : `0 0 14px ${rm.color}22`,
+                    boxShadow: legendary ? `0 0 40px ${rm.color}5a, inset 0 0 38px ${rm.color}1c`
+                             : rare       ? `0 0 24px ${rm.color}36`
+                             : `0 0 14px ${rm.color}20`,
                   }}
                 >
-                  {/* Rarity edge + a moving sheen on the shiniest cards */}
+                  {/* Rarity edge */}
                   <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(180deg, ${rm.color}, ${rm.color}33)`, boxShadow: `0 0 16px ${rm.color}` }} />
+                  {/* Moving sheen on rare/legendary */}
                   {(legendary || rare) && (
                     <motion.span aria-hidden
                       initial={{ x: '-130%' }}
@@ -1051,41 +1060,51 @@ export default function GauntletGame(props: GauntletGameProps) {
                       style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${rm.color}33, transparent)`, pointerEvents: 'none' }}
                     />
                   )}
-                  {/* Rarity + upgrade badges */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.22rem 0.62rem', boxShadow: legendary ? `0 0 14px ${rm.color}88` : 'none' }}>
+                  {/* Breathing inner glow — a quiet "tap me" pulse (inset so the
+                      card's overflow:hidden doesn't clip it). */}
+                  <motion.span aria-hidden
+                    animate={{ opacity: [0.25, 0.7, 0.25] }}
+                    transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.3 }}
+                    style={{ position: 'absolute', inset: 0, borderRadius: 16, boxShadow: `inset 0 0 20px ${rm.color}66`, pointerEvents: 'none' }}
+                  />
+                  {/* Row 1 — name + tier, rarity pill inline, learn-more */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f4fbf9', lineHeight: 1.16 }}>
+                      {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
+                    </p>
+                    <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.2rem 0.55rem', boxShadow: legendary ? `0 0 12px ${rm.color}88` : 'none' }}>
                       {rm.label}
                     </span>
+                    <span
+                      role="button" tabIndex={0} aria-label={`What ${b.name} does`}
+                      onClick={(e) => { e.stopPropagation(); setDetailEffect({ kind: 'boon', name: `${b.name} ${boonTierLabel(b.tier)}`, desc: b.desc, detail: b.detail, flavor: b.flavor, count: b.tier, maxTier }) }}
+                      className="font-cinzel font-700 tap"
+                      style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.22)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1 }}>
+                      i
+                    </span>
+                  </div>
+                  {/* Row 2 — the power gained, green + clear (with the upgrade tag inline) */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 7, flexWrap: 'wrap' }}>
+                    <span aria-hidden style={{ fontSize: '0.92rem', color: '#86efac', lineHeight: 1 }}>▲</span>
+                    <span className="font-cinzel font-800" style={{ fontSize: '1.12rem', color: '#aef5c4', lineHeight: 1.1, textShadow: '0 0 14px rgba(74,222,128,0.4)' }}>
+                      {b.desc}
+                    </span>
                     {b.upgrade && (
-                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: '#f0d79a', background: 'rgba(217,176,102,0.18)', border: '1px solid rgba(217,176,102,0.55)', borderRadius: 999, padding: '0.22rem 0.55rem' }}>
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#f0d79a', background: 'rgba(217,176,102,0.18)', border: '1px solid rgba(217,176,102,0.55)', borderRadius: 999, padding: '0.16rem 0.45rem' }}>
                         ↑ Upgrade
                       </span>
                     )}
                   </div>
-                  {/* HERO — the power gained, big and green so the gain is unmistakable */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span aria-hidden style={{ fontSize: '1.15rem', color: '#86efac', lineHeight: 1 }}>▲</span>
-                    <span className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#aef5c4', lineHeight: 1.05, textShadow: '0 0 18px rgba(74,222,128,0.42)' }}>
-                      {b.desc}
-                    </span>
-                  </div>
-                  {/* Name + tier */}
-                  <p className="font-cinzel font-700" style={{ fontSize: '1.08rem', color: '#f4fbf9', lineHeight: 1.2, marginTop: 8 }}>
-                    {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
-                  </p>
-                  <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(231,246,242,0.66)', lineHeight: 1.45, fontStyle: 'italic', marginTop: 4 }}>
+                  {/* Row 3 — flavor */}
+                  <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(231,246,242,0.6)', lineHeight: 1.4, fontStyle: 'italic', marginTop: 6 }}>
                     {b.flavor}
                   </p>
-                  {/* Claim cue */}
-                  <div style={{ marginTop: 11, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: rm.color }}>Claim</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={rm.color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-                  </div>
                 </motion.button>
               )
             })}
           </div>
         </div>
+        {detailModal}
         {exitModal}
       </>
     )
