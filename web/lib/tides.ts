@@ -455,10 +455,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'damage_control',
         label: 'Damage-control rehearsal',
-        description: '+5 HP at the start of every remaining fight. Boss fight starts with 15 less HP (crew is tired).',
+        description: '+5 HP at the start of every remaining fight. The crew drills patches, not gunnery — -10% Fire damage all run.',
         effects: [
           { kind: 'startOfFightHeal', n: 5 },
-          { kind: 'startHpDelta', n: -15, scope: 'boss' },
+          { kind: 'fireDmgMult', mult: 0.90 },
         ],
       },
       {
@@ -526,10 +526,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'powder',
         label: 'Haul the powder aboard',
-        description: 'Every reload has a 20% chance to load +1 cannonball, all run. -20 HP next fight.',
+        description: 'Every reload has a 20% chance to load +1 cannonball, all run. The extra powder weighs the hull down — -1 ship speed all run.',
         effects: [
           { kind: 'reloadProc', chance: 0.20, bonusCharges: 1 },
-          { kind: 'startHpDelta', n: -20, scope: 'nextFight' },
+          { kind: 'speedDelta', n: -1, scope: 'allRemaining' },
         ],
       },
       {
@@ -604,10 +604,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'ride_out',
         label: 'Ride it out',
-        description: '+2 ship speed all run (turn order and aim). -20 HP next fight.',
+        description: '+2 ship speed all run (turn order and aim). The hard heel into the swell strains the seams — take 12% more damage all run.',
         effects: [
           { kind: 'speedDelta', n: 2, scope: 'allRemaining' },
-          { kind: 'startHpDelta', n: -20, scope: 'nextFight' },
+          { kind: 'incomingDmgMult', mult: 1.12, scope: 'allRemaining' },
         ],
       },
     ],
