@@ -151,6 +151,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // 'run' = perks for the descent itself, 'shore' = upgrades for the wider game.
   const [shopSection, setShopSection] = useState<'run' | 'shore' | null>(null)
   const [haulOpen, setHaulOpen] = useState(false)
+  // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
+  // live run forfeits the whole pot — so confirm first.
+  const [confirmLeave, setConfirmLeave] = useState(false)
   // First-timer explainer. Auto-opens once (server flag), reopenable via the
   // "How it works" link.
   const [introOpen, setIntroOpen] = useState(!props.hasSeenIntro)
@@ -1074,7 +1077,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onEnemyDefeated={handleEnemyDefeated}
             onPlayerDefeated={handlePlayerDefeated}
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
-            onLeave={() => { resolveGauntletDeath(rollStateRef.current.cleared).finally(() => router.push('/expeditions')) }}
+            onLeave={() => setConfirmLeave(true)}
             raidMods={runRaidMods}
             tideEffects={[...activeTideEffects, ...boonEffects(boonTiers)]}
             crewMembers={props.crewMembers}
@@ -1087,6 +1090,13 @@ export default function GauntletGame(props: GauntletGameProps) {
             openingNote={fight.depth > 1 && (fight.depth - 1) % GAUNTLET_COOLDOWN_ROUNDS === 0 ? 'Your crew catch their breath. Abilities refreshed.' : undefined}
           />
         </div>
+        {confirmLeave && (
+          <AbandonRunModal
+            pot={potRef.current}
+            onStay={() => setConfirmLeave(false)}
+            onAbandon={() => { setConfirmLeave(false); resolveGauntletDeath(rollStateRef.current.cleared).finally(() => router.push('/expeditions')) }}
+          />
+        )}
       </div>
     )
   }
@@ -1396,6 +1406,40 @@ function ModalScrim({ zIndex, onClose, bg = 'rgba(2,6,12,0.85)', blur = 'blur(4p
       </div>
     </div>,
     document.body,
+  )
+}
+
+// ── Abandon-run confirm ───────────────────────────────────────────────────────
+// The mid-fight ← is one mis-tap from wiping a whole descent. Make the player
+// say so out loud, and spell out exactly what sinks with the ship.
+function AbandonRunModal({ pot, onStay, onAbandon }: { pot: number; onStay: () => void; onAbandon: () => void }) {
+  const CRIMSON = '#ef4444'
+  return (
+    <ModalScrim zIndex={1400} onClose={onStay}>
+      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 380, borderRadius: 18, background: 'linear-gradient(180deg, rgba(22,12,14,0.99), rgba(10,7,9,0.99))', border: `1px solid ${CRIMSON}44`, boxShadow: `0 0 44px ${CRIMSON}22, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.2rem 1.15rem', textAlign: 'center' }}>
+        <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${CRIMSON}cc` }}>Abandon the Dive?</p>
+        <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f3d6d6', lineHeight: 1.12, marginTop: 6 }}>
+          Leave Now and You Sink
+        </p>
+        <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c9c3b8', lineHeight: 1.5, marginTop: 10 }}>
+          {pot > 0
+            ? <>Walk away from this run and the <strong style={{ color: '#e08a8a' }}>{fmt(pot)} ⟡</strong> you&apos;ve hauled up, along with the Nav XP and any depth unlocks, goes down with the ship. Nothing is banked until you cash out.</>
+            : <>Walk away now and this descent is over for the day. Your one run is spent — there&apos;s no picking it back up.</>}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 18 }}>
+          <button onClick={onStay} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
+            style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.92rem', background: 'rgba(94,234,212,0.16)', border: `1px solid ${TEAL}55`, color: TEAL, cursor: 'pointer' }}>
+            Stay in the Fight
+          </button>
+          <button onClick={onAbandon} className="font-karla font-700 tap"
+            style={{ width: '100%', padding: '0.6rem', borderRadius: 11, fontSize: '0.74rem', background: 'none', border: `1px solid ${CRIMSON}40`, color: `${CRIMSON}dd`, cursor: 'pointer' }}>
+            Abandon and lose it all
+          </button>
+        </div>
+      </motion.div>
+    </ModalScrim>
   )
 }
 
