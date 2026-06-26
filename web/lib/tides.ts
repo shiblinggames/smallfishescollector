@@ -45,6 +45,8 @@ export type TideEffect =
   | { kind: 'critChanceBonus'; chance: number }
   /** Widens the gold critical zone on the aim bar (visual + math). */
   | { kind: 'critZoneScale'; mult: number }
+  /** Critical hits deal mult× more damage (stacks with the Gunner's Sight item). */
+  | { kind: 'critDmgMult'; mult: number }
   // ── Aim-bar disruptors (visual + feel) — Gauntlet curses lean on these.
   /** Drifting fog band over the aim bar (0-1 density), like the Mist Veil. */
   | { kind: 'aimFog'; density: number }
@@ -93,6 +95,11 @@ export type TideEffect =
   | { kind: 'enemyHpScale'; mult: number; scope: 'nextFight' }
   /** Next enemy starts with N fewer cannonballs (clamped to 0). */
   | { kind: 'enemyStartChargesDelta'; n: number; scope: 'nextFight' }
+  // ── Legendary one-of-a-kind effects (Gauntlet boons) ────────────
+  /** Instantly sink an enemy the moment its HP drops to <= pct of its max. */
+  | { kind: 'executeThreshold'; pct: number }
+  /** Heal the player for pct of the damage they deal. */
+  | { kind: 'lifestealPct'; pct: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -129,7 +136,10 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
   switch (e.kind) {
     case 'damageMult': case 'fireDmgMult': case 'volleyDmgMult':
     case 'bossDamageMult': case 'bossVolleyDmgMult': case 'critZoneScale':
+    case 'critDmgMult':
       return e.mult > 1 ? 'good' : e.mult < 1 ? 'bad' : 'neutral'
+    case 'executeThreshold': case 'lifestealPct':
+      return e.pct > 0 ? 'good' : 'neutral'
     case 'incomingDmgMult':
     case 'enemyHpScale':
       return e.mult < 1 ? 'good' : e.mult > 1 ? 'bad' : 'neutral'
@@ -671,6 +681,9 @@ export function describeEffect(e: TideEffect): string {
     case 'volleyDmgMult':         return `${pct(e.mult - 1)} Volley damage`
     case 'critChanceBonus':       return `${pct(e.chance)} crit chance`
     case 'critZoneScale':         return `Crit zone ${pct(e.mult - 1)} wider`
+    case 'critDmgMult':           return `${pct(e.mult - 1)} critical damage`
+    case 'executeThreshold':      return `Sink enemies below ${Math.round(e.pct * 100)}% HP`
+    case 'lifestealPct':          return `Heal ${pct(e.pct)} of damage dealt`
     case 'incomingDmgMult': {
       const scope = e.scope === 'nextFight' ? 'next fight' : 'all run'
       if (e.mult > 1) return `Take ${pct(e.mult - 1)} more damage, ${scope}`

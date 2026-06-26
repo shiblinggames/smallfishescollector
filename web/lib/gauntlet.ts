@@ -428,6 +428,16 @@ export function drawCurse(activeIds: string[]): GauntletCurse | null {
 //
 // Each boon is a single run-wide TideEffect, so it rides the same active-effect
 // pipeline the Tides + Curses use. `desc` is the player-facing summary chip.
+export type BoonRarity = 'common' | 'rare' | 'legendary'
+
+/** Per-rarity draft WEIGHT (relative odds of being offered) + display colour +
+ *  label. Stronger boons are rarer, so the draft visibly rewards a good roll. */
+export const BOON_RARITY_META: Record<BoonRarity, { label: string; color: string; weight: number }> = {
+  common:    { label: 'Common',    color: '#6ee7d6', weight: 1.0 },   // teal
+  rare:      { label: 'Rare',      color: '#8b9cff', weight: 0.46 },  // indigo
+  legendary: { label: 'Legendary', color: '#f5b94a', weight: 0.15 }, // gold
+}
+
 export interface GauntletBoonTier {
   /** Short, plain mechanical summary — the draft chip + breather chip. */
   desc: string
@@ -439,13 +449,19 @@ export interface GauntletBoon {
   id: string
   name: string
   flavor: string
+  /** Omit for Common. */
+  rarity?: BoonRarity
   /** Tier 1 → 2 → 3, strongest last. The highest tier you hold is the ONE that
-   *  applies — a higher tier replaces the lower, it doesn't stack on top. */
+   *  applies — a higher tier replaces the lower, it doesn't stack on top.
+   *  Legendaries run fewer, bigger tiers. */
   tiers: GauntletBoonTier[]
 }
 
+/** A boon's rarity, defaulting to Common. */
+export function boonRarity(fam: GauntletBoon): BoonRarity { return fam.rarity ?? 'common' }
+
 export const GAUNTLET_BOONS: GauntletBoon[] = [
-  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', tiers: [
+  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', rarity: 'rare', tiers: [
     { desc: '+15% all damage', detail: 'Every shot deals 15% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.15 } },
     { desc: '+30% all damage', detail: 'Every shot deals 30% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.30 } },
     { desc: '+50% all damage', detail: 'Every shot deals 50% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.50 } },
@@ -470,7 +486,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Much bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 26% wider.', effect: { kind: 'critZoneScale', mult: 1.26 } },
     { desc: 'Huge crit zone', detail: 'The gold "perfect shot" band on your aim bar is 42% wider.', effect: { kind: 'critZoneScale', mult: 1.42 } },
   ] },
-  { id: 'ironhide', name: 'Ironhide', flavor: 'Plates doubled along the waterline.', tiers: [
+  { id: 'ironhide', name: 'Ironhide', flavor: 'Plates doubled along the waterline.', rarity: 'rare', tiers: [
     { desc: 'Take 12% less damage', detail: 'Every hit an enemy lands on you deals 12% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
     { desc: 'Take 22% less damage', detail: 'Every hit an enemy lands on you deals 22% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.78, scope: 'allRemaining' } },
     { desc: 'Take 34% less damage', detail: 'Every hit an enemy lands on you deals 34% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.66, scope: 'allRemaining' } },
@@ -480,7 +496,7 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Reloads often load extra', detail: 'Each reload has a 22% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.22, bonusCharges: 1 } },
     { desc: 'Reloads frequently load extra', detail: 'Each reload has a 36% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.36, bonusCharges: 1 } },
   ] },
-  { id: 'following_sea', name: 'Following Sea', flavor: 'The current finally runs with you.', tiers: [
+  { id: 'following_sea', name: 'Following Sea', flavor: 'The current finally runs with you.', rarity: 'rare', tiers: [
     { desc: '+2 ship speed', detail: 'Your ship is 2 faster — you act first more often and your aim bar sweeps faster.', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
     { desc: '+4 ship speed', detail: 'Your ship is 4 faster — you act first more often and your aim bar sweeps faster.', effect: { kind: 'speedDelta', n: 4, scope: 'allRemaining' } },
     { desc: '+7 ship speed', detail: 'Your ship is 7 faster — you act first more often and your aim bar sweeps faster.', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
@@ -495,6 +511,21 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Enemies crit 24% less', detail: 'Enemies are 24% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.24 } },
     { desc: 'Enemies crit 40% less', detail: 'Enemies are 40% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.40 } },
   ] },
+  // ── RARE ───────────────────────────────────────────────────────────────────
+  { id: 'cold_fury', name: 'Cold Fury', flavor: 'When the shot lands true, it lands like the deep itself.', rarity: 'rare', tiers: [
+    { desc: '+25% critical damage', detail: 'Your critical hits deal 25% more damage. Stacks with Wide Sights / Dead-Eye landing more crits in the first place.', effect: { kind: 'critDmgMult', mult: 1.25 } },
+    { desc: '+45% critical damage', detail: 'Your critical hits deal 45% more damage.', effect: { kind: 'critDmgMult', mult: 1.45 } },
+    { desc: '+70% critical damage', detail: 'Your critical hits deal 70% more damage.', effect: { kind: 'critDmgMult', mult: 1.70 } },
+  ] },
+  // ── LEGENDARY (rare; bigger, one-of-a-kind effects, fewer tiers) ────────────
+  { id: 'executioner', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
+    { desc: 'Sink enemies below 18% HP', detail: 'The instant any hit drops an enemy to 18% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.18 } },
+    { desc: 'Sink enemies below 30% HP', detail: 'The instant any hit drops an enemy to 30% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.30 } },
+  ] },
+  { id: 'leviathans_hunger', name: "Leviathan's Hunger", flavor: 'Every wound you open, the deep drinks — and feeds it back to your hull.', rarity: 'legendary', tiers: [
+    { desc: 'Heal 12% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 12% of that damage. Sustain that climbs with how hard you hit.', effect: { kind: 'lifestealPct', pct: 0.12 } },
+    { desc: 'Heal 20% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 20% of that damage.', effect: { kind: 'lifestealPct', pct: 0.20 } },
+  ] },
 ]
 
 // Depths at which the player drafts a boon — offset from CURSE_DEPTHS so the
@@ -507,6 +538,7 @@ export interface BoonOffer {
   id: string
   name: string
   flavor: string
+  rarity: BoonRarity
   tier: number       // 1..3
   desc: string
   detail: string
@@ -517,16 +549,25 @@ export interface BoonOffer {
 
 /** Offer up to `n` distinct boons to draft. For each family the offer is the
  *  NEXT tier the player can take (tier 1 if they hold none, else owned+1);
- *  families already at max tier are excluded. No infinite single-boon stacking. */
+ *  families already at max tier are excluded. Picks are RARITY-WEIGHTED, so
+ *  Legendary/Rare boons surface far less often than Commons. No infinite
+ *  single-boon stacking. */
 export function drawBoons(n: number, owned: Record<string, number> = {}): BoonOffer[] {
-  const pool = GAUNTLET_BOONS
+  const avail = GAUNTLET_BOONS
     .map(fam => ({ fam, next: (owned[fam.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.fam.tiers.length)
   const out: BoonOffer[] = []
-  for (let i = 0; i < n && pool.length > 0; i++) {
-    const { fam, next } = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]
+  for (let i = 0; i < n && avail.length > 0; i++) {
+    const totalW = avail.reduce((a, x) => a + BOON_RARITY_META[boonRarity(x.fam)].weight, 0)
+    let r = Math.random() * totalW
+    let idx = 0
+    for (; idx < avail.length - 1; idx++) {
+      r -= BOON_RARITY_META[boonRarity(avail[idx].fam)].weight
+      if (r <= 0) break
+    }
+    const { fam, next } = avail.splice(idx, 1)[0]
     const t = fam.tiers[next - 1]
-    out.push({ id: fam.id, name: fam.name, flavor: fam.flavor, tier: next, desc: t.desc, detail: t.detail, effect: t.effect, upgrade: next > 1 })
+    out.push({ id: fam.id, name: fam.name, flavor: fam.flavor, rarity: boonRarity(fam), tier: next, desc: t.desc, detail: t.detail, effect: t.effect, upgrade: next > 1 })
   }
   return out
 }

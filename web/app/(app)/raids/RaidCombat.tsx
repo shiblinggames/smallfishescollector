@@ -347,6 +347,11 @@ export default function RaidCombat({
     let aimFog        = 0
     let aimSpeedMult  = 1
     let zoneSpeedMult = 1
+    // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
+    // lifesteal (heal % of damage dealt).
+    let critDmgMult     = 1
+    let executeThreshold = 0
+    let lifestealPct    = 0
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -356,6 +361,9 @@ export default function RaidCombat({
         case 'bossVolleyDmgMult':     bossVolMult *= e.mult; break
         case 'critChanceBonus':       critBonus += e.chance; break
         case 'critZoneScale':         critZoneMult *= e.mult; break
+        case 'critDmgMult':           critDmgMult *= e.mult; break
+        case 'executeThreshold':      executeThreshold = Math.max(executeThreshold, e.pct); break
+        case 'lifestealPct':          lifestealPct += e.pct; break
         case 'incomingDmgMult':       inDmgMult *= e.mult; break
         case 'incomingCritReduction': inCritReduce += e.chance; break
         case 'dodgeBonus':            dodgeBonus += e.chance; break
@@ -389,6 +397,7 @@ export default function RaidCombat({
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
       aimFog, aimSpeedMult, zoneSpeedMult,
+      critDmgMult, executeThreshold, lifestealPct,
     }
   }, [tideEffects, isBoss])
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
@@ -749,6 +758,9 @@ export default function RaidCombat({
 
   const playerHpRef = useRef(initialPlayerHp)
   const enemyHpRef  = useRef(enemy.hpBase)
+  // Enemy max HP for THIS fight (post-scale) — set in the encounter reset; used
+  // by the Executioner boon's % threshold.
+  const enemyHpMaxRef = useRef(enemy.hpBase)
   // Status effects on the CURRENT enemy (Incendiary / Frozen cannonballs).
   // Refs (not state) so the precomputed turn loop reads them synchronously;
   // both reset when the fight moves to a new enemy.
@@ -872,7 +884,7 @@ export default function RaidCombat({
     // initializer — since this reset runs on every encounter switch and the
     // enemyHpScale tide always targets a LATER enemy.
     const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
-    setEnemyHp(scaledHp); enemyHpRef.current = scaledHp
+    setEnemyHp(scaledHp); enemyHpRef.current = scaledHp; enemyHpMaxRef.current = scaledHp
     enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; enemyFreezePendingRef.current = false; snareBlockedRef.current = false; carapaceLoggedRef.current = false
     playerBurnRef.current = { turns: 0, dmg: 0 }; playerFrozenRef.current = false; playerFreezePendingRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
@@ -1636,8 +1648,10 @@ export default function RaidCombat({
           // effect). Sums if multiple ramp items are somehow equipped.
           const rampPerTurn = getActiveEffects(liveItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0)
           const rampMult = 1 + rampPerTurn * Math.max(0, turnRef.current - 1)
+          // Cold Fury (boon): crit hits hit harder. Only on a crit shot.
+          const critTideMult = isCritShot ? tide.critDmgMult : 1
           const mult = (isVolley ? 2 : 1) * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
@@ -1809,6 +1823,20 @@ export default function RaidCombat({
         if (isAttackerPlayer) {
           eHp = Math.max(0, eHp - dmg)
           if (dmg > 0) onPlayerHit?.(dmg)
+          // Leviathan's Hunger (boon): heal a slice of the damage you deal. The
+          // step carries the new pHp so the HP bar climbs; a log line tells why.
+          if (dmg > 0 && tide.lifestealPct > 0 && pHp > 0) {
+            const healed = Math.max(1, Math.round(dmg * tide.lifestealPct))
+            const before = pHp
+            pHp = Math.min(playerHpMax, pHp + healed)
+            if (pHp > before) stepLines.push(`Leviathan's Hunger drinks the wound — +${pHp - before} HP.`)
+          }
+          // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
+          // it's sunk outright (only when it actually landed + isn't already dead).
+          if (dmg > 0 && eHp > 0 && tide.executeThreshold > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.executeThreshold)) {
+            eHp = 0
+            stepLines.push(`Executioner! The ${enemy.name} drops past saving and is dragged under.`)
+          }
           // Incendiary / Frozen cannonball — 15% on-hit procs, only when the
           // shot actually landed and didn't already sink them. Burn refreshes
           // to a fresh 2 turns; freeze flags the enemy's next turn to skip.
