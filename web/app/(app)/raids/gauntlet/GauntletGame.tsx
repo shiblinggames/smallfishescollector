@@ -26,7 +26,7 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletCurseDelay, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -310,15 +310,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (clearedNow % GAUNTLET_COOLDOWN_ROUNDS === 0) setUsedAbilityIds(new Set())
 
     // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
-    // BOON_DEPTH). Normally these fall on different depths — curses sit one off
-    // from boons so the run alternates toll and gift. BUT the Calm Before
-    // upgrade pushes curses one depth deeper, landing them squarely on boon
-    // depths. When both come due the same round we must fire BOTH — curse
-    // first, then the boon — or the curse's early-out swallows the boon (which
-    // starved boons to almost nothing for anyone running Calm Before). The tide
-    // pity counter ticks once for the shared round either way.
+    // BOON_DEPTH). They sit on different depths so the run alternates toll and
+    // gift. Calm Before lets the FIRST curse milestone pass uncursed — the
+    // player descends curse-free until the second. The curse/boon both-fire
+    // branch below is kept defensive in case the two ever share a depth; the
+    // tide pity counter ticks once for the shared round either way.
     const nextDepth = clearedNow + 1
-    const curse = CURSE_DEPTHS.includes(nextDepth - gauntletCurseDelay(props.gauntletUpgrades))
+    const skipFirstCurse = nextDepth === CURSE_DEPTHS[0] && gauntletSkipsFirstCurse(props.gauntletUpgrades)
+    const curse = (CURSE_DEPTHS.includes(nextDepth) && !skipFirstCurse)
       ? drawCurse(activeCursesRef.current.map(c => c.id))
       : null
     const boonDue = BOON_DEPTHS.includes(nextDepth)

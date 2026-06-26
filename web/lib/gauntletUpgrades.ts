@@ -46,7 +46,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   {
     id: 'calm_before',
     name: 'Calm Before',
-    description: "The Locker's curses take one depth longer to catch you.",
+    description: "The Locker's first curse passes you by. You descend uncursed until the second.",
     depthRequired: 0,
     cost: 30,
     scope: 'gauntlet',
@@ -205,9 +205,9 @@ export function gauntletRunHpMult(unlocked: string[] | null | undefined): number
   return (unlocked ?? []).includes('diving_bell') ? 1.15 : 1
 }
 
-/** Calm Before: how many depths later the Locker's curses begin. */
-export function gauntletCurseDelay(unlocked: string[] | null | undefined): number {
-  return (unlocked ?? []).includes('calm_before') ? 1 : 0
+/** Calm Before: the Locker's first curse milestone passes without a curse. */
+export function gauntletSkipsFirstCurse(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('calm_before')
 }
 
 /** Iron Hide: damageTakenPct mod folded into the run's RaidMods. NEGATIVE =
