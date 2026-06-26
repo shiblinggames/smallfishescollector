@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, type GauntletRunSnapshot } from '@/lib/gauntlet'
 import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -51,6 +51,26 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   if (!user) return
   const admin = createAdminClient()
   await admin.rpc('bump_gauntlet_hit', { uid: user.id, dmg: Math.floor(dmg) })
+}
+
+/** Sanitize a client-supplied deepest-run snapshot before storing it. It's
+ *  display-only and scoped to the player's own profile, so the only real concern
+ *  is bounding the size; we stamp the depth + server time ourselves. */
+function sanitizeRunSnapshot(snap: unknown, depth: number): GauntletRunSnapshot | null {
+  if (!snap || typeof snap !== 'object') return null
+  const s = snap as Record<string, unknown>
+  const boons  = s.boons  && typeof s.boons  === 'object' ? (s.boons  as Record<string, number>) : {}
+  const curses = s.curses && typeof s.curses === 'object' ? (s.curses as Record<string, number>) : {}
+  const tides = Array.isArray(s.tides)
+    ? (s.tides as unknown[]).slice(0, 40).flatMap(t => {
+        if (!t || typeof t !== 'object') return []
+        const o = t as Record<string, unknown>
+        return typeof o.title === 'string' && typeof o.choice === 'string'
+          ? [{ title: o.title.slice(0, 80), choice: o.choice.slice(0, 80) }]
+          : []
+      })
+    : []
+  return { depth, boons, curses, tides, at: new Date().toISOString() }
 }
 
 // ── Locker Upgrades — permanent perks, depth-gated + bought with Fathoms ───────
@@ -153,15 +173,15 @@ export async function getGauntletLeaderboard(): Promise<{
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
-export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null }> {
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, is_admin')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, is_admin')
     .eq('id', user.id)
     .single()
 
@@ -176,6 +196,7 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
     deepest: (profile?.gauntlet_deepest as number | null) ?? 0,
     fathoms: (profile?.gauntlet_fathoms as number | null) ?? 0,
     nextAt: available ? null : new Date(nextMs).toISOString(),
+    deepestRun: (profile?.gauntlet_deepest_run as GauntletRunSnapshot | null) ?? null,
   }
 }
 
@@ -212,7 +233,7 @@ export async function startGauntletRun(): Promise<{ started: boolean; reason?: '
 
 /** Cash out an open run at the reached depth, banking the (clamped) pot ×
  *  chest multiplier + the chest's gem bonus. Closes the run. */
-export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, pot: number): Promise<
+export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, pot: number, runSnapshot?: GauntletRunSnapshot): Promise<
   | { ok: false }
   | {
       ok: true
@@ -296,6 +317,10 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const newExpeditionXP  = (profile.expedition_xp ?? 0) + bankedXp
   const prevDeepest      = (profile.gauntlet_deepest as number | null) ?? 0
   const deepest          = Math.max(prevDeepest, cd)
+  // On a new deepest, snapshot the run (boons/curses/tides) for the home recap.
+  const snapFields = cd > prevDeepest
+    ? { gauntlet_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) }
+    : {}
 
   // Leaderboard: deepest CASHED-OUT depth only (this path = cash-out, never
   // death). Time is server-computed wall-clock from run start (gauntlet_last_run_at
@@ -329,6 +354,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       raid_items: newRaidItems,
       ...bestFields,
       ...contestFields,
+      ...snapFields,
     }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
@@ -361,7 +387,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
 /** Close an open run after a wipe. Banks no doubloons; still records deepest and
  *  still pays Fathoms for how deep you got (the meta-currency rewards the dive,
  *  not the cash-out). */
-export async function resolveGauntletDeath(rewardDepth: number, combatDepth: number = rewardDepth): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
+export async function resolveGauntletDeath(rewardDepth: number, combatDepth: number = rewardDepth, runSnapshot?: GauntletRunSnapshot): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, deepest: 0, earnedFathoms: 0, newFathoms: 0 }
@@ -387,10 +413,14 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
   // on ships sunk (rd) so the head start never farms the meta-currency.
   const earnedFathoms = Math.round(fathomsForDepth(rd) * gauntletFathomsMult((profile.gauntlet_upgrades as string[] | null) ?? []))
   const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
+  // On a new deepest, snapshot the run for the home recap (even on a sink).
+  const snapFields = cd > prevDeepest
+    ? { gauntlet_deepest_run: sanitizeRunSnapshot(runSnapshot, cd) }
+    : {}
 
   await admin
     .from('profiles')
-    .update({ gauntlet_run_open: false, gauntlet_deepest: deepest, gauntlet_fathoms: newFathoms })
+    .update({ gauntlet_run_open: false, gauntlet_deepest: deepest, gauntlet_fathoms: newFathoms, ...snapFields })
     .eq('id', user.id)
 
   // Sinking still records your deepest — and still unlocks what you reached.

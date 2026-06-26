@@ -188,6 +188,21 @@ function drownedName(name: string): string {
   return `Drowned ${name}`
 }
 
+/** Snapshot of one gauntlet run, kept for the player's DEEPEST dive so the home
+ *  screen can recap the boons / curses / tides they ran. Stored in
+ *  profiles.gauntlet_deepest_run, written server-side on a new record. */
+export interface GauntletRunSnapshot {
+  depth: number
+  /** boon family id -> tier */
+  boons: Record<string, number>
+  /** curse id -> tier */
+  curses: Record<string, number>
+  /** tides picked, in order: the event title + the option label chosen */
+  tides: { title: string; choice: string }[]
+  /** ISO timestamp, set server-side */
+  at?: string
+}
+
 export interface GauntletFight {
   enemy: BroadsideEnemy
   isBoss: boolean

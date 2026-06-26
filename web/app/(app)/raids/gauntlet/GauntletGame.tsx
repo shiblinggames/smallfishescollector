@@ -23,7 +23,7 @@ import {
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT, GAUNTLET_COOLDOWN_HOURS,
   CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
-  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer,
+  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
@@ -86,6 +86,8 @@ export interface GauntletGameProps {
    *  Calm Before…). */
   gauntletUpgrades: string[]
   deepest: number
+  /** Snapshot of the deepest run (boons/curses/tides) for the home recap. */
+  deepestRun: GauntletRunSnapshot | null
   /** Fathoms balance — the Gauntlet's meta-currency, spent in the Locker. */
   fathoms: number
   available: boolean
@@ -159,6 +161,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // 'run' = perks for the descent itself, 'shore' = upgrades for the wider game.
   const [shopSection, setShopSection] = useState<'run' | 'shore' | null>(null)
   const [haulOpen, setHaulOpen] = useState(false)
+  // Deepest-run recap modal (boons/curses/tides of the record dive).
+  const [deepestRunOpen, setDeepestRunOpen] = useState(false)
   // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
   // live run forfeits the whole pot — so confirm first.
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -174,6 +178,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Powder Hoard carryover: cannonballs to seed the next fight with (set at each
   // kill from the leftover charges, capped by the boon tier). Reset each run.
   const carriedChargesRef = useRef(0)
+  // Tides picked this run (title + chosen option), for the deepest-run snapshot.
+  const runTidesRef = useRef<{ title: string; choice: string }[]>([])
   // Where a guard-intercepted exit should go once the player confirms the
   // abandon (the tapped nav link, or /expeditions for a Back press).
   const pendingNavRef = useRef<(() => void) | null>(null)
@@ -260,6 +266,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       playerHPRef.current = hpMax
       potRef.current = 0
       carriedChargesRef.current = 0
+      runTidesRef.current = []
       runMaxHitRef.current = 0
       setPlayerHP(hpMax)
       setPot(0)
@@ -387,10 +394,21 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPhase('between')
   }
 
+  // Snapshot the run's boons / curses / tides for the deepest-run recap. The
+  // server stamps the real depth + time and only keeps it on a new record.
+  function buildRunSnapshot(): GauntletRunSnapshot {
+    return {
+      depth: rollStateRef.current.cleared + skipOffset,
+      boons: boonTiers,
+      curses: curseTiers,
+      tides: runTidesRef.current,
+    }
+  }
+
   function handlePlayerDefeated() {
     if (resolving) return
     setResolving(true)
-    resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0).then(res => {
+    resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0, buildRunSnapshot()).then(res => {
       if (res?.ok) setDeathFathoms(res.earnedFathoms)
     }).finally(() => {
       setResolving(false)
@@ -415,7 +433,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function cashOut() {
     if (resolving) return
     setResolving(true)
-    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current).then(res => {
+    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current, buildRunSnapshot()).then(res => {
       setResolving(false)
       setReward(res)
       setPhase('reward')
@@ -435,7 +453,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         setConfirmLeave(false)
         const go = pendingNavRef.current ?? (() => router.push('/expeditions'))
         pendingNavRef.current = null
-        resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0).finally(go)
+        resolveGauntletDeath(rollStateRef.current.cleared, rollStateRef.current.cleared > 0 ? rollStateRef.current.cleared + skipOffset : 0, buildRunSnapshot()).finally(go)
       }}
     />
   ) : null
@@ -516,17 +534,32 @@ export default function GauntletGame(props: GauntletGameProps) {
               style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntDrift 6s ease-in-out infinite' }} />
           </div>
 
-          {/* Deepest descent — the record to beat (Greater-Rift style) */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 10, marginTop: 6,
-            padding: '0.45rem 1.1rem', borderRadius: 999,
-            background: 'rgba(240,192,64,0.08)', border: `1px solid ${GOLD}3a`,
-          }}>
-            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.18em', color: '#9a948a' }}>Deepest Descent</span>
-            <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD, lineHeight: 1 }}>
-              {props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}
-            </span>
-          </div>
+          {/* Deepest descent — the record to beat. Tap to recap that run's
+              boons / curses / tides (once a record with a snapshot exists). */}
+          {(() => {
+            const hasRecap = !!props.deepestRun && props.deepest > 0
+            return (
+              <button
+                type="button"
+                onClick={hasRecap ? () => setDeepestRunOpen(true) : undefined}
+                aria-label={hasRecap ? 'Recap your deepest run' : 'Deepest descent'}
+                className={hasRecap ? 'tap' : undefined}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 10, marginTop: 6,
+                  padding: '0.45rem 1.1rem', borderRadius: 999,
+                  background: 'rgba(240,192,64,0.08)', border: `1px solid ${GOLD}3a`,
+                  cursor: hasRecap ? 'pointer' : 'default',
+                }}>
+                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.18em', color: '#9a948a' }}>Deepest Descent</span>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD, lineHeight: 1 }}>
+                  {props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}
+                </span>
+                {hasRecap && (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.85 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
+                )}
+              </button>
+            )
+          })()}
 
           {/* The name to beat — #1 deepest cashed-out descender of all. */}
           {props.topDescender && (
@@ -622,6 +655,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal deepest={props.deepest} doubloonMult={props.classDoubloonMult} onClose={() => setHaulOpen(false)} />}
+        {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
       </>
     )
@@ -929,6 +963,8 @@ export default function GauntletGame(props: GauntletGameProps) {
         <TideModal
           tide={pendingTide}
           onPicked={(choice: TideChoice) => {
+            // Log the pick for the deepest-run recap (skip the pure opt-outs).
+            if (choice.effects.length > 0) runTidesRef.current.push({ title: pendingTide.title, choice: choice.label })
             let healDelta = 0
             let fullHealTriggered = false
             const persisted: TideEffect[] = []
@@ -1594,6 +1630,98 @@ function AbandonRunModal({ pot, onStay, onAbandon }: { pot: number; onStay: () =
 }
 
 // ── Haul modal ────────────────────────────────────────────────────────────────
+// ── Deepest-run recap ─────────────────────────────────────────────────────────
+// Tapping the "Deepest Descent" chip opens this: the boons, curses, and tides
+// the player carried on their record dive, resolved from the stored id→tier
+// snapshot against the live boon/curse tables.
+function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: () => void }) {
+  const boons = Object.entries(run.boons ?? {})
+    .map(([id, tier]) => ({ fam: GAUNTLET_BOONS.find(b => b.id === id), tier }))
+    .filter((x): x is { fam: NonNullable<typeof x.fam>; tier: number } => !!x.fam && x.tier >= 1)
+  const curses = Object.entries(run.curses ?? {})
+    .map(([id, tier]) => ({ c: GAUNTLET_CURSES.find(c => c.id === id), tier }))
+    .filter((x): x is { c: NonNullable<typeof x.c>; tier: number } => !!x.c && x.tier >= 1)
+  const tides = (run.tides ?? []).filter(t => t && t.title)
+
+  const Section = ({ title, color, children }: { title: string; color: string; children: React.ReactNode }) => (
+    <div style={{ marginTop: 16, textAlign: 'left' }}>
+      <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem', color, marginBottom: 7 }}>{title}</p>
+      {children}
+    </div>
+  )
+
+  return (
+    <ModalScrim zIndex={1300} onClose={onClose}>
+      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GOLD}3a`, boxShadow: `0 0 44px ${GOLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem', textAlign: 'center' }}>
+        <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: `${GOLD}cc` }}>Your Deepest Dive</p>
+        <p className="font-cinzel font-800" style={{ fontSize: '1.9rem', color: GOLD, lineHeight: 1.05, marginTop: 5, textShadow: `0 0 24px ${GOLD}33` }}>
+          Depth {run.depth}
+        </p>
+
+        {boons.length > 0 && (
+          <Section title={`Powers · ${boons.length}`} color={TEAL}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {boons.map(({ fam, tier }) => {
+                const t = fam.tiers[Math.min(tier, fam.tiers.length) - 1]
+                const rc = BOON_RARITY_META[boonRarity(fam)].color
+                return (
+                  <div key={fam.id} style={{ padding: '0.55rem 0.7rem', borderRadius: 11, background: `${rc}14`, border: `1px solid ${rc}40` }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#f4fbf9', lineHeight: 1.2 }}>{fam.name} <span style={{ color: rc }}>{boonTierLabel(tier)}</span></p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8fb6ad', marginTop: 2 }}>{t?.desc}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </Section>
+        )}
+
+        {curses.length > 0 && (
+          <Section title={`Curses · ${curses.length}`} color="#f87171">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {curses.map(({ c, tier }) => {
+                const t = c.tiers[Math.min(tier, c.tiers.length) - 1]
+                const label = curseTierLabel(tier)
+                return (
+                  <div key={c.id} style={{ padding: '0.55rem 0.7rem', borderRadius: 11, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.34)' }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: '#fdecec', lineHeight: 1.2 }}>{c.name}{label ? ` ${label}` : ''}</p>
+                    <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d99', marginTop: 2 }}>{t?.desc}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </Section>
+        )}
+
+        {tides.length > 0 && (
+          <Section title={`Tides · ${tides.length}`} color="#bae6fd">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {tides.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '0.42rem 0.65rem', borderRadius: 9, background: 'rgba(125,211,252,0.08)', border: '1px solid rgba(125,211,252,0.22)' }}>
+                  <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#cbe9f8' }}>{t.title}</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#8fb6c8', textAlign: 'right' }}>{t.choice}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {boons.length === 0 && curses.length === 0 && tides.length === 0 && (
+          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#8a8480', marginTop: 16, lineHeight: 1.5 }}>
+            No powers, curses, or tides were logged on that dive.
+          </p>
+        )}
+
+        <button onClick={onClose} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+          style={{ marginTop: 18, width: '100%', padding: '0.8rem', borderRadius: 12, fontSize: '0.74rem', background: `${GOLD}18`, border: `1px solid ${GOLD}55`, color: '#f5d98a', cursor: 'pointer' }}>
+          Close
+        </button>
+      </motion.div>
+    </ModalScrim>
+  )
+}
+
 // "What's down there" — a popup on the intro so a player can see the chest
 // ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
 // BEFORE committing a descent (and burning the cooldown).

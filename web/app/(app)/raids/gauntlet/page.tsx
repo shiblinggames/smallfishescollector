@@ -55,6 +55,7 @@ export default async function GauntletPage() {
           bonusChargeSlots={stats.bonusChargeSlots}
           gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
           deepest={daily.deepest}
+          deepestRun={daily.deepestRun}
           fathoms={daily.fathoms}
           available={daily.available}
           nextAt={daily.nextAt}
