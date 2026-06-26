@@ -26,21 +26,38 @@ export const CHARACTER_COLORS: CharacterColor[] = [
   { id: 'storm',    name: 'Storm',    free: false, unlockHint: 'Rare drop from fishing crates' },
 ]
 
-/** Character colors earned purely by reaching a fishing level. Single source
- *  for the unlock so EVERY fishing-XP path (catches, trawls) grants them the
- *  same way. */
-export const FISHING_LEVEL_COLORS: { level: number; id: string }[] = [
-  { level: 50, id: 'forest' },
-  { level: 75, id: 'ice' },
+/** Character colors earned purely by reaching a stat threshold. Single source
+ *  of truth so display, equip-validation, and the per-action grant hooks all
+ *  agree. Each gating stat (fishing level, nav level, prestige) has MULTIPLE
+ *  write paths, so any transition-based unlock would miss players who cross the
+ *  threshold via another path — these are checked STATE-based instead. */
+export const LEVEL_COLORS: { id: string; stat: 'fishing' | 'nav' | 'prestige'; level: number }[] = [
+  { id: 'forest', stat: 'fishing',  level: 50 },
+  { id: 'ice',    stat: 'fishing',  level: 75 },
+  { id: 'sky',    stat: 'nav',      level: 50 },
+  { id: 'sand',   stat: 'prestige', level: 3  },
 ]
 
-/** Which fishing-level colors a player at `fishingLevel` should have but is
- *  missing. STATE-based, not transition-based: it returns anything earned-but-
- *  unowned regardless of HOW the level was reached, so it self-heals players who
- *  crossed the threshold via a trawl, an admin grant, or before the color
- *  existed. The `!includes` guard keeps it idempotent (no duplicate grants). */
+/** Which level-gated colors a player has EARNED but doesn't own yet, given
+ *  their current stats. STATE-based + idempotent (the `!unlocked.includes`
+ *  guard), so it self-heals anyone who crossed a threshold via a path whose
+ *  grant hook didn't fire (raids/gauntlet for nav, trawls for fishing) or
+ *  before the color existed. Used for display union, equip validation, and the
+ *  grant hooks alike. */
+export function earnedLevelColors(
+  stats: { fishingLevel: number; navLevel: number; maxPrestige: number },
+  unlocked: string[] = [],
+): string[] {
+  return LEVEL_COLORS
+    .filter(c => !unlocked.includes(c.id))
+    .filter(c => (c.stat === 'fishing' ? stats.fishingLevel : c.stat === 'nav' ? stats.navLevel : stats.maxPrestige) >= c.level)
+    .map(c => c.id)
+}
+
+/** Fishing-only slice of {@link earnedLevelColors} for the catch + trawl XP
+ *  paths, which only know the player's fishing level. */
 export function fishingColorsToGrant(fishingLevel: number, unlocked: string[]): string[] {
-  return FISHING_LEVEL_COLORS.filter(c => fishingLevel >= c.level && !unlocked.includes(c.id)).map(c => c.id)
+  return earnedLevelColors({ fishingLevel, navLevel: 0, maxPrestige: 0 }, unlocked)
 }
 
 export function getCharacterSprites(colorId: string) {

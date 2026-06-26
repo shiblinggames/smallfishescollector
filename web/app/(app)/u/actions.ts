@@ -3,10 +3,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { CHARACTER_COLORS } from '@/lib/characters'
+import { CHARACTER_COLORS, earnedLevelColors } from '@/lib/characters'
 import { ALLOWED_BG_HEXES, ALLOWED_BORDER_HEXES, isPremiumBg, isPremiumBorder, getAvatarSpecial, AVATAR_SPECIALS } from '@/lib/avatarColors'
 import { isPremiumActive } from '@/lib/premium'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 
 export async function updateUsername(username: string): Promise<{ error?: string }> {
@@ -127,9 +128,23 @@ export async function updateCharacterColor(colorId: string): Promise<{ error?: s
   const admin = createAdminClient()
 
   if (!color.free) {
-    const { data: profile } = await admin.from('profiles').select('unlocked_character_colors').eq('id', user.id).single()
+    const { data: profile } = await admin.from('profiles')
+      .select('unlocked_character_colors, fishing_xp, expedition_xp, prestige_levels').eq('id', user.id).single()
     const unlocked = (profile?.unlocked_character_colors as string[] | null) ?? []
-    if (!unlocked.includes(colorId)) return { error: 'Color not unlocked' }
+    if (!unlocked.includes(colorId)) {
+      // Self-heal: a level-gated color the player has EARNED but whose grant
+      // hook never fired (e.g. crossed Nav 50 via raids, not voyages) is still
+      // valid — allow it and persist the unlock so it sticks. Anything else is
+      // genuinely locked.
+      const prestige = (profile?.prestige_levels as Record<string, number> | null) ?? {}
+      const earned = earnedLevelColors({
+        fishingLevel: getLevelFromXP((profile?.fishing_xp as number | null) ?? 0),
+        navLevel:     navLevelFromXP((profile?.expedition_xp as number | null) ?? 0),
+        maxPrestige:  Math.max(0, ...Object.values(prestige)),
+      }, unlocked)
+      if (!earned.includes(colorId)) return { error: 'Color not unlocked' }
+      await admin.from('profiles').update({ unlocked_character_colors: [...unlocked, colorId] }).eq('id', user.id)
+    }
   }
 
   await admin.from('profiles').update({ character_color: colorId }).eq('id', user.id)

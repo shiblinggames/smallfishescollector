@@ -297,9 +297,13 @@ export async function revealVoyageResults(voyageId: number): Promise<
   if (newPhantomHook) profileUpdate.has_phantom_hook = true
   if (newPerfectedSigil) profileUpdate.has_perfected_sigil = true
 
-  // Sky skin + Navigator badge: unlock at navigation level 50
+  // Sky skin + Navigator badge: earned at navigation level 50. STATE-based, not
+  // a level-crossing transition: nav XP also comes from raids + the Gauntlet, so
+  // a transition guard here missed anyone who hit 50 outside voyages. The badge
+  // self-heals via reconcileBadges; the color is granted here (+ self-healed at
+  // equip — see updateCharacterColor).
   let unlockedSkinId: string | undefined
-  if (oldExpeditionLevel < 50 && newExpeditionLevel >= 50) {
+  if (newExpeditionLevel >= 50) {
     await unlockBadge('navigator')
     const currentUnlocked = (profile.unlocked_character_colors as string[] | null) ?? []
     if (!currentUnlocked.includes('sky')) {

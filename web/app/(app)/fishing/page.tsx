@@ -4,7 +4,9 @@ import FishingPageClient from './FishingPageClient'
 import { getActiveChallengeSession } from '@/app/(app)/social/challengeActions'
 import { getDailyChallenge } from './dailyChallengeActions'
 import { isPremiumActive } from '@/lib/premium'
-import { getCharacterSprites } from '@/lib/characters'
+import { getCharacterSprites, earnedLevelColors } from '@/lib/characters'
+import { getLevelFromXP as fishLevelFromXP } from '@/lib/fishingLevel'
+import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getBoat } from '@/lib/boats'
 import { getHat } from '@/lib/hats'
 import { getRod } from '@/lib/rods'
@@ -72,6 +74,19 @@ export default async function FishingPage() {
     marketMultipliers[row.fish_id] = Number(row.multiplier)
   }
   const isPremium = isPremiumActive(profile)
+
+  // Union earned-but-ungranted level colors into the GearScreen picker (e.g.
+  // crossed Nav 50 via raids without the voyage grant firing). Equipping one
+  // persists the unlock server-side. Mirrors the profile page.
+  const storedColors = (profile?.unlocked_character_colors as string[] | null) ?? []
+  const unlockedCharacterColors = [
+    ...storedColors,
+    ...earnedLevelColors({
+      fishingLevel: fishLevelFromXP(profile?.fishing_xp ?? 0),
+      navLevel:     navLevelFromXP(profile?.expedition_xp ?? 0),
+      maxPrestige:  Math.max(0, ...Object.values((profile?.prestige_levels as Record<string, number> | null) ?? {})),
+    }, storedColors),
+  ]
 
   // Per-zone summary stats for the zone selector cards (avg sell value, avg
   // catch XP, top catch). Ancient Deep trophies pay 3× XP (see actions.ts).
@@ -202,7 +217,7 @@ export default async function FishingPage() {
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
           trophyCatches={(profile?.trophy_catches as number[] | null) ?? []}
           characterColor={characterColor}
-          unlockedCharacterColors={(profile?.unlocked_character_colors as string[] | null) ?? []}
+          unlockedCharacterColors={unlockedCharacterColors}
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
           marketMultipliers={marketMultipliers}
           isPremium={isPremium}
