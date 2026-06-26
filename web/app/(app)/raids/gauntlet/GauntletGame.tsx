@@ -25,7 +25,7 @@ import {
   type GauntletFight, type GauntletRollState, type GauntletCurse, type GauntletBoon,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
 import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletCurseDelay, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -159,6 +159,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const roundsSinceTideRef = useRef(0)
   const playerHPRef = useRef(hpMax)
   const potRef = useRef(0)
+  // Biggest single blow landed this descent — fed to the Biggest Hit board the
+  // moment it's beaten (persists even on death). Reset each run in begin().
+  const runMaxHitRef = useRef(0)
   // Lethal-save charges (Quartermaster's Anchor etc.) — a per-RUN pool that
   // survives the per-fight RaidCombat remounts, decremented when one fires.
   // Reset each run in begin().
@@ -198,6 +201,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       roundsSinceTideRef.current = 0
       playerHPRef.current = hpMax
       potRef.current = 0
+      runMaxHitRef.current = 0
       setPlayerHP(hpMax)
       setPot(0)
       setBossesDefeated(0)
@@ -397,9 +401,9 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           )}
 
-          {/* Leaderboard — deepest cashed-out descent across all captains. */}
+          {/* Leaderboard — deepest cashed-out descent + biggest single blow. */}
           <div style={{ marginTop: props.topDescender ? 6 : 9 }}>
-            <LeaderboardModal boards={['gauntletDepth']} title="Deepest Descent" label="View the Ranks" />
+            <LeaderboardModal boards={['gauntletDepth', 'gauntletBigHit']} title="The Gauntlet" label="View the Ranks" />
           </div>
 
           {/* Descend — the start. Big and obvious. */}
@@ -1037,6 +1041,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             equippedRepairKit={props.equippedRepairKit}
             onEnemyDefeated={handleEnemyDefeated}
             onPlayerDefeated={handlePlayerDefeated}
+            onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onLeave={() => { resolveGauntletDeath(rollStateRef.current.cleared).finally(() => router.push('/expeditions')) }}
             raidMods={runRaidMods}
             tideEffects={activeTideEffects}

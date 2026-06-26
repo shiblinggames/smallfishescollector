@@ -41,6 +41,18 @@ async function notifyDepthUnlocks(
   } catch { /* notification is best-effort; never block the payout */ }
 }
 
+/** Record a single gauntlet hit; persists the all-time biggest via greatest()
+ *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
+ *  so the Biggest Hit board reflects the largest blow ever landed in a descent. */
+export async function recordGauntletHit(dmg: number): Promise<void> {
+  if (!Number.isFinite(dmg) || dmg <= 0) return
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.rpc('bump_gauntlet_hit', { uid: user.id, dmg: Math.floor(dmg) })
+}
+
 // ── Locker Upgrades — permanent perks, depth-gated + bought with Fathoms ───────
 
 /** State for the Locker Upgrades panel: the player's deepest run, Fathoms purse,

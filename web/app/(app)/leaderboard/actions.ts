@@ -20,6 +20,7 @@ const VIEW_BY_KEY: Partial<Record<BoardKey, string>> = {
   blackjack:    'leaderboard_blackjack',
   roulette:     'leaderboard_roulette',
   expedition:   'leaderboard_expedition',
+  gauntletBigHit: 'leaderboard_gauntlet_hit',
 }
 
 async function resolveMyRank(admin: Admin, view: string, userId: string, myScore: number, top: LeaderboardEntry[]) {
