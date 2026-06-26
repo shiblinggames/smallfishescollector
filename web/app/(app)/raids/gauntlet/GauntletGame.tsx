@@ -725,6 +725,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     const ownedBoons = GAUNTLET_BOONS
       .map(fam => ({ fam, tier: boonTiers[fam.id] ?? 0 }))
       .filter(x => x.tier >= 1)
+    // A line of voice for the breather, keyed to the run's state — bleeding hull,
+    // a fat haul, a record depth, or just the quiet before the next gun.
+    const breathLine =
+      hpPct < 30        ? 'Your hull groans. The deep can smell blood in the water.'
+      : cleared >= 14   ? 'Few ships sail this deep. Fewer ever sail back.'
+      : previewDoubloons >= 5000 ? "A captain's ransom rides in your hold now."
+      : cleared <= 2    ? 'Early yet. The Locker is only just stirring below.'
+      :                   'The water stills. The Locker waits on your nerve.'
     return (
       <>
         <AbyssBackdrop />
@@ -733,59 +741,64 @@ export default function GauntletGame(props: GauntletGameProps) {
           padding: '10px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: TEAL, marginTop: 12 }}>
+          <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.34em', color: TEAL, marginTop: 12, textShadow: `0 0 14px ${TEAL}44` }}>
             Catch Your Breath
+          </motion.p>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#ece5d7', marginTop: 8, lineHeight: 1.1 }}>
+            Depth {cleared} · {band.name}
           </p>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#cfc9bf', marginTop: 7 }}>
-            {cleared} {cleared === 1 ? 'round' : 'rounds'} deep · {band.name}
+          {/* A line of voice so the breather has a pulse, keyed to how the run's going. */}
+          <p className="font-karla" style={{ fontSize: '0.88rem', fontStyle: 'italic', color: 'rgba(150,205,194,0.82)', lineHeight: 1.45, marginTop: 9, maxWidth: 350, marginInline: 'auto' }}>
+            &ldquo;{breathLine}&rdquo;
           </p>
 
           {/* The haul on the line — the push-your-luck centerpiece. */}
           <div style={{
-            marginTop: 16, padding: '1.15rem 1rem 1.05rem', borderRadius: 18,
-            background: `radial-gradient(ellipse at 50% 0%, ${GOLD}1c 0%, rgba(8,13,22,0.55) 74%)`,
-            border: `1px solid ${GOLD}40`,
-            boxShadow: `inset 0 0 28px ${GOLD}10, 0 14px 40px rgba(0,0,0,0.45)`,
+            marginTop: 18, padding: '1.35rem 1rem 1.2rem', borderRadius: 20,
+            background: `radial-gradient(ellipse at 50% 0%, ${GOLD}24 0%, rgba(8,13,22,0.6) 76%)`,
+            border: `1px solid ${GOLD}4a`,
+            boxShadow: `inset 0 0 32px ${GOLD}12, 0 14px 44px rgba(0,0,0,0.5)`,
           }}>
-            <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.52rem', color: `${GOLD}aa` }}>
-              The Haul on the Line
+            <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.6rem', color: `${GOLD}cc` }}>
+              Your Haul If You Bank Now
             </p>
-            <p className="font-cinzel font-800" style={{ fontSize: '2.15rem', color: GOLD, lineHeight: 1.05, marginTop: 5, textShadow: `0 0 26px ${GOLD}44` }}>
-              {fmt(previewDoubloons)} <span style={{ fontSize: '1.35rem' }}>⟡</span>
+            <p className="font-cinzel font-800" style={{ fontSize: '2.6rem', color: GOLD, lineHeight: 1.0, marginTop: 6, textShadow: `0 0 30px ${GOLD}55` }}>
+              {fmt(previewDoubloons)} <span style={{ fontSize: '1.5rem' }}>⟡</span>
             </p>
-            <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9a948a', marginTop: 6 }}>
-              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {chest.label}{chest.potMult > 1 ? ` ×${chest.potMult}` : ''}
+            <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#b0a890', marginTop: 8 }}>
+              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {chest.label}{chest.potMult > 1 ? ` ×${chest.potMult} chest` : ''}
             </p>
           </div>
 
           {/* Hull bar */}
-          <div style={{ marginTop: 14, textAlign: 'left' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-              <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.52rem', color: '#8a8880' }}>Hull</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: hpColor }}>{playerHP} / {hpMax}</span>
+          <div style={{ marginTop: 16, textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#9a988e' }}>Hull</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: hpColor }}>{playerHP} / {hpMax}</span>
             </div>
-            <div style={{ height: 9, borderRadius: 5, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ height: 12, borderRadius: 6, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
               <motion.div initial={{ width: `${hpPct}%` }} animate={{ width: `${hpPct}%` }} transition={{ duration: 0.4 }}
-                style={{ height: '100%', background: `linear-gradient(90deg, ${hpColor}aa, ${hpColor})`, boxShadow: `0 0 8px ${hpColor}88` }} />
+                style={{ height: '100%', background: `linear-gradient(90deg, ${hpColor}aa, ${hpColor})`, boxShadow: `0 0 10px ${hpColor}88` }} />
             </div>
           </div>
 
           {/* Powers + Curses tallies — each chip taps to a plain-English detail. */}
           {(ownedBoons.length > 0 || activeCurses.length > 0) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 14, textAlign: 'left' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: 16, textAlign: 'left' }}>
               {ownedBoons.length > 0 && (
                 <div>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: TEAL, marginBottom: 5 }}>
-                    Powers Claimed · {ownedBoons.length} <span style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: 0 }}>· tap for details</span>
+                  <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: TEAL, marginBottom: 6 }}>
+                    Powers · {ownedBoons.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
                   </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {ownedBoons.map(({ fam, tier }) => {
                       const t = fam.tiers[tier - 1]
                       const rc = BOON_RARITY_META[boonRarity(fam)].color
                       return (
                         <button key={fam.id} className="font-karla font-700 tap"
                           onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length })}
-                          style={{ cursor: 'pointer', fontSize: '0.58rem', padding: '0.2rem 0.55rem', borderRadius: 999, background: `${rc}1c`, border: `1px solid ${rc}55`, color: rc }}>
+                          style={{ cursor: 'pointer', fontSize: '0.68rem', padding: '0.28rem 0.66rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
                           {fam.name} {boonTierLabel(tier)}
                         </button>
                       )
@@ -795,14 +808,14 @@ export default function GauntletGame(props: GauntletGameProps) {
               )}
               {activeCurses.length > 0 && (
                 <div>
-                  <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: '#f87171', marginBottom: 5 }}>
-                    The Locker&rsquo;s Curses · {activeCurses.length} <span style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: 0 }}>· tap for details</span>
+                  <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f87171', marginBottom: 6 }}>
+                    Curses · {activeCurses.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
                   </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {activeCurses.map(c => (
                       <button key={c.id} className="font-karla font-700 tap"
                         onClick={() => setDetailEffect({ kind: 'curse', name: c.name, desc: c.desc, detail: c.detail, flavor: c.flavor, count: 1 })}
-                        style={{ cursor: 'pointer', fontSize: '0.58rem', padding: '0.2rem 0.55rem', borderRadius: 999, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.38)', color: '#fca5a5' }}>
+                        style={{ cursor: 'pointer', fontSize: '0.68rem', padding: '0.28rem 0.66rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
                         {c.name}
                       </button>
                     ))}
@@ -812,19 +825,19 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           )}
 
-          {/* The fork */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
-            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
-              style={{ width: '100%', padding: '1rem', borderRadius: 14, fontSize: '1rem', color: GOLD, background: `linear-gradient(180deg, ${GOLD}26, ${GOLD}0f)`, border: `1px solid ${GOLD}66`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 20px ${GOLD}1f` }}>
-              {resolving ? '…' : `Haul Up · ${fmt(previewDoubloons)} ⟡`}
+          {/* The fork — bank the safe haul, or gamble it deeper. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: 22 }}>
+            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+              style={{ width: '100%', padding: '1.1rem', borderRadius: 15, fontSize: '1.08rem', color: '#0e0a04', background: `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)`, border: `1px solid ${GOLD}`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 28px ${GOLD}44`, textShadow: '0 1px 0 rgba(255,255,255,0.25)' }}>
+              {resolving ? '…' : `Haul Up & Bank ${fmt(previewDoubloons)} ⟡`}
             </button>
-            <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
-              style={{ width: '100%', padding: '0.95rem', borderRadius: 14, fontSize: '1rem', background: `${TEAL}1c`, border: `1px solid ${TEAL}66`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              Push On to Depth {nextDepth}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+            <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.05em] tap"
+              style={{ width: '100%', padding: '1.05rem', borderRadius: 15, fontSize: '1.05rem', background: `${TEAL}1e`, border: `1px solid ${TEAL}77`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              Risk It · Dive to Depth {nextDepth}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
             </button>
-            <p className="font-karla" style={{ fontSize: '0.64rem', color: '#7a766e', marginTop: 2 }}>
-              Push on and the whole haul sinks with you if your ship goes down.
+            <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9a857a', marginTop: 3, lineHeight: 1.4 }}>
+              Sink on the next dive and all <span style={{ color: '#d8a14a' }}>{fmt(previewDoubloons)} ⟡</span> goes down with you.
             </p>
           </div>
         </div>
@@ -843,28 +856,28 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 280, damping: 24 }}
                   onClick={e => e.stopPropagation()}
                   style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
-                  <p className="font-karla font-700 uppercase tracking-[0.22em]" style={{ fontSize: '0.5rem', color: `${accent}cc` }}>
+                  <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: `${accent}cc` }}>
                     {isBoon ? 'Your Power' : 'The Locker’s Curse'}
                   </p>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: '#f5f2ec', lineHeight: 1.15, marginTop: 5 }}>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f5f2ec', lineHeight: 1.12, marginTop: 6 }}>
                     {detailEffect.name}
                   </p>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '0.3rem 0.8rem', borderRadius: 999, background: `${accent}1c`, border: `1px solid ${accent}55` }}>
-                    <span aria-hidden style={{ fontSize: '0.68rem', color: accent }}>{isBoon ? '▲' : '▼'}</span>
-                    <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: fg }}>{detailEffect.desc}</span>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 11, padding: '0.36rem 0.9rem', borderRadius: 999, background: `${accent}20`, border: `1px solid ${accent}5e` }}>
+                    <span aria-hidden style={{ fontSize: '0.78rem', color: accent }}>{isBoon ? '▲' : '▼'}</span>
+                    <span className="font-karla font-800" style={{ fontSize: '0.86rem', color: fg }}>{detailEffect.desc}</span>
                   </div>
-                  <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.82)', marginTop: 12 }}>
+                  <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.85)', marginTop: 13 }}>
                     {detailEffect.detail}
                   </p>
                   {isBoon && (() => {
                     const max = detailEffect.maxTier ?? 3
                     return (
-                      <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: accent, marginTop: 8 }}>
+                      <p className="font-karla font-700" style={{ fontSize: '0.76rem', color: accent, marginTop: 9 }}>
                         {detailEffect.count >= max ? `Tier ${detailEffect.count} of ${max} — fully upgraded.` : `Tier ${detailEffect.count} of ${max} — draft it again to upgrade.`}
                       </p>
                     )
                   })()}
-                  <p className="font-karla" style={{ fontSize: '0.74rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.5)', lineHeight: 1.5, marginTop: 12 }}>
+                  <p className="font-karla" style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.52)', lineHeight: 1.5, marginTop: 13 }}>
                     {detailEffect.flavor}
                   </p>
                   <button onClick={() => setDetailEffect(null)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
@@ -916,53 +929,59 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Curse interstitial — the Locker imposes a permanent run modifier ────────
   if (phase === 'curse' && pendingCurse) {
     const c = pendingCurse
-    const CRIM = '#f87171'
+    const CRIM = '#ef4444'
     return (
       <>
         <AbyssBackdrop />
+        {/* Crimson dread, bleeding up from the deep and breathing slowly. */}
+        <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
-          padding: '8px 0.95rem', textAlign: 'center',
+          padding: '12px 0.95rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: CRIM, marginTop: 14 }}>
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.34em' }} transition={{ duration: 0.9 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', color: CRIM, marginTop: 16, textShadow: `0 0 18px ${CRIM}66` }}>
             The Locker Curses You
-          </p>
+          </motion.p>
 
-          {/* Crimson sigil */}
-          <div style={{ position: 'relative', width: 124, height: 124, margin: '16px auto 6px' }}>
-            <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', background: `radial-gradient(circle, ${CRIM}33 0%, transparent 68%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
-            <svg width="124" height="124" viewBox="0 0 24 24" fill={CRIM} style={{ position: 'relative', filter: `drop-shadow(0 6px 22px ${CRIM}55)` }} aria-hidden>
+          {/* Skull sigil, sinking in from above like it's surfacing for you. */}
+          <motion.div initial={{ opacity: 0, y: -32, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'relative', width: 150, height: 150, margin: '18px auto 8px' }}>
+            <div style={{ position: 'absolute', inset: -24, borderRadius: '50%', background: `radial-gradient(circle, ${CRIM}3c 0%, transparent 64%)`, animation: 'gauntPulse 3s ease-in-out infinite' }} />
+            <svg width="150" height="150" viewBox="0 0 24 24" fill={CRIM} style={{ position: 'relative', filter: `drop-shadow(0 8px 28px ${CRIM}66)` }} aria-hidden>
               <path d="M12 2a8 8 0 0 0-8 8c0 2.5 1.2 4.2 2.8 5.4.4.3.7.8.7 1.3V18a1.6 1.6 0 0 0 1.6 1.6h.4l.5-1.6h-1l-.4-1.4h1.6L11 18l.5 1.6h1L13 18l.4-1.4H15l-.4 1.4h-1l.5 1.6h.4A1.6 1.6 0 0 0 16.1 18v-1.3c0-.5.3-1 .7-1.3C18.4 14.2 20 12.5 20 10a8 8 0 0 0-8-8Z" />
               <circle cx="9" cy="10.5" r="1.7" fill="#0a0e16" />
               <circle cx="15" cy="10.5" r="1.7" fill="#0a0e16" />
             </svg>
-          </div>
+          </motion.div>
 
-          <h1 className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: '#fdecec', lineHeight: 1.08, marginTop: 6, textShadow: `0 0 24px ${CRIM}44` }}>
+          <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 220, damping: 18 }}
+            className="font-cinzel font-800" style={{ fontSize: '2.2rem', color: '#fdecec', lineHeight: 1.06, marginTop: 8, textShadow: `0 0 30px ${CRIM}55` }}>
             {c.name}
-          </h1>
-          {/* What it actually does, in plain words — the headline, not buried in flavor. */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, padding: '0.32rem 0.85rem', borderRadius: 999, background: `${CRIM}1c`, border: `1px solid ${CRIM}55` }}>
-            <span aria-hidden style={{ fontSize: '0.7rem', color: CRIM }}>▼</span>
-            <span className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#fca5a5' }}>{c.desc}</span>
+          </motion.h1>
+          {/* What it does, plain and loud — the headline, not buried in flavor. */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 14, padding: '0.42rem 1rem', borderRadius: 999, background: `${CRIM}22`, border: `1px solid ${CRIM}66` }}>
+            <span aria-hidden style={{ fontSize: '0.85rem', color: CRIM }}>▼</span>
+            <span className="font-karla font-800" style={{ fontSize: '0.96rem', color: '#fca5a5' }}>{c.desc}</span>
           </div>
-          <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(253,236,236,0.7)', marginTop: 12, padding: '0 0.4rem' }}>
+          <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.55, color: 'rgba(253,236,236,0.78)', marginTop: 14, padding: '0 0.3rem' }}>
             {c.detail}
           </p>
-          <p className="font-karla" style={{ fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(253,236,236,0.5)', fontStyle: 'italic', marginTop: 10, padding: '0 0.4rem' }}>
+          <p className="font-karla" style={{ fontSize: '0.86rem', lineHeight: 1.5, color: 'rgba(253,236,236,0.5)', fontStyle: 'italic', marginTop: 12, padding: '0 0.3rem' }}>
             {c.flavor}
           </p>
-          <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: '#9a948a', marginTop: 12 }}>
-            It holds for the rest of the descent. {activeCurses.length + 1} {activeCurses.length === 0 ? 'curse' : 'curses'} now upon you.
+          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.14em', color: '#c98a8a', marginTop: 16 }}>
+            It holds for the rest of the dive · {activeCurses.length + 1} {activeCurses.length === 0 ? 'curse' : 'curses'} upon you
           </p>
 
           <button onClick={() => applyCurse(c)} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{
-              marginTop: 22, width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1.02rem',
-              color: CRIM, background: `linear-gradient(180deg, ${CRIM}26, ${CRIM}0f)`,
-              border: `1px solid ${CRIM}66`, cursor: 'pointer',
-              boxShadow: `0 0 20px ${CRIM}1f`,
+              marginTop: 22, width: '100%', padding: '1.1rem', borderRadius: 14, fontSize: '1.12rem',
+              color: '#ffe0e0', background: `linear-gradient(180deg, ${CRIM}33, ${CRIM}10)`,
+              border: `1px solid ${CRIM}77`, cursor: 'pointer',
+              boxShadow: `0 0 28px ${CRIM}2e`,
             }}>
             Bear It · Descend
           </button>
@@ -977,22 +996,27 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop />
+        {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
+        <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
+          style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${TEAL}24 0%, ${TEAL}08 38%, transparent 64%)` }} />
         <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
-          padding: '8px 0.85rem', textAlign: 'center',
+          position: 'relative', zIndex: 1, maxWidth: 470, margin: '0 auto',
+          padding: '12px 0.9rem', textAlign: 'center',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
-          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: TEAL, marginTop: 14 }}>
+          <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: TEAL, marginTop: 10, textShadow: `0 0 16px ${TEAL}66` }}>
             Plunder of the Deep
-          </p>
-          <h1 className="font-cinzel font-800" style={{ fontSize: '1.8rem', color: '#eafffb', lineHeight: 1.1, marginTop: 8, textShadow: `0 0 22px ${TEAL}33` }}>
+          </motion.p>
+          <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 17 }}
+            className="font-cinzel font-800" style={{ fontSize: '2.35rem', color: '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: `0 0 32px ${TEAL}55` }}>
             Choose Your Power
-          </h1>
-          <p className="font-karla" style={{ fontSize: '0.76rem', color: '#9a948a', marginTop: 6, marginBottom: 18 }}>
-            Yours for the rest of the descent. The rarer it shines, the stronger it bites — and each runs three tiers.
+          </motion.h1>
+          <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#b6c7c2', marginTop: 9, marginBottom: 20, lineHeight: 1.4 }}>
+            Three powers surface. One is yours for the rest of the dive.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {pendingBoons.map((b, idx) => {
               const rm = BOON_RARITY_META[b.rarity]
               const legendary = b.rarity === 'legendary'
@@ -1000,54 +1024,63 @@ export default function GauntletGame(props: GauntletGameProps) {
               return (
                 <motion.button
                   key={b.id}
-                  initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                  initial={{ opacity: 0, y: 24, scale: 0.94 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.08 + idx * 0.1, type: 'spring', stiffness: 320, damping: 24 }}
-                  whileTap={{ scale: 0.97 }}
+                  transition={{ delay: 0.12 + idx * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => applyBoon(b)}
                   className="tap"
                   style={{
-                    position: 'relative', textAlign: 'left',
-                    padding: '0.95rem 1rem 0.95rem 1.15rem', borderRadius: 16,
-                    background: `linear-gradient(180deg, ${rm.color}1f 0%, rgba(8,14,22,0.55) 70%)`,
-                    border: `1.5px solid ${rm.color}${legendary ? 'cc' : rare ? '88' : '55'}`,
-                    color: '#eef7f4', cursor: 'pointer', overflow: 'hidden',
-                    boxShadow: legendary ? `0 0 30px ${rm.color}55, inset 0 0 34px ${rm.color}18`
-                             : rare       ? `0 0 18px ${rm.color}33`
-                             : `0 0 10px ${rm.color}18`,
+                    position: 'relative', textAlign: 'left', overflow: 'hidden',
+                    padding: '1.1rem 1.15rem 1.05rem 1.3rem', borderRadius: 18,
+                    background: `linear-gradient(180deg, ${rm.color}28 0%, rgba(8,14,22,0.62) 72%)`,
+                    border: `1.5px solid ${rm.color}${legendary ? 'dd' : rare ? '99' : '66'}`,
+                    color: '#eef7f4', cursor: 'pointer',
+                    boxShadow: legendary ? `0 0 44px ${rm.color}66, inset 0 0 42px ${rm.color}1e`
+                             : rare       ? `0 0 26px ${rm.color}3a`
+                             : `0 0 14px ${rm.color}22`,
                   }}
                 >
                   {/* Rarity edge + a moving sheen on the shiniest cards */}
-                  <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, background: `linear-gradient(180deg, ${rm.color}, ${rm.color}33)`, boxShadow: `0 0 12px ${rm.color}` }} />
+                  <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(180deg, ${rm.color}, ${rm.color}33)`, boxShadow: `0 0 16px ${rm.color}` }} />
                   {(legendary || rare) && (
                     <motion.span aria-hidden
                       initial={{ x: '-130%' }}
-                      animate={{ x: '170%' }}
-                      transition={{ duration: legendary ? 2.4 : 3.2, repeat: Infinity, repeatDelay: legendary ? 1.1 : 2.4, ease: 'easeInOut' }}
-                      style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '42%', background: `linear-gradient(100deg, transparent, ${rm.color}2e, transparent)`, pointerEvents: 'none' }}
+                      animate={{ x: '180%' }}
+                      transition={{ duration: legendary ? 2.2 : 3, repeat: Infinity, repeatDelay: legendary ? 0.9 : 2.2, ease: 'easeInOut' }}
+                      style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${rm.color}33, transparent)`, pointerEvents: 'none' }}
                     />
                   )}
-                  {/* Rarity tag + upgrade + value pill */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.16em', color: rm.color, background: `${rm.color}22`, border: `1px solid ${rm.color}77`, borderRadius: 999, padding: '0.16rem 0.5rem', boxShadow: legendary ? `0 0 10px ${rm.color}66` : 'none' }}>
+                  {/* Rarity + upgrade badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.16em', color: legendary ? '#1a1206' : rm.color, background: legendary ? rm.color : `${rm.color}26`, border: `1px solid ${rm.color}`, borderRadius: 999, padding: '0.22rem 0.62rem', boxShadow: legendary ? `0 0 14px ${rm.color}88` : 'none' }}>
                       {rm.label}
                     </span>
                     {b.upgrade && (
-                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#f0d79a', background: 'rgba(217,176,102,0.16)', border: '1px solid rgba(217,176,102,0.5)', borderRadius: 999, padding: '0.16rem 0.45rem' }}>
-                        Upgrade
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: '#f0d79a', background: 'rgba(217,176,102,0.18)', border: '1px solid rgba(217,176,102,0.55)', borderRadius: 999, padding: '0.22rem 0.55rem' }}>
+                        ↑ Upgrade
                       </span>
                     )}
-                    <span style={{ flex: 1 }} />
-                    <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.6rem', padding: '0.2rem 0.55rem', borderRadius: 999, background: 'rgba(74,222,128,0.14)', border: '1px solid rgba(74,222,128,0.45)', color: '#86efac', whiteSpace: 'nowrap' }}>
-                      ▲ {b.desc}
+                  </div>
+                  {/* HERO — the power gained, big and green so the gain is unmistakable */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden style={{ fontSize: '1.15rem', color: '#86efac', lineHeight: 1 }}>▲</span>
+                    <span className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#aef5c4', lineHeight: 1.05, textShadow: '0 0 18px rgba(74,222,128,0.42)' }}>
+                      {b.desc}
                     </span>
                   </div>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.08rem', color: '#f4fbf9', lineHeight: 1.18 }}>
+                  {/* Name + tier */}
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.08rem', color: '#f4fbf9', lineHeight: 1.2, marginTop: 8 }}>
                     {b.name} <span style={{ color: rm.color }}>{boonTierLabel(b.tier)}</span>
                   </p>
-                  <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(231,246,242,0.62)', lineHeight: 1.45, fontStyle: 'italic', marginTop: 3 }}>
+                  <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(231,246,242,0.66)', lineHeight: 1.45, fontStyle: 'italic', marginTop: 4 }}>
                     {b.flavor}
                   </p>
+                  {/* Claim cue */}
+                  <div style={{ marginTop: 11, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.16em', color: rm.color }}>Claim</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={rm.color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </div>
                 </motion.button>
               )
             })}
