@@ -2559,6 +2559,15 @@ export default function RaidCombat({
   // parent being an internal scroll region (see RaidGame phase wrappers)
   // means the buttons are always reachable; on tall phones the battle
   // stage still reads fine at its natural size.
+
+  // Ship damage states: smoke/fire scale with HP%, and a hull starts to LIST
+  // (tilt from the waterline) below 35%. Enemy keeps its sink animation in
+  // charge of the tilt while sinking.
+  const enemyHpPctLive  = Math.max(0, Math.min(100, (enemyHp / enemyHpMax) * 100))
+  const playerHpPctLive = Math.max(0, Math.min(100, (playerHp / playerHpMax) * 100))
+  const enemyTilt  = (enemySinking || enemyHpPctLive >= 35) ? 0 : Math.min(6, ((35 - enemyHpPctLive) / 35) * 6)
+  const playerTilt = playerHpPctLive >= 35 ? 0 : -Math.min(6, ((35 - playerHpPctLive) / 35) * 6)
+
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
@@ -3062,14 +3071,15 @@ export default function RaidCombat({
         <motion.div
           key={`enemy-${enemy.id}`}
           initial={{ x: 80, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
+          animate={{ x: 0, opacity: 1, rotate: enemyTilt }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           style={{
             position: 'absolute', right: '7%', top: '42%', zIndex: 2,
-            width: '38%', maxWidth: 185,
+            width: '38%', maxWidth: 185, transformOrigin: 'bottom center',
           }}
         >
           <motion.div animate={enemyShakeCtrl} style={{ position: 'relative' }}>
+            <ShipDamageFX hpPct={enemyHpPctLive} />
             {/* Elite halo — STACKED drop-shadows on the ship sprite itself
                 so the glow follows the PNG alpha silhouette rather than a
                 rectangular container behind it. An earlier radial-gradient
@@ -3153,15 +3163,16 @@ export default function RaidCombat({
         {/* Player ship — lower left area, larger ("closer"). Outer mount, inner shake. */}
         <motion.div
           initial={{ x: -60, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
+          animate={{ x: 0, opacity: 1, rotate: playerTilt }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
           style={{
             position: 'absolute', left: '0%', bottom: '4%', zIndex: 3,
-            width: '68%', maxWidth: 340,
+            width: '68%', maxWidth: 340, transformOrigin: 'bottom center',
           }}
         >
           <motion.div animate={playerShakeCtrl} style={{ position: 'relative' }}>
             <motion.div animate={playerRecoilCtrl} style={{ position: 'relative' }}>
+              <ShipDamageFX hpPct={playerHpPctLive} flip />
               <motion.img
                 src={shipImageUrl}
                 alt={shipName}
@@ -4713,6 +4724,51 @@ function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' }) {
         />
       ))}
     </motion.div>
+  )
+}
+
+// Persistent battle-damage tell on a ship, scaled by HP. Below 60% a wisp of
+// smoke starts; it thickens and darkens as the hull fails, and below ~22% the
+// waterline catches fire with rising embers. Transform/opacity-only CSS (no
+// filters on the per-frame-bobbing ship) for iOS PWA headroom. `flip` mirrors
+// the smoke drift to match which way the ship faces.
+function ShipDamageFX({ hpPct, flip = false }: { hpPct: number; flip?: boolean }) {
+  if (hpPct >= 60) return null
+  const d = Math.max(0, Math.min(1, (60 - hpPct) / 60)) // 0 at 60% HP → 1 at 0%
+  const ablaze = hpPct < 22
+  const sign = flip ? -1 : 1
+  const k = flip ? 'l' : 'r'
+  // 2nd/3rd smoke columns fade in as the damage deepens, so it's a smooth slide.
+  const puffs = [
+    { left: '44%', size: 26, dur: 2.6, delay: 0,   base: 0.34, vis: 1 },
+    { left: '54%', size: 32, dur: 3.1, delay: 0.9, base: 0.40, vis: Math.max(0, (d - 0.3) / 0.7) },
+    { left: '48%', size: 22, dur: 2.9, delay: 1.7, base: 0.30, vis: Math.max(0, (d - 0.55) / 0.45) },
+  ]
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2, overflow: 'visible' }}>
+      <style>{`
+        @keyframes ship-smoke-${k} { 0% { transform: translate(0,0) scale(0.5); opacity: 0; } 18% { opacity: 1; } 100% { transform: translate(${sign * 26}px, -54px) scale(1.8); opacity: 0; } }
+        @keyframes ship-ember-${k} { 0% { transform: translate(0,0); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(${sign * 10}px, -36px); opacity: 0; } }
+        @keyframes ship-fire-${k} { 0%,100% { opacity: 0.55; } 50% { opacity: 0.85; } }
+      `}</style>
+      {ablaze && (
+        <div style={{ position: 'absolute', left: '36%', right: '28%', top: '40%', bottom: '4%', borderRadius: '50%', mixBlendMode: 'screen', background: 'radial-gradient(ellipse at 50% 72%, rgba(255,150,50,0.6) 0%, rgba(255,95,30,0.24) 46%, transparent 72%)', animation: `ship-fire-${k} 1.3s ease-in-out infinite` }} />
+      )}
+      {puffs.map((p, i) => p.vis <= 0 ? null : (
+        <div key={i} style={{
+          position: 'absolute', left: p.left, top: '32%', width: p.size, height: p.size, marginLeft: -p.size / 2, borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(${ablaze ? '46,43,48' : '66,66,72'},${(p.base * (0.5 + 0.5 * d) * p.vis).toFixed(2)}) 0%, transparent 68%)`,
+          animation: `ship-smoke-${k} ${p.dur}s ease-out ${p.delay}s infinite`,
+        }} />
+      ))}
+      {ablaze && [0, 1, 2, 3].map(i => (
+        <div key={`e${i}`} style={{
+          position: 'absolute', left: `${40 + i * 5}%`, top: '48%', width: 3.5, height: 3.5, marginLeft: -1.75, borderRadius: '50%',
+          background: i % 2 ? '#ffce5a' : '#ff8a3c', boxShadow: '0 0 4px #ff9a3c',
+          animation: `ship-ember-${k} ${(1 + i * 0.25).toFixed(2)}s ease-out ${(i * 0.2).toFixed(2)}s infinite`,
+        }} />
+      ))}
+    </div>
   )
 }
 
