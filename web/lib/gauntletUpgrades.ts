@@ -60,6 +60,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
+    id: 'sounding_line',
+    name: 'Sounding Line',
+    description: 'Before each dive, you can read what waits below: a lone hull, an elite and its trick, or a boss.',
+    depthRequired: 0,
+    cost: 45,
+    scope: 'gauntlet',
+  },
+  {
     // The economy accelerator — priced cheap + early on purpose so a smart
     // player grabs it first and it actually speeds the rest of the grind (its
     // whole point). Bonus trimmed 50% → 33% to match the lower price.
@@ -100,6 +108,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     id: 'veterans_start',
     name: "Veteran's Start",
     description: 'Begin every dive at depth 5: tougher ships, with boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink, so it is no reward shortcut.',
+    depthRequired: 0,
+    cost: 75,
+    scope: 'gauntlet',
+  },
+  {
+    id: 'diviners_charm',
+    name: "Diviner's Charm",
+    description: 'The deep deals you a better hand. Rare and Legendary boons surface far more often when you draft.',
     depthRequired: 0,
     cost: 75,
     scope: 'gauntlet',
@@ -255,4 +271,16 @@ export function gauntletDamageMod(unlocked: string[] | null | undefined): number
 /** Vigor: fraction of max HP restored after each enemy sunk in a run. */
 export function gauntletKillHealPct(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('vigor') ? 0.08 : 0
+}
+
+/** Sounding Line: when owned, the breather reveals the next fight (lone hull /
+ *  elite + affix / boss) before the player commits to the dive. */
+export function gauntletHasSoundingLine(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('sounding_line')
+}
+
+/** Diviner's Charm: multiplier on the draft weight of the non-Common boon
+ *  rarities (Rare + Legendary), so good boons are offered more often. */
+export function gauntletBoonLuck(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('diviners_charm') ? 1.7 : 1
 }

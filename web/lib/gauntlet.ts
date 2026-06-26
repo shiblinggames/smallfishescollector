@@ -705,17 +705,24 @@ export interface BoonOffer {
  *  families already at max tier are excluded. Picks are RARITY-WEIGHTED, so
  *  Legendary/Rare boons surface far less often than Commons. No infinite
  *  single-boon stacking. */
-export function drawBoons(n: number, owned: Record<string, number> = {}): BoonOffer[] {
+export function drawBoons(n: number, owned: Record<string, number> = {}, luckMult = 1): BoonOffer[] {
   const avail = GAUNTLET_BOONS
     .map(fam => ({ fam, next: (owned[fam.id] ?? 0) + 1 }))
     .filter(x => x.next <= x.fam.tiers.length)
+  // Diviner's Charm (luckMult > 1) scales up the draft weight of the non-Common
+  // rarities, so Rare/Legendary boons surface more often without changing which
+  // families exist. luckMult = 1 leaves the base odds untouched.
+  const weightFor = (fam: GauntletBoon) => {
+    const r = boonRarity(fam)
+    return BOON_RARITY_META[r].weight * (r === 'common' ? 1 : luckMult)
+  }
   const out: BoonOffer[] = []
   for (let i = 0; i < n && avail.length > 0; i++) {
-    const totalW = avail.reduce((a, x) => a + BOON_RARITY_META[boonRarity(x.fam)].weight, 0)
+    const totalW = avail.reduce((a, x) => a + weightFor(x.fam), 0)
     let r = Math.random() * totalW
     let idx = 0
     for (; idx < avail.length - 1; idx++) {
-      r -= BOON_RARITY_META[boonRarity(avail[idx].fam)].weight
+      r -= weightFor(avail[idx].fam)
       if (r <= 0) break
     }
     const { fam, next } = avail.splice(idx, 1)[0]

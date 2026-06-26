@@ -27,7 +27,7 @@ import {
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -135,6 +135,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [pot, setPot] = useState(0)
   const [bossesDefeated, setBossesDefeated] = useState(0)
   const [fight, setFight] = useState<GauntletFight | null>(null)
+  // Sounding Line: the next fight, pre-rolled at the breather so it can be
+  // revealed before the player commits — and CONSUMED on push, so the reveal is
+  // the actual fight, not a separate (lying) roll. State drives the reveal, the
+  // ref is the source of truth pushOn reads.
+  const [peekFight, setPeekFight] = useState<GauntletFight | null>(null)
+  const peekFightRef = useRef<GauntletFight | null>(null)
   const [activeTideEffects, setActiveTideEffects] = useState<TideEffect[]>([])
   const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
   const [pendingTide, setPendingTide] = useState<TideEvent | null>(null)
@@ -276,6 +282,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setCurseTiers({}); curseTiersRef.current = {}
       setPendingCurse(null)
       setBoonTiers({}); setPendingBoons(null)
+      peekFightRef.current = null; setPeekFight(null)
       anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
       setFight(generateFight(rollStateRef.current, skipOffset))
@@ -293,6 +300,16 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPhase('intro')
     router.refresh()
   }
+
+  // Pre-roll the next fight the moment the breather opens, so Sounding Line can
+  // reveal it AND pushOn fights the very same roll (no re-roll = no lie). The
+  // roll state doesn't change between here and the push, so this is consistent.
+  useEffect(() => {
+    if (phase !== 'between') return
+    const nf = generateFight(rollStateRef.current, skipOffset)
+    peekFightRef.current = nf
+    setPeekFight(nf)
+  }, [phase, skipOffset])
 
   // The descent beat: a short fall-into-the-dark interstitial before each fight
   // so dropping deeper reads as a real plunge, not a hard cut. Fight is already
@@ -351,7 +368,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       roundsSinceTideRef.current += 1
       // Draw the boon now even on a curse round, so applyCurse can hand off to
       // the boon screen (it routes to 'boon' whenever pendingBoons is set).
-      if (boonDue) setPendingBoons(drawBoons(3, boonTiers))
+      if (boonDue) setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
       if (curse) { setPendingCurse(curse); setPhase('curse') }
       else setPhase('boon')
       return
@@ -426,7 +443,12 @@ export default function GauntletGame(props: GauntletGameProps) {
       playerHPRef.current = drained
       setPlayerHP(drained)
     }
-    setFight(generateFight(rollStateRef.current, skipOffset))
+    // Fight the fight Sounding Line pre-rolled at the breather (fallback-roll if
+    // somehow unset). Clear the peek so the next breather rolls fresh.
+    const next = peekFightRef.current ?? generateFight(rollStateRef.current, skipOffset)
+    peekFightRef.current = null
+    setPeekFight(null)
+    setFight(next)
     setPhase('descending')
   }
 
@@ -829,6 +851,14 @@ export default function GauntletGame(props: GauntletGameProps) {
       : previewDoubloons >= 5000 ? "A captain's ransom rides in your hold now."
       : combatDepth <= 2  ? 'Early yet. The Locker is only just stirring below.'
       :                   'The water stills. The Locker waits on your nerve.'
+    // Sounding Line — read what waits at the next depth before committing.
+    const sounding = (gauntletHasSoundingLine(props.gauntletUpgrades) && peekFight)
+      ? peekFight.isBoss
+        ? { label: 'A BOSS lies below', sub: peekFight.enemy.name, color: '#f87171' }
+        : peekFight.isElite
+          ? { label: peekFight.affix ? `An Elite below · ${peekFight.affix.name}` : 'An Elite lies below', sub: peekFight.enemy.name, color: '#c084fc' }
+          : { label: 'Open water below · a lone hull', sub: peekFight.enemy.name, color: TEAL }
+      : null
     return (
       <>
         <AbyssBackdrop />
@@ -927,6 +957,18 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Sounding Line — the next depth, read before the gamble. */}
+          {sounding && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 18, padding: '0.6rem 0.9rem', borderRadius: 12, background: `${sounding.color}12`, border: `1px solid ${sounding.color}44` }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={sounding.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20" /><path d="M5 9l7-7 7 7" /><path d="M8 16h8" /></svg>
+              <div style={{ textAlign: 'left', minWidth: 0 }}>
+                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.46rem', color: `${sounding.color}cc` }}>The Sounding Line</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: sounding.color, lineHeight: 1.15 }}>{sounding.label}</p>
+              </div>
+            </motion.div>
           )}
 
           {/* Push deeper — the gamble against the banked haul above. */}
