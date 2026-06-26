@@ -110,9 +110,9 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
   {
     id: 'veterans_start',
     name: "Veteran's Start",
-    description: 'Skip the easy opening and begin every dive at depth 5. Tougher ships, and the deep’s gifts and curses come sooner. Your pot, chests, Fathoms and recorded depth still count only the ships you actually sink, so it is no shortcut on the rewards, just on the boredom.',
+    description: 'Begin every dive at depth 5: tougher ships, with boons and curses sooner. Pot, chests and Fathoms still count only the ships you sink, so it is no reward shortcut.',
     depthRequired: 0,
-    cost: 150,
+    cost: 75,
     scope: 'gauntlet',
   },
   // ── Ship & Shore (scope 'account'/'world') — PERMANENT power for the wider
