@@ -2042,45 +2042,43 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
     const prereqLocked = !!e.lockNote
     const claimable = depthMet && canAfford && !prereqLocked && !busy
     const accent = claimable ? GOLD : (!depthMet || prereqLocked) ? '#caa05a' : '#6a6764'
+    // Compact buy control on the right: a small tinted price-button when you can
+    // take it, a dim status chip when you can't. Fathoms read teal, matching the
+    // wallet, so it never needs a gold fill.
+    const topLabel = busy ? '' : !depthMet ? 'Locked' : prereqLocked ? 'Locked' : !canAfford ? 'Need' : 'Buy'
+    const bigLabel = busy ? '…' : !depthMet ? `Lv ${e.depthRequired}` : fmt(e.cost)
+    const showFathoms = !busy && depthMet
     return (
-      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.8rem 1rem', background: 'rgba(255,255,255,0.035)', border: `1px solid ${claimable ? `${GOLD}3a` : 'rgba(255,255,255,0.1)'}`, boxShadow: claimable ? `0 0 18px ${GOLD}12` : 'none' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.75rem 0.85rem 0.75rem 1rem', background: 'rgba(255,255,255,0.035)', border: `1px solid ${claimable ? `${GOLD}3a` : 'rgba(255,255,255,0.1)'}`, boxShadow: claimable ? `0 0 18px ${GOLD}12` : 'none' }}>
         <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ minWidth: 0 }}>
-            <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
-            {e.depthRequired > 0 && (
-              <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a' }}>
-                {depthMet ? `Depth ${e.depthRequired} reached` : `Locked · reach depth ${e.depthRequired}`}
-              </span>
-            )}
-          </div>
-          {/* Price tag */}
-          <div style={{ flexShrink: 0, textAlign: 'right', lineHeight: 1 }}>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.1rem', color: canAfford ? GOLD : '#8a8480' }}>{fmt(e.cost)}</p>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.12em', color: '#7a766e', marginTop: 2 }}>Fathoms</p>
-          </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
+          {e.depthRequired > 0 && (
+            <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a' }}>
+              {depthMet ? `Depth ${e.depthRequired} reached` : `Reach depth ${e.depthRequired}`}
+            </span>
+          )}
+          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 4 }}>{e.description}</p>
+          {e.demo && <CannonballRackDemo />}
+          {prereqLocked && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#caa05a', marginTop: 7 }}>{e.lockNote}</p>}
         </div>
-        <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 5 }}>{e.description}</p>
-        {e.demo && <CannonballRackDemo />}
-        {prereqLocked && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#caa05a', marginTop: 7 }}>{e.lockNote}</p>}
         <button
           type="button"
           onClick={claimable ? () => claim(e.id, e.special) : undefined}
           disabled={!claimable}
-          className="font-cinzel font-700 uppercase tracking-[0.06em] tap"
+          className="tap"
           style={{
-            marginTop: 11, width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.76rem',
+            flexShrink: 0, alignSelf: 'center', width: 66, padding: '0.5rem 0.4rem', borderRadius: 11,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, lineHeight: 1,
             cursor: claimable ? 'pointer' : 'default',
             color: claimable ? TEAL : '#6a6764',
             background: claimable ? `${TEAL}1c` : 'rgba(255,255,255,0.04)',
             border: `1px solid ${claimable ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}`,
           }}
         >
-          {busy ? 'Buying…'
-            : !depthMet ? `Reach depth ${e.depthRequired}`
-            : prereqLocked ? 'Auto Caster needed'
-            : !canAfford ? `Need ${fmt(e.cost - state.fathoms)} more Fathoms`
-            : 'Buy'}
+          {topLabel && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', opacity: 0.85 }}>{topLabel}</span>}
+          <span className="font-cinzel font-800" style={{ fontSize: '1rem' }}>{bigLabel}</span>
+          {showFathoms && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.4rem', letterSpacing: '0.08em', opacity: 0.7 }}>Fathoms</span>}
         </button>
       </div>
     )
