@@ -790,6 +790,28 @@ export default function RaidCombat({
   const enemyShakeCtrl  = useAnimation()
   const playerShakeCtrl = useAnimation()
   const playerRecoilCtrl = useAnimation()
+  // Camera shake — jolts the whole battle SCENE (not the action menu / log) on
+  // big impacts. Crit also starts with a brief "hold then erupt" (a hit-stop
+  // beat) + a tiny scale punch; volley is a smaller pure shake. Only crit /
+  // volley fire it, per the juice rule (nothing screen-wide on normal hits).
+  const stageShakeCtrl = useAnimation()
+  const cameraShake = useCallback((kind: 'crit' | 'volley') => {
+    if (kind === 'crit') {
+      stageShakeCtrl.start({
+        x:     [0, 0, -7, 6, -5, 3, -2, 0],
+        y:     [0, 0, 3, -2, 2, -1, 0, 0],
+        scale: [1, 1, 1.03, 0.997, 1.012, 1, 1, 1],
+        // The first two keyframes sit still (the hit-stop hold) before the jolt.
+        transition: { duration: 0.4, times: [0, 0.18, 0.32, 0.46, 0.6, 0.74, 0.88, 1], ease: 'easeOut' },
+      })
+    } else {
+      stageShakeCtrl.start({
+        x: [0, -3.5, 3, -2.5, 1.5, 0],
+        y: [0, 1.5, -1, 1, 0, 0],
+        transition: { duration: 0.26, ease: 'easeOut' },
+      })
+    }
+  }, [stageShakeCtrl])
   useEffect(() => {
     if (enemyShakeKey === 0) return
     if (enemyShakeKind === 'crit') {
@@ -2362,7 +2384,8 @@ export default function RaidCombat({
             if (!isDodged) {
               setEnemyShakeKind(step.big ? 'crit' : isVolleyShot ? 'volley' : 'hit')
               setEnemyShakeKey(k => k + 1)
-              if (isVolleyShot) vibrate([0, 22, 26, 30])
+              if (step.big) cameraShake('crit')
+              else if (isVolleyShot) { cameraShake('volley'); vibrate([0, 22, 26, 30]) }
             }
             if (!isDodged) {
               if (step.carapaceSoak) {
@@ -2427,7 +2450,8 @@ export default function RaidCombat({
               setPlayerShakeKey(k => k + 1)
               setPlayerImpact({ key: Date.now() + i + 3, kind: eCannonKind })
               setTimeout(() => setPlayerImpact(null), 700)
-              if (eIsVolley) vibrate([0, 22, 26, 30])
+              if (step.big) cameraShake('crit')
+              else if (eIsVolley) { cameraShake('volley'); vibrate([0, 22, 26, 30]) }
             }
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
@@ -2510,7 +2534,11 @@ export default function RaidCombat({
       // Phase-2 revival deserves a longer beat — the player needs time
       // to read "PHASE 2", see the HP refill, and absorb that the fight
       // isn't over. Bumps the gap from the standard ~1s to ~1.6s.
-      const gapMs = step.phaseTransition ? 1600 : STEP_GAP_MS
+      // Hit-stop: a big blow gets a beat of stillness before the fight resumes,
+      // so a crit/volley lands with weight (pairs with the camera shake's held
+      // opening frame + the crit flash). Normal hits keep the standard pace.
+      const hitStop = step.big ? 110 : (step.action === 'volley' ? 55 : 0)
+      const gapMs = (step.phaseTransition ? 1600 : STEP_GAP_MS) + hitStop
       playStepChainRef.current.push(setTimeout(() => playStep(i + 1), gapMs))
     }
 
@@ -2546,10 +2574,12 @@ export default function RaidCombat({
           minHeight is the floor on short viewports — the single-row action
           panel frees enough vertical space that we can afford a taller floor
           so the enemy ship clears the player XP bar overlay. */}
-      <div style={{
+      <motion.div animate={stageShakeCtrl} style={{
         position: 'relative',
         flex: 1,
         minHeight: 400,
+        transformOrigin: 'center center',
+        willChange: 'transform',
         // Sky/sea gradient + inner backdrop elements switch on the raid's
         // atmosphere config (BossRaidConfig.atmosphere). Each raid gets
         // its own visual identity — Pete's coastal sunset, Krust's cold
@@ -3523,7 +3553,7 @@ export default function RaidCombat({
           </div>
         </motion.button>
 
-      </div>
+      </motion.div>
 
       {/* Bottom panel — persistent log + action UI. NO position/transform
           here: it's an ancestor of heavy framer-motion content, and a
