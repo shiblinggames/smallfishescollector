@@ -513,18 +513,18 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   ] },
   // ── RARE ───────────────────────────────────────────────────────────────────
   { id: 'cold_fury', name: 'Cold Fury', flavor: 'When the shot lands true, it lands like the deep itself.', rarity: 'rare', tiers: [
-    { desc: '+25% critical damage', detail: 'Your critical hits deal 25% more damage. Stacks with Wide Sights / Dead-Eye landing more crits in the first place.', effect: { kind: 'critDmgMult', mult: 1.25 } },
+    { desc: '+15% critical damage', detail: 'Your critical hits deal 15% more damage. Stacks with Wide Sights / Dead-Eye landing more crits in the first place.', effect: { kind: 'critDmgMult', mult: 1.15 } },
+    { desc: '+30% critical damage', detail: 'Your critical hits deal 30% more damage.', effect: { kind: 'critDmgMult', mult: 1.30 } },
     { desc: '+45% critical damage', detail: 'Your critical hits deal 45% more damage.', effect: { kind: 'critDmgMult', mult: 1.45 } },
-    { desc: '+70% critical damage', detail: 'Your critical hits deal 70% more damage.', effect: { kind: 'critDmgMult', mult: 1.70 } },
   ] },
   // ── LEGENDARY (rare; bigger, one-of-a-kind effects, fewer tiers) ────────────
   { id: 'executioner', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
-    { desc: 'Sink enemies below 18% HP', detail: 'The instant any hit drops an enemy to 18% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.18 } },
-    { desc: 'Sink enemies below 30% HP', detail: 'The instant any hit drops an enemy to 30% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.30 } },
+    { desc: 'Sink enemies below 10% HP', detail: 'The instant any hit drops an enemy to 10% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.10 } },
+    { desc: 'Sink enemies below 15% HP', detail: 'The instant any hit drops an enemy to 15% of its health or lower, it is sunk outright.', effect: { kind: 'executeThreshold', pct: 0.15 } },
   ] },
   { id: 'leviathans_hunger', name: "Leviathan's Hunger", flavor: 'Every wound you open, the deep drinks — and feeds it back to your hull.', rarity: 'legendary', tiers: [
-    { desc: 'Heal 12% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 12% of that damage. Sustain that climbs with how hard you hit.', effect: { kind: 'lifestealPct', pct: 0.12 } },
-    { desc: 'Heal 20% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 20% of that damage.', effect: { kind: 'lifestealPct', pct: 0.20 } },
+    { desc: 'Heal 10% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 10% of that damage. Sustain that climbs with how hard you hit.', effect: { kind: 'lifestealPct', pct: 0.10 } },
+    { desc: 'Heal 15% of damage dealt', detail: 'Whenever you damage an enemy, your ship repairs 15% of that damage.', effect: { kind: 'lifestealPct', pct: 0.15 } },
   ] },
 ]
 
