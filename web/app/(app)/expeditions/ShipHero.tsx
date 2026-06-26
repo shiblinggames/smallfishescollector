@@ -23,7 +23,7 @@ import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingFamilyItems } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -610,8 +610,14 @@ export default function ShipHero({
     if (equipped) {
       next = equippedItems.filter(id => id !== itemId)
     } else {
-      if (equippedItems.length >= raidItemSlots) return // hull full — no-op
-      next = [...equippedItems, itemId]
+      // Tiered drops (Corsair/Prime, Krust's/Captain's Carapace, the Primers,
+      // the Astrolabes) don't stack — equipping one supersedes the other grade,
+      // so swap out any same-family item first instead of letting both sit
+      // equipped (which reads like they add up).
+      const conflicts = conflictingFamilyItems(itemId, equippedItems)
+      const base = conflicts.length ? equippedItems.filter(id => !conflicts.includes(id)) : equippedItems
+      if (base.length >= raidItemSlots) return // hull full — no-op
+      next = [...base, itemId]
     }
     setEquippedItems(next)
     // router.refresh() re-runs the server components so the prep modal's
@@ -1424,14 +1430,21 @@ export default function ShipHero({
                             if (!def) return null
                             const color = RARITY_ITEM_COLOR[def.rarity]
                             const isNew = newRaidItems.has(itemId)
+                            // Same-family grade currently equipped: tapping this
+                            // SWAPS for it (they don't stack), so it costs no net
+                            // slot and stays tappable even on a full hull.
+                            const swapNames = conflictingFamilyItems(itemId, equippedItems)
+                              .map(id => getRaidItem(id)?.name).filter(Boolean) as string[]
+                            const wouldSwap = swapNames.length > 0
+                            const blocked = full && !wouldSwap
                             return (
                               <button
                                 key={itemId}
                                 type="button"
-                                onClick={full ? undefined : () => toggleItem(itemId)}
-                                disabled={full}
-                                aria-label={full ? `${def.name}. Hull full, free a slot first.` : `${def.name}. Tap to equip.`}
-                                style={{ background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: full ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: full ? 0.42 : 1, transition: 'opacity 0.15s' }}
+                                onClick={blocked ? undefined : () => toggleItem(itemId)}
+                                disabled={blocked}
+                                aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
+                                style={{ background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s' }}
                               >
                                 <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                   {def.image ? (
@@ -1447,9 +1460,14 @@ export default function ShipHero({
                                     {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
                                   </p>
                                   <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.4 }}>{def.description}</p>
+                                  {wouldSwap && (
+                                    <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#d8a14a', lineHeight: 1.35, marginTop: 3 }}>
+                                      Same gear as {swapNames.join(', ')} — equipping swaps it in (they don&apos;t stack).
+                                    </p>
+                                  )}
                                 </div>
-                                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.58rem', color: full ? '#6a6764' : '#9ae6b4', padding: '0.24rem 0.55rem', borderRadius: 999, background: full ? 'rgba(255,255,255,0.04)' : 'rgba(154,230,180,0.10)', border: `1px solid ${full ? 'rgba(255,255,255,0.1)' : 'rgba(154,230,180,0.32)'}`, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                  {full ? 'Full' : 'Equip'}
+                                <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.58rem', color: blocked ? '#6a6764' : wouldSwap ? '#d8a14a' : '#9ae6b4', padding: '0.24rem 0.55rem', borderRadius: 999, background: blocked ? 'rgba(255,255,255,0.04)' : wouldSwap ? 'rgba(216,161,74,0.12)' : 'rgba(154,230,180,0.10)', border: `1px solid ${blocked ? 'rgba(255,255,255,0.1)' : wouldSwap ? 'rgba(216,161,74,0.34)' : 'rgba(154,230,180,0.32)'}`, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                  {blocked ? 'Full' : wouldSwap ? 'Swap' : 'Equip'}
                                 </span>
                               </button>
                             )

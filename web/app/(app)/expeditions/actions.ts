@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
-import { getForgeRecipe } from '@/lib/raidItems'
+import { getForgeRecipe, dedupeRaidItemFamilies } from '@/lib/raidItems'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -121,7 +121,10 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier').eq('id', user.id).single()
   const owned = (profile?.raid_items as string[] | null) ?? []
   const slots = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
-  const valid = itemIds.filter(id => owned.includes(id)).slice(0, slots)
+  // Owned + one-per-tier-family (no double-equipping both grades of a drop) +
+  // capped to the hull's slots. dedupe runs before the slice so a conflicting
+  // pair can't waste a slot apiece.
+  const valid = dedupeRaidItemFamilies(itemIds.filter(id => owned.includes(id))).slice(0, slots)
   await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
 }
 

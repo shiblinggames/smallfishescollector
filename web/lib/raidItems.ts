@@ -28,6 +28,11 @@ export interface RaidItemDef {
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
   effects: RaidEffect[]
   source: string
+  /** Tier family. Items sharing a `family` are higher/lower grades of the same
+   *  drop and DO NOT stack — the better one supersedes the other. Equip enforces
+   *  one-per-family so a player can never run both tiers (and assume they add up).
+   *  Omitted = unique item, always stacks freely. */
+  family?: string
 }
 
 export const RAID_ITEMS: RaidItemDef[] = [
@@ -43,6 +48,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'epic',
     effects: [{ type: 'boss_damage_mult', value: 1.10 }],
     source: "Barnacle Pete's Raid",
+    family: 'corsair',
   },
   {
     id: 'corsair_prime_cannon',
@@ -53,6 +59,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'legendary',
     effects: [{ type: 'boss_damage_mult', value: 1.20 }],
     source: "Barnacle Pete's Raid",
+    family: 'corsair',
   },
   {
     id: 'quartermasters_anchor',
@@ -91,6 +98,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'epic',
     effects: [{ type: 'incoming_damage_mult', value: 0.90 }],
     source: "Krust's Consignment",
+    family: 'carapace',
   },
   {
     id: 'captains_carapace',
@@ -101,6 +109,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'legendary',
     effects: [{ type: 'incoming_damage_mult', value: 0.85 }],
     source: "Krust's Consignment",
+    family: 'carapace',
   },
   {
     id: 'gunners_sight',
@@ -169,6 +178,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'epic',
     effects: [{ type: 'start_charge_chance', value: 0.5 }],
     source: "The Tollmaster's Cut",
+    family: 'primer',
   },
   {
     id: 'tollmasters_primer',
@@ -179,6 +189,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     rarity: 'legendary',
     effects: [{ type: 'start_charge_chance', value: 1.0 }],
     source: "The Tollmaster's Cut",
+    family: 'primer',
   },
   {
     id: 'cartographers_astrolabe',
@@ -192,6 +203,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'parry_reflect_pct', value: 0.50 },
     ],
     source: "The Cartographer's Survey",
+    family: 'astrolabe',
   },
   {
     id: 'captains_astrolabe',
@@ -205,6 +217,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'parry_reflect_pct', value: 0.75 },
     ],
     source: "The Cartographer's Survey",
+    family: 'astrolabe',
   },
   // ── Davy Jones Gauntlet chest cannons ──────────────────────────────────────
   // Two rare chest-only drops + the forged combination. Odds climb up the
@@ -275,4 +288,30 @@ export function getRaidItem(id: string): RaidItemDef | undefined {
 
 export function getActiveEffects(equippedItemIds: string[]): RaidEffect[] {
   return equippedItemIds.flatMap(id => getRaidItem(id)?.effects ?? [])
+}
+
+/** Equipped items in `equippedIds` that belong to the SAME tier family as
+ *  `itemId` (excluding itemId itself). Equipping `itemId` should drop these —
+ *  tiers of one drop don't stack. Empty for unique items. */
+export function conflictingFamilyItems(itemId: string, equippedIds: string[]): string[] {
+  const fam = getRaidItem(itemId)?.family
+  if (!fam) return []
+  return equippedIds.filter(id => id !== itemId && getRaidItem(id)?.family === fam)
+}
+
+/** Drop all-but-the-first item of each tier family from an equipped list, so a
+ *  loadout can never carry two grades of the same drop (which a player might
+ *  wrongly assume stack). Order-preserving; unique items pass through. */
+export function dedupeRaidItemFamilies(equippedIds: string[]): string[] {
+  const seenFamilies = new Set<string>()
+  const out: string[] = []
+  for (const id of equippedIds) {
+    const fam = getRaidItem(id)?.family
+    if (fam) {
+      if (seenFamilies.has(fam)) continue
+      seenFamilies.add(fam)
+    }
+    out.push(id)
+  }
+  return out
 }
