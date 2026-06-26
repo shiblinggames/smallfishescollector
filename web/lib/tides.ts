@@ -240,8 +240,9 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'follow',
         label: 'Follow the bell',
-        description: 'The bell was a lure. Boss fight starts with 10 less HP. No upside.',
+        description: 'It leads to a half-sunk cache: +150 ⟡ at raid end. But the chase leaves you ragged — you enter the boss fight with 10 less HP.',
         effects: [
+          { kind: 'doubloonsAtRaidEnd', n: 150 },
           { kind: 'startHpDelta', n: -10, scope: 'boss' },
         ],
       },
@@ -291,9 +292,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'heave',
         label: 'Heave it overboard',
-        description: '1 guaranteed dodge next fight (no roll needed).',
+        description: '1 guaranteed dodge next fight (no roll needed). Heaving it took the crew off the guns — that fight starts with 1 fewer cannonball.',
         effects: [
           { kind: 'guaranteedDodge', n: 1 },
+          { kind: 'startCharges', n: -1, scope: 'nextFight' },
         ],
       },
     ],
@@ -342,10 +344,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'cut_loose',
         label: 'Cut it loose',
-        description: '+5 HP next fight. +10% Volley damage all run.',
+        description: '+10% Volley damage all run. The freed whale thrashes through your lines — -2 ship speed for the next 2 fights.',
         effects: [
-          { kind: 'startHpDelta', n: 5, scope: 'nextFight' },
           { kind: 'volleyDmgMult', mult: 1.10 },
+          { kind: 'speedDelta', n: -2, scope: 'next2Fights' },
         ],
       },
       {
@@ -360,9 +362,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'netting',
         label: 'Take only the netting',
-        description: '+2 cannonballs at the start of the next fight. No downside.',
+        description: '+2 cannonballs at the start of the next fight. Hauling it aboard leaves the rail exposed — -5 HP entering that fight.',
         effects: [
           { kind: 'startCharges', n: 2, scope: 'nextFight' },
+          { kind: 'startHpDelta', n: -5, scope: 'nextFight' },
         ],
       },
     ],
@@ -628,9 +631,10 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'flank',
         label: 'Fall in behind them',
-        description: '+2 guaranteed dodges next fight (no roll needed).',
+        description: '+2 guaranteed dodges next fight (no roll needed). Drifting in their cold wake saps the crew — -10 HP entering that fight.',
         effects: [
           { kind: 'guaranteedDodge', n: 2 },
+          { kind: 'startHpDelta', n: -10, scope: 'nextFight' },
         ],
       },
       {
