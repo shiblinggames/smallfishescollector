@@ -413,19 +413,19 @@ export const TIDE_POOL: TideEvent[] = [
       {
         id: 'beach',
         label: 'Beach the ship and patch the hull',
-        description: 'Full HP restore. Boss fight starts with 15 less HP (your smoke draws attention).',
+        description: 'Full HP restored. But the long stop leaves your gun crews rusty — -12% damage all run.',
         effects: [
           { kind: 'fullHeal' },
-          { kind: 'startHpDelta', n: -15, scope: 'boss' },
+          { kind: 'damageMult', mult: 0.88 },
         ],
       },
       {
         id: 'quick_patch',
         label: 'Quick patch in the bow',
-        description: '+25 HP now. Boss fight starts with 5 less HP.',
+        description: '+25 HP now. You enter the boss fight with 12 less HP.',
         effects: [
           { kind: 'instantHeal', n: 25 },
-          { kind: 'startHpDelta', n: -5, scope: 'boss' },
+          { kind: 'startHpDelta', n: -12, scope: 'boss' },
         ],
       },
       {
@@ -561,11 +561,11 @@ export const TIDE_POOL: TideEvent[] = [
       },
       {
         id: 'ears',
-        label: 'Plug your ears',
-        description: 'Full HP now. The boss fight starts with 25 less HP for you.',
+        label: 'Take the song',
+        description: 'Full HP restored. But the bargain is paid in full — you take 15% more damage all run.',
         effects: [
           { kind: 'fullHeal' },
-          { kind: 'startHpDelta', n: -25, scope: 'boss' },
+          { kind: 'incomingDmgMult', mult: 1.15, scope: 'allRemaining' },
         ],
       },
       {
