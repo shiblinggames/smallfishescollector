@@ -198,7 +198,7 @@ export const RARITY_COLOR: Record<RaidLootItem['rarity'], string> = {
 
 export const CORSAIRS_RECKONING: BossRaidConfig = {
   raidId: 'corsairs_reckoning',
-  enemyAccuracy: 8,
+  enemyAccuracy: 4,
   raidTitle: "The Corsair's Reckoning",
   bossDefeatedText: 'Barnacle Pete Defeated',
   atmosphere: 'sunset',
@@ -315,7 +315,7 @@ export const CORSAIRS_RECKONING: BossRaidConfig = {
 
 export const CAPTAIN_KRUST: BossRaidConfig = {
   raidId: 'captain_krust',
-  enemyAccuracy: 13,
+  enemyAccuracy: 9,
   raidTitle: "Krust's Consignment",
   bossDefeatedText: 'Captain Krust Defeated',
   atmosphere: 'overcast',
@@ -447,7 +447,7 @@ export const CAPTAIN_KRUST: BossRaidConfig = {
 
 export const THE_CARTOGRAPHER: BossRaidConfig = {
   raidId: 'cartographer',
-  enemyAccuracy: 18,
+  enemyAccuracy: 14,
   raidTitle: "The Cartographer's Survey",
   bossDefeatedText: 'The Cartographer Defeated',
   atmosphere: 'fog',
@@ -642,7 +642,7 @@ export const THE_CARTOGRAPHER: BossRaidConfig = {
 
 export const THE_TOLLMASTER: BossRaidConfig = {
   raidId: 'tollmasters_cut',
-  enemyAccuracy: 23,
+  enemyAccuracy: 19,
   raidTitle: "The Tollmaster's Cut",
   bossDefeatedText: 'Tollmaster Spet Defeated',
   atmosphere: 'overcast',
@@ -778,7 +778,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
 // until step 4. Caps at Galleon — Man-o-War held for Chapter IV.
 export const THE_COFFERS_FLEET: BossRaidConfig = {
   raidId: 'coffers_fleet',
-  enemyAccuracy: 28,
+  enemyAccuracy: 24,
   raidTitle: 'The Harbour Fleet',
   bossDefeatedText: 'Admiral Ruse Defeated',  // NAME TBD (placeholder)
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
@@ -877,7 +877,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // NAMES + ART ARE PLACEHOLDERS until step 4. Caps at Galleon.
 export const THE_QUARTERMASTER: BossRaidConfig = {
   raidId: 'the_quartermaster',
-  enemyAccuracy: 32,
+  enemyAccuracy: 28,
   raidTitle: 'The Quartermaster',
   bossDefeatedText: 'The Quartermaster Defeated',
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4

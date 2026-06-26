@@ -181,7 +181,7 @@ function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean): Broa
   // the source enemy would fall behind). Gauntlet players are already post-
   // Chapter-2, so this opens near the late-raid band (~24) and ramps. Bosses
   // shoot a touch straighter. See BroadsideEnemy.accuracy for the dodge math.
-  const accuracy = Math.round(22 + depth * 1.4) + (isBoss ? 3 : 0)
+  const accuracy = Math.round(18 + depth * 1.4) + (isBoss ? 3 : 0)
   return { ...src, name: drownedName(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
 }
 
