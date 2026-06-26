@@ -428,43 +428,124 @@ export function drawCurse(activeIds: string[]): GauntletCurse | null {
 //
 // Each boon is a single run-wide TideEffect, so it rides the same active-effect
 // pipeline the Tides + Curses use. `desc` is the player-facing summary chip.
-export interface GauntletBoon {
-  id: string
-  name: string
-  flavor: string
+export interface GauntletBoonTier {
   /** Short, plain mechanical summary — the draft chip + breather chip. */
   desc: string
   /** Full plain-English explanation for the details popup (no jargon). */
   detail: string
   effect: TideEffect
 }
+export interface GauntletBoon {
+  id: string
+  name: string
+  flavor: string
+  /** Tier 1 → 2 → 3, strongest last. The highest tier you hold is the ONE that
+   *  applies — a higher tier replaces the lower, it doesn't stack on top. */
+  tiers: GauntletBoonTier[]
+}
 
 export const GAUNTLET_BOONS: GauntletBoon[] = [
-  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', desc: '+15% damage', detail: 'Every shot you fire — both aimed shots and volleys — deals 15% more damage.', effect: { kind: 'damageMult', mult: 1.15 } },
-  { id: 'powder_and_shot',   name: 'Powder & Shot',     flavor: 'Dry powder, packed tight. Your aimed shots punch through.',       desc: '+20% aimed-shot damage', detail: 'Your single aimed shots (the Fire action) deal 20% more damage. Does not affect volleys.', effect: { kind: 'fireDmgMult', mult: 1.2 } },
-  { id: 'grapeshot',         name: 'Grapeshot',          flavor: 'A scatter of iron off the rails. Your volleys shred.',            desc: '+20% volley damage', detail: 'Your volleys (the double-shot) deal 20% more damage. Does not affect single aimed shots.', effect: { kind: 'volleyDmgMult', mult: 1.2 } },
-  { id: 'dead_eye',          name: 'Dead-Eye',           flavor: 'You learn exactly where a hull wants to break.',                  desc: '+8% crit chance', detail: 'Every shot has an extra 8% chance to land as a critical hit (extra damage).', effect: { kind: 'critChanceBonus', chance: 0.08 } },
-  { id: 'wide_sights',       name: 'Wide Sights',        flavor: 'The perfect shot stops being luck.',                              desc: 'Bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 12% wider, so landing a critical hit is easier.', effect: { kind: 'critZoneScale', mult: 1.12 } },
-  { id: 'ironhide',          name: 'Ironhide',           flavor: 'Plates doubled along the waterline.',                             desc: 'Take 12% less damage', detail: 'Every hit an enemy lands on you deals 12% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
-  { id: 'press_the_powder',  name: 'Press the Powder',   flavor: 'Your crew loads like the deep is at their heels.',                desc: 'Reloads can load extra', detail: 'Each time you reload, there is a 10% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.1, bonusCharges: 1 } },
-  { id: 'following_sea',     name: 'Following Sea',      flavor: 'The current finally runs with you.',                             desc: '+2 ship speed', detail: 'Your ship is 2 faster. Speed decides who fires first each turn and how fast your aim bar sweeps, so you act first more often.', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
-  { id: 'bilge_pump',        name: 'Bilge Pump',         flavor: 'Patch the seams in the lull before the next gun.',                desc: 'Heal 6 HP each fight', detail: 'At the start of every fight, your ship repairs 6 HP — a steady answer to the deep wearing you down.', effect: { kind: 'startOfFightHeal', n: 6 } },
-  { id: 'ghostward',         name: 'Ghostward',          flavor: 'Salt and cold iron at the rails. The drowned aim wide.',          desc: 'Enemies crit 12% less', detail: 'Enemies are 12% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.12 } },
+  { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', tiers: [
+    { desc: '+15% damage', detail: 'Every shot you fire — aimed shots and volleys — deals 15% more damage.', effect: { kind: 'damageMult', mult: 1.15 } },
+    { desc: '+30% damage', detail: 'Every shot you fire — aimed shots and volleys — deals 30% more damage.', effect: { kind: 'damageMult', mult: 1.30 } },
+    { desc: '+50% damage', detail: 'Every shot you fire — aimed shots and volleys — deals 50% more damage.', effect: { kind: 'damageMult', mult: 1.50 } },
+  ] },
+  { id: 'powder_and_shot', name: 'Powder & Shot', flavor: 'Dry powder, packed tight. Your aimed shots punch through.', tiers: [
+    { desc: '+20% aimed-shot damage', detail: 'Your single aimed shots (the Fire action) deal 20% more damage. Volleys unaffected.', effect: { kind: 'fireDmgMult', mult: 1.20 } },
+    { desc: '+40% aimed-shot damage', detail: 'Your single aimed shots deal 40% more damage. Volleys unaffected.', effect: { kind: 'fireDmgMult', mult: 1.40 } },
+    { desc: '+65% aimed-shot damage', detail: 'Your single aimed shots deal 65% more damage. Volleys unaffected.', effect: { kind: 'fireDmgMult', mult: 1.65 } },
+  ] },
+  { id: 'grapeshot', name: 'Grapeshot', flavor: 'A scatter of iron off the rails. Your volleys shred.', tiers: [
+    { desc: '+20% volley damage', detail: 'Your volleys (the double-shot) deal 20% more damage. Aimed shots unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.20 } },
+    { desc: '+40% volley damage', detail: 'Your volleys deal 40% more damage. Aimed shots unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.40 } },
+    { desc: '+65% volley damage', detail: 'Your volleys deal 65% more damage. Aimed shots unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.65 } },
+  ] },
+  { id: 'dead_eye', name: 'Dead-Eye', flavor: 'You learn exactly where a hull wants to break.', tiers: [
+    { desc: '+8% crit chance', detail: 'Every shot has an extra 8% chance to land as a critical hit.', effect: { kind: 'critChanceBonus', chance: 0.08 } },
+    { desc: '+16% crit chance', detail: 'Every shot has an extra 16% chance to land as a critical hit.', effect: { kind: 'critChanceBonus', chance: 0.16 } },
+    { desc: '+26% crit chance', detail: 'Every shot has an extra 26% chance to land as a critical hit.', effect: { kind: 'critChanceBonus', chance: 0.26 } },
+  ] },
+  { id: 'wide_sights', name: 'Wide Sights', flavor: 'The perfect shot stops being luck.', tiers: [
+    { desc: 'Bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 12% wider, so landing a crit is easier.', effect: { kind: 'critZoneScale', mult: 1.12 } },
+    { desc: 'Much bigger crit zone', detail: 'The gold "perfect shot" band on your aim bar is 26% wider.', effect: { kind: 'critZoneScale', mult: 1.26 } },
+    { desc: 'Huge crit zone', detail: 'The gold "perfect shot" band on your aim bar is 42% wider.', effect: { kind: 'critZoneScale', mult: 1.42 } },
+  ] },
+  { id: 'ironhide', name: 'Ironhide', flavor: 'Plates doubled along the waterline.', tiers: [
+    { desc: 'Take 12% less damage', detail: 'Every hit an enemy lands on you deals 12% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.88, scope: 'allRemaining' } },
+    { desc: 'Take 22% less damage', detail: 'Every hit an enemy lands on you deals 22% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.78, scope: 'allRemaining' } },
+    { desc: 'Take 34% less damage', detail: 'Every hit an enemy lands on you deals 34% less damage for the rest of the run.', effect: { kind: 'incomingDmgMult', mult: 0.66, scope: 'allRemaining' } },
+  ] },
+  { id: 'press_the_powder', name: 'Press the Powder', flavor: 'Your crew loads like the deep is at their heels.', tiers: [
+    { desc: 'Reloads can load extra', detail: 'Each reload has a 10% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.10, bonusCharges: 1 } },
+    { desc: 'Reloads often load extra', detail: 'Each reload has a 22% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.22, bonusCharges: 1 } },
+    { desc: 'Reloads frequently load extra', detail: 'Each reload has a 36% chance to chamber an extra cannonball on top.', effect: { kind: 'reloadProc', chance: 0.36, bonusCharges: 1 } },
+  ] },
+  { id: 'following_sea', name: 'Following Sea', flavor: 'The current finally runs with you.', tiers: [
+    { desc: '+2 ship speed', detail: 'Your ship is 2 faster — you act first more often and your aim bar sweeps faster.', effect: { kind: 'speedDelta', n: 2, scope: 'allRemaining' } },
+    { desc: '+4 ship speed', detail: 'Your ship is 4 faster — you act first more often and your aim bar sweeps faster.', effect: { kind: 'speedDelta', n: 4, scope: 'allRemaining' } },
+    { desc: '+7 ship speed', detail: 'Your ship is 7 faster — you act first more often and your aim bar sweeps faster.', effect: { kind: 'speedDelta', n: 7, scope: 'allRemaining' } },
+  ] },
+  { id: 'bilge_pump', name: 'Bilge Pump', flavor: 'Patch the seams in the lull before the next gun.', tiers: [
+    { desc: 'Heal 6 HP each fight', detail: 'At the start of every fight, your ship repairs 6 HP.', effect: { kind: 'startOfFightHeal', n: 6 } },
+    { desc: 'Heal 13 HP each fight', detail: 'At the start of every fight, your ship repairs 13 HP.', effect: { kind: 'startOfFightHeal', n: 13 } },
+    { desc: 'Heal 22 HP each fight', detail: 'At the start of every fight, your ship repairs 22 HP.', effect: { kind: 'startOfFightHeal', n: 22 } },
+  ] },
+  { id: 'ghostward', name: 'Ghostward', flavor: 'Salt and cold iron at the rails. The drowned aim wide.', tiers: [
+    { desc: 'Enemies crit 12% less', detail: 'Enemies are 12% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.12 } },
+    { desc: 'Enemies crit 24% less', detail: 'Enemies are 24% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.24 } },
+    { desc: 'Enemies crit 40% less', detail: 'Enemies are 40% less likely to land a critical hit on you.', effect: { kind: 'incomingCritReduction', chance: 0.40 } },
+  ] },
 ]
 
 // Depths at which the player drafts a boon — offset from CURSE_DEPTHS so the
 // descent alternates gift and toll.
 export const BOON_DEPTHS = [2, 5, 8, 11, 14, 17, 20, 23]
 
-/** Offer `n` distinct boons to draft (boons CAN repeat across drafts to stack,
- *  but a single draft never shows the same boon twice). */
-export function drawBoons(n: number): GauntletBoon[] {
-  const pool = [...GAUNTLET_BOONS]
-  const out: GauntletBoon[] = []
+/** A single draft choice: a specific TIER of a boon family. The offered tier is
+ *  one above whatever the player already holds in that family. */
+export interface BoonOffer {
+  id: string
+  name: string
+  flavor: string
+  tier: number       // 1..3
+  desc: string
+  detail: string
+  effect: TideEffect
+  /** True when this offer upgrades a boon the player already owns (tier > 1). */
+  upgrade: boolean
+}
+
+/** Offer up to `n` distinct boons to draft. For each family the offer is the
+ *  NEXT tier the player can take (tier 1 if they hold none, else owned+1);
+ *  families already at max tier are excluded. No infinite single-boon stacking. */
+export function drawBoons(n: number, owned: Record<string, number> = {}): BoonOffer[] {
+  const pool = GAUNTLET_BOONS
+    .map(fam => ({ fam, next: (owned[fam.id] ?? 0) + 1 }))
+    .filter(x => x.next <= x.fam.tiers.length)
+  const out: BoonOffer[] = []
   for (let i = 0; i < n && pool.length > 0; i++) {
-    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0])
+    const { fam, next } = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]
+    const t = fam.tiers[next - 1]
+    out.push({ id: fam.id, name: fam.name, flavor: fam.flavor, tier: next, desc: t.desc, detail: t.detail, effect: t.effect, upgrade: next > 1 })
   }
   return out
+}
+
+/** Resolve the active TideEffect for each boon the player currently holds —
+ *  the HIGHEST tier only, since a higher tier replaces the lower. Feeds the
+ *  combat effect pipeline. */
+export function boonEffects(owned: Record<string, number>): TideEffect[] {
+  const out: TideEffect[] = []
+  for (const fam of GAUNTLET_BOONS) {
+    const tier = owned[fam.id]
+    if (tier && tier >= 1) out.push(fam.tiers[Math.min(tier, fam.tiers.length) - 1].effect)
+  }
+  return out
+}
+
+/** Roman numeral for a boon tier (1→I, 2→II, 3→III). '' for 0/invalid. */
+export function boonTierLabel(tier: number): string {
+  return ['', 'I', 'II', 'III'][tier] ?? ''
 }
 
 // ── Depth bands + Davy's voice ────────────────────────────────────────────────

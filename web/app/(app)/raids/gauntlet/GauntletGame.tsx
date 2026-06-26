@@ -18,11 +18,11 @@ import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import {
   generateFight, advanceRollState, shouldFireTide, chestForDepth,
-  CURSE_DEPTHS, drawCurse, BOON_DEPTHS, drawBoons,
+  CURSE_DEPTHS, drawCurse, BOON_DEPTHS, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_ROUNDS, TIDE_HEAL_HP_PCT, GAUNTLET_COOLDOWN_HOURS,
   CHEST_TIERS, chestCannonDropChance, estimatePotForDepth,
-  type GauntletFight, type GauntletRollState, type GauntletCurse, type GauntletBoon,
+  type GauntletFight, type GauntletRollState, type GauntletCurse, type BoonOffer,
 } from '@/lib/gauntlet'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
@@ -135,9 +135,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [activeCurses, setActiveCurses] = useState<GauntletCurse[]>([])
   const [pendingCurse, setPendingCurse] = useState<GauntletCurse | null>(null)
   const activeCursesRef = useRef<GauntletCurse[]>([])
-  // Boons — drafted, stacking, the player's answer to the curses.
-  const [activeBoons, setActiveBoons] = useState<GauntletBoon[]>([])
-  const [pendingBoons, setPendingBoons] = useState<GauntletBoon[] | null>(null)
+  // Boons — drafted as TIERS (family id → highest tier owned, 1..3). Drafting a
+  // higher tier replaces the lower; no infinite single-boon stacking.
+  const [boonTiers, setBoonTiers] = useState<Record<string, number>>({})
+  const [pendingBoons, setPendingBoons] = useState<BoonOffer[] | null>(null)
   // Tapped boon/curse on the breather screen → details popup.
   const [detailEffect, setDetailEffect] = useState<
     { kind: 'boon' | 'curse'; name: string; desc: string; detail: string; flavor: string; count: number } | null
@@ -209,7 +210,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setUsedAbilityIds(new Set())
       setActiveCurses([]); activeCursesRef.current = []
       setPendingCurse(null)
-      setActiveBoons([]); setPendingBoons(null)
+      setBoonTiers({}); setPendingBoons(null)
       anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
       setFight(generateFight(rollStateRef.current))
@@ -282,7 +283,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // priority over a tide this round so interstitials never stack.
     if (BOON_DEPTHS.includes(nextDepth)) {
       roundsSinceTideRef.current += 1
-      setPendingBoons(drawBoons(3))
+      setPendingBoons(drawBoons(3, boonTiers))
       setPhase('boon')
       return
     }
@@ -314,9 +315,12 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // Claim a drafted boon — its effect rides the active-effect channel (run-wide,
   // so it persists + stacks), then drop into the breather.
-  function applyBoon(boon: GauntletBoon) {
-    setActiveBoons(prev => [...prev, boon])
-    setActiveTideEffects(prev => [...prev, boon.effect])
+  // Claim a drafted boon TIER — records it as the family's highest tier (a higher
+  // tier replaces the lower). Effects are derived from boonTiers and fed to
+  // RaidCombat each fight, so they persist for free without piling into the tide
+  // channel (where an upgrade would otherwise double-apply the old tier).
+  function applyBoon(offer: BoonOffer) {
+    setBoonTiers(prev => ({ ...prev, [offer.id]: offer.tier }))
     setPendingBoons(null)
     setPhase('between')
   }
@@ -648,10 +652,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
     const band = bandForDepth(cleared)
-    const boonCounts = Object.values(activeBoons.reduce<Record<string, { boon: GauntletBoon; n: number }>>((acc, b) => {
-      acc[b.id] = { boon: b, n: (acc[b.id]?.n ?? 0) + 1 }
-      return acc
-    }, {}))
+    const ownedBoons = GAUNTLET_BOONS
+      .map(fam => ({ fam, tier: boonTiers[fam.id] ?? 0 }))
+      .filter(x => x.tier >= 1)
     return (
       <>
         <AbyssBackdrop />
@@ -698,21 +701,24 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
 
           {/* Powers + Curses tallies — each chip taps to a plain-English detail. */}
-          {(boonCounts.length > 0 || activeCurses.length > 0) && (
+          {(ownedBoons.length > 0 || activeCurses.length > 0) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 14, textAlign: 'left' }}>
-              {boonCounts.length > 0 && (
+              {ownedBoons.length > 0 && (
                 <div>
                   <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: TEAL, marginBottom: 5 }}>
-                    Powers Claimed · {activeBoons.length} <span style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: 0 }}>· tap for details</span>
+                    Powers Claimed · {ownedBoons.length} <span style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: 0 }}>· tap for details</span>
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {boonCounts.map(({ boon, n }) => (
-                      <button key={boon.id} className="font-karla font-700 tap"
-                        onClick={() => setDetailEffect({ kind: 'boon', name: boon.name, desc: boon.desc, detail: boon.detail, flavor: boon.flavor, count: n })}
-                        style={{ cursor: 'pointer', fontSize: '0.58rem', padding: '0.2rem 0.55rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}3a`, color: '#aef3e6' }}>
-                        {boon.name}{n > 1 ? ` ×${n}` : ''}
-                      </button>
-                    ))}
+                    {ownedBoons.map(({ fam, tier }) => {
+                      const t = fam.tiers[tier - 1]
+                      return (
+                        <button key={fam.id} className="font-karla font-700 tap"
+                          onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier })}
+                          style={{ cursor: 'pointer', fontSize: '0.58rem', padding: '0.2rem 0.55rem', borderRadius: 999, background: `${TEAL}14`, border: `1px solid ${TEAL}3a`, color: '#aef3e6' }}>
+                          {fam.name} {boonTierLabel(tier)}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -770,7 +776,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     {isBoon ? 'Your Power' : 'The Locker’s Curse'}
                   </p>
                   <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: '#f5f2ec', lineHeight: 1.15, marginTop: 5 }}>
-                    {detailEffect.name}{detailEffect.count > 1 ? <span style={{ color: accent }}> ×{detailEffect.count}</span> : null}
+                    {detailEffect.name}
                   </p>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '0.3rem 0.8rem', borderRadius: 999, background: `${accent}1c`, border: `1px solid ${accent}55` }}>
                     <span aria-hidden style={{ fontSize: '0.68rem', color: accent }}>{isBoon ? '▲' : '▼'}</span>
@@ -779,9 +785,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                   <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.82)', marginTop: 12 }}>
                     {detailEffect.detail}
                   </p>
-                  {detailEffect.count > 1 && (
+                  {isBoon && (
                     <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: accent, marginTop: 8 }}>
-                      You hold {detailEffect.count} of these, and the effect stacks.
+                      {detailEffect.count >= 3 ? 'Tier 3 of 3 — fully upgraded.' : `Tier ${detailEffect.count} of 3 — draft it again to upgrade.`}
                     </p>
                   )}
                   <p className="font-karla" style={{ fontSize: '0.74rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.5)', lineHeight: 1.5, marginTop: 12 }}>
@@ -904,13 +910,11 @@ export default function GauntletGame(props: GauntletGameProps) {
             Claim a Power
           </h1>
           <p className="font-karla" style={{ fontSize: '0.78rem', color: '#9a948a', marginTop: 6, marginBottom: 16 }}>
-            It holds for the rest of the descent. Stack it to go deeper.
+            It holds for the rest of the descent. Each power runs three tiers — claim one to unlock the next.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pendingBoons.map((b, idx) => {
-              const owned = activeBoons.filter(x => x.id === b.id).length
-              return (
+            {pendingBoons.map((b, idx) => (
                 <motion.button
                   key={b.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -928,10 +932,12 @@ export default function GauntletGame(props: GauntletGameProps) {
                 >
                   <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${TEAL}, ${TEAL}33)` }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <p className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.98rem', color: '#aef3e6', lineHeight: 1.2 }}>{b.name}</p>
-                    {owned > 0 && (
-                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: `${TEAL}cc`, background: `${TEAL}1c`, border: `1px solid ${TEAL}44`, borderRadius: 999, padding: '0.12rem 0.4rem' }}>
-                        Owned ×{owned}
+                    <p className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.98rem', color: '#aef3e6', lineHeight: 1.2 }}>
+                      {b.name} <span style={{ color: `${TEAL}cc` }}>{boonTierLabel(b.tier)}</span>
+                    </p>
+                    {b.upgrade && (
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#f0d79a', background: 'rgba(217,176,102,0.16)', border: '1px solid rgba(217,176,102,0.5)', borderRadius: 999, padding: '0.12rem 0.4rem' }}>
+                        Upgrade
                       </span>
                     )}
                     <span className="font-karla font-700" style={{ flexShrink: 0, fontSize: '0.6rem', padding: '0.18rem 0.5rem', borderRadius: 999, background: 'rgba(74,222,128,0.13)', border: '1px solid rgba(74,222,128,0.42)', color: '#86efac', whiteSpace: 'nowrap' }}>
@@ -942,8 +948,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     {b.flavor}
                   </p>
                 </motion.button>
-              )
-            })}
+            ))}
           </div>
         </div>
       </>
@@ -1044,7 +1049,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onLeave={() => { resolveGauntletDeath(rollStateRef.current.cleared).finally(() => router.push('/expeditions')) }}
             raidMods={runRaidMods}
-            tideEffects={activeTideEffects}
+            tideEffects={[...activeTideEffects, ...boonEffects(boonTiers)]}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
             onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
