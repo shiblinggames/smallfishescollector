@@ -172,7 +172,10 @@ export default function RaidLootStage(props: Props) {
       {/* Dark treasure-hold stage — the haul sits over a deep, glowing dark so
           the chest + reward pop (mirrors the Gauntlet cash-out's abyss). */}
       <div style={{
-        position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        // overflowX pinned off: overflowY:auto alone makes the browser compute
+        // overflow-x to auto too, so any sub-pixel horizontal bleed (a glow, a
+        // full-width child) would show a stray horizontal scrollbar here.
+        position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch',
         background: `radial-gradient(ellipse 130% 80% at 50% 22%, ${accent}14 0%, #0a1626 42%, #04080e 100%)`,
       }}>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto', padding: '1.3rem 1rem 1.5rem', textAlign: 'center' }}>
