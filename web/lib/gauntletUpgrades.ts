@@ -137,17 +137,17 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   // ── Ship & Shore (scope 'account'/'world') — PERMANENT power for the wider
-  //    game. These outrank the Run Upgrades on price (all sit above the 100-cap
-  //    run ceiling) because they carry out of the Gauntlet forever. Gated by
-  //    depth AND cost: cost ≈ gate × 15, so each is ~15 dives of saving once you
-  //    can reach its gate — a real sink even with runs fully farmable, where the
-  //    depth gate is the skill limiter and Fathoms are the grind. ─────────────
+  //    game (raids, voyages, fishing forever). The REAL gate is depth: you have
+  //    to dive deep to reach each one, so the Fathom cost is just a modest
+  //    top-up, not a second grind wall. A gentle ascending ladder (50 → 110) so
+  //    deeper unlocks cost a touch more, but none are a slog once you can reach
+  //    the depth that gates them. ─────────────────────────────────────────────
   {
     id: 'safe_voyages',
     name: 'Safe Passage',
     description: 'Your crew never dies on voyages. Sail any route risk-free.',
     depthRequired: 8,
-    cost: 120,
+    cost: 50,
     scope: 'world',
     category: 'voyages',
   },
@@ -156,7 +156,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Extra Cannonball Rack',
     description: 'Hold 4 cannonballs in raids instead of 3, so one stays loaded right after you fire a volley.',
     depthRequired: 10,
-    cost: 150,
+    cost: 65,
     scope: 'account',
     category: 'raids',
   },
@@ -165,7 +165,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Swift Sails',
     description: 'Your crew voyages return 30% faster — less waiting, more sailing.',
     depthRequired: 12,
-    cost: 180,
+    cost: 80,
     scope: 'world',
     category: 'voyages',
   },
@@ -174,7 +174,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Seasoned Timbers',
     description: 'Your repair kit patches you up 25% more in every raid.',
     depthRequired: 14,
-    cost: 210,
+    cost: 95,
     scope: 'account',
     category: 'raids',
   },
@@ -183,7 +183,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Tireless Catcher',
     description: 'Your Auto Catcher reels in rare fish on its own too, not just commons and uncommons.',
     depthRequired: 16,
-    cost: 240,
+    cost: 110,
     scope: 'world',
     category: 'fishing',
   },
