@@ -717,7 +717,12 @@ export default function RaidCombat({
   const [cannonShot, setCannonShot]   = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   const [enemyImpact, setEnemyImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   // Man-o-War Mega FX (Phase 3): Railgun beam, Barrage's 4 splats, Nuke blast.
-  const [railBeam,  setRailBeam]  = useState<{ key: number; color: string } | null>(null)
+  // The beam carries computed geometry (start px + length + angle) measured from
+  // the real ship positions so it always runs muzzle -> enemy regardless of layout.
+  const [railBeam,  setRailBeam]  = useState<{ key: number; color: string; x1: number; y1: number; len: number; angle: number } | null>(null)
+  const stageRef      = useRef<HTMLDivElement>(null)
+  const playerShipRef = useRef<HTMLDivElement>(null)
+  const enemyShipRef  = useRef<HTMLDivElement>(null)
   const [nukeBlast, setNukeBlast] = useState<{ key: number; color: string } | null>(null)
   const [megaSplats, setMegaSplats] = useState<{ key: number; color: string; items: { id: number; text: string; size: number; dx: number; dy: number; delay: number }[] } | null>(null)
   // Crew-ability cast cue — themed portrait banner + ring that pops over the
@@ -2437,7 +2442,21 @@ export default function RaidCombat({
         // Railgun — a beam lances out the instant you fire (no cannonball arc).
         if (megaId === 'railgun') {
           setPlayerRecoilKey(k => k + 1)
-          setRailBeam({ key: Date.now() + i, color: megaColor })
+          // Measure the real ship boxes so the beam runs from the player's bow to
+          // the enemy hull no matter the layout.
+          const stg = stageRef.current?.getBoundingClientRect()
+          const ps  = playerShipRef.current?.getBoundingClientRect()
+          const es  = enemyShipRef.current?.getBoundingClientRect()
+          if (stg && ps && es) {
+            const x1 = ps.right - stg.left - ps.width * 0.18  // just inside the bow
+            const y1 = ps.top   - stg.top  + ps.height * 0.30 // upper deck
+            const x2 = es.left  - stg.left + es.width * 0.50  // enemy centre
+            const y2 = es.top   - stg.top  + es.height * 0.45
+            const dx = x2 - x1, dy = y2 - y1
+            const len = Math.max(40, Math.hypot(dx, dy))
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI
+            setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
+          }
           playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 780))
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
@@ -2695,7 +2714,7 @@ export default function RaidCombat({
           minHeight is the floor on short viewports — the single-row action
           panel frees enough vertical space that we can afford a taller floor
           so the enemy ship clears the player XP bar overlay. */}
-      <motion.div animate={stageShakeCtrl} style={{
+      <motion.div ref={stageRef} animate={stageShakeCtrl} style={{
         position: 'relative',
         flex: 1,
         minHeight: 400,
@@ -3182,6 +3201,7 @@ export default function RaidCombat({
         {/* Enemy boat — sits in the water (below the horizon), farther away than the player */}
         <motion.div
           key={`enemy-${enemy.id}`}
+          ref={enemyShipRef}
           initial={{ x: 80, opacity: 0 }}
           animate={{ x: 0, opacity: 1, rotate: enemyTilt }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -3277,6 +3297,7 @@ export default function RaidCombat({
 
         {/* Player ship — lower left area, larger ("closer"). Outer mount, inner shake. */}
         <motion.div
+          ref={playerShipRef}
           initial={{ x: -60, opacity: 0 }}
           animate={{ x: 0, opacity: 1, rotate: playerTilt }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
@@ -3386,7 +3407,7 @@ export default function RaidCombat({
           </motion.div>
           {/* Railgun — a hyper beam erupting across the stage from the player's
               guns into the enemy hull. Stage-level so it isn't clipped. */}
-          {railBeam && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} />}
+          {railBeam && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} x1={railBeam.x1} y1={railBeam.y1} len={railBeam.len} angle={railBeam.angle} />}
           {/* Davy's Heavy Cannon heat — a per-fight damage stack badge that runs
               hotter (orange → red) as the ramp builds, and re-pops each turn it
               climbs. Only shows once the ramp has actually accrued (turn 2+). */}
@@ -4669,10 +4690,10 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 // Railgun: a Pokémon-style HYPER BEAM — a charge orb at the player's guns, then a
 // thick white-hot beam erupts UP AND TO THE RIGHT into the enemy hull (the player
 // sits lower-left, the enemy upper-right), held, then fades.
-function RailgunBeam({ color }: { color: string }) {
-  // Anchor at the player's muzzle (lower-left) and rake the beam up to the enemy.
+function RailgunBeam({ color, x1, y1, len, angle }: { color: string; x1: number; y1: number; len: number; angle: number }) {
+  // Geometry is measured from the real ship boxes (muzzle -> enemy hull) and
+  // passed in as pixels + degrees, so the beam always connects the two ships.
   // The rotate lives in `style` and composes with framer's scaleX eruption.
-  const LEFT = '54%', TOP = '47%', ANGLE = -20, WIDTH = '58%'
   return (
     <>
       {/* Charge orb at the muzzle, flares as the beam erupts. */}
@@ -4680,21 +4701,21 @@ function RailgunBeam({ color }: { color: string }) {
         initial={{ opacity: 0, scale: 0.3 }}
         animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1.6, 1.2, 0.5] }}
         transition={{ duration: 0.6, times: [0, 0.22, 0.7, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: LEFT, top: `calc(${TOP} - 28px)`, width: 56, height: 56, marginLeft: -10, borderRadius: '50%', zIndex: 6, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 74%)`, boxShadow: `0 0 34px 8px ${color}` }} />
+        style={{ position: 'absolute', left: x1, top: y1, width: 56, height: 56, marginLeft: -28, marginTop: -28, borderRadius: '50%', zIndex: 20, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 74%)`, boxShadow: `0 0 34px 8px ${color}` }} />
       {/* Outer glow beam (soft, wide). */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scaleX: 0 }}
         animate={{ opacity: [0, 0.85, 0.85, 0], scaleX: [0, 1, 1, 1] }}
         transition={{ duration: 0.72, times: [0, 0.16, 0.62, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: LEFT, top: `calc(${TOP} - 26px)`, width: WIDTH, height: 52, transformOrigin: 'left center', rotate: ANGLE, borderRadius: 30, zIndex: 5, pointerEvents: 'none', background: `${color}66`, filter: 'blur(8px)' }} />
+        style={{ position: 'absolute', left: x1, top: y1 - 26, width: len, height: 52, transformOrigin: 'left center', rotate: angle, borderRadius: 30, zIndex: 19, pointerEvents: 'none', background: `${color}66`, filter: 'blur(8px)' }} />
       {/* Core beam — white-hot, thick. */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scaleX: 0 }}
         animate={{ opacity: [0, 1, 1, 0.9, 0], scaleX: [0, 1, 1, 1, 1] }}
         transition={{ duration: 0.72, times: [0, 0.16, 0.6, 0.85, 1], ease: 'easeOut' }}
         style={{
-          position: 'absolute', left: LEFT, top: `calc(${TOP} - 13px)`, width: WIDTH, height: 26,
-          transformOrigin: 'left center', rotate: ANGLE, borderRadius: 18, zIndex: 6, pointerEvents: 'none',
+          position: 'absolute', left: x1, top: y1 - 13, width: len, height: 26,
+          transformOrigin: 'left center', rotate: angle, borderRadius: 18, zIndex: 20, pointerEvents: 'none',
           background: `linear-gradient(90deg, ${color} 0%, #ffffff 35%, #ffffff 82%, ${color} 100%)`,
           boxShadow: `0 0 22px 4px ${color}, 0 0 54px 10px ${color}cc`,
         }} />
