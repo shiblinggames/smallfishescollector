@@ -716,6 +716,10 @@ export default function RaidCombat({
   const [playerRecoilKey, setPlayerRecoilKey] = useState(0)
   const [cannonShot, setCannonShot]   = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   const [enemyImpact, setEnemyImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
+  // Man-o-War Mega FX (Phase 3): Railgun beam, Barrage's 4 splats, Nuke blast.
+  const [railBeam,  setRailBeam]  = useState<{ key: number; color: string } | null>(null)
+  const [nukeBlast, setNukeBlast] = useState<{ key: number; color: string } | null>(null)
+  const [megaSplats, setMegaSplats] = useState<{ key: number; color: string; items: { id: number; text: string; size: number; dx: number; dy: number; delay: number }[] } | null>(null)
   // Crew-ability cast cue — themed portrait banner + ring that pops over the
   // stage so firing ANY ability has an unmistakable "you did something" tell.
   const [abilityCast, setAbilityCast] = useState<{ key: number; label: string; name: string; color: string; image?: string | null; emoji?: string } | null>(null)
@@ -2423,11 +2427,19 @@ export default function RaidCombat({
       if (isAttack && step.who === 'player') {
         // Player firing: cannon shot + recoil immediately, projectile flies,
         // then splat + shake + HP update + crit flash all together.
-        // Mega borrows the Volley impact/shake for now; Phase 3 gives it its own FX.
+        // The Mega rides the Volley salvo FX as a base; each augment layers its
+        // own signature on top (beam / 4-splat / blast) below.
+        const megaId    = step.action === 'mega' ? (megaAugment?.id ?? null) : null
+        const megaColor = megaAugment?.color ?? '#ffffff'
         const isVolleyShot = (step.action === 'volley' || step.action === 'mega') && !step.big
         const cannonKind: 'normal' | 'volley' | 'crit' =
           step.big ? 'crit' : isVolleyShot ? 'volley' : 'normal'
-        if (isVolleyShot) {
+        // Railgun — a beam lances out the instant you fire (no cannonball arc).
+        if (megaId === 'railgun') {
+          setPlayerRecoilKey(k => k + 1)
+          setRailBeam({ key: Date.now() + i, color: megaColor })
+          playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 440))
+        } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
           // burst, so a volley fires visibly as a salvo, not one shot.
           ;[0, 95, 190].forEach((off, k) => {
@@ -2452,11 +2464,27 @@ export default function RaidCombat({
           // catches up.
           setPlayerHp(step.pHp)
           if (step.splatTarget === 'enemy') {
-            setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big, volley: isVolleyShot })
+            // Barrage: split the total into 4 falling splats (first biggest), so
+            // the broadside reads as four hammer-blows. Others: one splat.
+            if (megaId === 'barrage' && !isDodged) {
+              const total = Math.max(0, parseInt(step.splatText.replace(/[^0-9]/g, ''), 10) || 0)
+              const fr = [0.40, 0.25, 0.18, 0.17]
+              let used = 0
+              const items = fr.map((f, k) => {
+                const v = k === fr.length - 1 ? total - used : Math.round(total * f)
+                used += v
+                return { id: k, text: `-${v}`, size: 1.5 - k * 0.22, dx: (k - 1.5) * 18, dy: -k * 6, delay: k * 0.07 }
+              })
+              setMegaSplats({ key: Date.now() + i + 1, color: megaColor, items })
+              setTimeout(() => setMegaSplats(null), SPLAT_HOLD_MS + 240)
+            } else {
+              setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: megaId ? megaColor : step.splatColor, big: step.big || megaId === 'nuke', volley: isVolleyShot })
+            }
             if (!isDodged) {
-              setEnemyShakeKind(step.big ? 'crit' : isVolleyShot ? 'volley' : 'hit')
+              const heavy = step.big || megaId === 'nuke'
+              setEnemyShakeKind(heavy ? 'crit' : isVolleyShot ? 'volley' : 'hit')
               setEnemyShakeKey(k => k + 1)
-              if (step.big) cameraShake('crit')
+              if (heavy) cameraShake('crit')
               else if (isVolleyShot) { cameraShake('volley'); vibrate([0, 22, 26, 30]) }
             }
             if (!isDodged) {
@@ -2468,9 +2496,15 @@ export default function RaidCombat({
               } else {
                 // Impact burst exploding on the enemy ship (crit cascade is huge)
                 const impactKind: 'normal' | 'volley' | 'crit' =
-                  step.big ? 'crit' : isVolleyShot ? 'volley' : 'normal'
+                  step.big || megaId === 'nuke' ? 'crit' : isVolleyShot ? 'volley' : 'normal'
                 setEnemyImpact({ key: Date.now() + i + 2, kind: impactKind })
                 setTimeout(() => setEnemyImpact(null), 700)
+                // Nuke — a big expanding shockwave on top of the impact.
+                if (megaId === 'nuke') {
+                  setNukeBlast({ key: Date.now() + i + 13, color: megaColor })
+                  playStepChainRef.current.push(setTimeout(() => setNukeBlast(null), 760))
+                  vibrate([0, 50, 40, 90])
+                }
               }
             }
             // Incendiary lit / Frozen iced — flare the matching hull aura the
@@ -2483,7 +2517,7 @@ export default function RaidCombat({
               if (step.procStatus === 'burn') setEnemyBurning(true)
               else setEnemyFrozen(true)
             }
-            if (step.big) {
+            if (step.big || megaId === 'nuke') {
               setCritFlash(true)
               setTimeout(() => setCritFlash(false), 380)
               // Retrigger the player's recoil with the impact so the kickback
@@ -3232,6 +3266,10 @@ export default function RaidCombat({
             )}
             {/* Carapace deflect — the plate shrugs a soaked shot away */}
             {enemyDeflect > 0 && <CarapaceDeflect key={`cd-${enemyDeflect}`} />}
+            {/* Man-o-War Mega FX */}
+            {railBeam  && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} />}
+            {nukeBlast && <NukeBlast   key={`nb-${nukeBlast.key}`} color={nukeBlast.color} />}
+            {megaSplats && <MegaSplats key={`ms-${megaSplats.key}`} color={megaSplats.color} items={megaSplats.items} />}
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} volley={eHitsplat.volley} />}
             </AnimatePresence>
@@ -4625,6 +4663,57 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 // Carapace deflect — the read when Krust's plate shrugs off a non-volley shot:
 // a steely plate-flex ring + a hard glint + sparks scattering sideways/down
 // (deflected, not penetrating). Reads as "blocked — volley to crack it".
+// ── Man-o-War Mega FX ─────────────────────────────────────────────────────────
+// Railgun: a lance of light streaks into the hull from the player side.
+function RailgunBeam({ color }: { color: string }) {
+  return (
+    <motion.div aria-hidden
+      initial={{ opacity: 0, scaleX: 0 }}
+      animate={{ opacity: [0, 1, 1, 0], scaleX: [0, 1, 1, 1] }}
+      transition={{ duration: 0.44, times: [0, 0.18, 0.6, 1], ease: 'easeOut' }}
+      style={{
+        position: 'absolute', left: '-65%', right: '12%', top: '46%', height: 5,
+        transformOrigin: 'left center', borderRadius: 4, pointerEvents: 'none', zIndex: 6,
+        background: `linear-gradient(90deg, transparent, ${color}, #ffffff)`,
+        boxShadow: `0 0 18px ${color}, 0 0 44px ${color}aa`,
+      }}
+    />
+  )
+}
+// Nuke: a white-hot core plus an expanding shock ring.
+function NukeBlast({ color }: { color: string }) {
+  return (
+    <>
+      <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0.95 }} animate={{ scale: 3.1, opacity: 0 }} transition={{ duration: 0.68, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '12%', borderRadius: '50%', pointerEvents: 'none', zIndex: 7, background: `radial-gradient(circle, #ffffff 0%, ${color} 42%, transparent 70%)` }} />
+      <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.7, opacity: 0 }} transition={{ duration: 0.74, delay: 0.05, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '22%', borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 30px ${color}`, pointerEvents: 'none', zIndex: 7 }} />
+    </>
+  )
+}
+// Barrage: four falling damage numbers, first biggest, staggered.
+function MegaSplats({ color, items }: { color: string; items: { id: number; text: string; size: number; dx: number; dy: number; delay: number }[] }) {
+  return (
+    <>
+      {items.map(it => (
+        // Outer wrapper owns the static horizontal centering so the inner
+        // motion transform (y/scale) doesn't clobber it.
+        <div key={it.id} aria-hidden style={{ position: 'absolute', left: `calc(50% + ${it.dx}px)`, top: '34%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 8 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.6 }}
+            animate={{ opacity: [0, 1, 1, 0], y: [6, -8 + it.dy, -22 + it.dy], scale: [0.6, it.size, it.size] }}
+            transition={{ duration: 0.72, delay: it.delay, times: [0, 0.25, 0.72, 1], ease: 'easeOut' }}
+            className="font-cinzel font-800"
+            style={{ fontSize: `${0.9 * it.size}rem`, color, textShadow: `0 0 10px ${color}, 0 1px 3px rgba(0,0,0,0.85)`, lineHeight: 1, whiteSpace: 'nowrap' }}
+          >
+            {it.text}
+          </motion.div>
+        </div>
+      ))}
+    </>
+  )
+}
+
 function CarapaceDeflect() {
   const STEEL = '#9fc4e0'
   const sparks = useMemo(() => Array.from({ length: 8 }, (_, n) => {
