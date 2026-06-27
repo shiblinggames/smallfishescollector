@@ -27,7 +27,7 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls } from '@/lib/gauntletUpgrades'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -146,6 +146,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // surface alongside the boons in later rounds. Taking it means forgoing the
   // boon draft (give up upgrade potential for immediate relief).
   const [pendingReprieve, setPendingReprieve] = useState<Reprieve | null>(null)
+  // Second Cast: rerolls left on the CURRENT boon draft (set when it opens).
+  const [rerollsLeft, setRerollsLeft] = useState(0)
   // True for the fight that OPENS right after crew abilities were restored (a
   // boss kill or a Beat to Quarters reprieve) — drives the obvious in-combat
   // "abilities restored" banner. crewRefreshedRef accumulates between fights;
@@ -368,6 +370,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // the boon screen (it routes to 'boon' whenever pendingBoons is set).
       if (boonDue) {
         setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
+        setRerollsLeft(gauntletBoonRerolls(props.gauntletUpgrades))
         // Reprieve: in later rounds, sometimes a one-time relief card surfaces
         // alongside the boons (replacing the old random heal-tide's job, but as
         // a deliberate choice). Taking it forgoes the boon draft.
@@ -408,6 +411,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPendingBoons(null)
     setPendingReprieve(null) // chose the boon over the relief
     setPhase('between')
+  }
+
+  // Second Cast: throw the offered boons back and draw three fresh ones.
+  function rerollBoons() {
+    if (rerollsLeft <= 0) return
+    setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
+    setRerollsLeft(r => r - 1)
   }
 
   // Take the Reprieve instead of a boon — apply its one-time effect now and
@@ -1243,6 +1253,15 @@ export default function GauntletGame(props: GauntletGameProps) {
               </>
             )}
           </div>
+
+          {/* Second Cast — reroll the offered boons (limited per draft). */}
+          {rerollsLeft > 0 && (
+            <button onClick={rerollBoons} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+              style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
+              Reroll · {rerollsLeft} left
+            </button>
+          )}
         </div>
         {detailModal}
         {exitModal}

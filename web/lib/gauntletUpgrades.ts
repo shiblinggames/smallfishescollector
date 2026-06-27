@@ -79,6 +79,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
+    id: 'second_cast',
+    name: 'Second Cast',
+    description: 'Once per power draft, throw the offered boons back and draw three fresh ones.',
+    depthRequired: 0,
+    cost: 60,
+    scope: 'gauntlet',
+  },
+  {
     id: 'iron_hide',
     name: 'Iron Hide',
     description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
@@ -282,4 +290,9 @@ export function gauntletHasSoundingLine(unlocked: string[] | null | undefined): 
  *  rarities (Rare + Legendary), so good boons are offered more often. */
 export function gauntletBoonLuck(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('diviners_charm') ? 1.7 : 1
+}
+
+/** Second Cast: how many times the player may reroll the offered boons per draft. */
+export function gauntletBoonRerolls(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('second_cast') ? 1 : 0
 }
