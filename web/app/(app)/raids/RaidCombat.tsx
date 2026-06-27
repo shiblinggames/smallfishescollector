@@ -2442,6 +2442,7 @@ export default function RaidCombat({
         // Railgun — a beam lances out the instant you fire (no cannonball arc).
         if (megaId === 'railgun') {
           setPlayerRecoilKey(k => k + 1)
+          vibrate([0, 45, 28, 75])
           // Measure the real ship boxes so the beam runs from the player's bow to
           // the enemy hull no matter the layout.
           const stg = stageRef.current?.getBoundingClientRect()
@@ -2464,7 +2465,7 @@ export default function RaidCombat({
           const len = Math.max(60, Math.hypot(dx, dy))
           const angle = Math.atan2(dy, dx) * 180 / Math.PI
           setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
-          playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 780))
+          playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 920))
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
           // burst, so a volley fires visibly as a salvo, not one shot.
@@ -2504,10 +2505,10 @@ export default function RaidCombat({
               setMegaSplats({ key: Date.now() + i + 1, color: megaColor, items })
               setTimeout(() => setMegaSplats(null), SPLAT_HOLD_MS + 240)
             } else {
-              setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: megaId ? megaColor : step.splatColor, big: step.big || megaId === 'nuke', volley: isVolleyShot })
+              setEHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: megaId ? megaColor : step.splatColor, big: step.big || megaId === 'nuke' || megaId === 'railgun', volley: isVolleyShot })
             }
             if (!isDodged) {
-              const heavy = step.big || megaId === 'nuke'
+              const heavy = step.big || megaId === 'nuke' || megaId === 'railgun'
               setEnemyShakeKind(heavy ? 'crit' : isVolleyShot ? 'volley' : 'hit')
               setEnemyShakeKey(k => k + 1)
               if (heavy) cameraShake('crit')
@@ -2522,7 +2523,7 @@ export default function RaidCombat({
               } else {
                 // Impact burst exploding on the enemy ship (crit cascade is huge)
                 const impactKind: 'normal' | 'volley' | 'crit' =
-                  step.big || megaId === 'nuke' ? 'crit' : isVolleyShot ? 'volley' : 'normal'
+                  step.big || megaId === 'nuke' || megaId === 'railgun' ? 'crit' : isVolleyShot ? 'volley' : 'normal'
                 setEnemyImpact({ key: Date.now() + i + 2, kind: impactKind })
                 setTimeout(() => setEnemyImpact(null), 700)
                 // Nuke — a big expanding shockwave on top of the impact.
@@ -2543,7 +2544,7 @@ export default function RaidCombat({
               if (step.procStatus === 'burn') setEnemyBurning(true)
               else setEnemyFrozen(true)
             }
-            if (step.big || megaId === 'nuke') {
+            if (step.big || megaId === 'nuke' || megaId === 'railgun') {
               setCritFlash(true)
               setTimeout(() => setCritFlash(false), 380)
               // Retrigger the player's recoil with the impact so the kickback
@@ -4705,31 +4706,53 @@ function RailgunBeam({ color, x1, y1, len, angle }: { color: string; x1: number;
   // Geometry is measured from the real ship boxes (muzzle -> enemy hull) and
   // passed in as pixels + degrees, so the beam always connects the two ships.
   // The rotate lives in `style` and composes with framer's scaleX eruption.
+  // Far end (where the beam strikes the hull) — for the impact flare + ring.
+  const rad = angle * Math.PI / 180
+  const ex = x1 + Math.cos(rad) * len
+  const ey = y1 + Math.sin(rad) * len
   return (
     <>
-      {/* Charge orb at the muzzle, flares as the beam erupts. */}
+      {/* Muzzle blast — a hard flash of charge as the beam erupts. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scale: 0.2 }}
+        animate={{ opacity: [0, 1, 0.85, 0], scale: [0.2, 2.1, 1.3, 0.5] }}
+        transition={{ duration: 0.62, times: [0, 0.16, 0.6, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1, width: 78, height: 78, marginLeft: -39, marginTop: -39, borderRadius: '50%', zIndex: 21, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 46%, transparent 72%)`, boxShadow: `0 0 48px 14px ${color}` }} />
+      {/* Outer glow beam (soft, wide) — swells then throbs. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scaleX: 0, scaleY: 0.6 }}
+        animate={{ opacity: [0, 0.9, 0.72, 0.85, 0], scaleX: [0, 1, 1, 1, 1], scaleY: [0.6, 1.3, 1, 1.18, 0.85] }}
+        transition={{ duration: 0.82, times: [0, 0.14, 0.46, 0.72, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1 - 34, width: len, height: 68, transformOrigin: 'left center', rotate: angle, borderRadius: 40, zIndex: 19, pointerEvents: 'none', background: `${color}77`, filter: 'blur(11px)' }} />
+      {/* Core beam — white-hot, thick, breathing height for weight. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scaleX: 0, scaleY: 0.45 }}
+        animate={{ opacity: [0, 1, 1, 0.95, 0], scaleX: [0, 1, 1, 1, 1], scaleY: [0.45, 1.32, 1, 1.2, 0.75] }}
+        transition={{ duration: 0.82, times: [0, 0.12, 0.5, 0.78, 1], ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: x1, top: y1 - 17, width: len, height: 34,
+          transformOrigin: 'left center', rotate: angle, borderRadius: 20, zIndex: 20, pointerEvents: 'none',
+          background: `linear-gradient(90deg, ${color} 0%, #ffffff 30%, #ffffff 84%, ${color} 100%)`,
+          boxShadow: `0 0 28px 6px ${color}, 0 0 66px 14px ${color}cc`,
+        }} />
+      {/* Inner lance — an ultra-bright hairline that reads as the bolt's spine. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scaleX: 0 }}
+        animate={{ opacity: [0, 1, 1, 0], scaleX: [0, 1, 1, 1] }}
+        transition={{ duration: 0.72, times: [0, 0.1, 0.62, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1 - 4, width: len, height: 8, transformOrigin: 'left center', rotate: angle, borderRadius: 6, zIndex: 21, pointerEvents: 'none', background: '#ffffff', boxShadow: '0 0 18px 4px #ffffff' }} />
+      {/* Impact flare at the hull — the hard hit where the beam lands. */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scale: 0.3 }}
-        animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1.6, 1.2, 0.5] }}
-        transition={{ duration: 0.6, times: [0, 0.22, 0.7, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: x1, top: y1, width: 56, height: 56, marginLeft: -28, marginTop: -28, borderRadius: '50%', zIndex: 20, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 74%)`, boxShadow: `0 0 34px 8px ${color}` }} />
-      {/* Outer glow beam (soft, wide). */}
+        animate={{ opacity: [0, 1, 0.8, 0], scale: [0.3, 1.9, 2.5, 0.6] }}
+        transition={{ duration: 0.74, delay: 0.08, times: [0, 0.2, 0.6, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: ex, top: ey, width: 94, height: 94, marginLeft: -47, marginTop: -47, borderRadius: '50%', zIndex: 21, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 44%, transparent 70%)`, boxShadow: `0 0 52px 16px ${color}` }} />
+      {/* Impact shock ring — punches out from the strike point. */}
       <motion.div aria-hidden
-        initial={{ opacity: 0, scaleX: 0 }}
-        animate={{ opacity: [0, 0.85, 0.85, 0], scaleX: [0, 1, 1, 1] }}
-        transition={{ duration: 0.72, times: [0, 0.16, 0.62, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: x1, top: y1 - 26, width: len, height: 52, transformOrigin: 'left center', rotate: angle, borderRadius: 30, zIndex: 19, pointerEvents: 'none', background: `${color}66`, filter: 'blur(8px)' }} />
-      {/* Core beam — white-hot, thick. */}
-      <motion.div aria-hidden
-        initial={{ opacity: 0, scaleX: 0 }}
-        animate={{ opacity: [0, 1, 1, 0.9, 0], scaleX: [0, 1, 1, 1, 1] }}
-        transition={{ duration: 0.72, times: [0, 0.16, 0.6, 0.85, 1], ease: 'easeOut' }}
-        style={{
-          position: 'absolute', left: x1, top: y1 - 13, width: len, height: 26,
-          transformOrigin: 'left center', rotate: angle, borderRadius: 18, zIndex: 20, pointerEvents: 'none',
-          background: `linear-gradient(90deg, ${color} 0%, #ffffff 35%, #ffffff 82%, ${color} 100%)`,
-          boxShadow: `0 0 22px 4px ${color}, 0 0 54px 10px ${color}cc`,
-        }} />
+        initial={{ opacity: 0.9, scale: 0.2 }}
+        animate={{ opacity: 0, scale: 2.6 }}
+        transition={{ duration: 0.52, delay: 0.12, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: ex, top: ey, width: 72, height: 72, marginLeft: -36, marginTop: -36, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 26px ${color}`, zIndex: 20, pointerEvents: 'none' }} />
     </>
   )
 }
