@@ -3414,7 +3414,6 @@ export default function RaidCombat({
           </motion.div>
           {/* Railgun — a hyper beam erupting across the stage from the player's
               guns into the enemy hull. Stage-level so it isn't clipped. */}
-          {railBeam && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} x1={railBeam.x1} y1={railBeam.y1} len={railBeam.len} angle={railBeam.angle} />}
           {/* Davy's Heavy Cannon heat — a per-fight damage stack badge that runs
               hotter (orange → red) as the ramp builds, and re-pops each turn it
               climbs. Only shows once the ramp has actually accrued (turn 2+). */}
@@ -3445,6 +3444,11 @@ export default function RaidCombat({
             )
           })()}
         </motion.div>
+
+        {/* Railgun — a hyper beam from the player's bow into the enemy hull.
+            Rendered as a DIRECT child of the stage so its measured px coords
+            share the stage's coordinate space (not the tilted ship container). */}
+        {railBeam && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} x1={railBeam.x1} y1={railBeam.y1} len={railBeam.len} angle={railBeam.angle} />}
 
         {/* Low-hull danger — a red vignette breathes at the stage edges while
             the player's HP is critical, so the tension reads without a number. */}
