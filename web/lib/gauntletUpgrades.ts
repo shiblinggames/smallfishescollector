@@ -137,17 +137,16 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   // ── Ship & Shore (scope 'account'/'world') — PERMANENT power for the wider
-  //    game (raids, voyages, fishing forever). The REAL gate is depth: you have
-  //    to dive deep to reach each one, so the Fathom cost is just a modest
-  //    top-up, not a second grind wall. A gentle ascending ladder (50 → 110) so
-  //    deeper unlocks cost a touch more, but none are a slog once you can reach
-  //    the depth that gates them. ─────────────────────────────────────────────
+  //    game (raids, voyages, fishing forever). Cost ≈ gate × 10 — the depth
+  //    requirement is the real limiter, so Fathoms are a modest top-up, not a
+  //    second grind wall. Tireless Catcher is the exception (110, under its
+  //    ladder spot): its depth-16 gate already does plenty of gating. ─────────
   {
     id: 'safe_voyages',
     name: 'Safe Passage',
     description: 'Your crew never dies on voyages. Sail any route risk-free.',
     depthRequired: 8,
-    cost: 50,
+    cost: 80,
     scope: 'world',
     category: 'voyages',
   },
@@ -156,7 +155,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Extra Cannonball Rack',
     description: 'Hold 4 cannonballs in raids instead of 3, so one stays loaded right after you fire a volley.',
     depthRequired: 10,
-    cost: 65,
+    cost: 100,
     scope: 'account',
     category: 'raids',
   },
@@ -165,7 +164,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Swift Sails',
     description: 'Your crew voyages return 30% faster — less waiting, more sailing.',
     depthRequired: 12,
-    cost: 80,
+    cost: 120,
     scope: 'world',
     category: 'voyages',
   },
@@ -174,7 +173,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'Seasoned Timbers',
     description: 'Your repair kit patches you up 25% more in every raid.',
     depthRequired: 14,
-    cost: 95,
+    cost: 140,
     scope: 'account',
     category: 'raids',
   },
