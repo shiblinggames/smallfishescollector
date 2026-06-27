@@ -15,18 +15,12 @@ import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { RARITY_NAMES, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { grantXPToCrewIds, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
+import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-const BASE_VOYAGE_MS = 3 * 60 * 60 * 1000 // 3 hours baseline (halved from 6)
-
-function computeVoyageDuration(expeditionLevel: number, totalNav: number): number {
-  const levelReductionMs = 90 * Math.pow(expeditionLevel / 100, 2) * 60 * 1000
-  const navReductionMs = Math.min(90 * 60 * 1000, 90 * Math.pow(totalNav / 75, 2) * 60 * 1000)
-  return Math.max(BASE_VOYAGE_MS * 0.5, BASE_VOYAGE_MS - levelReductionMs - navReductionMs)
-}
 
 export interface DailyVoyage {
   id: number
@@ -187,7 +181,7 @@ export async function sendDailyVoyage(route: VoyageRoute = 'open'): Promise<
   const expeditionLevel = getLevelFromXP(profile.expedition_xp ?? 0)
   const totalNav = crew.reduce((s, c, i) => s + Math.round(c.dodge * (i === 0 ? 1 : 0.8)), 0)
   // Swift Sails (Locker Upgrade) shortens the wait.
-  const duration_ms = Math.round(computeVoyageDuration(expeditionLevel, totalNav) * gauntletVoyageSpeedMult(gauntletUpgrades))
+  const duration_ms = Math.round(computeVoyageDurationMs(expeditionLevel, totalNav) * gauntletVoyageSpeedMult(gauntletUpgrades))
   const crewIds = party.map(p => p.id)
 
   const { data: voyage, error } = await admin

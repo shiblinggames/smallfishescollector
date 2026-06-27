@@ -14,18 +14,11 @@ import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, getTrawlingCrewIds, type DailyVoyage } from './voyageActions'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
+import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
 
 type PanelState = 'idle' | 'away' | 'returned' | 'done'
-
-const BASE_VOYAGE_MS = 6 * 60 * 60 * 1000
-
-function computeVoyageDurationMs(expeditionLevel: number, totalNav: number): number {
-  const levelReductionMs = 90 * Math.pow(expeditionLevel / 100, 2) * 60 * 1000
-  const navReductionMs = Math.min(90 * 60 * 1000, 90 * Math.pow(totalNav / 75, 2) * 60 * 1000)
-  return Math.max(BASE_VOYAGE_MS * 0.5, BASE_VOYAGE_MS - levelReductionMs - navReductionMs)
-}
 
 function formatDuration(ms: number): string {
   const totalMin = Math.round(ms / 60000)
@@ -401,7 +394,7 @@ export default function DailyVoyagePanel({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       {([
                         ['🗺️', 'Pick a route', 'Tap a location on the map. Riskier routes pay more — but your crew might not make it back.'],
-                        ['⏳', 'They sail (up to 6 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
+                        ['⏳', 'They sail (up to 3 hours)', 'Events unfold along the way. Higher Nav and expedition level reduce voyage time. Check back to watch the story.'],
                         ['💰', 'Claim your loot', 'When they return, collect doubloons, gems, and rare drops.'],
                         ['☠️', 'Crew can die', 'On dangerous routes, crew members can be lost at sea — permanently. Crew Fortune cuts the risk, all the way to zero. Deeper routes need more Fortune to sail safe.'],
                       ] as [string, string, string][]).map(([icon, title, desc]) => (
