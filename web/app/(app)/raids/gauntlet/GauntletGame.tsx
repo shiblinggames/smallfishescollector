@@ -148,6 +148,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [pendingReprieve, setPendingReprieve] = useState<Reprieve | null>(null)
   // Second Cast: rerolls left on the CURRENT boon draft (set when it opens).
   const [rerollsLeft, setRerollsLeft] = useState(0)
+  // Calm Before: spent once it has waved off the player's FIRST curse milestone
+  // (whatever depth that is — Veteran's Start can move it off depth 4).
+  const calmBeforeUsedRef = useRef(false)
   // True for the fight that OPENS right after crew abilities were restored (a
   // boss kill or a Beat to Quarters reprieve) — drives the obvious in-combat
   // "abilities restored" banner. crewRefreshedRef accumulates between fights;
@@ -288,6 +291,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
+      calmBeforeUsedRef.current = false
       anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
       setFight(generateFight(rollStateRef.current, skipOffset))
@@ -360,8 +364,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     // branch below is kept defensive in case the two ever share a depth.
     // Combat depth (Veteran's Start shifts the boon/curse cadence up too).
     const nextDepth = clearedNow + 1 + skipOffset
-    const skipFirstCurse = nextDepth === CURSE_DEPTHS[0] && gauntletSkipsFirstCurse(props.gauntletUpgrades)
-    const curse = (CURSE_DEPTHS.includes(nextDepth) && !skipFirstCurse)
+    const atCurseDepth = CURSE_DEPTHS.includes(nextDepth)
+    // Calm Before waves off the FIRST curse milestone the player actually hits,
+    // not a hardcoded depth — so it still works under Veteran's Start, which
+    // starts past depth 4. Spent the moment it fires.
+    const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(props.gauntletUpgrades)
+    if (skipFirstCurse) calmBeforeUsedRef.current = true
+    const curse = (atCurseDepth && !skipFirstCurse)
       ? drawCurse(curseTiersRef.current, nextDepth)
       : null
     const boonDue = BOON_DEPTHS.includes(nextDepth)
