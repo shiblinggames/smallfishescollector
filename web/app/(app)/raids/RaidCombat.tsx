@@ -818,7 +818,17 @@ export default function RaidCombat({
   // beat) + a tiny scale punch; volley is a smaller pure shake. Only crit /
   // volley fire it, per the juice rule (nothing screen-wide on normal hits).
   const stageShakeCtrl = useAnimation()
-  const cameraShake = useCallback((kind: 'crit' | 'volley') => {
+  const cameraShake = useCallback((kind: 'crit' | 'volley' | 'nuke') => {
+    if (kind === 'nuke') {
+      // Heaviest shake — the silo impact. Bigger throw, longer settle, a real heave.
+      stageShakeCtrl.start({
+        x:     [0, 0, -13, 12, -10, 8, -6, 4, -2, 0],
+        y:     [0, 0, 6, -5, 4, -3, 2, -1, 0, 0],
+        scale: [1, 1, 1.055, 0.992, 1.03, 0.996, 1.015, 1, 1, 1],
+        transition: { duration: 0.72, times: [0, 0.12, 0.26, 0.4, 0.52, 0.64, 0.76, 0.86, 0.94, 1], ease: 'easeOut' },
+      })
+      return
+    }
     if (kind === 'crit') {
       stageShakeCtrl.start({
         x:     [0, 0, -7, 6, -5, 3, -2, 0],
@@ -2492,7 +2502,8 @@ export default function RaidCombat({
           }
           setNukeMissile({ key: Date.now() + i, color: megaColor, x1: mx1, y1: my1, x2: mx2, y2: my2, dur: flightMs })
           playStepChainRef.current.push(setTimeout(() => setNukeMissile(null), flightMs + 90))
-          vibrate([0, 30, 50, 20])
+          cameraShake('volley')           // lift-off rumble (the boom comes on impact)
+          vibrate([0, 45, 60, 25])
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
           // burst, so a volley fires visibly as a salvo, not one shot.
@@ -2538,7 +2549,7 @@ export default function RaidCombat({
               const heavy = step.big || megaId === 'nuke' || megaId === 'railgun'
               setEnemyShakeKind(heavy ? 'crit' : isVolleyShot ? 'volley' : 'hit')
               setEnemyShakeKey(k => k + 1)
-              if (heavy) cameraShake('crit')
+              if (heavy) cameraShake(megaId === 'nuke' ? 'nuke' : 'crit')
               else if (isVolleyShot) { cameraShake('volley'); vibrate([0, 22, 26, 30]) }
             }
             if (!isDodged) {
@@ -4806,25 +4817,33 @@ function NukeMissile({ color, x1, y1, x2, y2, dur }: { color: string; x1: number
         animate={{ opacity: [0, 0.5, 0], scaleY: [0.3, 1, 1.2] }}
         transition={{ duration: 0.9, times: [0, 0.3, 1], ease: 'easeOut' }}
         style={{ position: 'absolute', left: x1, top: y1 - 26, width: 22, height: 56, marginLeft: -11, borderRadius: 12, transformOrigin: 'bottom center', zIndex: 16, pointerEvents: 'none', background: 'linear-gradient(0deg, rgba(70,50,40,0.55), rgba(120,120,120,0.25) 60%, transparent)', filter: 'blur(3px)' }} />
-      {/* Missile + exhaust — moving wrapper rides the parabola, accelerating in. */}
+      {/* Ignition flash — a hard white pop at the instant of lift-off. */}
       <motion.div aria-hidden
-        initial={{ x: 0, y: 0, rotate: -68, opacity: 0 }}
-        animate={{ x: [0, dx * 0.5, dx], y: [0, apexY, dy], rotate: [-68, -6, 58], opacity: [0, 1, 1, 1] }}
-        transition={{ duration: d, times: [0, 0.45, 1], ease: 'easeIn' }}
+        initial={{ opacity: 0.95, scale: 0.3 }}
+        animate={{ opacity: 0, scale: 1.9 }}
+        transition={{ duration: 0.26, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1, width: 46, height: 46, marginLeft: -23, marginTop: -23, borderRadius: '50%', zIndex: 18, pointerEvents: 'none', background: 'radial-gradient(circle, #ffffff 0%, #ffe6b0 55%, transparent 78%)' }} />
+      {/* Missile + trail — moving wrapper. Horizontal speed is constant and the
+          vertical rides a gravity curve, so there's no hitch at the apex. */}
+      <motion.div aria-hidden
+        initial={{ x: 0, y: 0, rotate: -50, opacity: 0 }}
+        animate={{ x: [0, dx], y: [0, apexY, dy], rotate: [-50, 2, 54], opacity: 1 }}
+        transition={{
+          duration: d,
+          x: { ease: 'linear' },
+          y: { ease: ['easeOut', 'easeIn'], times: [0, 0.42, 1] },
+          rotate: { ease: 'easeInOut', times: [0, 0.42, 1] },
+          opacity: { duration: 0.1 },
+        }}
         style={{ position: 'absolute', left: x1, top: y1, zIndex: 18, pointerEvents: 'none' }}
       >
-        {/* Exhaust trail — tapering fire behind the tail (nose points right). */}
+        {/* Comet trail — a tapering flame streak behind the shell. */}
         <motion.div aria-hidden
-          animate={{ opacity: [0.5, 1, 0.85] }}
-          transition={{ duration: 0.18, repeat: Infinity, repeatType: 'mirror' }}
-          style={{ position: 'absolute', left: -52, top: -5, width: 52, height: 10, borderRadius: 6, background: `linear-gradient(90deg, transparent 0%, ${color}88 40%, ${color} 70%, #ffd27a 100%)`, filter: 'blur(2.5px)' }} />
-        {/* Missile body. */}
-        <div style={{ position: 'absolute', left: -13, top: -4.5, width: 26, height: 9, borderRadius: 6, background: 'linear-gradient(90deg, #94a3b8, #f8fafc)', boxShadow: `0 0 10px ${color}` }}>
-          {/* Nose cone. */}
-          <div style={{ position: 'absolute', left: '100%', top: -0.5, width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '8px solid #ef4444' }} />
-          {/* Tail fin. */}
-          <div style={{ position: 'absolute', right: -2, top: -3, width: 6, height: 15, borderRadius: 2, background: '#cbd5e1' }} />
-        </div>
+          animate={{ opacity: [0.6, 1, 0.8], scaleX: [0.9, 1, 0.92] }}
+          transition={{ duration: 0.16, repeat: Infinity, repeatType: 'mirror' }}
+          style={{ position: 'absolute', left: -46, top: -4, width: 46, height: 8, transformOrigin: 'right center', borderRadius: 5, background: `linear-gradient(90deg, transparent 0%, ${color}77 45%, ${color} 78%, #ffe6b0 100%)`, filter: 'blur(2px)' }} />
+        {/* Shell — a sleek elongated slug, hot at the nose. Simple, no hard edges. */}
+        <div style={{ position: 'absolute', left: -13, top: -3.5, width: 26, height: 8, borderRadius: '45% 60% 60% 45% / 50%', background: 'linear-gradient(90deg, #2b3340 0%, #5b6675 46%, #ffd9a0 86%, #ffffff 100%)', boxShadow: `0 0 9px 1px ${color}` }} />
       </motion.div>
     </>
   )
@@ -4847,9 +4866,9 @@ function NukeBlast({ color }: { color: string }) {
   }), [])
   return (
     <>
-      {/* White flash core — the instant of detonation. */}
-      <motion.div aria-hidden initial={{ scale: 0.25, opacity: 1 }} animate={{ scale: 2.3, opacity: 0 }} transition={{ duration: 0.34, ease: 'easeOut' }}
-        style={{ position: 'absolute', inset: '4%', borderRadius: '50%', pointerEvents: 'none', zIndex: 8, background: 'radial-gradient(circle, #ffffff 0%, #fff4d6 50%, transparent 74%)' }} />
+      {/* White flash core — a hard, snappy punch at the instant of detonation. */}
+      <motion.div aria-hidden initial={{ scale: 0.2, opacity: 1 }} animate={{ scale: [0.2, 1.4, 2.9], opacity: [1, 1, 0] }} transition={{ duration: 0.3, times: [0, 0.4, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '2%', borderRadius: '50%', pointerEvents: 'none', zIndex: 8, background: 'radial-gradient(circle, #ffffff 0%, #fff4d6 52%, transparent 74%)' }} />
       {/* Fireball — blooms big and slow, white-hot fading to the augment colour. */}
       <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 2.4, 3.6], opacity: [0, 1, 0] }} transition={{ duration: 0.95, times: [0, 0.35, 1], ease: 'easeOut' }}
         style={{ position: 'absolute', inset: '-6%', borderRadius: '50%', pointerEvents: 'none', zIndex: 7, background: `radial-gradient(circle, #ffffff 0%, #ffd27a 30%, ${color} 58%, transparent 74%)` }} />
