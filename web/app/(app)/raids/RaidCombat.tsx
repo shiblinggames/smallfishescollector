@@ -4666,33 +4666,35 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 // a steely plate-flex ring + a hard glint + sparks scattering sideways/down
 // (deflected, not penetrating). Reads as "blocked — volley to crack it".
 // ── Man-o-War Mega FX ─────────────────────────────────────────────────────────
-// Railgun: a Pokémon-style HYPER BEAM — a charge orb at the muzzle, then a thick
-// white-hot beam erupts across the stage into the enemy hull, held, then fades.
+// Railgun: a Pokémon-style HYPER BEAM — a charge orb at the player's guns, then a
+// thick white-hot beam erupts UP AND TO THE RIGHT into the enemy hull (the player
+// sits lower-left, the enemy upper-right), held, then fades.
 function RailgunBeam({ color }: { color: string }) {
-  // The beam is vertically centred at ~55% of the stage (the enemy's hull line)
-  // via `top` so framer's scaleX animation never clobbers a translate.
+  // Anchor at the player's muzzle (lower-left) and rake the beam up to the enemy.
+  // The rotate lives in `style` and composes with framer's scaleX eruption.
+  const LEFT = '42%', TOP = '64%', ANGLE = -25, WIDTH = '56%'
   return (
     <>
-      {/* Charge orb at the player's guns, flares as the beam erupts. */}
+      {/* Charge orb at the muzzle, flares as the beam erupts. */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scale: 0.3 }}
         animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1.6, 1.2, 0.5] }}
         transition={{ duration: 0.6, times: [0, 0.22, 0.7, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: '3%', top: 'calc(55% - 28px)', width: 56, height: 56, borderRadius: '50%', zIndex: 5, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 74%)`, boxShadow: `0 0 34px 8px ${color}` }} />
+        style={{ position: 'absolute', left: LEFT, top: `calc(${TOP} - 28px)`, width: 56, height: 56, marginLeft: -10, borderRadius: '50%', zIndex: 6, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 74%)`, boxShadow: `0 0 34px 8px ${color}` }} />
       {/* Outer glow beam (soft, wide). */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scaleX: 0 }}
         animate={{ opacity: [0, 0.85, 0.85, 0], scaleX: [0, 1, 1, 1] }}
         transition={{ duration: 0.72, times: [0, 0.16, 0.62, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: '5%', right: '12%', top: 'calc(55% - 26px)', height: 52, transformOrigin: 'left center', borderRadius: 30, zIndex: 5, pointerEvents: 'none', background: `${color}66`, filter: 'blur(8px)' }} />
+        style={{ position: 'absolute', left: LEFT, top: `calc(${TOP} - 26px)`, width: WIDTH, height: 52, transformOrigin: 'left center', rotate: ANGLE, borderRadius: 30, zIndex: 5, pointerEvents: 'none', background: `${color}66`, filter: 'blur(8px)' }} />
       {/* Core beam — white-hot, thick. */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scaleX: 0 }}
         animate={{ opacity: [0, 1, 1, 0.9, 0], scaleX: [0, 1, 1, 1, 1] }}
         transition={{ duration: 0.72, times: [0, 0.16, 0.6, 0.85, 1], ease: 'easeOut' }}
         style={{
-          position: 'absolute', left: '5%', right: '13%', top: 'calc(55% - 13px)', height: 26,
-          transformOrigin: 'left center', borderRadius: 18, zIndex: 6, pointerEvents: 'none',
+          position: 'absolute', left: LEFT, top: `calc(${TOP} - 13px)`, width: WIDTH, height: 26,
+          transformOrigin: 'left center', rotate: ANGLE, borderRadius: 18, zIndex: 6, pointerEvents: 'none',
           background: `linear-gradient(90deg, ${color} 0%, #ffffff 35%, #ffffff 82%, ${color} 100%)`,
           boxShadow: `0 0 22px 4px ${color}, 0 0 54px 10px ${color}cc`,
         }} />
