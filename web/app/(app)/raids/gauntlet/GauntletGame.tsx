@@ -146,6 +146,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   // surface alongside the boons in later rounds. Taking it means forgoing the
   // boon draft (give up upgrade potential for immediate relief).
   const [pendingReprieve, setPendingReprieve] = useState<Reprieve | null>(null)
+  // True for the fight that OPENS right after crew abilities were restored (a
+  // boss kill or a Beat to Quarters reprieve) — drives the obvious in-combat
+  // "abilities restored" banner. crewRefreshedRef accumulates between fights;
+  // pushOn snapshots it into the state the next fight reads.
+  const [fightOpensRefreshed, setFightOpensRefreshed] = useState(false)
+  const crewRefreshedRef = useRef(false)
   // Curses — the Locker's escalating, permanent run modifiers.
   // Active curses as id -> tier (1 or 2), mirroring the boon system. Tier 2
   // deepens a curse already on you (from CURSE_TIER2_DEPTH). The ref backs the
@@ -279,6 +285,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setPendingCurse(null)
       setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
       peekFightRef.current = null; setPeekFight(null)
+      crewRefreshedRef.current = false; setFightOpensRefreshed(false)
       anchorSavesLeftRef.current = getActiveEffects(props.equippedItems)
         .filter(e => e.type === 'lethal_save').reduce((a, e) => a + e.value, 0)
       setFight(generateFight(rollStateRef.current, skipOffset))
@@ -342,7 +349,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Crew abilities refresh after each BOSS kill (a natural "catch your breath"
     // beat) plus at run start. Keys off the actual fight, not a depth counter,
     // so Veteran's Start can't desync it. The on-demand Reprieve fills the gaps.
-    if (f.isBoss) setUsedAbilityIds(new Set())
+    if (f.isBoss) { setUsedAbilityIds(new Set()); crewRefreshedRef.current = true }
 
     // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
     // BOON_DEPTH). They sit on different depths so the run alternates toll and
@@ -364,7 +371,9 @@ export default function GauntletGame(props: GauntletGameProps) {
         // Reprieve: in later rounds, sometimes a one-time relief card surfaces
         // alongside the boons (replacing the old random heal-tide's job, but as
         // a deliberate choice). Taking it forgoes the boon draft.
-        setPendingReprieve(nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE ? drawReprieve() : null)
+        setPendingReprieve(nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE
+          ? drawReprieve({ curseCount: Object.keys(curseTiersRef.current).length })
+          : null)
       }
       if (curse) { setPendingCurse(curse); setPhase('curse') }
       else setPhase('boon')
@@ -410,6 +419,20 @@ export default function GauntletGame(props: GauntletGameProps) {
       setPlayerHP(healed)
     } else if (r.kind === 'crew') {
       setUsedAbilityIds(new Set()) // every crew ability loaded fresh
+      crewRefreshedRef.current = true
+    } else if (r.kind === 'charges') {
+      // Open the next fight with the gun deck run out (carryover plumbing).
+      carriedChargesRef.current = 3 + bonusChargeSlots(props.gauntletUpgrades)
+    } else if (r.kind === 'cleanse') {
+      // Shed one random active curse.
+      const owned = Object.keys(curseTiersRef.current)
+      if (owned.length > 0) {
+        const drop = owned[Math.floor(Math.random() * owned.length)]
+        const next = { ...curseTiersRef.current }
+        delete next[drop]
+        curseTiersRef.current = next
+        setCurseTiers(next)
+      }
     }
     setPendingReprieve(null)
     setPendingBoons(null)
@@ -452,6 +475,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     const next = peekFightRef.current ?? generateFight(rollStateRef.current, skipOffset)
     peekFightRef.current = null
     setPeekFight(null)
+    // Snapshot whether this fight opens with freshly restored abilities, then
+    // clear the accumulator for the next stretch.
+    setFightOpensRefreshed(crewRefreshedRef.current)
+    crewRefreshedRef.current = false
     setFight(next)
     setPhase('descending')
   }
@@ -1322,6 +1349,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             tideEffects={[...boonEffects(boonTiers), ...curseEffects(curseTiers)]}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
+            abilitiesRefreshed={fightOpensRefreshed}
             onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
               if (prev.has(crewId)) return prev
               const next = new Set(prev); next.add(crewId); return next

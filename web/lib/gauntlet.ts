@@ -287,22 +287,26 @@ export interface Reprieve {
   flavor: string
   /** Short plain effect line shown on the card. */
   desc: string
-  kind: 'heal' | 'crew'
+  kind: 'heal' | 'crew' | 'charges' | 'cleanse'
   /** For 'heal': fraction of MAX HP restored. Ignored otherwise. */
   amount: number
 }
 export const REPRIEVES: Reprieve[] = [
-  { id: 'patch_hull',       name: 'Patch the Hull',   flavor: 'A frantic hour at the pumps buys back the worst of the damage.', desc: 'Heal 75% of your max HP', kind: 'heal', amount: 0.75 },
-  { id: 'beat_to_quarters', name: 'Beat to Quarters', flavor: 'The bosun pipes all hands. Every gun and trick comes up loaded.',  desc: 'Refresh every crew ability',  kind: 'crew', amount: 0 },
+  { id: 'patch_hull',       name: 'Patch the Hull',   flavor: 'A frantic hour at the pumps buys back the worst of the damage.', desc: 'Heal 75% of your max HP',       kind: 'heal',    amount: 0.75 },
+  { id: 'beat_to_quarters', name: 'Beat to Quarters', flavor: 'The bosun pipes all hands. Every gun and trick comes up loaded.',  desc: 'Refresh every crew ability',    kind: 'crew',    amount: 0 },
+  { id: 'load_the_guns',    name: 'Load the Guns',    flavor: 'You come in at full sail with the gun deck already run out.',      desc: 'Open your next fight fully chambered', kind: 'charges', amount: 0 },
+  { id: 'shake_the_curse',  name: 'Shake the Curse',  flavor: 'You throw something dark over the side. The deep takes it back.', desc: 'Shed one of your active curses', kind: 'cleanse', amount: 0 },
 ]
 /** Combat depth at/after which a Reprieve can appear on a boon screen. The first
  *  eligible boon draft is depth 8 (the boon screens are at 2/5/8/11/...). */
 export const REPRIEVE_MIN_DEPTH = 6
 /** Chance a Reprieve surfaces on an eligible boon screen. */
 export const REPRIEVE_CHANCE = 0.55
-/** Pick one Reprieve to offer. */
-export function drawReprieve(): Reprieve {
-  return REPRIEVES[Math.floor(Math.random() * REPRIEVES.length)]
+/** Pick one Reprieve to offer. `curseCount` lets us drop the cleanse option when
+ *  there's nothing to cleanse, so it's never a dead card. */
+export function drawReprieve(ctx: { curseCount: number } = { curseCount: 0 }): Reprieve {
+  const pool = REPRIEVES.filter(r => r.kind !== 'cleanse' || ctx.curseCount > 0)
+  return pool[Math.floor(Math.random() * pool.length)]
 }
 
 // ── Cash-out chest ───────────────────────────────────────────────────────────

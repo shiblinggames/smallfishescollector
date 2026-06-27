@@ -330,6 +330,10 @@ export interface RaidCombatProps {
    *  All optional so practice raid (which uses no crew) still works. */
   crewMembers?: import('./actions').RaidCrewMember[]
   usedAbilityIds?: Set<number>
+  /** When true, this fight OPENS with crew abilities freshly restored — drives a
+   *  prominent one-shot "Crew Abilities Restored" banner so the refresh is
+   *  obvious (Gauntlet: a boss kill or a Beat to Quarters reprieve). */
+  abilitiesRefreshed?: boolean
   onAbilityFired?: (crewId: number) => void
   /** Sub-text shown on a USED crew-ability card. Defaults to the campaign's
    *  'Already used this raid.'; the Gauntlet overrides it (rounds cooldown). */
@@ -360,7 +364,7 @@ export default function RaidCombat({
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
   atmosphere = 'dusk',
-  crewMembers = [], usedAbilityIds, onAbilityFired,
+  crewMembers = [], usedAbilityIds, abilitiesRefreshed = false, onAbilityFired,
   usedAbilitySub = 'Already used this raid.', openingNote,
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
@@ -3715,6 +3719,23 @@ export default function RaidCombat({
         )}
       </div>
 
+      {/* Crew abilities restored — a one-shot banner so the refresh is obvious
+          (CSS animation runs once on mount; it ends invisible + click-through).
+          Centered via a flex wrap so the keyframe's transform doesn't clobber it. */}
+      {abilitiesRefreshed && (
+        <div aria-hidden style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 70px)', left: 0, right: 0, zIndex: 95, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 1.05rem', borderRadius: 999,
+            background: 'rgba(8,20,28,0.92)', border: '1px solid rgba(110,231,214,0.6)',
+            boxShadow: '0 0 28px rgba(110,231,214,0.3), 0 8px 24px rgba(0,0,0,0.5)', whiteSpace: 'nowrap',
+            animation: 'rc-ability-banner 2.6s ease forwards',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6ee7d6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v13" /><circle cx="12" cy="5" r="2.4" /><path d="M5 12a7 7 0 0 0 14 0" /></svg>
+            <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.74rem', letterSpacing: '0.08em', color: '#aef5e8' }}>Crew Abilities Restored</span>
+          </div>
+        </div>
+      )}
+
       {/* Full-screen crit flash — fixed, matches the existing raid */}
       {critFlash && (
         <div style={{
@@ -3795,6 +3816,12 @@ export default function RaidCombat({
         @keyframes rc-crit-flash {
           0%   { opacity: 1; }
           100% { opacity: 0; }
+        }
+        @keyframes rc-ability-banner {
+          0%   { opacity: 0; transform: translateY(-14px) scale(0.88); }
+          12%  { opacity: 1; transform: translateY(0) scale(1); }
+          82%  { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-8px) scale(0.96); }
         }
         @keyframes rc-phase-flash {
           0%   { opacity: 0; }
