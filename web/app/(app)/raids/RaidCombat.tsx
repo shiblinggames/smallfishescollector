@@ -2452,17 +2452,18 @@ export default function RaidCombat({
           // back to stage-relative proportions so the beam ALWAYS fires.
           let x1: number, y1: number, x2: number, y2: number
           if (stg && ps && es) {
-            x1 = ps.right - stg.left - ps.width * 0.18   // just inside the bow
-            y1 = ps.top   - stg.top  + ps.height * 0.30  // upper deck
-            x2 = es.left  - stg.left + es.width * 0.50   // enemy centre
-            y2 = es.top   - stg.top  + es.height * 0.45
+            x1 = ps.left  - stg.left + ps.width * 0.56   // back from the bow, closer to the ship
+            y1 = ps.top   - stg.top  + ps.height * 0.32  // upper deck
+            x2 = es.left  - stg.left + es.width * 0.52   // enemy centre
+            y2 = es.top   - stg.top  + es.height * 0.46
           } else {
             const W = stg?.width ?? 360, H = stg?.height ?? 400
-            x1 = W * 0.50; y1 = H * 0.60
+            x1 = W * 0.42; y1 = H * 0.60
             x2 = W * 0.78; y2 = H * 0.50
           }
           const dx = x2 - x1, dy = y2 - y1
-          const len = Math.max(60, Math.hypot(dx, dy))
+          // Slight overshoot so the lance punches into the hull, not short of it.
+          const len = Math.max(60, Math.hypot(dx, dy) * 1.06)
           const angle = Math.atan2(dy, dx) * 180 / Math.PI
           setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
           playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 920))
@@ -4712,47 +4713,41 @@ function RailgunBeam({ color, x1, y1, len, angle }: { color: string; x1: number;
   const ey = y1 + Math.sin(rad) * len
   return (
     <>
-      {/* Muzzle blast — a hard flash of charge as the beam erupts. */}
+      {/* Muzzle spark — a small, soft flare as the lance leaves the gun. */}
       <motion.div aria-hidden
-        initial={{ opacity: 0, scale: 0.2 }}
-        animate={{ opacity: [0, 1, 0.85, 0], scale: [0.2, 2.1, 1.3, 0.5] }}
-        transition={{ duration: 0.62, times: [0, 0.16, 0.6, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: x1, top: y1, width: 78, height: 78, marginLeft: -39, marginTop: -39, borderRadius: '50%', zIndex: 21, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 46%, transparent 72%)`, boxShadow: `0 0 48px 14px ${color}` }} />
-      {/* Outer glow beam (soft, wide) — swells then throbs. */}
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 0.85, 0], scale: [0.3, 1.2, 0.6] }}
+        transition={{ duration: 0.5, times: [0, 0.3, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1, width: 34, height: 34, marginLeft: -17, marginTop: -17, borderRadius: '50%', zIndex: 21, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 74%)`, boxShadow: `0 0 18px 5px ${color}` }} />
+      {/* Outer glow — a thin halo hugging the lance. */}
       <motion.div aria-hidden
-        initial={{ opacity: 0, scaleX: 0, scaleY: 0.6 }}
-        animate={{ opacity: [0, 0.9, 0.72, 0.85, 0], scaleX: [0, 1, 1, 1, 1], scaleY: [0.6, 1.3, 1, 1.18, 0.85] }}
-        transition={{ duration: 0.82, times: [0, 0.14, 0.46, 0.72, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: x1, top: y1 - 34, width: len, height: 68, transformOrigin: 'left center', rotate: angle, borderRadius: 40, zIndex: 19, pointerEvents: 'none', background: `${color}77`, filter: 'blur(11px)' }} />
-      {/* Core beam — white-hot, thick, breathing height for weight. */}
+        initial={{ opacity: 0, scaleX: 0 }}
+        animate={{ opacity: [0, 0.7, 0.6, 0], scaleX: [0, 1, 1, 1] }}
+        transition={{ duration: 0.7, times: [0, 0.12, 0.6, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1 - 9, width: len, height: 18, transformOrigin: 'left center', rotate: angle, borderRadius: 10, zIndex: 19, pointerEvents: 'none', background: `${color}66`, filter: 'blur(5px)' }} />
+      {/* Core lance — slim, white-hot, crisp. */}
       <motion.div aria-hidden
-        initial={{ opacity: 0, scaleX: 0, scaleY: 0.45 }}
-        animate={{ opacity: [0, 1, 1, 0.95, 0], scaleX: [0, 1, 1, 1, 1], scaleY: [0.45, 1.32, 1, 1.2, 0.75] }}
-        transition={{ duration: 0.82, times: [0, 0.12, 0.5, 0.78, 1], ease: 'easeOut' }}
+        initial={{ opacity: 0, scaleX: 0 }}
+        animate={{ opacity: [0, 1, 1, 0.95, 0], scaleX: [0, 1, 1, 1, 1] }}
+        transition={{ duration: 0.7, times: [0, 0.1, 0.55, 0.8, 1], ease: 'easeOut' }}
         style={{
-          position: 'absolute', left: x1, top: y1 - 17, width: len, height: 34,
-          transformOrigin: 'left center', rotate: angle, borderRadius: 20, zIndex: 20, pointerEvents: 'none',
-          background: `linear-gradient(90deg, ${color} 0%, #ffffff 30%, #ffffff 84%, ${color} 100%)`,
-          boxShadow: `0 0 28px 6px ${color}, 0 0 66px 14px ${color}cc`,
+          position: 'absolute', left: x1, top: y1 - 5, width: len, height: 10,
+          transformOrigin: 'left center', rotate: angle, borderRadius: 6, zIndex: 20, pointerEvents: 'none',
+          background: `linear-gradient(90deg, ${color} 0%, #ffffff 28%, #ffffff 86%, ${color} 100%)`,
+          boxShadow: `0 0 12px 2px ${color}, 0 0 30px 6px ${color}aa`,
         }} />
-      {/* Inner lance — an ultra-bright hairline that reads as the bolt's spine. */}
+      {/* Inner spine — a bright hairline down the centre. */}
       <motion.div aria-hidden
         initial={{ opacity: 0, scaleX: 0 }}
         animate={{ opacity: [0, 1, 1, 0], scaleX: [0, 1, 1, 1] }}
-        transition={{ duration: 0.72, times: [0, 0.1, 0.62, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: x1, top: y1 - 4, width: len, height: 8, transformOrigin: 'left center', rotate: angle, borderRadius: 6, zIndex: 21, pointerEvents: 'none', background: '#ffffff', boxShadow: '0 0 18px 4px #ffffff' }} />
-      {/* Impact flare at the hull — the hard hit where the beam lands. */}
+        transition={{ duration: 0.66, times: [0, 0.1, 0.62, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1 - 2, width: len, height: 4, transformOrigin: 'left center', rotate: angle, borderRadius: 3, zIndex: 21, pointerEvents: 'none', background: '#ffffff', boxShadow: '0 0 10px 2px #ffffff' }} />
+      {/* Impact glow at the hull — a soft burn where the lance lands. */}
       <motion.div aria-hidden
-        initial={{ opacity: 0, scale: 0.3 }}
-        animate={{ opacity: [0, 1, 0.8, 0], scale: [0.3, 1.9, 2.5, 0.6] }}
-        transition={{ duration: 0.74, delay: 0.08, times: [0, 0.2, 0.6, 1], ease: 'easeOut' }}
-        style={{ position: 'absolute', left: ex, top: ey, width: 94, height: 94, marginLeft: -47, marginTop: -47, borderRadius: '50%', zIndex: 21, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 44%, transparent 70%)`, boxShadow: `0 0 52px 16px ${color}` }} />
-      {/* Impact shock ring — punches out from the strike point. */}
-      <motion.div aria-hidden
-        initial={{ opacity: 0.9, scale: 0.2 }}
-        animate={{ opacity: 0, scale: 2.6 }}
-        transition={{ duration: 0.52, delay: 0.12, ease: 'easeOut' }}
-        style={{ position: 'absolute', left: ex, top: ey, width: 72, height: 72, marginLeft: -36, marginTop: -36, borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 26px ${color}`, zIndex: 20, pointerEvents: 'none' }} />
+        initial={{ opacity: 0, scale: 0.4 }}
+        animate={{ opacity: [0, 0.9, 0], scale: [0.4, 1.3, 0.8] }}
+        transition={{ duration: 0.6, delay: 0.06, times: [0, 0.35, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: ex, top: ey, width: 48, height: 48, marginLeft: -24, marginTop: -24, borderRadius: '50%', zIndex: 21, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 48%, transparent 72%)`, boxShadow: `0 0 24px 7px ${color}` }} />
     </>
   )
 }
