@@ -4672,7 +4672,7 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 function RailgunBeam({ color }: { color: string }) {
   // Anchor at the player's muzzle (lower-left) and rake the beam up to the enemy.
   // The rotate lives in `style` and composes with framer's scaleX eruption.
-  const LEFT = '42%', TOP = '64%', ANGLE = -25, WIDTH = '56%'
+  const LEFT = '50%', TOP = '56%', ANGLE = -25, WIDTH = '48%'
   return (
     <>
       {/* Charge orb at the muzzle, flares as the beam erupts. */}
