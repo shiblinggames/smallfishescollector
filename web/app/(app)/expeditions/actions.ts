@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItemFamilies } from '@/lib/raidItems'
+import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
+import { getShipAugment, canChooseAugment, AUGMENT_COST } from '@/lib/shipAugments'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -168,4 +170,43 @@ export async function equipShipSkin(skinId: string | null): Promise<void> {
     if (!owned.includes(skinId)) return
   }
   await admin.from('profiles').update({ equipped_ship_skin: skinId }).eq('id', user.id)
+}
+
+/** Choose (and permanently lock in) a Man-o-War volley augment. One-time purchase
+ *  for AUGMENT_COST doubloons; gated on owning the Man-o-War at Nav 70. The
+ *  conditional `.is(manowar_augment, null)` write makes it idempotent — a double
+ *  tap can't double-charge or overwrite an existing pick. */
+export async function chooseShipAugment(id: string): Promise<{ ok: boolean; error?: string; doubloons?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+  const augment = getShipAugment(id)
+  if (!augment) return { ok: false, error: 'Unknown augment.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('ship_tier, expedition_xp, doubloons, manowar_augment').eq('id', user.id).single()
+  if (!profile) return { ok: false, error: 'No profile.' }
+  if (profile.manowar_augment) return { ok: false, error: 'Your ship is already augmented. The choice is permanent.' }
+
+  const navLevel = navLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+  if (!canChooseAugment((profile.ship_tier as number | null) ?? 0, navLevel)) {
+    return { ok: false, error: 'Requires the Man-o-War at Navigation level 70.' }
+  }
+  const doubloons = (profile.doubloons as number | null) ?? 0
+  if (doubloons < AUGMENT_COST) return { ok: false, error: `You need ${AUGMENT_COST.toLocaleString()} doubloons.` }
+
+  const newDoubloons = doubloons - AUGMENT_COST
+  const { data: updated } = await admin.from('profiles')
+    .update({ manowar_augment: augment.id, doubloons: newDoubloons })
+    .eq('id', user.id)
+    .is('manowar_augment', null)
+    .select('manowar_augment')
+    .maybeSingle()
+  if (!updated) return { ok: false, error: 'Could not augment the ship.' }
+
+  await admin.from('doubloon_transactions').insert({
+    user_id: user.id, amount: -AUGMENT_COST, reason: `Man-o-War augment: ${augment.name}`,
+  })
+  return { ok: true, doubloons: newDoubloons }
 }

@@ -17,7 +17,9 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem } from './actions'
+import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, chooseShipAugment } from './actions'
+import { SHIP_AUGMENTS, getShipAugment, canChooseAugment, AUGMENT_COST, MEGA_CHARGE_COST, AUGMENTS_LIVE, type ShipAugmentId } from '@/lib/shipAugments'
+import { bonusChargeSlots } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
@@ -25,7 +27,7 @@ import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/l
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingFamilyItems } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
-import { getXPProgress, navLevelBonuses, MAX_LEVEL } from '@/lib/expeditionLevel'
+import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
@@ -201,6 +203,9 @@ interface Props {
   /** Claimed Davy Jones Gauntlet locker-upgrade ids (display-only here;
    *  buying happens in the Gauntlet shop). */
   gauntletUpgrades?: string[]
+  /** The locked-in Man-o-War volley augment id, or null. */
+  manowarAugment?: string | null
+  isAdmin?: boolean
 }
 
 // Drag handle for the loadout drawer. Touching this strip starts a
@@ -273,6 +278,8 @@ export default function ShipHero({
   raidRepairOwed, doubloons,
   shipClasses,
   gauntletUpgrades = [],
+  manowarAugment: initialManowarAugment = null,
+  isAdmin = false,
 }: Props) {
   const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
@@ -396,6 +403,26 @@ export default function ShipHero({
 
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
   const raidItemSlots = raidItemSlotsForTier(shipTierForSlots)
+
+  // Man-o-War volley augment — the permanent endgame "Mega" pick.
+  const navLevelNow = navLevelFromXP(expeditionXP)
+  const augmentEligible = canChooseAugment(shipTierForSlots, navLevelNow)
+  const showAugments = (AUGMENTS_LIVE || isAdmin) && augmentEligible
+  const hasRack = bonusChargeSlots(gauntletUpgrades) > 0
+  const [augment, setAugment] = useState<string | null>(initialManowarAugment)
+  const [augmentConfirm, setAugmentConfirm] = useState<ShipAugmentId | null>(null)
+  const [augmentBusy, setAugmentBusy] = useState(false)
+  const [augmentErr, setAugmentErr] = useState<string | null>(null)
+  async function buyAugment(id: ShipAugmentId) {
+    if (augmentBusy) return
+    setAugmentBusy(true); setAugmentErr(null)
+    const res = await chooseShipAugment(id)
+    setAugmentBusy(false)
+    if (!res.ok) { setAugmentErr(res.error ?? 'Could not augment the ship.'); return }
+    setAugment(id)
+    setAugmentConfirm(null)
+    if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
+  }
 
   // Manage Ship section tab. Loadout (the battle decision) first; Ship
   // (upgrade / class / repair) next; cosmetic Skins last.
@@ -1589,6 +1616,75 @@ export default function ShipHero({
                       <div style={{ borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
                         <p className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.58rem', color: '#9a948a' }}>Top of the line — no bigger hull.</p>
                       </div>
+                    )}
+
+                    {/* ── Man-o-War Augment ── the permanent endgame "Mega" pick.
+                        Only the Man-o-War at Nav 70+ sees this (admin until live). */}
+                    {showAugments && (
+                      <>
+                        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>Man-o-War Augment</p>
+                        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+                          Forge a signature Mega shot into your hull. It fires above your Volley for a full magazine of {MEGA_CHARGE_COST} cannonballs, then leaves you cold. {augment ? 'Your choice is locked in.' : 'You pick one, and the choice is permanent.'}
+                        </p>
+                        {augment ? (() => {
+                          const a = getShipAugment(augment)
+                          if (!a) return null
+                          return (
+                            <div style={{ marginBottom: hasRack ? '1.7rem' : '0.7rem', borderRadius: 14, padding: '0.85rem 0.9rem', background: `${a.color}14`, border: `1px solid ${a.color}55`, boxShadow: `0 0 20px ${a.color}14` }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: a.color }}>{a.name}</p>
+                                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: a.color, background: `${a.color}1e`, border: `1px solid ${a.color}66`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>Locked in</span>
+                              </div>
+                              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a8', lineHeight: 1.45, marginTop: 5 }}>{a.tagline}</p>
+                            </div>
+                          )
+                        })() : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.7rem' }}>
+                            {SHIP_AUGMENTS.map(a => {
+                              const confirming = augmentConfirm === a.id
+                              const canAfford = doubloons >= AUGMENT_COST
+                              return (
+                                <div key={a.id} style={{ borderRadius: 12, padding: '0.7rem 0.8rem', background: confirming ? `${a.color}16` : `${a.color}0c`, border: `1px solid ${a.color}${confirming ? '77' : '40'}` }}>
+                                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: a.color }}>{a.name}</p>
+                                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a8', lineHeight: 1.4, marginTop: 3 }}>{a.tagline}</p>
+                                  <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7f7a72', fontStyle: 'italic', lineHeight: 1.4, marginTop: 4 }}>{a.flavor}</p>
+                                  {confirming ? (
+                                    <div style={{ marginTop: 9 }}>
+                                      <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', lineHeight: 1.4, marginBottom: 7 }}>
+                                        Permanent. {AUGMENT_COST.toLocaleString()} ⟡, and you can never change it.
+                                      </p>
+                                      <div style={{ display: 'flex', gap: 8 }}>
+                                        <button type="button" onClick={() => { setAugmentConfirm(null); setAugmentErr(null) }} disabled={augmentBusy}
+                                          className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                                          style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
+                                          Cancel
+                                        </button>
+                                        <button type="button" onClick={() => canAfford && buyAugment(a.id)} disabled={!canAfford || augmentBusy}
+                                          className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                                          style={{ flex: 1.4, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', cursor: canAfford && !augmentBusy ? 'pointer' : 'default', color: canAfford ? a.color : '#6a6764', background: canAfford ? `${a.color}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? `${a.color}66` : 'rgba(255,255,255,0.1)'}` }}>
+                                          {augmentBusy ? 'Forging…' : canAfford ? `Confirm · ${AUGMENT_COST.toLocaleString()} ⟡` : `Need ${(AUGMENT_COST - doubloons).toLocaleString()} more ⟡`}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button type="button" onClick={() => { setAugmentConfirm(a.id); setAugmentErr(null) }}
+                                      className="font-karla font-700 uppercase tracking-[0.08em] tap"
+                                      style={{ marginTop: 9, width: '100%', padding: '0.55rem', borderRadius: 10, fontSize: '0.66rem', color: a.color, background: `${a.color}14`, border: `1px solid ${a.color}55`, cursor: 'pointer' }}>
+                                      Choose · {AUGMENT_COST.toLocaleString()} ⟡
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                        {augmentErr && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#fca5a5', textAlign: 'center', marginTop: 4 }}>{augmentErr}</p>}
+                        {!hasRack && (
+                          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#caa05a', lineHeight: 1.4, marginTop: 6, marginBottom: '1.7rem' }}>
+                            Needs the Extra Cannonball Rack (Gauntlet, depth 10) to hold {MEGA_CHARGE_COST} cannonballs and fire the Mega. {augment ? 'You own the augment, but it stays silent until you have the Rack.' : ''}
+                          </p>
+                        )}
+                      </>
                     )}
 
                     {/* ── Captain's Class ── permanent chapter-end buffs. */}
