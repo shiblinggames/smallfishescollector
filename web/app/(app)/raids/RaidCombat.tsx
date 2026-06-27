@@ -2438,7 +2438,7 @@ export default function RaidCombat({
         if (megaId === 'railgun') {
           setPlayerRecoilKey(k => k + 1)
           setRailBeam({ key: Date.now() + i, color: megaColor })
-          playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 440))
+          playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 780))
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
           // burst, so a volley fires visibly as a salvo, not one shot.
@@ -3266,8 +3266,7 @@ export default function RaidCombat({
             )}
             {/* Carapace deflect — the plate shrugs a soaked shot away */}
             {enemyDeflect > 0 && <CarapaceDeflect key={`cd-${enemyDeflect}`} />}
-            {/* Man-o-War Mega FX */}
-            {railBeam  && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} />}
+            {/* Man-o-War Mega FX (Railgun beam lives at stage level, below) */}
             {nukeBlast && <NukeBlast   key={`nb-${nukeBlast.key}`} color={nukeBlast.color} />}
             {megaSplats && <MegaSplats key={`ms-${megaSplats.key}`} color={megaSplats.color} items={megaSplats.items} />}
             <AnimatePresence>
@@ -3385,6 +3384,9 @@ export default function RaidCombat({
               {pHitsplat && <HitsplatOverlay key={pHitsplat.key} text={pHitsplat.text} color={pHitsplat.color} big={pHitsplat.big} volley={pHitsplat.volley} />}
             </AnimatePresence>
           </motion.div>
+          {/* Railgun — a hyper beam erupting across the stage from the player's
+              guns into the enemy hull. Stage-level so it isn't clipped. */}
+          {railBeam && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} />}
           {/* Davy's Heavy Cannon heat — a per-fight damage stack badge that runs
               hotter (orange → red) as the ramp builds, and re-pops each turn it
               climbs. Only shows once the ramp has actually accrued (turn 2+). */}
@@ -4664,20 +4666,37 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 // a steely plate-flex ring + a hard glint + sparks scattering sideways/down
 // (deflected, not penetrating). Reads as "blocked — volley to crack it".
 // ── Man-o-War Mega FX ─────────────────────────────────────────────────────────
-// Railgun: a lance of light streaks into the hull from the player side.
+// Railgun: a Pokémon-style HYPER BEAM — a charge orb at the muzzle, then a thick
+// white-hot beam erupts across the stage into the enemy hull, held, then fades.
 function RailgunBeam({ color }: { color: string }) {
+  // The beam is vertically centred at ~55% of the stage (the enemy's hull line)
+  // via `top` so framer's scaleX animation never clobbers a translate.
   return (
-    <motion.div aria-hidden
-      initial={{ opacity: 0, scaleX: 0 }}
-      animate={{ opacity: [0, 1, 1, 0], scaleX: [0, 1, 1, 1] }}
-      transition={{ duration: 0.44, times: [0, 0.18, 0.6, 1], ease: 'easeOut' }}
-      style={{
-        position: 'absolute', left: '-65%', right: '12%', top: '46%', height: 5,
-        transformOrigin: 'left center', borderRadius: 4, pointerEvents: 'none', zIndex: 6,
-        background: `linear-gradient(90deg, transparent, ${color}, #ffffff)`,
-        boxShadow: `0 0 18px ${color}, 0 0 44px ${color}aa`,
-      }}
-    />
+    <>
+      {/* Charge orb at the player's guns, flares as the beam erupts. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1.6, 1.2, 0.5] }}
+        transition={{ duration: 0.6, times: [0, 0.22, 0.7, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '3%', top: 'calc(55% - 28px)', width: 56, height: 56, borderRadius: '50%', zIndex: 5, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 74%)`, boxShadow: `0 0 34px 8px ${color}` }} />
+      {/* Outer glow beam (soft, wide). */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scaleX: 0 }}
+        animate={{ opacity: [0, 0.85, 0.85, 0], scaleX: [0, 1, 1, 1] }}
+        transition={{ duration: 0.72, times: [0, 0.16, 0.62, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '5%', right: '12%', top: 'calc(55% - 26px)', height: 52, transformOrigin: 'left center', borderRadius: 30, zIndex: 5, pointerEvents: 'none', background: `${color}66`, filter: 'blur(8px)' }} />
+      {/* Core beam — white-hot, thick. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scaleX: 0 }}
+        animate={{ opacity: [0, 1, 1, 0.9, 0], scaleX: [0, 1, 1, 1, 1] }}
+        transition={{ duration: 0.72, times: [0, 0.16, 0.6, 0.85, 1], ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: '5%', right: '13%', top: 'calc(55% - 13px)', height: 26,
+          transformOrigin: 'left center', borderRadius: 18, zIndex: 6, pointerEvents: 'none',
+          background: `linear-gradient(90deg, ${color} 0%, #ffffff 35%, #ffffff 82%, ${color} 100%)`,
+          boxShadow: `0 0 22px 4px ${color}, 0 0 54px 10px ${color}cc`,
+        }} />
+    </>
   )
 }
 // Nuke: a white-hot core plus an expanding shock ring.
