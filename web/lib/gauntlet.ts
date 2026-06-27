@@ -126,7 +126,7 @@ export const MAX_GAUNTLET_DEPTH = 60
 function mobHp(depth: number)    { return Math.round(34 + depth * 10) }
 function mobMinDmg(depth: number){ return Math.round(5 + depth * 0.9) }
 function mobMaxDmg(depth: number){ return Math.round(9 + depth * 1.7) }
-const BOSS_HP_MULT  = 3.0
+const BOSS_HP_MULT  = 2.8
 const BOSS_DMG_MULT = 1.5
 
 // ── Roll guardrails ──────────────────────────────────────────────────────────
