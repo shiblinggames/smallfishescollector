@@ -2437,6 +2437,8 @@ export default function RaidCombat({
         const megaId    = step.action === 'mega' ? (megaAugment?.id ?? null) : null
         const megaColor = megaAugment?.color ?? '#ffffff'
         const isVolleyShot = (step.action === 'volley' || step.action === 'mega') && !step.big
+        // The Nuke is a heavy lob — a slower projectile so the blast lands with weight.
+        const flightMs = megaId === 'nuke' ? PROJECTILE_FLIGHT_MS + 380 : PROJECTILE_FLIGHT_MS
         const cannonKind: 'normal' | 'volley' | 'crit' =
           step.big ? 'crit' : isVolleyShot ? 'volley' : 'normal'
         // Railgun — a beam lances out the instant you fire (no cannonball arc).
@@ -2467,6 +2469,13 @@ export default function RaidCombat({
           const angle = Math.atan2(dy, dx) * 180 / Math.PI
           setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
           playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 920))
+        } else if (megaId === 'nuke') {
+          // Heavy charged lob — a single big recoil + launch thump, then a slow
+          // flight to the blast. No salvo: the Nuke is one massive shell.
+          setPlayerRecoilKey(k => k + 1)
+          setCannonShot({ key: Date.now() + i, kind: 'crit' })
+          setTimeout(() => setCannonShot(null), 900)
+          vibrate([0, 30, 50, 20])
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
           // burst, so a volley fires visibly as a salvo, not one shot.
@@ -2530,8 +2539,8 @@ export default function RaidCombat({
                 // Nuke — a big expanding shockwave on top of the impact.
                 if (megaId === 'nuke') {
                   setNukeBlast({ key: Date.now() + i + 13, color: megaColor })
-                  playStepChainRef.current.push(setTimeout(() => setNukeBlast(null), 760))
-                  vibrate([0, 50, 40, 90])
+                  playStepChainRef.current.push(setTimeout(() => setNukeBlast(null), 1150))
+                  vibrate([0, 70, 50, 130])
                 }
               }
             }
@@ -2547,7 +2556,7 @@ export default function RaidCombat({
             }
             if (step.big || megaId === 'nuke' || megaId === 'railgun') {
               setCritFlash(true)
-              setTimeout(() => setCritFlash(false), 380)
+              setTimeout(() => setCritFlash(false), megaId === 'nuke' ? 640 : 380)
               // Retrigger the player's recoil with the impact so the kickback
               // lines up with the big enemy explosion, not just the cannon fire
               setPlayerRecoilKey(k => k + 1)
@@ -2560,7 +2569,7 @@ export default function RaidCombat({
             setPHitsplat({ key: Date.now() + i + 5, text: `+${step.lifestealHeal}`, color: '#34d399' })
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
           }
-        }, PROJECTILE_FLIGHT_MS)
+        }, flightMs)
       } else if (isAttack && step.who === 'enemy') {
         // Enemy firing at player — muzzle flash off the enemy gun deck now,
         // projectile flies, then splat + shake + impact spray on the player hull.
@@ -2677,7 +2686,10 @@ export default function RaidCombat({
       // Hit-stop: a big blow gets a beat of stillness before the fight resumes,
       // so a crit/volley lands with weight (pairs with the camera shake's held
       // opening frame + the crit flash). Normal hits keep the standard pace.
-      const hitStop = step.big ? 110 : (step.action === 'volley' || step.action === 'mega' ? 55 : 0)
+      // The Nuke lands later (slow lob) and its blast lingers, so it needs a
+      // longer beat before the next step or the explosion gets cut off.
+      const isNukeStep = step.action === 'mega' && megaAugment?.id === 'nuke'
+      const hitStop = step.big ? 110 : isNukeStep ? 620 : (step.action === 'volley' || step.action === 'mega' ? 55 : 0)
       const gapMs = (step.phaseTransition ? 1600 : STEP_GAP_MS) + hitStop
       playStepChainRef.current.push(setTimeout(() => playStep(i + 1), gapMs))
     }
@@ -4751,14 +4763,47 @@ function RailgunBeam({ color, x1, y1, len, angle }: { color: string; x1: number;
     </>
   )
 }
-// Nuke: a white-hot core plus an expanding shock ring.
+// Nuke: a big, slow detonation — white flash, blooming fireball, staggered
+// shock rings, flung embers, and lingering smoke. Heavier and slower than a crit.
 function NukeBlast({ color }: { color: string }) {
+  // Deterministic ember spray (no RNG) so it's stable across renders.
+  const embers = useMemo(() => Array.from({ length: 11 }, (_, n) => {
+    const ang = (n / 11) * Math.PI * 2 + (n % 2 ? 0.35 : 0)
+    const dist = 54 + (n % 4) * 24
+    return {
+      id: n,
+      x: Math.cos(ang) * dist,
+      y: Math.sin(ang) * dist - 8,           // bias upward, like flung debris
+      size: 3 + (n % 3) * 2,
+      dur: 0.66 + (n % 4) * 0.12,
+      delay: 0.05 + (n % 3) * 0.05,
+    }
+  }), [])
   return (
     <>
-      <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0.95 }} animate={{ scale: 3.1, opacity: 0 }} transition={{ duration: 0.68, ease: 'easeOut' }}
-        style={{ position: 'absolute', inset: '12%', borderRadius: '50%', pointerEvents: 'none', zIndex: 7, background: `radial-gradient(circle, #ffffff 0%, ${color} 42%, transparent 70%)` }} />
-      <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.7, opacity: 0 }} transition={{ duration: 0.74, delay: 0.05, ease: 'easeOut' }}
-        style={{ position: 'absolute', inset: '22%', borderRadius: '50%', border: `3px solid ${color}`, boxShadow: `0 0 30px ${color}`, pointerEvents: 'none', zIndex: 7 }} />
+      {/* White flash core — the instant of detonation. */}
+      <motion.div aria-hidden initial={{ scale: 0.25, opacity: 1 }} animate={{ scale: 2.3, opacity: 0 }} transition={{ duration: 0.34, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '4%', borderRadius: '50%', pointerEvents: 'none', zIndex: 8, background: 'radial-gradient(circle, #ffffff 0%, #fff4d6 50%, transparent 74%)' }} />
+      {/* Fireball — blooms big and slow, white-hot fading to the augment colour. */}
+      <motion.div aria-hidden initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 2.4, 3.6], opacity: [0, 1, 0] }} transition={{ duration: 0.95, times: [0, 0.35, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '-6%', borderRadius: '50%', pointerEvents: 'none', zIndex: 7, background: `radial-gradient(circle, #ffffff 0%, #ffd27a 30%, ${color} 58%, transparent 74%)` }} />
+      {/* First shock ring. */}
+      <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.95 }} animate={{ scale: 3.2, opacity: 0 }} transition={{ duration: 0.7, delay: 0.04, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '20%', borderRadius: '50%', border: `4px solid ${color}`, boxShadow: `0 0 34px ${color}`, pointerEvents: 'none', zIndex: 7 }} />
+      {/* Second shock ring — wider, slower, trails the first. */}
+      <motion.div aria-hidden initial={{ scale: 0.4, opacity: 0.7 }} animate={{ scale: 4.4, opacity: 0 }} transition={{ duration: 0.98, delay: 0.14, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '24%', borderRadius: '50%', border: `2px solid ${color}aa`, pointerEvents: 'none', zIndex: 7 }} />
+      {/* Flung embers. */}
+      {embers.map(e => (
+        <motion.div key={e.id} aria-hidden
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x: e.x, y: e.y, opacity: 0, scale: 0.4 }}
+          transition={{ duration: e.dur, delay: e.delay, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '46%', width: e.size, height: e.size, marginLeft: -e.size / 2, marginTop: -e.size / 2, borderRadius: '50%', background: '#ffd27a', boxShadow: `0 0 8px 2px ${color}`, pointerEvents: 'none', zIndex: 8 }} />
+      ))}
+      {/* Lingering smoke — dark billow that swells and fades last. */}
+      <motion.div aria-hidden initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: [0.6, 2.0, 2.8], opacity: [0, 0.5, 0] }} transition={{ duration: 1.15, times: [0, 0.4, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '6%', borderRadius: '50%', pointerEvents: 'none', zIndex: 6, background: 'radial-gradient(circle, rgba(40,20,15,0.7) 0%, rgba(30,15,12,0.4) 45%, transparent 72%)' }} />
     </>
   )
 }
