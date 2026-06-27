@@ -4839,13 +4839,13 @@ function NukeMissile({ color, x1, y1, x2, y2, dur }: { color: string; x1: number
         }}
         style={{ position: 'absolute', left: x1, top: y1, zIndex: 18, pointerEvents: 'none' }}
       >
-        {/* Comet trail — a tapering flame streak behind the shell. */}
+        {/* Fiery trail — a tapering flame streak behind the cannonball. */}
         <motion.div aria-hidden
-          animate={{ opacity: [0.6, 1, 0.8], scaleX: [0.9, 1, 0.92] }}
+          animate={{ opacity: [0.6, 1, 0.8], scaleX: [0.88, 1, 0.9] }}
           transition={{ duration: 0.16, repeat: Infinity, repeatType: 'mirror' }}
-          style={{ position: 'absolute', left: -46, top: -4, width: 46, height: 8, transformOrigin: 'right center', borderRadius: 5, background: `linear-gradient(90deg, transparent 0%, ${color}77 45%, ${color} 78%, #ffe6b0 100%)`, filter: 'blur(2px)' }} />
-        {/* Shell — a sleek elongated slug, hot at the nose. Simple, no hard edges. */}
-        <div style={{ position: 'absolute', left: -13, top: -3.5, width: 26, height: 8, borderRadius: '45% 60% 60% 45% / 50%', background: 'linear-gradient(90deg, #2b3340 0%, #5b6675 46%, #ffd9a0 86%, #ffffff 100%)', boxShadow: `0 0 9px 1px ${color}` }} />
+          style={{ position: 'absolute', left: -52, top: -5, width: 46, height: 10, transformOrigin: 'right center', borderRadius: 6, background: `linear-gradient(90deg, transparent 0%, ${color}77 42%, ${color} 76%, #ffe6b0 100%)`, filter: 'blur(2.5px)' }} />
+        {/* Cannonball — a heavy iron sphere, hot-rimmed from the launch. */}
+        <div style={{ position: 'absolute', left: -10, top: -10, width: 20, height: 20, borderRadius: '50%', background: 'radial-gradient(circle at 34% 28%, #8b96a3 0%, #49525f 36%, #232a31 68%, #0d1014 100%)', boxShadow: `0 0 12px 2px ${color}, inset -2px -2px 5px rgba(0,0,0,0.65)` }} />
       </motion.div>
     </>
   )
