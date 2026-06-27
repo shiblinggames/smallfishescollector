@@ -764,6 +764,13 @@ export default function RaidCombat({
   const zoneDirRef  = useRef(1)
   const indicatorRef = useRef<HTMLDivElement>(null)
   const zoneRef      = useRef<HTMLDivElement>(null)
+  // The Coffers admiral — "Decoy Screen": N extra MOVING target bands (escort
+  // decoys) thrown up every fire. You must pop each (green+) to clear it before
+  // the flagship is a real hit; firing on the flagship with escorts up = chip.
+  // Reset at the start of each aiming session (it's a per-shot challenge).
+  const decoyRunRef = useRef<{ pos: number; dir: number; speed: number; cleared: boolean }[]>([])
+  const decoyElRefs = useRef<(HTMLDivElement | null)[]>([])
+  const chipPlayerShotRef = useRef(false)
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
 
@@ -1106,6 +1113,17 @@ export default function RaidCombat({
     // Needle sweep, with the curse multiplier (Racing Tide etc.).
     const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult
 
+    // ── Decoy Screen setup — fresh escort decoys for THIS fire. Spread across
+    //    the full bar, each drifting at its own pace/direction so they're a
+    //    moving aim challenge, not static lures. Cleared on resolve.
+    const dlo = HIT_W + GRAZE_W, dhi = 1 - HIT_W - GRAZE_W
+    const nDecoys = Math.max(0, Math.min(4, enemy.decoyCount ?? 0))
+    decoyRunRef.current = Array.from({ length: nDecoys }, (_, k) => {
+      const frac = nDecoys === 1 ? 0.32 : k / (nDecoys - 1)   // span ~full bar
+      return { pos: 0.18 + (0.82 - 0.18) * frac, dir: k % 2 === 0 ? 1 : -1, speed: 0.85 + (k % 3) * 0.4, cleared: false }
+    })
+    chipPlayerShotRef.current = false
+
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
       last = now
@@ -1124,10 +1142,27 @@ export default function RaidCombat({
       if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
       if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
 
+      // Drift each uncleared escort decoy and paint it; cleared ones stay hidden.
+      let onDecoy = false
+      for (let k = 0; k < decoyRunRef.current.length; k++) {
+        const d = decoyRunRef.current[k]
+        const el = decoyElRefs.current[k]
+        if (d.cleared) { if (el) el.style.display = 'none'; continue }
+        d.pos += ZONE_SPEED * d.speed * frames * d.dir
+        if (d.pos >= dhi) { d.pos = dhi; d.dir = -1 }
+        if (d.pos <= dlo) { d.pos = dlo; d.dir = 1 }
+        if (el) {
+          el.style.display = 'block'
+          el.style.left = `${(d.pos - HIT_W - GRAZE_W) * 100}%`
+        }
+        if (Math.abs(firePosRef.current - d.pos) <= HIT_W) onDecoy = true
+      }
+
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
         const zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
-        const bg = zone === 'critical' ? '#fbbf24'
+        const bg = onDecoy           ? '#4ade80'   // poppable escort under the needle
+                 : zone === 'critical' ? '#fbbf24'
                  : zone === 'hit'      ? '#4ade80'
                  : zone === 'graze'    ? '#94a3b8'
                  : 'rgba(255,255,255,0.4)'
@@ -1413,6 +1448,22 @@ export default function RaidCombat({
     // double-tap in the same frame can't run the lock twice while the
     // critFreeze state commit is still pending.
     if (subPhase !== 'aiming' || critFreeze || critFreezeRef.current) return
+    // Decoy Screen gate (The Coffers admiral): if the needle is sitting on an
+    // uncleared escort decoy (green+), POP it and keep aiming — the shot only
+    // resolves on the flagship (or a clean miss). Handled before the freeze so
+    // the sequence continues; the RAF keeps the needle + remaining decoys moving.
+    {
+      const p = firePosRef.current
+      const di = decoyRunRef.current.findIndex(d => !d.cleared && Math.abs(p - d.pos) <= HIT_W)
+      if (di >= 0) {
+        decoyRunRef.current[di].cleared = true
+        const el = decoyElRefs.current[di]
+        if (el) el.style.display = 'none'
+        flashBar(barFlashRef.current, '#f59e0b', 0.42)   // amber pop
+        vibrate(14)
+        return
+      }
+    }
     // Freeze the RAF synchronously. The critFreezeRef mirror effect only
     // commits after this render, which let the tick run 1–2 more frames and
     // drift the painted needle past the spot being judged.
@@ -1459,6 +1510,9 @@ export default function RaidCombat({
     // to upgrade to a crit. Tide bonus stacks ADDITIVELY with crew crit.
     const critUpgradeChance = (mods.critPct / 100) + tide.critBonus
     if (res === 'hit' && critUpgradeChance > 0 && Math.random() < critUpgradeChance) res = 'critical'
+    // Chip: you loosed on the flagship with escort decoys still standing. Any
+    // landed shot (graze/hit/crit) barely scratches it — resolved in resolveTurn.
+    chipPlayerShotRef.current = res !== 'miss' && decoyRunRef.current.some(d => !d.cleared)
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
 
@@ -1871,6 +1925,12 @@ export default function RaidCombat({
             const before = dmg
             dmg = Math.max(1, Math.round(dmg * enemy.phase2.damageTakenMult))
             stepLines.push(`Carapace! ${enemy.name}'s plate soaks the blow (${before} → ${dmg}).`)
+          }
+          // Decoy Screen — firing on the flagship with escort decoys still up
+          // barely scratches it, no matter how clean the aim. Flat chip.
+          if (chipPlayerShotRef.current) {
+            dmg = 1 + Math.floor(Math.random() * 3)   // 1–3
+            stepLines.push(`Decoy screen! Escorts still up — your shot barely scratches the flagship (${dmg}).`)
           }
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
@@ -3794,8 +3854,11 @@ export default function RaidCombat({
             // Shimmer the gold band while the buff is live (band is already
             // widened via liveCritW; the pulse makes the boon unmistakable).
             sharpshotActive={!!sharpshotBuff && !critFreeze}
-            // The Coffers — "Decoys": extra lure crit bands strewn on the bar.
+            // The Coffers — "Decoy Screen": moving escort target bands you must
+            // pop (green+) before the flagship is a real hit. The RAF positions
+            // each band via these refs (same model as the main zone).
             decoyCount={enemy.decoyCount}
+            decoyElRefs={decoyElRefs}
           />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
@@ -5708,7 +5771,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -5728,9 +5791,11 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
   /** Sharpshot buff live — pulse the gold crit band so the widened window
    *  reads as an active boon, not just a quietly bigger target. */
   sharpshotActive?: boolean
-  /** The Coffers — "Decoys": N static gold lure bands strewn across the bar.
-   *  Purely visual; the real crit is still only the moving zone. */
+  /** The Coffers — "Decoy Screen": N moving escort target bands. Each must be
+   *  popped (green+) before the flagship counts; firing on the flagship while
+   *  any remain = chip. The RAF drives positions through decoyElRefs. */
   decoyCount?: number
+  decoyElRefs?: React.MutableRefObject<(HTMLDivElement | null)[]>
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
@@ -5739,12 +5804,9 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
   // random rather than a metronome.
   const inkOpacity = Math.max(0, Math.min(0.95, aimBlackout ?? 0))
   const hasInk = inkOpacity > 0
-  // Decoys — evenly-spaced fixed lure positions across the bar (deterministic
-  // so they don't jitter on re-render). Real crit stays the moving zone band.
-  const decoys = Math.max(0, Math.min(6, decoyCount ?? 0))
-  const decoyPositions = decoys > 0
-    ? Array.from({ length: decoys }, (_, i) => 14 + (i + 1) * (72 / (decoys + 1)))
-    : []
+  // Decoy Screen — N moving escort bands; the RAF positions each via
+  // decoyElRefs (same geometry as the main zone, amber instead of green).
+  const decoys = Math.max(0, Math.min(4, decoyCount ?? 0))
   // The zone div spans ±(HIT_W + GRAZE_W) around its center, so the crit
   // band's share of it is critW / (HIT_W + GRAZE_W), centered.
   const critBandPct = (critW / (HIT_W + GRAZE_W)) * 100
@@ -5788,24 +5850,12 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
           }
         `}</style>
       )}
-      {/* Decoy lure bands drift side to side (the -50% centering is baked into
-          the keyframe so the animation doesn't clobber it) — a moving fake is
-          far more distracting than a static one. */}
-      {decoys > 0 && (
-        <style>{`
-          @keyframes rc-decoy-drift {
-            0%, 100% { transform: translateX(calc(-50% - 18px)); }
-            50%      { transform: translateX(calc(-50% + 18px)); }
-          }
-        `}</style>
-      )}
-
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexShrink: 0 }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#fbbf24' }}>
           Lock Your Shot
         </p>
-        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#5a7a9a' }}>
-          Gold = Crit
+        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: decoys > 0 ? '#f59e0b' : '#5a7a9a' }}>
+          {decoys > 0 ? 'Pop escorts → flagship' : 'Gold = Crit'}
         </p>
       </div>
 
@@ -5830,23 +5880,23 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
           <div className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
-        {/* Decoys — static gold lure bands. Look like the real crit but never
-            score; the true crit is only ever the moving zone band above. */}
-        {decoyPositions.map((pos, i) => (
-          <div key={`decoy-${i}`} aria-hidden style={{
-            position: 'absolute', top: '3px', bottom: '3px',
-            left: `${pos}%`, width: '9%',
-            zIndex: 1, pointerEvents: 'none',
-            // Each drifts at its own pace + phase so they sweep independently,
-            // sometimes crossing the real (zone-anchored) target.
-            animation: `rc-decoy-drift ${(1.6 + i * 0.5).toFixed(2)}s ease-in-out infinite`,
-            animationDelay: `${(i * 0.37).toFixed(2)}s`,
-          }}>
-            {/* A muted copy of the real target — green hit band + gold crit
-                band, dimmer than the live zone — so it reads as another ship
-                you could be firing on, not an obvious overlay. */}
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(74,222,128,0.12)', borderRadius: 3 }} />
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: '32%', width: '36%', background: 'rgba(251,191,36,0.26)', borderRadius: 2 }} />
+        {/* Escort decoys — moving amber target bands the RAF positions via
+            decoyElRefs (same geometry as the main zone). Each must be popped
+            (needle green on it) before the flagship is a real hit. Hidden until
+            the RAF places it, and again once cleared. */}
+        {Array.from({ length: decoys }).map((_, i) => (
+          <div key={`decoy-${i}`} aria-hidden
+            ref={el => { if (decoyElRefs) decoyElRefs.current[i] = el }}
+            style={{
+              position: 'absolute', top: 0, bottom: 0, left: 0,
+              width: `${(HIT_W + GRAZE_W) * 2 * 100}%`,
+              zIndex: 1, pointerEvents: 'none', display: 'none',
+            }}>
+            {/* Amber escort silhouette — graze halo + bright hit core, clearly
+                distinct from the green flagship target. */}
+            <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(245,158,11,0.16)', borderRadius: 4 }} />
+            <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(245,158,11,0.5)', borderRadius: 3 }} />
+            <div style={{ position: 'absolute', top: '18%', bottom: '18%', left: 'calc(50% - 1px)', width: 2, background: '#f59e0b' }} />
           </div>
         ))}
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />

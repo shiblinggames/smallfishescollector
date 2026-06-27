@@ -73,15 +73,15 @@ export interface BroadsideEnemy {
   parryChance?: number
   parryDamagePct?: number
   parryName?: string
-  /** The Coffers (Chapter 3) — "Decoys." During aim-bar lock-in the bar
-   *  is strewn with `decoyCount` extra gold-looking lure bands at fixed
-   *  positions; only the real (moving, green-backed) crit zone actually
-   *  crits. Purely VISUAL misdirection — getShotResult still judges the
-   *  single true center, so nothing about scoring changes; the player just
-   *  has to read the real gold center through the clutter (sibling to the
-   *  Mist Veil's fog). `decoyName` labels it on the nameplate (mirrors
-   *  `aimFogName`). Undefined on every other enemy = zero render cost.
-   *  Render lives in AimBarInline. */
+  /** The Coffers (Chapter 3) — "Decoy Screen." Every fire, the bar throws up
+   *  `decoyCount` MOVING amber escort target bands spread across the full bar.
+   *  Each must be popped (land the needle green+ on it) to clear it, IN ONE
+   *  fire turn, before the green flagship zone is a real hit. Firing on the
+   *  flagship while any escort still stands = flat chip (1–3). Popping an
+   *  escort does NOT resolve the shot — only hitting the flagship (or a clean
+   *  miss) does. Logic spans the aim RAF + lockShot + resolveTurn; render in
+   *  AimBarInline. `decoyName` labels it on the nameplate (mirrors
+   *  `aimFogName`). Undefined on every other enemy = mechanic dormant. */
   decoyCount?: number
   decoyName?: string
   /** The Coffers (Chapter 3) — "Repossession." At the START of this fight the
