@@ -2501,7 +2501,7 @@ export default function RaidCombat({
             mx2 = W * 0.78; my2 = H * 0.50
           }
           setNukeMissile({ key: Date.now() + i, color: megaColor, x1: mx1, y1: my1, x2: mx2, y2: my2, dur: flightMs })
-          playStepChainRef.current.push(setTimeout(() => setNukeMissile(null), flightMs + 90))
+          playStepChainRef.current.push(setTimeout(() => setNukeMissile(null), flightMs))
           cameraShake('volley')           // lift-off rumble (the boom comes on impact)
           vibrate([0, 45, 60, 25])
         } else if (isVolleyShot) {
@@ -4827,13 +4827,15 @@ function NukeMissile({ color, x1, y1, x2, y2, dur }: { color: string; x1: number
           vertical rides a gravity curve, so there's no hitch at the apex. */}
       <motion.div aria-hidden
         initial={{ x: 0, y: 0, rotate: -50, opacity: 0 }}
-        animate={{ x: [0, dx], y: [0, apexY, dy], rotate: [-50, 2, 54], opacity: 1 }}
+        animate={{ x: [0, dx], y: [0, apexY, dy], rotate: [-50, 2, 54], opacity: [0, 1, 1, 0] }}
         transition={{
           duration: d,
           x: { ease: 'linear' },
           y: { ease: ['easeOut', 'easeIn'], times: [0, 0.42, 1] },
           rotate: { ease: 'easeInOut', times: [0, 0.42, 1] },
-          opacity: { duration: 0.1 },
+          // Fade out over the last sliver of flight so the shell vanishes INTO
+          // the blast instead of freezing on the hull.
+          opacity: { times: [0, 0.08, 0.9, 1], ease: 'linear' },
         }}
         style={{ position: 'absolute', left: x1, top: y1, zIndex: 18, pointerEvents: 'none' }}
       >
