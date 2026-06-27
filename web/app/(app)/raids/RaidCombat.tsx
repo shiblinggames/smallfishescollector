@@ -2351,7 +2351,7 @@ export default function RaidCombat({
       }
 
       const step = steps[i]
-      const isAttack  = step.action === 'fire' || step.action === 'volley'
+      const isAttack  = step.action === 'fire' || step.action === 'volley' || step.action === 'mega'
       const isDodged  = isAttack && step.splatText === 'Dodged'
 
       // Phase 2 transition — this is the dramatic revival beat. The ref
@@ -2649,7 +2649,7 @@ export default function RaidCombat({
       // Hit-stop: a big blow gets a beat of stillness before the fight resumes,
       // so a crit/volley lands with weight (pairs with the camera shake's held
       // opening frame + the crit flash). Normal hits keep the standard pace.
-      const hitStop = step.big ? 110 : (step.action === 'volley' ? 55 : 0)
+      const hitStop = step.big ? 110 : (step.action === 'volley' || step.action === 'mega' ? 55 : 0)
       const gapMs = (step.phaseTransition ? 1600 : STEP_GAP_MS) + hitStop
       playStepChainRef.current.push(setTimeout(() => playStep(i + 1), gapMs))
     }
