@@ -10,6 +10,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
+import { type ShipAugment } from '@/lib/shipAugments'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp,
 } from '@/lib/bossRaids'
@@ -359,7 +360,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   totalPower, totalDodge, totalFortune, crewCount, crewMembers, initialExpeditionXP,
   playerCharacterColor, playerEquippedHat,
   playerAvatarBg, playerAvatarBorder,
-  raidMods, bonusChargeSlots = 0,
+  raidMods, bonusChargeSlots = 0, manowarAugment = null,
 }: {
   config: BossRaidConfig
   shipImageUrl: string
@@ -397,6 +398,8 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   raidMods: RaidMods
   /** Extra player cannonball slots from claimed Locker Upgrades. */
   bonusChargeSlots?: number
+  /** Man-o-War volley augment (or null). */
+  manowarAugment?: ShipAugment | null
 }) {
   const router            = useRouter()
   const shipSkinDef       = equippedShipSkin ? getShipSkin(equippedShipSkin) : undefined
@@ -1446,6 +1449,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 fleeNav={fleeNavRef.current}
                 raidMods={raidMods}
                 bonusChargeSlots={bonusChargeSlots}
+                megaAugment={manowarAugment}
                 tideEffects={activeTideEffects}
                 crewMembers={crewMembers}
                 usedAbilityIds={usedAbilityIds}

@@ -48,6 +48,7 @@ export default async function RaidPage() {
             initialExpeditionXP={profile?.expedition_xp ?? 0}
             raidMods={stats.raidMods}
             bonusChargeSlots={stats.bonusChargeSlots}
+            manowarAugment={stats.manowarAugment}
           />
         </div>
       </main>

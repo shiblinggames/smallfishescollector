@@ -4,7 +4,10 @@ export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/s
 // Enemy `pattern` arrays never include it and `pickEnemyAction` never
 // returns it — it lives in this union only so the same action type
 // flows through resolveTurn for both sides.
-export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair'
+// 'mega' is a PLAYER-only Man-o-War augment attack (a 4-charge super-volley).
+// Enemy patterns / pickEnemyAction never produce it; it lives in the union so
+// the same resolveTurn handles it for the player.
+export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'mega'
 
 export interface BroadsideEnemy {
   id: string

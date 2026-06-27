@@ -58,6 +58,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
+import { MEGA_CHARGE_COST, type ShipAugment } from '@/lib/shipAugments'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
 import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
@@ -107,7 +108,7 @@ const d20 = () => Math.floor(Math.random() * 20) + 1
 // branches if a new pattern shape needs its own tell.
 function enemyBehaviorHint(pattern: EnemyAction[]): string {
   const n = pattern.length || 1
-  const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0 }
+  const c = { reload: 0, fire: 0, volley: 0, dodge: 0, repair: 0, mega: 0 }
   for (const a of pattern) c[a]++
   const aggR    = (c.fire + c.volley) / n
   const dodgeR  = c.dodge / n
@@ -341,6 +342,9 @@ export interface RaidCombatProps {
   /** One extra line seeded into THIS fight's opening combat log (e.g. the
    *  Gauntlet's 'Crew abilities refreshed.' on a refresh round). */
   openingNote?: string
+  /** Man-o-War volley augment (Phase 2). When set AND the player can stockpile
+   *  MEGA_CHARGE_COST charges (the Gauntlet Rack), a "Mega" attack opens up. */
+  megaAugment?: ShipAugment | null
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -366,6 +370,7 @@ export default function RaidCombat({
   atmosphere = 'dusk',
   crewMembers = [], usedAbilityIds, abilitiesRefreshed = false, onAbilityFired,
   usedAbilitySub = 'Already used this raid.', openingNote,
+  megaAugment = null,
 }: RaidCombatProps) {
   // Net crew raid effects; no-op default so the practice skirmish is unaffected.
   const mods: RaidMods = raidMods ?? { damagePct: 0, damageTakenPct: 0, critPct: 0, firstStrike: false }
@@ -1162,6 +1167,9 @@ export default function RaidCombat({
 
   const canFire   = playerCharges >= 1
   const canVolley = playerCharges >= VOLLEY_COST
+  // Mega (Man-o-War augment): a full magazine of MEGA_CHARGE_COST (4). Reaching
+  // 4 requires the Gauntlet Rack, so the augment is naturally gated behind it.
+  const canMega   = !!megaAugment && playerCharges >= MEGA_CHARGE_COST
   // Dodge has a 1-turn cooldown so it can't be spammed defensively.
   const canDodge  = lastPlayerAction !== 'dodge'
   // Reload no-ops at full magazine — the +1 (and any tide proc bonus)
@@ -1351,6 +1359,7 @@ export default function RaidCombat({
     if (subPhase !== 'await_input') return
     if (action === 'fire'   && !canFire)   return
     if (action === 'volley' && !canVolley) return
+    if (action === 'mega'   && !canMega)   return
     if (action === 'dodge'  && !canDodge)  return
     if (action === 'repair') {
       if (!repairKit || kitUsed || playerHp >= playerHpMax) return
@@ -1359,7 +1368,7 @@ export default function RaidCombat({
     }
 
     setPlayerAction(action)
-    if (action === 'fire' || action === 'volley') {
+    if (action === 'fire' || action === 'volley' || action === 'mega') {
       // Reset aim positions and indicator styling, then begin aiming
       firePosRef.current = 0; fireDirRef.current = 1
       zonePosRef.current = 0.3 + Math.random() * 0.4
@@ -1719,11 +1728,15 @@ export default function RaidCombat({
         if (!(otherIsAttacking && dodgerWentSecond)) {
           stepLines.push(who === 'player' ? `You brace, ready to dodge.` : `Enemy braces, ready to dodge.`)
         }
-      } else if (action === 'fire' || action === 'volley') {
-        if (who === 'player') pCharges -= (action === 'volley' ? VOLLEY_COST : 1)
+      } else if (action === 'fire' || action === 'volley' || action === 'mega') {
+        if (who === 'player') pCharges -= (action === 'mega' ? MEGA_CHARGE_COST : action === 'volley' ? VOLLEY_COST : 1)
         else                  eCharges -= (action === 'volley' ? MAX_CHARGES : 1)
 
         const isAttackerPlayer = who === 'player'
+        // Mega (player-only): the augment whose damage + on-hit behaviour drives
+        // this shot. megaMult replaces the volley's flat ×2.
+        const isMega  = action === 'mega'
+        const megaAug = isMega ? megaAugment : null
         // The player's effective ship speed folds in tide.speedDelta (Following
         // Sea boon, Becalmed curse, etc.) so a speed boost makes you nimbler in
         // the dodge contest too — slipping more shots when you defend and
@@ -1759,9 +1772,11 @@ export default function RaidCombat({
           // Tide layer: dmgMult (broad), plus action-specific fire/volley
           // mults, plus boss-only mults stacked on top when isBoss.
           const isVolley = action === 'volley'
-          const tideActionMult = isVolley ? tide.volleyDmgMult : tide.fireDmgMult
+          // The Mega is a heavy shot, so it rides the same Volley tide layers.
+          const isVolleyLike = isVolley || isMega
+          const tideActionMult = isVolleyLike ? tide.volleyDmgMult : tide.fireDmgMult
           const tideBossMult = isBoss
-            ? tide.bossDmgMult * (isVolley ? tide.bossVolMult : 1)
+            ? tide.bossDmgMult * (isVolleyLike ? tide.bossVolMult : 1)
             : 1
           // Davy's Hand Cannon: +% damage vs NON-boss enemies (mobs / elites).
           const nonbossMult = isBoss
@@ -1782,7 +1797,8 @@ export default function RaidCombat({
             : 1
           // All-or-Nothing curse: anything short of a gold crit hits soft.
           const noncritTideMult = isCritShot ? 1 : tide.noncritDmgMult
-          const mult = (isVolley ? 2 : 1) * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
+          const actionBaseMult = isMega ? (megaAug?.megaMult ?? 2.6) : isVolley ? 2 : 1
+          const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
                        * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
@@ -1793,7 +1809,7 @@ export default function RaidCombat({
           // this answer (no enemy in that raid ever volleys themselves; the
           // player's volley is the response). Fire/graze still gets soaked.
           const dr = enemy.damageReduction ?? 0
-          if (dr > 0 && dmg > 0 && action !== 'volley') {
+          if (dr > 0 && dmg > 0 && action !== 'volley' && action !== 'mega') {
             const before = dmg
             dmg = Math.max(1, Math.round(dmg * (1 - dr)))
             carapaceSoaked = true
@@ -1874,6 +1890,9 @@ export default function RaidCombat({
           stepLines.push(isAttackerPlayer
             ? `The ${enemy.name} is frozen solid — it can't weave aside.`
             : `Your ship is frozen solid — you can't weave aside.`)
+        } else if (defenderAction === 'dodge' && isAttackerPlayer && isMega && megaAug?.pierce) {
+          // Railgun: the beam can't be dodged. The shot lands clean (no roll).
+          stepLines.push(`The beam pierces straight through — no slipping it.`)
         } else if (defenderAction === 'dodge') {
           // Tide dodge effects only help the PLAYER (when the player is the
           // one defending = the enemy is attacking = !isAttackerPlayer).
@@ -1988,17 +2007,40 @@ export default function RaidCombat({
             const onHitEffects = getActiveEffects(liveItems)
             const burnChance = onHitEffects.filter(e => e.type === 'burn_chance').reduce((a, e) => Math.max(a, e.value), 0)
             const freezeChance = onHitEffects.filter(e => e.type === 'freeze_chance').reduce((a, e) => Math.max(a, e.value), 0)
-            if (burnChance > 0 && Math.random() < burnChance) {
+            // Barrage: each of its sub-hits gets a proc roll — the first at full
+            // chance, the rest at procFalloff. Collapsed to one effective-chance
+            // roll (same odds, less noise). Other shots = a single roll.
+            const megaHits = isMega ? megaAug?.hits : undefined
+            const procRoll = (c: number) => {
+              if (c <= 0) return false
+              if (megaHits && megaHits.length > 1) {
+                const falloff = megaAug?.procFalloff ?? 0.3
+                const pNone = (1 - c) * Math.pow(1 - c * falloff, megaHits.length - 1)
+                return Math.random() < (1 - pNone)
+              }
+              return Math.random() < c
+            }
+            if (burnChance > 0 && procRoll(burnChance)) {
               const tickDmg = Math.max(1, Math.min(Math.round(dmg * BURN_TICK_PCT), Math.round(enemyHpMaxRef.current * BURN_CAP_PCT)))
               enemyBurnRef.current = { turns: BURN_TURNS, dmg: tickDmg }
               stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
               procStatus = 'burn'
             }
-            if (freezeChance > 0 && Math.random() < freezeChance) {
+            if (freezeChance > 0 && procRoll(freezeChance)) {
               enemyFreezePendingRef.current = true
               stepLines.push(`Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
               procStatus = 'freeze'
             }
+          }
+          // Nuke Fallout: the blast always leaves the wreck burning (overwrites a
+          // weaker Incendiary proc with the stronger DoT). Capped per tick like
+          // any burn so it can't snowball out of hand.
+          if (isMega && megaAug?.fallout && dmg > 0 && eHp > 0) {
+            const f = megaAug.fallout
+            const tick = Math.max(1, Math.min(Math.round(dmg * f.pct), Math.round(enemyHpMaxRef.current * BURN_CAP_PCT)))
+            enemyBurnRef.current = { turns: f.turns, dmg: tick }
+            stepLines.push(`Fallout! The ${enemy.name} burns in the blast (${tick}/turn, ${f.turns} turns).`)
+            procStatus = 'burn'
           }
           // Reflective affix: 50% chance to bounce a slice of the damage
           // back to the player on landing. Fires only when actual damage
@@ -2381,7 +2423,8 @@ export default function RaidCombat({
       if (isAttack && step.who === 'player') {
         // Player firing: cannon shot + recoil immediately, projectile flies,
         // then splat + shake + HP update + crit flash all together.
-        const isVolleyShot = step.action === 'volley' && !step.big
+        // Mega borrows the Volley impact/shake for now; Phase 3 gives it its own FX.
+        const isVolleyShot = (step.action === 'volley' || step.action === 'mega') && !step.big
         const cannonKind: 'normal' | 'volley' | 'crit' =
           step.big ? 'crit' : isVolleyShot ? 'volley' : 'normal'
         if (isVolleyShot) {
@@ -3646,6 +3689,8 @@ export default function RaidCombat({
           <ActionMenu
             canFire={canFire}
             canVolley={canVolley}
+            canMega={canMega}
+            megaAugment={megaAugment}
             canDodge={canDodge}
             canReload={canReload}
             onSelect={selectAction}
@@ -5097,9 +5142,12 @@ export interface SpecialItem {
   onClick: () => void
 }
 
-function ActionMenu({ canFire, canVolley, canDodge, canReload, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
+function ActionMenu({ canFire, canVolley, canMega = false, megaAugment = null, canDodge, canReload, onSelect, disabled = false, highlightedAction = null, specialItems = [] }: {
   canFire: boolean
   canVolley: boolean
+  /** Man-o-War Mega is available (augment owned + a full 4-charge magazine). */
+  canMega?: boolean
+  megaAugment?: ShipAugment | null
   canDodge: boolean
   /** False when the magazine's already full — reload would be a wasted
    *  turn (any extra charge clamps off). Drives a "Full" label so the
@@ -5133,7 +5181,7 @@ function ActionMenu({ canFire, canVolley, canDodge, canReload, onSelect, disable
 
   function tapFire() {
     if (disabled || !canFire) return
-    if (canVolley) setFireMenu(true)   // enough charges → let the player pick
+    if (canVolley || canMega) setFireMenu(true)   // enough charges → let the player pick
     else onSelect('fire')
   }
   function tapSpecial() {
@@ -5272,6 +5320,21 @@ function ActionMenu({ canFire, canVolley, canDodge, canReload, onSelect, disable
               <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>Volley</span>
               <span className="font-karla" style={{ fontSize: '0.62rem', color: '#fbbf24' }}>3 ◆ · 2× dmg</span>
             </motion.button>
+            {canMega && megaAugment && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => pick('mega')}
+                style={{
+                  flex: 1, padding: '0.7rem 0.5rem', borderRadius: 10,
+                  background: `${megaAugment.color}1e`, border: `2px solid ${megaAugment.color}`, cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  boxShadow: `0 0 16px ${megaAugment.color}3a`,
+                }}
+              >
+                <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff' }}>{megaAugment.name}</span>
+                <span className="font-karla" style={{ fontSize: '0.62rem', color: megaAugment.color }}>{MEGA_CHARGE_COST} ◆ · Mega</span>
+              </motion.button>
+            )}
           </motion.div>
         </>
       )}
@@ -5597,7 +5660,7 @@ function ActionTilesRow({ playerAction, enemyAction, aimResult, firstActor }: {
   firstActor: Actor | null
 }) {
   const labelFor = (a: EnemyAction | null) =>
-    a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'dodge' ? 'Dodge' : '—'
+    a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'mega' ? 'Mega' : a === 'reload' ? 'Reload' : a === 'dodge' ? 'Dodge' : '—'
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
       <ActionTile label="YOU" action={labelFor(playerAction)} aim={aimResult} first={firstActor === 'player'} color="#4ade80" />

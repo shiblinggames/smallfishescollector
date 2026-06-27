@@ -28,6 +28,7 @@ import {
 } from '@/lib/gauntlet'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
 import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls } from '@/lib/gauntletUpgrades'
+import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
 import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
@@ -82,6 +83,8 @@ export interface GauntletGameProps {
   raidMods: RaidMods
   /** Extra player cannonball slots from claimed Locker Upgrades. */
   bonusChargeSlots: number
+  /** Man-o-War volley augment (or null) — the Mega attack. */
+  manowarAugment: ShipAugment | null
   /** Claimed Locker Upgrade ids — drives the run-scoped perks (Diving Bell,
    *  Calm Before…). */
   gauntletUpgrades: string[]
@@ -1377,6 +1380,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             tideEffects={[...boonEffects(boonTiers), ...curseEffects(curseTiers)]}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
+            megaAugment={props.manowarAugment}
             abilitiesRefreshed={fightOpensRefreshed}
             onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
               if (prev.has(crewId)) return prev

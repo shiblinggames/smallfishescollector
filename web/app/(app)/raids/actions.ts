@@ -10,6 +10,7 @@ import { getActiveEffects, dedupeRaidItemFamilies } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { getShipSkin } from '@/lib/shipSkins'
 import { bonusChargeSlots, gauntletRepairHealMult } from '@/lib/gauntletUpgrades'
+import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -70,6 +71,9 @@ export interface RaidPlayerStats {
   raidMods: RaidMods
   /** Extra player cannonball slots from claimed Locker Upgrades (Gauntlet). */
   bonusChargeSlots: number
+  /** The Man-o-War volley augment, resolved + gated on actually being on the
+   *  Man-o-War (tier 6). Null otherwise — the Mega only exists on that hull. */
+  manowarAugment: ShipAugment | null
 }
 
 export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStats> {
@@ -77,7 +81,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes, gauntlet_upgrades')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes, gauntlet_upgrades, manowar_augment')
     .eq('id', userId)
     .single()
 
@@ -169,6 +173,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
     raidMods:             { ...resolved.raid, repairHealMult: gauntletRepairHealMult(gauntletUpgrades) },
     bonusChargeSlots:     bonusChargeSlots((profile?.gauntlet_upgrades as string[] | null) ?? []),
+    manowarAugment:       shipTier === MANOWAR_TIER ? getShipAugment(profile?.manowar_augment as string | null) : null,
   }
 }
 
