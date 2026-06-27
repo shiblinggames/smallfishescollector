@@ -606,19 +606,19 @@ export function boonRarity(fam: GauntletBoon): BoonRarity { return fam.rarity ??
 
 export const GAUNTLET_BOONS: GauntletBoon[] = [
   { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', rarity: 'rare', tiers: [
-    { desc: '+10% all damage', detail: 'Every shot deals 10% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.10 } },
-    { desc: '+22% all damage', detail: 'Every shot deals 22% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.22 } },
-    { desc: '+35% all damage', detail: 'Every shot deals 35% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.35 } },
+    { desc: '+12% all damage', detail: 'Every shot deals 12% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.12 } },
+    { desc: '+26% all damage', detail: 'Every shot deals 26% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.26 } },
+    { desc: '+42% all damage', detail: 'Every shot deals 42% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.42 } },
   ] },
   { id: 'powder_and_shot', name: 'Powder & Shot', flavor: 'Dry powder, packed tight. Your single shots punch through.', tiers: [
-    { desc: '+12% Fire damage', detail: 'The single-shot Fire action deals 12% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.12 } },
-    { desc: '+26% Fire damage', detail: 'The single-shot Fire action deals 26% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.26 } },
-    { desc: '+42% Fire damage', detail: 'The single-shot Fire action deals 42% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.42 } },
+    { desc: '+14% Fire damage', detail: 'The single-shot Fire action deals 14% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.14 } },
+    { desc: '+30% Fire damage', detail: 'The single-shot Fire action deals 30% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.30 } },
+    { desc: '+48% Fire damage', detail: 'The single-shot Fire action deals 48% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.48 } },
   ] },
   { id: 'grapeshot', name: 'Grapeshot', flavor: 'A scatter of iron off the rails. Your volleys shred.', tiers: [
-    { desc: '+12% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 12% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.12 } },
-    { desc: '+26% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 26% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.26 } },
-    { desc: '+42% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 42% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.42 } },
+    { desc: '+14% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 14% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.14 } },
+    { desc: '+30% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 30% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.30 } },
+    { desc: '+48% Volley damage', detail: 'Your Volley (the 3-charge double shot) deals 48% more damage. Single Fire shots are unaffected.', effect: { kind: 'volleyDmgMult', mult: 1.48 } },
   ] },
   { id: 'dead_eye', name: 'Dead-Eye', flavor: 'You learn exactly where a hull wants to break.', tiers: [
     { desc: '+8% crit on clean hits', detail: 'Each clean hit (a green-zone landing, not the gold band) has an extra 8% chance to upgrade into a critical — your way to crit even when you miss the gold. Grazes and shots that already crit are unaffected.', effect: { kind: 'critChanceBonus', chance: 0.08 } },
@@ -657,14 +657,14 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   ] },
   // ── RARE ───────────────────────────────────────────────────────────────────
   { id: 'cold_fury', name: 'Cold Fury', flavor: 'When the shot lands true, it lands like the deep itself.', rarity: 'rare', tiers: [
-    { desc: '+15% critical damage', detail: 'Your critical hits deal 15% more damage. Stacks with Wide Sights / Dead-Eye landing more crits in the first place.', effect: { kind: 'critDmgMult', mult: 1.15 } },
-    { desc: '+30% critical damage', detail: 'Your critical hits deal 30% more damage.', effect: { kind: 'critDmgMult', mult: 1.30 } },
-    { desc: '+45% critical damage', detail: 'Your critical hits deal 45% more damage.', effect: { kind: 'critDmgMult', mult: 1.45 } },
+    { desc: '+17% critical damage', detail: 'Your critical hits deal 17% more damage. Stacks with Wide Sights / Dead-Eye landing more crits in the first place.', effect: { kind: 'critDmgMult', mult: 1.17 } },
+    { desc: '+35% critical damage', detail: 'Your critical hits deal 35% more damage.', effect: { kind: 'critDmgMult', mult: 1.35 } },
+    { desc: '+52% critical damage', detail: 'Your critical hits deal 52% more damage.', effect: { kind: 'critDmgMult', mult: 1.52 } },
   ] },
   { id: 'giant_killer', name: 'Giant-Killer', flavor: 'The bigger the hull, the more of it to hit.', rarity: 'rare', tiers: [
-    { desc: '+15% boss damage', detail: 'Deal 15% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.15 } },
-    { desc: '+28% boss damage', detail: 'Deal 28% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.28 } },
-    { desc: '+40% boss damage', detail: 'Deal 40% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.40 } },
+    { desc: '+17% boss damage', detail: 'Deal 17% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.17 } },
+    { desc: '+33% boss damage', detail: 'Deal 33% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.33 } },
+    { desc: '+48% boss damage', detail: 'Deal 48% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.48 } },
   ] },
   { id: 'spiteful_wake', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back. The sea keeps its debts.', rarity: 'rare', tiers: [
     { desc: 'Reflect 8% of damage taken', detail: 'When an enemy lands a hit on you, it takes 8% of that damage straight back into its own hull.', effect: { kind: 'retaliatePct', pct: 0.08 } },
@@ -672,9 +672,9 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Reflect 25% of damage taken', detail: 'When an enemy lands a hit on you, it takes 25% of that damage straight back into its own hull.', effect: { kind: 'retaliatePct', pct: 0.25 } },
   ] },
   { id: 'wounded_fury', name: 'Wounded Fury', flavor: 'The closer to sinking, the harder your guns bite.', rarity: 'rare', tiers: [
-    { desc: 'Up to +15% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +15%.', effect: { kind: 'lowHpDamage', maxBonus: 0.15 } },
-    { desc: 'Up to +30% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +30%.', effect: { kind: 'lowHpDamage', maxBonus: 0.30 } },
-    { desc: 'Up to +45% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +45%.', effect: { kind: 'lowHpDamage', maxBonus: 0.45 } },
+    { desc: 'Up to +17% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +17%.', effect: { kind: 'lowHpDamage', maxBonus: 0.17 } },
+    { desc: 'Up to +35% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +35%.', effect: { kind: 'lowHpDamage', maxBonus: 0.35 } },
+    { desc: 'Up to +52% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +52%.', effect: { kind: 'lowHpDamage', maxBonus: 0.52 } },
   ] },
   // ── LEGENDARY (rare; bigger, one-of-a-kind effects, fewer tiers) ────────────
   { id: 'executioner', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
