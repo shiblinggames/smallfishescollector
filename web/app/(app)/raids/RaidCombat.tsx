@@ -724,6 +724,9 @@ export default function RaidCombat({
   const playerShipRef = useRef<HTMLDivElement>(null)
   const enemyShipRef  = useRef<HTMLDivElement>(null)
   const [nukeBlast, setNukeBlast] = useState<{ key: number; color: string } | null>(null)
+  // Nuke "silo launch" — a missile that arcs from the player's deck to the
+  // enemy before the detonation. Geometry measured from the real ship boxes.
+  const [nukeMissile, setNukeMissile] = useState<{ key: number; color: string; x1: number; y1: number; x2: number; y2: number; dur: number } | null>(null)
   const [megaSplats, setMegaSplats] = useState<{ key: number; color: string; items: { id: number; text: string; size: number; dx: number; dy: number; delay: number }[] } | null>(null)
   // Crew-ability cast cue — themed portrait banner + ring that pops over the
   // stage so firing ANY ability has an unmistakable "you did something" tell.
@@ -2437,8 +2440,8 @@ export default function RaidCombat({
         const megaId    = step.action === 'mega' ? (megaAugment?.id ?? null) : null
         const megaColor = megaAugment?.color ?? '#ffffff'
         const isVolleyShot = (step.action === 'volley' || step.action === 'mega') && !step.big
-        // The Nuke is a heavy lob — a slower projectile so the blast lands with weight.
-        const flightMs = megaId === 'nuke' ? PROJECTILE_FLIGHT_MS + 380 : PROJECTILE_FLIGHT_MS
+        // The Nuke is a silo launch — a missile arcs across, so it flies longer.
+        const flightMs = megaId === 'nuke' ? PROJECTILE_FLIGHT_MS + 560 : PROJECTILE_FLIGHT_MS
         const cannonKind: 'normal' | 'volley' | 'crit' =
           step.big ? 'crit' : isVolleyShot ? 'volley' : 'normal'
         // Railgun — a beam lances out the instant you fire (no cannonball arc).
@@ -2470,11 +2473,25 @@ export default function RaidCombat({
           setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
           playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 920))
         } else if (megaId === 'nuke') {
-          // Heavy charged lob — a single big recoil + launch thump, then a slow
-          // flight to the blast. No salvo: the Nuke is one massive shell.
+          // Silo launch — a missile blasts off the deck, arcs up and over, then
+          // comes down on the enemy where it detonates. Geometry from real boxes.
           setPlayerRecoilKey(k => k + 1)
-          setCannonShot({ key: Date.now() + i, kind: 'crit' })
-          setTimeout(() => setCannonShot(null), 900)
+          const stg = stageRef.current?.getBoundingClientRect()
+          const ps  = playerShipRef.current?.getBoundingClientRect()
+          const es  = enemyShipRef.current?.getBoundingClientRect()
+          let mx1: number, my1: number, mx2: number, my2: number
+          if (stg && ps && es) {
+            mx1 = ps.left - stg.left + ps.width * 0.50   // launches off the deck centre
+            my1 = ps.top  - stg.top  + ps.height * 0.20
+            mx2 = es.left - stg.left + es.width * 0.50   // comes down on the enemy
+            my2 = es.top  - stg.top  + es.height * 0.42
+          } else {
+            const W = stg?.width ?? 360, H = stg?.height ?? 400
+            mx1 = W * 0.34; my1 = H * 0.55
+            mx2 = W * 0.78; my2 = H * 0.50
+          }
+          setNukeMissile({ key: Date.now() + i, color: megaColor, x1: mx1, y1: my1, x2: mx2, y2: my2, dur: flightMs })
+          playStepChainRef.current.push(setTimeout(() => setNukeMissile(null), flightMs + 90))
           vibrate([0, 30, 50, 20])
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
@@ -2689,7 +2706,7 @@ export default function RaidCombat({
       // The Nuke lands later (slow lob) and its blast lingers, so it needs a
       // longer beat before the next step or the explosion gets cut off.
       const isNukeStep = step.action === 'mega' && megaAugment?.id === 'nuke'
-      const hitStop = step.big ? 110 : isNukeStep ? 620 : (step.action === 'volley' || step.action === 'mega' ? 55 : 0)
+      const hitStop = step.big ? 110 : isNukeStep ? 800 : (step.action === 'volley' || step.action === 'mega' ? 55 : 0)
       const gapMs = (step.phaseTransition ? 1600 : STEP_GAP_MS) + hitStop
       playStepChainRef.current.push(setTimeout(() => playStep(i + 1), gapMs))
     }
@@ -3463,6 +3480,10 @@ export default function RaidCombat({
             Rendered as a DIRECT child of the stage so its measured px coords
             share the stage's coordinate space (not the tilted ship container). */}
         {railBeam && <RailgunBeam key={`rb-${railBeam.key}`} color={railBeam.color} x1={railBeam.x1} y1={railBeam.y1} len={railBeam.len} angle={railBeam.angle} />}
+
+        {/* Nuke silo launch — the arcing missile flies stage-level so its measured
+            path spans both ships; the detonation itself lands on the enemy hull. */}
+        {nukeMissile && <NukeMissile key={`nm-${nukeMissile.key}`} color={nukeMissile.color} x1={nukeMissile.x1} y1={nukeMissile.y1} x2={nukeMissile.x2} y2={nukeMissile.y2} dur={nukeMissile.dur} />}
 
         {/* Low-hull danger — a red vignette breathes at the stage edges while
             the player's HP is critical, so the tension reads without a number. */}
@@ -4760,6 +4781,51 @@ function RailgunBeam({ color, x1, y1, len, angle }: { color: string; x1: number;
         animate={{ opacity: [0, 0.9, 0], scale: [0.4, 1.3, 0.8] }}
         transition={{ duration: 0.6, delay: 0.06, times: [0, 0.35, 1], ease: 'easeOut' }}
         style={{ position: 'absolute', left: ex, top: ey, width: 48, height: 48, marginLeft: -24, marginTop: -24, borderRadius: '50%', zIndex: 21, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 48%, transparent 72%)`, boxShadow: `0 0 24px 7px ${color}` }} />
+    </>
+  )
+}
+// Nuke silo launch — a missile blasts off the player's deck, arcs up and over,
+// then accelerates down onto the enemy. Launch plume stays at the deck; the
+// missile + exhaust ride a moving wrapper along a parabola to the target.
+function NukeMissile({ color, x1, y1, x2, y2, dur }: { color: string; x1: number; y1: number; x2: number; y2: number; dur: number }) {
+  const dx = x2 - x1, dy = y2 - y1
+  // Apex well above both ends so it reads as a true lob, not a straight shot.
+  const apexY = Math.min(0, dy) - 120
+  const d = dur / 1000
+  return (
+    <>
+      {/* Launch plume — fire + smoke blasting off the deck as it lifts. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scale: 0.4 }}
+        animate={{ opacity: [0, 0.95, 0.5, 0], scale: [0.4, 1.5, 2.1, 2.6] }}
+        transition={{ duration: 0.7, times: [0, 0.2, 0.6, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1 + 6, width: 60, height: 60, marginLeft: -30, marginTop: -22, borderRadius: '50%', zIndex: 17, pointerEvents: 'none', background: `radial-gradient(circle, #ffffff 0%, ${color} 38%, rgba(60,40,30,0.45) 66%, transparent 80%)`, filter: 'blur(2px)' }} />
+      {/* Lift-off smoke column rising off the launch point. */}
+      <motion.div aria-hidden
+        initial={{ opacity: 0, scaleY: 0.3 }}
+        animate={{ opacity: [0, 0.5, 0], scaleY: [0.3, 1, 1.2] }}
+        transition={{ duration: 0.9, times: [0, 0.3, 1], ease: 'easeOut' }}
+        style={{ position: 'absolute', left: x1, top: y1 - 26, width: 22, height: 56, marginLeft: -11, borderRadius: 12, transformOrigin: 'bottom center', zIndex: 16, pointerEvents: 'none', background: 'linear-gradient(0deg, rgba(70,50,40,0.55), rgba(120,120,120,0.25) 60%, transparent)', filter: 'blur(3px)' }} />
+      {/* Missile + exhaust — moving wrapper rides the parabola, accelerating in. */}
+      <motion.div aria-hidden
+        initial={{ x: 0, y: 0, rotate: -68, opacity: 0 }}
+        animate={{ x: [0, dx * 0.5, dx], y: [0, apexY, dy], rotate: [-68, -6, 58], opacity: [0, 1, 1, 1] }}
+        transition={{ duration: d, times: [0, 0.45, 1], ease: 'easeIn' }}
+        style={{ position: 'absolute', left: x1, top: y1, zIndex: 18, pointerEvents: 'none' }}
+      >
+        {/* Exhaust trail — tapering fire behind the tail (nose points right). */}
+        <motion.div aria-hidden
+          animate={{ opacity: [0.5, 1, 0.85] }}
+          transition={{ duration: 0.18, repeat: Infinity, repeatType: 'mirror' }}
+          style={{ position: 'absolute', left: -52, top: -5, width: 52, height: 10, borderRadius: 6, background: `linear-gradient(90deg, transparent 0%, ${color}88 40%, ${color} 70%, #ffd27a 100%)`, filter: 'blur(2.5px)' }} />
+        {/* Missile body. */}
+        <div style={{ position: 'absolute', left: -13, top: -4.5, width: 26, height: 9, borderRadius: 6, background: 'linear-gradient(90deg, #94a3b8, #f8fafc)', boxShadow: `0 0 10px ${color}` }}>
+          {/* Nose cone. */}
+          <div style={{ position: 'absolute', left: '100%', top: -0.5, width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '8px solid #ef4444' }} />
+          {/* Tail fin. */}
+          <div style={{ position: 'absolute', right: -2, top: -3, width: 6, height: 15, borderRadius: 2, background: '#cbd5e1' }} />
+        </div>
+      </motion.div>
     </>
   )
 }
