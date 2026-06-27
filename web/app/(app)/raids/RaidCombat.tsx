@@ -2447,16 +2447,23 @@ export default function RaidCombat({
           const stg = stageRef.current?.getBoundingClientRect()
           const ps  = playerShipRef.current?.getBoundingClientRect()
           const es  = enemyShipRef.current?.getBoundingClientRect()
+          // Muzzle -> enemy hull. Measure the real ship boxes when we can; fall
+          // back to stage-relative proportions so the beam ALWAYS fires.
+          let x1: number, y1: number, x2: number, y2: number
           if (stg && ps && es) {
-            const x1 = ps.right - stg.left - ps.width * 0.18  // just inside the bow
-            const y1 = ps.top   - stg.top  + ps.height * 0.30 // upper deck
-            const x2 = es.left  - stg.left + es.width * 0.50  // enemy centre
-            const y2 = es.top   - stg.top  + es.height * 0.45
-            const dx = x2 - x1, dy = y2 - y1
-            const len = Math.max(40, Math.hypot(dx, dy))
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI
-            setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
+            x1 = ps.right - stg.left - ps.width * 0.18   // just inside the bow
+            y1 = ps.top   - stg.top  + ps.height * 0.30  // upper deck
+            x2 = es.left  - stg.left + es.width * 0.50   // enemy centre
+            y2 = es.top   - stg.top  + es.height * 0.45
+          } else {
+            const W = stg?.width ?? 360, H = stg?.height ?? 400
+            x1 = W * 0.50; y1 = H * 0.60
+            x2 = W * 0.78; y2 = H * 0.50
           }
+          const dx = x2 - x1, dy = y2 - y1
+          const len = Math.max(60, Math.hypot(dx, dy))
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI
+          setRailBeam({ key: Date.now() + i, color: megaColor, x1, y1, len, angle })
           playStepChainRef.current.push(setTimeout(() => setRailBeam(null), 780))
         } else if (isVolleyShot) {
           // Rat-a-tat — three muzzle pops + recoil kicks for the 3-cannonball
