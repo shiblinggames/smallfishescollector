@@ -295,8 +295,9 @@ export const REPRIEVES: Reprieve[] = [
   { id: 'patch_hull',       name: 'Patch the Hull',   flavor: 'A frantic hour at the pumps buys back the worst of the damage.', desc: 'Heal 75% of your max HP', kind: 'heal', amount: 0.75 },
   { id: 'beat_to_quarters', name: 'Beat to Quarters', flavor: 'The bosun pipes all hands. Every gun and trick comes up loaded.',  desc: 'Refresh every crew ability',  kind: 'crew', amount: 0 },
 ]
-/** Combat depth at/after which a Reprieve can appear on a boon screen. */
-export const REPRIEVE_MIN_DEPTH = 9
+/** Combat depth at/after which a Reprieve can appear on a boon screen. The first
+ *  eligible boon draft is depth 8 (the boon screens are at 2/5/8/11/...). */
+export const REPRIEVE_MIN_DEPTH = 6
 /** Chance a Reprieve surfaces on an eligible boon screen. */
 export const REPRIEVE_CHANCE = 0.55
 /** Pick one Reprieve to offer. */
