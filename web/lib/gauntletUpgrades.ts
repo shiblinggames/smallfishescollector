@@ -168,6 +168,19 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     category: 'raids',
   },
   {
+    // The big one — priced ABOVE the gate×10 rule (would be 120) because it's a
+    // major capability, not a stat nudge: it unlocks the whole forge system,
+    // letting players fuse raid-item recipes into one slot (more recipes land
+    // over time). Gated deep + dear so it reads as a milestone unlock.
+    id: 'forge',
+    name: 'The Forge',
+    description: 'Unlock the Forge at your ship loadout: fuse a recipe’s component items into one, stacking both effects into a single slot. New recipes are added over time.',
+    depthRequired: 12,
+    cost: 150,
+    scope: 'account',
+    category: 'raids',
+  },
+  {
     id: 'swift_sails',
     name: 'Swift Sails',
     description: 'Your crew voyages return 30% faster — less waiting, more sailing.',
@@ -209,6 +222,12 @@ export function bonusChargeSlots(unlocked: string[] | null | undefined): number 
 /** Safe Passage: when owned, voyages never roll a crew casualty. */
 export function hasSafeVoyages(unlocked: string[] | null | undefined): boolean {
   return (unlocked ?? []).includes('safe_voyages')
+}
+
+/** The Forge: gates the raid-item forge (combine recipes into one slot). Both
+ *  the loadout UI and the forgeRaidItem server action check this. */
+export function hasForge(unlocked: string[] | null | undefined): boolean {
+  return (unlocked ?? []).includes('forge')
 }
 
 /** Seasoned Timbers: repair-kit heal multiplier in EVERY raid (account-wide). */

@@ -19,7 +19,7 @@ import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
 import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, chooseShipAugment } from './actions'
 import { SHIP_AUGMENTS, getShipAugment, canChooseAugment, AUGMENT_COST, MEGA_CHARGE_COST, AUGMENTS_LIVE, type ShipAugmentId } from '@/lib/shipAugments'
-import { bonusChargeSlots } from '@/lib/gauntletUpgrades'
+import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
@@ -409,6 +409,9 @@ export default function ShipHero({
   const augmentEligible = canChooseAugment(shipTierForSlots, navLevelNow)
   const showAugments = (AUGMENTS_LIVE || isAdmin) && augmentEligible
   const hasRack = bonusChargeSlots(gauntletUpgrades) > 0
+  // The Forge is a major Gauntlet (Fathom) unlock — locked → a teaser, not the recipes.
+  const forgeUnlocked = hasForge(gauntletUpgrades)
+  const forgeUpg = getGauntletUpgrade('forge')
   const [augment, setAugment] = useState<string | null>(initialManowarAugment)
   const [augmentConfirm, setAugmentConfirm] = useState<ShipAugmentId | null>(null)
   const [augmentBusy, setAugmentBusy] = useState(false)
@@ -664,7 +667,7 @@ export default function ShipHero({
   const [forgeFx, setForgeFx] = useState<{ compImages: (string | null)[]; result: { name: string; image: string | null }; accent: string } | null>(null)
   const [forgeReady, setForgeReady] = useState(false)
   function onForgeTap(resultId: string) {
-    if (forging) return
+    if (forging || !forgeUnlocked) return
     if (forgeArmed !== resultId) {
       setForgeArmed(resultId)
       setTimeout(() => setForgeArmed(a => (a === resultId ? null : a)), 3000)
@@ -1506,14 +1509,27 @@ export default function ShipHero({
                 )
               })()}
 
-              {/* Forge recipes — each is always visible (until forged) so the
-                  result reads as a goal to chase. Shows a component checklist;
-                  the forge button only unlocks once every component is owned.
+              {/* Forge — gated behind a major Gauntlet (Fathom) unlock. Locked →
+                  a teaser pointing at the Gauntlet; unlocked → the recipe cards.
+                  Each recipe is visible (until forged) so the result reads as a
+                  goal; the forge button only arms once every component is owned.
                   Generic over FORGE_RECIPES, so new forgeable items just appear. */}
               {FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
                 <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Forge</p>
               )}
-              {FORGE_RECIPES.filter(recipe => !ownedRaidItems.includes(recipe.result)).map(recipe => {
+              {!forgeUnlocked && FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
+                <div className="app-card" style={{ padding: '0.95rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid rgba(125,176,208,0.32)', background: 'rgba(18,28,40,0.55)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#8fb6d6' }}>The Forge · Locked</p>
+                    {forgeUpg && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.54rem', color: '#7fd0ff' }}>{forgeUpg.cost} Fathoms</span>}
+                  </div>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6', lineHeight: 1.1 }}>Unlock the Forge in the Gauntlet</p>
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45 }}>
+                    Combine two raid items into one, fusing both effects into a single loadout slot so you save space and stack power. A major unlock earned in the Davy Jones Gauntlet{forgeUpg ? `: reach depth ${forgeUpg.depthRequired}, then spend ${forgeUpg.cost} Fathoms.` : '.'}
+                  </p>
+                </div>
+              )}
+              {forgeUnlocked && FORGE_RECIPES.filter(recipe => !ownedRaidItems.includes(recipe.result)).map(recipe => {
                 const result = getRaidItem(recipe.result)
                 if (!result) return null
                 const comps = recipe.components.map(id => ({ def: getRaidItem(id), owned: ownedRaidItems.includes(id) }))

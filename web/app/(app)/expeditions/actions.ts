@@ -7,6 +7,7 @@ import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItemFamilies } from '@/lib/raidItems'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getShipAugment, canChooseAugment, AUGMENT_COST } from '@/lib/shipAugments'
+import { hasForge } from '@/lib/gauntletUpgrades'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -144,9 +145,13 @@ export async function forgeRaidItem(resultId: string): Promise<{ ok: true; raidI
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('raid_items, equipped_raid_items')
+    .select('raid_items, equipped_raid_items, gauntlet_upgrades')
     .eq('id', user.id)
     .single()
+  // The Forge is a major Gauntlet (Fathom) unlock — server-enforce it.
+  if (!hasForge((profile?.gauntlet_upgrades as string[] | null) ?? [])) {
+    return { error: 'The Forge is locked. Unlock it in the Davy Jones Gauntlet.' }
+  }
   const owned = (profile?.raid_items as string[] | null) ?? []
   if (owned.includes(recipe.result)) return { error: 'Already forged.' }
   if (!recipe.components.every(id => owned.includes(id))) return { error: 'You don\'t own every component yet.' }
