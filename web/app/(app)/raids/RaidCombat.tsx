@@ -1113,14 +1113,22 @@ export default function RaidCombat({
     // Needle sweep, with the curse multiplier (Racing Tide etc.).
     const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult
 
+    // Escort decoys run FASTER than the flagship zone and shrug off MOST of the
+    // player's Navigation slow (0.006 vs the zone's 0.015) — at the endgame
+    // admiral, high nav shouldn't turn the screen into a trivial chore. A fast
+    // base + a wide per-decoy spread = a genuine timing test, not a monotonous tap.
+    const DECOY_SPEED = enemy.shipSpeed * 0.0008 * tide.zoneSpeedMult * (1 / (1 + totalNavigation * 0.006))
+
     // ── Decoy Screen setup — fresh escort decoys for THIS fire. Spread across
-    //    the full bar, each drifting at its own pace/direction so they're a
-    //    moving aim challenge, not static lures. Cleared on resolve.
+    //    the full bar, each ripping along at its own pace/direction so they're a
+    //    real moving aim challenge, not static lures. Cleared on resolve.
     const dlo = HIT_W + GRAZE_W, dhi = 1 - HIT_W - GRAZE_W
     const nDecoys = Math.max(0, Math.min(4, enemy.decoyCount ?? 0))
     decoyRunRef.current = Array.from({ length: nDecoys }, (_, k) => {
       const frac = nDecoys === 1 ? 0.32 : k / (nDecoys - 1)   // span ~full bar
-      return { pos: 0.18 + (0.82 - 0.18) * frac, dir: k % 2 === 0 ? 1 : -1, speed: 0.85 + (k % 3) * 0.4, cleared: false }
+      // Wide spread (1.7× → 2.9×) so no two decoys track together — you can't
+      // settle into one rhythm to clear them all.
+      return { pos: 0.18 + (0.82 - 0.18) * frac, dir: k % 2 === 0 ? 1 : -1, speed: 1.7 + (k % 3) * 0.6, cleared: false }
     })
     chipPlayerShotRef.current = false
 
@@ -1148,7 +1156,7 @@ export default function RaidCombat({
         const d = decoyRunRef.current[k]
         const el = decoyElRefs.current[k]
         if (d.cleared) { if (el) el.style.display = 'none'; continue }
-        d.pos += ZONE_SPEED * d.speed * frames * d.dir
+        d.pos += DECOY_SPEED * d.speed * frames * d.dir
         if (d.pos >= dhi) { d.pos = dhi; d.dir = -1 }
         if (d.pos <= dlo) { d.pos = dlo; d.dir = 1 }
         if (el) {
