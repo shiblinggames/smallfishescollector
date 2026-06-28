@@ -8,7 +8,7 @@
 // lib/gauntlet; boons + curses are the run-modifier layer (Tides are raids-only).
 // The pot is only banked on cash-out; a wipe loses everything.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -210,8 +210,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   // higher tier replaces the lower; no infinite single-boon stacking.
   const [boonTiers, setBoonTiers] = useState<Record<string, number>>({})
   const [pendingBoons, setPendingBoons] = useState<BoonOffer[] | null>(null)
-  // Boon-draft fanfare — a "stop the room" reveal when a Rare/Legendary surfaces.
-  const [boonFanfare, setBoonFanfare] = useState<'legendary' | 'rare' | null>(null)
+  // Boon-draft reveal — the three powers surface like a Crew Hall recruit pull:
+  // each card sits under a sealed cover that rattles, then 3D-flips open, run
+  // worst -> best so the rarest is the climax. Per-card phase keyed by index.
+  const [boonPhases, setBoonPhases] = useState<Record<number, 'sealed' | 'charging' | 'flipped'>>({})
+  const [boonFlash, setBoonFlash] = useState(0)               // key — retriggers the legendary flash
+  const [boonBanner, setBoonBanner] = useState<{ name: string; key: number } | null>(null)
   // Tapped boon/curse on the breather screen → details popup.
   const [detailEffect, setDetailEffect] = useState<
     { kind: 'boon' | 'curse'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number } | null
@@ -375,24 +379,60 @@ export default function GauntletGame(props: GauntletGameProps) {
     return () => clearTimeout(t)
   }, [phase, fight])
 
-  // Boon-draft fanfare — when the draft surfaces a Rare/Legendary, fire a
-  // reveal beat (gold burst + banner + treasure sting + haptic) so a good roll
-  // lands like a moment. Plays once as the draft screen opens.
+  // Boon-draft reveal sequence — seal all three, then charge + flip them open
+  // worst -> best so the rarest pull lands last as the climax (mirrors the Crew
+  // Hall recruit reveal). The flip itself carries the haptic/SFX payoff per
+  // rarity; legendary also fires a screen flash + banner.
   useEffect(() => {
-    if (phase !== 'boon' || !pendingBoons) { setBoonFanfare(null); return }
-    const tier = pendingBoons.some(b => b.rarity === 'legendary') ? 'legendary'
-               : pendingBoons.some(b => b.rarity === 'rare') ? 'rare' : null
-    setBoonFanfare(tier)
-    if (tier === 'legendary') {
-      vibrate([0, 50, 40, 70, 40, 110])
-      import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
-    } else if (tier === 'rare') {
-      vibrate([0, 35, 45, 55])
-      import('@/lib/fishingMusic').then(m => m.playChestSfx(false)).catch(() => {})
+    if (phase !== 'boon' || !pendingBoons) { setBoonPhases({}); setBoonBanner(null); return }
+    const rank = (r: string) => (r === 'legendary' ? 3 : r === 'rare' ? 2 : 1)
+    const init: Record<number, 'sealed' | 'charging' | 'flipped'> = {}
+    pendingBoons.forEach((_, i) => { init[i] = 'sealed' })
+    setBoonPhases(init)
+    setBoonBanner(null)
+    const order = pendingBoons
+      .map((b, i) => ({ i, r: rank(b.rarity), name: b.name }))
+      .sort((a, c) => a.r - c.r)   // rarest last
+    const timers: ReturnType<typeof setTimeout>[] = []
+    // Flip a card open + fire its rarity payoff.
+    const doFlip = (o: { i: number; r: number; name: string }) => {
+      setBoonPhases(p => ({ ...p, [o.i]: 'flipped' }))
+      if (o.r === 3) {
+        setBoonFlash(1000 + o.i)
+        setBoonBanner({ name: o.name, key: 1000 + o.i })
+        vibrate([0, 50, 40, 70, 40, 110])
+        import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
+      } else if (o.r === 2) {
+        vibrate([0, 32, 40, 52])
+        import('@/lib/fishingMusic').then(m => m.playChestSfx(false)).catch(() => {})
+      }
     }
-    const t = setTimeout(() => setBoonFanfare(null), 1500)
-    return () => clearTimeout(t)
+    let t = 120
+    order.forEach((o, pos) => {
+      const isLast = pos === order.length - 1
+      if (o.r === 3) {
+        // Legendary: the one card that earns a wind-up — a brief rattle, then
+        // the climax flip + big payoff.
+        const chargeAt = t + (isLast ? 120 : 0)   // a small beat before the finale
+        const charge = 320
+        timers.push(setTimeout(() => setBoonPhases(p => (p[o.i] === 'sealed' ? { ...p, [o.i]: 'charging' } : p)), chargeAt))
+        timers.push(setTimeout(() => doFlip(o), chargeAt + charge))
+        t = chargeAt + charge + 110
+      } else {
+        // Common / rare: clean, quick flip — no rattle.
+        timers.push(setTimeout(() => doFlip(o), t))
+        t += 150
+      }
+    })
+    return () => timers.forEach(clearTimeout)
   }, [phase, pendingBoons])
+
+  // Auto-dismiss the legendary banner a beat after it lands.
+  useEffect(() => {
+    if (!boonBanner) return
+    const t = setTimeout(() => setBoonBanner(null), 2200)
+    return () => clearTimeout(t)
+  }, [boonBanner])
 
   function handleEnemyDefeated(remainingHp: number, leftoverCharges = 0) {
     const f = fight
@@ -1218,39 +1258,36 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Boon draft — claim one of three powers ──────────────────────────────────
   if (phase === 'boon' && pendingBoons) {
     const RELIEF = '#e7b667' // warm amber — distinct from the boon rarity palette
+    // Hold the reprieve + reroll options back until every card has flipped open,
+    // so they don't pop in over a reveal still in progress.
+    const revealDone = pendingBoons.every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
     return (
       <>
         <AbyssBackdrop />
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${TEAL}24 0%, ${TEAL}08 38%, transparent 64%)` }} />
-        {/* Rare / Legendary fanfare — a burst + banner that stops the room when a
-            good roll surfaces. Plays once on draft open (see the effect above). */}
-        {boonFanfare && (() => {
-          const isLeg = boonFanfare === 'legendary'
-          const col = isLeg ? '#f5b94a' : '#8b9cff'
-          return (
-            <div key={boonFanfare} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <motion.div initial={{ scale: 0.2, opacity: 0.9 }} animate={{ scale: 3.2, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
-                style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: `radial-gradient(circle, ${col}cc 0%, ${col}33 38%, transparent 70%)` }} />
-              <motion.div initial={{ scale: 0.3, opacity: 0.85 }} animate={{ scale: 2.7, opacity: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }}
-                style={{ position: 'absolute', width: 210, height: 210, borderRadius: '50%', border: `2px solid ${col}`, boxShadow: `0 0 32px ${col}` }} />
-              {isLeg && (
-                <motion.div initial={{ scale: 0.4, opacity: 0.7 }} animate={{ scale: 4, opacity: 0 }} transition={{ duration: 1.1, delay: 0.12, ease: 'easeOut' }}
-                  style={{ position: 'absolute', width: 160, height: 160, borderRadius: '50%', border: `1.5px solid ${col}aa` }} />
-              )}
-              <motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: [0, 1, 1, 0], scale: [0.6, 1.1, 1, 1] }} transition={{ duration: 1.5, times: [0, 0.16, 0.78, 1], ease: 'easeOut' }}
-                style={{ position: 'relative', textAlign: 'center' }}>
-                <p className="font-cinzel font-800 uppercase" style={{ fontSize: '1.55rem', letterSpacing: '0.1em', color: col, textShadow: `0 0 30px ${col}, 0 0 12px ${col}` }}>
-                  {isLeg ? 'Legendary' : 'Rare Find'}
-                </p>
-                <p className="font-karla font-700 uppercase tracking-[0.28em]" style={{ fontSize: '0.54rem', color: `${col}cc`, marginTop: 5 }}>
-                  {isLeg ? 'surfaces from the deep' : 'breaks the surface'}
-                </p>
-              </motion.div>
-            </div>
-          )
-        })()}
+        {/* Legendary climax — a brief gold screen flash the instant the rarest
+            card flips open (rare/common land quietly on the card itself). */}
+        <AnimatePresence>
+          {boonFlash > 0 && boonBanner && (
+            <motion.div key={boonFlash} aria-hidden initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 58, pointerEvents: 'none', background: 'radial-gradient(circle at 50% 46%, rgba(245,185,74,0.4) 0%, rgba(245,185,74,0.12) 40%, transparent 72%)' }} />
+          )}
+        </AnimatePresence>
+        {/* Legendary banner — the only "stop the room" beat left, reserved for the
+            rarest pull (mirrors the Crew Hall legendary reveal). */}
+        <AnimatePresence>
+          {boonBanner && (
+            <motion.div key={boonBanner.key} aria-hidden
+              initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.45, ease: [0.16, 1.25, 0.3, 1] }}
+              style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+              <p className="font-pirata" style={{ fontSize: '2.4rem', letterSpacing: '0.05em', lineHeight: 1, color: '#f5b94a', textShadow: '0 0 28px #f5b94a, 0 0 64px rgba(245,185,74,0.6)' }}>Legendary!</p>
+              <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.95rem', letterSpacing: '0.18em', color: '#ecdcbd', marginTop: 8, textShadow: '0 2px 12px rgba(0,0,0,0.85)' }}>{boonBanner.name}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 470, margin: '0 auto',
           padding: '12px 0.9rem', textAlign: 'center',
@@ -1274,18 +1311,28 @@ export default function GauntletGame(props: GauntletGameProps) {
               const legendary = b.rarity === 'legendary'
               const rare = b.rarity === 'rare'
               const maxTier = GAUNTLET_BOONS.find(f => f.id === b.id)?.tiers.length ?? 3
+              const ph = boonPhases[idx] ?? 'sealed'
+              const flipped = ph === 'flipped'
+              const charging = ph === 'charging'
+              const rank = legendary ? 3 : rare ? 2 : 1
               return (
+                <div key={b.id} style={{ position: 'relative', perspective: 1100 }}>
+                {/* The real card — edge-on (hidden) until it flips up to face you */}
+                <motion.div
+                  initial={false}
+                  animate={{ rotateY: flipped ? 0 : -90 }}
+                  transition={{ duration: 0.26, ease: 'easeOut' }}
+                  className={flipped ? (rank === 3 ? 'reveal-glow-legendary' : rank === 2 ? 'reveal-glow-rare' : '') : ''}
+                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                >
                 <motion.button
-                  key={b.id}
-                  initial={{ opacity: 0, y: 22, scale: 0.94 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.12 + idx * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
-                  whileTap={{ scale: 0.945 }}
-                  whileHover={{ scale: 1.015 }}
-                  onClick={() => applyBoon(b)}
+                  initial={false}
+                  whileTap={flipped ? { scale: 0.945 } : undefined}
+                  whileHover={flipped ? { scale: 1.015 } : undefined}
+                  onClick={() => { if (flipped) applyBoon(b) }}
                   className="tap"
                   style={{
-                    position: 'relative', textAlign: 'left', overflow: 'hidden',
+                    position: 'relative', textAlign: 'left', overflow: 'hidden', width: '100%',
                     padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
                     background: `linear-gradient(180deg, ${rm.color}28 0%, rgba(8,14,22,0.62) 74%)`,
                     border: `1.5px solid ${rm.color}${legendary ? 'dd' : rare ? '99' : '66'}`,
@@ -1346,13 +1393,65 @@ export default function GauntletGame(props: GauntletGameProps) {
                     {b.flavor}
                   </p>
                 </motion.button>
+                </motion.div>
+
+                {/* Landing payoff — legendary gets gold shock rings + a spark
+                    burst; rare/common settle with a soft rarity-tinted ring. */}
+                {flipped && rank === 3 && <BoonShockRings />}
+                {flipped && rank === 3 && <BoonSparks />}
+                {flipped && rank < 3 && (
+                  <span aria-hidden className="crew-land-ring" style={{
+                    position: 'absolute', left: '50%', top: '50%', width: 44, height: 44, marginLeft: -22, marginTop: -22,
+                    borderRadius: '50%', border: `2px solid ${rm.color}`, boxShadow: `0 0 8px ${rm.color}66`,
+                    zIndex: 4, pointerEvents: 'none',
+                  }} />
+                )}
+
+                {/* Sealed cover — rattles while charging, then flips away to reveal
+                    the card beneath (mirrors the Crew Hall dossier reveal). */}
+                <AnimatePresence>
+                  {!flipped && (
+                    <motion.div key="cover" initial={false} exit={{ rotateY: 90, opacity: 0 }}
+                      transition={{ duration: 0.26, ease: 'easeIn' }}
+                      style={{ position: 'absolute', inset: 0, zIndex: 6, transformOrigin: 'center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', pointerEvents: 'none' }}>
+                      <motion.div
+                        animate={charging
+                          ? { x: [0, -2, 2, -1.5, 1.5, 0], rotate: rank >= 3 ? [0, -1.4, 1.4, -0.9, 0.9, 0] : [0, -0.9, 0.9, -0.5, 0.5, 0] }
+                          : { x: 0, rotate: 0 }}
+                        transition={charging ? { duration: rank >= 3 ? 0.1 : 0.17, repeat: Infinity, ease: 'linear' } : { duration: 0.12 }}
+                        style={{
+                          width: '100%', height: '100%', borderRadius: 16,
+                          background: 'linear-gradient(157deg, #11202a 0%, #0a141c 100%)',
+                          border: `1px solid ${rm.color}3a`,
+                          boxShadow: `inset 0 0 0 1px ${rm.color}1a, 0 6px 16px rgba(0,0,0,0.5)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                        <div className={charging ? 'crew-seal-charging' : ''} style={{
+                          width: 48, height: 48, borderRadius: '50%',
+                          background: `radial-gradient(circle at 38% 32%, ${rm.color} 0%, ${rm.color}66 72%)`,
+                          border: '2px solid rgba(0,0,0,0.32)',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.25)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          ['--seal-glow']: rm.color,
+                        } as CSSProperties}>
+                          {/* Compass-rose sigil — a "power waiting to surface" mark */}
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <circle cx="12" cy="12" r="9" />
+                            <polygon points="12,4.2 13.7,10.3 19.8,12 13.7,13.7 12,19.8 10.3,13.7 4.2,12 10.3,10.3" fill="rgba(255,255,255,0.82)" stroke="none" />
+                          </svg>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                </div>
               )
             })}
 
             {/* Reprieve — an optional one-time relief, taken INSTEAD of a boon.
                 Surfaces in later rounds; the warm amber + "you forgo the draft"
                 cue keep the trade clear. */}
-            {pendingReprieve && (
+            {pendingReprieve && revealDone && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
@@ -1392,7 +1491,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </div>
 
           {/* Second Cast — reroll the offered boons (limited per draft). */}
-          {rerollsLeft > 0 && (
+          {rerollsLeft > 0 && revealDone && (
             <button onClick={rerollBoons} className="font-karla font-700 uppercase tracking-[0.1em] tap"
               style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: TEAL, background: `${TEAL}14`, border: `1px solid ${TEAL}55`, cursor: 'pointer' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
@@ -2469,6 +2568,58 @@ const MOTES = [
   { left: 7,  size: 2, dur: 14, delay: 6 },
   { left: 58, size: 2, dur: 9,  delay: 7 },
 ]
+
+// Gold shockwave rings off a legendary boon card as it flips open.
+function BoonShockRings() {
+  const color = '#f5b94a'
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5, overflow: 'visible' }}>
+      {[0, 0.14, 0.28].map((d, i) => (
+        <span key={i} style={{
+          position: 'absolute', left: '50%', top: '50%', width: 84, height: 84, marginLeft: -42, marginTop: -42,
+          borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 12px ${color}88`,
+          animation: `crew-shock 1.1s ${d}s ease-out both`,
+        }} />
+      ))}
+    </div>
+  )
+}
+
+// A modest gold spark burst from a legendary boon card's centre.
+function BoonSparks() {
+  const colors = ['#ffe48a', '#ffd23c', '#ffb800', '#fff3c0']
+  const count = 30
+  const sparks = Array.from({ length: count }, (_, i) => {
+    // Deterministic-ish spread (no Math.random in a render-pure helper is fine
+    // here, but a touch of variance reads better) — vary by index.
+    const angle = (Math.PI * 2 * i) / count + (i % 3 - 1) * 0.22
+    const dist = 50 + (i % 5) * 22
+    return {
+      id: i,
+      x: Math.cos(angle) * dist,
+      y: Math.sin(angle) * dist - 12,
+      size: 3 + (i % 4),
+      color: colors[i % colors.length],
+      delay: (i % 6) * 0.025,
+      dur: 0.7 + (i % 4) * 0.12,
+    }
+  })
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5, overflow: 'visible' }}>
+      {sparks.map(p => (
+        <motion.span key={p.id}
+          initial={{ x: 0, y: 0, scale: 0.3, opacity: 0 }}
+          animate={{ x: p.x, y: p.y, scale: [0.3, 1, 0.55], opacity: [0, 1, 0] }}
+          transition={{ duration: p.dur, delay: p.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: p.size, height: p.size, marginLeft: -p.size / 2, marginTop: -p.size / 2,
+            borderRadius: '50%', background: p.color, boxShadow: `0 0 6px ${p.color}, 0 0 12px ${p.color}88`,
+          }} />
+      ))}
+    </div>
+  )
+}
 
 function AbyssBackdrop() {
   return (
