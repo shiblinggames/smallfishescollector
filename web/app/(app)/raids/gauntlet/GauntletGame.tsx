@@ -1794,6 +1794,11 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
         padding: '10px 0.95rem', textAlign: 'center',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        // The chest burst/ray FX scale up to ~800px and stay mounted at opacity
+        // 0; transformed elements still count toward scroll size, so without
+        // this they balloon the page's scroll area. Clip the decorative bleed —
+        // the bursts still flash, they just can't push the page wider/taller.
+        overflow: 'hidden',
       }}>
         {!opened ? (
           <>
