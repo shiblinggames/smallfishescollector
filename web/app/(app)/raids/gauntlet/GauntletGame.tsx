@@ -343,6 +343,11 @@ export default function GauntletGame(props: GauntletGameProps) {
       setBossesDefeated(0)
       setUsedAbilityIds(new Set())
       setCurseTiers({}); curseTiersRef.current = {}
+      // Dead Hands: clear the silenced-crew set too, or a new run keeps locking
+      // last run's silenced crew (fight-open re-silences straight from this ref,
+      // never re-checking the now-empty curse count) — the "silence outlives the
+      // run" bug.
+      silencedCrewIdsRef.current = []
       setPendingCurse(null)
       setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
       peekFightRef.current = null; setPeekFight(null)
