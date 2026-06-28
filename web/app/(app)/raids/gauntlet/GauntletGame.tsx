@@ -205,6 +205,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // higher tier replaces the lower; no infinite single-boon stacking.
   const [boonTiers, setBoonTiers] = useState<Record<string, number>>({})
   const [pendingBoons, setPendingBoons] = useState<BoonOffer[] | null>(null)
+  // Boon-draft fanfare — a "stop the room" reveal when a Rare/Legendary surfaces.
+  const [boonFanfare, setBoonFanfare] = useState<'legendary' | 'rare' | null>(null)
   // Tapped boon/curse on the breather screen → details popup.
   const [detailEffect, setDetailEffect] = useState<
     { kind: 'boon' | 'curse'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number } | null
@@ -367,6 +369,25 @@ export default function GauntletGame(props: GauntletGameProps) {
     const t = setTimeout(() => setPhase('fighting'), hasTaunt ? 3000 : 1350)
     return () => clearTimeout(t)
   }, [phase, fight])
+
+  // Boon-draft fanfare — when the draft surfaces a Rare/Legendary, fire a
+  // reveal beat (gold burst + banner + treasure sting + haptic) so a good roll
+  // lands like a moment. Plays once as the draft screen opens.
+  useEffect(() => {
+    if (phase !== 'boon' || !pendingBoons) { setBoonFanfare(null); return }
+    const tier = pendingBoons.some(b => b.rarity === 'legendary') ? 'legendary'
+               : pendingBoons.some(b => b.rarity === 'rare') ? 'rare' : null
+    setBoonFanfare(tier)
+    if (tier === 'legendary') {
+      vibrate([0, 50, 40, 70, 40, 110])
+      import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
+    } else if (tier === 'rare') {
+      vibrate([0, 35, 45, 55])
+      import('@/lib/fishingMusic').then(m => m.playChestSfx(false)).catch(() => {})
+    }
+    const t = setTimeout(() => setBoonFanfare(null), 1500)
+    return () => clearTimeout(t)
+  }, [phase, pendingBoons])
 
   function handleEnemyDefeated(remainingHp: number, leftoverCharges = 0) {
     const f = fight
@@ -1177,6 +1198,33 @@ export default function GauntletGame(props: GauntletGameProps) {
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${TEAL}24 0%, ${TEAL}08 38%, transparent 64%)` }} />
+        {/* Rare / Legendary fanfare — a burst + banner that stops the room when a
+            good roll surfaces. Plays once on draft open (see the effect above). */}
+        {boonFanfare && (() => {
+          const isLeg = boonFanfare === 'legendary'
+          const col = isLeg ? '#f5b94a' : '#8b9cff'
+          return (
+            <div key={boonFanfare} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <motion.div initial={{ scale: 0.2, opacity: 0.9 }} animate={{ scale: 3.2, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
+                style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: `radial-gradient(circle, ${col}cc 0%, ${col}33 38%, transparent 70%)` }} />
+              <motion.div initial={{ scale: 0.3, opacity: 0.85 }} animate={{ scale: 2.7, opacity: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }}
+                style={{ position: 'absolute', width: 210, height: 210, borderRadius: '50%', border: `2px solid ${col}`, boxShadow: `0 0 32px ${col}` }} />
+              {isLeg && (
+                <motion.div initial={{ scale: 0.4, opacity: 0.7 }} animate={{ scale: 4, opacity: 0 }} transition={{ duration: 1.1, delay: 0.12, ease: 'easeOut' }}
+                  style={{ position: 'absolute', width: 160, height: 160, borderRadius: '50%', border: `1.5px solid ${col}aa` }} />
+              )}
+              <motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: [0, 1, 1, 0], scale: [0.6, 1.1, 1, 1] }} transition={{ duration: 1.5, times: [0, 0.16, 0.78, 1], ease: 'easeOut' }}
+                style={{ position: 'relative', textAlign: 'center' }}>
+                <p className="font-cinzel font-800 uppercase" style={{ fontSize: '1.55rem', letterSpacing: '0.1em', color: col, textShadow: `0 0 30px ${col}, 0 0 12px ${col}` }}>
+                  {isLeg ? 'Legendary' : 'Rare Find'}
+                </p>
+                <p className="font-karla font-700 uppercase tracking-[0.28em]" style={{ fontSize: '0.54rem', color: `${col}cc`, marginTop: 5 }}>
+                  {isLeg ? 'surfaces from the deep' : 'breaks the surface'}
+                </p>
+              </motion.div>
+            </div>
+          )
+        })()}
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 470, margin: '0 auto',
           padding: '12px 0.9rem', textAlign: 'center',
@@ -1385,9 +1433,17 @@ export default function GauntletGame(props: GauntletGameProps) {
 
   // ── Fighting ──────────────────────────────────────────────────────────────
   if (phase === 'fighting' && fight) {
+    // The deep presses in harder the further you fall — a cold gloom that creeps
+    // into the edges of the fight as depth climbs (edge-only so the action stays
+    // readable). Caps so it never blacks the stage out.
+    const gloom = Math.min(0.46, Math.max(0, (fight.depth - 3) * 0.016))
     return (
       <div className="raid-combat-region flex flex-col items-center gap-2 select-none"
-        style={{ userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
+        style={{ position: 'relative', userSelect: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 48px)' }}>
+        {gloom > 0.02 && (
+          <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none',
+            background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(3,9,18,${gloom}) 100%)` }} />
+        )}
         <div style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
           <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} />
         </div>
