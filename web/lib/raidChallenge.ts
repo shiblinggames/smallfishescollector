@@ -196,6 +196,29 @@ const KRUST_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
   damageTakenVolleyBypass:  true,
 }
 
+// The Cartographer's phase 2 — he drops the methodical triple-reload telegraph
+// and fights dirty through his own fog: a faster loop with the volley sooner and
+// more single fires, +20% damage. His top-level Mist Veil + Riposte persist into
+// phase 2 (the fog never lifts, his dodge still counters), so the revive layers
+// pressure onto an already-tricky fight rather than re-teaching a mechanic.
+const CARTOGRAPHER_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
+  revivePct:  0.5,
+  damageMult: 1.2,
+  pattern: ['reload', 'fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+  dialogueLine: "You sketched one chart of me. There's always a deeper sounding.",
+}
+
+// Tollmaster Spet's phase 2 — the toll doubles. He re-chambers and presses the
+// heaviest cadence in the game even harder: back-to-back fires around a volley,
+// barely a dodge, +20% damage. His doubled-opener aggression is the fight, so
+// phase 2 just collects the second bill twice as hard.
+const SPET_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
+  revivePct:  0.5,
+  damageMult: 1.2,
+  pattern: ['reload', 'reload', 'fire', 'fire', 'reload', 'volley', 'fire', 'dodge'],
+  dialogueLine: "You think the bill's settled? I always collect twice.",
+}
+
 // Challenge-mode loot tables. Doubled special-drop rates from normal:
 // ship skin 5%→10%, normal item 20%→40%, legendary 5%→10%. Currency
 // shrinks proportionally so the totals stay at 100. Defined as
@@ -263,11 +286,11 @@ const CARTOGRAPHER_CHALLENGE_LOOT: typeof THE_CARTOGRAPHER['loot'] = (() => {
 
 // Pre-built challenge variants — page files + raid map import these
 // directly so the heavy lifting (the factory) only runs once at module
-// load, not per-request. Pete and Krust both carry two-phase challenge
-// fights, tuned to their character (Pete = aggression, Krust = plate).
-// The Cartographer skips phase 2 for now — Riposte is already a unique
-// second threat layer on top of the crew-wide Mist Veil, and adding a
-// phase 2 would stack three signature mechanics into one fight.
+// load, not per-request. EVERY challenge boss carries a two-phase fight,
+// tuned to its character (Pete = aggression, Krust = plate, the
+// Cartographer = fog-and-parry pressure, Spet = doubled cadence). The
+// Coffers admiral + the Quartermaster inherit their phase 2 from the base
+// config automatically (buildChallengeRaid spreads it through scaleEnemy).
 export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig = {
   ...withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING, PETE_CHALLENGE_LOOT), 'pete', PETE_PHASE2),
   // Hard mode keeps the original 6-mob grind — only the NORMAL entry raid was
@@ -283,13 +306,12 @@ export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig = {
   sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'brute', 'elite', 'elite'],
 }
 export const THE_CARTOGRAPHER_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(THE_CARTOGRAPHER, CARTOGRAPHER_CHALLENGE_LOOT)
+  withBossPhase2(buildChallengeRaid(THE_CARTOGRAPHER, CARTOGRAPHER_CHALLENGE_LOOT), 'cartographer', CARTOGRAPHER_PHASE2)
 
 // The Tollmaster's challenge loot. Doubles the special-drop rates (Spet's Primer
 // 20 → 40, Tollmaster's Primer 5 → 10, Chartmaker Hull 9 → 16) so the
 // legendary Primer becomes the realistic chase and the chapter-2 trophy skin
-// stays on the table. No phase 2 — like the Cartographer, the raid-wide First
-// Cut + the doubled-opener boss are already the fight's identity.
+// stays on the table.
 const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
   const byId = Object.fromEntries(THE_TOLLMASTER.loot.map(l => [l.id, l]))
   const w = (id: string, weight: number) => ({ ...byId[id], weight })
@@ -305,7 +327,7 @@ const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
 })()
 
 export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(THE_TOLLMASTER, TOLLMASTER_CHALLENGE_LOOT)
+  withBossPhase2(buildChallengeRaid(THE_TOLLMASTER, TOLLMASTER_CHALLENGE_LOOT), 'spet', SPET_PHASE2)
 
 // The Harbour Fleet's challenge — Chapter III, Raid 5. The admiral's normal
 // phase 2 carries through scaleEnemy automatically (it spreads ...e), so the
