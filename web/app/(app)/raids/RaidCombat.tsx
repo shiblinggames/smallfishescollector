@@ -92,6 +92,9 @@ const BURN_TURNS = 2
 // scales with your damage.
 const BURN_TICK_PCT = 0.10
 const BURN_TICK_MAX = 0.20
+// Wildfire "Backdraft" (tier III): each burn tick can flare for a bonus burst.
+const BACKDRAFT_FLARE_CHANCE = 0.35
+const BACKDRAFT_FLARE_MULT   = 0.7
 // HP-relative per-tick cap. Now only guards the player from INCOMING burns
 // (Scorching affix) — outgoing Incendiary / Wildfire / Fallout are uncapped and
 // just scale with the hit. Keeps a deep-run enemy crit from burning you for an
@@ -1765,14 +1768,15 @@ export default function RaidCombat({
     // that drops the enemy to 0 ends the fight via the final-step death check.
     if (enemyBurnRef.current.turns > 0 && eHp > 0) {
       const tick = enemyBurnRef.current.dmg
-      // Wildfire "Backdraft": the final tick detonates for a burst (1.5× a tick)
-      // as the fire goes out.
-      const lastTick = enemyBurnRef.current.turns === 1
-      const boom = lastTick && tide.backdraft ? Math.round(tick * 1.5) : 0
-      const total = tick + boom
+      // Wildfire "Backdraft": while it burns, the flames can flare on any tick for
+      // a bonus burst. Sustained burning (Reignite) = more flares — the two feed
+      // each other instead of canceling out (an expiry burst never fired while
+      // Reignite kept refreshing the duration).
+      const flare = tide.backdraft && Math.random() < BACKDRAFT_FLARE_CHANCE ? Math.round(tick * BACKDRAFT_FLARE_MULT) : 0
+      const total = tick + flare
       eHp = Math.max(0, eHp - total)
       enemyBurnRef.current = { turns: enemyBurnRef.current.turns - 1, dmg: enemyBurnRef.current.dmg }
-      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [boom > 0 ? `The ${enemy.name} burns for ${tick}, then bursts for ${boom} as the fire goes out.` : `The ${enemy.name} is ablaze, burning for ${tick}.`], burnTurnsLeft: enemyBurnRef.current.turns })
+      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`], burnTurnsLeft: enemyBurnRef.current.turns })
     }
 
     // Scorching burn (elite affix) ticks the PLAYER's hull at the top of the turn
