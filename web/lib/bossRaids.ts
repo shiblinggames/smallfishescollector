@@ -73,15 +73,15 @@ export interface BroadsideEnemy {
   parryChance?: number
   parryDamagePct?: number
   parryName?: string
-  /** The Coffers (Chapter 3) — "Decoy Screen." Every fire, the bar throws up
-   *  `decoyCount` MOVING amber escort target bands spread across the full bar.
-   *  Each must be popped (land the needle green+ on it) to clear it, IN ONE
-   *  fire turn, before the green flagship zone is a real hit. Firing on the
-   *  flagship while any escort still stands = flat chip (1–3). Popping an
-   *  escort does NOT resolve the shot — only hitting the flagship (or a clean
-   *  miss) does. Logic spans the aim RAF + lockShot + resolveTurn; render in
-   *  AimBarInline. `decoyName` labels it on the nameplate (mirrors
-   *  `aimFogName`). Undefined on every other enemy = mechanic dormant. */
+  /** The Coffers (Chapter 3) — "Flare Barrage." Every few turns the escort
+   *  screen throws up false flares the player must swat (reactive whack-a-mole)
+   *  before they can act. `decoyCount` is the difficulty dial (Coffers fleet
+   *  1-3): flares per barrage = 4 + decoyCount*2 (crew 6 → admiral 10), and the
+   *  fuses tighten across the wave. Flares spawn ARRHYTHMICALLY (clusters /
+   *  lulls) so the player can't autopilot a rhythm; each one that slips through
+   *  chips the player (softens them for the admiral's real shot, never kills).
+   *  Logic: FlareBarrage component + the 'flares' subPhase in RaidCombat.
+   *  `decoyName` labels the barrage banner. Undefined elsewhere = dormant. */
   decoyCount?: number
   decoyName?: string
   /** The Coffers (Chapter 3) — "Repossession." At the START of this fight the

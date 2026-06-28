@@ -70,7 +70,7 @@ import { vibrate } from '@/lib/haptics'
 import CharacterAvatar from '@/components/CharacterAvatar'
 
 type ShotResult = 'miss' | 'graze' | 'hit' | 'critical'
-type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'done'
+type SubPhase   = 'await_input' | 'aiming' | 'revealing' | 'resolving' | 'flares' | 'done'
 type Actor      = 'player' | 'enemy'
 
 // Cannonball cap. MAX_CHARGES is the enemy's cap AND the volley cost (a volley
@@ -764,13 +764,6 @@ export default function RaidCombat({
   const zoneDirRef  = useRef(1)
   const indicatorRef = useRef<HTMLDivElement>(null)
   const zoneRef      = useRef<HTMLDivElement>(null)
-  // The Coffers admiral — "Decoy Screen": N extra MOVING target bands (escort
-  // decoys) thrown up every fire. You must pop each (green+) to clear it before
-  // the flagship is a real hit; firing on the flagship with escorts up = chip.
-  // Reset at the start of each aiming session (it's a per-shot challenge).
-  const decoyRunRef = useRef<{ pos: number; dir: number; speed: number; cleared: boolean }[]>([])
-  const decoyElRefs = useRef<(HTMLDivElement | null)[]>([])
-  const chipPlayerShotRef = useRef(false)
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
 
@@ -1113,25 +1106,6 @@ export default function RaidCombat({
     // Needle sweep, with the curse multiplier (Racing Tide etc.).
     const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult
 
-    // Escort decoys run FASTER than the flagship zone and shrug off MOST of the
-    // player's Navigation slow (0.006 vs the zone's 0.015) — at the endgame
-    // admiral, high nav shouldn't turn the screen into a trivial chore. A fast
-    // base + a wide per-decoy spread = a genuine timing test, not a monotonous tap.
-    const DECOY_SPEED = enemy.shipSpeed * 0.0008 * tide.zoneSpeedMult * (1 / (1 + totalNavigation * 0.006))
-
-    // ── Decoy Screen setup — fresh escort decoys for THIS fire. Spread across
-    //    the full bar, each ripping along at its own pace/direction so they're a
-    //    real moving aim challenge, not static lures. Cleared on resolve.
-    const dlo = HIT_W + GRAZE_W, dhi = 1 - HIT_W - GRAZE_W
-    const nDecoys = Math.max(0, Math.min(4, enemy.decoyCount ?? 0))
-    decoyRunRef.current = Array.from({ length: nDecoys }, (_, k) => {
-      const frac = nDecoys === 1 ? 0.32 : k / (nDecoys - 1)   // span ~full bar
-      // Wide spread (1.7× → 2.9×) so no two decoys track together — you can't
-      // settle into one rhythm to clear them all.
-      return { pos: 0.18 + (0.82 - 0.18) * frac, dir: k % 2 === 0 ? 1 : -1, speed: 1.7 + (k % 3) * 0.6, cleared: false }
-    })
-    chipPlayerShotRef.current = false
-
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
       last = now
@@ -1150,27 +1124,10 @@ export default function RaidCombat({
       if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
       if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
 
-      // Drift each uncleared escort decoy and paint it; cleared ones stay hidden.
-      let onDecoy = false
-      for (let k = 0; k < decoyRunRef.current.length; k++) {
-        const d = decoyRunRef.current[k]
-        const el = decoyElRefs.current[k]
-        if (d.cleared) { if (el) el.style.display = 'none'; continue }
-        d.pos += DECOY_SPEED * d.speed * frames * d.dir
-        if (d.pos >= dhi) { d.pos = dhi; d.dir = -1 }
-        if (d.pos <= dlo) { d.pos = dlo; d.dir = 1 }
-        if (el) {
-          el.style.display = 'block'
-          el.style.left = `${(d.pos - HIT_W - GRAZE_W) * 100}%`
-        }
-        if (Math.abs(firePosRef.current - d.pos) <= HIT_W) onDecoy = true
-      }
-
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
         const zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
-        const bg = onDecoy           ? '#4ade80'   // poppable escort under the needle
-                 : zone === 'critical' ? '#fbbf24'
+        const bg = zone === 'critical' ? '#fbbf24'
                  : zone === 'hit'      ? '#4ade80'
                  : zone === 'graze'    ? '#94a3b8'
                  : 'rgba(255,255,255,0.4)'
@@ -1227,6 +1184,38 @@ export default function RaidCombat({
     }
     return action
   }, [enemy.pattern, enemy.phase2, enemyCharges])
+
+  // ─── Coffers admiral — "Flare Barrage" ─────────────────────────────────────
+  // Every FLARE_EVERY turns the escort screen throws up false flares the player
+  // must swat (reactive whack-a-mole) before they can act. Flares spawn
+  // arrhythmically (clusters/pauses) so you can't autopilot a rhythm; each one
+  // that slips through chips you (softens you for the admiral's real shot).
+  // Reuses the per-enemy `decoyCount` (Coffers fleet, 1-3) as the difficulty
+  // dial: more flares + shorter fuses up the chain. Dormant on every other enemy.
+  const FLARE_EVERY = 3
+  const flareTier   = enemy.decoyCount ?? 0
+  const flareCount  = flareTier > 0 ? 4 + flareTier * 2 : 0          // crew 6 → admiral 10
+  const flarePerMiss = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.045))
+  // Apply the barrage outcome, then hand control to the player's turn. Misses
+  // chip but never kill outright (floored at 1) — they set up the admiral's
+  // follow-up rather than landing the killing blow themselves.
+  function onFlareBarrageDone(missed: number) {
+    if (missed > 0) {
+      const dmg = missed * flarePerMiss
+      setPlayerHp(hp => {
+        const n = Math.max(1, hp - dmg)
+        return n
+      })
+      setPlayerShakeKey(k => k + 1)
+      setPlayerImpact({ key: Date.now(), kind: 'volley' })
+      setTimeout(() => setPlayerImpact(null), 700)
+      vibrate([0, 40, 30, 60])
+      setResolveLog(prev => [...prev, `${missed} flare${missed > 1 ? 's' : ''} slipped the screen — the escorts rake you for ${dmg}.`])
+    } else {
+      setResolveLog(prev => [...prev, `Every flare swatted — the screen breaks clean.`])
+    }
+    setSubPhase('await_input')
+  }
 
   // ─── Player action handlers ────────────────────────────────────────────────
 
@@ -1456,22 +1445,6 @@ export default function RaidCombat({
     // double-tap in the same frame can't run the lock twice while the
     // critFreeze state commit is still pending.
     if (subPhase !== 'aiming' || critFreeze || critFreezeRef.current) return
-    // Decoy Screen gate (The Coffers admiral): if the needle is sitting on an
-    // uncleared escort decoy (green+), POP it and keep aiming — the shot only
-    // resolves on the flagship (or a clean miss). Handled before the freeze so
-    // the sequence continues; the RAF keeps the needle + remaining decoys moving.
-    {
-      const p = firePosRef.current
-      const di = decoyRunRef.current.findIndex(d => !d.cleared && Math.abs(p - d.pos) <= HIT_W)
-      if (di >= 0) {
-        decoyRunRef.current[di].cleared = true
-        const el = decoyElRefs.current[di]
-        if (el) el.style.display = 'none'
-        flashBar(barFlashRef.current, '#f59e0b', 0.42)   // amber pop
-        vibrate(14)
-        return
-      }
-    }
     // Freeze the RAF synchronously. The critFreezeRef mirror effect only
     // commits after this render, which let the tick run 1–2 more frames and
     // drift the painted needle past the spot being judged.
@@ -1518,9 +1491,6 @@ export default function RaidCombat({
     // to upgrade to a crit. Tide bonus stacks ADDITIVELY with crew crit.
     const critUpgradeChance = (mods.critPct / 100) + tide.critBonus
     if (res === 'hit' && critUpgradeChance > 0 && Math.random() < critUpgradeChance) res = 'critical'
-    // Chip: you loosed on the flagship with escort decoys still standing. Any
-    // landed shot (graze/hit/crit) barely scratches it — resolved in resolveTurn.
-    chipPlayerShotRef.current = res !== 'miss' && decoyRunRef.current.some(d => !d.cleared)
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
 
@@ -1933,12 +1903,6 @@ export default function RaidCombat({
             const before = dmg
             dmg = Math.max(1, Math.round(dmg * enemy.phase2.damageTakenMult))
             stepLines.push(`Carapace! ${enemy.name}'s plate soaks the blow (${before} → ${dmg}).`)
-          }
-          // Decoy Screen — firing on the flagship with escort decoys still up
-          // barely scratches it, no matter how clean the aim. Flat chip.
-          if (chipPlayerShotRef.current) {
-            dmg = 1 + Math.floor(Math.random() * 3)   // 1–3
-            stepLines.push(`Decoy screen! Escorts still up — your shot barely scratches the flagship (${dmg}).`)
           }
         } else {
           const base = Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg
@@ -2431,7 +2395,13 @@ export default function RaidCombat({
           turnRef.current++; setTurn(turnRef.current)
           setLastPlayerAction(pAction)
           setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
-          setSubPhase('await_input')
+          // Flare Barrage interrupt — every few turns the admiral screens itself
+          // with false flares the player must swat before acting.
+          if (flareCount > 0 && turnRef.current % FLARE_EVERY === 0) {
+            setSubPhase('flares')
+          } else {
+            setSubPhase('await_input')
+          }
         }, 400)
         return
       }
@@ -3564,6 +3534,18 @@ export default function RaidCombat({
             path spans both ships; the detonation itself lands on the enemy hull. */}
         {nukeMissile && <NukeMissile key={`nm-${nukeMissile.key}`} color={nukeMissile.color} x1={nukeMissile.x1} y1={nukeMissile.y1} x2={nukeMissile.x2} y2={nukeMissile.y2} dur={nukeMissile.dur} />}
 
+        {/* Coffers admiral — "Flare Barrage": a reactive whack-a-mole overlay.
+            Swat the false flares before their fuses close; misses chip you. */}
+        {subPhase === 'flares' && (
+          <FlareBarrage
+            key={`barrage-${turn}`}
+            count={flareCount}
+            color="#f59e0b"
+            label={enemy.decoyName ?? 'Flare Barrage'}
+            onComplete={onFlareBarrageDone}
+          />
+        )}
+
         {/* Low-hull danger — a red vignette breathes at the stage edges while
             the player's HP is critical, so the tension reads without a number. */}
         {playerHp > 0 && playerHp / playerHpMax < 0.25 && (
@@ -3862,11 +3844,6 @@ export default function RaidCombat({
             // Shimmer the gold band while the buff is live (band is already
             // widened via liveCritW; the pulse makes the boon unmistakable).
             sharpshotActive={!!sharpshotBuff && !critFreeze}
-            // The Coffers — "Decoy Screen": moving escort target bands you must
-            // pop (green+) before the flagship is a real hit. The RAF positions
-            // each band via these refs (same model as the main zone).
-            decoyCount={enemy.decoyCount}
-            decoyElRefs={decoyElRefs}
           />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
@@ -4818,6 +4795,121 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 // Railgun: a Pokémon-style HYPER BEAM — a charge orb at the player's guns, then a
 // thick white-hot beam erupts UP AND TO THE RIGHT into the enemy hull (the player
 // sits lower-left, the enemy upper-right), held, then fades.
+// ── Coffers admiral "Flare Barrage" — reactive whack-a-mole ──────────────────
+// `count` false flares spawn across the stage at ARRHYTHMIC intervals (clusters,
+// pauses, sudden quick ones) so the player can't settle into a rhythm. Each has
+// a short closing-ring fuse; tap before it shuts to pop it, miss and it
+// detonates. Calls onComplete(missed) once every flare has resolved.
+function FlareBarrage({ count, color, label, onComplete }: {
+  count: number
+  color: string
+  label: string
+  onComplete: (missed: number) => void
+}) {
+  type Flare = { id: number; x: number; y: number; fuse: number }
+  const [flares, setFlares] = useState<Flare[]>([])
+  const [pops, setPops] = useState<{ id: number; x: number; y: number; missed: boolean }[]>([])
+  const [resolved, setResolved] = useState(0)
+  const resolvedIds = useRef<Set<number>>(new Set())
+  const missedRef = useRef(0)
+  const doneRef = useRef(false)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  function resolveFlare(id: number, x: number, y: number, missed: boolean) {
+    if (resolvedIds.current.has(id)) return
+    resolvedIds.current.add(id)
+    if (missed) missedRef.current++
+    else vibrate(13)
+    setResolved(r => r + 1)
+    setFlares(prev => prev.filter(f => f.id !== id))
+    setPops(pp => [...pp, { id, x, y, missed }])
+    timersRef.current.push(setTimeout(() => setPops(pp => pp.filter(p => p.id !== id)), 600))
+    if (resolvedIds.current.size >= count && !doneRef.current) {
+      doneRef.current = true
+      timersRef.current.push(setTimeout(() => onComplete(missedRef.current), 340))
+    }
+  }
+
+  useEffect(() => {
+    if (count <= 0) { onComplete(0); return }
+    let t = 420
+    for (let k = 0; k < count; k++) {
+      const x = 12 + Math.random() * 76
+      const y = 24 + Math.random() * 50
+      const fuse = Math.max(460, 880 - k * 40) + Math.random() * 150   // fuses tighten as it goes
+      const id = k
+      timersRef.current.push(setTimeout(() => {
+        setFlares(prev => [...prev, { id, x, y, fuse }])
+        timersRef.current.push(setTimeout(() => resolveFlare(id, x, y, true), fuse))
+      }, t))
+      // Arrhythmic gap to the next spawn — cluster, lull, or normal.
+      const r = Math.random()
+      const gap = r < 0.26 ? 120 + Math.random() * 90      // cluster (rapid back-to-back)
+                : r < 0.52 ? 780 + Math.random() * 280     // lull (a beat of calm)
+                : 360 + Math.random() * 240                // normal
+      t += gap
+    }
+    return () => { timersRef.current.forEach(clearTimeout) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 14, pointerEvents: 'none' }}>
+      <style>{`
+        @keyframes rc-flare-in   { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes rc-flare-fuse { 0% { transform: scale(2.6); opacity: 0.95; } 100% { transform: scale(1); opacity: 0.3; } }
+        @keyframes rc-flare-pop  { 0% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(2.7); opacity: 0; } }
+      `}</style>
+      {/* Banner + remaining tally */}
+      <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', textAlign: 'center' }}>
+        <div className="font-cinzel font-700 uppercase" style={{ fontSize: '0.82rem', letterSpacing: '0.12em', color, textShadow: `0 0 16px ${color}aa`, whiteSpace: 'nowrap' }}>
+          {label} — intercept!
+        </div>
+        <div className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: '#c4b690', marginTop: 2 }}>
+          {Math.max(0, count - resolved)} left
+        </div>
+      </div>
+      {/* Active flares — tappable */}
+      {flares.map(f => (
+        <button key={f.id} type="button" aria-label="Swat flare"
+          onPointerDown={(e) => { e.preventDefault(); resolveFlare(f.id, f.x, f.y, false) }}
+          style={{
+            position: 'absolute', left: `${f.x}%`, top: `${f.y}%`,
+            width: 66, height: 66, marginLeft: -33, marginTop: -33,
+            padding: 0, border: 'none', background: 'transparent', cursor: 'pointer',
+            pointerEvents: 'auto', touchAction: 'manipulation',
+            animation: 'rc-flare-in 0.13s ease-out',
+          }}>
+          {/* Closing fuse ring — shrinks onto the orb over the fuse window. */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: 5, borderRadius: '50%',
+            border: `3px solid ${color}`, boxShadow: `0 0 14px ${color}`,
+            animation: `rc-flare-fuse ${f.fuse}ms linear forwards`,
+          }} />
+          {/* Core orb. */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: 21, borderRadius: '50%',
+            background: `radial-gradient(circle at 35% 30%, #ffffff 0%, ${color} 55%, ${color}aa 100%)`,
+            boxShadow: `0 0 18px ${color}`,
+          }} />
+        </button>
+      ))}
+      {/* Pop (swatted) / detonation (missed) bursts. */}
+      {pops.map(p => (
+        <div key={`pop-${p.id}`} aria-hidden style={{
+          position: 'absolute', left: `${p.x}%`, top: `${p.y}%`,
+          width: 58, height: 58, marginLeft: -29, marginTop: -29, borderRadius: '50%',
+          pointerEvents: 'none',
+          background: p.missed
+            ? 'radial-gradient(circle, #ef4444 0%, rgba(239,68,68,0.35) 48%, transparent 72%)'
+            : `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 72%)`,
+          boxShadow: p.missed ? '0 0 24px #ef4444' : `0 0 24px ${color}`,
+          animation: 'rc-flare-pop 0.5s ease-out forwards',
+        }} />
+      ))}
+    </div>
+  )
+}
 function RailgunBeam({ color, x1, y1, len, angle }: { color: string; x1: number; y1: number; len: number; angle: number }) {
   // Geometry is measured from the real ship boxes (muzzle -> enemy hull) and
   // passed in as pixels + degrees, so the beam always connects the two ships.
@@ -5779,7 +5871,7 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
@@ -5799,11 +5891,6 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
   /** Sharpshot buff live — pulse the gold crit band so the widened window
    *  reads as an active boon, not just a quietly bigger target. */
   sharpshotActive?: boolean
-  /** The Coffers — "Decoy Screen": N moving escort target bands. Each must be
-   *  popped (green+) before the flagship counts; firing on the flagship while
-   *  any remain = chip. The RAF drives positions through decoyElRefs. */
-  decoyCount?: number
-  decoyElRefs?: React.MutableRefObject<(HTMLDivElement | null)[]>
 }) {
   const fogOpacity = Math.max(0, Math.min(1, aimFogDensity ?? 0))
   const hasFog = fogOpacity > 0
@@ -5812,9 +5899,6 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
   // random rather than a metronome.
   const inkOpacity = Math.max(0, Math.min(0.95, aimBlackout ?? 0))
   const hasInk = inkOpacity > 0
-  // Decoy Screen — N moving escort bands; the RAF positions each via
-  // decoyElRefs (same geometry as the main zone, amber instead of green).
-  const decoys = Math.max(0, Math.min(4, decoyCount ?? 0))
   // The zone div spans ±(HIT_W + GRAZE_W) around its center, so the crit
   // band's share of it is critW / (HIT_W + GRAZE_W), centered.
   const critBandPct = (critW / (HIT_W + GRAZE_W)) * 100
@@ -5862,8 +5946,8 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.65rem', color: '#fbbf24' }}>
           Lock Your Shot
         </p>
-        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: decoys > 0 ? '#f59e0b' : '#5a7a9a' }}>
-          {decoys > 0 ? 'Pop escorts → flagship' : 'Gold = Crit'}
+        <p className="font-karla font-600 uppercase tracking-[0.12em]" style={{ fontSize: '0.55rem', color: '#5a7a9a' }}>
+          Gold = Crit
         </p>
       </div>
 
@@ -5888,25 +5972,6 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
           <div className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
-        {/* Escort decoys — moving amber target bands the RAF positions via
-            decoyElRefs (same geometry as the main zone). Each must be popped
-            (needle green on it) before the flagship is a real hit. Hidden until
-            the RAF places it, and again once cleared. */}
-        {Array.from({ length: decoys }).map((_, i) => (
-          <div key={`decoy-${i}`} aria-hidden
-            ref={el => { if (decoyElRefs) decoyElRefs.current[i] = el }}
-            style={{
-              position: 'absolute', top: 0, bottom: 0, left: 0,
-              width: `${(HIT_W + GRAZE_W) * 2 * 100}%`,
-              zIndex: 1, pointerEvents: 'none', display: 'none',
-            }}>
-            {/* Amber escort silhouette — graze halo + bright hit core, clearly
-                distinct from the green flagship target. */}
-            <div style={{ position: 'absolute', inset: '3px 0', background: 'rgba(245,158,11,0.16)', borderRadius: 4 }} />
-            <div style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${(GRAZE_W / (HIT_W + GRAZE_W)) * 50}%`, width: `${(HIT_W / (HIT_W + GRAZE_W)) * 100}%`, background: 'rgba(245,158,11,0.5)', borderRadius: 3 }} />
-            <div style={{ position: 'absolute', top: '18%', bottom: '18%', left: 'calc(50% - 1px)', width: 2, background: '#f59e0b' }} />
-          </div>
-        ))}
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
         {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
             fog band drifts back-and-forth across the bar, briefly
