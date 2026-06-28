@@ -107,19 +107,27 @@ export interface GauntletGameProps {
 export default function GauntletGame(props: GauntletGameProps) {
   const router = useRouter()
   const shipFilter = props.equippedShipSkin ? getShipSkin(props.equippedShipSkin)?.filter ?? 'none' : 'none'
+  // Locker run-upgrades, mirrored into local state. The server-loaded prop only
+  // refreshes on a fresh page render (tab switch / navigation), so a player who
+  // BUYS an upgrade and immediately starts a run would otherwise fight with the
+  // stale set — e.g. Diving Bell's +15% HP wouldn't apply until they left and
+  // came back. onClaimed updates this immediately; the effect resyncs if the
+  // server later sends a new prop. See [[feedback-usestate-prop-sync]].
+  const [upgrades, setUpgrades] = useState(props.gauntletUpgrades)
+  useEffect(() => { setUpgrades(props.gauntletUpgrades) }, [props.gauntletUpgrades])
   // Diving Bell (Run Upgrade) lifts the player's max HP for the whole run; every
   // HP reference below uses this boosted ceiling rather than the raw stat.
-  const hpMax = Math.round(props.playerHPMax * gauntletRunHpMult(props.gauntletUpgrades))
+  const hpMax = Math.round(props.playerHPMax * gauntletRunHpMult(upgrades))
   // Veteran's Start: combat depth = cleared + 1 + skipOffset (enemies, boon/curse
   // cadence, displayed depth). Rewards stay on the cleared count, so the head
   // start never inflates pot / chests / Fathoms / record.
-  const skipOffset = gauntletSkipOffset(props.gauntletUpgrades)
+  const skipOffset = gauntletSkipOffset(upgrades)
   // Run Upgrades that fold into the combat mods: Iron Hide (−damage taken) +
   // Gunner's Eye (+damage dealt).
   const runRaidMods = {
     ...props.raidMods,
-    damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(props.gauntletUpgrades),
-    damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(props.gauntletUpgrades),
+    damageTakenPct: (props.raidMods.damageTakenPct ?? 0) + gauntletDamageTakenMod(upgrades),
+    damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(upgrades),
   }
 
   const [phase, setPhase] = useState<Phase>(props.available ? 'intro' : 'usedup')
@@ -444,7 +452,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       ? Math.max(0, Math.min(leftoverCharges, carryEffect.cap))
       : 0
     // Vigor (Run Upgrade): patch up a slice of max HP for every ship you sink.
-    const vigorHeal = Math.round(hpMax * gauntletKillHealPct(props.gauntletUpgrades))
+    const vigorHeal = Math.round(hpMax * gauntletKillHealPct(upgrades))
     const healedHp = vigorHeal > 0 ? Math.min(hpMax, remainingHp + vigorHeal) : remainingHp
     playerHPRef.current = healedHp
     setPlayerHP(healedHp)
@@ -475,7 +483,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Calm Before waves off the FIRST curse milestone the player actually hits,
     // not a hardcoded depth — so it still works under Veteran's Start, which
     // starts past depth 4. Spent the moment it fires.
-    const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(props.gauntletUpgrades)
+    const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(upgrades)
     if (skipFirstCurse) calmBeforeUsedRef.current = true
     const curse = (atCurseDepth && !skipFirstCurse)
       ? drawCurse(curseTiersRef.current, nextDepth)   // null once the curse pool is spent
@@ -483,14 +491,14 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Draw the boons up front so an exhausted pool ([] when every family is
     // maxed) falls through to the breather instead of an empty draft screen.
     const boons = isBoonDepth(nextDepth)
-      ? drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades))
+      ? drawBoons(3, boonTiers, gauntletBoonLuck(upgrades))
       : []
     if (curse || boons.length > 0) {
       // Set the boon draft now even on a curse round, so applyCurse can hand off
       // to the boon screen (it routes to 'boon' whenever pendingBoons is set).
       if (boons.length > 0) {
         setPendingBoons(boons)
-        setRerollsLeft(gauntletBoonRerolls(props.gauntletUpgrades))
+        setRerollsLeft(gauntletBoonRerolls(upgrades))
         // Reprieve: in later rounds, sometimes a one-time relief card surfaces
         // alongside the boons (replacing the old random heal-tide's job, but as
         // a deliberate choice). Taking it forgoes the boon draft.
@@ -498,7 +506,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           ? drawReprieve({ curseCount: Object.keys(curseTiersRef.current).length })
           : null)
       }
-      if (curse) { curseDepthRef.current = nextDepth; setPendingCurse(curse); setCurseRerollsLeft(gauntletCurseRerolls(props.gauntletUpgrades)); setPhase('curse') }
+      if (curse) { curseDepthRef.current = nextDepth; setPendingCurse(curse); setCurseRerollsLeft(gauntletCurseRerolls(upgrades)); setPhase('curse') }
       else setPhase('boon')
       return
     }
@@ -538,7 +546,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Second Cast: throw the offered boons back and draw three fresh ones.
   function rerollBoons() {
     if (rerollsLeft <= 0) return
-    setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
+    setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(upgrades)))
     setRerollsLeft(r => r - 1)
   }
 
@@ -569,7 +577,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       crewRefreshedRef.current = true
     } else if (r.kind === 'charges') {
       // Open the next fight with the gun deck run out (carryover plumbing).
-      carriedChargesRef.current = 3 + bonusChargeSlots(props.gauntletUpgrades)
+      carriedChargesRef.current = 3 + bonusChargeSlots(upgrades)
     } else if (r.kind === 'cleanse') {
       // Shed one random active curse.
       const owned = Object.keys(curseTiersRef.current)
@@ -832,7 +840,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               descent. Global Ship & Shore unlocks (cannonball rack, etc.) live
               out in the world, so listing them here would just confuse. */}
           {(() => {
-            const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && props.gauntletUpgrades.includes(u.id))
+            const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && upgrades.includes(u.id))
             if (owned.length === 0) return null
             return (
               <div style={{ marginTop: 18 }}>
@@ -858,7 +866,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal onClose={() => setHaulOpen(false)} />}
         {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
-        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
       </>
     )
   }
@@ -902,7 +910,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </button>
         </div>
         <BackLink router={router} label="Back to the map" primary={!ready} />
-        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => setBonusSlots(bonusChargeSlots(owned))} />}
+        {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
       </Shell>
     )
   }
@@ -1036,7 +1044,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       : combatDepth <= 2  ? 'Early yet. The Locker is only just stirring below.'
       :                   'The water stills. The Locker waits on your nerve.'
     // Sounding Line — read what waits at the next depth before committing.
-    const sounding = (gauntletHasSoundingLine(props.gauntletUpgrades) && peekFight)
+    const sounding = (gauntletHasSoundingLine(upgrades) && peekFight)
       ? peekFight.isBoss
         ? { label: 'A BOSS lies below', sub: peekFight.enemy.name, color: '#f87171' }
         : peekFight.isElite
