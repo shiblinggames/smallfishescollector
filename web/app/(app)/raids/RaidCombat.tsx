@@ -87,11 +87,13 @@ const ENEMY_COLOR  = '#ef4444'
 // this fraction of the hit that lit it (locked at application, "constant fixed
 // damage scaled to your damage").
 const BURN_TURNS = 2
-const BURN_TICK_PCT = 0.30
-// Per-tick burn is capped at this fraction of the TARGET's max HP, so a huge
-// crit/volley doesn't also burn for an unbounded chunk (the DoT scaled 1:1 with
-// hit damage before, which ran away on high-damage builds). Normal hits stay
-// at the 30% of the hit; only hits above ~1/3 of the target's HP get clamped.
+// Burn tick = this fraction of the hit that lit it (lowered 0.30 → 0.22 when the
+// HP cap was dropped on OUTGOING burns, so it scales cleanly with your damage).
+const BURN_TICK_PCT = 0.22
+// HP-relative per-tick cap. Now only guards the player from INCOMING burns
+// (Scorching affix) — outgoing Incendiary / Wildfire / Fallout are uncapped and
+// just scale with the hit. Keeps a deep-run enemy crit from burning you for an
+// unbounded chunk of your hull.
 const BURN_CAP_PCT = 0.10
 const BURN_COLOR = '#fb923c'
 const FREEZE_COLOR = '#7dd3fc'
@@ -2208,7 +2210,7 @@ export default function RaidCombat({
             if (burnChance > 0 && procRoll(burnChance)) {
               // Wildfire lengthens (turnsBonus) + heats (tickMult) every burn.
               const turns = BURN_TURNS + tide.burnTurnsBonus
-              const tickDmg = Math.max(1, Math.min(Math.round(dmg * BURN_TICK_PCT * tide.burnTickMult), Math.round(enemyHpMaxRef.current * BURN_CAP_PCT)))
+              const tickDmg = Math.max(1, Math.round(dmg * BURN_TICK_PCT * tide.burnTickMult))   // uncapped: scales with the hit
               enemyBurnRef.current = { turns, dmg: Math.max(tickDmg, tide.reignite ? enemyBurnRef.current.dmg : 0) }
               stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${enemyBurnRef.current.dmg}/turn, ${turns} turns).`)
               procStatus = 'burn'
@@ -2225,7 +2227,7 @@ export default function RaidCombat({
           // any burn so it can't snowball out of hand.
           if (isMega && megaAug?.fallout && dmg > 0 && eHp > 0) {
             const f = megaAug.fallout
-            const tick = Math.max(1, Math.min(Math.round(dmg * f.pct), Math.round(enemyHpMaxRef.current * BURN_CAP_PCT)))
+            const tick = Math.max(1, Math.round(dmg * f.pct))   // uncapped (outgoing burn)
             enemyBurnRef.current = { turns: f.turns, dmg: tick }
             stepLines.push(`Fallout! The ${enemy.name} burns in the blast (${tick}/turn, ${f.turns} turns).`)
             procStatus = 'burn'
