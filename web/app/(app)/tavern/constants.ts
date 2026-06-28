@@ -8,9 +8,9 @@
 // than a clean miss), 3 catfish pays a share of the global pot instead
 // of a fixed multiplier, and a sardine pair is just a near-miss.
 //
-// Base-game RTP ≈ 86.5% (catfish pair trimmed 3× → 2× on 2026-06-28);
+// Base-game RTP ≈ 86.8% (marlin pair trimmed 2× → 1.5× on 2026-06-28);
 // the 10% jackpot feed (raised from 5% same day) plus the seeded pot
-// brings the total to ≈ 96.5% — under 100% with the pot now climbing
+// brings the total to ≈ 96.8% — under 100% with the pot now climbing
 // twice as fast. Value shifted from base churn into the communal
 // jackpot. Verified with slots-rtp.mjs (repo root) — rerun it before
 // changing ANY weight or payout here.
@@ -67,12 +67,13 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
 // hook included). Sardine pairs pay nothing — they read as a near-miss
 // instead of the old 0.5× fake win.
 export const SLOT_PAIR_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
-  rare:      2,
+  // 2026-06-28: marlin pair 2× → 1.5×. Funds the doubled (10%) jackpot feed
+  // out of the base game's MOST COMMON win (marlin pair lands ~1-in-10), so
+  // the trim spreads thin and is barely felt per hit. Catfish pair stays 3×.
+  // Holds total RTP at ~96.8%.
+  rare:      1.5,
   legendary: 5,
-  // 2026-06-28: catfish pair 3× → 2×. Funds the doubled (10%) jackpot feed
-  // out of the base game — the catfish's value shifts from the pair
-  // consolation into the bigger communal pot. Holds total RTP at ~96.5%.
-  catfish:   2,
+  catfish:   3,
 }
 
 export const SLOTS_MIN_BET   = 10
