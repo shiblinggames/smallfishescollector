@@ -87,9 +87,11 @@ const ENEMY_COLOR  = '#ef4444'
 // this fraction of the hit that lit it (locked at application, "constant fixed
 // damage scaled to your damage").
 const BURN_TURNS = 2
-// Burn tick = this fraction of the hit that lit it (lowered 0.30 → 0.22 when the
-// HP cap was dropped on OUTGOING burns, so it scales cleanly with your damage).
-const BURN_TICK_PCT = 0.22
+// Burn tick = this fraction of the hit that lit it. 10% base; Wildfire heats it
+// up to a hard 20% ceiling (BURN_TICK_MAX). Uncapped vs target HP — it just
+// scales with your damage.
+const BURN_TICK_PCT = 0.10
+const BURN_TICK_MAX = 0.20
 // HP-relative per-tick cap. Now only guards the player from INCOMING burns
 // (Scorching affix) — outgoing Incendiary / Wildfire / Fallout are uncapped and
 // just scale with the hit. Keeps a deep-run enemy crit from burning you for an
@@ -2210,7 +2212,9 @@ export default function RaidCombat({
             if (burnChance > 0 && procRoll(burnChance)) {
               // Wildfire lengthens (turnsBonus) + heats (tickMult) every burn.
               const turns = BURN_TURNS + tide.burnTurnsBonus
-              const tickDmg = Math.max(1, Math.round(dmg * BURN_TICK_PCT * tide.burnTickMult))   // uncapped: scales with the hit
+              // 10% of the hit, heated by Wildfire up to the 20% ceiling.
+              const tickPct = Math.min(BURN_TICK_MAX, BURN_TICK_PCT * tide.burnTickMult)
+              const tickDmg = Math.max(1, Math.round(dmg * tickPct))
               enemyBurnRef.current = { turns, dmg: Math.max(tickDmg, tide.reignite ? enemyBurnRef.current.dmg : 0) }
               stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${enemyBurnRef.current.dmg}/turn, ${turns} turns).`)
               procStatus = 'burn'
