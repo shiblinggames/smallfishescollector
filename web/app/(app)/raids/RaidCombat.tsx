@@ -1762,14 +1762,17 @@ export default function RaidCombat({
       }
       const action = who === 'player' ? pAction : eAction
       // False Colours fumble — the player locked onto a decoy band. The shot is a
-      // dud: no cannon fires, the player takes chip damage, and the turn is spent
-      // (the enemy still acts its half of the round). Modeled on the reload branch
-      // so nothing is loosed at the enemy.
+      // dud: no cannon fires, but the loaded charge(s) are spent (you committed to
+      // the shot), the player takes chip damage, and the turn is over (the enemy
+      // still acts its half of the round). Modeled on the reload branch so nothing
+      // is loosed at the enemy.
       if (who === 'player' && decoyFumbleRef.current && (action === 'fire' || action === 'volley' || action === 'mega')) {
         decoyFumbleRef.current = false
+        const cost = action === 'mega' ? MEGA_CHARGE_COST : action === 'volley' ? VOLLEY_COST : 1
+        pCharges = Math.max(0, pCharges - cost)
         const chip = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.06))
         pHp = Math.max(1, pHp - chip)
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${chip}`, splatColor: '#ef4444', logLines: [`False Colours! You locked onto a phantom — the shot's a dud. Chip damage, and your turn's spent.`] })
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${chip}`, splatColor: '#ef4444', logLines: [`False Colours! You locked onto a phantom. The shot is a dud: the loaded shot is wasted and you take ${chip} chip damage for the mistake.`] })
         continue
       }
       let splatTarget: Actor | null = null
