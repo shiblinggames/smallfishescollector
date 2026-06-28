@@ -76,10 +76,10 @@ export interface BroadsideEnemy {
   /** The Quartermaster raid (Chapter 3, Raid 6) — "Flare Barrage." Every few
    *  turns the keeper throws up false flares the player must swat (reactive
    *  whack-a-mole) before they can act. `decoyCount` is the per-ENEMY ladder
-   *  tier (1-3), so the mechanic escalates up the raid:
-   *    1 — gentle warmup: ~6 flares, generous fuses, every 3 turns.
-   *    2 — pressure: ~8 flares, tighter fuses, heavy clustering, every 3 turns.
-   *    3 — the boss: ~10 flares, tightest fuses, every 2 turns, PLUS FEINTS —
+   *  tier (1-3), so the mechanic escalates up the raid (a barrage every 3 turns):
+   *    1 — gentle warmup: ~5 flares, generous fuses.
+   *    2 — pressure: ~7 flares, tighter fuses, heavy clustering.
+   *    3 — the boss: ~9 flares, tightest fuses, PLUS (sparse) FEINTS —
    *        red "live shell" flares you must NOT tap (tapping one chips you; the
    *        rule flips), so the climax is discriminate-and-react, not just swat.
    *  Flares spawn ARRHYTHMICALLY (clusters / lulls) so you can't autopilot a
@@ -870,14 +870,14 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // ── CHAPTER III, Raid 6 — The Quartermaster (The Coffers finale) ─────────────
 // ADMIN-ONLY (map node adminOnly + route page guards is_admin). The keeper of
 // the Cache and his hired guns, behind the counter of the market he runs.
-// GALLEON-tier. SIGNATURES: (1) "Flare Barrage" (decoyCount) — every few turns
-// the keeper throws up false flares the player must swat before acting; it's a
-// reactive whack-a-mole that LADDERS up the raid (crew tier 1-2 → the boss adds
-// FEINTS, the don't-tap traps, + faster barrages). (2) "Repossession"
-// (repossess, BOSS ONLY) — at fight start the boss reclaims one of the player's
-// equipped raid items for the whole fight (the merchant takes back the edge he
-// sold you). PLUS a phase 2 (the chapter's two-phase finale): at half HP he
-// opens the reserve deck. Tier-2 tides.
+// GALLEON-tier. SIGNATURE: "Flare Barrage" (decoyCount) — every few turns the
+// keeper throws up false flares the player must swat before acting; a reactive
+// whack-a-mole that LADDERS up the raid (crew tier 1-2 → the boss is the peak:
+// FEINTS, the red don't-tap live-shells, mixed in). PLUS a phase 2 (the
+// chapter's two-phase finale): at half HP he opens the reserve deck. Tier-2
+// tides. (Repossession was dropped 2026-06-28 so the boss has ONE clean
+// signature instead of two stacked mechanics; the `repossess` field + its
+// RaidCombat plumbing stay dormant for any future enemy that wants it.)
 // NAMES + ART ARE PLACEHOLDERS until step 4. Caps at Galleon.
 export const THE_QUARTERMASTER: BossRaidConfig = {
   raidId: 'the_quartermaster',
@@ -927,13 +927,12 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     quartermaster: {
       id: 'quartermaster', name: 'The Quartermaster', hpBase: 300, minDmg: 22, maxDmg: 38,
       shipSpeed: 7, actionMs: 4200,
-      // The keeper himself. REPOSSESSION: opens by reclaiming one of your raid
-      // items for the fight. PHASE 2: at half HP he opens the reserve deck and
-      // fights harder. The theft + the two phases are the fight.
+      // The keeper himself, the peak of the Flare Barrage ladder: his waves mix
+      // in FEINTS (red live-shells you must NOT tap). PHASE 2: at half HP he
+      // opens the reserve deck and fights harder. Flares + the two phases are it.
       pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.12,
-      repossess: true, repossessName: 'Repossession',
-      decoyCount: 3, decoyName: 'False Flares',   // ladder tier 3 — feints + barrages every 2 turns
+      decoyCount: 3, decoyName: 'False Flares',   // ladder tier 3 — feints mixed in
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,
@@ -965,9 +964,9 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   preFightDialogue: [
     { speaker: 'narrator', text: "The Cache's shutters roll up into a gun-deck, and the keeper stands behind a counter of run-out cannon, smiling like he's already counted your coin." },
     { speaker: 'boss', text: "Every captain who ever beat me bought the means to do it off my own shelf. You included." },
-    { speaker: 'player', text: "Then I'll do it again with whatever you leave me." },
-    { speaker: 'boss', text: "Generous of you to think I'll leave you anything. First thing I do, captain, is take back what's mine. You'll fight this one a piece short." },
-    { speaker: 'boss', text: "Run out your guns. I'll be running out the ones you can't reach for." },
+    { speaker: 'player', text: "Then I'll sink you with your own goods. Hold still." },
+    { speaker: 'boss', text: "Hold still? I built this Cache on captains who couldn't tell a live gun from a lit rag. I'll have the whole bay flickering before you ever find me." },
+    { speaker: 'boss', text: "Swat at my flares all you like. Touch the wrong one and you'll wish you had kept your powder." },
   ],
 }
 

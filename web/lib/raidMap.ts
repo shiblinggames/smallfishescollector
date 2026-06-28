@@ -1443,7 +1443,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_QUARTERMASTER.enemies.quartermaster.portrait,
     detail: {
       description:
-        "The Quartermaster himself, behind the guns of the market he runs. He fights the way he trades: he opens by repossessing one of the raid items he sold you, leaving you a piece short for the whole fight, then opens a reserve deck and rises again when you think he's beaten. Put him under and the Cache's hold falls open.",
+        "The Quartermaster himself, behind the guns of the market he runs. He fights the way he trades, all misdirection: he floods the bay with false flares to foul your aim, and slips live shells in among them that you'll regret swatting. Read the real targets, intercept the rest, then put him under, through his reserve deck and all, to spill the Cache's hold.",
       enemies: ['Tally ×2', 'Ledger ×2', 'Strongbox ×2', 'Collector ×2', 'The Quartermaster'],
       drops: lootDrops(THE_QUARTERMASTER.loot),
       clearReward: clearPayout(THE_QUARTERMASTER),
