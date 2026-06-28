@@ -23,6 +23,10 @@ import {
   CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER,
   type BroadsideEnemy,
 } from './bossRaids'
+import {
+  CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE,
+  THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE,
+} from './raidChallenge'
 import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, type AffixDef } from './raidAffixes'
 import { type TideEffect } from './tides'
 
@@ -151,7 +155,17 @@ const MOB_POOL: BroadsideEnemy[] = RAID_CONFIGS.flatMap(c =>
     .filter(([key]) => key !== c.bossId)
     .map(([, e]) => e),
 )
-const BOSS_POOL: BroadsideEnemy[] = RAID_CONFIGS.map(c => c.enemies[c.bossId])
+// Bosses are drawn from the CHALLENGE variants so their two-phase fights carry
+// into the Gauntlet (Pete + Krust revive at half HP; the Cartographer + the
+// Tollmaster have no challenge phase 2 by design, so they stay single-phase).
+// The challenge HP/dmg buffs are harmless here — scaleToCurve overwrites HP +
+// damage with the Gauntlet depth curve, so the ONLY thing the challenge config
+// adds is the boss's phase2.
+const BOSS_CONFIGS = [
+  CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE,
+  THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE,
+]
+const BOSS_POOL: BroadsideEnemy[] = BOSS_CONFIGS.map(c => c.enemies[c.bossId])
 
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
 
