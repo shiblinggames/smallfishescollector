@@ -1192,11 +1192,13 @@ export default function RaidCombat({
   // penalty (a real flare missed OR a feint tapped) chips you. `decoyCount` is
   // the per-enemy ladder tier (1-3) — dormant on every other enemy.
   const flareTier   = enemy.decoyCount ?? 0
-  const flareCount  = flareTier > 0 ? 4 + flareTier * 2 : 0           // 6 / 8 / 10
-  // Tier 3 (the boss) drops a barrage every 2 turns instead of 3.
-  const FLARE_EVERY = flareTier >= 3 ? 2 : 3
+  const flareCount  = flareTier > 0 ? 3 + flareTier * 2 : 0           // 5 / 7 / 9
+  // Every 3 turns at every tier — the boss already carries Repossession + phase
+  // 2, so the barrage stays a periodic beat, not a relentless every-other-turn.
+  const FLARE_EVERY = 3
   // Boss-only "feints" — red live-shell flares you must NOT tap (the rule flips).
-  const flareFeintChance   = flareTier >= 3 ? 0.32 : 0
+  // Kept sparse so it's a sharp twist, not a minefield.
+  const flareFeintChance   = flareTier >= 3 ? 0.22 : 0
   // Heavier clustering from tier 2 up; fuses tighten as the tier climbs.
   const flareClusterChance = flareTier >= 2 ? 0.42 : 0.24
   const flareFuseScale     = flareTier >= 3 ? 0.82 : flareTier === 2 ? 0.95 : 1.15
