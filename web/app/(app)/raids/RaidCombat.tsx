@@ -187,6 +187,11 @@ function flashBar(el: HTMLDivElement | null, color: string, peak = 0.55) {
 const GRAZE_W = 0.038
 const HIT_W = 0.06
 const CRIT_W = 0.012
+// False Colours curse — decoy bands. Smaller hit window than the real target
+// (HIT_W) so they're a tighter, trickier read, and they only show on a random
+// fraction of fires so the player never settles into expecting them.
+const DECOY_HALF = HIT_W * 0.62
+const DECOY_FIRE_CHANCE = 0.45
 // Needle speed (~0.6% of the bar per 60fps frame). The target zone
 // drifts too, driven by enemy ship speed and slowed by the player's
 // Navigation (see the RAF effect).
@@ -406,6 +411,7 @@ export default function RaidCombat({
     let aimSpeedMult  = 1
     let zoneSpeedMult = 1
     let aimBlackout   = 0
+    let aimDecoys     = 0   // False Colours curse: N decoy bands on random fires
     // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
     let noncritDmgMult = 1
     // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
@@ -460,6 +466,7 @@ export default function RaidCombat({
         case 'aimSpeedMult':          aimSpeedMult *= e.mult; break
         case 'zoneSpeedMult':         zoneSpeedMult *= e.mult; break
         case 'aimBlackout':           aimBlackout = Math.min(0.95, Math.max(aimBlackout, e.intensity)); break
+        case 'aimDecoys':             aimDecoys = Math.max(aimDecoys, e.n); break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
@@ -471,7 +478,7 @@ export default function RaidCombat({
       chargesStart, hpStartDelta, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
-      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, noncritDmgMult,
+      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, noncritDmgMult,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
     }
@@ -766,6 +773,14 @@ export default function RaidCombat({
   const zoneRef      = useRef<HTMLDivElement>(null)
   const barFlashRef  = useRef<HTMLDivElement>(null)
   const rafRef       = useRef(0)
+  // False Colours curse — drifting DECOY bands the player must NOT lock onto.
+  // Decided fresh each aiming session (a random fraction of fires). The RAF
+  // drifts them + paints via decoyElRefs; lockShot reads decoyRunRef to detect a
+  // bad lock; decoyFumbleRef tells resolveTurn the shot was a dud.
+  const decoyRunRef = useRef<{ pos: number; dir: number; speed: number }[]>([])
+  const decoyElRefs = useRef<(HTMLDivElement | null)[]>([])
+  const decoyFumbleRef = useRef(false)
+  const [activeDecoys, setActiveDecoys] = useState(0)
 
   // Chain-driving timeouts from resolveTurn's playStep cascade. The
   // recursion (`setTimeout(() => playStep(i + 1), gapMs)`) has no other
@@ -1106,6 +1121,18 @@ export default function RaidCombat({
     // Needle sweep, with the curse multiplier (Racing Tide etc.).
     const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult
 
+    // False Colours: on a RANDOM fraction of fires, spawn N drifting decoy bands.
+    // Decided once per aiming session so the player can't predict it.
+    const dLo = HIT_W + GRAZE_W, dHi = 1 - HIT_W - GRAZE_W
+    const nDecoys = tide.aimDecoys > 0 && Math.random() < DECOY_FIRE_CHANCE ? tide.aimDecoys : 0
+    decoyRunRef.current = Array.from({ length: nDecoys }, (_, k) => ({
+      pos: dLo + (dHi - dLo) * (nDecoys === 1 ? 0.32 + Math.random() * 0.36 : k / (nDecoys - 1)),
+      dir: k % 2 === 0 ? 1 : -1,
+      speed: 1.25 + (k % 2) * 0.55,
+    }))
+    decoyFumbleRef.current = false
+    setActiveDecoys(nDecoys)
+
     function tick(now: number) {
       const dt = Math.min(now - last, 50)
       last = now
@@ -1124,10 +1151,23 @@ export default function RaidCombat({
       if (zonePosRef.current >= 1 - HIT_W - GRAZE_W) { zonePosRef.current = 1 - HIT_W - GRAZE_W; zoneDirRef.current = -1 }
       if (zonePosRef.current <= HIT_W + GRAZE_W)     { zonePosRef.current = HIT_W + GRAZE_W;     zoneDirRef.current = 1 }
 
+      // Drift each decoy band; flag when the needle is sitting on a fake.
+      let onDecoy = false
+      for (let k = 0; k < decoyRunRef.current.length; k++) {
+        const d = decoyRunRef.current[k]
+        d.pos += ZONE_SPEED * d.speed * frames * d.dir
+        if (d.pos >= dHi) { d.pos = dHi; d.dir = -1 }
+        if (d.pos <= dLo) { d.pos = dLo; d.dir = 1 }
+        const el = decoyElRefs.current[k]
+        if (el) el.style.left = `${(d.pos - DECOY_HALF) * 100}%`
+        if (Math.abs(firePosRef.current - d.pos) <= DECOY_HALF) onDecoy = true
+      }
+
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
         const zone = getShotResult(firePosRef.current, zonePosRef.current, liveCritWRef.current)
-        const bg = zone === 'critical' ? '#fbbf24'
+        const bg = onDecoy            ? '#ef4444'   // on a decoy — locking duds the shot
+                 : zone === 'critical' ? '#fbbf24'
                  : zone === 'hit'      ? '#4ade80'
                  : zone === 'graze'    ? '#94a3b8'
                  : 'rgba(255,255,255,0.4)'
@@ -1456,6 +1496,23 @@ export default function RaidCombat({
     // commits after this render, which let the tick run 1–2 more frames and
     // drift the painted needle past the spot being judged.
     critFreezeRef.current = true
+    // False Colours: locked onto a drifting decoy → the shot's a dud. Flag the
+    // fumble (resolveTurn turns the player's turn into chip damage + no shot),
+    // flash the bar red, and skip the normal aim judgment entirely.
+    if (decoyRunRef.current.some(d => Math.abs(firePosRef.current - d.pos) <= DECOY_HALF)) {
+      decoyFumbleRef.current = true
+      if (indicatorRef.current) {
+        indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
+        indicatorRef.current.style.background = '#ef4444'
+      }
+      setAimResult('miss')
+      setCritFreeze(true)
+      snapIndicator(indicatorRef.current)
+      flashBar(barFlashRef.current, '#ef4444', 0.5)
+      vibrate([0, 50, 40, 70])
+      setTimeout(() => { setCritFreeze(false); advanceToReveal(playerAction!, 'miss') }, 360)
+      return
+    }
     // Tide critZoneScale widens the gold critical band. Sharpshot ability
     // also widens it for the next N shots. Both multiply onto CRIT_W (via
     // liveCritW); a wider zone = same aim, more crits. Sharpshot buff is
@@ -1704,6 +1761,17 @@ export default function RaidCombat({
         continue
       }
       const action = who === 'player' ? pAction : eAction
+      // False Colours fumble — the player locked onto a decoy band. The shot is a
+      // dud: no cannon fires, the player takes chip damage, and the turn is spent
+      // (the enemy still acts its half of the round). Modeled on the reload branch
+      // so nothing is loosed at the enemy.
+      if (who === 'player' && decoyFumbleRef.current && (action === 'fire' || action === 'volley' || action === 'mega')) {
+        decoyFumbleRef.current = false
+        const chip = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.06))
+        pHp = Math.max(1, pHp - chip)
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${chip}`, splatColor: '#ef4444', logLines: [`False Colours! You locked onto a phantom — the shot's a dud. Chip damage, and your turn's spent.`] })
+        continue
+      }
       let splatTarget: Actor | null = null
       let splatText = ''
       let splatColor = '#ef4444'
@@ -3854,6 +3922,9 @@ export default function RaidCombat({
             // Shimmer the gold band while the buff is live (band is already
             // widened via liveCritW; the pulse makes the boon unmistakable).
             sharpshotActive={!!sharpshotBuff && !critFreeze}
+            // False Colours curse — decoy bands the RAF drifts via these refs.
+            decoyCount={activeDecoys}
+            decoyElRefs={decoyElRefs}
           />
         ) : (
           <LogBox lines={resolveLog} turn={turn} />
@@ -5902,10 +5973,14 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
 // shift. The actual aim bar is 44px; the surrounding chrome (Turn-
 // style header + centering + helper hint) fills the rest of the slot.
 // Pairs with InlineLockButton below.
-function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive }: {
+function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlackout, critW, sharpshotActive, decoyCount, decoyElRefs }: {
   indicatorRef: React.RefObject<HTMLDivElement | null>
   zoneRef:      React.RefObject<HTMLDivElement | null>
   flashRef:     React.RefObject<HTMLDivElement | null>
+  /** False Colours curse — N drifting decoy bands the player must NOT lock onto.
+   *  The RAF positions each via decoyElRefs. 0 = none this fire. */
+  decoyCount?: number
+  decoyElRefs?: React.MutableRefObject<(HTMLDivElement | null)[]>
   /** Inkfall curse — 0-1 intensity of a random blackout that briefly swallows
    *  the whole bar (needle + zone), like the abyss reel going dark. */
   aimBlackout?: number
@@ -6003,6 +6078,18 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
           <div className={sharpshotActive ? 'rc-sharp-band' : undefined} style={{ position: 'absolute', top: '3px', bottom: '3px', left: `${50 - critBandPct / 2}%`, width: `${critBandPct}%`, background: sharpshotActive ? 'rgba(251,191,36,0.62)' : 'rgba(251,191,36,0.45)', borderRadius: 2 }} />
           <div style={{ position: 'absolute', top: '20%', bottom: '20%', left: 'calc(50% - 1px)', width: 2, background: '#fbbf24' }} />
         </div>
+        {/* False Colours — drifting DECOY bands (narrower than the real target,
+            crimson/danger). The RAF positions each via decoyElRefs; locking on
+            one duds the shot. Hidden until the RAF places it. */}
+        {Array.from({ length: Math.max(0, Math.min(2, decoyCount ?? 0)) }).map((_, i) => (
+          <div key={`decoy-${i}`} aria-hidden
+            ref={el => { if (decoyElRefs) decoyElRefs.current[i] = el }}
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${DECOY_HALF * 2 * 100}%`, zIndex: 1, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', inset: '4px 0', background: 'rgba(239,68,68,0.2)', borderRadius: 4 }} />
+            <div style={{ position: 'absolute', top: '4px', bottom: '4px', left: '24%', width: '52%', background: 'rgba(239,68,68,0.5)', borderRadius: 2 }} />
+            <div style={{ position: 'absolute', top: '22%', bottom: '22%', left: 'calc(50% - 1px)', width: 2, background: '#fca5a5' }} />
+          </div>
+        ))}
         <div ref={indicatorRef} style={{ position: 'absolute', top: 2, bottom: 2, width: 4, borderRadius: 2, background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.6)', zIndex: 2 }} />
         {/* Mist Veil overlay — The Cartographer's raid ability. A semi-opaque
             fog band drifts back-and-forth across the bar, briefly

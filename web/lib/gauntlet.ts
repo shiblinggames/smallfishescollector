@@ -554,6 +554,15 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
+    id: 'false_colours',
+    name: 'False Colours',
+    flavor: 'The drowned fly colours that are not their own. Half the targets out there are lies.',
+    tiers: [
+      { desc: 'A false target sometimes drifts your aim bar', detail: 'On some of your shots (not all), a decoy target band drifts across your aim bar alongside the real gold one. Lock onto the decoy and your shot is a dud: you take chip damage and your turn ends without firing. Pick the real band out of the lie.', effects: [{ kind: 'aimDecoys', n: 1 }] },
+      { desc: 'Two false targets sometimes drift your aim bar', detail: 'The deception thickens. Now two decoy bands can drift your aim bar at once, so threading a clean shot to the real target gets harder. Locking either decoy still duds your shot and ends your turn.', effects: [{ kind: 'aimDecoys', n: 2 }] },
+    ],
+  },
+  {
     id: 'dead_hands',
     name: 'Dead Hands',
     flavor: 'The cold creeps up the rigging and into your crew. The ones it takes never lift a gun again.',
