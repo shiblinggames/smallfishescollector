@@ -73,15 +73,20 @@ export interface BroadsideEnemy {
   parryChance?: number
   parryDamagePct?: number
   parryName?: string
-  /** The Coffers (Chapter 3) — "Flare Barrage." Every few turns the escort
-   *  screen throws up false flares the player must swat (reactive whack-a-mole)
-   *  before they can act. `decoyCount` is the difficulty dial (Coffers fleet
-   *  1-3): flares per barrage = 4 + decoyCount*2 (crew 6 → admiral 10), and the
-   *  fuses tighten across the wave. Flares spawn ARRHYTHMICALLY (clusters /
-   *  lulls) so the player can't autopilot a rhythm; each one that slips through
-   *  chips the player (softens them for the admiral's real shot, never kills).
-   *  Logic: FlareBarrage component + the 'flares' subPhase in RaidCombat.
-   *  `decoyName` labels the barrage banner. Undefined elsewhere = dormant. */
+  /** The Quartermaster raid (Chapter 3, Raid 6) — "Flare Barrage." Every few
+   *  turns the keeper throws up false flares the player must swat (reactive
+   *  whack-a-mole) before they can act. `decoyCount` is the per-ENEMY ladder
+   *  tier (1-3), so the mechanic escalates up the raid:
+   *    1 — gentle warmup: ~6 flares, generous fuses, every 3 turns.
+   *    2 — pressure: ~8 flares, tighter fuses, heavy clustering, every 3 turns.
+   *    3 — the boss: ~10 flares, tightest fuses, every 2 turns, PLUS FEINTS —
+   *        red "live shell" flares you must NOT tap (tapping one chips you; the
+   *        rule flips), so the climax is discriminate-and-react, not just swat.
+   *  Flares spawn ARRHYTHMICALLY (clusters / lulls) so you can't autopilot a
+   *  rhythm; each penalty (a real flare missed OR a feint tapped) chips the
+   *  player (softens them for the real shot, never kills). Logic: FlareBarrage
+   *  component + the 'flares' subPhase in RaidCombat. `decoyName` labels the
+   *  banner. Undefined elsewhere = dormant. */
   decoyCount?: number
   decoyName?: string
   /** The Coffers (Chapter 3) — "Repossession." At the START of this fight the
@@ -771,14 +776,12 @@ export const THE_TOLLMASTER: BossRaidConfig = {
 // ── CHAPTER III, Raid 5 — The Harbour Fleet (The Coffers) ────────────────────
 // ADMIN-ONLY (the map node is adminOnly + the route page guards is_admin). The
 // Coffers' escort fleet + its admiral. GALLEON-tier hulls — the player's first
-// capital-ship fight. SIGNATURE: "Decoys" (decoyCount) — the crew run false
-// colours, strewing fake gold crit bands across the aim bar so you can't trust
-// which gun is the live one (purely visual; the real crit is still the moving
-// zone). Scales across the crew (1 on the quick hulls → 3 on the admiral), the
-// way the Cartographer's Mist Veil deepened toward the boss. The admiral also
-// runs a PHASE 2 (normal-boss two-phase starts this chapter). Tier-2 tides.
-// NAMES + ART ARE PLACEHOLDERS (working names; Ch2 hull art reused as stand-ins)
-// until step 4. Caps at Galleon — Man-o-War held for Chapter IV.
+// capital-ship fight. SIGNATURE: TBD — the Flare Barrage that used to live here
+// moved to Raid 6 (The Quartermaster) so each Coffers raid keeps a distinct
+// identity; pick a fresh fleet gimmick in step 4. The admiral runs a PHASE 2
+// (normal-boss two-phase starts this chapter). Tier-2 tides. NAMES + ART ARE
+// PLACEHOLDERS (working names; Ch2 hull art reused as stand-ins) until step 4.
+// Caps at Galleon — Man-o-War held for Chapter IV.
 export const THE_COFFERS_FLEET: BossRaidConfig = {
   raidId: 'coffers_fleet',
   enemyAccuracy: 24,
@@ -793,7 +796,6 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 8, actionMs: 3500,
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
-      decoyCount: 1, decoyName: 'False Colours',
       image: '/enemychapter2schooner_v2.png',
       portrait: '/enemychapter2schooner_v2.png',
     },
@@ -802,7 +804,6 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 6, actionMs: 4400,
       pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
-      decoyCount: 1, decoyName: 'False Colours',
       image: '/enemychapter2brigantine_v2.png',
       portrait: '/enemychapter2brigantine_v2.png',
     },
@@ -811,7 +812,6 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
-      decoyCount: 2, decoyName: 'False Colours',
       image: '/enemychapter2galleon_v2.png',
       portrait: '/enemychapter2galleon_v2.png',
     },
@@ -820,18 +820,16 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 9, actionMs: 3300,
       pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.13,
-      decoyCount: 2, decoyName: 'False Colours',
       image: '/enemychapter2galleon_v2.png',
       portrait: '/enemychapter2galleon_v2.png',
     },
     admiral: {
       id: 'admiral', name: 'Admiral Ruse', hpBase: 270, minDmg: 20, maxDmg: 36,
       shipSpeed: 7, actionMs: 4200,
-      // Flagship — heaviest Decoys (3 fake bands). Phase 2: at half HP he drops
-      // the false colours and fights for real, faster and meaner.
+      // Flagship. Phase 2: at half HP he drops the act and fights for real,
+      // faster and meaner.
       pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.12,
-      decoyCount: 3, decoyName: 'False Colours',
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,
@@ -872,11 +870,14 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // ── CHAPTER III, Raid 6 — The Quartermaster (The Coffers finale) ─────────────
 // ADMIN-ONLY (map node adminOnly + route page guards is_admin). The keeper of
 // the Cache and his hired guns, behind the counter of the market he runs.
-// GALLEON-tier. SIGNATURE: "Repossession" (repossess) — at fight start the boss
-// reclaims ONE of the player's equipped raid items for the whole fight (the
-// merchant takes back the edge he sold you). PLUS a phase 2 (the chapter's
-// two-phase finale): at half HP he opens the reserve deck. Tier-2 tides. Only
-// the boss carries Repossession; the crew are clean (the theft is his identity).
+// GALLEON-tier. SIGNATURES: (1) "Flare Barrage" (decoyCount) — every few turns
+// the keeper throws up false flares the player must swat before acting; it's a
+// reactive whack-a-mole that LADDERS up the raid (crew tier 1-2 → the boss adds
+// FEINTS, the don't-tap traps, + faster barrages). (2) "Repossession"
+// (repossess, BOSS ONLY) — at fight start the boss reclaims one of the player's
+// equipped raid items for the whole fight (the merchant takes back the edge he
+// sold you). PLUS a phase 2 (the chapter's two-phase finale): at half HP he
+// opens the reserve deck. Tier-2 tides.
 // NAMES + ART ARE PLACEHOLDERS until step 4. Caps at Galleon.
 export const THE_QUARTERMASTER: BossRaidConfig = {
   raidId: 'the_quartermaster',
@@ -892,6 +893,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 8, actionMs: 3500,
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
+      decoyCount: 1, decoyName: 'False Flares',   // ladder tier 1 — gentle warmup
       image: '/enemychapter2schooner_v2.png',
       portrait: '/enemychapter2schooner_v2.png',
     },
@@ -900,6 +902,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 6, actionMs: 4400,
       pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
+      decoyCount: 1, decoyName: 'False Flares',   // ladder tier 1
       image: '/enemychapter2brigantine_v2.png',
       portrait: '/enemychapter2brigantine_v2.png',
     },
@@ -908,6 +911,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
+      decoyCount: 2, decoyName: 'False Flares',   // ladder tier 2 — bigger wave, heavy clusters
       image: '/enemychapter2galleon_v2.png',
       portrait: '/enemychapter2galleon_v2.png',
     },
@@ -916,6 +920,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 9, actionMs: 3300,
       pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.13,
+      decoyCount: 2, decoyName: 'False Flares',   // ladder tier 2
       image: '/enemychapter2galleon_v2.png',
       portrait: '/enemychapter2galleon_v2.png',
     },
@@ -928,6 +933,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.12,
       repossess: true, repossessName: 'Repossession',
+      decoyCount: 3, decoyName: 'False Flares',   // ladder tier 3 — feints + barrages every 2 turns
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,

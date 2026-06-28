@@ -1185,16 +1185,21 @@ export default function RaidCombat({
     return action
   }, [enemy.pattern, enemy.phase2, enemyCharges])
 
-  // ─── Coffers admiral — "Flare Barrage" ─────────────────────────────────────
-  // Every FLARE_EVERY turns the escort screen throws up false flares the player
-  // must swat (reactive whack-a-mole) before they can act. Flares spawn
-  // arrhythmically (clusters/pauses) so you can't autopilot a rhythm; each one
-  // that slips through chips you (softens you for the admiral's real shot).
-  // Reuses the per-enemy `decoyCount` (Coffers fleet, 1-3) as the difficulty
-  // dial: more flares + shorter fuses up the chain. Dormant on every other enemy.
-  const FLARE_EVERY = 3
+  // ─── The Quartermaster raid — "Flare Barrage" (per-tier ladder) ────────────
+  // Every FLARE_EVERY turns the keeper throws up false flares the player must
+  // swat (reactive whack-a-mole) before they can act. Flares spawn
+  // arrhythmically (clusters/pauses) so you can't autopilot a rhythm; each
+  // penalty (a real flare missed OR a feint tapped) chips you. `decoyCount` is
+  // the per-enemy ladder tier (1-3) — dormant on every other enemy.
   const flareTier   = enemy.decoyCount ?? 0
-  const flareCount  = flareTier > 0 ? 4 + flareTier * 2 : 0          // crew 6 → admiral 10
+  const flareCount  = flareTier > 0 ? 4 + flareTier * 2 : 0           // 6 / 8 / 10
+  // Tier 3 (the boss) drops a barrage every 2 turns instead of 3.
+  const FLARE_EVERY = flareTier >= 3 ? 2 : 3
+  // Boss-only "feints" — red live-shell flares you must NOT tap (the rule flips).
+  const flareFeintChance   = flareTier >= 3 ? 0.32 : 0
+  // Heavier clustering from tier 2 up; fuses tighten as the tier climbs.
+  const flareClusterChance = flareTier >= 2 ? 0.42 : 0.24
+  const flareFuseScale     = flareTier >= 3 ? 0.82 : flareTier === 2 ? 0.95 : 1.15
   const flarePerMiss = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.045))
   // Apply the barrage outcome, then hand control to the player's turn. Misses
   // chip but never kill outright (floored at 1) — they set up the admiral's
@@ -1210,9 +1215,9 @@ export default function RaidCombat({
       setPlayerImpact({ key: Date.now(), kind: 'volley' })
       setTimeout(() => setPlayerImpact(null), 700)
       vibrate([0, 40, 30, 60])
-      setResolveLog(prev => [...prev, `${missed} flare${missed > 1 ? 's' : ''} slipped the screen — the escorts rake you for ${dmg}.`])
+      setResolveLog(prev => [...prev, `${missed} flare${missed > 1 ? 's' : ''} caught you out — the screen rakes you for ${dmg}.`])
     } else {
-      setResolveLog(prev => [...prev, `Every flare swatted — the screen breaks clean.`])
+      setResolveLog(prev => [...prev, `Screen read clean — every flare called right.`])
     }
     setSubPhase('await_input')
   }
@@ -3542,6 +3547,9 @@ export default function RaidCombat({
             count={flareCount}
             color="#f59e0b"
             label={enemy.decoyName ?? 'Flare Barrage'}
+            feintChance={flareFeintChance}
+            clusterChance={flareClusterChance}
+            fuseScale={flareFuseScale}
             onComplete={onFlareBarrageDone}
           />
         )}
@@ -4795,38 +4803,47 @@ function ImpactBurst({ kind }: { kind: 'normal' | 'volley' | 'crit' }) {
 // Railgun: a Pokémon-style HYPER BEAM — a charge orb at the player's guns, then a
 // thick white-hot beam erupts UP AND TO THE RIGHT into the enemy hull (the player
 // sits lower-left, the enemy upper-right), held, then fades.
-// ── Coffers admiral "Flare Barrage" — reactive whack-a-mole ──────────────────
+// ── The Quartermaster "Flare Barrage" — reactive whack-a-mole ────────────────
 // `count` false flares spawn across the stage at ARRHYTHMIC intervals (clusters,
-// pauses, sudden quick ones) so the player can't settle into a rhythm. Each has
-// a short closing-ring fuse; tap before it shuts to pop it, miss and it
-// detonates. Calls onComplete(missed) once every flare has resolved.
-function FlareBarrage({ count, color, label, onComplete }: {
+// pauses, sudden quick ones) so the player can't settle into a rhythm. Amber
+// flares are SWAT targets — tap before the fuse shuts. Red FEINTS (boss tier)
+// are live shells — the rule flips: tapping one is a penalty, you must let it
+// fizzle. A penalty = a real flare missed OR a feint tapped. Calls
+// onComplete(penalties) once every flare has resolved.
+const FEINT_COLOR = '#ef4444'
+function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.24, fuseScale = 1, onComplete }: {
   count: number
   color: string
   label: string
-  onComplete: (missed: number) => void
+  feintChance?: number
+  clusterChance?: number
+  fuseScale?: number
+  onComplete: (penalties: number) => void
 }) {
-  type Flare = { id: number; x: number; y: number; fuse: number }
+  type Flare = { id: number; x: number; y: number; fuse: number; feint: boolean }
   const [flares, setFlares] = useState<Flare[]>([])
-  const [pops, setPops] = useState<{ id: number; x: number; y: number; missed: boolean }[]>([])
+  const [pops, setPops] = useState<{ id: number; x: number; y: number; bad: boolean }[]>([])
   const [resolved, setResolved] = useState(0)
   const resolvedIds = useRef<Set<number>>(new Set())
-  const missedRef = useRef(0)
+  const penaltyRef = useRef(0)
   const doneRef = useRef(false)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
-  function resolveFlare(id: number, x: number, y: number, missed: boolean) {
-    if (resolvedIds.current.has(id)) return
-    resolvedIds.current.add(id)
-    if (missed) missedRef.current++
-    else vibrate(13)
+  // A penalty is a real flare LET THROUGH (not tapped) or a feint TAPPED — the
+  // rule flips on feints, which is the boss-tier discrimination test.
+  function resolveFlare(f: { id: number; x: number; y: number; feint: boolean }, tapped: boolean) {
+    if (resolvedIds.current.has(f.id)) return
+    resolvedIds.current.add(f.id)
+    const penalty = f.feint ? tapped : !tapped
+    if (penalty) penaltyRef.current++
+    else if (tapped) vibrate(13)   // clean swat
     setResolved(r => r + 1)
-    setFlares(prev => prev.filter(f => f.id !== id))
-    setPops(pp => [...pp, { id, x, y, missed }])
-    timersRef.current.push(setTimeout(() => setPops(pp => pp.filter(p => p.id !== id)), 600))
+    setFlares(prev => prev.filter(p => p.id !== f.id))
+    setPops(pp => [...pp, { id: f.id, x: f.x, y: f.y, bad: penalty }])
+    timersRef.current.push(setTimeout(() => setPops(pp => pp.filter(p => p.id !== f.id)), 600))
     if (resolvedIds.current.size >= count && !doneRef.current) {
       doneRef.current = true
-      timersRef.current.push(setTimeout(() => onComplete(missedRef.current), 340))
+      timersRef.current.push(setTimeout(() => onComplete(penaltyRef.current), 340))
     }
   }
 
@@ -4836,17 +4853,19 @@ function FlareBarrage({ count, color, label, onComplete }: {
     for (let k = 0; k < count; k++) {
       const x = 12 + Math.random() * 76
       const y = 24 + Math.random() * 50
-      const fuse = Math.max(460, 880 - k * 40) + Math.random() * 150   // fuses tighten as it goes
-      const id = k
+      const fuse = (Math.max(460, 880 - k * 40) + Math.random() * 150) * fuseScale   // tighten as it goes
+      // Never make the FIRST flare a feint (ease the player into the wave).
+      const feint = k > 0 && Math.random() < feintChance
+      const f = { id: k, x, y, fuse, feint }
       timersRef.current.push(setTimeout(() => {
-        setFlares(prev => [...prev, { id, x, y, fuse }])
-        timersRef.current.push(setTimeout(() => resolveFlare(id, x, y, true), fuse))
+        setFlares(prev => [...prev, f])
+        timersRef.current.push(setTimeout(() => resolveFlare(f, false), fuse))
       }, t))
       // Arrhythmic gap to the next spawn — cluster, lull, or normal.
       const r = Math.random()
-      const gap = r < 0.26 ? 120 + Math.random() * 90      // cluster (rapid back-to-back)
-                : r < 0.52 ? 780 + Math.random() * 280     // lull (a beat of calm)
-                : 360 + Math.random() * 240                // normal
+      const gap = r < clusterChance ? 115 + Math.random() * 85       // cluster (rapid back-to-back)
+                : r < clusterChance + 0.26 ? 770 + Math.random() * 280 // lull (a beat of calm)
+                : 350 + Math.random() * 230                          // normal
       t += gap
     }
     return () => { timersRef.current.forEach(clearTimeout) }
@@ -4865,45 +4884,55 @@ function FlareBarrage({ count, color, label, onComplete }: {
         <div className="font-cinzel font-700 uppercase" style={{ fontSize: '0.82rem', letterSpacing: '0.12em', color, textShadow: `0 0 16px ${color}aa`, whiteSpace: 'nowrap' }}>
           {label} — intercept!
         </div>
-        <div className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: '#c4b690', marginTop: 2 }}>
-          {Math.max(0, count - resolved)} left
+        <div className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: feintChance > 0 ? FEINT_COLOR : '#c4b690', marginTop: 2 }}>
+          {feintChance > 0 ? "don't tap the red" : `${Math.max(0, count - resolved)} left`}
         </div>
       </div>
-      {/* Active flares — tappable */}
-      {flares.map(f => (
-        <button key={f.id} type="button" aria-label="Swat flare"
-          onPointerDown={(e) => { e.preventDefault(); resolveFlare(f.id, f.x, f.y, false) }}
-          style={{
-            position: 'absolute', left: `${f.x}%`, top: `${f.y}%`,
-            width: 66, height: 66, marginLeft: -33, marginTop: -33,
-            padding: 0, border: 'none', background: 'transparent', cursor: 'pointer',
-            pointerEvents: 'auto', touchAction: 'manipulation',
-            animation: 'rc-flare-in 0.13s ease-out',
-          }}>
-          {/* Closing fuse ring — shrinks onto the orb over the fuse window. */}
-          <div aria-hidden style={{
-            position: 'absolute', inset: 5, borderRadius: '50%',
-            border: `3px solid ${color}`, boxShadow: `0 0 14px ${color}`,
-            animation: `rc-flare-fuse ${f.fuse}ms linear forwards`,
-          }} />
-          {/* Core orb. */}
-          <div aria-hidden style={{
-            position: 'absolute', inset: 21, borderRadius: '50%',
-            background: `radial-gradient(circle at 35% 30%, #ffffff 0%, ${color} 55%, ${color}aa 100%)`,
-            boxShadow: `0 0 18px ${color}`,
-          }} />
-        </button>
-      ))}
-      {/* Pop (swatted) / detonation (missed) bursts. */}
+      {/* Active flares — amber = swat, red = feint (leave it). */}
+      {flares.map(f => {
+        const c = f.feint ? FEINT_COLOR : color
+        return (
+          <button key={f.id} type="button" aria-label={f.feint ? 'Live shell — do not tap' : 'Swat flare'}
+            onPointerDown={(e) => { e.preventDefault(); resolveFlare(f, true) }}
+            style={{
+              position: 'absolute', left: `${f.x}%`, top: `${f.y}%`,
+              width: 66, height: 66, marginLeft: -33, marginTop: -33,
+              padding: 0, border: 'none', background: 'transparent', cursor: 'pointer',
+              pointerEvents: 'auto', touchAction: 'manipulation',
+              animation: 'rc-flare-in 0.13s ease-out',
+            }}>
+            {/* Closing fuse ring — shrinks onto the orb over the fuse window. */}
+            <div aria-hidden style={{
+              position: 'absolute', inset: 5, borderRadius: '50%',
+              border: `3px solid ${c}`, boxShadow: `0 0 14px ${c}`,
+              animation: `rc-flare-fuse ${f.fuse}ms linear forwards`,
+            }} />
+            {/* Core orb — feints are darker/menacing with a cross-bar so they
+                read as "don't touch" under pressure. */}
+            <div aria-hidden style={{
+              position: 'absolute', inset: 21, borderRadius: '50%',
+              background: f.feint
+                ? `radial-gradient(circle at 35% 30%, ${FEINT_COLOR} 0%, #7f1d1d 70%, #450a0a 100%)`
+                : `radial-gradient(circle at 35% 30%, #ffffff 0%, ${color} 55%, ${color}aa 100%)`,
+              boxShadow: `0 0 18px ${c}`,
+            }}>
+              {f.feint && (
+                <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 16, lineHeight: 1 }}>✕</div>
+              )}
+            </div>
+          </button>
+        )
+      })}
+      {/* Burst FX — clean swat (amber) vs penalty (red detonation). */}
       {pops.map(p => (
         <div key={`pop-${p.id}`} aria-hidden style={{
           position: 'absolute', left: `${p.x}%`, top: `${p.y}%`,
           width: 58, height: 58, marginLeft: -29, marginTop: -29, borderRadius: '50%',
           pointerEvents: 'none',
-          background: p.missed
+          background: p.bad
             ? 'radial-gradient(circle, #ef4444 0%, rgba(239,68,68,0.35) 48%, transparent 72%)'
             : `radial-gradient(circle, #ffffff 0%, ${color} 50%, transparent 72%)`,
-          boxShadow: p.missed ? '0 0 24px #ef4444' : `0 0 24px ${color}`,
+          boxShadow: p.bad ? '0 0 24px #ef4444' : `0 0 24px ${color}`,
           animation: 'rc-flare-pop 0.5s ease-out forwards',
         }} />
       ))}
