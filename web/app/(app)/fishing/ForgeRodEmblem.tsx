@@ -1,60 +1,45 @@
 'use client'
 
-// The Completionist Rod has no sprite (it's a forged, one-of-a-kind thing), so
-// this is its stylized emblem: a gold fishing rod whose aura + tip jewel
-// intensify with `power` (0..1 = how many of the 3 effects are forged in).
-// Shared by the forge panel preview (GearScreen) and the first-forge flourish
-// (FishingGame) so the rod that lights up is the same in both places.
+// The Completionist Rod's preview, shared by the forge panel (GearScreen) and
+// the first-forge flourish (FishingGame). Now that the real 3-pose art exists,
+// this shows the actual rod sprite wrapped in an emerald forge aura that
+// intensifies with `power` (0..1 = how many of the 3 effects are forged in).
 export default function ForgeRodEmblem({
   size = 120,
   power = 0,
-  accent = '#f3d98a',
+  accent = '#34d399',
 }: {
   size?: number
-  /** 0..1 power level — drives aura + tip-jewel intensity. */
+  /** 0..1 power level — drives the aura intensity + tip bloom. */
   power?: number
-  /** Tip-glow colour (defaults to gold; the panel can tint it the colour of
-   *  the effect just forged). */
+  /** Bloom tint — the panel passes the colour of the effect just forged so the
+   *  rod flares in that colour; defaults to the forge emerald. */
   accent?: string
 }) {
-  const h = size * 0.72
   const glow = 0.3 + power * 0.7
   return (
-    <div style={{ position: 'relative', width: size, height: h, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Aura bloom behind the rod — grows with power. */}
+    <div style={{ position: 'relative', width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Emerald forge aura behind the rod — grows with power. */}
       <div aria-hidden style={{
-        position: 'absolute', inset: '-22%',
-        background: `radial-gradient(ellipse at 64% 28%, rgba(245,210,110,${0.12 + power * 0.45}) 0%, transparent 64%)`,
-        filter: 'blur(6px)', pointerEvents: 'none',
+        position: 'absolute', inset: '-16%',
+        background: `radial-gradient(ellipse at 50% 46%, rgba(52,211,153,${0.14 + power * 0.5}) 0%, transparent 66%)`,
+        filter: 'blur(9px)', pointerEvents: 'none',
       }} />
-      <svg width={size} height={h} viewBox="0 0 120 86" fill="none" style={{ position: 'relative' }}>
-        <defs>
-          <linearGradient id="forgeRodGold" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="#8a6322" />
-            <stop offset="0.5" stopColor="#f3d98a" />
-            <stop offset="1" stopColor="#fff6d8" />
-          </linearGradient>
-        </defs>
-        {/* Cork handle */}
-        <line x1="16" y1="76" x2="36" y2="62" stroke="#5e4220" strokeWidth="6.5" strokeLinecap="round" />
-        {/* Shaft */}
-        <line x1="30" y1="66" x2="102" y2="12" stroke="url(#forgeRodGold)" strokeWidth="3.4" strokeLinecap="round" />
-        {/* Reel */}
-        <circle cx="33" cy="62" r="5.5" fill="none" stroke="#caa540" strokeWidth="2.2" />
-        <circle cx="33" cy="62" r="1.4" fill="#caa540" />
-        {/* Line guides */}
-        <circle cx="57" cy="44" r="2.4" fill="none" stroke="#e8c84a" strokeWidth="1.5" />
-        <circle cx="80" cy="26" r="2.4" fill="none" stroke="#e8c84a" strokeWidth="1.5" />
-        {/* Tip jewel */}
-        <circle cx="102" cy="12" r={3.2 + power * 1.4} fill={accent} />
-      </svg>
-      {/* Tip glow — CSS bloom over the jewel, scales with power. */}
+      {/* Accent bloom — tinted by the effect just forged (panel passes accent);
+          scales + brightens with power so socketing an effect reads as a surge. */}
       <div aria-hidden style={{
-        position: 'absolute', left: '85%', top: '14%',
-        width: 10 + power * 16, height: 10 + power * 16,
-        transform: 'translate(-50%,-50%)', borderRadius: '50%',
-        background: accent, filter: 'blur(4px)', opacity: glow, pointerEvents: 'none',
+        position: 'absolute', width: `${40 + power * 34}%`, height: `${40 + power * 34}%`,
+        borderRadius: '50%', background: `radial-gradient(circle, ${accent} 0%, transparent 62%)`,
+        opacity: glow * 0.45, filter: 'blur(12px)', pointerEvents: 'none',
       }} />
+      {/* The real rod sprite — breathing emerald glow via the shared class. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/rod_completionist_thumb.png"
+        alt="Completionist Rod"
+        className="rod-glow-forge"
+        style={{ position: 'relative', width: '90%', height: '90%', objectFit: 'contain', display: 'block' }}
+      />
     </div>
   )
 }

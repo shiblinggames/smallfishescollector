@@ -662,6 +662,29 @@ html, body {
 }
 .rod-glow-saber { animation: rod-glow-saber 2.2s ease-in-out infinite; }
 
+/* Completionist — forge: a living emerald aura, the rod's own green energy.
+   A slow base breath broken by one brighter surge per cycle, like banked
+   forge-coals flaring. Green so the capstone reads as its own thing, distinct
+   from the gold/cyan marquee glows. */
+@keyframes rod-glow-forge {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 4px #a7f3d0)
+      drop-shadow(0 0 14px #34d399);
+  }
+  48% {
+    filter:
+      drop-shadow(0 0 11px #ecfdf5)
+      drop-shadow(0 0 36px #22c55e);
+  }
+  56% {
+    filter:
+      drop-shadow(0 0 4px #a7f3d0)
+      drop-shadow(0 0 14px #34d399);
+  }
+}
+.rod-glow-forge { animation: rod-glow-forge 5.5s ease-in-out infinite; }
+
 /* ── Hook glows (per-theme animated effects) ──
    Used by lib/hooks.ts via hookGlowClass(). chrome / gilded are very
    subtle so silver / gold hooks read as polished metal; arcane / cursed
@@ -780,6 +803,7 @@ html, body {
 .pause-glows .rod-glow-electric,
 .pause-glows .rod-glow-moon,
 .pause-glows .rod-glow-tech,
+.pause-glows .rod-glow-forge,
 .pause-glows .hook-glow-chrome,
 .pause-glows .hook-glow-gilded,
 .pause-glows .hook-glow-arcane,
