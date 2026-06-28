@@ -18,8 +18,8 @@ import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import {
   generateFight, advanceRollState, chestForDepth,
-  CURSE_DEPTHS, drawCurse, curseEffects, curseHpDrain, curseTierLabel, GAUNTLET_CURSES,
-  BOON_DEPTHS, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
+  isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseTierLabel, GAUNTLET_CURSES,
+  isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS,
@@ -367,21 +367,27 @@ export default function GauntletGame(props: GauntletGameProps) {
     // branch below is kept defensive in case the two ever share a depth.
     // Combat depth (Veteran's Start shifts the boon/curse cadence up too).
     const nextDepth = clearedNow + 1 + skipOffset
-    const atCurseDepth = CURSE_DEPTHS.includes(nextDepth)
+    // isCurseDepth / isBoonDepth carry the cadence PAST the fixed schedule
+    // (every few depths forever) so deep runs keep stacking rules.
+    const atCurseDepth = isCurseDepth(nextDepth)
     // Calm Before waves off the FIRST curse milestone the player actually hits,
     // not a hardcoded depth — so it still works under Veteran's Start, which
     // starts past depth 4. Spent the moment it fires.
     const skipFirstCurse = atCurseDepth && !calmBeforeUsedRef.current && gauntletSkipsFirstCurse(props.gauntletUpgrades)
     if (skipFirstCurse) calmBeforeUsedRef.current = true
     const curse = (atCurseDepth && !skipFirstCurse)
-      ? drawCurse(curseTiersRef.current, nextDepth)
+      ? drawCurse(curseTiersRef.current, nextDepth)   // null once the curse pool is spent
       : null
-    const boonDue = BOON_DEPTHS.includes(nextDepth)
-    if (curse || boonDue) {
-      // Draw the boon now even on a curse round, so applyCurse can hand off to
-      // the boon screen (it routes to 'boon' whenever pendingBoons is set).
-      if (boonDue) {
-        setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
+    // Draw the boons up front so an exhausted pool ([] when every family is
+    // maxed) falls through to the breather instead of an empty draft screen.
+    const boons = isBoonDepth(nextDepth)
+      ? drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades))
+      : []
+    if (curse || boons.length > 0) {
+      // Set the boon draft now even on a curse round, so applyCurse can hand off
+      // to the boon screen (it routes to 'boon' whenever pendingBoons is set).
+      if (boons.length > 0) {
+        setPendingBoons(boons)
         setRerollsLeft(gauntletBoonRerolls(props.gauntletUpgrades))
         // Reprieve: in later rounds, sometimes a one-time relief card surfaces
         // alongside the boons (replacing the old random heal-tide's job, but as

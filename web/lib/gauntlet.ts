@@ -551,11 +551,22 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
 ]
 
 // Depths at which the Locker imposes its next curse. One per milestone, drawn at
-// random from the eligible pool (see drawCurse).
+// random from the eligible pool (see drawCurse). PAST the fixed schedule the
+// cadence CONTINUES every CURSE_INTERVAL depths (isCurseDepth) so deep runs keep
+// stacking rules instead of going pure stat-curve — drawCurse self-limits by
+// returning null once the pool is finally spent.
 export const CURSE_DEPTHS = [4, 7, 10, 13, 16, 19]
+const CURSE_INTERVAL = 3
 // Tier-2 curses (deepenings of one you already carry) only become eligible from
 // this depth on.
 export const CURSE_TIER2_DEPTH = 13
+
+/** Is `depth` a curse milestone? The fixed early schedule, then every
+ *  CURSE_INTERVAL depths forever after, so the deep end never stops cursing. */
+export function isCurseDepth(depth: number): boolean {
+  const last = CURSE_DEPTHS[CURSE_DEPTHS.length - 1]
+  return CURSE_DEPTHS.includes(depth) || (depth > last && (depth - last) % CURSE_INTERVAL === 0)
+}
 
 /** Pick the next curse the Locker imposes. Eligible = a fresh tier-1 curse you
  *  don't have, OR (from CURSE_TIER2_DEPTH on) a tier-2 deepening of one you do.
@@ -719,8 +730,18 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
 ]
 
 // Depths at which the player drafts a boon — offset from CURSE_DEPTHS so the
-// descent alternates gift and toll.
+// descent alternates gift and toll. PAST the fixed schedule the cadence
+// CONTINUES every BOON_INTERVAL depths (isBoonDepth); drawBoons returns [] once
+// every family is maxed, and the caller falls through to the breather.
 export const BOON_DEPTHS = [2, 5, 8, 11, 14, 17, 20, 23]
+const BOON_INTERVAL = 3
+
+/** Is `depth` a boon draft? Fixed early schedule, then every BOON_INTERVAL
+ *  depths forever after, so deep runs keep drafting (until the pool is maxed). */
+export function isBoonDepth(depth: number): boolean {
+  const last = BOON_DEPTHS[BOON_DEPTHS.length - 1]
+  return BOON_DEPTHS.includes(depth) || (depth > last && (depth - last) % BOON_INTERVAL === 0)
+}
 
 /** A single draft choice: a specific TIER of a boon family. The offered tier is
  *  one above whatever the player already holds in that family. */
