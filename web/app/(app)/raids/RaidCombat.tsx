@@ -95,6 +95,10 @@ const BURN_TICK_PCT = 0.30
 const BURN_CAP_PCT = 0.10
 const BURN_COLOR = '#fb923c'
 const FREEZE_COLOR = '#7dd3fc'
+// Elemental builds — the TOTAL on-hit proc chance (item cannonball + matching
+// boon) is capped here so a specialist gets deadlier procs, not runaway ones.
+const FREEZE_PROC_CAP = 0.20
+const BURN_PROC_CAP   = 0.20
 
 // ─── Math helpers ──────────────────────────────────────────────────────────────
 
@@ -412,6 +416,18 @@ export default function RaidCombat({
     let zoneSpeedMult = 1
     let aimBlackout   = 0
     let aimDecoys     = 0   // False Colours curse: N decoy bands on random fires
+    // Elemental boons — Permafrost (ice) + Wildfire (fire). The proc chances fold
+    // into the item burn/freeze math (capped in combat); the rest are multipliers
+    // / flags read where burn + freeze resolve.
+    let freezeChanceBoon = 0
+    let frozenDmgMult    = 1
+    let deepFreeze       = false
+    let brittle          = false
+    let burnChanceBoon   = 0
+    let burnTurnsBonus   = 0
+    let burnTickMult     = 1
+    let reignite         = false
+    let backdraft        = false
     // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
     let noncritDmgMult = 1
     // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
@@ -467,6 +483,19 @@ export default function RaidCombat({
         case 'zoneSpeedMult':         zoneSpeedMult *= e.mult; break
         case 'aimBlackout':           aimBlackout = Math.min(0.95, Math.max(aimBlackout, e.intensity)); break
         case 'aimDecoys':             aimDecoys = Math.max(aimDecoys, e.n); break
+        case 'iceAffinity':
+          freezeChanceBoon = Math.max(freezeChanceBoon, e.freezeChance)
+          frozenDmgMult    = Math.max(frozenDmgMult, e.frozenDmgMult)
+          if (e.brittle)    brittle = true
+          if (e.deepFreeze) deepFreeze = true
+          break
+        case 'fireAffinity':
+          burnChanceBoon = Math.max(burnChanceBoon, e.burnChance)
+          burnTurnsBonus = Math.max(burnTurnsBonus, e.burnTurnsBonus)
+          burnTickMult   = Math.max(burnTickMult, e.burnTickMult)
+          if (e.reignite)  reignite = true
+          if (e.backdraft) backdraft = true
+          break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
@@ -479,6 +508,8 @@ export default function RaidCombat({
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
       aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, noncritDmgMult,
+      freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
+      burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
     }
@@ -918,8 +949,10 @@ export default function RaidCombat({
   // regardless of who acts first: a hit sets *Pending*, which promotes to the
   // active *Frozen* flag at the top of the NEXT round, and that round's turn is
   // the one skipped. Clear-cut: "your hit freezes their next turn."
-  const enemyFrozenRef = useRef(false)
-  const enemyFreezePendingRef = useRef(false)
+  // Frozen turns REMAINING on the enemy (Deep Freeze can make this 2). Pending =
+  // turns to apply next round (a freeze procced this round skips the NEXT turn).
+  const enemyFrozenRef = useRef(0)
+  const enemyFreezePendingRef = useRef(0)
   const playerBurnRef = useRef<{ turns: number; dmg: number }>({ turns: 0, dmg: 0 })
   const playerFrozenRef = useRef(false)
   const playerFreezePendingRef = useRef(false)
@@ -1034,7 +1067,7 @@ export default function RaidCombat({
     // enemyHpScale tide always targets a LATER enemy.
     const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
     setEnemyHp(scaledHp); enemyHpRef.current = scaledHp; enemyHpMaxRef.current = scaledHp
-    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = false; enemyFreezePendingRef.current = false; snareBlockedRef.current = false; carapaceLoggedRef.current = false
+    enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = 0; enemyFreezePendingRef.current = 0; snareBlockedRef.current = false; carapaceLoggedRef.current = false
     playerBurnRef.current = { turns: 0, dmg: 0 }; playerFrozenRef.current = false; playerFreezePendingRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
     // ≥ 1) so their fire-first patterns shoot on turn 1. The player mirrors it
@@ -1713,14 +1746,14 @@ export default function RaidCombat({
     // Promote any freeze armed LAST round into the active skip for THIS round.
     // A freeze procced during this round only set the pending flag, so it can't
     // affect the round it landed on — it always skips the actor's next turn.
-    if (enemyFreezePendingRef.current) { enemyFrozenRef.current = true; enemyFreezePendingRef.current = false }
+    if (enemyFreezePendingRef.current > 0) { enemyFrozenRef.current = Math.max(enemyFrozenRef.current, enemyFreezePendingRef.current); enemyFreezePendingRef.current = 0 }
     if (playerFreezePendingRef.current) { playerFrozenRef.current = true; playerFreezePendingRef.current = false }
     // Round-scoped freeze flags. The per-actor ref above gets CONSUMED when that
     // actor's turn is skipped, which (with a faster opponent) happens before the
     // other side fires — so we snapshot "frozen this round" here and use it to
     // also suppress the frozen side's DODGE (reactive, resolved on the attacker's
     // shot). A frozen ship can't weave aside no matter the turn order.
-    const enemyFrozenThisRound  = enemyFrozenRef.current
+    const enemyFrozenThisRound  = enemyFrozenRef.current > 0
     const playerFrozenThisRound = playerFrozenRef.current
 
     // Incendiary burn ticks at the top of the turn. It reads the burn set on a
@@ -1728,9 +1761,14 @@ export default function RaidCombat({
     // that drops the enemy to 0 ends the fight via the final-step death check.
     if (enemyBurnRef.current.turns > 0 && eHp > 0) {
       const tick = enemyBurnRef.current.dmg
-      eHp = Math.max(0, eHp - tick)
+      // Wildfire "Backdraft": the final tick detonates for a burst (1.5× a tick)
+      // as the fire goes out.
+      const lastTick = enemyBurnRef.current.turns === 1
+      const boom = lastTick && tide.backdraft ? Math.round(tick * 1.5) : 0
+      const total = tick + boom
+      eHp = Math.max(0, eHp - total)
       enemyBurnRef.current = { turns: enemyBurnRef.current.turns - 1, dmg: enemyBurnRef.current.dmg }
-      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`The ${enemy.name} is ablaze, burning for ${tick}.`], burnTurnsLeft: enemyBurnRef.current.turns })
+      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [boom > 0 ? `The ${enemy.name} burns for ${tick}, then bursts for ${boom} as the fire goes out.` : `The ${enemy.name} is ablaze, burning for ${tick}.`], burnTurnsLeft: enemyBurnRef.current.turns })
     }
 
     // Scorching burn (elite affix) ticks the PLAYER's hull at the top of the turn
@@ -1748,9 +1786,10 @@ export default function RaidCombat({
       // Frozen Cannonball: the enemy loses this whole turn (skips before its
       // turn-start heal + action). This is the turn AFTER the proc; one turn,
       // then the ice breaks.
-      if (who === 'enemy' && enemyFrozenRef.current) {
-        enemyFrozenRef.current = false
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [`The ${enemy.name} is frozen solid — its turn is skipped.`], freezeEnds: true })
+      if (who === 'enemy' && enemyFrozenRef.current > 0) {
+        enemyFrozenRef.current -= 1
+        const ends = enemyFrozenRef.current === 0
+        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [ends ? `The ${enemy.name} is frozen solid — its turn is skipped.` : `The ${enemy.name} is locked in deep ice — another turn frozen.`], freezeEnds: ends })
         continue
       }
       // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
@@ -1929,9 +1968,14 @@ export default function RaidCombat({
             : 1
           // All-or-Nothing curse: anything short of a gold crit hits soft.
           const noncritTideMult = isCritShot ? 1 : tide.noncritDmgMult
+          // Permafrost: bonus damage to a FROZEN enemy (you shatter the brittle
+          // hull). Brittle doubles the bonus on a critical hit.
+          const frozenMult = enemyFrozenThisRound && tide.frozenDmgMult > 1
+            ? (isCritShot && tide.brittle ? 1 + (tide.frozenDmgMult - 1) * 2 : tide.frozenDmgMult)
+            : 1
           const actionBaseMult = isMega ? (megaAug?.megaMult ?? 2.6) : isVolley ? 2 : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
@@ -2137,8 +2181,17 @@ export default function RaidCombat({
           // to a fresh 2 turns; freeze flags the enemy's next turn to skip.
           if (dmg > 0 && eHp > 0) {
             const onHitEffects = getActiveEffects(liveItems)
-            const burnChance = onHitEffects.filter(e => e.type === 'burn_chance').reduce((a, e) => Math.max(a, e.value), 0)
-            const freezeChance = onHitEffects.filter(e => e.type === 'freeze_chance').reduce((a, e) => Math.max(a, e.value), 0)
+            // Item cannonball chance + matching elemental boon chance, capped so a
+            // specialist (item + boon) gets deadlier procs, not runaway frequency.
+            const itemBurn   = onHitEffects.filter(e => e.type === 'burn_chance').reduce((a, e) => Math.max(a, e.value), 0)
+            const itemFreeze = onHitEffects.filter(e => e.type === 'freeze_chance').reduce((a, e) => Math.max(a, e.value), 0)
+            const burnChance   = Math.min(BURN_PROC_CAP,   itemBurn   + tide.burnChanceBoon)
+            const freezeChance = Math.min(FREEZE_PROC_CAP, itemFreeze + tide.freezeChanceBoon)
+            // Wildfire "Reignite": landing on an already-burning hull refreshes the
+            // burn back to full duration (keep the fire alive without re-proccing).
+            if (tide.reignite && enemyBurnRef.current.turns > 0) {
+              enemyBurnRef.current = { turns: BURN_TURNS + tide.burnTurnsBonus, dmg: enemyBurnRef.current.dmg }
+            }
             // Barrage: each of its sub-hits gets a proc roll — the first at full
             // chance, the rest at procFalloff. Collapsed to one effective-chance
             // roll (same odds, less noise). Other shots = a single roll.
@@ -2153,14 +2206,17 @@ export default function RaidCombat({
               return Math.random() < c
             }
             if (burnChance > 0 && procRoll(burnChance)) {
-              const tickDmg = Math.max(1, Math.min(Math.round(dmg * BURN_TICK_PCT), Math.round(enemyHpMaxRef.current * BURN_CAP_PCT)))
-              enemyBurnRef.current = { turns: BURN_TURNS, dmg: tickDmg }
-              stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${tickDmg}/turn, ${BURN_TURNS} turns).`)
+              // Wildfire lengthens (turnsBonus) + heats (tickMult) every burn.
+              const turns = BURN_TURNS + tide.burnTurnsBonus
+              const tickDmg = Math.max(1, Math.min(Math.round(dmg * BURN_TICK_PCT * tide.burnTickMult), Math.round(enemyHpMaxRef.current * BURN_CAP_PCT)))
+              enemyBurnRef.current = { turns, dmg: Math.max(tickDmg, tide.reignite ? enemyBurnRef.current.dmg : 0) }
+              stepLines.push(`Incendiary hit! The ${enemy.name} catches fire (${enemyBurnRef.current.dmg}/turn, ${turns} turns).`)
               procStatus = 'burn'
             }
             if (freezeChance > 0 && procRoll(freezeChance)) {
-              enemyFreezePendingRef.current = true
-              stepLines.push(`Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
+              // Permafrost "Deep Freeze": 2 skipped turns instead of 1.
+              enemyFreezePendingRef.current = tide.deepFreeze ? 2 : 1
+              stepLines.push(tide.deepFreeze ? `Frozen shot! The ${enemy.name} locks in deep ice — its next two turns are frozen.` : `Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
               procStatus = 'freeze'
             }
           }

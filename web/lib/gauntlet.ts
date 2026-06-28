@@ -740,6 +740,21 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Up to +35% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +35%.', effect: { kind: 'lowHpDamage', maxBonus: 0.35 } },
     { desc: 'Up to +52% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +52%.', effect: { kind: 'lowHpDamage', maxBonus: 0.52 } },
   ] },
+  // ── Elemental builds — lean a run into ICE (control + shatter) or FIRE
+  //    (stacking DoT). Each grants its proc chance ON ITS OWN, so you can take
+  //    it without the matching cannonball; with the cannonball the chances stack
+  //    but RaidCombat caps the total at 20% so a specialist gets DEADLIER procs,
+  //    not infinitely more frequent ones. Higher tiers add signature levers.
+  { id: 'permafrost', name: 'Permafrost', flavor: 'The cold off your guns finds the seams in their hull and holds it fast.', rarity: 'rare', tiers: [
+    { desc: '10% freeze, +25% vs frozen', detail: 'Each hit has a 10% chance to freeze the enemy (it loses its next turn), and you deal 25% more damage to a frozen hull. Stacks with the Frozen Cannonball, capped at 20% total freeze.', effect: { kind: 'iceAffinity', freezeChance: 0.10, frozenDmgMult: 1.25 } },
+    { desc: '15% freeze, +40% vs frozen, Brittle', detail: 'Freeze chance 15%, +40% damage to frozen hulls. BRITTLE: a critical hit on a frozen enemy shatters it for DOUBLE the frozen bonus.', effect: { kind: 'iceAffinity', freezeChance: 0.15, frozenDmgMult: 1.40, brittle: true } },
+    { desc: '20% freeze (2 turns), +55% vs frozen, Brittle', detail: 'Freeze chance 20% and +55% damage to frozen hulls, with Brittle. DEEP FREEZE: your freezes now last TWO skipped turns instead of one.', effect: { kind: 'iceAffinity', freezeChance: 0.20, frozenDmgMult: 1.55, brittle: true, deepFreeze: true } },
+  ] },
+  { id: 'wildfire', name: 'Wildfire', flavor: 'You set the sea alight and let it do the work the guns started.', rarity: 'rare', tiers: [
+    { desc: '10% burn, 3 turns, hotter ticks', detail: 'Each hit has a 10% chance to set the enemy ablaze. Your burns last 3 turns (one longer than normal) and each tick burns ~27% hotter. Stacks with the Incendiary Cannonball, capped at 20% total burn.', effect: { kind: 'fireAffinity', burnChance: 0.10, burnTurnsBonus: 1, burnTickMult: 1.27 } },
+    { desc: '15% burn, hotter, Reignite', detail: 'Burn chance 15%, ticks ~53% hotter. REIGNITE: hitting an already-burning enemy refreshes the burn back to full duration, so you can keep the fire going as long as you keep landing shots.', effect: { kind: 'fireAffinity', burnChance: 0.15, burnTurnsBonus: 1, burnTickMult: 1.53, reignite: true } },
+    { desc: '20% burn, 4 turns, Reignite + Backdraft', detail: 'Burn chance 20%, burns last 4 turns and tick ~83% hotter, with Reignite. BACKDRAFT: when a burn finally goes out it detonates for a burst of damage on top of the last tick.', effect: { kind: 'fireAffinity', burnChance: 0.20, burnTurnsBonus: 2, burnTickMult: 1.83, reignite: true, backdraft: true } },
+  ] },
   // ── LEGENDARY (rare; bigger, one-of-a-kind effects, fewer tiers) ────────────
   { id: 'executioner', name: 'Executioner', flavor: "Below a certain mark, a hull is already gone — it just doesn't know it yet.", rarity: 'legendary', tiers: [
     { desc: 'Sink enemies below 5% HP', detail: 'The instant any hit drops an enemy to 5% of its health or lower, it is sunk outright — no need to chip out the last sliver.', effect: { kind: 'executeThreshold', pct: 0.05 } },

@@ -64,6 +64,17 @@ export type TideEffect =
    *  Lock onto one and your shot is a dud — chip damage + the turn ends. The
    *  "False Colours" curse. */
   | { kind: 'aimDecoys'; n: number }
+  // ── Elemental builds (Gauntlet boons) — composite effects so one boon tier
+  //    carries a whole identity. Fold into the item burn/freeze proc math (the
+  //    chances STACK with the matching cannonball, capped in RaidCombat).
+  /** Ice build "Permafrost": a freeze chance on hit (skips the enemy's turn) +
+   *  bonus damage vs a frozen hull. `brittle` = crits shatter for double the
+   *  bonus; `deepFreeze` = the freeze lasts 2 skipped turns. */
+  | { kind: 'iceAffinity'; freezeChance: number; frozenDmgMult: number; brittle?: boolean; deepFreeze?: boolean }
+  /** Fire build "Wildfire": a burn chance on hit + longer burns (turnsBonus) +
+   *  hotter ticks (tickMult). `reignite` = hitting a burning hull refreshes the
+   *  duration; `backdraft` = the burn detonates for a burst when it expires. */
+  | { kind: 'fireAffinity'; burnChance: number; burnTurnsBonus: number; burnTickMult: number; reignite?: boolean; backdraft?: boolean }
   // ── Incoming damage / mitigation ────────────────────────────────
   /** Multiplier on incoming damage rolls. <1 = mitigation. */
   | { kind: 'incomingDmgMult'; mult: number; scope: 'nextFight' | 'allRemaining' }
@@ -185,6 +196,8 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
       return e.n < 0 ? 'good' : e.n > 0 ? 'bad' : 'neutral'
     case 'aimFog':       return e.density > 0 ? 'bad' : 'neutral'
     case 'aimDecoys':    return e.n > 0 ? 'bad' : 'neutral'
+    case 'iceAffinity':  return 'good'
+    case 'fireAffinity': return 'good'
     case 'aimSpeedMult': return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
     case 'zoneSpeedMult':return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
     default:
@@ -772,6 +785,8 @@ export function describeEffect(e: TideEffect): string {
     case 'noncritDmgMult':        return `Non-crit shots deal ${Math.round((1 - e.mult) * 100)}% less`
     case 'aimBlackout':           return 'Your aim bar goes dark in fits'
     case 'aimDecoys':             return `${e.n} false target${e.n === 1 ? '' : 's'} drift your aim bar`
+    case 'iceAffinity':           return `${Math.round(e.freezeChance * 100)}% freeze + ${Math.round((e.frozenDmgMult - 1) * 100)}% vs frozen`
+    case 'fireAffinity':          return `${Math.round(e.burnChance * 100)}% burn, longer + hotter`
     case 'aimFog':                return 'Fog drifts over your aim bar'
     case 'aimSpeedMult':          return e.mult > 1 ? `Aim needle ${pct(e.mult - 1)} faster` : `Aim needle ${pct(1 - e.mult)} slower`
     case 'zoneSpeedMult':         return e.mult > 1 ? `Target band lurches ${pct(e.mult - 1)} faster` : `Target band ${pct(1 - e.mult)} steadier`
