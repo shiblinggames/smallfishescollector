@@ -168,6 +168,7 @@ export const RODS: RodDef[] = [
     // procs. The unique effects come from the rods socketed into it (see
     // resolveCompletionistRod). Earlier this rod hard-coded every proc maxed;
     // now it's a build-your-own capstone.
+    slug: 'rod_completionist',
     color: '#e8c84a', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 16,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: true, perfectZoneBonus: 3,
   },
