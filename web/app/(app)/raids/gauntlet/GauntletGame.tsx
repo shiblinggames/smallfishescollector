@@ -29,7 +29,7 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -2356,6 +2356,8 @@ type ShopEntry = {
   id: string; name: string; description: string; depthRequired: number; cost: number
   scope: string; owned: boolean; lockNote: string | null; demo: boolean; special: boolean
   category?: 'voyages' | 'raids' | 'fishing'
+  /** Built but not live yet — shown with a Coming Soon lock, can't be bought. */
+  comingSoon?: boolean
 }
 
 // Ship & Shore sections, ordered, each with a small glyph for the header.
@@ -2399,24 +2401,30 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
   // are surfaced as chips up top, not here.)
   function Card({ e }: { e: ShopEntry }) {
     if (!state) return null
+    const comingSoon = !!e.comingSoon
     const depthMet = state.deepest >= e.depthRequired
     const canAfford = state.fathoms >= e.cost
     const busy = claiming === e.id
     const prereqLocked = !!e.lockNote
-    const claimable = depthMet && canAfford && !prereqLocked && !busy
-    const accent = claimable ? GOLD : (!depthMet || prereqLocked) ? '#caa05a' : '#6a6764'
+    const claimable = depthMet && canAfford && !prereqLocked && !busy && !comingSoon
+    const accent = comingSoon ? `${TEAL}66` : claimable ? GOLD : (!depthMet || prereqLocked) ? '#caa05a' : '#6a6764'
     // Compact buy control on the right: a small tinted price-button when you can
     // take it, a dim status chip when you can't. Fathoms read teal, matching the
     // wallet, so it never needs a gold fill.
-    const topLabel = busy ? '' : !depthMet ? 'Locked' : prereqLocked ? 'Locked' : !canAfford ? 'Need' : 'Buy'
-    const bigLabel = busy ? '…' : !depthMet ? `Lv ${e.depthRequired}` : fmt(e.cost)
-    const showFathoms = !busy && depthMet
+    const topLabel = comingSoon ? 'Coming' : busy ? '' : !depthMet ? 'Locked' : prereqLocked ? 'Locked' : !canAfford ? 'Need' : 'Buy'
+    const bigLabel = comingSoon ? 'Soon' : busy ? '…' : !depthMet ? `Lv ${e.depthRequired}` : fmt(e.cost)
+    const showFathoms = !comingSoon && !busy && depthMet
     return (
       <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.75rem 0.85rem 0.75rem 1rem', background: 'rgba(255,255,255,0.035)', border: `1px solid ${claimable ? `${GOLD}3a` : 'rgba(255,255,255,0.1)'}`, boxShadow: claimable ? `0 0 18px ${GOLD}12` : 'none' }}>
         <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
-          {e.depthRequired > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: comingSoon ? '#cfcabf' : '#f0ede8', lineHeight: 1.15 }}>{e.name}</p>
+            {comingSoon && (
+              <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, fontSize: '0.46rem', color: TEAL, background: `${TEAL}1c`, border: `1px solid ${TEAL}55`, borderRadius: 999, padding: '0.16rem 0.4rem' }}>Coming Soon</span>
+            )}
+          </div>
+          {e.depthRequired > 0 && !comingSoon && (
             <span className="font-karla font-700 uppercase tracking-[0.07em]" style={{ fontSize: '0.5rem', color: depthMet ? '#7fd49a' : '#d8a14a' }}>
               {depthMet ? `Depth ${e.depthRequired} reached` : `Reach depth ${e.depthRequired}`}
             </span>
@@ -2424,6 +2432,7 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 4 }}>{e.description}</p>
           {e.demo && <CannonballRackDemo />}
           {prereqLocked && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#caa05a', marginTop: 7 }}>{e.lockNote}</p>}
+          {comingSoon && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: `${TEAL}cc`, marginTop: 7 }}>Still on the anvil. Not ready yet.</p>}
         </div>
         <button
           type="button"
@@ -2474,6 +2483,7 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
               id: u.id, name: u.name, description: u.description, depthRequired: u.depthRequired,
               cost: u.cost, scope: u.scope, owned: state.owned.includes(u.id), lockNote: null,
               demo: u.id === 'cannonball_rack', special: false, category: u.category,
+              comingSoon: COMING_SOON_UPGRADES.has(u.id),
             }))
             const ac = getSpecialItem('auto_catcher')
             const autoCatcher: ShopEntry | null = ac ? {

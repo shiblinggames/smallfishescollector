@@ -221,6 +221,15 @@ export function getGauntletUpgrade(id: string): GauntletUpgrade | null {
   return GAUNTLET_UPGRADES.find(u => u.id === id) ?? null
 }
 
+/** Upgrade ids that are built but NOT live for players yet — surfaced in the
+ *  shop with a Coming Soon lock (no price, can't buy) and rejected at claim
+ *  time. One source of truth for the client card + the server guard. */
+export const COMING_SOON_UPGRADES = new Set<string>(['forge'])
+
+export function isUpgradeComingSoon(id: string): boolean {
+  return COMING_SOON_UPGRADES.has(id)
+}
+
 /** Extra player cannonball capacity (max charges) granted by claimed upgrades.
  *  Volley cost is unchanged — these are reserve slots. */
 export function bonusChargeSlots(unlocked: string[] | null | undefined): number {

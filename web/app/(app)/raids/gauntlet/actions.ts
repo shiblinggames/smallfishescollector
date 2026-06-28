@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, type GauntletRunSnapshot } from '@/lib/gauntlet'
-import { getGauntletUpgrade, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
+import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 
@@ -85,6 +85,7 @@ export async function claimGauntletUpgrade(id: string): Promise<
 
   const upgrade = getGauntletUpgrade(id)
   if (!upgrade) return { error: 'Unknown upgrade.' }
+  if (isUpgradeComingSoon(id)) return { error: 'Coming soon.' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
