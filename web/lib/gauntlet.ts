@@ -155,12 +155,13 @@ const MOB_POOL: BroadsideEnemy[] = RAID_CONFIGS.flatMap(c =>
     .filter(([key]) => key !== c.bossId)
     .map(([, e]) => e),
 )
-// Bosses are drawn from the CHALLENGE variants so their two-phase fights carry
-// into the Gauntlet — every challenge boss revives at half HP and fights harder
-// (Pete = aggression, Krust = plate, Cartographer = fog-and-parry, Spet =
-// doubled cadence). The challenge HP/dmg buffs are harmless here: scaleToCurve
+// Bosses are drawn from the CHALLENGE variants so their two-phase fights can
+// carry into the Gauntlet — every challenge boss has a half-HP revive (Pete =
+// aggression, Krust = plate, Cartographer = fog-and-parry, Spet = doubled
+// cadence). The challenge HP/dmg buffs are harmless here: scaleToCurve
 // overwrites HP + damage with the Gauntlet depth curve, so the ONLY thing the
-// challenge config adds is the boss's phase2.
+// challenge config adds is the boss's phase2 — which scaleToCurve then GATES to
+// deep runs only (stripped at/below PHASE2_BOSS_MIN_DEPTH).
 const BOSS_CONFIGS = [
   CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE,
   THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE,
@@ -175,6 +176,10 @@ function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length
 // RaidCombat (enemyArtFilter prop).
 export const DROWNED_FILTER = 'grayscale(0.45) brightness(0.82) drop-shadow(0 0 11px rgba(110,220,210,0.6))'
 
+// Two-phase boss revives are an ENDGAME escalation — early/mid Gauntlet bosses
+// stay single-phase; only past this depth do they bring their phase 2.
+const PHASE2_BOSS_MIN_DEPTH = 20
+
 /** Overlay the gauntlet curve onto a source enemy, preserving identity
  *  (pattern, art, signature ability, First-Cut startCharges, etc) but
  *  reframing it as a drowned Locker creature. */
@@ -188,7 +193,11 @@ function scaleToCurve(src: BroadsideEnemy, depth: number, isBoss: boolean): Broa
   // Chapter-2, so this opens near the late-raid band (~24) and ramps. Bosses
   // shoot a touch straighter. See BroadsideEnemy.accuracy for the dodge math.
   const accuracy = Math.round(18 + depth * 1.4) + (isBoss ? 3 : 0)
-  return { ...src, name: drownedName(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
+  const out: BroadsideEnemy = { ...src, name: drownedName(src.name), hpBase: hp, minDmg: Math.max(1, min), maxDmg: Math.max(min + 1, max), accuracy }
+  // Phase-2 revives only past PHASE2_BOSS_MIN_DEPTH — strip the inherited
+  // challenge phase2 on shallower boss rounds so they stay single-phase.
+  if (isBoss && depth <= PHASE2_BOSS_MIN_DEPTH) out.phase2 = undefined
+  return out
 }
 
 /** Reframe an enemy as a drowned Locker creature. A leading "The" keeps its
