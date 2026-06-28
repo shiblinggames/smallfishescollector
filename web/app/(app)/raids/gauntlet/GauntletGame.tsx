@@ -16,9 +16,11 @@ import RaidCombat from '../RaidCombat'
 import { getShipSkin } from '@/lib/shipSkins'
 import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
+import { classForSlug, CLASSES, currentMilestone } from '@/lib/crewClasses'
+import { crewLevelFromXP } from '@/lib/crewLevel'
 import {
   generateFight, advanceRollState, chestForDepth,
-  isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseTierLabel, GAUNTLET_CURSES,
+  isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
@@ -145,6 +147,38 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [peekFight, setPeekFight] = useState<GauntletFight | null>(null)
   const peekFightRef = useRef<GauntletFight | null>(null)
   const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
+  // Dead Hands curse — crew ids the deep has silenced. They stay in the used set
+  // through every refresh, so their ability never comes back. Reconciled to the
+  // active curse count whenever a curse is imposed or cleansed.
+  const silencedCrewIdsRef = useRef<number[]>([])
+  // Crew that actually have a usable ability (a wired class + an unlocked
+  // milestone at their level) — the only ones worth silencing.
+  function abilityCrewIds(): number[] {
+    return props.crewMembers
+      .filter(c => { const cls = classForSlug(c.slug); return !!cls && !!currentMilestone(CLASSES[cls], crewLevelFromXP(c.xp)) })
+      .map(c => c.id)
+  }
+  // Reconcile the silenced set to the active Dead Hands count: lock newly
+  // silenced crew into the used set now, and free any a cleanse just released.
+  function reconcileSilence() {
+    const before = silencedCrewIdsRef.current
+    const count = curseSilenceCount(curseTiersRef.current)
+    const valid = abilityCrewIds()
+    const keep = before.filter(id => valid.includes(id))
+    const pool = valid.filter(id => !keep.includes(id))
+    while (keep.length < Math.min(count, valid.length) && pool.length) {
+      keep.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0])
+    }
+    const next = keep.slice(0, Math.min(count, valid.length))
+    silencedCrewIdsRef.current = next
+    const freed = before.filter(id => !next.includes(id))
+    setUsedAbilityIds(prev => {
+      const s = new Set(prev)
+      next.forEach(id => s.add(id))      // lock the silenced
+      freed.forEach(id => s.delete(id))  // a cleanse refreshed these
+      return s
+    })
+  }
   // Reprieve — an optional one-time relief card (heal / crew refresh) that can
   // surface alongside the boons in later rounds. Taking it means forgoing the
   // boon draft (give up upgrade potential for immediate relief).
@@ -358,7 +392,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     // Crew abilities refresh after each BOSS kill (a natural "catch your breath"
     // beat) plus at run start. Keys off the actual fight, not a depth counter,
     // so Veteran's Start can't desync it. The on-demand Reprieve fills the gaps.
-    if (f.isBoss) { setUsedAbilityIds(new Set()); crewRefreshedRef.current = true }
+    // Refresh everyone EXCEPT crew the deep has silenced (Dead Hands) — they
+    // stay spent through the refresh.
+    if (f.isBoss) { setUsedAbilityIds(new Set(silencedCrewIdsRef.current)); crewRefreshedRef.current = true }
 
     // Curse milestone (descend INTO a CURSE_DEPTH) and boon draft (INTO a
     // BOON_DEPTH). They sit on different depths so the run alternates toll and
@@ -412,6 +448,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     const next = { ...curseTiersRef.current, [offer.id]: offer.tier }
     curseTiersRef.current = next
     setCurseTiers(next)
+    // Dead Hands: lock the freshly-silenced crew into the used set right away.
+    if (offer.silenceCrew) reconcileSilence()
     setPendingCurse(null)
     // If a boon was drawn for this same depth (Calm Before lands a curse on a
     // boon depth), show it next instead of dropping straight to the breather.
@@ -446,7 +484,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       playerHPRef.current = healed
       setPlayerHP(healed)
     } else if (r.kind === 'crew') {
-      setUsedAbilityIds(new Set()) // every crew ability loaded fresh
+      // Loads every ability fresh — but Dead Hands holds its silenced crew down.
+      setUsedAbilityIds(new Set(silencedCrewIdsRef.current))
       crewRefreshedRef.current = true
     } else if (r.kind === 'charges') {
       // Open the next fight with the gun deck run out (carryover plumbing).
@@ -460,6 +499,8 @@ export default function GauntletGame(props: GauntletGameProps) {
         delete next[drop]
         curseTiersRef.current = next
         setCurseTiers(next)
+        // If Dead Hands was the curse shed, free the crew it had silenced.
+        if (drop === 'dead_hands') reconcileSilence()
       }
     }
     setPendingReprieve(null)

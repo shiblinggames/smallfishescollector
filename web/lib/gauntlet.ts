@@ -393,6 +393,10 @@ export interface GauntletCurseTier {
   effects?: TideEffect[]
   /** % of MAX HP the hull sheds at the start of every fight while active. */
   hpDrainPct?: number
+  /** N crew whose special ability the deep silences for the rest of the run —
+   *  they stop refreshing (once spent, stay spent). Host-side, not a TideEffect
+   *  (it touches the used-ability set, not combat math). */
+  silenceCrew?: number
 }
 
 export interface GauntletCurse {
@@ -416,6 +420,7 @@ export interface CurseOffer {
   detail: string
   effects?: TideEffect[]
   hpDrainPct?: number
+  silenceCrew?: number
   isUpgrade: boolean
 }
 
@@ -548,6 +553,15 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
       { desc: 'Enemies open every fight loaded for a volley', detail: 'Every enemy now starts each fight with two cannonballs chambered, ready to open with their heaviest shot.', effects: [{ kind: 'enemyStartChargesDelta', n: 2, scope: 'allRemaining' }] },
     ],
   },
+  {
+    id: 'dead_hands',
+    name: 'Dead Hands',
+    flavor: 'The cold creeps up the rigging and into your crew. The ones it takes never lift a gun again.',
+    tiers: [
+      { desc: 'One crew can no longer refresh its ability', detail: "The deep silences one of your crew. Their special ability stops coming back between fights, so once it's spent it stays spent for the rest of the run. (If it was already spent, it's gone now.)", silenceCrew: 1 },
+      { desc: 'Two crew can no longer refresh their abilities', detail: 'The cold spreads. A second crew falls silent too, so two of your special abilities no longer refresh for the rest of the run.', silenceCrew: 2 },
+    ],
+  },
 ]
 
 // Depths at which the Locker imposes its next curse. One per milestone, drawn at
@@ -578,7 +592,7 @@ export function drawCurse(curseTiers: Record<string, number>, depth: number): Cu
   if (eligible.length === 0) return null
   const { c, next } = eligible[Math.floor(Math.random() * eligible.length)]
   const t = c.tiers[next - 1]
-  return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, isUpgrade: next > 1 }
+  return { id: c.id, name: c.name, flavor: c.flavor, tier: next, desc: t.desc, detail: t.detail, effects: t.effects, hpDrainPct: t.hpDrainPct, silenceCrew: t.silenceCrew, isUpgrade: next > 1 }
 }
 
 /** Run-wide combat effects from every curse currently on the player, at its
@@ -592,6 +606,13 @@ export function curseEffects(curseTiers: Record<string, number>): TideEffect[] {
 export function curseHpDrain(curseTiers: Record<string, number>): number {
   return Object.entries(curseTiers).reduce((a, [id, tier]) =>
     a + (GAUNTLET_CURSES.find(c => c.id === id)?.tiers[tier - 1]?.hpDrainPct ?? 0), 0)
+}
+
+/** How many crew the active curses silence (Dead Hands) — their abilities stop
+ *  refreshing. The host keeps that many crew locked in the used-ability set. */
+export function curseSilenceCount(curseTiers: Record<string, number>): number {
+  return Object.entries(curseTiers).reduce((a, [id, tier]) =>
+    a + (GAUNTLET_CURSES.find(c => c.id === id)?.tiers[tier - 1]?.silenceCrew ?? 0), 0)
 }
 
 /** Roman tier marker for curse chips ('' for tier 1, 'II' for tier 2). */
