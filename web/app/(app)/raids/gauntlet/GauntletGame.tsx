@@ -1888,8 +1888,8 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers }: {
     .map(([id, tier]) => ({ c: GAUNTLET_CURSES.find(c => c.id === id), tier }))
     .filter((x): x is { c: NonNullable<typeof x.c>; tier: number } => !!x.c && x.tier >= 1)
   const Stat = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
-    <div style={{ flex: 1, padding: '0.62rem 0.35rem', borderRadius: 12, background: 'rgba(125,211,252,0.05)', border: '1px solid rgba(125,211,252,0.16)', textAlign: 'center' }}>
-      <p className="font-cinzel font-800" style={{ fontSize: '1.28rem', color, lineHeight: 1, textShadow: `0 0 16px ${color}33` }}>{value}</p>
+    <div style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '0.62rem 0.35rem', borderRadius: 12, background: 'rgba(125,211,252,0.05)', border: '1px solid rgba(125,211,252,0.16)', textAlign: 'center', overflow: 'hidden' }}>
+      <p className="font-cinzel font-800" style={{ fontSize: 'clamp(0.95rem, 4.4vw, 1.22rem)', color, lineHeight: 1, textShadow: `0 0 16px ${color}33`, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
       <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#84939f', marginTop: 5 }}>{label}</p>
     </div>
   )
@@ -1898,7 +1898,7 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers }: {
       <p className="font-karla font-800 uppercase tracking-[0.14em]" style={{ fontSize: '0.54rem', color, marginBottom: 7 }}>{title}</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {items.map(it => (
-          <span key={it.key} className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#eef6f4', padding: '0.28rem 0.62rem', borderRadius: 999, background: `${it.rc}1a`, border: `1px solid ${it.rc}4d` }}>
+          <span key={it.key} className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#eef6f4', padding: '0.28rem 0.62rem', borderRadius: 999, background: `${it.rc}1a`, border: `1px solid ${it.rc}4d`, maxWidth: '100%', overflowWrap: 'anywhere' }}>
             {it.label}
           </span>
         ))}
@@ -1906,7 +1906,7 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers }: {
     </div>
   )
   return (
-    <div style={{ marginTop: 18 }}>
+    <div style={{ marginTop: 18, maxWidth: '100%' }}>
       <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.52rem', color: '#7e96a8', marginBottom: 9, textAlign: 'center' }}>The Dive</p>
       <div style={{ display: 'flex', gap: 8 }}>
         <Stat label="Depth" value={depth} color={TEAL} />
