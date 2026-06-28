@@ -80,6 +80,10 @@ type Actor      = 'player' | 'enemy'
 // reserve.
 const MAX_CHARGES = 3
 const VOLLEY_COST = MAX_CHARGES
+// Odds the enemy FEINTS instead of firing when a reload lands on a full
+// magazine (see pickEnemyAction) — holds the shot and braces, so "enemy at MAX
+// charges" stops being a guaranteed incoming fire the player can pre-dodge.
+const FEINT_CHANCE = 0.3
 const PLAYER_COLOR = '#4ade80'
 const ENEMY_COLOR  = '#ef4444'
 
@@ -842,6 +846,9 @@ export default function RaidCombat({
   useEffect(() => () => { playStepChainRef.current.forEach(clearTimeout) }, [])
 
   const enemyPatternIdxRef = useRef(0)
+  // Consecutive reload-at-max FEINTS (see pickEnemyAction). Capped so a full
+  // magazine can't become a guaranteed incoming fire OR an endless bluff.
+  const enemyFeintStreakRef = useRef(0)
   // Boss phase tracking. The ref drives combat reads (pickEnemyAction,
   // damage rolls, mitigation checks) without re-renders; the state
   // mirror drives the persistent visual treatment (crimson nameplate +
@@ -1153,6 +1160,7 @@ export default function RaidCombat({
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
     enemyPatternIdxRef.current = 0
+    enemyFeintStreakRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
     setEnemySinking(false)  // fresh enemy — clear any leftover sink from a prior fight
@@ -1254,15 +1262,27 @@ export default function RaidCombat({
     //  2) Reload at MAX charges — would no-op and burn the turn. Affects
     //     no-volley enemies (Krust + his crew) whose patterns carry more
     //     reloads than fires per cycle: charges accumulate cycle over
-    //     cycle until a reload overshoots MAX. Substitute fire (they
-    //     have ammo by definition) and DO advance — the wasted reload
-    //     becomes the extra shot the cadence was already building toward.
+    //     cycle until a reload overshoots MAX. Normally substitute fire (they
+    //     have ammo by definition) and DO advance — the wasted reload becomes
+    //     the extra shot the cadence was already building toward.
+    //
+    //     But a guaranteed fire at full charges is a free read: the player
+    //     just pre-dodges every time the counter shows MAX. So sometimes FEINT
+    //     instead — hold the shot and brace (dodge) — baiting that wasted
+    //     dodge. Capped to one feint in a row so a full magazine can't stall
+    //     forever; the next max-reload then fires for sure.
     if ((action === 'fire'   && enemyCharges < 1) ||
         (action === 'volley' && enemyCharges < MAX_CHARGES)) {
       action = 'reload'
     } else if (action === 'reload' && enemyCharges >= MAX_CHARGES) {
-      action = 'fire'
       enemyPatternIdxRef.current++
+      if (enemyFeintStreakRef.current < 1 && Math.random() < FEINT_CHANCE) {
+        action = 'dodge'
+        enemyFeintStreakRef.current++
+      } else {
+        action = 'fire'
+        enemyFeintStreakRef.current = 0
+      }
     } else {
       enemyPatternIdxRef.current++
     }
@@ -2448,6 +2468,7 @@ export default function RaidCombat({
       ) {
         enemyPhaseRef.current = 2
         enemyPatternIdxRef.current = 0
+        enemyFeintStreakRef.current = 0
         const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * enemy.phase2.revivePct))
         eHp = revivedHp
         steps.push({
