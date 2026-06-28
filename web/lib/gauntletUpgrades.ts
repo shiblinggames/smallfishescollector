@@ -87,6 +87,14 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     scope: 'gauntlet',
   },
   {
+    id: 'salt_ward',
+    name: 'Salt Ward',
+    description: "Once per curse the Locker lays on you, throw it back and force a different one. The new curse could be milder, or worse — it's a gamble.",
+    depthRequired: 0,
+    cost: 65,
+    scope: 'gauntlet',
+  },
+  {
     id: 'iron_hide',
     name: 'Iron Hide',
     description: 'Take 10% less damage from every enemy for the whole Gauntlet run.',
@@ -314,4 +322,9 @@ export function gauntletBoonLuck(unlocked: string[] | null | undefined): number 
 /** Second Cast: how many times the player may reroll the offered boons per draft. */
 export function gauntletBoonRerolls(unlocked: string[] | null | undefined): number {
   return (unlocked ?? []).includes('second_cast') ? 1 : 0
+}
+
+/** Salt Ward: how many times the player may reroll a curse the Locker imposes. */
+export function gauntletCurseRerolls(unlocked: string[] | null | undefined): number {
+  return (unlocked ?? []).includes('salt_ward') ? 1 : 0
 }

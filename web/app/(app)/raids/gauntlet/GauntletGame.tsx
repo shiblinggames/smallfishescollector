@@ -29,7 +29,7 @@ import {
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
-import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls } from '@/lib/gauntletUpgrades'
+import { GAUNTLET_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
 import { buySpecialItem } from '@/app/(app)/fishing/actions'
@@ -185,6 +185,11 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [pendingReprieve, setPendingReprieve] = useState<Reprieve | null>(null)
   // Second Cast: rerolls left on the CURRENT boon draft (set when it opens).
   const [rerollsLeft, setRerollsLeft] = useState(0)
+  // Salt Ward: rerolls left on the CURRENT imposed curse (set when it appears).
+  const [curseRerollsLeft, setCurseRerollsLeft] = useState(0)
+  // Depth the current curse was drawn at — so a Salt Ward reroll redraws at the
+  // same depth (keeps the tier-2 gate honest).
+  const curseDepthRef = useRef(0)
   // Calm Before: spent once it has waved off the player's FIRST curse milestone
   // (whatever depth that is — Veteran's Start can move it off depth 4).
   const calmBeforeUsedRef = useRef(false)
@@ -453,7 +458,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           ? drawReprieve({ curseCount: Object.keys(curseTiersRef.current).length })
           : null)
       }
-      if (curse) { setPendingCurse(curse); setPhase('curse') }
+      if (curse) { curseDepthRef.current = nextDepth; setPendingCurse(curse); setCurseRerollsLeft(gauntletCurseRerolls(props.gauntletUpgrades)); setPhase('curse') }
       else setPhase('boon')
       return
     }
@@ -495,6 +500,20 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (rerollsLeft <= 0) return
     setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(props.gauntletUpgrades)))
     setRerollsLeft(r => r - 1)
+  }
+
+  // Salt Ward: throw the imposed curse back and draw a different one. Tries a few
+  // times to land a curse that isn't the same one you just shrugged off; if the
+  // pool is thin it may repeat (and an exhausted pool just keeps the current one).
+  function rerollCurse() {
+    if (curseRerollsLeft <= 0 || !pendingCurse) return
+    const depth = curseDepthRef.current
+    let next = drawCurse(curseTiersRef.current, depth)
+    for (let i = 0; i < 6 && next && next.id === pendingCurse.id && next.tier === pendingCurse.tier; i++) {
+      next = drawCurse(curseTiersRef.current, depth)
+    }
+    if (next) setPendingCurse(next)
+    setCurseRerollsLeft(r => r - 1)
   }
 
   // Take the Reprieve instead of a boon — apply its one-time effect now and
@@ -1183,6 +1202,13 @@ export default function GauntletGame(props: GauntletGameProps) {
             }}>
             Bear It · Descend
           </button>
+          {curseRerollsLeft > 0 && (
+            <button onClick={rerollCurse} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+              style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.55rem 1.1rem', borderRadius: 999, fontSize: '0.64rem', color: '#fca5a5', background: `${CRIM}14`, border: `1px solid ${CRIM}55`, cursor: 'pointer' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
+              Salt Ward · Reroll Curse · {curseRerollsLeft} left
+            </button>
+          )}
         </div>
         {exitModal}
       </>
