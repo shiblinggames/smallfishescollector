@@ -8,9 +8,11 @@
 // than a clean miss), 3 catfish pays a share of the global pot instead
 // of a fixed multiplier, and a sardine pair is just a near-miss.
 //
-// Base-game RTP at these numbers ≈ 91.6%; the 10% jackpot feed (raised
-// from 5% on 2026-06-28) plus the seeded pot brings the total to ≈
-// 101.6%+. Verified with slots-rtp.mjs (repo root) — rerun it before
+// Base-game RTP ≈ 86.5% (catfish pair trimmed 3× → 2× on 2026-06-28);
+// the 10% jackpot feed (raised from 5% same day) plus the seeded pot
+// brings the total to ≈ 96.5% — under 100% with the pot now climbing
+// twice as fast. Value shifted from base churn into the communal
+// jackpot. Verified with slots-rtp.mjs (repo root) — rerun it before
 // changing ANY weight or payout here.
 //
 // 2026-06-10 small-population retune (second pass same day): with ~25
@@ -67,7 +69,10 @@ export const SLOT_PAYOUTS: Record<SlotSymbolId, number> = {
 export const SLOT_PAIR_PAYOUTS: Partial<Record<SlotSymbolId, number>> = {
   rare:      2,
   legendary: 5,
-  catfish:   3,
+  // 2026-06-28: catfish pair 3× → 2×. Funds the doubled (10%) jackpot feed
+  // out of the base game — the catfish's value shifts from the pair
+  // consolation into the bigger communal pot. Holds total RTP at ~96.5%.
+  catfish:   2,
 }
 
 export const SLOTS_MIN_BET   = 10

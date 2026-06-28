@@ -79,3 +79,15 @@ report('E: catfish 10, pair 5x, sardine 4x', { common: 42, rare: 20, legendary: 
 report('F: catfish 14, pair 3x, sardine 4x', { common: 39, rare: 20, legendary: 9, catfish: 14, anchor: 18 }, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
 report('F2: catfish 14, pair 2.5x, sardine 4x', { common: 40, rare: 20, legendary: 9, catfish: 14, anchor: 17 }, { rare: 1.5, legendary: 5, catfish: 2.5 }, T4)
 report("F': catfish 14, pair 3x, sardine 4x, marlin pair 2x", { common: 39, rare: 20, legendary: 9, catfish: 14, anchor: 18 }, { rare: 2, legendary: 5, catfish: 3 }, T4)
+
+// ── 2026-06-28: 10% feed pushed total to ~101.6%. Levers to claw base RTP
+//    back UNDER 100% (value shifts from base churn into the bigger jackpot).
+const W = { common: 39, rare: 20, legendary: 9, catfish: 14, anchor: 18 }
+const T3 = { common: 3, rare: 12, legendary: 60, anchor: 0 }   // sardine triple 4→3
+console.log('\n\n######## 10% FEED — claw-back candidates (target <100% total) ########')
+report('LIVE @10% (F\', unchanged base)',           W, { rare: 2,   legendary: 5, catfish: 3 }, T4)
+report('A: catfish pair 3→2',                       W, { rare: 2,   legendary: 5, catfish: 2 }, T4)
+report('B: marlin pair 2→1.5',                      W, { rare: 1.5, legendary: 5, catfish: 3 }, T4)
+report('C: sardine triple 4→3',                     W, { rare: 2,   legendary: 5, catfish: 3 }, T3)
+report('D: catfish pair 3→2.5 + marlin 2→1.5',      W, { rare: 1.5, legendary: 5, catfish: 2.5 }, T4)
+report('E: catfish 3→2 + marlin 2→1.5 (firmer)',    W, { rare: 1.5, legendary: 5, catfish: 2 }, T4)
