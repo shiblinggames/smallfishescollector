@@ -8,9 +8,10 @@
 // than a clean miss), 3 catfish pays a share of the global pot instead
 // of a fixed multiplier, and a sardine pair is just a near-miss.
 //
-// Base-game RTP at these numbers ≈ 91.6%; the ~5% jackpot feed plus the
-// seeded pot brings the total to ≈ 96.6%+. Verified with slots-rtp.mjs
-// (repo root) — rerun it before changing ANY weight or payout here.
+// Base-game RTP at these numbers ≈ 91.6%; the 10% jackpot feed (raised
+// from 5% on 2026-06-28) plus the seeded pot brings the total to ≈
+// 101.6%+. Verified with slots-rtp.mjs (repo root) — rerun it before
+// changing ANY weight or payout here.
 //
 // 2026-06-10 small-population retune (second pass same day): with ~25
 // active players the slots see only ~40–120 spins/day, so even
@@ -77,7 +78,10 @@ export const SLOTS_MAX_BET   = 500
 // Pot resets to its seed (15,000 ⟡, set in the slots_jackpot row;
 // raised from 5,000 on 2026-06-11 — see the seed-raise note above)
 // after a claim, so every jackpot pays at least ~30× the wager.
-export const SLOTS_JACKPOT_FEED_PCT = 0.05
+// 2026-06-28: feed raised 5% → 10% so the pot climbs twice as fast
+// (50 ⟡/spin at max bet) for a livelier community jackpot. The feed is
+// player return, so total RTP rises to ≈101.6% — intentionally generous.
+export const SLOTS_JACKPOT_FEED_PCT = 0.10
 
 // ─── Shared casino wallet ────────────────────────────────────────────────────
 // One chip purse across Blackjack / Roulette / Slots (profiles.casino_chips),

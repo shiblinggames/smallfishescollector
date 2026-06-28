@@ -62,7 +62,7 @@ function report(label, weights, pairs, triples = TRIPLES) {
   const r = rtp(weights, triples, pairs)
   console.log(`\n=== ${label} ===`)
   console.log(`weights: ${JSON.stringify(weights)}  pairs: ${JSON.stringify(pairs)}`)
-  console.log(`base RTP: ${(r.base * 100).toFixed(2)}%  (+5% jackpot feed = ${(r.base * 100 + 5).toFixed(2)}% total)`)
+  console.log(`base RTP: ${(r.base * 100).toFixed(2)}%  (+10% jackpot feed = ${(r.base * 100 + 10).toFixed(2)}% total)`)
   console.log(`catfish TRIPLE (jackpot): 1-in-${Math.round(1 / r.jackpotProb).toLocaleString()}`)
   for (const k in r.tripleProb) console.log(`  triple ${k}: 1-in-${Math.round(1 / r.tripleProb[k]).toLocaleString()}`)
   for (const k in r.pairProb) console.log(`  pair ${k} (${pairs[k]}x): 1-in-${Math.round(1 / r.pairProb[k])}  → contributes ${(r.pairProb[k] * pairs[k] * 100).toFixed(1)}pp`)
