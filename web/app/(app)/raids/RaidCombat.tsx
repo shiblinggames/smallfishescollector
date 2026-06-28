@@ -95,6 +95,10 @@ const BURN_TICK_MAX = 0.20
 // Wildfire "Backdraft" (tier III): each burn tick can flare for a bonus burst.
 const BACKDRAFT_FLARE_CHANCE = 0.35
 const BACKDRAFT_FLARE_MULT   = 0.7
+// Drowned Whispers (confuse curse) — action words for the "you called for X but
+// did Y" log line + the on-screen flash.
+const ACTION_NOUN: Record<EnemyAction, string> = { fire: 'a Shot', volley: 'a Volley', mega: 'a Mega', reload: 'a Reload', dodge: 'a Dodge', repair: 'a Repair' }
+const ACTION_PAST: Record<EnemyAction, string> = { fire: 'opened fire', volley: 'loosed a volley', mega: 'unleashed a Mega', reload: 'reloaded', dodge: 'dodged', repair: 'patched the hull' }
 // HP-relative per-tick cap. Now only guards the player from INCOMING burns
 // (Scorching affix) — outgoing Incendiary / Wildfire / Fallout are uncapped and
 // just scale with the hit. Keeps a deep-run enemy crit from burning you for an
@@ -423,6 +427,7 @@ export default function RaidCombat({
     let zoneSpeedMult = 1
     let aimBlackout   = 0
     let aimDecoys     = 0   // False Colours curse: N decoy bands on random fires
+    let confuseChance = 0   // Drowned Whispers curse: chance to scramble your action
     // Elemental boons — Permafrost (ice) + Wildfire (fire). The proc chances fold
     // into the item burn/freeze math (capped in combat); the rest are multipliers
     // / flags read where burn + freeze resolve.
@@ -490,6 +495,7 @@ export default function RaidCombat({
         case 'zoneSpeedMult':         zoneSpeedMult *= e.mult; break
         case 'aimBlackout':           aimBlackout = Math.min(0.95, Math.max(aimBlackout, e.intensity)); break
         case 'aimDecoys':             aimDecoys = Math.max(aimDecoys, e.n); break
+        case 'confuse':               confuseChance = Math.max(confuseChance, e.chance); break
         case 'iceAffinity':
           freezeChanceBoon = Math.max(freezeChanceBoon, e.freezeChance)
           frozenDmgMult    = Math.max(frozenDmgMult, e.frozenDmgMult)
@@ -514,7 +520,7 @@ export default function RaidCombat({
       chargesStart, hpStartDelta, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
-      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, noncritDmgMult,
+      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, noncritDmgMult,
       freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
       burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft,
       critDmgMult, executeThreshold, lifestealPct,
@@ -819,6 +825,11 @@ export default function RaidCombat({
   const decoyElRefs = useRef<(HTMLDivElement | null)[]>([])
   const decoyFumbleRef = useRef(false)
   const [activeDecoys, setActiveDecoys] = useState(0)
+  // Drowned Whispers (confuse curse) — when an order is scrambled, the swap is
+  // stashed here so resolveTurn can explain it in the action log, and flashed
+  // on screen so the player notices the moment it happens.
+  const confusionRef = useRef<{ from: EnemyAction; to: EnemyAction } | null>(null)
+  const [confusedFx, setConfusedFx] = useState<{ key: number; from: EnemyAction; to: EnemyAction } | null>(null)
 
   // Chain-driving timeouts from resolveTurn's playStep cascade. The
   // recursion (`setTimeout(() => playStep(i + 1), gapMs)`) has no other
@@ -1508,6 +1519,27 @@ export default function RaidCombat({
       setKitUsed(true)
     }
 
+    // Drowned Whispers: a chance the chosen order comes out scrambled into a
+    // DIFFERENT valid action. Repair is spared (the kit is too precious to waste).
+    // Stash the swap for the action-log line + flash it on screen.
+    confusionRef.current = null
+    if (tide.confuseChance > 0 && action !== 'repair' && Math.random() < tide.confuseChance) {
+      const pool: EnemyAction[] = []
+      if (action !== 'fire'   && canFire)   pool.push('fire')
+      if (action !== 'volley' && canVolley) pool.push('volley')
+      if (action !== 'mega'   && canMega)   pool.push('mega')
+      if (action !== 'reload' && canReload) pool.push('reload')
+      if (action !== 'dodge'  && canDodge)  pool.push('dodge')
+      if (pool.length > 0) {
+        const swapped = pool[Math.floor(Math.random() * pool.length)]
+        confusionRef.current = { from: action, to: swapped }
+        setConfusedFx({ key: Date.now(), from: action, to: swapped })
+        setTimeout(() => setConfusedFx(c => (c && c.from === action ? null : c)), 1400)
+        vibrate([0, 25, 35, 25])
+        action = swapped
+      }
+    }
+
     setPlayerAction(action)
     if (action === 'fire' || action === 'volley' || action === 'mega') {
       // Reset aim positions and indicator styling, then begin aiming
@@ -1694,7 +1726,12 @@ export default function RaidCombat({
     // Speed roll determines turn order regardless of chosen action — keep
     // the line action-agnostic ("act first" not "fire first") since a faster
     // ship might reload or dodge first.
+    // Drowned Whispers: if the player's order was scrambled this turn, lead the
+    // log with what happened so the wrong action never looks like a misfire.
+    const confused = confusionRef.current
+    confusionRef.current = null
     setResolveLog([
+      ...(confused ? [`Drowned Whispers! You called for ${ACTION_NOUN[confused.from]}, but your crew ${ACTION_PAST[confused.to]} instead.`] : []),
       first === 'player'
         ? `You're faster — you act first.`
         : `Enemy is faster — they act first.`,
@@ -4105,6 +4142,27 @@ export default function RaidCombat({
           animation: 'rc-crit-flash 0.38s ease forwards',
         }} />
       )}
+
+      {/* Drowned Whispers — a violet "Confused!" flash the moment an order is
+          scrambled, so the wrong action reads as the curse, not a misfire. The
+          action log carries the full explanation a beat later. */}
+      <AnimatePresence>
+        {confusedFx && (
+          <motion.div key={confusedFx.key} aria-hidden
+            initial={{ opacity: 0, y: -10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            style={{ position: 'fixed', top: '24%', left: '50%', transform: 'translateX(-50%)', zIndex: 92, pointerEvents: 'none', textAlign: 'center', width: 'min(88%, 340px)' }}>
+            <div style={{ padding: '0.55rem 1rem', borderRadius: 12, background: 'rgba(38,20,54,0.92)', border: '1px solid rgba(168,139,250,0.6)', boxShadow: '0 0 26px rgba(168,139,250,0.4)' }}>
+              <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.92rem', letterSpacing: '0.1em', color: '#c4b5fd', textShadow: '0 0 14px rgba(168,139,250,0.6)' }}>Confused!</p>
+              <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#d2c4ec', marginTop: 2, lineHeight: 1.35 }}>
+                You called for {ACTION_NOUN[confusedFx.from]} — your crew {ACTION_PAST[confusedFx.to]} instead.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Phase-2 transition flash — red full-screen wash that holds for
           ~1s alongside the centered PHASE 2 callout (rendered inside the

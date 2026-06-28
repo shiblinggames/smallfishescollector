@@ -64,6 +64,9 @@ export type TideEffect =
    *  Lock onto one and your shot is a dud — chip damage + the turn ends. The
    *  "False Colours" curse. */
   | { kind: 'aimDecoys'; n: number }
+  /** 0-1 chance, each turn, that the action you pick comes out SCRAMBLED — your
+   *  crew does a different (valid) action instead. The "Drowned Whispers" curse. */
+  | { kind: 'confuse'; chance: number }
   // ── Elemental builds (Gauntlet boons) — composite effects so one boon tier
   //    carries a whole identity. Fold into the item burn/freeze proc math (the
   //    chances STACK with the matching cannonball, capped in RaidCombat).
@@ -196,6 +199,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
       return e.n < 0 ? 'good' : e.n > 0 ? 'bad' : 'neutral'
     case 'aimFog':       return e.density > 0 ? 'bad' : 'neutral'
     case 'aimDecoys':    return e.n > 0 ? 'bad' : 'neutral'
+    case 'confuse':      return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
     case 'fireAffinity': return 'good'
     case 'aimSpeedMult': return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
@@ -785,6 +789,7 @@ export function describeEffect(e: TideEffect): string {
     case 'noncritDmgMult':        return `Non-crit shots deal ${Math.round((1 - e.mult) * 100)}% less`
     case 'aimBlackout':           return 'Your aim bar goes dark in fits'
     case 'aimDecoys':             return `${e.n} false target${e.n === 1 ? '' : 's'} drift your aim bar`
+    case 'confuse':               return `${Math.round(e.chance * 100)}% of your orders come out scrambled`
     case 'iceAffinity':           return `${Math.round(e.freezeChance * 100)}% freeze + ${Math.round((e.frozenDmgMult - 1) * 100)}% vs frozen`
     case 'fireAffinity':          return `${Math.round(e.burnChance * 100)}% burn, longer + hotter`
     case 'aimFog':                return 'Fog drifts over your aim bar'
