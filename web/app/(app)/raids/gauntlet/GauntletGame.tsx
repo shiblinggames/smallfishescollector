@@ -2511,18 +2511,24 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
               <span className="font-cinzel font-800" style={{ fontSize: '1.2rem', color: TEAL }}>{fmt(state.fathoms)}</span>
             </div>
 
-            {/* What you already own — surfaced as chips so the loadout is obvious. */}
+            {/* What you already own — name + what it does, so the loadout you've
+                built (and what each piece is doing for you) is readable, not just
+                a row of names. No price; a check marks it claimed. */}
             {owned.length > 0 && (
               <div style={{ marginTop: 14 }}>
                 <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginBottom: 7 }}>
                   {section === 'run' ? `Active every dive · ${owned.length}` : `Owned · ${owned.length}`}
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {owned.map(e => (
-                    <span key={e.id} className="font-karla font-700" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', color: '#bdeee5', background: `${TEAL}16`, border: `1px solid ${TEAL}4a`, borderRadius: 999, padding: '0.28rem 0.62rem' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                      {e.name}
-                    </span>
+                    <div key={e.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: `${TEAL}0d`, border: `1px solid ${TEAL}33` }}>
+                      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: TEAL }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#eafffb', lineHeight: 1.15 }}>{e.name}</p>
+                      </div>
+                      <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a7c4bd', lineHeight: 1.45, marginTop: 4 }}>{e.description}</p>
+                    </div>
                   ))}
                 </div>
               </div>
