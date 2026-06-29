@@ -17,6 +17,22 @@ import type {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// PostgREST visibility filter (service-role bypasses RLS, so it's explicit).
+// A row is visible if it's targeted to this user, OR it's a broadcast that is
+// either evergreen (onboarding mail shown to everyone) or was sent on/after the
+// player joined. The join cutoff is what stops a brand-new player from seeing —
+// and claiming — every historical broadcast; only evergreen broadcasts (e.g.
+// "Welcome to the Beta!") reach back past their signup. Mirrored in claim_mail.
+function mailVisibilityFilter(userId: string, joinIso: string): string {
+  return `target_user_id.eq.${userId},and(target_user_id.is.null,or(evergreen.is.true,created_at.gte.${joinIso}))`
+}
+
+// The account's signup time, normalized to a PostgREST-safe ISO string (Z, no
+// +offset). Falls back to the epoch if somehow absent (sees all — old behavior).
+function joinCutoff(user: { created_at?: string }): string {
+  return user.created_at ? new Date(user.created_at).toISOString() : new Date(0).toISOString()
+}
+
 /** Fetch every non-expired mail message + this user's read/claim state for
  *  each one. Newest first. Caller renders the inbox sheet from this. */
 export async function getInbox(): Promise<InboxResult> {
@@ -31,10 +47,10 @@ export async function getInbox(): Promise<InboxResult> {
     admin.from('mail_messages')
       .select('id, subject, body, sender_label, image_url, attachment_doubloons, attachment_gems, created_at, expires_at')
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-      // Broadcasts have target_user_id IS NULL; targeted mail only
-      // shows to its recipient. Service-role bypasses RLS so the filter
-      // has to be explicit here.
-      .or(`target_user_id.is.null,target_user_id.eq.${user.id}`)
+      // Targeted mail only shows to its recipient; broadcasts respect the
+      // join-date cutoff (evergreen ones reach back past signup). See
+      // mailVisibilityFilter. Service-role bypasses RLS so this is explicit.
+      .or(mailVisibilityFilter(user.id, joinCutoff(user)))
       .order('created_at', { ascending: false })
       .limit(100),
     admin.from('mail_reads')
@@ -81,7 +97,7 @@ export async function getMailUnreadCount(): Promise<number> {
     admin.from('mail_messages')
       .select('id')
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-      .or(`target_user_id.is.null,target_user_id.eq.${user.id}`),
+      .or(mailVisibilityFilter(user.id, joinCutoff(user))),
     admin.from('mail_reads')
       .select('message_id')
       .eq('user_id', user.id),
@@ -124,7 +140,7 @@ export async function markAllMailRead(): Promise<{ ok: boolean; count: number }>
     admin.from('mail_messages')
       .select('id')
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-      .or(`target_user_id.is.null,target_user_id.eq.${user.id}`),
+      .or(mailVisibilityFilter(user.id, joinCutoff(user))),
     admin.from('mail_reads')
       .select('message_id')
       .eq('user_id', user.id),
