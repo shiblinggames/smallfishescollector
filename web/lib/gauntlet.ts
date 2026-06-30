@@ -861,6 +861,62 @@ export function boonTierLabel(tier: number): string {
   return ['', 'I', 'II', 'III'][tier] ?? ''
 }
 
+// ── Confluences — boon SYNERGIES ──────────────────────────────────────────────
+// Hold two specific boon families (each at/above a min tier) and a bonus effect
+// unlocks for free, on top of the boons themselves. The reward for committing to
+// a theme instead of grabbing the highest number — discovered, not drafted, and
+// announced with a banner the moment the second piece lands. Their effects ride
+// the same TideEffect pipeline as boons/curses (see confluenceEffects).
+export interface Confluence {
+  id: string
+  name: string
+  /** The two families (+ min tier) that must BOTH be held. */
+  requires: { boonId: string; minTier: number }[]
+  /** Short player-facing summary (the unlock banner + breather chip). */
+  desc: string
+  /** One-line flavor. */
+  flavor: string
+  effects: TideEffect[]
+}
+
+export const CONFLUENCES: Confluence[] = [
+  {
+    id: 'thermal_shock',
+    name: 'Thermal Shock',
+    requires: [{ boonId: 'permafrost', minTier: 1 }, { boonId: 'wildfire', minTier: 1 }],
+    desc: 'Frozen + burning hulls shatter for a burst',
+    flavor: 'Ice in the seams, fire on the deck. The hull cracks where the two meet.',
+    effects: [{ kind: 'thermalShock', burstMult: 0.6 }],
+  },
+  {
+    id: 'coup_de_grace',
+    name: 'Coup de Grâce',
+    requires: [{ boonId: 'executioner', minTier: 1 }, { boonId: 'cold_fury', minTier: 1 }],
+    desc: '+20% crit damage and a wider execute',
+    flavor: 'You know the killing mark, and you hit it like the deep itself.',
+    effects: [{ kind: 'critDmgMult', mult: 1.20 }, { kind: 'executeThreshold', pct: 0.12 }],
+  },
+  {
+    id: 'hull_render',
+    name: 'Hull Render',
+    requires: [{ boonId: 'broadside_mastery', minTier: 1 }, { boonId: 'grapeshot', minTier: 1 }],
+    desc: '+30% volley damage, +8% all damage',
+    flavor: 'Every gun on the rail, all at once. Hulls come apart at the seams.',
+    effects: [{ kind: 'volleyDmgMult', mult: 1.30 }, { kind: 'damageMult', mult: 1.08 }],
+  },
+]
+
+/** Confluences the player currently qualifies for (both pieces held at tier). */
+export function activeConfluences(owned: Record<string, number>): Confluence[] {
+  return CONFLUENCES.filter(c => c.requires.every(r => (owned[r.boonId] ?? 0) >= r.minTier))
+}
+
+/** Flattened TideEffects from every active confluence — appended to the boon
+ *  effects fed into combat. */
+export function confluenceEffects(owned: Record<string, number>): TideEffect[] {
+  return activeConfluences(owned).flatMap(c => c.effects)
+}
+
 // ── Depth bands + Davy's voice ────────────────────────────────────────────────
 // The descent is a place, not a treadmill. Each band has its own name (shown on
 // the plunge + the depth bar) and the deeper bands pair with the darker combat

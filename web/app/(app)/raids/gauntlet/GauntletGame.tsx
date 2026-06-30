@@ -22,6 +22,7 @@ import {
   generateFight, advanceRollState, chestForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
+  confluenceEffects, activeConfluences, type Confluence,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS,
@@ -224,6 +225,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [boonPhases, setBoonPhases] = useState<Record<number, 'sealed' | 'charging' | 'flipped'>>({})
   const [boonFlash, setBoonFlash] = useState(0)               // key — retriggers the legendary flash
   const [boonBanner, setBoonBanner] = useState<{ name: string; key: number } | null>(null)
+  // Confluence just completed by the boon you claimed — highlighted on the next
+  // breather as a "synergy unlocked" beat. Cleared when you descend.
+  const [confluenceUnlocked, setConfluenceUnlocked] = useState<Confluence | null>(null)
   // Tapped boon/curse on the breather screen → details popup.
   const [detailEffect, setDetailEffect] = useState<
     { kind: 'boon' | 'curse'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number } | null
@@ -350,6 +354,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       silencedCrewIdsRef.current = []
       setPendingCurse(null)
       setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
+      setConfluenceUnlocked(null)
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
       calmBeforeUsedRef.current = false
@@ -542,9 +547,15 @@ export default function GauntletGame(props: GauntletGameProps) {
   // RaidCombat each fight, so they persist for free without piling into the tide
   // channel (where an upgrade would otherwise double-apply the old tier).
   function applyBoon(offer: BoonOffer) {
-    setBoonTiers(prev => ({ ...prev, [offer.id]: offer.tier }))
+    // Detect a confluence the new boon just completes (a synergy pair coming
+    // online) so the breather can celebrate it.
+    const before = new Set(activeConfluences(boonTiers).map(c => c.id))
+    const nextTiers = { ...boonTiers, [offer.id]: offer.tier }
+    const newlyActive = activeConfluences(nextTiers).find(c => !before.has(c.id)) ?? null
+    setBoonTiers(nextTiers)
     setPendingBoons(null)
     setPendingReprieve(null) // chose the boon over the relief
+    setConfluenceUnlocked(newlyActive)
     setPhase('between')
   }
 
@@ -623,6 +634,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   }
 
   function pushOn() {
+    setConfluenceUnlocked(null) // the "just unlocked" highlight is spent once you dive
     // Crushing Depth (and any future drain curse): the hull sheds a slice of
     // max HP before each new fight. Clamped to leave at least 1 — the curse
     // squeezes how deep you can go, but the sea never lands the kill itself.
@@ -1040,6 +1052,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const ownedCurses = GAUNTLET_CURSES
       .map(c => ({ c, tier: curseTiers[c.id] ?? 0 }))
       .filter(x => x.tier >= 1)
+    const activeConf = activeConfluences(boonTiers)
     // A line of voice for the breather, keyed to the run's state — bleeding hull,
     // a fat haul, a record depth, or just the quiet before the next gun.
     const breathLine =
@@ -1153,6 +1166,41 @@ export default function GauntletGame(props: GauntletGameProps) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Confluences — synergies you've unlocked by pairing boons. A just-
+              completed one lands as a highlighted "unlocked" beat. */}
+          {activeConf.length > 0 && (
+            <div style={{ marginTop: 16, textAlign: 'left' }}>
+              <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f5b94a', marginBottom: 7 }}>
+                Synergies · {activeConf.length}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {activeConf.map(c => {
+                  const fresh = confluenceUnlocked?.id === c.id
+                  const GLD = '#f5b94a'
+                  return (
+                    <motion.div key={c.id}
+                      initial={fresh ? { opacity: 0, scale: 0.92, y: 6 } : false}
+                      animate={fresh ? { opacity: 1, scale: 1, y: 0 } : {}}
+                      transition={{ type: 'spring', stiffness: 240, damping: 18 }}
+                      style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: fresh ? `${GLD}1c` : `${GLD}0e`, border: `1px solid ${GLD}${fresh ? '88' : '4a'}`, boxShadow: fresh ? `0 0 22px ${GLD}33` : 'none' }}>
+                      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: GLD }} />
+                      {fresh && (
+                        <motion.span aria-hidden initial={{ x: '-130%' }} animate={{ x: '180%' }} transition={{ duration: 1.4, repeat: 2, ease: 'easeInOut' }}
+                          style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${GLD}3a, transparent)`, pointerEvents: 'none' }} />
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name}</p>
+                        {fresh && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, marginLeft: 'auto', fontSize: '0.46rem', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Unlocked</span>}
+                      </div>
+                      <p className="font-karla" style={{ fontSize: '0.7rem', color: '#cdb88e', lineHeight: 1.4, marginTop: 4 }}>{c.desc}</p>
+                    </motion.div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -1622,7 +1670,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onLeave={() => setConfirmLeave(true)}
             raidMods={runRaidMods}
-            tideEffects={[...boonEffects(boonTiers), ...curseEffects(curseTiers)]}
+            tideEffects={[...boonEffects(boonTiers), ...confluenceEffects(boonTiers), ...curseEffects(curseTiers)]}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
             megaAugment={props.manowarAugment}

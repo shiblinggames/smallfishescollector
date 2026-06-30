@@ -78,6 +78,10 @@ export type TideEffect =
    *  hotter ticks (tickMult). `reignite` = hitting a burning hull refreshes the
    *  duration; `backdraft` = the burn detonates for a burst when it expires. */
   | { kind: 'fireAffinity'; burnChance: number; burnTurnsBonus: number; burnTickMult: number; reignite?: boolean; backdraft?: boolean }
+  /** Confluence "Thermal Shock" (Permafrost + Wildfire): when a hit lands on a
+   *  hull that is BOTH frozen and burning, the ice shatters in the heat for a
+   *  bonus burst of `burstMult`× the hit, consuming the freeze. */
+  | { kind: 'thermalShock'; burstMult: number }
   // ── Incoming damage / mitigation ────────────────────────────────
   /** Multiplier on incoming damage rolls. <1 = mitigation. */
   | { kind: 'incomingDmgMult'; mult: number; scope: 'nextFight' | 'allRemaining' }
@@ -737,6 +741,7 @@ export function describeEffect(e: TideEffect): string {
     case 'lifestealPct':          return `Heal ${pct(e.pct)} of damage dealt`
     case 'retaliatePct':          return `Reflect ${Math.round(e.pct * 100)}% of damage taken`
     case 'lowHpDamage':           return `Up to ${pct(e.maxBonus)} damage as your HP drops`
+    case 'thermalShock':          return `Frozen + burning hulls shatter for +${pct(e.burstMult)}`
     case 'chargeCarryover':       return e.cap >= 99 ? 'Carry all unfired cannonballs to the next fight' : `Carry up to ${e.cap} cannonball${e.cap === 1 ? '' : 's'} to the next fight`
     case 'fightShield':           return `Shield each fight worth ${Math.round(e.pctMax * 100)}% of max HP`
     case 'incomingDmgMult': {

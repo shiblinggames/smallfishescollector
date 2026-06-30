@@ -444,6 +444,8 @@ export default function RaidCombat({
     let burnTickMult     = 1
     let reignite         = false
     let backdraft        = false
+    // Confluence "Thermal Shock": burst mult when the hull is frozen AND burning.
+    let thermalShockMult = 0
     // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
     let noncritDmgMult = 1
     // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
@@ -513,6 +515,7 @@ export default function RaidCombat({
           if (e.reignite)  reignite = true
           if (e.backdraft) backdraft = true
           break
+        case 'thermalShock':          thermalShockMult = Math.max(thermalShockMult, e.burstMult); break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
@@ -526,7 +529,7 @@ export default function RaidCombat({
       enemyHpScaleMult, enemyChargesDelta,
       aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, noncritDmgMult,
       freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
-      burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft,
+      burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft, thermalShockMult,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
     }
@@ -2234,6 +2237,18 @@ export default function RaidCombat({
             const before = pHp
             pHp = Math.min(playerHpMax, pHp + healed)
             lifestealHealedOut = pHp - before
+          }
+          // Confluence "Thermal Shock" (Permafrost + Wildfire): a hit on a hull
+          // that's BOTH frozen and burning shatters the ice in the heat for a
+          // bonus burst, consuming the freeze. Checked before the burn proc below
+          // (so it reads the burn from PRIOR hits) and before Executioner (so the
+          // burst can drop the enemy past the execute mark).
+          if (dmg > 0 && eHp > 0 && tide.thermalShockMult > 0 && enemyFrozenThisRound && enemyBurnRef.current.turns > 0) {
+            const burst = Math.max(1, Math.round(dmg * tide.thermalShockMult))
+            eHp = Math.max(0, eHp - burst)
+            enemyFrozenRef.current = 0
+            enemyFreezePendingRef.current = 0
+            stepLines.push(`Thermal Shock! The frozen hull shatters in the fire for ${burst}.`)
           }
           // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
           // it's sunk outright (only when it actually landed + isn't already dead).
