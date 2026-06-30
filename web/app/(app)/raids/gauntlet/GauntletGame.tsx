@@ -29,7 +29,7 @@ import {
   CHEST_TIERS, chestCannonDropChance,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms } from './actions'
 import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -39,7 +39,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 
-type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'curse' | 'boon' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -104,6 +104,21 @@ export interface GauntletGameProps {
   /** #1 deepest cashed-out descender across all captains, or null if none yet. */
   topDescender: { name: string; depth: number } | null
 }
+
+// ── The Drowned Shrine (wager node) ──────────────────────────────────────────
+// A rare non-combat beat that surfaces on a plain breather depth: gamble your
+// banked pot on a coin, bleed HP for a boon, or walk on for a small heal. Roll
+// is arrhythmic (a chance past a min depth), capped per run, never on the same
+// beat as a curse/boon. Pot/HP/boons are all client run state already trusted by
+// the daily-gate + cashout-clamp model, so no server work.
+// Cadence: the first shrine is due AFTER depth 7 (first eligible depth ≥ this),
+// then one comes due every SHRINE_INTERVAL (+0-2 jitter) depths. That lands the
+// first two before depth 25 (≈ depths 9 and 18) and keeps the same pace after.
+const SHRINE_FIRST_DEPTH = 8
+const SHRINE_INTERVAL    = 7
+const SHRINE_WAGER_MAX    = 10    // Davy's Coin: most Fathoms you can stake (double or nothing, server-rolled)
+const SHRINE_BLOOD_HP_PCT = 0.50  // Blood Price: fraction of CURRENT HP paid for a boon (a normal draft, no skew)
+const SHRINE_WALK_HEAL    = 0.05  // Walk on: fraction of MAX HP healed (deliberately small — the safe-but-weak out)
 
 export default function GauntletGame(props: GauntletGameProps) {
   const router = useRouter()
@@ -228,9 +243,27 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Confluence just completed by the boon you claimed — highlighted on the next
   // breather as a "synergy unlocked" beat. Cleared when you descend.
   const [confluenceUnlocked, setConfluenceUnlocked] = useState<Confluence | null>(null)
-  // Tapped boon/curse on the breather screen → details popup.
+  // A one-shot "Synergy Unlocked" banner overlay (auto-dismisses); separate from
+  // the persistent breather highlight above.
+  const [confluenceBanner, setConfluenceBanner] = useState<{ c: Confluence; key: number } | null>(null)
+  // The Drowned Shrine — a wager node on a roughly fixed cadence. nextShrineRef
+  // is the next combat depth a shrine is due (first after depth 7, then ~every
+  // SHRINE_INTERVAL depths so 2 always land before depth 25 and it keeps coming
+  // at the same pace after). The coin state holds a resolved Davy's Coin wager.
+  const nextShrineRef = useRef(SHRINE_FIRST_DEPTH)
+  const [shrineCoin, setShrineCoin] = useState<{ result: 'win' | 'lose'; stake: number; fathoms: number } | null>(null)
+  const [shrineFlipping, setShrineFlipping] = useState(false)
+  // Banked Fathoms, mirrored so a shrine wager can update it live without a
+  // refetch (Fathoms only change here or at cashout/Locker, all of which resync).
+  const [fathomsNow, setFathomsNow] = useState(props.fathoms)
+  useEffect(() => { setFathomsNow(props.fathoms) }, [props.fathoms])
+  const [shrineStake, setShrineStake] = useState(SHRINE_WAGER_MAX)
+  // Whether the current boon draft came from a shrine's Blood Price (reflavors
+  // the draft header) vs a normal depth draft.
+  const [boonFromShrine, setBoonFromShrine] = useState(false)
+  // Tapped boon/curse/confluence on the breather screen → details popup.
   const [detailEffect, setDetailEffect] = useState<
-    { kind: 'boon' | 'curse'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number } | null
+    { kind: 'boon' | 'curse' | 'confluence'; name: string; desc: string; detail: string; flavor: string; count: number; maxTier?: number } | null
   >(null)
   const [reward, setReward] = useState<CashResult | null>(null)
   const [resolving, setResolving] = useState(false)
@@ -279,7 +312,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // tab close with the browser's native prompt. Active across the whole run
   // (every in-fight + interstitial phase) so the Back sentinel is pushed once.
   const runLive = phase === 'descending' || phase === 'fighting'
-    || phase === 'curse' || phase === 'boon' || phase === 'between'
+    || phase === 'curse' || phase === 'boon' || phase === 'shrine' || phase === 'between'
   useEffect(() => {
     if (!runLive) return
     window.history.pushState(null, '', window.location.href) // Back sentinel
@@ -354,7 +387,8 @@ export default function GauntletGame(props: GauntletGameProps) {
       silencedCrewIdsRef.current = []
       setPendingCurse(null)
       setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
-      setConfluenceUnlocked(null)
+      setConfluenceUnlocked(null); setConfluenceBanner(null)
+      nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
       calmBeforeUsedRef.current = false
@@ -452,6 +486,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     return () => clearTimeout(t)
   }, [boonBanner])
 
+  // Auto-dismiss the confluence "Synergy Unlocked" banner.
+  useEffect(() => {
+    if (!confluenceBanner) return
+    const t = setTimeout(() => setConfluenceBanner(null), 3000)
+    return () => clearTimeout(t)
+  }, [confluenceBanner])
+
   function handleEnemyDefeated(remainingHp: number, leftoverCharges = 0) {
     const f = fight
     if (!f) return
@@ -508,6 +549,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // to the boon screen (it routes to 'boon' whenever pendingBoons is set).
       if (boons.length > 0) {
         setPendingBoons(boons)
+        setBoonFromShrine(false)
         setRerollsLeft(gauntletBoonRerolls(upgrades))
         // Reprieve: in later rounds, sometimes a one-time relief card surfaces
         // alongside the boons (replacing the old random heal-tide's job, but as
@@ -521,6 +563,71 @@ export default function GauntletGame(props: GauntletGameProps) {
       return
     }
 
+    // The Drowned Shrine — a wager beat on a steady cadence. Only reachable here,
+    // i.e. on a depth with no active boon/curse, and only once we've passed the
+    // due depth. Schedules the next one ~SHRINE_INTERVAL deeper. Sits BEFORE the
+    // breather (it hands off to 'between'), so you still get your cash-out choice.
+    if (nextDepth >= nextShrineRef.current) {
+      nextShrineRef.current = nextDepth + SHRINE_INTERVAL + Math.floor(Math.random() * 3)
+      setShrineCoin(null)
+      setShrineStake(Math.min(SHRINE_WAGER_MAX, Math.max(1, fathomsNow)))
+      setPhase('shrine')
+      return
+    }
+
+    setPhase('between')
+  }
+
+  // ── The Drowned Shrine wagers ───────────────────────────────────────────────
+  // Davy's Coin: double-or-nothing on your banked FATHOMS, up to SHRINE_WAGER_MAX.
+  // Server-authoritative (Fathoms buy permanent upgrades) — the stake + roll are
+  // resolved in wagerGauntletFathoms. The coin spins for ≥1s of suspense in
+  // parallel with the round-trip, then the result lands.
+  async function shrineCoinFlip() {
+    if (shrineCoin || shrineFlipping || fathomsNow < 1) return
+    setShrineFlipping(true)
+    vibrate([0, 18])
+    const [res] = await Promise.all([
+      wagerGauntletFathoms(shrineStake),
+      new Promise(r => setTimeout(r, 1050)),  // minimum spin time, parallel to the call
+    ])
+    if ('error' in res) { setShrineFlipping(false); return }
+    setFathomsNow(res.fathoms)
+    setShrineCoin({ result: res.won ? 'win' : 'lose', stake: res.stake, fathoms: res.fathoms })
+    setShrineFlipping(false)
+    vibrate(res.won ? [0, 45, 50, 95] : [0, 80, 40, 40])
+  }
+
+  // Blood Price: pay HALF your current HP (never below 1) for a NORMAL boon draft
+  // (no rare skew — the cost is the HP, not a better draw). If the boon pool is
+  // spent, charge nothing and just move on.
+  function shrineBloodPrice() {
+    const draft = drawBoons(3, boonTiers, gauntletBoonLuck(upgrades))
+    if (draft.length === 0) { setPhase('between'); return }
+    const cost = Math.max(1, Math.round(playerHPRef.current * SHRINE_BLOOD_HP_PCT))
+    const left = Math.max(1, playerHPRef.current - cost)
+    playerHPRef.current = left
+    setPlayerHP(left)
+    vibrate([0, 60, 30, 30])
+    setPendingBoons(draft)
+    setRerollsLeft(0)
+    setPendingReprieve(null)
+    setBoonFromShrine(true)
+    setPhase('boon')
+  }
+
+  // Walk on: a small safe heal, no gamble.
+  function shrineWalkOn() {
+    const healed = Math.min(hpMax, playerHPRef.current + Math.round(hpMax * SHRINE_WALK_HEAL))
+    playerHPRef.current = healed
+    setPlayerHP(healed)
+    setShrineCoin(null)
+    setPhase('between')
+  }
+
+  // Leave the shrine after a resolved coin flip.
+  function shrineDescend() {
+    setShrineCoin(null)
     setPhase('between')
   }
 
@@ -556,6 +663,12 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPendingBoons(null)
     setPendingReprieve(null) // chose the boon over the relief
     setConfluenceUnlocked(newlyActive)
+    if (newlyActive) {
+      // A synergy coming online is a real moment — fanfare it on the breather.
+      setConfluenceBanner({ c: newlyActive, key: Date.now() })
+      vibrate([0, 45, 40, 80, 40, 130])
+      import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
+    }
     setPhase('between')
   }
 
@@ -692,8 +805,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     <AnimatePresence>
       {detailEffect && (() => {
         const isBoon = detailEffect.kind === 'boon'
-        const accent = isBoon ? TEAL : '#f87171'
-        const fg = isBoon ? '#aef3e6' : '#fca5a5'
+        const isConf = detailEffect.kind === 'confluence'
+        const accent = isConf ? '#f5b94a' : isBoon ? TEAL : '#f87171'
+        const fg = isConf ? '#fbe7c4' : isBoon ? '#aef3e6' : '#fca5a5'
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
             onClick={() => setDetailEffect(null)}
@@ -703,13 +817,13 @@ export default function GauntletGame(props: GauntletGameProps) {
               onClick={e => e.stopPropagation()}
               style={{ width: '100%', maxWidth: 360, borderRadius: 18, padding: '1.2rem 1.15rem 1.1rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}55`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
               <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.58rem', color: `${accent}cc` }}>
-                {isBoon ? 'Your Power' : 'The Locker’s Curse'}
+                {isConf ? 'A Synergy' : isBoon ? 'Your Power' : 'The Locker’s Curse'}
               </p>
               <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f5f2ec', lineHeight: 1.12, marginTop: 6 }}>
                 {detailEffect.name}
               </p>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 11, padding: '0.36rem 0.9rem', borderRadius: 999, background: `${accent}20`, border: `1px solid ${accent}5e` }}>
-                <span aria-hidden style={{ fontSize: '0.78rem', color: accent }}>{isBoon ? '▲' : '▼'}</span>
+                <span aria-hidden style={{ fontSize: '0.78rem', color: accent }}>{isConf ? '◆' : isBoon ? '▲' : '▼'}</span>
                 <span className="font-karla font-800" style={{ fontSize: '0.86rem', color: fg }}>{detailEffect.desc}</span>
               </div>
               <p className="font-karla" style={{ fontSize: '0.92rem', lineHeight: 1.55, color: 'rgba(245,242,236,0.85)', marginTop: 13 }}>
@@ -1033,6 +1147,172 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
   }
 
+  // ── The Drowned Shrine — a wager beat before the breather ───────────────────
+  if (phase === 'shrine') {
+    const VIO = '#b794f6'
+    const hpNow = playerHP
+    const bloodCost = Math.max(1, Math.round(hpNow * SHRINE_BLOOD_HP_PCT))
+    const walkHeal = Math.round(hpMax * SHRINE_WALK_HEAL)
+    const won = shrineCoin?.result === 'win'
+    const maxStake = Math.min(SHRINE_WAGER_MAX, fathomsNow)
+    const stake = Math.min(Math.max(1, shrineStake), Math.max(1, maxStake))
+    const canWager = fathomsNow >= 1
+    return (
+      <>
+        <AbyssBackdrop />
+        <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
+          padding: '12px 0.95rem', textAlign: 'center', overflow: 'hidden',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          <motion.p initial={{ opacity: 0, letterSpacing: '0.5em' }} animate={{ opacity: 1, letterSpacing: '0.32em' }} transition={{ duration: 0.8 }}
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', color: VIO, marginTop: 16, textShadow: `0 0 16px ${VIO}66` }}>
+            A Drowned Shrine
+          </motion.p>
+          {/* A sunken idol, rising from the dark — only while you're choosing. */}
+          {!shrineFlipping && !shrineCoin && (
+            <motion.div initial={{ opacity: 0, y: -26, scale: 0.7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+              style={{ position: 'relative', width: 128, height: 128, margin: '16px auto 6px' }}>
+              <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, ${VIO}3a 0%, transparent 66%)`, animation: 'gauntPulse 3.4s ease-in-out infinite' }} />
+              <svg width="128" height="128" viewBox="0 0 24 24" fill="none" stroke={VIO} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', filter: `drop-shadow(0 6px 22px ${VIO}55)` }} aria-hidden>
+                <path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z" />
+                <circle cx="12" cy="10" r="2.4" />
+                <path d="M12 12.5V17" /><path d="M9.5 15h5" />
+              </svg>
+            </motion.div>
+          )}
+
+          {shrineFlipping ? (
+            <div style={{ padding: '14px 0 10px' }}>
+              <div style={{ perspective: 600, width: 112, height: 112, margin: '6px auto 0' }}>
+                <motion.div initial={{ rotateY: 0 }} animate={{ rotateY: 360 * 4 }} transition={{ duration: 1.05, ease: [0.4, 0, 0.3, 1] }}
+                  style={{ width: 112, height: 112, borderRadius: '50%', transformStyle: 'preserve-3d', background: `radial-gradient(circle at 38% 30%, #ffe9a8, ${GOLD} 58%, #b07f2c)`, border: '3px solid #d9b25a', boxShadow: `0 0 32px ${GOLD}99, inset 0 0 16px rgba(70,40,0,0.35)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="52" height="52" viewBox="0 0 24 24" fill="#7a5418" aria-hidden style={{ opacity: 0.85 }}>
+                    <path d="M12 2a7 7 0 0 0-7 7c0 2.2 1 3.7 2.4 4.8.4.3.6.7.6 1.2v1.2A1.4 1.4 0 0 0 9.4 18.8h.3l.4-1.4h-.9l-.3-1.2h1.4l.4 1.2.4-1.2h.9l.4 1.2h1.4l-.3 1.2h-.9l.4 1.4h.3a1.4 1.4 0 0 0 1.4-1.4v-1.2c0-.5.2-.9.6-1.2C18 12.7 19 11.2 19 9a7 7 0 0 0-7-7Z" />
+                    <circle cx="9.3" cy="9.3" r="1.5" fill="#ffe9a8" />
+                    <circle cx="14.7" cy="9.3" r="1.5" fill="#ffe9a8" />
+                  </svg>
+                </motion.div>
+              </div>
+              <motion.p animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
+                className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#efe7fb', marginTop: 20, textShadow: `0 0 20px ${GOLD}44` }}>
+                The coin turns in the dark…
+              </motion.p>
+            </div>
+          ) : !shrineCoin ? (
+            <>
+              <motion.h1 initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 18 }}
+                className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: '#efe7fb', lineHeight: 1.06, marginTop: 6, textShadow: `0 0 26px ${VIO}55` }}>
+                Make an Offering
+              </motion.h1>
+              <p className="font-karla" style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'rgba(214,200,240,0.7)', lineHeight: 1.5, marginTop: 8, padding: '0 0.4rem' }}>
+                The old gods of the deep trade in nerve and blood. Lay something on the stone, or walk on.
+              </p>
+
+              {/* Davy's Coin — double-or-nothing on your banked Fathoms */}
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                style={{ marginTop: 18, padding: '0.9rem 1rem 1rem', borderRadius: 16, background: `linear-gradient(180deg, ${GOLD}22, rgba(8,13,22,0.6) 82%)`, border: `1.5px solid ${GOLD}88`, boxShadow: `0 0 22px ${GOLD}20`, textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H9.5h3.5a1.8 1.8 0 0 1 0 3.6H9.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1.05rem', color: '#f5d98a' }}>Davy&apos;s Coin</p>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: '#1a1206', background: GOLD, borderRadius: 999, padding: '0.2rem 0.5rem' }}>Double or nothing</span>
+                </div>
+                {canWager ? (
+                  <>
+                    <p className="font-karla" style={{ fontSize: '0.78rem', color: '#cdbfa0', lineHeight: 1.45, marginTop: 6 }}>
+                      Stake your hard-won Fathoms on the flip. Heads, you double them. Tails, the deep keeps them.
+                    </p>
+                    {/* Stake stepper */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 12 }}>
+                      <button type="button" aria-label="Wager less" className="tap" onClick={() => setShrineStake(s => Math.max(1, Math.min(s, maxStake) - 1))}
+                        style={{ width: 36, height: 36, borderRadius: 10, fontSize: '1.3rem', lineHeight: 1, color: '#f5d98a', background: `${GOLD}1c`, border: `1px solid ${GOLD}66`, cursor: 'pointer' }}>−</button>
+                      <div style={{ textAlign: 'center', minWidth: 96 }}>
+                        <p className="font-cinzel font-800" style={{ fontSize: '1.6rem', color: GOLD, lineHeight: 1 }}>{stake} <span style={{ fontSize: '0.85rem' }}>Fathoms</span></p>
+                      </div>
+                      <button type="button" aria-label="Wager more" className="tap" onClick={() => setShrineStake(s => Math.min(maxStake, Math.min(s, maxStake) + 1))}
+                        style={{ width: 36, height: 36, borderRadius: 10, fontSize: '1.3rem', lineHeight: 1, color: '#f5d98a', background: `${GOLD}1c`, border: `1px solid ${GOLD}66`, cursor: 'pointer' }}>+</button>
+                    </div>
+                    <p className="font-karla font-700" style={{ fontSize: '0.66rem', textAlign: 'center', color: '#b0a890', marginTop: 8 }}>
+                      Win <span style={{ color: '#86efac' }}>+{stake}</span> · Lose <span style={{ color: '#e0a0a0' }}>−{stake}</span> · You hold {fmt(fathomsNow)}
+                    </p>
+                    <motion.button whileTap={{ scale: 0.97 }} onClick={shrineCoinFlip} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                      style={{ width: '100%', marginTop: 12, padding: '0.85rem', borderRadius: 12, fontSize: '0.95rem', color: '#1a1206', background: `linear-gradient(180deg, #ffe08a, ${GOLD})`, border: `1px solid ${GOLD}`, cursor: 'pointer', boxShadow: `0 0 18px ${GOLD}3a` }}>
+                      Flip the Coin
+                    </motion.button>
+                  </>
+                ) : (
+                  <p className="font-karla" style={{ fontSize: '0.78rem', color: '#a8a08c', lineHeight: 1.45, marginTop: 6, fontStyle: 'italic' }}>
+                    You&apos;ve no Fathoms banked to wager. Descend, earn some, and the coin will be here next time.
+                  </p>
+                )}
+              </motion.div>
+
+              {/* Blood Price — HP for a boon */}
+              <motion.button whileTap={{ scale: 0.975 }} onClick={shrineBloodPrice} className="tap"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+                style={{ width: '100%', textAlign: 'left', marginTop: 11, padding: '0.9rem 1rem', borderRadius: 16, background: `linear-gradient(180deg, rgba(239,68,68,0.16), rgba(8,13,22,0.6) 78%)`, border: '1.5px solid rgba(239,68,68,0.55)', color: '#f6e3e3', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" style={{ flexShrink: 0 }}><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1.05rem', color: '#fca5a5' }}>Blood Price</p>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: '#fca5a5', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.6)', borderRadius: 999, padding: '0.2rem 0.5rem' }}>Sure thing</span>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.78rem', color: '#d3b8b8', lineHeight: 1.45, marginTop: 6 }}>
+                  Bleed <strong style={{ color: '#fca5a5' }}>half your hull ({fmt(bloodCost)} HP)</strong> onto the stone and a power surfaces: an extra boon draft, here and now.
+                </p>
+              </motion.button>
+
+              {/* Walk on — safe heal */}
+              <motion.button whileTap={{ scale: 0.975 }} onClick={shrineWalkOn} className="tap"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
+                style={{ width: '100%', textAlign: 'left', marginTop: 11, padding: '0.85rem 1rem', borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.16)', color: '#d8e6e2', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M12 21s-7-4.3-9.5-8.5C.8 9.6 2.4 6 6 6c2 0 3.2 1.2 4 2.3C10.8 7.2 12 6 14 6c3.6 0 5.2 3.6 3.5 6.5C19 16.7 12 21 12 21z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <p className="font-cinzel font-700" style={{ flex: 1, fontSize: '0.98rem', color: '#bfe6cf' }}>Leave an Offering, Walk On</p>
+                </div>
+                <p className="font-karla" style={{ fontSize: '0.76rem', color: '#9fb4ad', lineHeight: 1.45, marginTop: 5 }}>
+                  No gamble. The shrine mends your hull for <strong style={{ color: '#86efac' }}>{fmt(walkHeal)} HP</strong> and lets you pass.
+                </p>
+              </motion.button>
+
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#7d7596', marginTop: 16 }}>
+                Fathoms banked · {fmt(fathomsNow)} · Hull {hpNow}/{hpMax}
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Coin resolved — the deep gives, or the deep takes. A win bursts. */}
+              {won && (
+                <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.8 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
+                  style={{ position: 'absolute', left: '50%', top: '34%', width: 240, height: 240, marginLeft: -120, marginTop: -120, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}66 0%, ${GOLD}1c 42%, transparent 70%)`, pointerEvents: 'none' }} />
+              )}
+              <motion.h1 key={shrineCoin.result} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 16 }}
+                className="font-pirata" style={{ fontSize: '2.6rem', lineHeight: 1, marginTop: 6, color: won ? GOLD : '#ef4444', textShadow: won ? `0 0 30px ${GOLD}88` : '0 0 30px rgba(239,68,68,0.6)' }}>
+                {won ? 'The Coin Falls True!' : 'The Deep Takes Its Cut'}
+              </motion.h1>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                style={{ marginTop: 18, padding: '1.1rem', borderRadius: 16, background: won ? `${GOLD}14` : 'rgba(239,68,68,0.12)', border: `1px solid ${won ? `${GOLD}55` : 'rgba(239,68,68,0.45)'}` }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '2.3rem', lineHeight: 1, color: won ? '#86efac' : '#fca5a5', textShadow: won ? `0 0 24px ${GOLD}55` : 'none' }}>
+                  {won ? '+' : '−'}{shrineCoin.stake} <span style={{ fontSize: '1.1rem' }}>Fathoms</span>
+                </p>
+                <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#b0a890', marginTop: 8 }}>
+                  {fmt(shrineCoin.fathoms)} Fathoms banked
+                </p>
+              </motion.div>
+              <motion.button whileTap={{ scale: 0.97 }} onClick={shrineDescend} className="font-cinzel font-800 uppercase tracking-[0.06em] tap"
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                style={{ width: '100%', marginTop: 22, padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#efe7fb', background: `linear-gradient(180deg, ${VIO}33, ${VIO}12)`, border: `1px solid ${VIO}77`, cursor: 'pointer' }}>
+                Leave the Shrine
+              </motion.button>
+            </>
+          )}
+        </div>
+        {exitModal}
+      </>
+    )
+  }
+
   // ── Between rounds: cash out or push on ──────────────────────────────────
   if (phase === 'between') {
     const cleared = rollStateRef.current.cleared
@@ -1072,6 +1352,31 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop />
+        {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
+            comes online (the boon you just claimed completed a pair). */}
+        <AnimatePresence>
+          {confluenceBanner && (() => {
+            const GLD = '#f5b94a'
+            return (
+              <motion.div key={confluenceBanner.key} aria-hidden
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 1.2rem' }}>
+                {/* radial gold burst */}
+                <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.8, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
+                  style={{ position: 'absolute', width: 280, height: 280, borderRadius: '50%', background: `radial-gradient(circle, ${GLD}88 0%, ${GLD}22 40%, transparent 70%)` }} />
+                <motion.div initial={{ scale: 0.4, opacity: 0.8 }} animate={{ scale: 2.1, opacity: 0 }} transition={{ duration: 0.8, delay: 0.1, ease: 'easeOut' }}
+                  style={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', border: `2px solid ${GLD}`, boxShadow: `0 0 28px ${GLD}` }} />
+                <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 16 }}
+                  style={{ position: 'relative' }}>
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${GLD}aa)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>Synergy Unlocked</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1.05, color: '#fdecc6', marginTop: 6, textShadow: `0 0 30px ${GLD}66` }}>{confluenceBanner.c.name}</p>
+                  <p className="font-karla" style={{ fontSize: '0.86rem', color: '#cdb88e', marginTop: 8, lineHeight: 1.4, maxWidth: 320 }}>{confluenceBanner.c.desc}</p>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
           padding: '10px 0.95rem', textAlign: 'center',
@@ -1174,18 +1479,20 @@ export default function GauntletGame(props: GauntletGameProps) {
           {activeConf.length > 0 && (
             <div style={{ marginTop: 16, textAlign: 'left' }}>
               <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f5b94a', marginBottom: 7 }}>
-                Synergies · {activeConf.length}
+                Synergies · {activeConf.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {activeConf.map(c => {
                   const fresh = confluenceUnlocked?.id === c.id
                   const GLD = '#f5b94a'
+                  const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
                   return (
-                    <motion.div key={c.id}
+                    <motion.button key={c.id} type="button" className="tap" whileTap={{ scale: 0.985 }}
+                      onClick={() => setDetailEffect({ kind: 'confluence', name: c.name, desc: c.desc, detail: `Active while you hold ${reqNames.join(' and ')} together. The pair opens an edge neither gives alone.`, flavor: c.flavor, count: 0 })}
                       initial={fresh ? { opacity: 0, scale: 0.92, y: 6 } : false}
                       animate={fresh ? { opacity: 1, scale: 1, y: 0 } : {}}
                       transition={{ type: 'spring', stiffness: 240, damping: 18 }}
-                      style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: fresh ? `${GLD}1c` : `${GLD}0e`, border: `1px solid ${GLD}${fresh ? '88' : '4a'}`, boxShadow: fresh ? `0 0 22px ${GLD}33` : 'none' }}>
+                      style={{ width: '100%', textAlign: 'left', cursor: 'pointer', position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: fresh ? `${GLD}1c` : `${GLD}0e`, border: `1px solid ${GLD}${fresh ? '88' : '4a'}`, boxShadow: fresh ? `0 0 22px ${GLD}33` : 'none' }}>
                       <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: GLD }} />
                       {fresh && (
                         <motion.span aria-hidden initial={{ x: '-130%' }} animate={{ x: '180%' }} transition={{ duration: 1.4, repeat: 2, ease: 'easeInOut' }}
@@ -1197,7 +1504,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                         {fresh && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, marginLeft: 'auto', fontSize: '0.46rem', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Unlocked</span>}
                       </div>
                       <p className="font-karla" style={{ fontSize: '0.7rem', color: '#cdb88e', lineHeight: 1.4, marginTop: 4 }}>{c.desc}</p>
-                    </motion.div>
+                    </motion.button>
                   )
                 })}
               </div>
@@ -1356,14 +1663,16 @@ export default function GauntletGame(props: GauntletGameProps) {
         }}>
           <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
             className="font-karla font-800 uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.36em', color: TEAL, marginTop: 10, textShadow: `0 0 16px ${TEAL}66` }}>
-            Plunder of the Deep
+            {boonFromShrine ? 'Paid in Blood' : 'Plunder of the Deep'}
           </motion.p>
           <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 240, damping: 17 }}
             className="font-cinzel font-800" style={{ fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', whiteSpace: 'nowrap', color: '#eafffb', lineHeight: 1.04, marginTop: 9, textShadow: `0 0 32px ${TEAL}55` }}>
-            Choose a Power
+            {boonFromShrine ? 'A Power Surfaces' : 'Choose a Power'}
           </motion.h1>
           <p className="font-karla font-600" style={{ fontSize: '0.95rem', color: '#b6c7c2', marginTop: 9, marginBottom: 20, lineHeight: 1.4 }}>
-            Three powers surface. One is yours for the rest of the dive.
+            {boonFromShrine
+              ? 'The stone drank your blood and gave this up in return. Take one.'
+              : 'Three powers surface. One is yours for the rest of the dive.'}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -2078,6 +2387,7 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers }: {
   const curses = Object.entries(curseTiers)
     .map(([id, tier]) => ({ c: GAUNTLET_CURSES.find(c => c.id === id), tier }))
     .filter((x): x is { c: NonNullable<typeof x.c>; tier: number } => !!x.c && x.tier >= 1)
+  const confs = activeConfluences(boonTiers)
   const Stat = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
     <div style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '0.62rem 0.35rem', borderRadius: 12, background: 'rgba(125,211,252,0.05)', border: '1px solid rgba(125,211,252,0.16)', textAlign: 'center', overflow: 'hidden' }}>
       <p className="font-cinzel font-800" style={{ fontSize: 'clamp(0.95rem, 4.4vw, 1.22rem)', color, lineHeight: 1, textShadow: `0 0 16px ${color}33`, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
@@ -2107,6 +2417,10 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers }: {
       {boons.length > 0 && (
         <Chips title={`Powers · ${boons.length}`} color={TEAL}
           items={boons.map(({ fam, tier }) => ({ key: fam.id, label: `${fam.name} ${boonTierLabel(tier)}`.trim(), rc: BOON_RARITY_META[boonRarity(fam)].color }))} />
+      )}
+      {confs.length > 0 && (
+        <Chips title={`Synergies · ${confs.length}`} color="#f5b94a"
+          items={confs.map(c => ({ key: c.id, label: c.name, rc: '#f5b94a' }))} />
       )}
       {curses.length > 0 && (
         <Chips title={`Curses · ${curses.length}`} color="#f87171"

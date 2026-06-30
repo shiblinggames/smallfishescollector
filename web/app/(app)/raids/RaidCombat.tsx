@@ -792,6 +792,8 @@ export default function RaidCombat({
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
   const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' } | null>(null)
+  // Thermal Shock confluence detonation — an ice+fire shatter burst over the hull.
+  const [thermalShockFx, setThermalShockFx] = useState<{ key: number } | null>(null)
   // Persistent status — the enemy keeps a low ember glow while burning and a
   // frost tint while iced, between the activation flare and the tick/skip.
   const [enemyBurning, setEnemyBurning] = useState(false)
@@ -1158,7 +1160,7 @@ export default function RaidCombat({
       // resolveLog gets replaced wholesale and we don't want to clobber it.
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
-    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null)
+    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null); setThermalShockFx(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
@@ -1794,6 +1796,9 @@ export default function RaidCombat({
       lifestealHeal?: number
       // Krust's Carapace soaked this (non-volley) hit — drives a deflect cue.
       carapaceSoak?: boolean
+      // Thermal Shock confluence: the shatter burst dealt on top of this hit —
+      // drives the ice+fire detonation FX + its own splat.
+      thermalShock?: number
     }
 
     // Hull plating: equipped damage-reduction items cut INCOMING enemy
@@ -1891,6 +1896,7 @@ export default function RaidCombat({
       let riposteDmgOut: number | undefined
       let enemyHealOut: number | undefined
       let lifestealHealedOut = 0
+      let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
       let carapaceSoaked = false
       const stepLines: string[] = []
 
@@ -2248,7 +2254,12 @@ export default function RaidCombat({
             eHp = Math.max(0, eHp - burst)
             enemyFrozenRef.current = 0
             enemyFreezePendingRef.current = 0
-            stepLines.push(`Thermal Shock! The frozen hull shatters in the fire for ${burst}.`)
+            thermalBurstOut = burst
+            // Count the shatter as part of this shot's output for the "biggest hit"
+            // tracker (onPlayerHit takes the max, so dmg+burst supersedes the dmg
+            // already reported above).
+            onPlayerHit?.(dmg + burst)
+            stepLines.push(`Thermal Shock! Ice meets fire and the frozen hull shatters apart for ${burst}.`)
           }
           // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
           // it's sunk outright (only when it actually landed + isn't already dead).
@@ -2462,6 +2473,7 @@ export default function RaidCombat({
         enemyHeal: enemyHealOut,
         lifestealHeal: lifestealHealedOut || undefined,
         carapaceSoak: carapaceSoaked,
+        thermalShock: thermalBurstOut || undefined,
       })
 
       // Phase 2 revival — when the player's killing blow drops the boss
@@ -2836,6 +2848,22 @@ export default function RaidCombat({
               setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
               if (step.procStatus === 'burn') setEnemyBurning(true)
               else setEnemyFrozen(true)
+            }
+            // Thermal Shock confluence detonation — a beat AFTER the main hit so it
+            // reads as a one-two: the shot lands, then the frozen hull shatters in
+            // the fire. Ice+fire burst over the hull, its own splat, a hard shake.
+            if (step.thermalShock && !isDodged) {
+              const tk = Date.now() + i + 19
+              const burst = step.thermalShock
+              playStepChainRef.current.push(setTimeout(() => {
+                setThermalShockFx({ key: tk })
+                setEnemyImpact({ key: tk + 1, kind: 'crit' })
+                setEHitsplat({ key: tk + 2, text: `-${burst}`, color: '#fdba74', big: true })
+                setEnemyShakeKind('crit'); setEnemyShakeKey(k => k + 1)
+                cameraShake('crit')
+                vibrate([0, 45, 28, 70])
+                playStepChainRef.current.push(setTimeout(() => { setThermalShockFx(null); setEHitsplat(null) }, 760))
+              }, 200))
             }
             if (step.big || megaId === 'nuke' || megaId === 'railgun') {
               setCritFlash(true)
@@ -3588,6 +3616,10 @@ export default function RaidCombat({
             {enemyImpact && (
               <ImpactBurst key={`ei-${enemyImpact.key}`} kind={enemyImpact.kind} />
             )}
+            {/* Thermal Shock confluence — the ice+fire shatter detonation */}
+            <AnimatePresence>
+              {thermalShockFx && <ThermalShockBurst key={`ts-${thermalShockFx.key}`} />}
+            </AnimatePresence>
             {/* Carapace deflect — the plate shrugs a soaked shot away */}
             {enemyDeflect > 0 && <CarapaceDeflect key={`cd-${enemyDeflect}`} />}
             {/* Man-o-War Mega FX (Railgun beam lives at stage level, below) */}
@@ -5547,6 +5579,42 @@ function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' }) {
         />
       ))}
     </motion.div>
+  )
+}
+
+// Thermal Shock confluence detonation — the signature ice+fire moment. A white
+// core flash, an expanding shockwave ring, a warm fire bloom, and a spray of
+// cyan ice shards flung outward as the frozen hull cracks apart in the heat.
+// One-shot, ~0.75s, localized to the enemy hull. Transform/opacity only.
+function ThermalShockBurst() {
+  const ICE = '#a5f3fc'
+  const FIRE = '#fb923c'
+  const shards = useMemo(() => Array.from({ length: 11 }, (_, n) => {
+    const ang = (Math.PI * 2 * n) / 11 + (n % 2) * 0.4
+    const dist = 40 + (n % 4) * 16
+    return { id: n, x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, rot: (n * 57) % 360, dur: 0.5 + (n % 3) * 0.12, delay: (n % 4) * 0.018, len: 7 + (n % 3) * 4 }
+  }), [])
+  return (
+    <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 6, overflow: 'visible' }}>
+      {/* White-hot core flash */}
+      <motion.div initial={{ scale: 0.3, opacity: 0.95 }} animate={{ scale: 1.7, opacity: 0 }} transition={{ duration: 0.32, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '46%', top: '50%', width: 96, height: 96, marginLeft: -48, marginTop: -48, borderRadius: '50%', background: `radial-gradient(circle, #ffffff 0%, ${FIRE}cc 36%, ${ICE}66 60%, transparent 74%)`, mixBlendMode: 'screen' }} />
+      {/* Shockwave ring — ice rim, fire glow */}
+      <motion.div initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '46%', top: '50%', width: 70, height: 70, marginLeft: -35, marginTop: -35, borderRadius: '50%', border: `2.5px solid ${ICE}`, boxShadow: `0 0 18px ${ICE}, inset 0 0 14px ${FIRE}aa` }} />
+      {/* Fire bloom lingering in the centre */}
+      <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: [0.5, 1.3, 1], opacity: [0, 0.85, 0] }} transition={{ duration: 0.7, ease: 'easeOut' }}
+        style={{ position: 'absolute', left: '46%', top: '50%', width: 80, height: 80, marginLeft: -40, marginTop: -40, borderRadius: '50%', background: `radial-gradient(circle, ${FIRE}cc 0%, ${FIRE}44 44%, transparent 70%)`, mixBlendMode: 'screen' }} />
+      {/* Ice shards flung outward */}
+      {shards.map(s => (
+        <motion.div key={s.id}
+          initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
+          animate={{ x: s.x, y: s.y, opacity: [0, 1, 0], scale: 1 }}
+          transition={{ duration: s.dur, delay: s.delay, ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '46%', top: '50%', width: 2.5, height: s.len, marginLeft: -1.25, marginTop: -s.len / 2, borderRadius: 2, background: `linear-gradient(${ICE}, #ffffff)`, boxShadow: `0 0 6px ${ICE}`, transform: `rotate(${s.rot}deg)` }}
+        />
+      ))}
+    </div>
   )
 }
 

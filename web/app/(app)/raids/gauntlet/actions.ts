@@ -108,6 +108,38 @@ export async function claimGauntletUpgrade(id: string): Promise<
   return { ok: true, fathoms: newFathoms, owned: newOwned }
 }
 
+// The Drowned Shrine's "Davy's Coin" — a double-or-nothing wager of the player's
+// banked Fathoms. Server-authoritative because Fathoms are persistent meta-
+// currency that buys permanent upgrades: the stake is clamped to the balance +
+// a hard cap, and the 50/50 is ROLLED HERE (a client can't force a win). EV is
+// neutral, so even spamming it nets ~0 — the gate is just there to keep it sane.
+const SHRINE_WAGER_CAP = 10
+export async function wagerGauntletFathoms(stake: number): Promise<
+  { ok: true; won: boolean; stake: number; fathoms: number } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_fathoms, gauntlet_run_open')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found.' }
+  if (!profile.gauntlet_run_open) return { error: 'No run in progress.' }
+
+  const balance = (profile.gauntlet_fathoms as number | null) ?? 0
+  const staked = Math.min(Math.max(1, Math.floor(stake || 0)), SHRINE_WAGER_CAP, balance)
+  if (staked < 1) return { error: 'No Fathoms to wager.' }
+
+  const won = Math.random() < 0.5
+  const newFathoms = Math.max(0, won ? balance + staked : balance - staked)
+  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id)
+  return { ok: true, won, stake: staked, fathoms: newFathoms }
+}
+
 /** The single deepest run across all captains + this player's own deepest.
  *  Surfaced on the gauntlet map node. */
 export async function getGauntletLeaderboard(): Promise<{
