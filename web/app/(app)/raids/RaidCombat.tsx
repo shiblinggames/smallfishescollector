@@ -4217,11 +4217,11 @@ export default function RaidCombat({
       <AnimatePresence>
         {confusedFx && (
           <motion.div key={confusedFx.key} aria-hidden
-            initial={{ opacity: 0, y: -10, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, y: -10, scale: 0.92, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, scale: 0.95, x: '-50%' }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            style={{ position: 'fixed', top: '24%', left: '50%', transform: 'translateX(-50%)', zIndex: 92, pointerEvents: 'none', textAlign: 'center', width: 'min(88%, 340px)' }}>
+            style={{ position: 'fixed', top: '24%', left: '50%', zIndex: 92, pointerEvents: 'none', textAlign: 'center', width: 'min(88%, 340px)' }}>
             <div style={{ padding: '0.55rem 1rem', borderRadius: 12, background: 'rgba(38,20,54,0.92)', border: '1px solid rgba(168,139,250,0.6)', boxShadow: '0 0 26px rgba(168,139,250,0.4)' }}>
               <p className="font-cinzel font-800 uppercase" style={{ fontSize: '0.92rem', letterSpacing: '0.1em', color: '#c4b5fd', textShadow: '0 0 14px rgba(168,139,250,0.6)' }}>Confused!</p>
               <p className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#d2c4ec', marginTop: 2, lineHeight: 1.35 }}>

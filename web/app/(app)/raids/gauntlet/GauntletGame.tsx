@@ -246,6 +246,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // A one-shot "Synergy Unlocked" banner overlay (auto-dismisses); separate from
   // the persistent breather highlight above.
   const [confluenceBanner, setConfluenceBanner] = useState<{ c: Confluence; key: number } | null>(null)
+  // One-shot "Curse Shed" confirmation when a Shake the Curse reprieve clears one.
+  const [curseShed, setCurseShed] = useState<{ name: string; key: number } | null>(null)
   // The Drowned Shrine — a wager node on a roughly fixed cadence. nextShrineRef
   // is the next combat depth a shrine is due (first after depth 7, then ~every
   // SHRINE_INTERVAL depths so 2 always land before depth 25 and it keeps coming
@@ -387,7 +389,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       silencedCrewIdsRef.current = []
       setPendingCurse(null)
       setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
-      setConfluenceUnlocked(null); setConfluenceBanner(null)
+      setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
       peekFightRef.current = null; setPeekFight(null)
       crewRefreshedRef.current = false; setFightOpensRefreshed(false)
@@ -492,6 +494,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     const t = setTimeout(() => setConfluenceBanner(null), 3000)
     return () => clearTimeout(t)
   }, [confluenceBanner])
+
+  // Auto-dismiss the "Curse Shed" confirmation.
+  useEffect(() => {
+    if (!curseShed) return
+    const t = setTimeout(() => setCurseShed(null), 2800)
+    return () => clearTimeout(t)
+  }, [curseShed])
 
   function handleEnemyDefeated(remainingHp: number, leftoverCharges = 0) {
     const f = fight
@@ -718,6 +727,10 @@ export default function GauntletGame(props: GauntletGameProps) {
         setCurseTiers(next)
         // If Dead Hands was the curse shed, free the crew it had silenced.
         if (drop === 'dead_hands') reconcileSilence()
+        // Confirm it landed — name the curse the deep took back so the player
+        // can see the reprieve actually worked.
+        setCurseShed({ name: GAUNTLET_CURSES.find(c => c.id === drop)?.name ?? 'a curse', key: Date.now() })
+        vibrate([0, 40, 50, 70])
       }
     }
     setPendingReprieve(null)
@@ -1376,6 +1389,24 @@ export default function GauntletGame(props: GauntletGameProps) {
               </motion.div>
             )
           })()}
+        </AnimatePresence>
+        {/* Curse Shed — confirms a Shake the Curse reprieve actually took one. */}
+        <AnimatePresence>
+          {curseShed && (
+            <motion.div key={curseShed.key} aria-hidden
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 1.2rem' }}>
+              <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.6, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
+                style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: `radial-gradient(circle, ${TEAL}77 0%, ${TEAL}1c 42%, transparent 70%)` }} />
+              <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.1, type: 'spring', stiffness: 220, damping: 16 }}
+                style={{ position: 'relative' }}>
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${TEAL}aa)` }}><path d="M20 6 9 17l-5-5" /></svg>
+                <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: TEAL, marginTop: 10, textShadow: `0 0 16px ${TEAL}88` }}>Curse Shed</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.9rem', lineHeight: 1.05, color: '#eafffb', marginTop: 6, textShadow: `0 0 30px ${TEAL}66` }}>{curseShed.name}</p>
+                <p className="font-karla" style={{ fontSize: '0.84rem', color: '#9cc7bf', marginTop: 8, fontStyle: 'italic' }}>The deep takes it back.</p>
+              </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
