@@ -82,6 +82,14 @@ export type TideEffect =
    *  hull that is BOTH frozen and burning, the ice shatters in the heat for a
    *  bonus burst of `burstMult`× the hit, consuming the freeze. */
   | { kind: 'thermalShock'; burstMult: number }
+  /** Confluence "Coup de Grâce" (Executioner + Cold Fury): a CRITICAL hit that
+   *  leaves the enemy at/below `pct` of max HP sinks it outright (a far wider
+   *  execute window than the base Executioner, but crit-gated). */
+  | { kind: 'critExecute'; pct: number }
+  /** Confluence "Hull Render" (Broadside Mastery + Grapeshot): each Volley you
+   *  fire THIS fight hits `perVolley` harder than the last (a stacking ramp that
+   *  resets every fight) — rewards saving up and slamming repeated volleys. */
+  | { kind: 'volleyRamp'; perVolley: number }
   // ── Incoming damage / mitigation ────────────────────────────────
   /** Multiplier on incoming damage rolls. <1 = mitigation. */
   | { kind: 'incomingDmgMult'; mult: number; scope: 'nextFight' | 'allRemaining' }
@@ -742,6 +750,8 @@ export function describeEffect(e: TideEffect): string {
     case 'retaliatePct':          return `Reflect ${Math.round(e.pct * 100)}% of damage taken`
     case 'lowHpDamage':           return `Up to ${pct(e.maxBonus)} damage as your HP drops`
     case 'thermalShock':          return `Frozen + burning hulls shatter for +${pct(e.burstMult)}`
+    case 'critExecute':           return `Crits sink hulls below ${Math.round(e.pct * 100)}% HP`
+    case 'volleyRamp':            return `Each Volley this fight hits +${Math.round(e.perVolley * 100)}% harder`
     case 'chargeCarryover':       return e.cap >= 99 ? 'Carry all unfired cannonballs to the next fight' : `Carry up to ${e.cap} cannonball${e.cap === 1 ? '' : 's'} to the next fight`
     case 'fightShield':           return `Shield each fight worth ${Math.round(e.pctMax * 100)}% of max HP`
     case 'incomingDmgMult': {

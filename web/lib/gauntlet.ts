@@ -892,17 +892,17 @@ export const CONFLUENCES: Confluence[] = [
     id: 'coup_de_grace',
     name: 'Coup de Grâce',
     requires: [{ boonId: 'executioner', minTier: 1 }, { boonId: 'cold_fury', minTier: 1 }],
-    desc: '+20% crit damage and a wider execute',
-    flavor: 'You know the killing mark, and you hit it like the deep itself.',
-    effects: [{ kind: 'critDmgMult', mult: 1.20 }, { kind: 'executeThreshold', pct: 0.12 }],
+    desc: 'A crit on a hull below 20% HP sinks it outright',
+    flavor: 'You know the killing mark, and when the shot rings true you find it every time.',
+    effects: [{ kind: 'critDmgMult', mult: 1.15 }, { kind: 'critExecute', pct: 0.20 }],
   },
   {
     id: 'hull_render',
     name: 'Hull Render',
     requires: [{ boonId: 'broadside_mastery', minTier: 1 }, { boonId: 'grapeshot', minTier: 1 }],
-    desc: '+30% volley damage, +8% all damage',
-    flavor: 'Every gun on the rail, all at once. Hulls come apart at the seams.',
-    effects: [{ kind: 'volleyDmgMult', mult: 1.30 }, { kind: 'damageMult', mult: 1.08 }],
+    desc: 'Each Volley this fight hits harder than the last',
+    flavor: 'Every gun on the rail, again and again, until the seams give. The deep loves a drummer.',
+    effects: [{ kind: 'volleyDmgMult', mult: 1.15 }, { kind: 'volleyRamp', perVolley: 0.15 }],
   },
 ]
 

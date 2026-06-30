@@ -22,7 +22,7 @@ import {
   generateFight, advanceRollState, chestForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
-  confluenceEffects, activeConfluences, type Confluence,
+  confluenceEffects, activeConfluences, CONFLUENCES, type Confluence,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS,
@@ -275,6 +275,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   // 'run' = perks for the descent itself, 'shore' = upgrades for the wider game.
   const [shopSection, setShopSection] = useState<'run' | 'shore' | null>(null)
   const [haulOpen, setHaulOpen] = useState(false)
+  const [synergiesOpen, setSynergiesOpen] = useState(false)
   // Deepest-run recap modal (boons/curses/tides of the record dive).
   const [deepestRunOpen, setDeepestRunOpen] = useState(false)
   // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
@@ -980,6 +981,13 @@ export default function GauntletGame(props: GauntletGameProps) {
             />
           </div>
 
+          {/* Synergies codex — what boon pairs unlock, so you can build toward them. */}
+          <button onClick={() => setSynergiesOpen(true)} className="tap"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 8, padding: '0.6rem', borderRadius: 12, background: '#f5b94a10', border: '1px solid #f5b94a3a', color: '#f5b94a', cursor: 'pointer' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+            <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem' }}>Synergies · what the pairs unlock</span>
+          </button>
+
           {/* Active run perks — only the gauntlet-scoped upgrades that change a
               descent. Global Ship & Shore unlocks (cannonball rack, etc.) live
               out in the world, so listing them here would just confuse. */}
@@ -1009,6 +1017,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal onClose={() => setHaulOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} onClose={() => setSynergiesOpen(false)} />}
         {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
       </>
@@ -2557,6 +2566,63 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 // "What's down there" — a popup on the intro so a player can see the chest
 // ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
 // BEFORE committing a descent (and burning the cooldown).
+// Synergies codex — every confluence pair, so players can build TOWARD one
+// instead of stumbling into it (the Hades-duo "chase"). Shows the two boons that
+// unlock each, what it does, and marks any you currently hold both halves of.
+function SynergiesModal({ owned, onClose }: { owned: Record<string, number>; onClose: () => void }) {
+  const GLD = '#f5b94a'
+  const active = new Set(activeConfluences(owned).map(c => c.id))
+  return (
+    <ModalScrim zIndex={1300} onClose={onClose}>
+      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>Build Toward One</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>Synergies</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
+          Hold both boons in a pair and a bonus power unlocks for free, for the rest of the dive. Draft with a pair in mind.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+          {CONFLUENCES.map(c => {
+            const reqs = c.requires.map(r => {
+              const fam = GAUNTLET_BOONS.find(b => b.id === r.boonId)
+              return { name: fam?.name ?? r.boonId, color: fam ? BOON_RARITY_META[boonRarity(fam)].color : '#888' }
+            })
+            const on = active.has(c.id)
+            return (
+              <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.85rem', background: on ? `${GLD}16` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${GLD}66` : 'rgba(255,255,255,0.1)'}` }}>
+                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: GLD }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                  <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name}</p>
+                  {on && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Active</span>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  {reqs.map((r, i) => (
+                    <span key={r.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {i > 0 && <span style={{ color: '#7a8e8a', fontSize: '0.85rem' }}>+</span>}
+                      <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: r.color, background: `${r.color}1e`, border: `1px solid ${r.color}55`, borderRadius: 999, padding: '0.18rem 0.55rem' }}>{r.name}</span>
+                    </span>
+                  ))}
+                </div>
+                <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#aef5c4', marginTop: 9, lineHeight: 1.25, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{c.desc}</p>
+                <p className="font-karla" style={{ fontSize: '0.74rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.5)', lineHeight: 1.45, marginTop: 5 }}>{c.flavor}</p>
+              </div>
+            )
+          })}
+        </div>
+      </motion.div>
+    </ModalScrim>
+  )
+}
+
 function HaulModal({ onClose }: { onClose: () => void }) {
   const cannons = ['davys_heavy_cannon', 'davys_hand_cannon']
     .map(getRaidItem)

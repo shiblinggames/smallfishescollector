@@ -446,6 +446,10 @@ export default function RaidCombat({
     let backdraft        = false
     // Confluence "Thermal Shock": burst mult when the hull is frozen AND burning.
     let thermalShockMult = 0
+    // Confluence "Coup de Grâce": crit-gated execute pct. "Hull Render": per-volley
+    // damage ramp (stacks per volley fired this fight).
+    let critExecutePct = 0
+    let volleyRampPct  = 0
     // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
     let noncritDmgMult = 1
     // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
@@ -516,6 +520,8 @@ export default function RaidCombat({
           if (e.backdraft) backdraft = true
           break
         case 'thermalShock':          thermalShockMult = Math.max(thermalShockMult, e.burstMult); break
+        case 'critExecute':           critExecutePct = Math.max(critExecutePct, e.pct); break
+        case 'volleyRamp':            volleyRampPct = Math.max(volleyRampPct, e.perVolley); break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
@@ -530,6 +536,7 @@ export default function RaidCombat({
       aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, noncritDmgMult,
       freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
       burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft, thermalShockMult,
+      critExecutePct, volleyRampPct,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
     }
@@ -622,6 +629,9 @@ export default function RaidCombat({
   // split as the anchor.
   const [abyssalShieldHp, setAbyssalShieldHp] = useState(0)
   const abyssalShieldRef = useRef(0)
+  // Hull Render confluence: how many Volleys the player has fired THIS fight, so
+  // each one ramps harder than the last. Reset on every fight start.
+  const volleyCountRef = useRef(0)
   // Cleanse Mender flag — Lv 100 Mender heals AND strips one enemy debuff
   // from the player. There's no in-fight debuff system yet, so this is a
   // hook for future expansion; for now it's tracked but does nothing.
@@ -1166,6 +1176,7 @@ export default function RaidCombat({
     setPlayerBurning(false); setPlayerFrozen(false)
     enemyPatternIdxRef.current = 0
     enemyFeintStreakRef.current = 0
+    volleyCountRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
     setEnemySinking(false)  // fresh enemy — clear any leftover sink from a prior fight
@@ -2047,10 +2058,14 @@ export default function RaidCombat({
           const frozenMult = enemyFrozenThisRound && tide.frozenDmgMult > 1
             ? (isCritShot && tide.brittle ? 1 + (tide.frozenDmgMult - 1) * 2 : tide.frozenDmgMult)
             : 1
+          // Hull Render confluence: each Volley this fight ramps. Reads the count
+          // BEFORE this volley (so the first is +0), then it's bumped below.
+          const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + tide.volleyRampPct * volleyCountRef.current : 1
           const actionBaseMult = isMega ? (megaAug?.megaMult ?? 2.6) : isVolley ? 2 : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
+          if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
           // the hitsplat + log show the real number that gets through.
@@ -2266,6 +2281,13 @@ export default function RaidCombat({
           if (dmg > 0 && eHp > 0 && tide.executeThreshold > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.executeThreshold)) {
             eHp = 0
             stepLines.push(`Executioner! The ${enemy.name} drops past saving and is dragged under.`)
+          }
+          // Coup de Grâce confluence: a CRITICAL hit that leaves the hull wounded
+          // (<= critExecutePct of max) finishes it on the spot — a far wider mark
+          // than the base Executioner, but only on a crit.
+          if (dmg > 0 && eHp > 0 && lockedAimResult === 'critical' && tide.critExecutePct > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.critExecutePct)) {
+            eHp = 0
+            stepLines.push(`Coup de Grâce! The crit finds the killing mark and the ${enemy.name} is gone.`)
           }
           // Incendiary / Frozen cannonball — 15% on-hit procs, only when the
           // shot actually landed and didn't already sink them. Burn refreshes
