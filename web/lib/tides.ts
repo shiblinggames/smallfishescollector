@@ -90,6 +90,18 @@ export type TideEffect =
    *  fire THIS fight hits `perVolley` harder than the last (a stacking ramp that
    *  resets every fight) — rewards saving up and slamming repeated volleys. */
   | { kind: 'volleyRamp'; perVolley: number }
+  /** Confluence "Reaper's Tithe" (Executioner + Leviathan's Hunger): sinking a
+   *  hull heals you `pctMaxHp` of THAT enemy's max HP. */
+  | { kind: 'executeHeal'; pctMaxHp: number }
+  /** Confluence "Feed the Fire" (Wildfire + Leviathan's Hunger): each burn tick
+   *  on an enemy also heals you `pctTick` of the tick's damage. */
+  | { kind: 'burnTickHeal'; pctTick: number }
+  /** Confluence "Untouchable" (Following Sea + Ghostward): a successful dodge
+   *  refunds `charges` cannonball(s). */
+  | { kind: 'dodgeRefund'; charges: number }
+  /** Confluence "Iron Tempest" (Spiteful Wake + Ironhide): your reflected (thorns)
+   *  damage is multiplied by `mult`. */
+  | { kind: 'retaliateBoost'; mult: number }
   // ── Incoming damage / mitigation ────────────────────────────────
   /** Multiplier on incoming damage rolls. <1 = mitigation. */
   | { kind: 'incomingDmgMult'; mult: number; scope: 'nextFight' | 'allRemaining' }
@@ -752,6 +764,10 @@ export function describeEffect(e: TideEffect): string {
     case 'thermalShock':          return `Frozen + burning hulls shatter for +${pct(e.burstMult)}`
     case 'critExecute':           return `Crits sink hulls below ${Math.round(e.pct * 100)}% HP`
     case 'volleyRamp':            return `Each Volley this fight hits +${Math.round(e.perVolley * 100)}% harder`
+    case 'executeHeal':           return `Sinking a hull heals ${Math.round(e.pctMaxHp * 100)}% of its max HP`
+    case 'burnTickHeal':          return `Burn ticks heal you ${Math.round(e.pctTick * 100)}% of the tick`
+    case 'dodgeRefund':           return `A dodge refunds ${e.charges} cannonball${e.charges === 1 ? '' : 's'}`
+    case 'retaliateBoost':        return `Reflected damage ×${e.mult.toFixed(1)}`
     case 'chargeCarryover':       return e.cap >= 99 ? 'Carry all unfired cannonballs to the next fight' : `Carry up to ${e.cap} cannonball${e.cap === 1 ? '' : 's'} to the next fight`
     case 'fightShield':           return `Shield each fight worth ${Math.round(e.pctMax * 100)}% of max HP`
     case 'incomingDmgMult': {

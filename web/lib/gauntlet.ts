@@ -867,54 +867,130 @@ export function boonTierLabel(tier: number): string {
 // a theme instead of grabbing the highest number — discovered, not drafted, and
 // announced with a banner the moment the second piece lands. Their effects ride
 // the same TideEffect pipeline as boons/curses (see confluenceEffects).
+// A confluence unlocks the moment you hold BOTH required boons (at tier 1), and
+// then SCALES: its level = the lower of the two boons' tiers (so deepening the
+// pair deepens the synergy). Each level carries its own desc + effects, mirroring
+// how boons tier. It's never drafted separately — you upgrade it by upgrading its
+// two halves. The effects stack ON TOP of the boons (additive, not a replacement).
+export interface ConfluenceLevel { desc: string; effects: TideEffect[] }
 export interface Confluence {
   id: string
   name: string
-  /** The two families (+ min tier) that must BOTH be held. */
-  requires: { boonId: string; minTier: number }[]
-  /** Short player-facing summary (the unlock banner + breather chip). */
-  desc: string
+  /** The two families that must BOTH be held (tier 1+ to unlock). */
+  requires: { boonId: string }[]
   /** One-line flavor. */
   flavor: string
-  effects: TideEffect[]
+  /** Effects + summary per confluence level (1..3), index = level - 1. */
+  levels: ConfluenceLevel[]
 }
 
 export const CONFLUENCES: Confluence[] = [
   {
     id: 'thermal_shock',
     name: 'Thermal Shock',
-    requires: [{ boonId: 'permafrost', minTier: 1 }, { boonId: 'wildfire', minTier: 1 }],
-    desc: 'Frozen + burning hulls shatter for a burst',
+    requires: [{ boonId: 'permafrost' }, { boonId: 'wildfire' }],
     flavor: 'Ice in the seams, fire on the deck. The hull cracks where the two meet.',
-    effects: [{ kind: 'thermalShock', burstMult: 0.6 }],
+    levels: [
+      { desc: 'Frozen + burning hulls shatter for +50%', effects: [{ kind: 'thermalShock', burstMult: 0.50 }] },
+      { desc: 'Frozen + burning hulls shatter for +70%', effects: [{ kind: 'thermalShock', burstMult: 0.70 }] },
+      { desc: 'Frozen + burning hulls shatter for +95%', effects: [{ kind: 'thermalShock', burstMult: 0.95 }] },
+    ],
   },
   {
     id: 'coup_de_grace',
     name: 'Coup de Grâce',
-    requires: [{ boonId: 'executioner', minTier: 1 }, { boonId: 'cold_fury', minTier: 1 }],
-    desc: 'A crit on a hull below 20% HP sinks it outright',
+    requires: [{ boonId: 'executioner' }, { boonId: 'cold_fury' }],
     flavor: 'You know the killing mark, and when the shot rings true you find it every time.',
-    effects: [{ kind: 'critDmgMult', mult: 1.15 }, { kind: 'critExecute', pct: 0.20 }],
+    levels: [
+      { desc: 'A crit on a hull below 15% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.12 }, { kind: 'critExecute', pct: 0.15 }] },
+      { desc: 'A crit on a hull below 20% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.18 }, { kind: 'critExecute', pct: 0.20 }] },
+      { desc: 'A crit on a hull below 26% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.25 }, { kind: 'critExecute', pct: 0.26 }] },
+    ],
   },
   {
     id: 'hull_render',
     name: 'Hull Render',
-    requires: [{ boonId: 'broadside_mastery', minTier: 1 }, { boonId: 'grapeshot', minTier: 1 }],
-    desc: 'Each Volley this fight hits harder than the last',
+    requires: [{ boonId: 'broadside_mastery' }, { boonId: 'grapeshot' }],
     flavor: 'Every gun on the rail, again and again, until the seams give. The deep loves a drummer.',
-    effects: [{ kind: 'volleyDmgMult', mult: 1.15 }, { kind: 'volleyRamp', perVolley: 0.15 }],
+    levels: [
+      { desc: 'Each Volley this fight hits +12% harder than the last', effects: [{ kind: 'volleyDmgMult', mult: 1.12 }, { kind: 'volleyRamp', perVolley: 0.12 }] },
+      { desc: 'Each Volley this fight hits +15% harder than the last', effects: [{ kind: 'volleyDmgMult', mult: 1.18 }, { kind: 'volleyRamp', perVolley: 0.15 }] },
+      { desc: 'Each Volley this fight hits +18% harder than the last', effects: [{ kind: 'volleyDmgMult', mult: 1.25 }, { kind: 'volleyRamp', perVolley: 0.18 }] },
+    ],
+  },
+  {
+    id: 'reapers_tithe',
+    name: "Reaper's Tithe",
+    requires: [{ boonId: 'executioner' }, { boonId: 'leviathans_hunger' }],
+    flavor: 'Every hull you send down, the deep tithes back to you. Death feeds the killer.',
+    levels: [
+      { desc: 'Sinking a hull heals you 12% of its max HP', effects: [{ kind: 'executeHeal', pctMaxHp: 0.12 }] },
+      { desc: 'Sinking a hull heals you 16% of its max HP', effects: [{ kind: 'executeHeal', pctMaxHp: 0.16 }] },
+      { desc: 'Sinking a hull heals you 22% of its max HP', effects: [{ kind: 'executeHeal', pctMaxHp: 0.22 }] },
+    ],
+  },
+  {
+    id: 'feed_the_fire',
+    name: 'Feed the Fire',
+    requires: [{ boonId: 'wildfire' }, { boonId: 'leviathans_hunger' }],
+    flavor: 'The flames you set drink from the enemy and pour it into your hull.',
+    levels: [
+      { desc: 'Burn ticks heal you 50% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.50 }] },
+      { desc: 'Burn ticks heal you 75% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.75 }] },
+      { desc: 'Burn ticks heal you for the full tick', effects: [{ kind: 'burnTickHeal', pctTick: 1.00 }] },
+    ],
+  },
+  {
+    id: 'untouchable',
+    name: 'Untouchable',
+    requires: [{ boonId: 'following_sea' }, { boonId: 'ghostward' }],
+    flavor: 'You are never where the shot lands, and the wind hands you back your powder.',
+    levels: [
+      { desc: 'A successful dodge refunds a cannonball', effects: [{ kind: 'dodgeRefund', charges: 1 }] },
+      { desc: 'A dodge refunds a cannonball; +8% dodge', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.08, scope: 'allRemaining' }] },
+      { desc: 'A dodge refunds a cannonball; +16% dodge', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.16, scope: 'allRemaining' }] },
+    ],
+  },
+  {
+    id: 'iron_tempest',
+    name: 'Iron Tempest',
+    requires: [{ boonId: 'spiteful_wake' }, { boonId: 'ironhide' }],
+    flavor: 'Plate over plate, and every blow that breaks on it is flung back twofold.',
+    levels: [
+      { desc: 'Your reflected damage hits 1.5× harder', effects: [{ kind: 'retaliateBoost', mult: 1.5 }] },
+      { desc: 'Your reflected damage hits 1.9× harder', effects: [{ kind: 'retaliateBoost', mult: 1.9 }] },
+      { desc: 'Your reflected damage hits 2.4× harder', effects: [{ kind: 'retaliateBoost', mult: 2.4 }] },
+    ],
   },
 ]
 
-/** Confluences the player currently qualifies for (both pieces held at tier). */
-export function activeConfluences(owned: Record<string, number>): Confluence[] {
-  return CONFLUENCES.filter(c => c.requires.every(r => (owned[r.boonId] ?? 0) >= r.minTier))
+/** A confluence's current LEVEL (1..3), or 0 if you don't hold both halves. The
+ *  level is the lower of the two boons' tiers, capped to the confluence's range. */
+export function confluenceLevel(c: Confluence, owned: Record<string, number>): number {
+  const tiers = c.requires.map(r => owned[r.boonId] ?? 0)
+  if (tiers.some(t => t < 1)) return 0
+  return Math.min(Math.min(...tiers), c.levels.length)
 }
 
-/** Flattened TideEffects from every active confluence — appended to the boon
- *  effects fed into combat. */
+/** Confluences the player currently has online (both halves held). */
+export function activeConfluences(owned: Record<string, number>): Confluence[] {
+  return CONFLUENCES.filter(c => confluenceLevel(c, owned) >= 1)
+}
+
+/** The player-facing summary for a confluence at a given level (defaults to its
+ *  base/level-1 line, e.g. for the codex when not yet held). */
+export function confluenceDescAt(c: Confluence, level: number): string {
+  const i = Math.max(1, Math.min(level || 1, c.levels.length)) - 1
+  return c.levels[i].desc
+}
+
+/** Flattened TideEffects from every active confluence at its CURRENT level —
+ *  appended to the boon effects fed into combat. */
 export function confluenceEffects(owned: Record<string, number>): TideEffect[] {
-  return activeConfluences(owned).flatMap(c => c.effects)
+  return CONFLUENCES.flatMap(c => {
+    const lvl = confluenceLevel(c, owned)
+    return lvl >= 1 ? c.levels[lvl - 1].effects : []
+  })
 }
 
 // ── Depth bands + Davy's voice ────────────────────────────────────────────────

@@ -22,7 +22,7 @@ import {
   generateFight, advanceRollState, chestForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
-  confluenceEffects, activeConfluences, CONFLUENCES, type Confluence,
+  confluenceEffects, activeConfluences, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS,
@@ -243,9 +243,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Confluence just completed by the boon you claimed — highlighted on the next
   // breather as a "synergy unlocked" beat. Cleared when you descend.
   const [confluenceUnlocked, setConfluenceUnlocked] = useState<Confluence | null>(null)
-  // A one-shot "Synergy Unlocked" banner overlay (auto-dismisses); separate from
-  // the persistent breather highlight above.
-  const [confluenceBanner, setConfluenceBanner] = useState<{ c: Confluence; key: number } | null>(null)
+  // A one-shot banner overlay when a confluence comes online (isNew) OR deepens a
+  // level (auto-dismisses); separate from the persistent breather highlight above.
+  const [confluenceBanner, setConfluenceBanner] = useState<{ c: Confluence; level: number; isNew: boolean; key: number } | null>(null)
   // One-shot "Curse Shed" confirmation when a Shake the Curse reprieve clears one.
   const [curseShed, setCurseShed] = useState<{ name: string; key: number } | null>(null)
   // The Drowned Shrine — a wager node on a roughly fixed cadence. nextShrineRef
@@ -664,20 +664,20 @@ export default function GauntletGame(props: GauntletGameProps) {
   // RaidCombat each fight, so they persist for free without piling into the tide
   // channel (where an upgrade would otherwise double-apply the old tier).
   function applyBoon(offer: BoonOffer) {
-    // Detect a confluence the new boon just completes (a synergy pair coming
-    // online) so the breather can celebrate it.
-    const before = new Set(activeConfluences(boonTiers).map(c => c.id))
+    // Detect a confluence the new boon just brought online OR deepened a level
+    // (the lower of the pair's tiers rose), so the breather can celebrate it.
     const nextTiers = { ...boonTiers, [offer.id]: offer.tier }
-    const newlyActive = activeConfluences(nextTiers).find(c => !before.has(c.id)) ?? null
+    const bumped = CONFLUENCES.find(c => confluenceLevel(c, nextTiers) > confluenceLevel(c, boonTiers)) ?? null
     setBoonTiers(nextTiers)
     setPendingBoons(null)
     setPendingReprieve(null) // chose the boon over the relief
-    setConfluenceUnlocked(newlyActive)
-    if (newlyActive) {
-      // A synergy coming online is a real moment — fanfare it on the breather.
-      setConfluenceBanner({ c: newlyActive, key: Date.now() })
+    setConfluenceUnlocked(bumped)
+    if (bumped) {
+      // A synergy coming online (or climbing a tier) is a real moment.
+      const isNew = confluenceLevel(bumped, boonTiers) === 0
+      setConfluenceBanner({ c: bumped, level: confluenceLevel(bumped, nextTiers), isNew, key: Date.now() })
       vibrate([0, 45, 40, 80, 40, 130])
-      import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
+      import('@/lib/fishingMusic').then(m => m.playChestSfx(isNew)).catch(() => {})
     }
     setPhase('between')
   }
@@ -1391,9 +1391,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 16 }}
                   style={{ position: 'relative' }}>
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${GLD}aa)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>Synergy Unlocked</p>
+                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>{confluenceBanner.isNew ? 'Synergy Unlocked' : `Synergy Deepened · ${['', 'I', 'II', 'III'][confluenceBanner.level] ?? ''}`}</p>
                   <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1.05, color: '#fdecc6', marginTop: 6, textShadow: `0 0 30px ${GLD}66` }}>{confluenceBanner.c.name}</p>
-                  <p className="font-karla" style={{ fontSize: '0.86rem', color: '#cdb88e', marginTop: 8, lineHeight: 1.4, maxWidth: 320 }}>{confluenceBanner.c.desc}</p>
+                  <p className="font-karla" style={{ fontSize: '0.86rem', color: '#cdb88e', marginTop: 8, lineHeight: 1.4, maxWidth: 320 }}>{confluenceDescAt(confluenceBanner.c, confluenceBanner.level)}</p>
                 </motion.div>
               </motion.div>
             )
@@ -1525,10 +1525,12 @@ export default function GauntletGame(props: GauntletGameProps) {
                 {activeConf.map(c => {
                   const fresh = confluenceUnlocked?.id === c.id
                   const GLD = '#f5b94a'
+                  const lvl = confluenceLevel(c, boonTiers)
+                  const lvlLabel = ['', 'I', 'II', 'III'][lvl] ?? ''
                   const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
                   return (
                     <motion.button key={c.id} type="button" className="tap" whileTap={{ scale: 0.985 }}
-                      onClick={() => setDetailEffect({ kind: 'confluence', name: c.name, desc: c.desc, detail: `Active while you hold ${reqNames.join(' and ')} together. The pair opens an edge neither gives alone.`, flavor: c.flavor, count: 0 })}
+                      onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `Active while you hold ${reqNames.join(' and ')} together. It deepens as you tier both boons up.`, flavor: c.flavor, count: 0 })}
                       initial={fresh ? { opacity: 0, scale: 0.92, y: 6 } : false}
                       animate={fresh ? { opacity: 1, scale: 1, y: 0 } : {}}
                       transition={{ type: 'spring', stiffness: 240, damping: 18 }}
@@ -1540,10 +1542,10 @@ export default function GauntletGame(props: GauntletGameProps) {
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name}</p>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name} <span style={{ color: GLD, fontSize: '0.78rem' }}>{lvlLabel}</span></p>
                         {fresh && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, marginLeft: 'auto', fontSize: '0.46rem', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Unlocked</span>}
                       </div>
-                      <p className="font-karla" style={{ fontSize: '0.7rem', color: '#cdb88e', lineHeight: 1.4, marginTop: 4 }}>{c.desc}</p>
+                      <p className="font-karla" style={{ fontSize: '0.7rem', color: '#cdb88e', lineHeight: 1.4, marginTop: 4 }}>{confluenceDescAt(c, lvl)}</p>
                     </motion.button>
                   )
                 })}
@@ -2571,7 +2573,6 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 // unlock each, what it does, and marks any you currently hold both halves of.
 function SynergiesModal({ owned, onClose }: { owned: Record<string, number>; onClose: () => void }) {
   const GLD = '#f5b94a'
-  const active = new Set(activeConfluences(owned).map(c => c.id))
   return (
     <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
@@ -2595,13 +2596,14 @@ function SynergiesModal({ owned, onClose }: { owned: Record<string, number>; onC
               const fam = GAUNTLET_BOONS.find(b => b.id === r.boonId)
               return { name: fam?.name ?? r.boonId, color: fam ? BOON_RARITY_META[boonRarity(fam)].color : '#888' }
             })
-            const on = active.has(c.id)
+            const lvl = confluenceLevel(c, owned)
+            const on = lvl >= 1
             return (
               <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.85rem', background: on ? `${GLD}16` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${GLD}66` : 'rgba(255,255,255,0.1)'}` }}>
                 <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: GLD }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                  <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name}</p>
+                  <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name}{on ? ` ${['', 'I', 'II', 'III'][lvl] ?? ''}` : ''}</p>
                   {on && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Active</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
@@ -2612,7 +2614,7 @@ function SynergiesModal({ owned, onClose }: { owned: Record<string, number>; onC
                     </span>
                   ))}
                 </div>
-                <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#aef5c4', marginTop: 9, lineHeight: 1.25, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{c.desc}</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#aef5c4', marginTop: 9, lineHeight: 1.25, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{confluenceDescAt(c, Math.max(1, lvl))}</p>
                 <p className="font-karla" style={{ fontSize: '0.74rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.5)', lineHeight: 1.45, marginTop: 5 }}>{c.flavor}</p>
               </div>
             )

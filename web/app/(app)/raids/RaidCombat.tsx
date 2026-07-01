@@ -450,6 +450,13 @@ export default function RaidCombat({
     // damage ramp (stacks per volley fired this fight).
     let critExecutePct = 0
     let volleyRampPct  = 0
+    // More confluences: Reaper's Tithe (heal on sinking a hull), Feed the Fire
+    // (burn ticks heal you), Untouchable (dodge refunds charges), Iron Tempest
+    // (reflected damage multiplier).
+    let executeHealPct    = 0
+    let burnTickHealPct   = 0
+    let dodgeRefundCharges = 0
+    let retaliateBoostMult = 1
     // All-or-Nothing curse: damage mult on non-crit shots (hit + graze).
     let noncritDmgMult = 1
     // Gauntlet boons: crit-damage mult, execute threshold (sink at <= % HP),
@@ -522,6 +529,10 @@ export default function RaidCombat({
         case 'thermalShock':          thermalShockMult = Math.max(thermalShockMult, e.burstMult); break
         case 'critExecute':           critExecutePct = Math.max(critExecutePct, e.pct); break
         case 'volleyRamp':            volleyRampPct = Math.max(volleyRampPct, e.perVolley); break
+        case 'executeHeal':           executeHealPct = Math.max(executeHealPct, e.pctMaxHp); break
+        case 'burnTickHeal':          burnTickHealPct = Math.max(burnTickHealPct, e.pctTick); break
+        case 'dodgeRefund':           dodgeRefundCharges = Math.max(dodgeRefundCharges, e.charges); break
+        case 'retaliateBoost':        retaliateBoostMult = Math.max(retaliateBoostMult, e.mult); break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
@@ -537,6 +548,7 @@ export default function RaidCombat({
       freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
       burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft, thermalShockMult,
       critExecutePct, volleyRampPct,
+      executeHealPct, burnTickHealPct, dodgeRefundCharges, retaliateBoostMult,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
     }
@@ -1852,7 +1864,13 @@ export default function RaidCombat({
       const total = tick + flare
       eHp = Math.max(0, eHp - total)
       enemyBurnRef.current = { turns: enemyBurnRef.current.turns - 1, dmg: enemyBurnRef.current.dmg }
-      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`], burnTurnsLeft: enemyBurnRef.current.turns })
+      // Feed the Fire confluence: the burn ticks also heal you a slice of itself.
+      let feedHeal = 0
+      if (tide.burnTickHealPct > 0 && pHp > 0) {
+        feedHeal = Math.min(playerHpMax - pHp, Math.round(total * tide.burnTickHealPct))
+        if (feedHeal > 0) pHp += feedHeal
+      }
+      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
     }
 
     // Scorching burn (elite affix) ticks the PLAYER's hull at the top of the turn
@@ -2190,6 +2208,12 @@ export default function RaidCombat({
             stepLines.push(isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
+            // Untouchable confluence: slipping an enemy shot hands you back a
+            // cannonball (only when it's the PLAYER who dodged).
+            if (!isAttackerPlayer && tide.dodgeRefundCharges > 0) {
+              const refund = Math.min(playerMaxCharges - pCharges, tide.dodgeRefundCharges)
+              if (refund > 0) { pCharges += refund; stepLines.push(`Untouchable! The wind hands you back ${refund} cannonball${refund === 1 ? '' : 's'}.`) }
+            }
 
             // ── Parry layer on top of the dodge result ───────────────────
             // Two mirror mechanics, only one fires per dodge depending on
@@ -2288,6 +2312,13 @@ export default function RaidCombat({
           if (dmg > 0 && eHp > 0 && lockedAimResult === 'critical' && tide.critExecutePct > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.critExecutePct)) {
             eHp = 0
             stepLines.push(`Coup de Grâce! The crit finds the killing mark and the ${enemy.name} is gone.`)
+          }
+          // Reaper's Tithe confluence: sinking a hull heals you a slice of ITS
+          // max HP. Skips a phase-1 boss "kill" that's about to revive (it isn't
+          // really sunk yet — the real phase-2 death pays out instead).
+          if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemy.phase2 && enemyPhaseRef.current === 1)) {
+            const heal = Math.min(playerHpMax - pHp, Math.round(enemyHpMaxRef.current * tide.executeHealPct))
+            if (heal > 0) { pHp += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
           }
           // Incendiary / Frozen cannonball — 15% on-hit procs, only when the
           // shot actually landed and didn't already sink them. Burn refreshes
@@ -2425,9 +2456,10 @@ export default function RaidCombat({
           // straight back. Reads the post-shield, post-mitigation damage (what
           // actually hit the hull); never reflects onto an already-sunk enemy.
           if (tide.retaliatePct > 0 && dmg > 0 && eHp > 0) {
-            const thorns = Math.max(1, Math.round(dmg * tide.retaliatePct))
+            // Iron Tempest confluence multiplies the reflected damage.
+            const thorns = Math.max(1, Math.round(dmg * tide.retaliatePct * tide.retaliateBoostMult))
             eHp = Math.max(0, eHp - thorns)
-            stepLines.push(`Spiteful Wake bites back for ${thorns}.`)
+            stepLines.push(tide.retaliateBoostMult > 1 ? `Iron Tempest! The blow is flung back for ${thorns}.` : `Spiteful Wake bites back for ${thorns}.`)
           }
           // Scorching / Glacial affixes: the elite's landed hit has a chance to
           // set the player ablaze (DoT scaled to this hit, like the player's
