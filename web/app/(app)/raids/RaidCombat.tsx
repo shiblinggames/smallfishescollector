@@ -84,6 +84,11 @@ const VOLLEY_COST = MAX_CHARGES
 // magazine (see pickEnemyAction) — holds the shot and braces, so "enemy at MAX
 // charges" stops being a guaranteed incoming fire the player can pre-dodge.
 const FEINT_CHANCE = 0.3
+// Confluence guard-rails: Reaper's Tithe heal per kill is capped to this slice
+// of the PLAYER's max HP (so a big boss doesn't near-full-heal you); Hull
+// Render's per-fight volley ramp bonus caps here (so a long fight can't runaway).
+const REAPER_HEAL_CAP_PCT = 0.15
+const HULL_RENDER_RAMP_CAP = 1.0   // max +100% from the ramp, on top of the base volley boost
 const PLAYER_COLOR = '#4ade80'
 const ENEMY_COLOR  = '#ef4444'
 
@@ -2078,7 +2083,7 @@ export default function RaidCombat({
             : 1
           // Hull Render confluence: each Volley this fight ramps. Reads the count
           // BEFORE this volley (so the first is +0), then it's bumped below.
-          const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + tide.volleyRampPct * volleyCountRef.current : 1
+          const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + Math.min(tide.volleyRampPct * volleyCountRef.current, HULL_RENDER_RAMP_CAP) : 1
           const actionBaseMult = isMega ? (megaAug?.megaMult ?? 2.6) : isVolley ? 2 : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
                        * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult
@@ -2317,7 +2322,13 @@ export default function RaidCombat({
           // max HP. Skips a phase-1 boss "kill" that's about to revive (it isn't
           // really sunk yet — the real phase-2 death pays out instead).
           if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemy.phase2 && enemyPhaseRef.current === 1)) {
-            const heal = Math.min(playerHpMax - pHp, Math.round(enemyHpMaxRef.current * tide.executeHealPct))
+            // Scales with the sunk hull's max HP, but CAPPED at a slice of YOUR
+            // own max so a big-HP boss can't near-full-heal you.
+            const heal = Math.min(
+              playerHpMax - pHp,
+              Math.round(enemyHpMaxRef.current * tide.executeHealPct),
+              Math.round(playerHpMax * REAPER_HEAL_CAP_PCT),
+            )
             if (heal > 0) { pHp += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
           }
           // Incendiary / Frozen cannonball — 15% on-hit procs, only when the

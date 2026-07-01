@@ -902,9 +902,9 @@ export const CONFLUENCES: Confluence[] = [
     requires: [{ boonId: 'executioner' }, { boonId: 'cold_fury' }],
     flavor: 'You know the killing mark, and when the shot rings true you find it every time.',
     levels: [
-      { desc: 'A crit on a hull below 15% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.12 }, { kind: 'critExecute', pct: 0.15 }] },
-      { desc: 'A crit on a hull below 20% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.18 }, { kind: 'critExecute', pct: 0.20 }] },
-      { desc: 'A crit on a hull below 26% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.25 }, { kind: 'critExecute', pct: 0.26 }] },
+      { desc: 'A crit on a hull below 12% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.12 }, { kind: 'critExecute', pct: 0.12 }] },
+      { desc: 'A crit on a hull below 16% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.18 }, { kind: 'critExecute', pct: 0.16 }] },
+      { desc: 'A crit on a hull below 20% HP sinks it', effects: [{ kind: 'critDmgMult', mult: 1.25 }, { kind: 'critExecute', pct: 0.20 }] },
     ],
   },
   {
