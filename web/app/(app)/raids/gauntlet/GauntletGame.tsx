@@ -29,7 +29,7 @@ import {
   CHEST_TIERS, chestCannonDropChance,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
 } from '@/lib/gauntlet'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen } from './actions'
 import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -91,6 +91,8 @@ export interface GauntletGameProps {
   /** Claimed Locker Upgrade ids — drives the run-scoped perks (Diving Bell,
    *  Calm Before…). */
   gauntletUpgrades: string[]
+  /** Confluence ids the player has ever discovered — drives the codex fog. */
+  confluencesSeen: string[]
   deepest: number
   /** Snapshot of the deepest run (boons/curses/tides) for the home recap. */
   deepestRun: GauntletRunSnapshot | null
@@ -245,7 +247,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [confluenceUnlocked, setConfluenceUnlocked] = useState<Confluence | null>(null)
   // A one-shot banner overlay when a confluence comes online (isNew) OR deepens a
   // level (auto-dismisses); separate from the persistent breather highlight above.
-  const [confluenceBanner, setConfluenceBanner] = useState<{ c: Confluence; level: number; isNew: boolean; key: number } | null>(null)
+  const [confluenceBanner, setConfluenceBanner] = useState<{ c: Confluence; level: number; isNew: boolean; discovered: boolean; key: number } | null>(null)
   // One-shot "Curse Shed" confirmation when a Shake the Curse reprieve clears one.
   const [curseShed, setCurseShed] = useState<{ name: string; key: number } | null>(null)
   // The Drowned Shrine — a wager node on a roughly fixed cadence. nextShrineRef
@@ -276,6 +278,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [shopSection, setShopSection] = useState<'run' | 'shore' | null>(null)
   const [haulOpen, setHaulOpen] = useState(false)
   const [synergiesOpen, setSynergiesOpen] = useState(false)
+  // Discovered confluences (codex fog). Mirrored so a first-ever unlock reveals
+  // it live in the codex; resynced if the server sends a fresh prop.
+  const [seenConfluences, setSeenConfluences] = useState<string[]>(props.confluencesSeen)
+  useEffect(() => { setSeenConfluences(props.confluencesSeen) }, [props.confluencesSeen])
   // Deepest-run recap modal (boons/curses/tides of the record dive).
   const [deepestRunOpen, setDeepestRunOpen] = useState(false)
   // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
@@ -673,9 +679,16 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPendingReprieve(null) // chose the boon over the relief
     setConfluenceUnlocked(bumped)
     if (bumped) {
-      // A synergy coming online (or climbing a tier) is a real moment.
+      // A synergy coming online (or climbing a tier) is a real moment. A FIRST-
+      // EVER unlock (not in the discovery set) is bigger still — reveal it in the
+      // codex forever and persist it server-side.
       const isNew = confluenceLevel(bumped, boonTiers) === 0
-      setConfluenceBanner({ c: bumped, level: confluenceLevel(bumped, nextTiers), isNew, key: Date.now() })
+      const discovered = isNew && !seenConfluences.includes(bumped.id)
+      if (discovered) {
+        setSeenConfluences(prev => (prev.includes(bumped.id) ? prev : [...prev, bumped.id]))
+        markConfluencesSeen([bumped.id]).catch(() => {})
+      }
+      setConfluenceBanner({ c: bumped, level: confluenceLevel(bumped, nextTiers), isNew, discovered, key: Date.now() })
       vibrate([0, 45, 40, 80, 40, 130])
       import('@/lib/fishingMusic').then(m => m.playChestSfx(isNew)).catch(() => {})
     }
@@ -1017,7 +1030,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal onClose={() => setHaulOpen(false)} />}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} onClose={() => setSynergiesOpen(false)} />}
         {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
       </>
@@ -1391,7 +1404,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 16 }}
                   style={{ position: 'relative' }}>
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${GLD}aa)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>{confluenceBanner.isNew ? 'Synergy Unlocked' : `Synergy Deepened · ${['', 'I', 'II', 'III'][confluenceBanner.level] ?? ''}`}</p>
+                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>{confluenceBanner.discovered ? 'New Synergy Discovered' : confluenceBanner.isNew ? 'Synergy Unlocked' : `Synergy Deepened · ${['', 'I', 'II', 'III'][confluenceBanner.level] ?? ''}`}</p>
                   <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1.05, color: '#fdecc6', marginTop: 6, textShadow: `0 0 30px ${GLD}66` }}>{confluenceBanner.c.name}</p>
                   <p className="font-karla" style={{ fontSize: '0.86rem', color: '#cdb88e', marginTop: 8, lineHeight: 1.4, maxWidth: 320 }}>{confluenceDescAt(confluenceBanner.c, confluenceBanner.level)}</p>
                 </motion.div>
@@ -2568,11 +2581,14 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 // "What's down there" — a popup on the intro so a player can see the chest
 // ladder, a rough doubloon/XP estimate for their reach, and the named-item chase
 // BEFORE committing a descent (and burning the cooldown).
-// Synergies codex — every confluence pair, so players can build TOWARD one
-// instead of stumbling into it (the Hades-duo "chase"). Shows the two boons that
-// unlock each, what it does, and marks any you currently hold both halves of.
-function SynergiesModal({ owned, onClose }: { owned: Record<string, number>; onClose: () => void }) {
+// Synergies codex — the confluence pairs, with DISCOVERY FOG: an unfound pair
+// shows as a silhouetted "undiscovered" row (no name, boons, or effect), and
+// reveals permanently the first time you unlock it in a dive. The chase is the
+// point — you find them by experimenting, then they stay in your codex.
+function SynergiesModal({ owned, seen, onClose }: { owned: Record<string, number>; seen: string[]; onClose: () => void }) {
   const GLD = '#f5b94a'
+  const seenSet = new Set(seen)
+  const found = CONFLUENCES.filter(c => seenSet.has(c.id) || confluenceLevel(c, owned) >= 1).length
   return (
     <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
@@ -2580,7 +2596,7 @@ function SynergiesModal({ owned, onClose }: { owned: Record<string, number>; onC
         style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>Build Toward One</p>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>Discovered · {found} / {CONFLUENCES.length}</p>
             <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>Synergies</p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2588,16 +2604,29 @@ function SynergiesModal({ owned, onClose }: { owned: Record<string, number>; onC
           </button>
         </div>
         <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
-          Hold both boons in a pair and a bonus power unlocks for free, for the rest of the dive. Draft with a pair in mind.
+          Certain pairs of boons hide a bonus power. Unlock one in a dive and it&apos;s recorded here for good.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
           {CONFLUENCES.map(c => {
+            const lvl = confluenceLevel(c, owned)
+            const on = lvl >= 1
+            const known = seenSet.has(c.id) || on
+            if (!known) {
+              // Undiscovered — a silhouette. No name, no boons, no effect.
+              return (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, padding: '0.85rem 0.9rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#7d8794', letterSpacing: '0.16em' }}>? ? ?</p>
+                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered synergy. Find the pair to reveal it.</p>
+                  </div>
+                </div>
+              )
+            }
             const reqs = c.requires.map(r => {
               const fam = GAUNTLET_BOONS.find(b => b.id === r.boonId)
               return { name: fam?.name ?? r.boonId, color: fam ? BOON_RARITY_META[boonRarity(fam)].color : '#888' }
             })
-            const lvl = confluenceLevel(c, owned)
-            const on = lvl >= 1
             return (
               <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.85rem', background: on ? `${GLD}16` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${GLD}66` : 'rgba(255,255,255,0.1)'}` }}>
                 <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: GLD }} />

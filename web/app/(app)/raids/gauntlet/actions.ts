@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, type GauntletRunSnapshot } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, CONFLUENCES, type GauntletRunSnapshot } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -138,6 +138,28 @@ export async function wagerGauntletFathoms(stake: number): Promise<
   const newFathoms = Math.max(0, won ? balance + staked : balance - staked)
   await admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id)
   return { ok: true, won, stake: staked, fathoms: newFathoms }
+}
+
+// Record confluences the player has discovered (first unlocked), so the Synergies
+// codex reveals them permanently. Fire-and-forget from the client on a first-ever
+// unlock. Ids are validated against the real catalog so junk can't be written.
+const VALID_CONFLUENCE_IDS = new Set(CONFLUENCES.map(c => c.id))
+export async function markConfluencesSeen(ids: string[]): Promise<{ ok: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false }
+  const valid = (ids ?? []).filter(id => VALID_CONFLUENCE_IDS.has(id))
+  if (valid.length === 0) return { ok: true }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles').select('gauntlet_confluences_seen').eq('id', user.id).single()
+  const seen = (profile?.gauntlet_confluences_seen as string[] | null) ?? []
+  const next = Array.from(new Set([...seen, ...valid]))
+  if (next.length !== seen.length) {
+    await admin.from('profiles').update({ gauntlet_confluences_seen: next }).eq('id', user.id)
+  }
+  return { ok: true }
 }
 
 /** The single deepest run across all captains + this player's own deepest.
