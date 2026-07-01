@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, CONFLUENCES, type GauntletRunSnapshot } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, CONFLUENCES, type GauntletRunSnapshot } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -338,7 +338,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
 
   const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades))
-  const bankedXp        = Math.round(cleanPot * chest.potMult * gauntletXpMult(upgrades))
+  // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
+  // (leveling was the sharper concern). Chest multiplier still rides on top.
+  const bankedXp        = Math.round(gauntletXpForDepth(rd) * chest.potMult * gauntletXpMult(upgrades))
   const gems            = chest.gems
 
   // Fathoms — the Gauntlet's meta-currency — bank on reaching this depth

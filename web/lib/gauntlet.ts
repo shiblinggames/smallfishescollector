@@ -31,14 +31,22 @@ import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, type AffixDef } from
 import { type TideEffect } from './tides'
 
 // ── Economy ────────────────────────────────────────────────────────────────
-// Per-round pot contribution = POT_BASE + POT_GROWTH * depth (⟡ AND XP, the
-// two mirror). A boss round multiplies that by BOSS_POT_MULT. Tuned against a
-// Tollmaster CHALLENGE clear (~1,980 ⟡): a shallow bail (depth ~5) lands
-// ~1,300 (below the safe grind, on purpose); depth 8 ~1.7×, depth 12 ~3.6×,
-// depth 16 ~6×, depth 20 ~9×. The cash-out chest multiplier rides on top.
+// Per-round pot contribution = POT_BASE + POT_GROWTH * min(depth, POT_FLATTEN).
+// A boss round multiplies that by BOSS_POT_MULT. The cash-out chest multiplier
+// rides on top. Tuned against a Tollmaster CHALLENGE clear (~1,980 ⟡): shallow
+// bail (~depth 5) ~1,300; depth 12 ~3.6×; depth 20 ~9×.
+//
+// 2026-07-01 — the contribution FLATTENS past POT_FLATTEN_DEPTH (20). Cumulative
+// pot was quadratic, so once shrine + confluences made depth 30-40 common,
+// deep cash-outs paid 3-5× the tuned ceiling. Past depth 20 each round now adds
+// a constant (the depth-20 value) instead of a growing amount — deeper still
+// pays more, just not runaway-more. Shallow/mid (<= 20) is unchanged.
+// Nav XP is DECOUPLED onto its own gentler curve (gauntletXpForDepth) because
+// leveling was the sharper problem — a deep dive was 6-8 nav levels.
 export const POT_BASE = 80
 export const POT_GROWTH = 50
 export const BOSS_POT_MULT = 3
+const POT_FLATTEN_DEPTH = 20
 
 // Cooldown between Gauntlet runs. Measured from when a run STARTS
 // (consume-on-start), so a quit-retry can't dodge it. Tune here to make the
@@ -80,10 +88,28 @@ export const GAUNTLET_DEPTH_UNLOCKS: GauntletDepthUnlock[] = [
   { depth: 10, name: 'Extra Cannonball Rack', blurb: 'Stockpile a 4th cannonball in every raid (volleys still cost 3).', where: 'Buy it in the Locker shop' },
 ]
 
-/** ⟡ (== XP) a single cleared round at this depth adds to the pot. */
+/** ⟡ a single cleared round at this depth adds to the pot (flattens past
+ *  POT_FLATTEN_DEPTH so deep runs stop scaling quadratically). */
 export function roundContribution(depth: number, isBoss: boolean): number {
-  const base = POT_BASE + POT_GROWTH * depth
+  const base = POT_BASE + POT_GROWTH * Math.min(depth, POT_FLATTEN_DEPTH)
   return Math.round(base * (isBoss ? BOSS_POT_MULT : 1))
+}
+
+// Nav XP earned by cashing out at `depth`, DECOUPLED from the doubloon pot and
+// on a gentler curve (lower growth + flattens earlier at XP_FLATTEN_DEPTH) so a
+// deep dive doesn't fast-level players. A typical-boss uplift (XP_BOSS_FACTOR)
+// is baked in so it stays comparable to the old pot-derived XP at shallow depth.
+// The cash-out chest multiplier rides on top of this (see cashOutGauntlet).
+const XP_BASE = 80
+const XP_GROWTH = 40
+const XP_FLATTEN_DEPTH = 15
+const XP_BOSS_FACTOR = 1.35
+export function gauntletXpForDepth(depth: number): number {
+  let total = 0
+  for (let d = 1; d <= Math.max(0, Math.floor(depth)); d++) {
+    total += XP_BASE + XP_GROWTH * Math.min(d, XP_FLATTEN_DEPTH)
+  }
+  return Math.round(total * XP_BOSS_FACTOR)
 }
 
 /** Server-side ceiling for a reported depth: the pot the player would have

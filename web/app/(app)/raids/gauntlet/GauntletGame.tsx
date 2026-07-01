@@ -19,7 +19,7 @@ import type { RaidCrewMember } from '../actions'
 import { classForSlug, CLASSES, currentMilestone } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import {
-  generateFight, advanceRollState, chestForDepth,
+  generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
   confluenceEffects, activeConfluences, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence,
@@ -1357,7 +1357,8 @@ export default function GauntletGame(props: GauntletGameProps) {
     const nextDepth = combatDepth + 1
     const chest = chestForDepth(cleared)
     const previewDoubloons = Math.round(pot * chest.potMult * props.classDoubloonMult)
-    const previewXp = Math.round(pot * chest.potMult)
+    // Nav XP is on its own decoupled curve (not the pot) — mirror the server.
+    const previewXp = Math.round(gauntletXpForDepth(cleared) * chest.potMult)
     const hpPct = Math.max(0, Math.min(100, Math.round((playerHP / hpMax) * 100)))
     const hpColor = hpPct < 30 ? '#f87171' : hpPct < 60 ? GOLD : '#4ade80'
     const band = bandForDepth(combatDepth)
@@ -2679,7 +2680,7 @@ function HaulModal({ onClose }: { onClose: () => void }) {
         <div style={{ marginTop: 12, textAlign: 'left' }}>
               {/* Plain-English intro — the whole loop in one breath. */}
               <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b8b2a6', lineHeight: 1.5 }}>
-                Every ship you sink grows <span style={{ color: GOLD, fontWeight: 700 }}>one pot</span>. Cash out at any depth to bank it as doubloons, plus the same amount in Nav XP. The deeper you go, the bigger it gets — but sink first and you lose the lot.
+                Every ship you sink grows <span style={{ color: GOLD, fontWeight: 700 }}>one pot</span>. Cash out at any depth to bank it as doubloons, plus a share of Nav XP for the dive. The deeper you go, the bigger it gets — but sink first and you lose the lot.
               </p>
 
               {/* Fathoms — the always-earned half, distinct from the gambled pot. */}
