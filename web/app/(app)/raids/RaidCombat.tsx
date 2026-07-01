@@ -2288,23 +2288,6 @@ export default function RaidCombat({
             pHp = Math.min(playerHpMax, pHp + healed)
             lifestealHealedOut = pHp - before
           }
-          // Confluence "Thermal Shock" (Permafrost + Wildfire): a hit on a hull
-          // that's BOTH frozen and burning shatters the ice in the heat for a
-          // bonus burst, consuming the freeze. Checked before the burn proc below
-          // (so it reads the burn from PRIOR hits) and before Executioner (so the
-          // burst can drop the enemy past the execute mark).
-          if (dmg > 0 && eHp > 0 && tide.thermalShockMult > 0 && enemyFrozenThisRound && enemyBurnRef.current.turns > 0) {
-            const burst = Math.max(1, Math.round(dmg * tide.thermalShockMult))
-            eHp = Math.max(0, eHp - burst)
-            enemyFrozenRef.current = 0
-            enemyFreezePendingRef.current = 0
-            thermalBurstOut = burst
-            // Count the shatter as part of this shot's output for the "biggest hit"
-            // tracker (onPlayerHit takes the max, so dmg+burst supersedes the dmg
-            // already reported above).
-            onPlayerHit?.(dmg + burst)
-            stepLines.push(`Thermal Shock! Ice meets fire and the frozen hull shatters apart for ${burst}.`)
-          }
           // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
           // it's sunk outright (only when it actually landed + isn't already dead).
           if (dmg > 0 && eHp > 0 && tide.executeThreshold > 0 && eHp <= Math.ceil(enemyHpMaxRef.current * tide.executeThreshold)) {
@@ -2375,6 +2358,31 @@ export default function RaidCombat({
               enemyFreezePendingRef.current = tide.deepFreeze ? 2 : 1
               stepLines.push(tide.deepFreeze ? `Frozen shot! The ${enemy.name} locks in deep ice — its next two turns are frozen.` : `Frozen shot! The ${enemy.name} ices over — its next turn is frozen.`)
               procStatus = 'freeze'
+            }
+          }
+          // Confluence "Thermal Shock" (Permafrost + Wildfire) — placed AFTER the
+          // burn/freeze procs so it fires the instant the pair COMPLETES: with fire
+          // already on the hull, the freeze you just landed shatters it on the same
+          // shot (and vice-versa), instead of waiting for a later hit. Reads a
+          // freeze active THIS round OR just applied (pending), plus any burn.
+          // Consumes the freeze, so it's one detonation per freeze.
+          if (
+            dmg > 0 && eHp > 0 && tide.thermalShockMult > 0
+            && (enemyFrozenThisRound || enemyFreezePendingRef.current > 0)
+            && enemyBurnRef.current.turns > 0
+          ) {
+            const burst = Math.max(1, Math.round(dmg * tide.thermalShockMult))
+            eHp = Math.max(0, eHp - burst)
+            enemyFrozenRef.current = 0
+            enemyFreezePendingRef.current = 0
+            thermalBurstOut = burst
+            onPlayerHit?.(dmg + burst)   // the shatter counts toward Biggest Hit
+            stepLines.push(`Thermal Shock! Ice meets fire and the frozen hull shatters apart for ${burst}.`)
+            // Credit Reaper's Tithe if the shatter is what sank the hull (the base
+            // execute/heal checks ran before the procs, so re-check here).
+            if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemy.phase2 && enemyPhaseRef.current === 1)) {
+              const heal = Math.min(playerHpMax - pHp, Math.round(enemyHpMaxRef.current * tide.executeHealPct), Math.round(playerHpMax * REAPER_HEAL_CAP_PCT))
+              if (heal > 0) { pHp += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
             }
           }
           // Nuke Fallout: the blast always leaves the wreck burning (overwrites a
