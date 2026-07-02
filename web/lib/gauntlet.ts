@@ -100,8 +100,11 @@ export function roundContribution(depth: number, isBoss: boolean): number {
 // deep dive doesn't fast-level players. A typical-boss uplift (XP_BOSS_FACTOR)
 // is baked in so it stays comparable to the old pot-derived XP at shallow depth.
 // The cash-out chest multiplier rides on top of this (see cashOutGauntlet).
+// Tuned 2026-07-02 against real pace data (~55-69 depth/hr) to a TARGET RATE of
+// ~50-60k Nav XP/hr: deep dives (depth 35-45) land ~50-55k/hr, steady-state ~60k.
+// GROWTH 40→25 pulled it down from ~72-82k/hr. Retune GROWTH to move the rate.
 const XP_BASE = 80
-const XP_GROWTH = 40
+const XP_GROWTH = 25
 const XP_FLATTEN_DEPTH = 15
 const XP_BOSS_FACTOR = 1.35
 export function gauntletXpForDepth(depth: number): number {
@@ -110,6 +113,17 @@ export function gauntletXpForDepth(depth: number): number {
     total += XP_BASE + XP_GROWTH * Math.min(d, XP_FLATTEN_DEPTH)
   }
   return Math.round(total * XP_BOSS_FACTOR)
+}
+
+// CREW XP from a Gauntlet cash-out at `depth`, on a MUCH smaller scale than the
+// player's Nav XP. Crew leveling is tuned against RAIDS (~910 XP/raid, ~278
+// raids to max a crew — see lib/crewLevel), but the Gauntlet used to mirror its
+// big Nav XP to crew, maxing them in a couple of dives. Now a run is worth
+// roughly depth/6 raids of crew XP (depth 30 ≈ 4,500 ≈ 5 raids; ~42 depth-40
+// dives to max one crew). Granted per-assigned-crew, cash-out only.
+const CREW_XP_PER_DEPTH = 150
+export function gauntletCrewXp(depth: number): number {
+  return Math.round(Math.max(0, Math.floor(depth)) * CREW_XP_PER_DEPTH)
 }
 
 /** Server-side ceiling for a reported depth: the pot the player would have

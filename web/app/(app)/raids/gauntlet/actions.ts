@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, CONFLUENCES, type GauntletRunSnapshot } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, type GauntletRunSnapshot } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -399,7 +399,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       amount: bankedDoubloons,
       reason: `Davy Jones Gauntlet: depth ${cd}`,
     }),
-    grantXPToAssignedCrew(admin, user.id, bankedXp),
+    // Crew XP is DECOUPLED from the player's Nav XP (which is huge) onto a raid-
+    // calibrated scale — mirroring bankedXp maxed crew in a couple of dives.
+    grantXPToAssignedCrew(admin, user.id, gauntletCrewXp(rd)),
   ])
 
   // Depth-milestone unlocks crossed by SURVIVING to this depth (cash-out only —
