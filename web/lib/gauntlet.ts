@@ -401,14 +401,18 @@ export function chestForDepth(depth: number): ChestTier {
 
 // Per-chest-tier drop chance for EACH of Davy's two chest cannons (rolled
 // independently, only for cannons you don't already own). Super low at the
-// shallow chests — possible only if you're very lucky — climbing steeply up the
-// ladder so deep runs are the real way to chase them.
+// shallow chests — possible only if you're very lucky — climbing up the ladder
+// so deep runs are the real way to chase them.
+// 2026-07-02: pulled the top tiers DOWN. Deep (depth 18+ / tier-5) dives became
+// routine once the shrine + confluences shipped, so 11%/cannon collected both
+// (→ the Grand Cannon) in ~14 dives (~2 weeks daily). Now ~5% at tier 5 → ~30
+// deep dives to collect both, a real capstone chase again. Was 0.5/1.5/3/6/11%.
 const CHEST_CANNON_ODDS: Record<number, number> = {
   1: 0.005, // Waterlogged Chest
-  2: 0.015, // Barnacled Strongbox
-  3: 0.03,  // Drowned Hoard
-  4: 0.06,  // Leviathan's Cache
-  5: 0.11,  // Davy Jones' Locker
+  2: 0.01,  // Barnacled Strongbox
+  3: 0.02,  // Drowned Hoard
+  4: 0.03,  // Leviathan's Cache
+  5: 0.05,  // Davy Jones' Locker
 }
 export function chestCannonDropChance(chestTier: number): number {
   return CHEST_CANNON_ODDS[chestTier] ?? 0
