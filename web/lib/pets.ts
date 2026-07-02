@@ -56,12 +56,14 @@ export function getPet(id: string | null | undefined): PetDef | undefined {
 }
 
 /** Crate → pet roll chance, indexed by crate tier. Pet hits override
- *  the normal crate outcome (doubloons/bait/cosmetic). Tune here. */
+ *  the normal crate outcome (doubloons/bait/cosmetic). Tune here.
+ *  2026-07-02: halved across the board — pets were dropping too easily
+ *  (esp. with auto-fishing racking up casts). Was 0.01/0.02/0.04/0.08. */
 export const CRATE_PET_CHANCE: Record<'wooden' | 'metal' | 'gold' | 'diamond', number> = {
-  wooden:  0.01,
-  metal:   0.02,
-  gold:    0.04,
-  diamond: 0.08,
+  wooden:  0.005,
+  metal:   0.01,
+  gold:    0.02,
+  diamond: 0.04,
 }
 
 /** Per-species, per-frame overlay positions in the character container.
