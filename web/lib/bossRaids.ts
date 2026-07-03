@@ -25,6 +25,9 @@ export interface BossPhase {
   /** Optional centre-screen callout label for the transition (e.g. 'RESERVE
    *  DECK'). Falls back to "PHASE N" when unset. */
   badge?: string
+  /** Optional telegraphed mechanic check that ARMS the instant this phase
+   *  begins (answer it with the right crew play or eat the consequence). */
+  check?: BossMechanicCheck
   // Optional chance-gated incoming-damage mitigation while in this phase.
   // Mirrors the Ironclad affix shape: when the chance roll succeeds, dmg is
   // multiplied by `damageTakenMult` (e.g. 0.7 for -30%) and a log line surfaces.
@@ -33,6 +36,37 @@ export interface BossPhase {
   damageTakenChance?: number
   damageTakenMult?: number
   damageTakenVolleyBypass?: boolean
+}
+
+/** ── Mechanic checks (MMO-raid style) ───────────────────────────────────────
+ *  A telegraphed boss move the player must ANSWER with the right kind of crew
+ *  play, or eat a big consequence. Attach one to a `BossPhase.check`; it arms
+ *  the instant that phase begins: a warning banner + a `chargeTurns` countdown
+ *  appears, and the player has that window to produce ANY ONE of the broad
+ *  `responses`. At resolution: satisfied -> COUNTERED (chip + a line); unmet ->
+ *  the `consequence` lands. Deliberately BROAD (several answers per check) so a
+ *  roster isn't hard-locked by one class — see [[raid-mechanic-checks]].
+ *
+ *  Each `MechanicResponse` maps to real combat state RaidCombat can read:
+ *    brace  — Anchor brace active (anchorReductionRef > 0)
+ *    shield — Tidecaller shield up (abyssalShieldRef > 0)
+ *    snare  — enemy dodge jammed by a Snare (snareDodgeTurnsRef !== 0)
+ *    dodge  — the player used the Dodge action during the window
+ *    heal   — the player healed during the window (Mender / Tidecaller / repair kit)
+ *    burst  — the player landed a crit or a legendary big shot (Leviathan / Apex) */
+export type MechanicResponse = 'brace' | 'shield' | 'snare' | 'dodge' | 'heal' | 'burst'
+
+export interface BossMechanicCheck {
+  id: string
+  name: string          // banner label, e.g. 'The Big Gun'
+  telegraph: string     // warning line the moment the wind-up begins
+  chargeTurns: number   // player turns to answer before it resolves (1-2)
+  responses: MechanicResponse[]   // ANY ONE clears it (kept broad on purpose)
+  counteredLine: string // action-log line on a successful counter
+  failLine: string      // action-log line on failure (before the consequence)
+  consequence:
+    | { kind: 'damagePctMaxHp';    value: number }   // hit for value × player max HP (can wipe)
+    | { kind: 'enemyHealPctMaxHp'; value: number }   // boss heals value × its own max HP
 }
 
 export interface BroadsideEnemy {
@@ -938,18 +972,42 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       critChance: 0.12,
       repossess: true, repossessName: 'Repossession',
       phases: [
-        // Phase 2 — the debt called in. Faster fire cadence.
+        // Phase 2 — the debt called in. Faster cadence + a MITIGATION check.
         { revivePct: 0.85, damageMult: 1.15, badge: 'Called In',
           pattern: ['reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
-          dialogueLine: "You cracked the ledger. You have not cleared the debt." },
-        // Phase 3 — the reserve deck. Volley-heavy, meaner.
+          dialogueLine: "You cracked the ledger. You have not cleared the debt.",
+          check: {
+            id: 'big_gun', name: 'The Big Gun', chargeTurns: 2,
+            telegraph: 'He hauls the reserve cannon onto the rail. Get a shield or brace up, or dodge it.',
+            responses: ['brace', 'shield', 'dodge'],
+            counteredLine: 'You get cover up in time — the big shot glances off.',
+            failLine: 'The reserve cannon speaks, and nothing was up to stop it.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.75 },
+          } },
+        // Phase 3 — the reserve deck. Volley-heavy + a DISRUPT ("dodge cancel") check.
         { revivePct: 0.72, damageMult: 1.30, badge: 'Reserve Deck',
           pattern: ['reload', 'reload', 'volley', 'fire', 'volley', 'fire', 'dodge'],
-          dialogueLine: "You think the shelves are bare? I keep a reserve deck for captains like you." },
-        // Phase 4 — nothing left to sell. Desperation, relentless.
+          dialogueLine: "You think the shelves are bare? I keep a reserve deck for captains like you.",
+          check: {
+            id: 'cooking_books', name: 'Cooking the Books', chargeTurns: 2,
+            telegraph: 'He ducks behind the counter to tally a killing ledger. Jam his helm or blast him to stop it.',
+            responses: ['snare', 'burst'],
+            counteredLine: 'You break his tally before it closes.',
+            failLine: 'The ledger balances in his favour.',
+            consequence: { kind: 'enemyHealPctMaxHp', value: 0.30 },
+          } },
+        // Phase 4 — nothing left to sell. Desperation + a HEAL check.
         { revivePct: 0.60, damageMult: 1.50, badge: 'Empty Shelves',
           pattern: ['fire', 'volley', 'reload', 'fire', 'fire', 'volley', 'fire'],
-          dialogueLine: "Nothing left to sell. Then I sink you and take the lot back myself." },
+          dialogueLine: "Nothing left to sell. Then I sink you and take the lot back myself.",
+          check: {
+            id: 'fire_sale', name: 'Fire Sale', chargeTurns: 2,
+            telegraph: 'He torches the stock and lets it all burn. Heal through it or get a shield up.',
+            responses: ['heal', 'shield'],
+            counteredLine: 'You ride out the blaze.',
+            failLine: 'The fire sale takes its cut of your hull.',
+            consequence: { kind: 'damagePctMaxHp', value: 0.55 },
+          } },
       ],
       image: '/enemychapter3galleon.png',
       portrait: '/enemychapter3galleon.png',

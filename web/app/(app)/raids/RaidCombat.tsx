@@ -56,7 +56,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
-import { BroadsideEnemy, EnemyAction } from '@/lib/bossRaids'
+import { BroadsideEnemy, EnemyAction, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, type ShipAugment } from '@/lib/shipAugments'
 import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
@@ -898,6 +898,84 @@ export default function RaidCombat({
   // classic phase2 boss just yields [] or [phase2], so all existing raids behave
   // exactly as before.
   const phaseList = useMemo(() => enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : []), [enemy.phases, enemy.phase2])
+  // ── Mechanic checks (telegraphed boss moves you must answer) ────────────────
+  // A phase's `check` arms the instant that phase begins: `pendingCheckRef` holds
+  // the config, `checkTurnsLeftRef` counts down each player turn, and
+  // `checkFlagsRef` records the transient answers the player produced during the
+  // window (persistent answers — brace/shield/snare — are read live at resolve).
+  // The state mirror drives the warning banner + countdown. See [[raid-mechanic-checks]].
+  const pendingCheckRef  = useRef<BossMechanicCheck | null>(null)
+  const checkTurnsLeftRef = useRef(0)
+  // True for the phase-transition turn the check armed on, so that turn's own
+  // turn-advance doesn't burn a countdown tick (the window starts NEXT turn).
+  const checkArmedThisTurnRef = useRef(false)
+  const checkFlagsRef    = useRef<{ dodge: boolean; heal: boolean; burst: boolean }>({ dodge: false, heal: false, burst: false })
+  const [pendingCheck, setPendingCheck] = useState<{ name: string; telegraph: string; turnsLeft: number } | null>(null)
+  // Arm the check that opens a phase (called from both revival paths).
+  function armMechanicCheck(check: BossMechanicCheck | undefined) {
+    if (!check) return
+    pendingCheckRef.current = check
+    checkTurnsLeftRef.current = check.chargeTurns
+    checkArmedThisTurnRef.current = true
+    checkFlagsRef.current = { dodge: false, heal: false, burst: false }
+    setPendingCheck({ name: check.name, telegraph: check.telegraph, turnsLeft: check.chargeTurns })
+  }
+  // Record a transient answer if a check is live (persistent answers are read at
+  // resolve time). Called from the dodge / heal / burst code paths.
+  function noteCheckResponse(r: 'dodge' | 'heal' | 'burst') {
+    if (pendingCheckRef.current) checkFlagsRef.current[r] = true
+  }
+  // Resolve the pending check: satisfied → countered; else the consequence.
+  function resolveMechanicCheck() {
+    const chk = pendingCheckRef.current
+    if (!chk) return
+    pendingCheckRef.current = null
+    setPendingCheck(null)
+    const f = checkFlagsRef.current
+    const has = (r: MechanicResponse) =>
+      r === 'brace'  ? (anchorReductionRef.current ?? 0) > 0
+      : r === 'shield' ? (abyssalShieldRef.current ?? 0) > 0
+      : r === 'snare'  ? (snareDodgeTurnsRef.current ?? 0) !== 0
+      : r === 'dodge'  ? f.dodge
+      : r === 'heal'   ? f.heal
+      : r === 'burst'  ? f.burst
+      : false
+    if (chk.responses.some(has)) {
+      setResolveLog(prev => [...prev, chk.counteredLine])
+      vibrate(24)
+      return
+    }
+    // Failed the check — the consequence lands.
+    setResolveLog(prev => [...prev, chk.failLine])
+    if (chk.consequence.kind === 'enemyHealPctMaxHp') {
+      const heal = Math.max(1, Math.round(enemyHpMaxRef.current * chk.consequence.value))
+      const nHp = Math.min(enemyHpMaxRef.current, enemyHpRef.current + heal)
+      enemyHpRef.current = nHp; setEnemyHp(nHp)
+      setResolveLog(prev => [...prev, `${enemy.name} collects — heals ${heal}.`])
+      return
+    }
+    // damagePctMaxHp — a big hit that can wipe (the whole point of a one-shot).
+    const dmg = Math.max(1, Math.round(playerHpMax * chk.consequence.value))
+    const newHp = playerHpRef.current - dmg
+    setPlayerShakeKey(k => k + 1)
+    setPlayerImpact({ key: Date.now(), kind: 'volley' })
+    setTimeout(() => setPlayerImpact(null), 700)
+    vibrate([0, 60, 40, 90])
+    if (newHp > 0) {
+      playerHpRef.current = newHp; setPlayerHp(newHp)
+      setResolveLog(prev => [...prev, `It rakes you for ${dmg}.`])
+    } else if (anchorSaveAvailable && !anchorUsedRef.current) {
+      // Quartermaster's Anchor catches a would-be wipe, once per run.
+      anchorUsedRef.current = true; onAnchorSave?.()
+      playerHpRef.current = 1; setPlayerHp(1)
+      setAnchorSaveFx(k => k + 1)
+      setResolveLog(prev => [...prev, `It should have sunk you — the anchor holds at 1 HP.`])
+    } else {
+      playerHpRef.current = 0; setPlayerHp(0)
+      setResolveLog(prev => [...prev, `It rakes you for ${dmg} — your hull gives way.`])
+      setSubPhase('done'); onPlayerDefeated()
+    }
+  }
   const turnRef            = useRef(1)
   const [turn, setTurn]    = useState(1)
   // Davy's Heavy Cannon ramp — the per-fight +damage stack. Mirrors the
@@ -1436,6 +1514,7 @@ export default function RaidCombat({
         setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
         playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
         if (mm.cleanseDebuff) setCleanseDebuffPending(true)
+        noteCheckResponse('heal')
         setResolveLog(prev => [...prev, `${crew.name} patches the hull. +${heal} HP${mm.cleanseDebuff ? ', debuffs cleared' : ''}.`])
         break
       }
@@ -1494,6 +1573,7 @@ export default function RaidCombat({
         setAbyssalShieldHp(prev => prev + shield)
         abyssalShieldRef.current += shield
         if (at.cleanseDebuff) setCleanseDebuffPending(true)
+        noteCheckResponse('heal')   // shield is read live at resolve; the heal is the transient note
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
         break
       }
@@ -1505,6 +1585,7 @@ export default function RaidCombat({
         // Lv 100 forces the shot to crit.
         const shotResult: ShotResult = lv.autoCrit ? 'critical' : 'hit'
         const dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * lv.dmgMult))
+        noteCheckResponse('burst')
         applyAbilityDamage(dmg, `${crew.name} fires a heavy salvo for ${dmg}!`, lv.autoCrit ? 'crit' : 'hit')
         break
       }
@@ -1525,6 +1606,7 @@ export default function RaidCombat({
           if (Math.random() >= bz.chainChance) break
         }
         total = Math.max(1, total)
+        noteCheckResponse('burst')
         applyAbilityDamage(total, `${crew.name} chains ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
         break
       }
@@ -1565,6 +1647,7 @@ export default function RaidCombat({
         setPhaseFlash(true)
         setTimeout(() => setPhaseFlash(false), 1100)
         setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name}: "${nextCfg.dialogueLine}"`]), 300)
+        armMechanicCheck(nextCfg.check)
         vibrate([0, 50, 40, 80])
         return
       }
@@ -1838,6 +1921,9 @@ export default function RaidCombat({
       // ('RESERVE DECK'); drive the nameplate badge + centre-screen callout.
       phaseNumber?: number
       phaseBadge?: string
+      // The mechanic check that arms as this phase begins (armed when the
+      // transition step plays), if the phase carries one.
+      phaseCheck?: BossMechanicCheck
       // Set when this hit lit an Incendiary / froze a Frozen cannonball, so the
       // enemy hull flares with the matching status aura the instant it lands.
       procStatus?: 'burn' | 'freeze'
@@ -2020,6 +2106,7 @@ export default function RaidCombat({
           const before = pHp
           pHp = Math.min(playerHpMax, pHp + roll)
           const healed = pHp - before
+          noteCheckResponse('heal')
           stepLines.push(`You crack open the ${repairKit.name}.`)
           stepLines.push(`The hull patches up for ${healed} HP.`)
           splatTarget = 'player'
@@ -2072,6 +2159,7 @@ export default function RaidCombat({
           // crit mult; hit + graze multiply by the non-crit mult. Skipped
           // entirely on a miss (rollShotDamage already returns 0).
           const isCritShot = lockedAimResult === 'critical'
+          if (isCritShot) noteCheckResponse('burst')
           const aimItemMult = isCritShot
             ? getActiveEffects(liveItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
             : getActiveEffects(liveItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
@@ -2616,6 +2704,7 @@ export default function RaidCombat({
           phaseTransition: true,
           phaseNumber: enemyPhaseRef.current,
           phaseBadge: nextCfg.badge,
+          phaseCheck: nextCfg.check,
         })
         break
       }
@@ -2729,6 +2818,19 @@ export default function RaidCombat({
           }
           turnRef.current++; setTurn(turnRef.current)
           setLastPlayerAction(pAction)
+          // Mechanic-check countdown: the turn it armed on doesn't tick (window
+          // opens next turn); after that, each resolved turn burns one, and when
+          // it hits zero the check resolves (countered or the consequence lands).
+          if (pendingCheckRef.current) {
+            if (pAction === 'dodge') noteCheckResponse('dodge')   // record a dodge answer before resolving
+            if (checkArmedThisTurnRef.current) {
+              checkArmedThisTurnRef.current = false
+            } else {
+              checkTurnsLeftRef.current -= 1
+              if (checkTurnsLeftRef.current <= 0) resolveMechanicCheck()
+              else setPendingCheck(pc => (pc ? { ...pc, turnsLeft: checkTurnsLeftRef.current } : pc))
+            }
+          }
           setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
           // Flare Barrage interrupt — every few turns the admiral screens itself
           // with false flares the player must swat before acting.
@@ -2758,6 +2860,8 @@ export default function RaidCombat({
         setPhaseCallout(step.phaseBadge ?? `Phase ${n}`)
         setPhaseFlash(true)
         setTimeout(() => setPhaseFlash(false), 1100)
+        // Arm this phase's mechanic check (if any) as the phase begins.
+        armMechanicCheck(step.phaseCheck)
       }
 
       // Stream this step's log lines into the visible log as the step plays.
@@ -3906,6 +4010,23 @@ export default function RaidCombat({
           />
         )}
 
+        {/* Mechanic-check telegraph — a pulsing warning banner + countdown while
+            the boss winds up a move you must answer (brace / shield / dodge /
+            snare / heal / burst). Non-interactive; drives the "answer or eat it"
+            tension without hiding the fight. */}
+        {pendingCheck && (
+          <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 13, width: 'min(94%, 340px)', pointerEvents: 'none', textAlign: 'center' }}>
+            <div className="rc-check-banner" style={{ borderRadius: 12, padding: '0.5rem 0.8rem', background: 'linear-gradient(180deg, rgba(120,20,20,0.92), rgba(70,10,10,0.9))', border: '1.5px solid rgba(248,113,113,0.75)', boxShadow: '0 0 22px rgba(239,68,68,0.4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+                <span className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '0.82rem', color: '#ffe0e0', textShadow: '0 0 12px rgba(239,68,68,0.9)' }}>{pendingCheck.name}</span>
+                <span className="font-karla font-800" style={{ fontSize: '0.72rem', color: '#fca5a5', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(248,113,113,0.6)', borderRadius: 999, padding: '0.05rem 0.42rem' }}>{pendingCheck.turnsLeft}</span>
+              </div>
+              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#f3d0d0', lineHeight: 1.35, marginTop: 3 }}>{pendingCheck.telegraph}</p>
+            </div>
+          </div>
+        )}
+
         {/* Low-hull danger — a red vignette breathes at the stage edges while
             the player's HP is critical, so the tension reads without a number. */}
         {playerHp > 0 && playerHp / playerHpMax < 0.25 && (
@@ -4438,6 +4559,11 @@ export default function RaidCombat({
         .rc-phase2-badge {
           animation: rc-phase2-badge-pulse 1.8s ease-in-out infinite;
         }
+        @keyframes rc-check-pulse {
+          0%, 100% { box-shadow: 0 0 18px rgba(239,68,68,0.35); }
+          50%      { box-shadow: 0 0 30px rgba(239,68,68,0.7); }
+        }
+        .rc-check-banner { animation: rc-check-pulse 1.1s ease-in-out infinite; }
         @keyframes rc-lowhp-pulse {
           0%, 100% { box-shadow: inset 0 0 36px 6px rgba(239,68,68,0.28); }
           50%      { box-shadow: inset 0 0 64px 14px rgba(239,68,68,0.52); }
