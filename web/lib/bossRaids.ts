@@ -849,7 +849,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       critChance: 0.07,
       decoyCount: 1, decoyName: 'False Colours',   // deception ladder tier 1
       image: '/enemychapter3schooner.png',
-      portrait: '/enemychapter3schooner.png',
+      portrait: '/raid5_feint.png',
     },
     reg: {
       id: 'reg', name: 'Sham', hpBase: 104, minDmg: 10, maxDmg: 18,
@@ -858,7 +858,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       critChance: 0.08,
       decoyCount: 1, decoyName: 'False Colours',   // tier 1
       image: '/enemychapter3brigantine.png',
-      portrait: '/enemychapter3brigantine.png',
+      portrait: '/raid5_sham.png',
     },
     brute: {
       id: 'brute', name: 'Bulwark', hpBase: 152, minDmg: 14, maxDmg: 24,
@@ -867,7 +867,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       critChance: 0.06,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2 — bigger spread
       image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/raid5_bulwark.png',
     },
     elite: {
       id: 'elite', name: 'Mirage', hpBase: 132, minDmg: 13, maxDmg: 22,
@@ -876,7 +876,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       critChance: 0.13,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2
       image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/raid5_mirage.png',
     },
     admiral: {
       id: 'admiral', name: 'Admiral Ruse', hpBase: 270, minDmg: 20, maxDmg: 36,
@@ -893,7 +893,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
         dialogueLine: "Enough games. Run out the real guns.",
       },
       image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      portrait: '/raid5_admiralruse.png',
     },
   },
   sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
