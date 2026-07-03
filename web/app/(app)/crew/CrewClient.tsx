@@ -1568,7 +1568,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           // sectionAccent used to color the heading bar + h2; both went
           // away with the heading cleanup so this constant did too.
           return (
-        <div ref={crewSectionRef} style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.015)', padding: '0.85rem 0.85rem 1rem', scrollMarginTop: 70 }}>
+        <div ref={crewSectionRef} style={{ scrollMarginTop: 70 }}>
           {/* Section heading + right-side count pill BOTH dropped — the
               top-level tabs ('Roster · 8' / 'Graves · 2') already carry
               both pieces of information and an accent bar + h2 + right
@@ -1629,10 +1629,6 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <p className="font-karla font-500" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.42)', lineHeight: 1.45, marginTop: -2 }}>
-                      Each crew holds one post at a time. Tap a card to move them, an open seat to fill it, or a section header to collapse it.
-                    </p>
-
                     <PartySection accent={ASSIGN_RAID} Icon={CrossedSwordsIconSvg} label="Raid Party" sub="fights at your side" count={raidParty.length} max={maxSlots} members={raidParty} collapsed={collapsed.has('raid')} onToggle={() => toggleCollapse('raid')}>
                       {grid(raidParty, maxSlots - raidParty.length, ASSIGN_RAID, () => setAssignTrack('raid'))}
                     </PartySection>
