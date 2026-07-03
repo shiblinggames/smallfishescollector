@@ -978,7 +978,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       portrait: '/raid6_thebreaker.png',
     },
     quartermaster: {
-      id: 'quartermaster', name: 'The Quartermaster', hpBase: 500, minDmg: 22, maxDmg: 38,
+      id: 'quartermaster', name: 'The Quartermaster', hpBase: 450, minDmg: 22, maxDmg: 38,
       shipSpeed: 7, actionMs: 4200,
       // The keeper himself, a 4-PHASE final-boss fight. SIGNATURE: Repossession —
       // at fight start he reclaims one of your equipped raid items for the whole
