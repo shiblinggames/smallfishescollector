@@ -910,8 +910,8 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 5,  shipSkinId: 'coffers_hull' },
     // Signature deception-fleet drops — the anti-evasion Tell-Tale Glass (epic)
     // + Admiral's Eye (legendary chase). Challenge variant lifts the rare rate.
-    { id: 'tell_tale_glass', label: 'Tell-Tale Glass', image: null,      emoji: '🔭',      rarity: 'epic',      weight: 20 },
-    { id: 'admirals_eye',    label: "Admiral's Eye",   image: null,      emoji: '👁️',     rarity: 'legendary', weight: 5  },
+    { id: 'tell_tale_glass', label: 'Tell-Tale Glass', image: '/telltaleglass.png', emoji: '🔭',  rarity: 'epic',      weight: 20 },
+    { id: 'admirals_eye',    label: "Admiral's Eye",   image: '/admiralseye.png',   emoji: '👁️', rarity: 'legendary', weight: 5  },
     { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 28 },
     { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 18 },
     { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 16 },
@@ -1039,8 +1039,8 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 8,  shipSkinId: 'coffers_hull' },
     // Signature finale drops — the activatable War Drum (epic) + guaranteed
     // Thunder Drum (legendary chase). Challenge variant lifts the legendary rate.
-    { id: 'war_drum',       label: 'War Drum',     image: null,          emoji: '🥁',      rarity: 'epic',      weight: 20 },
-    { id: 'thunder_drum',   label: 'Thunder Drum', image: null,          emoji: '🥁',      rarity: 'legendary', weight: 5  },
+    { id: 'war_drum',       label: 'War Drum',     image: '/wardrum.png',     emoji: '🥁',      rarity: 'epic',      weight: 20 },
+    { id: 'thunder_drum',   label: 'Thunder Drum', image: '/thunderdrum.png', emoji: '🥁',      rarity: 'legendary', weight: 5  },
     { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 26 },
     { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 20 },
     { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 22 },
