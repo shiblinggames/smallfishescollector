@@ -1355,6 +1355,39 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // Quartermaster foreshadow — a short character beat between the last Cache
+    // and the fleet fight. The keeper is too glad, too knowing, and lets slip
+    // that flying his goods "counts for something" without saying to whom. Plants
+    // the betrayal that lands for real at quartermaster_turn (after Raid 5).
+    id: 'coffers_keeper',
+    type: 'story',
+    label: "The Keeper's Smile",
+    flavor: "The keeper's a shade too glad to see you, and a shade too sure of your picks. He talks like he already knows how your run ends.",
+    bridge: "The war-fleet turns to meet you. Whatever the keeper meant by it, you'll puzzle it out on the far side of the guns.",
+    requiresNode: 'coffers_cache',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "You lash the new rig on while the keeper watches from behind the counter, in no hurry at all." },
+      { speaker: 'The Keeper', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Good pick. I'd have steered you to it myself. I usually do." },
+      { speaker: 'The Keeper', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Every captain who washes up in the Coffers, I get them kitted just so. Then I watch how they sail." },
+      { text: "He says it easy, like he's already read the last page of a log you're only halfway through writing." },
+      { speaker: 'The Keeper', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "That admiral out past the wall has never lost his boom chain. But you're flying my goods now. That counts for something." },
+      { text: "You almost ask him which side that counts for. Then the war-fleet comes about, and the guns don't wait on questions." },
+      { text: "You fold the unease away for later. There'll be time to name it once the fleet's on the harbor floor." },
+    ],
+    detail: {
+      description:
+        "You re-arm at the Cache one last time, and the keeper is friendlier than any fair trade explains. He talks like he's outfitted every captain in these waters and watched them all sail into the same net, and he lets slip that flying his goods counts for something without ever saying to whom. It sits wrong. But the market's war-fleet is already turning to meet you, and the unease will keep.",
+      drops: [
+        { emoji: '📜', label: 'Overheard at the Counter', sublabel: "\"You're flying my goods now, captain. That counts for something.\"", rarity: 'uncommon' },
+      ],
+      dropsNote: 'A last word from the keeper before the fleet. Whatever he meant, it waits till the guns are quiet.',
+      ctaLabel: 'Meet the Fleet →',
+      summary: "At the last Cache the keeper was too glad to see you and too sure of your picks, letting slip that flying his goods counts for something. You filed the unease away and turned to face the market's war-fleet.",
+    },
+  },
+  {
     // Raid 5. The escort-fleet admiral guarding the Coffers — the player's first
     // capital-ship fight (Galleon-tier). Signature: Decoys (false crit bands) +
     // the admiral's phase 2 + tier-2 tides. LIVE config (THE_COFFERS_FLEET), but
@@ -1364,7 +1397,7 @@ export const RAID_MAP: RaidNode[] = [
     label: 'The Harbor Fleet',
     flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
     bridge: "The admiral's fleet is wreckage on the harbor floor, and the way to the market's heart is open. The last push is on the keeper himself now.",
-    requiresNode: 'coffers_cache',
+    requiresNode: 'coffers_keeper',
     requiresNavLevel: 40,
     adminOnly: true,
     route: '/raids/coffers-fleet',
