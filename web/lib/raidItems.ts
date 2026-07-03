@@ -247,15 +247,113 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'davys_grand_cannon',
     name: "Davy's Grand Cannon",
-    description: 'Both Davy cannons forged into one: damage climbs +5% each turn of a fight AND +20% damage to non-boss enemies.',
+    description: 'Both Davy cannons forged onto one mount: damage climbs +4% each turn of a fight AND +17% damage to non-boss enemies. Tuned down a hair to share a single carriage.',
     image: '/davysgrandcannon.png',
     emoji: '☠️',
     rarity: 'legendary',
     effects: [
-      { type: 'ramp_damage_per_turn', value: 0.05 },
-      { type: 'nonboss_damage_mult',  value: 1.20 },
+      { type: 'ramp_damage_per_turn', value: 0.04 },
+      { type: 'nonboss_damage_mult',  value: 1.17 },
     ],
     source: "Forged from Davy's Heavy + Hand Cannon",
+  },
+  // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
+  // Offense fusions run at ~85% of each parent effect (they trade raw numbers for
+  // the slot a single mount saves); defence/tempo fusions keep full strength.
+  // Art PENDING — placeholder emoji until the fused-item sprites land (Phase 3).
+  {
+    id: 'siege_cannon',
+    name: 'Siege Cannon',
+    description: '+8% damage to bosses AND your damage climbs +4% every turn of a fight. Built for the long guns against a heavy hull.',
+    image: null,
+    emoji: '🎆',
+    rarity: 'legendary',
+    effects: [
+      { type: 'boss_damage_mult',     value: 1.08 },
+      { type: 'ramp_damage_per_turn', value: 0.04 },
+    ],
+    source: "Forged from Corsair Cannon + Davy's Heavy Cannon",
+  },
+  {
+    id: 'sharpshooters_cannon',
+    name: "Sharpshooter's Cannon",
+    description: '+17% damage to non-boss enemies AND +13% critical damage, but non-crit shots hit for 13% less. A crew-shredder for the steady-handed.',
+    image: null,
+    emoji: '🎯',
+    rarity: 'legendary',
+    effects: [
+      { type: 'nonboss_damage_mult', value: 1.17 },
+      { type: 'crit_damage_mult',    value: 1.13 },
+      { type: 'noncrit_damage_mult', value: 0.87 },
+    ],
+    source: "Forged from Davy's Hand Cannon + Gunner's Sight",
+  },
+  {
+    id: 'warlords_cannon',
+    name: "Warlord's Cannon",
+    description: '+8% damage to bosses AND +13% critical damage, but non-crit shots hit for 13% less. The killing piece for a captain who lands his crits.',
+    image: null,
+    emoji: '⚔️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'boss_damage_mult',    value: 1.08 },
+      { type: 'crit_damage_mult',    value: 1.13 },
+      { type: 'noncrit_damage_mult', value: 0.87 },
+    ],
+    source: "Forged from Corsair Cannon + Gunner's Sight",
+  },
+  {
+    id: 'ironclad_bulwark',
+    name: 'Ironclad Bulwark',
+    description: '+15% max HP AND cuts incoming enemy fire by 10%. Heavier strakes over plated hide.',
+    image: null,
+    emoji: '🛡️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'max_hp_mult',         value: 1.15 },
+      { type: 'incoming_damage_mult', value: 0.90 },
+    ],
+    source: "Forged from Reinforced Hull + Krust's Carapace",
+  },
+  {
+    id: 'last_bastion',
+    name: 'Last Bastion',
+    description: 'Once per raid, a killing blow leaves you at 1 HP instead of sinking, AND +15% max HP. The hull that refuses the deep.',
+    image: null,
+    emoji: '⚓',
+    rarity: 'legendary',
+    effects: [
+      { type: 'lethal_save', value: 1 },
+      { type: 'max_hp_mult', value: 1.15 },
+    ],
+    source: "Forged from Quartermaster's Anchor + Reinforced Hull",
+  },
+  {
+    id: 'deflector_plate',
+    name: 'Deflector Plate',
+    description: 'On a successful dodge, 30% chance to deflect half the shot back at the attacker, AND cuts incoming enemy fire by 10%.',
+    image: null,
+    emoji: '🪞',
+    rarity: 'legendary',
+    effects: [
+      { type: 'parry_chance',         value: 0.30 },
+      { type: 'parry_reflect_pct',    value: 0.50 },
+      { type: 'incoming_damage_mult', value: 0.90 },
+    ],
+    source: "Forged from Cartographer's Astrolabe + Krust's Carapace",
+  },
+  {
+    id: 'vanguards_chronometer',
+    name: "Vanguard's Chronometer",
+    description: 'Adds a fifth of your Savvy to your turn-order roll so you strike first more often, AND a 50% chance to open each fight with a cannonball already loaded.',
+    image: null,
+    emoji: '🧭',
+    rarity: 'legendary',
+    effects: [
+      { type: 'speed_roll_nav_pct',  value: 0.20 },
+      { type: 'start_charge_chance', value: 0.50 },
+    ],
+    source: "Forged from Navigator's Compass + Spet's Primer",
   },
 ]
 
@@ -269,10 +367,25 @@ export interface ForgeRecipe {
   components: string[]
   /** Item id produced. */
   result: string
+  /** Fathoms to LEARN the recipe before it can be forged (the meta sink). Once
+   *  learned it's permanent; forging then only needs the components. */
+  fathomCost: number
 }
 
+// The forge web: components are shared across recipes (e.g. Davy's Heavy feeds
+// both the Grand and the Siege) so one drop can be spent down different paths —
+// forge one, then refarm the boss for another copy to forge the other. Offense
+// fusions cost less (they're nerfed to 85% + situational); the always-on defence
+// fusions and the boss-crit Warlord top out at 300.
 export const FORGE_RECIPES: ForgeRecipe[] = [
-  { components: ['davys_heavy_cannon', 'davys_hand_cannon'], result: 'davys_grand_cannon' },
+  { components: ['navigators_compass', 'spets_primer'],         result: 'vanguards_chronometer', fathomCost: 150 },
+  { components: ['davys_heavy_cannon', 'davys_hand_cannon'],    result: 'davys_grand_cannon',     fathomCost: 200 },
+  { components: ['corsair_cannon', 'davys_heavy_cannon'],       result: 'siege_cannon',           fathomCost: 200 },
+  { components: ['davys_hand_cannon', 'gunners_sight'],         result: 'sharpshooters_cannon',   fathomCost: 200 },
+  { components: ['reinforced_hull', 'krusts_carapace'],         result: 'ironclad_bulwark',       fathomCost: 300 },
+  { components: ['quartermasters_anchor', 'reinforced_hull'],   result: 'last_bastion',           fathomCost: 300 },
+  { components: ['cartographers_astrolabe', 'krusts_carapace'], result: 'deflector_plate',        fathomCost: 300 },
+  { components: ['corsair_cannon', 'gunners_sight'],            result: 'warlords_cannon',        fathomCost: 300 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
@@ -280,7 +393,7 @@ export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
 }
 
 /** The Davy recipe — its components double as the Gauntlet chest drop pool. */
-export const DAVY_FORGE = FORGE_RECIPES[0]
+export const DAVY_FORGE = getForgeRecipe('davys_grand_cannon')!
 
 export function getRaidItem(id: string): RaidItemDef | undefined {
   return RAID_ITEMS.find(i => i.id === id)
@@ -297,6 +410,51 @@ export function conflictingFamilyItems(itemId: string, equippedIds: string[]): s
   const fam = getRaidItem(itemId)?.family
   if (!fam) return []
   return equippedIds.filter(id => id !== itemId && getRaidItem(id)?.family === fam)
+}
+
+/** The raw items a forged result was made from, that it therefore can't sit
+ *  beside: its recipe components PLUS any other tier sharing a component's family
+ *  (so a fusion excludes both the standard AND prime grade of an ingredient).
+ *  Empty for a non-forged item. This is what keeps a fusion off the same loadout
+ *  as its own ingredients, blocking the cheap "forge it, then re-equip a refarmed
+ *  component to run the effect twice" double-dip. Forging two DIFFERENT fusions
+ *  is still allowed — that's an earned specialisation, not this cheap stack. */
+export function fusionExcludedItems(resultId: string): string[] {
+  const recipe = getForgeRecipe(resultId)
+  if (!recipe) return []
+  const ids = new Set<string>(recipe.components)
+  const fams = new Set(recipe.components.map(c => getRaidItem(c)?.family).filter(Boolean) as string[])
+  if (fams.size) for (const it of RAID_ITEMS) if (it.family && fams.has(it.family)) ids.add(it.id)
+  return [...ids]
+}
+
+/** Everything equipped that can't coexist with `itemId` and must be dropped when
+ *  it's equipped: same-family tiers (conflictingFamilyItems) PLUS the forge
+ *  relationship in BOTH directions — a fusion vs its ingredients (+ their tiers),
+ *  and a raw ingredient vs a fusion forged from it. The single source of truth
+ *  for the equip swap + the loadout sanitiser. */
+export function conflictingRaidItems(itemId: string, equippedIds: string[]): string[] {
+  const out = new Set<string>(conflictingFamilyItems(itemId, equippedIds))
+  const myExcluded = new Set(fusionExcludedItems(itemId)) // itemId is a fusion → its ingredients
+  for (const id of equippedIds) {
+    if (id === itemId) continue
+    // itemId (a fusion) excludes an equipped ingredient, OR an equipped fusion
+    // excludes itemId (itemId is one of its ingredients).
+    if (myExcluded.has(id) || fusionExcludedItems(id).includes(itemId)) out.add(id)
+  }
+  return [...out]
+}
+
+/** Sanitise an equipped list so nothing that can't coexist rides together —
+ *  family tiers AND forge ingredient/fusion pairs. Keeps the earlier item of any
+ *  conflict; order-preserving; unique items pass through. Supersedes the
+ *  family-only dedupe (which it still uses under the hood). */
+export function dedupeRaidItems(equippedIds: string[]): string[] {
+  const out: string[] = []
+  for (const id of equippedIds) {
+    if (conflictingRaidItems(id, out).length === 0) out.push(id)
+  }
+  return out
 }
 
 /** Drop all-but-the-first item of each tier family from an equipped list, so a

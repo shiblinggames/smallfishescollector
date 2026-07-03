@@ -17,7 +17,7 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, chooseShipAugment } from './actions'
+import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, chooseShipAugment } from './actions'
 import { SHIP_AUGMENTS, getShipAugment, canChooseAugment, AUGMENT_COST, MEGA_CHARGE_COST, AUGMENTS_LIVE, type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
@@ -25,7 +25,7 @@ import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingFamilyItems } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -203,6 +203,10 @@ interface Props {
   /** Claimed Davy Jones Gauntlet locker-upgrade ids (display-only here;
    *  buying happens in the Gauntlet shop). */
   gauntletUpgrades?: string[]
+  /** Banked Fathoms — spent to LEARN forge recipes here. */
+  gauntletFathoms?: number
+  /** Forge recipe result-ids the player has already learned. */
+  forgeRecipesLearned?: string[]
   /** The locked-in Man-o-War volley augment id, or null. */
   manowarAugment?: string | null
   isAdmin?: boolean
@@ -278,6 +282,8 @@ export default function ShipHero({
   raidRepairOwed, doubloons,
   shipClasses,
   gauntletUpgrades = [],
+  gauntletFathoms = 0,
+  forgeRecipesLearned = [],
   manowarAugment: initialManowarAugment = null,
   isAdmin = false,
 }: Props) {
@@ -641,10 +647,11 @@ export default function ShipHero({
       next = equippedItems.filter(id => id !== itemId)
     } else {
       // Tiered drops (Corsair/Prime, Krust's/Captain's Carapace, the Primers,
-      // the Astrolabes) don't stack — equipping one supersedes the other grade,
-      // so swap out any same-family item first instead of letting both sit
-      // equipped (which reads like they add up).
-      const conflicts = conflictingFamilyItems(itemId, equippedItems)
+      // the Astrolabes) don't stack, and a forged item can't sit beside its own
+      // ingredients — equipping one supersedes the conflicting item(s), so swap
+      // them out first instead of letting both sit equipped (which reads like
+      // they add up).
+      const conflicts = conflictingRaidItems(itemId, equippedItems)
       const base = conflicts.length ? equippedItems.filter(id => !conflicts.includes(id)) : equippedItems
       if (base.length >= raidItemSlots) return // hull full — no-op
       next = [...base, itemId]
@@ -666,6 +673,26 @@ export default function ShipHero({
   // lands so the reveal can settle on confirmed success.
   const [forgeFx, setForgeFx] = useState<{ compImages: (string | null)[]; result: { name: string; image: string | null }; accent: string } | null>(null)
   const [forgeReady, setForgeReady] = useState(false)
+  // Recipe learning (the Fathom sink). Mirror the server props into state for
+  // optimistic updates, resyncing if the server sends fresh props (admin grants,
+  // a Gauntlet run banking Fathoms, etc.) — see [[feedback-usestate-prop-sync]].
+  const [learnedRecipes, setLearnedRecipes] = useState<string[]>(forgeRecipesLearned)
+  useEffect(() => { setLearnedRecipes(forgeRecipesLearned) }, [forgeRecipesLearned])
+  const [fathomsNow, setFathomsNow] = useState(gauntletFathoms)
+  useEffect(() => { setFathomsNow(gauntletFathoms) }, [gauntletFathoms])
+  const [learning, setLearning] = useState<string | null>(null)
+  function onLearnTap(resultId: string, cost: number) {
+    if (learning || !forgeUnlocked || fathomsNow < cost || learnedRecipes.includes(resultId)) return
+    setLearning(resultId)
+    vibrate(12)
+    startTransition(async () => {
+      const res = await learnForgeRecipe(resultId)
+      setLearning(null)
+      if ('error' in res) return
+      setLearnedRecipes(res.learned)
+      setFathomsNow(res.fathoms)
+    })
+  }
   function onForgeTap(resultId: string) {
     if (forging || !forgeUnlocked) return
     if (forgeArmed !== resultId) {
@@ -1460,10 +1487,12 @@ export default function ShipHero({
                             if (!def) return null
                             const color = RARITY_ITEM_COLOR[def.rarity]
                             const isNew = newRaidItems.has(itemId)
-                            // Same-family grade currently equipped: tapping this
-                            // SWAPS for it (they don't stack), so it costs no net
-                            // slot and stays tappable even on a full hull.
-                            const swapNames = conflictingFamilyItems(itemId, equippedItems)
+                            // A conflicting item currently equipped (same-family
+                            // grade, or the ingredients this fusion was forged
+                            // from): tapping this SWAPS for it (they don't stack),
+                            // so it costs no net slot and stays tappable even on a
+                            // full hull.
+                            const swapNames = conflictingRaidItems(itemId, equippedItems)
                               .map(id => getRaidItem(id)?.name).filter(Boolean) as string[]
                             const wouldSwap = swapNames.length > 0
                             const blocked = full && !wouldSwap
@@ -1529,6 +1558,11 @@ export default function ShipHero({
                   </p>
                 </div>
               )}
+              {forgeUnlocked && FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
+                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#8fb6d6', marginBottom: '0.7rem' }}>
+                  Fathoms banked · <span style={{ color: '#7fd0ff' }}>{fathomsNow}</span>
+                </p>
+              )}
               {forgeUnlocked && FORGE_RECIPES.filter(recipe => !ownedRaidItems.includes(recipe.result)).map(recipe => {
                 const result = getRaidItem(recipe.result)
                 if (!result) return null
@@ -1536,11 +1570,18 @@ export default function ShipHero({
                 const haveAll = comps.every(c => c.owned)
                 const armed = forgeArmed === recipe.result
                 const busy = forging === recipe.result
+                const learned = learnedRecipes.includes(recipe.result)
+                const cost = recipe.fathomCost
+                const canAfford = fathomsNow >= cost
+                const isLearning = learning === recipe.result
+                const ready = learned && haveAll
                 return (
-                  <div key={recipe.result} className="app-card app-card-gold" style={{ padding: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 9, opacity: haveAll ? 1 : 0.92 }}>
+                  <div key={recipe.result} className="app-card app-card-gold" style={{ padding: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 9, opacity: ready ? 1 : 0.92 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: haveAll ? '#e8c879' : '#9a8a5a' }}>{haveAll ? 'Forge Available' : 'Forge · Locked'}</p>
-                      <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a8a5a' }}>{comps.filter(c => c.owned).length}/{comps.length}</span>
+                      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: ready ? '#e8c879' : '#9a8a5a' }}>{!learned ? 'Recipe · Locked' : ready ? 'Forge Available' : 'Learned · Gather Parts'}</p>
+                      {learned
+                        ? <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a8a5a' }}>{comps.filter(c => c.owned).length}/{comps.length}</span>
+                        : <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#7fd0ff' }}>{cost} Fathoms</span>}
                     </div>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6', lineHeight: 1.1 }}>{result.name}</p>
                     <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.4 }}>{result.description}</p>
@@ -1565,7 +1606,23 @@ export default function ShipHero({
                       ))}
                     </div>
 
-                    {haveAll ? (
+                    {!learned ? (
+                      <button
+                        type="button"
+                        onClick={() => onLearnTap(recipe.result, cost)}
+                        disabled={!canAfford || isLearning}
+                        className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+                        style={{
+                          width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem',
+                          background: canAfford ? 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${canAfford ? 'rgba(127,208,255,0.55)' : 'rgba(255,255,255,0.16)'}`,
+                          color: canAfford ? '#cfeaff' : '#8a8480',
+                          cursor: (!canAfford || isLearning) ? 'default' : 'pointer',
+                        }}
+                      >
+                        {isLearning ? 'Learning…' : canAfford ? `Learn Recipe · ${cost} Fathoms` : `Need ${cost} Fathoms — you have ${fathomsNow}`}
+                      </button>
+                    ) : haveAll ? (
                       <button
                         type="button"
                         onClick={() => onForgeTap(recipe.result)}
@@ -1583,7 +1640,7 @@ export default function ShipHero({
                       </button>
                     ) : (
                       <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', lineHeight: 1.4, fontStyle: 'italic' }}>
-                        Collect every component, then forge them here. The forge sacrifices them.
+                        Recipe learned. Collect every component, then forge them here — the forge sacrifices them.
                       </p>
                     )}
                   </div>
@@ -2396,12 +2453,26 @@ function ForgeAnimation({ compImages, result, accent, ready, onDone }: {
             <motion.div aria-hidden initial={{ opacity: 0, scale: 0.5, rotate: 0 }} animate={{ opacity: 0.5, scale: 1, rotate: 360 }}
               transition={{ opacity: { duration: 0.5 }, scale: { duration: 0.6 }, rotate: { duration: 22, repeat: Infinity, ease: 'linear' } }}
               style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: `conic-gradient(from 0deg, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00, ${accent}44, ${accent}00)` }} />
-            <motion.img
-              src={result.image ?? undefined} alt={result.name}
-              initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: [0.3, 1.18, 1], opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: [0.22, 1.3, 0.4, 1] }}
-              style={{ position: 'relative', width: 132, height: 132, objectFit: 'contain', filter: `drop-shadow(0 0 28px ${accent}aa) drop-shadow(0 6px 14px rgba(0,0,0,0.6))` }}
-            />
+            {result.image ? (
+              <motion.img
+                src={result.image} alt={result.name}
+                initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: [0.3, 1.18, 1], opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, ease: [0.22, 1.3, 0.4, 1] }}
+                style={{ position: 'relative', width: 132, height: 132, objectFit: 'contain', filter: `drop-shadow(0 0 28px ${accent}aa) drop-shadow(0 6px 14px rgba(0,0,0,0.6))` }}
+              />
+            ) : (
+              // Art pending — a forged-medallion placeholder (accent ring + anvil)
+              // so the reveal reads clean until the fused-item sprite lands.
+              <motion.div
+                initial={{ scale: 0.3, opacity: 0, y: 10 }} animate={{ scale: [0.3, 1.18, 1], opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, ease: [0.22, 1.3, 0.4, 1] }}
+                style={{ position: 'relative', width: 132, height: 132, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(circle, ${accent}2e, rgba(6,10,16,0.65) 72%)`, border: `2px solid ${accent}88`, filter: `drop-shadow(0 0 28px ${accent}aa)` }}
+              >
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" />
+                </svg>
+              </motion.div>
+            )}
           </>
         )}
       </div>

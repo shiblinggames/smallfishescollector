@@ -6,7 +6,7 @@ import { EXPEDITION_SHIP_STATS, raidRepairCost, raidItemSlotsForTier, type RaidM
 import { getLevelFromXP, navLevelBonuses } from '@/lib/expeditionLevel'
 import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
-import { getActiveEffects, dedupeRaidItemFamilies } from '@/lib/raidItems'
+import { getActiveEffects, dedupeRaidItems } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { getShipSkin } from '@/lib/shipSkins'
 import { bonusChargeSlots, gauntletRepairHealMult } from '@/lib/gauntletUpgrades'
@@ -126,10 +126,10 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   // drawer opens, so the next save will write the truncated list back.
   const rawEquipped = (profile?.equipped_raid_items as string[] | null) ?? []
   const slotCap     = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
-  // Drop duplicate tier-family items (e.g. both Corsair grades) so a legacy
-  // double-equip can't double-apply a stat that was never meant to stack, then
-  // cap to the hull's slots.
-  const equippedItems = dedupeRaidItemFamilies(rawEquipped).slice(0, slotCap)
+  // Drop items that can't coexist (tier-family grades + a fusion beside its own
+  // forge ingredients) so a legacy/stale loadout can't double-apply a stat that
+  // was never meant to stack, then cap to the hull's slots.
+  const equippedItems = dedupeRaidItems(rawEquipped).slice(0, slotCap)
   const hpMaxMult = getActiveEffects(equippedItems)
     .filter(e => e.type === 'max_hp_mult')
     .reduce((a, e) => a * e.value, 1)

@@ -85,6 +85,8 @@ async function ShipHeroSection() {
       doubloons={profile?.doubloons ?? 0}
       shipClasses={(profile?.ship_classes as Record<string, string> | null) ?? {}}
       gauntletUpgrades={(profile?.gauntlet_upgrades as string[] | null) ?? []}
+      gauntletFathoms={(profile?.gauntlet_fathoms as number | null) ?? 0}
+      forgeRecipesLearned={(profile?.forge_recipes_learned as string[] | null) ?? []}
       manowarAugment={(profile?.manowar_augment as string | null) ?? null}
       isAdmin={profile?.is_admin === true}
     />

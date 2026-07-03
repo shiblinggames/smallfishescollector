@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
-import { getForgeRecipe, dedupeRaidItemFamilies } from '@/lib/raidItems'
+import { getForgeRecipe, dedupeRaidItems } from '@/lib/raidItems'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getShipAugment, canChooseAugment, AUGMENT_COST } from '@/lib/shipAugments'
 import { hasForge } from '@/lib/gauntletUpgrades'
@@ -124,10 +124,10 @@ export async function saveEquippedRaidItems(itemIds: string[]): Promise<void> {
   const { data: profile } = await admin.from('profiles').select('raid_items, ship_tier').eq('id', user.id).single()
   const owned = (profile?.raid_items as string[] | null) ?? []
   const slots = raidItemSlotsForTier((profile?.ship_tier as number | null) ?? 0)
-  // Owned + one-per-tier-family (no double-equipping both grades of a drop) +
-  // capped to the hull's slots. dedupe runs before the slice so a conflicting
-  // pair can't waste a slot apiece.
-  const valid = dedupeRaidItemFamilies(itemIds.filter(id => owned.includes(id))).slice(0, slots)
+  // Owned + can-coexist (one-per-tier-family, and no fusion beside its own forge
+  // ingredients) + capped to the hull's slots. dedupe runs before the slice so a
+  // conflicting pair can't waste a slot apiece.
+  const valid = dedupeRaidItems(itemIds.filter(id => owned.includes(id))).slice(0, slots)
   await admin.from('profiles').update({ equipped_raid_items: valid }).eq('id', user.id)
 }
 
@@ -145,13 +145,16 @@ export async function forgeRaidItem(resultId: string): Promise<{ ok: true; raidI
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('raid_items, equipped_raid_items, gauntlet_upgrades')
+    .select('raid_items, equipped_raid_items, gauntlet_upgrades, forge_recipes_learned')
     .eq('id', user.id)
     .single()
   // The Forge is a major Gauntlet (Fathom) unlock — server-enforce it.
   if (!hasForge((profile?.gauntlet_upgrades as string[] | null) ?? [])) {
     return { error: 'The Forge is locked. Unlock it in the Davy Jones Gauntlet.' }
   }
+  // Recipe must be learned first (learnForgeRecipe spends the Fathoms).
+  const learned = (profile?.forge_recipes_learned as string[] | null) ?? []
+  if (!learned.includes(recipe.result)) return { error: 'You haven\'t learned this recipe yet.' }
   const owned = (profile?.raid_items as string[] | null) ?? []
   if (owned.includes(recipe.result)) return { error: 'Already forged.' }
   if (!recipe.components.every(id => owned.includes(id))) return { error: 'You don\'t own every component yet.' }
@@ -162,6 +165,36 @@ export async function forgeRaidItem(resultId: string): Promise<{ ok: true; raidI
   const equipped = ((profile?.equipped_raid_items as string[] | null) ?? []).filter(id => !recipe.components.includes(id))
   await admin.from('profiles').update({ raid_items: newOwned, equipped_raid_items: equipped }).eq('id', user.id)
   return { ok: true, raidItems: newOwned }
+}
+
+/** Learn a forge recipe by paying its Fathom cost (the repeatable meta sink).
+ *  Permanent once learned; forging then only needs the components. Gated on the
+ *  Forge being unlocked; server-validated so a tampered client can't learn free. */
+export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fathoms: number; learned: string[] } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const recipe = getForgeRecipe(resultId)
+  if (!recipe) return { error: 'Unknown recipe' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_upgrades, gauntlet_fathoms, forge_recipes_learned')
+    .eq('id', user.id)
+    .single()
+  if (!hasForge((profile?.gauntlet_upgrades as string[] | null) ?? [])) {
+    return { error: 'The Forge is locked. Unlock it in the Davy Jones Gauntlet.' }
+  }
+  const learned = (profile?.forge_recipes_learned as string[] | null) ?? []
+  if (learned.includes(resultId)) return { error: 'Already learned.' }
+  const fathoms = (profile?.gauntlet_fathoms as number | null) ?? 0
+  if (fathoms < recipe.fathomCost) return { error: `Not enough Fathoms — this recipe needs ${recipe.fathomCost}.` }
+
+  const newFathoms = fathoms - recipe.fathomCost
+  const newLearned = [...learned, resultId]
+  await admin.from('profiles').update({ gauntlet_fathoms: newFathoms, forge_recipes_learned: newLearned }).eq('id', user.id)
+  return { ok: true, fathoms: newFathoms, learned: newLearned }
 }
 
 export async function equipShipSkin(skinId: string | null): Promise<void> {
