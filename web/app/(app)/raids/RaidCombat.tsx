@@ -1442,10 +1442,10 @@ export default function RaidCombat({
   // Heavier clustering from tier 2 up; fuses tighten as the tier climbs.
   const flareClusterChance = flareTier >= 2 ? 0.42 : 0.24
   const flareFuseScale     = flareTier >= 3 ? 0.82 : flareTier === 2 ? 0.95 : 1.15
-  const flarePerMiss = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.045))
+  const flarePerMiss = Math.max(Math.round(enemy.minDmg * 0.7), Math.round(playerHpMax * 0.032))
   // Tapping a live-shell feint hurts MORE than letting a flare through — the
   // whole point of the "don't tap the red" test is that grabbing one bites.
-  const flarePerFeint = Math.round(flarePerMiss * 1.5)
+  const flarePerFeint = Math.round(flarePerMiss * 1.4)
   // Apply the barrage outcome, then hand control to the player's turn. A bad
   // enough wave (flares let through + live shells tapped) CAN now sink you.
   // Feint-taps and misses are called out apart so the mistake is legible.
