@@ -14,6 +14,8 @@ export type RaidEffectType =
   | 'nonboss_damage_mult'   // value = damage multiplier vs NON-boss enemies (mobs / elites). Mirror of boss_damage_mult.
   | 'ramp_damage_per_turn'  // value = extra damage fraction PER TURN elapsed this fight (resets each enemy). turn 1 = +0, turn 2 = +value, …
   | 'dodge_pierce_chance'   // value = 0-1 chance, when the ENEMY would dodge your shot, to land it anyway ("see through the feint"). Only fires vs a would-be dodge, so naturally infrequent.
+  | 'crit_zone_mult'        // value = multiplier on the aim-bar CRIT zone width (1.35 = +35% wider gold band, so crits are easier to land). Stacks on the Sharpshot crew widen.
+  | 'reload_charge_chance'  // value = 0-1 chance, on each RELOAD, to load a SECOND cannonball (catch the wind). Folds on top of any tide reload proc.
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -475,6 +477,29 @@ export const RAID_ITEMS: RaidItemDef[] = [
     activated: { kind: 'refresh_ability', chance: 1.00 },
     source: "The Quartermaster's Cache",
     family: 'war_drum',
+  },
+  // ── Chapter III, the last Cache — masts vs sails (choose ONE) ───────────────
+  // A rig upgrade split down "aim harder vs shoot more." Both from the final
+  // Quartermaster's Cache choice node (before the betrayal).
+  {
+    id: 'crows_nest_rigging',
+    name: "Crow's-Nest Rigging",
+    description: "A lookout high in the masts calls the range — widens your crit window by 35%, so the gold band is easier to catch.",
+    image: null,
+    emoji: '🗼',
+    rarity: 'epic',
+    effects: [{ type: 'crit_zone_mult', value: 1.35 }],
+    source: "The Quartermaster's Cache",
+  },
+  {
+    id: 'trade_wind_sails',
+    name: 'Trade-Wind Sails',
+    description: 'Canvas that grabs every gust. Each reload has a 30% chance to load a second cannonball.',
+    image: null,
+    emoji: '⛵',
+    rarity: 'epic',
+    effects: [{ type: 'reload_charge_chance', value: 0.30 }],
+    source: "The Quartermaster's Cache",
   },
 ]
 

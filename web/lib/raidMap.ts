@@ -1336,6 +1336,25 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // The LAST Quartermaster's Cache — a rig choice (masts vs sails) right before
+    // the fleet fight, and the final "friendly" stop before the betrayal at
+    // quartermaster_turn. The keeper's a touch too glad to see you, seeding it.
+    // Reuses the generic `choice` node + claimQuartermasterChoice action.
+    id: 'coffers_cache',
+    type: 'shop',
+    label: 'The Last Cache',
+    flavor: "The Quartermaster's Cache keeps a stall even here, deep in the Coffers. The keeper waves you over, all smiles, and lays out two cuts of rigging. Take one.",
+    bridge: "New rig lashed on, and the market's war-fleet dead ahead. Whatever the keeper's grinning about, it'll keep till the guns are quiet.",
+    requiresNode: 'coffers_lens',
+    adminOnly: true,
+    choice: { items: ['crows_nest_rigging', 'trade_wind_sails'] },
+    detail: {
+      description:
+        "Even here, in the drowned heart of the market, the Quartermaster's Cache keeps a stall — the same shady supplier that's kitted you out since the coast. The keeper's all smiles today, a shade too glad to see you. He lays two cuts of ship's rigging on the counter: a crow's-nest set that sharpens your eye, or trade-wind canvas that keeps your guns fed. Pick one. The other rolls back under the counter.\n\nWhatever you take is yours to keep, ready to equip in your raid loadout.",
+      dropsNote: 'Pick one rig. Permanent, equippable, and you can\'t come back for the other.',
+    },
+  },
+  {
     // Raid 5. The escort-fleet admiral guarding the Coffers — the player's first
     // capital-ship fight (Galleon-tier). Signature: Decoys (false crit bands) +
     // the admiral's phase 2 + tier-2 tides. LIVE config (THE_COFFERS_FLEET), but
@@ -1344,8 +1363,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'coffers_fleet',    type: 'raid',
     label: 'The Harbor Fleet',
     flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
-    bridge: "The admiral's fleet is wreckage on the harbor floor, and the way to the market's heart is open. Time to re-arm at the Cache before the last push.",
-    requiresNode: 'coffers_lens',
+    bridge: "The admiral's fleet is wreckage on the harbor floor, and the way to the market's heart is open. The last push is on the keeper himself now.",
+    requiresNode: 'coffers_cache',
     requiresNavLevel: 40,
     adminOnly: true,
     route: '/raids/coffers-fleet',

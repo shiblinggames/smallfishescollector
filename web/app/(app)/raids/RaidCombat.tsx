@@ -619,7 +619,14 @@ export default function RaidCombat({
   // the tick colored against base CRIT_W while lockShot judged the widened
   // band, so the needle could glow green at the lock moment yet resolve
   // critical. Ref mirror lets the RAF read it without restarting the tick.
-  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1)
+  // Crow's-Nest Rigging (crit_zone_mult items) widens the gold band too — one
+  // more multiplier on the single source of truth, so the tick, judgment and
+  // drawn band all agree.
+  const critZoneItemMult = useMemo(
+    () => getActiveEffects(equippedRaidItems).filter(e => e.type === 'crit_zone_mult').reduce((a, e) => a * e.value, 1),
+    [equippedRaidItems],
+  )
+  const liveCritW = CRIT_W * tide.critZoneMult * critZoneItemMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1)
   const liveCritWRef = useRef(liveCritW)
   useEffect(() => { liveCritWRef.current = liveCritW }, [liveCritW])
   // Width the shot was JUDGED at, captured in lockShot. The drawn band uses
@@ -2159,11 +2166,17 @@ export default function RaidCombat({
           // dedicated log line on success so the player sees the
           // tide doing work, not just a bigger number.
           const baseGain = 1
-          const procGain = tide.reloadProc.chance > 0 && Math.random() < tide.reloadProc.chance
+          const tideProc = tide.reloadProc.chance > 0 && Math.random() < tide.reloadProc.chance
             ? tide.reloadProc.bonus : 0
+          // Trade-Wind Sails (reload_charge_chance item): a chance to catch the
+          // wind and load a SECOND ball, stacked on top of any tide proc.
+          const sailChance = getActiveEffects(equippedRaidItems).filter(e => e.type === 'reload_charge_chance').reduce((a, e) => Math.max(a, e.value), 0)
+          const sailProc = sailChance > 0 && Math.random() < sailChance ? 1 : 0
+          const procGain = tideProc + sailProc
           pCharges = Math.min(playerMaxCharges, pCharges + baseGain + procGain)
           if (procGain > 0) {
-            stepLines.push(`Powder Keg proc! +${procGain} extra cannonball${procGain === 1 ? '' : 's'}. (${pCharges}/${playerMaxCharges})`)
+            const label = tideProc > 0 ? 'Powder Keg proc' : 'The trade wind fills your sails'
+            stepLines.push(`${label}! +${procGain} extra cannonball${procGain === 1 ? '' : 's'}. (${pCharges}/${playerMaxCharges})`)
           } else {
             stepLines.push(`You load a cannonball. (${pCharges}/${playerMaxCharges})`)
           }
