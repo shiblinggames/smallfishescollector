@@ -121,6 +121,11 @@ export interface BroadsideEnemy {
    *  enemy means zero rendering cost. */
   aimFogDensity?: number
   aimFogName?: string
+  /** Per-enemy aim-needle speed multiplier (1 = normal). Above 1 makes the
+   *  indicator sweep faster, so lining up a clean Critical is much harder —
+   *  used on darting, evasive enemies (The Leech) where a steady bead is the
+   *  whole difficulty. Folds on top of any tide aimSpeedMult. Undefined = 1. */
+  aimSpeedMult?: number
   /** The Cartographer's raid — "Riposte." When this enemy executes a
    *  `dodge` action and the player's same-turn action was offensive
    *  (`fire` or `volley`), `parryChance` (0-1) rolls. On success, the
@@ -956,6 +961,9 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 10, actionMs: 3000,
       pattern: ['fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.20,
+      // A darting lamprey — the needle races, so landing a clean Critical on it
+      // is genuinely hard (you have to catch a fast, narrow window).
+      aimSpeedMult: 2.0,
       image: '/raid6_theleech.png',
       portrait: '/raid6_theleech.png',
     },
