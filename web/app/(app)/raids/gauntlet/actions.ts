@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, type GauntletRunSnapshot } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -206,15 +206,15 @@ export async function getGauntletLeaderboard(): Promise<{
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
-export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null }> {
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, resumeState: null }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, is_admin')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used')
     .eq('id', user.id)
     .single()
 
@@ -224,13 +224,60 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
   const nextMs = lastRunAt + GAUNTLET_COOLDOWN_MS
   const available = isAdmin || Date.now() >= nextMs
 
+  // A run left open with a saved checkpoint and a resume still in the bank (one
+  // per run) can be picked back up — the crash safety net. The counter is
+  // server-owned; getResumeState only PREVIEWS it, resumeGauntletRun spends it.
+  const runState = (profile?.gauntlet_run_state as GauntletRunState | null) ?? null
+  const resumesUsed = (profile?.gauntlet_resumes_used as number | null) ?? 0
+  const resumeState = profile?.gauntlet_run_open === true && runState && resumesUsed < 1 ? runState : null
+
   return {
     available,
     deepest: (profile?.gauntlet_deepest as number | null) ?? 0,
     fathoms: (profile?.gauntlet_fathoms as number | null) ?? 0,
     nextAt: available ? null : new Date(nextMs).toISOString(),
     deepestRun: (profile?.gauntlet_deepest_run as GauntletRunSnapshot | null) ?? null,
+    resumeState,
   }
+}
+
+/** Checkpoint an in-progress run's resumable state between fights. Fire-and-
+ *  forget from the client at each breather; only writes while a run is open. */
+export async function checkpointGauntletRun(state: GauntletRunState): Promise<{ ok: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles').select('gauntlet_run_open').eq('id', user.id).single()
+  if (profile?.gauntlet_run_open !== true) return { ok: false }
+
+  await admin.from('profiles').update({ gauntlet_run_state: state }).eq('id', user.id)
+  return { ok: true }
+}
+
+/** Spend the run's single resume: hand back the checkpointed state and bump the
+ *  server-owned counter so it can't be used twice. Refuses if there's no open
+ *  run, no checkpoint, or the resume is already spent. */
+export async function resumeGauntletRun(): Promise<{ ok: false } | { ok: true; state: GauntletRunState }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used')
+    .eq('id', user.id).single()
+
+  const state = (profile?.gauntlet_run_state as GauntletRunState | null) ?? null
+  const used = (profile?.gauntlet_resumes_used as number | null) ?? 0
+  if (profile?.gauntlet_run_open !== true || !state || used >= 1) return { ok: false }
+
+  // Server owns the counter — increment regardless of any client-reported value.
+  await admin.from('profiles').update({ gauntlet_resumes_used: used + 1 }).eq('id', user.id)
+  return { ok: true, state }
 }
 
 /** Consume the run attempt (start the cooldown) and open a run. Starting (not
@@ -258,7 +305,7 @@ export async function startGauntletRun(): Promise<{ started: boolean; reason?: '
 
   await admin
     .from('profiles')
-    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true })
+    .update({ gauntlet_last_run_at: new Date().toISOString(), gauntlet_run_open: true, gauntlet_run_state: null, gauntlet_resumes_used: 0 })
     .eq('id', user.id)
 
   return { started: true, deepest }
@@ -387,6 +434,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gems: newGems,
       expedition_xp: newExpeditionXP,
       gauntlet_run_open: false,
+      gauntlet_run_state: null,
+      gauntlet_resumes_used: 0,
       gauntlet_deepest: deepest,
       gauntlet_fathoms: newFathoms,
       raid_items: newRaidItems,
@@ -462,7 +511,7 @@ export async function resolveGauntletDeath(rewardDepth: number, _combatDepth: nu
   // untouched — they belong to cash-outs.
   await admin
     .from('profiles')
-    .update({ gauntlet_run_open: false, gauntlet_fathoms: newFathoms })
+    .update({ gauntlet_run_open: false, gauntlet_fathoms: newFathoms, gauntlet_run_state: null, gauntlet_resumes_used: 0 })
     .eq('id', user.id)
 
   return { ok: true, deepest: prevDeepest, earnedFathoms, newFathoms }

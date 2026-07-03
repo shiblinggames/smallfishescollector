@@ -27,9 +27,9 @@ import {
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS,
   CHEST_TIERS, chestCannonDropChance,
-  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot,
+  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState,
 } from '@/lib/gauntlet'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun } from './actions'
 import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -39,7 +39,7 @@ import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 
-type Phase = 'intro' | 'usedup' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'resume' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -105,6 +105,9 @@ export interface GauntletGameProps {
   hasSeenIntro: boolean
   /** #1 deepest cashed-out descender across all captains, or null if none yet. */
   topDescender: { name: string; depth: number } | null
+  /** A crashed run's saved checkpoint, if one can still be resumed (one resume
+   *  per run). Present → the run offers a Resume beat before a fresh descent. */
+  resumeState: GauntletRunState | null
 }
 
 // ── The Drowned Shrine (wager node) ──────────────────────────────────────────
@@ -148,7 +151,9 @@ export default function GauntletGame(props: GauntletGameProps) {
     damagePct: (props.raidMods.damagePct ?? 0) + gauntletDamageMod(upgrades),
   }
 
-  const [phase, setPhase] = useState<Phase>(props.available ? 'intro' : 'usedup')
+  // A resumable crashed run takes priority over the intro/cooldown screens — the
+  // player is offered their dive back before anything else.
+  const [phase, setPhase] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
   const [starting, setStarting] = useState(false)
   // When the next run unlocks (cooldown). Set from props, or refreshed if a
   // start attempt races the cooldown.
@@ -427,6 +432,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     const nf = generateFight(rollStateRef.current, skipOffset)
     peekFightRef.current = nf
     setPeekFight(nf)
+    // Crash safety net: checkpoint the settled run state at every breather so an
+    // interruption resumes here (worst case: redo the fight you were in).
+    void checkpointGauntletRun(buildCheckpoint()).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, skipOffset])
 
   // The descent beat: a short fall-into-the-dark interstitial before each fight
@@ -762,6 +771,74 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
   }
 
+  // ── Crash safety net ────────────────────────────────────────────────────────
+  // Snapshot the resumable run state (everything that affects rewards, difficulty
+  // or power). Called at each breather so a crash resumes at the last cleared
+  // depth. Transient UI (banners, pending drafts) is rebuilt fresh on resume.
+  function buildCheckpoint(): GauntletRunState {
+    return {
+      cleared: rollStateRef.current.cleared,
+      prevWasBoss: rollStateRef.current.prevWasBoss,
+      roundsSinceBoss: rollStateRef.current.roundsSinceBoss,
+      hp: playerHPRef.current,
+      pot: potRef.current,
+      bossesDefeated,
+      boonTiers,
+      curseTiers,
+      usedAbilityIds: Array.from(usedAbilityIds),
+      silencedCrewIds: silencedCrewIdsRef.current,
+      carriedCharges: carriedChargesRef.current,
+      anchorSavesLeft: anchorSavesLeftRef.current,
+      runMaxHit: runMaxHitRef.current,
+      nextShrine: nextShrineRef.current,
+      calmBeforeUsed: calmBeforeUsedRef.current,
+    }
+  }
+
+  // Rehydrate a resumed run and drop the player back at the breather. The
+  // between-phase effect re-rolls the next fight from the restored roll state.
+  function applyCheckpoint(s: GauntletRunState) {
+    rollStateRef.current = { cleared: s.cleared, prevWasBoss: s.prevWasBoss, roundsSinceBoss: s.roundsSinceBoss }
+    playerHPRef.current = s.hp; setPlayerHP(s.hp)
+    potRef.current = s.pot; setPot(s.pot)
+    setBossesDefeated(s.bossesDefeated)
+    setBoonTiers(s.boonTiers)
+    setCurseTiers(s.curseTiers); curseTiersRef.current = s.curseTiers
+    setUsedAbilityIds(new Set(s.usedAbilityIds))
+    silencedCrewIdsRef.current = s.silencedCrewIds
+    carriedChargesRef.current = s.carriedCharges
+    anchorSavesLeftRef.current = s.anchorSavesLeft
+    runMaxHitRef.current = s.runMaxHit
+    nextShrineRef.current = s.nextShrine
+    calmBeforeUsedRef.current = s.calmBeforeUsed
+    // Transient state rebuilt fresh at the breather.
+    peekFightRef.current = null; setPeekFight(null)
+    crewRefreshedRef.current = false; setFightOpensRefreshed(false)
+    setConfluenceUnlocked(null); setConfluenceBanner(null)
+    setPendingBoons(null); setPendingCurse(null); setPendingReprieve(null)
+    setPhase('between')
+  }
+
+  const [resuming, setResuming] = useState(false)
+  // Take the crashed run back (spends the run's single resume, server-owned).
+  function doResume() {
+    if (resuming || !props.resumeState) return
+    setResuming(true)
+    resumeGauntletRun().then(res => {
+      if (res.ok) applyCheckpoint(res.state)
+      else setPhase(props.available ? 'intro' : 'usedup') // already spent / raced
+    }).finally(() => setResuming(false))
+  }
+  // Let the crashed run go: close it out (banks Fathoms for the depth reached,
+  // clears the checkpoint) and return to the normal intro.
+  function abandonResume() {
+    if (resuming || !props.resumeState) return
+    setResuming(true)
+    const cleared = props.resumeState.cleared
+    resolveGauntletDeath(cleared, cleared > 0 ? cleared + skipOffset : 0)
+      .finally(() => router.refresh())
+  }
+
   function handlePlayerDefeated() {
     if (resolving) return
     setResolving(true)
@@ -880,6 +957,59 @@ export default function GauntletGame(props: GauntletGameProps) {
   )
 
   // ── Intro ──────────────────────────────────────────────────────────────
+  // A crashed run offered back to the player — the crash safety net. Resume
+  // (spends the run's one resume) or let it go (banks Fathoms + ends the run).
+  if (phase === 'resume' && props.resumeState) {
+    const rs = props.resumeState
+    const depth = rs.cleared + skipOffset
+    const boonCount = Object.keys(rs.boonTiers).length
+    const curseCount = Object.keys(rs.curseTiers).length
+    const pill = (label: string, value: string, color: string) => (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0.5rem 0.9rem', borderRadius: 12, background: 'rgba(240,192,64,0.06)', border: `1px solid ${GOLD}2a` }}>
+        <span className="font-cinzel font-800" style={{ fontSize: '1.05rem', color, lineHeight: 1 }}>{value}</span>
+        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.16em', color: '#9a948a' }}>{label}</span>
+      </div>
+    )
+    return (
+      <>
+        <AbyssBackdrop />
+        <div style={{
+          position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
+          padding: '6px 0.85rem', textAlign: 'center',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
+        }}>
+          <h1 className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 26, textShadow: '0 0 26px rgba(240,192,64,0.32)' }}>
+            The Deep Still Has You
+          </h1>
+          <p className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 340, marginInline: 'auto' }}>
+            Your last dive was cut short before it ended. The current holds you at your breather — take the line back up and press on.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 20 }}>
+            {pill('Depth', `${depth}`, GOLD)}
+            {pill(boonCount === 1 ? 'Boon' : 'Boons', `${boonCount}`, TEAL)}
+            {pill(curseCount === 1 ? 'Curse' : 'Curses', `${curseCount}`, '#e08a6a')}
+          </div>
+          <button onClick={doResume} disabled={resuming} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+            style={{
+              marginTop: 26, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem',
+              color: GOLD, background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}10)`,
+              border: `1px solid ${GOLD}70`, cursor: resuming ? 'wait' : 'pointer',
+              boxShadow: `0 0 22px ${GOLD}22`, animation: resuming ? 'none' : 'gauntCta 2.6s ease-in-out infinite',
+            }}>
+            {resuming ? 'Descending…' : 'Resume the Dive'}
+          </button>
+          <button onClick={abandonResume} disabled={resuming} className="font-karla font-700 tap"
+            style={{ marginTop: 12, width: '100%', padding: '0.7rem', borderRadius: 12, fontSize: '0.78rem', color: '#9a948a', background: 'transparent', border: '1px solid rgba(154,148,138,0.28)', cursor: resuming ? 'wait' : 'pointer' }}>
+            Let it go
+          </button>
+          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7d776e', lineHeight: 1.5, marginTop: 12 }}>
+            A crashed run can be resumed once. Letting it go banks the Fathoms you earned and ends the run.
+          </p>
+        </div>
+      </>
+    )
+  }
+
   if (phase === 'intro') {
     return (
       <>

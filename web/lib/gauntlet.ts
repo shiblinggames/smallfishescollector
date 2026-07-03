@@ -265,6 +265,38 @@ export interface GauntletRunSnapshot {
   at?: string
 }
 
+/** The resumable state of an in-progress run, checkpointed to
+ *  profiles.gauntlet_run_state between fights so a mid-run crash can resume at
+ *  the last cleared breather (worst case: redo the fight you were in). Only the
+ *  state that affects rewards, difficulty, or player power — transient UI
+ *  (banners, pending drafts) is rebuilt on resume. See [[gauntlet-crash-recovery-gap]]. */
+export interface GauntletRunState {
+  cleared: number
+  prevWasBoss: boolean
+  roundsSinceBoss: number
+  hp: number
+  pot: number
+  bossesDefeated: number
+  /** boon family id -> tier */
+  boonTiers: Record<string, number>
+  /** curse id -> tier */
+  curseTiers: Record<string, number>
+  /** crew ids whose ability is spent (Set serialised to array) */
+  usedAbilityIds: number[]
+  /** crew ids silenced by Dead Hands */
+  silencedCrewIds: number[]
+  /** Powder Hoard cannonballs carried into the next fight */
+  carriedCharges: number
+  /** lethal-save charges left (Quartermaster's Anchor) */
+  anchorSavesLeft: number
+  /** biggest single blow landed this run (Biggest Hit board) */
+  runMaxHit: number
+  /** next combat depth a Drowned Shrine is due */
+  nextShrine: number
+  /** Calm Before already waved off the first curse milestone */
+  calmBeforeUsed: boolean
+}
+
 export interface GauntletFight {
   enemy: BroadsideEnemy
   isBoss: boolean

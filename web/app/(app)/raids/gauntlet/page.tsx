@@ -61,6 +61,7 @@ export default async function GauntletPage() {
           fathoms={daily.fathoms}
           available={daily.available}
           nextAt={daily.nextAt}
+          resumeState={daily.resumeState}
           hasSeenIntro={profile?.has_seen_gauntlet_intro === true}
           topDescender={leaderboard.top}
         />

@@ -91,7 +91,11 @@
       "PowerShell(npx next lint --dir app/`\\(app`\\)/tavern/trivia 2>$null)",
       "PowerShell(npx next lint --dir \"app/\\(app\\)/tavern/trivia\")",
       "PowerShell(npx eslint \"app/\\(app\\)/tavern/trivia\" \"app/api/cron/midnight\")",
-      "PowerShell(git add \"web/app/\\(app\\)/tavern/trivia\" \"web/app/api/cron/midnight/route.ts\" \"web/supabase/migrate_trivia_board.sql\")"
+      "PowerShell(git add \"web/app/\\(app\\)/tavern/trivia\" \"web/app/api/cron/midnight/route.ts\" \"web/supabase/migrate_trivia_board.sql\")",
+      "PowerShell(Set-Location web; npx tsc --noEmit; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit; \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(git -C \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\" add -A)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Kong\\\\Projects\\\\shiblinggames\\\\smallfishes\" status --short)"
     ]
   }
 }
