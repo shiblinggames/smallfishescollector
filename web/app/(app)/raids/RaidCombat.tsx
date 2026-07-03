@@ -1443,25 +1443,44 @@ export default function RaidCombat({
   const flareClusterChance = flareTier >= 2 ? 0.42 : 0.24
   const flareFuseScale     = flareTier >= 3 ? 0.82 : flareTier === 2 ? 0.95 : 1.15
   const flarePerMiss = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.045))
-  // Apply the barrage outcome, then hand control to the player's turn. Misses
-  // chip but never kill outright (floored at 1) — they set up the admiral's
-  // follow-up rather than landing the killing blow themselves.
-  function onFlareBarrageDone(missed: number) {
-    if (missed > 0) {
-      const dmg = missed * flarePerMiss
-      setPlayerHp(hp => {
-        const n = Math.max(1, hp - dmg)
-        return n
-      })
-      setPlayerShakeKey(k => k + 1)
-      setPlayerImpact({ key: Date.now(), kind: 'volley' })
-      setTimeout(() => setPlayerImpact(null), 700)
-      vibrate([0, 40, 30, 60])
-      setResolveLog(prev => [...prev, `${missed} flare${missed > 1 ? 's' : ''} caught you out — the screen rakes you for ${dmg}.`])
-    } else {
+  // Tapping a live-shell feint hurts MORE than letting a flare through — the
+  // whole point of the "don't tap the red" test is that grabbing one bites.
+  const flarePerFeint = Math.round(flarePerMiss * 1.5)
+  // Apply the barrage outcome, then hand control to the player's turn. A bad
+  // enough wave (flares let through + live shells tapped) CAN now sink you.
+  // Feint-taps and misses are called out apart so the mistake is legible.
+  function onFlareBarrageDone(missed: number, feintsTapped: number) {
+    const dmg = missed * flarePerMiss + feintsTapped * flarePerFeint
+    if (dmg <= 0) {
       setResolveLog(prev => [...prev, `Screen read clean — every flare called right.`])
+      setSubPhase('await_input')
+      return
     }
-    setSubPhase('await_input')
+    setPlayerShakeKey(k => k + 1)
+    setPlayerImpact({ key: Date.now(), kind: 'volley' })
+    setTimeout(() => setPlayerImpact(null), 700)
+    vibrate([0, 40, 30, 60])
+    // Build the "what went wrong" clause from the two failure types.
+    const parts: string[] = []
+    if (feintsTapped > 0) parts.push(`tapped ${feintsTapped} live shell${feintsTapped > 1 ? 's' : ''}`)
+    if (missed > 0)       parts.push(`let ${missed} flare${missed > 1 ? 's' : ''} through`)
+    const what = parts.join(' and ')
+    const newHp = playerHpRef.current - dmg
+    if (newHp > 0) {
+      playerHpRef.current = newHp; setPlayerHp(newHp)
+      setResolveLog(prev => [...prev, `You ${what} — the barrage rakes you for ${dmg}.`])
+      setSubPhase('await_input')
+    } else if (anchorSaveAvailable && !anchorUsedRef.current) {
+      anchorUsedRef.current = true; onAnchorSave?.()
+      playerHpRef.current = 1; setPlayerHp(1)
+      setAnchorSaveFx(k => k + 1)
+      setResolveLog(prev => [...prev, `You ${what} — it should have sunk you, but the anchor holds at 1 HP.`])
+      setSubPhase('await_input')
+    } else {
+      playerHpRef.current = 0; setPlayerHp(0)
+      setResolveLog(prev => [...prev, `You ${what} — the barrage rakes you for ${dmg} and your hull gives way.`])
+      setSubPhase('done'); onPlayerDefeated()
+    }
   }
 
   // ─── Player action handlers ────────────────────────────────────────────────
@@ -5359,38 +5378,43 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
   feintChance?: number
   clusterChance?: number
   fuseScale?: number
-  onComplete: (penalties: number) => void
+  onComplete: (missed: number, feintsTapped: number) => void
 }) {
   type Flare = { id: number; x: number; y: number; fuse: number; feint: boolean }
   const [flares, setFlares] = useState<Flare[]>([])
   const [pops, setPops] = useState<{ id: number; x: number; y: number; bad: boolean }[]>([])
   const [resolved, setResolved] = useState(0)
   const resolvedIds = useRef<Set<number>>(new Set())
-  const penaltyRef = useRef(0)
+  const missRef = useRef(0)       // real flares LET THROUGH (not tapped)
+  const feintTapRef = useRef(0)   // live-shell feints TAPPED (the boss-tier mistake)
   const doneRef = useRef(false)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const rootRef = useRef<HTMLDivElement>(null)
 
   // A penalty is a real flare LET THROUGH (not tapped) or a feint TAPPED — the
-  // rule flips on feints, which is the boss-tier discrimination test.
+  // rule flips on feints, which is the boss-tier discrimination test. The two
+  // are tracked apart so the outcome can call out a live-shell tap for what it
+  // is (and buzz a distinct "you blew it" haptic the instant it happens).
   function resolveFlare(f: { id: number; x: number; y: number; feint: boolean }, tapped: boolean) {
     if (resolvedIds.current.has(f.id)) return
     resolvedIds.current.add(f.id)
     const penalty = f.feint ? tapped : !tapped
-    if (penalty) penaltyRef.current++
-    else if (tapped) vibrate(13)   // clean swat
+    if (penalty) {
+      if (f.feint) { feintTapRef.current++; vibrate([0, 55, 35, 75]) }  // tapped a live shell
+      else           missRef.current++                                  // let a real flare through
+    } else if (tapped) vibrate(13)   // clean swat
     setResolved(r => r + 1)
     setFlares(prev => prev.filter(p => p.id !== f.id))
     setPops(pp => [...pp, { id: f.id, x: f.x, y: f.y, bad: penalty }])
     timersRef.current.push(setTimeout(() => setPops(pp => pp.filter(p => p.id !== f.id)), 600))
     if (resolvedIds.current.size >= count && !doneRef.current) {
       doneRef.current = true
-      timersRef.current.push(setTimeout(() => onComplete(penaltyRef.current), 340))
+      timersRef.current.push(setTimeout(() => onComplete(missRef.current, feintTapRef.current), 340))
     }
   }
 
   useEffect(() => {
-    if (count <= 0) { onComplete(0); return }
+    if (count <= 0) { onComplete(0, 0); return }
     // Spacing: keep a new flare's centre far enough from any flare still on
     // screen that its 66px tap target can't overlap a live one and steal its
     // tap. Convert the button size (+ buffer) to this stage's % per axis so it
@@ -5458,17 +5482,19 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
         @keyframes rc-flare-in   { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes rc-flare-fuse { 0% { transform: scale(2.6); opacity: 0.95; } 100% { transform: scale(1); opacity: 0.3; } }
         @keyframes rc-flare-pop  { 0% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(2.7); opacity: 0; } }
+        @keyframes rc-feint-warn { 0%,100% { transform: scale(1);    opacity: 0.9; } 50% { transform: scale(1.32); opacity: 0.25; } }
+        @keyframes rc-feint-throb{ 0%,100% { box-shadow: 0 0 16px ${FEINT_COLOR}, 0 0 4px #fff inset; } 50% { box-shadow: 0 0 30px ${FEINT_COLOR}, 0 0 8px #fff inset; } }
       `}</style>
       {/* Banner + remaining tally */}
       <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', textAlign: 'center' }}>
         <div className="font-cinzel font-700 uppercase" style={{ fontSize: '0.82rem', letterSpacing: '0.12em', color, textShadow: `0 0 16px ${color}aa`, whiteSpace: 'nowrap' }}>
           {label} — intercept!
         </div>
-        <div className="font-karla font-600 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: feintChance > 0 ? FEINT_COLOR : '#c4b690', marginTop: 2 }}>
-          {feintChance > 0 ? "don't tap the red" : `${Math.max(0, count - resolved)} left`}
+        <div className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: feintChance > 0 ? FEINT_COLOR : '#c4b690', marginTop: 2, whiteSpace: 'nowrap' }}>
+          {feintChance > 0 ? "swat amber · never tap the red ✕" : `${Math.max(0, count - resolved)} left`}
         </div>
       </div>
-      {/* Active flares — amber = swat, red = feint (leave it). */}
+      {/* Active flares — amber = swat, red ✕ = feint (a LIVE shell, leave it). */}
       {flares.map(f => {
         const c = f.feint ? FEINT_COLOR : color
         return (
@@ -5481,23 +5507,33 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
               pointerEvents: 'auto', touchAction: 'manipulation',
               animation: 'rc-flare-in 0.13s ease-out',
             }}>
+            {/* Feints get a constant pulsing HAZARD halo so a live shell is
+                unmistakable from an amber swat-target under pressure. */}
+            {f.feint && (
+              <div aria-hidden style={{
+                position: 'absolute', inset: -2, borderRadius: '50%',
+                border: `2px dashed ${FEINT_COLOR}`,
+                animation: 'rc-feint-warn 0.7s ease-in-out infinite',
+              }} />
+            )}
             {/* Closing fuse ring — shrinks onto the orb over the fuse window. */}
             <div aria-hidden style={{
               position: 'absolute', inset: 5, borderRadius: '50%',
               border: `3px solid ${c}`, boxShadow: `0 0 14px ${c}`,
               animation: `rc-flare-fuse ${f.fuse}ms linear forwards`,
             }} />
-            {/* Core orb — feints are darker/menacing with a cross-bar so they
-                read as "don't touch" under pressure. */}
+            {/* Core orb — feints are a dark, throbbing red with a big ✕ so they
+                read as "do NOT touch" at a glance; amber reads as "swat me". */}
             <div aria-hidden style={{
-              position: 'absolute', inset: 21, borderRadius: '50%',
+              position: 'absolute', inset: f.feint ? 18 : 21, borderRadius: '50%',
               background: f.feint
-                ? `radial-gradient(circle at 35% 30%, ${FEINT_COLOR} 0%, #7f1d1d 70%, #450a0a 100%)`
+                ? `radial-gradient(circle at 35% 30%, #ff6b6b 0%, #b91c1c 55%, #450a0a 100%)`
                 : `radial-gradient(circle at 35% 30%, #ffffff 0%, ${color} 55%, ${color}aa 100%)`,
               boxShadow: `0 0 18px ${c}`,
+              animation: f.feint ? 'rc-feint-throb 0.7s ease-in-out infinite' : undefined,
             }}>
               {f.feint && (
-                <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 16, lineHeight: 1 }}>✕</div>
+                <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 26, lineHeight: 1, textShadow: '0 0 6px #450a0a' }}>✕</div>
               )}
             </div>
           </button>
