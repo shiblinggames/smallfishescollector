@@ -2793,7 +2793,26 @@ export default function RaidCombat({
               setSubPhase('done'); onPlayerDefeated(); return
             }
           }
-          if (eHp <= 0) {
+          if (eHp <= 0 && enemyPhaseRef.current <= phaseList.length) {
+            // Multi-phase SAFETY NET: a non-attack killing blow (a burn tick, a
+            // reflected hit, etc.) that reaches here with phases remaining revives
+            // the boss instead of ending it. The fire/volley/mega + ability paths
+            // pre-revive, so they never arrive here with eHp<=0. Falls through to
+            // the normal turn continuation below (no return).
+            const nextCfg = phaseList[enemyPhaseRef.current - 1]
+            enemyPhaseRef.current += 1
+            enemyPatternIdxRef.current = 0
+            enemyFeintStreakRef.current = 0
+            const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
+            eHp = revivedHp; enemyHpRef.current = revivedHp; setEnemyHp(revivedHp)
+            const n = enemyPhaseRef.current
+            setEnemyPhase(n)
+            setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
+            setPhaseFlash(true); setTimeout(() => setPhaseFlash(false), 1100)
+            setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name}: "${nextCfg.dialogueLine}"`]), 300)
+            armMechanicCheck(nextCfg.check)
+            vibrate([0, 50, 40, 80])
+          } else if (eHp <= 0) {
             // Pokemon-style victory beat: stream the kill into the log,
             // then hand control back to the parent. The parent uses this
             // delay to either advance to the next enemy in-place or roll
