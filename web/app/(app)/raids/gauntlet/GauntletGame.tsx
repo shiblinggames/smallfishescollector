@@ -178,6 +178,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [peekFight, setPeekFight] = useState<GauntletFight | null>(null)
   const peekFightRef = useRef<GauntletFight | null>(null)
   const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
+  // Per-RUN activatable-item use (War Drum / Thunder Drum). One use for the whole
+  // gauntlet run — persists across fights + boss refreshes, resets only on a new
+  // run (or restore from a saved run).
+  const [usedRaidItemIds, setUsedRaidItemIds] = useState<Set<string>>(new Set())
   // Dead Hands curse — crew ids the deep has silenced. They stay in the used set
   // through every refresh, so their ability never comes back. Reconciled to the
   // active curse count whenever a curse is imposed or cleansed.
@@ -393,6 +397,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       setPot(0)
       setBossesDefeated(0)
       setUsedAbilityIds(new Set())
+      setUsedRaidItemIds(new Set())
       setCurseTiers({}); curseTiersRef.current = {}
       // Dead Hands: clear the silenced-crew set too, or a new run keeps locking
       // last run's silenced crew (fight-open re-silences straight from this ref,
@@ -786,6 +791,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       boonTiers,
       curseTiers,
       usedAbilityIds: Array.from(usedAbilityIds),
+      usedRaidItemIds: Array.from(usedRaidItemIds),
       silencedCrewIds: silencedCrewIdsRef.current,
       carriedCharges: carriedChargesRef.current,
       anchorSavesLeft: anchorSavesLeftRef.current,
@@ -805,6 +811,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setBoonTiers(s.boonTiers)
     setCurseTiers(s.curseTiers); curseTiersRef.current = s.curseTiers
     setUsedAbilityIds(new Set(s.usedAbilityIds))
+    setUsedRaidItemIds(new Set(s.usedRaidItemIds ?? []))
     silencedCrewIdsRef.current = s.silencedCrewIds
     carriedChargesRef.current = s.carriedCharges
     anchorSavesLeftRef.current = s.anchorSavesLeft
@@ -2173,6 +2180,15 @@ export default function GauntletGame(props: GauntletGameProps) {
             onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
               if (prev.has(crewId)) return prev
               const next = new Set(prev); next.add(crewId); return next
+            })}
+            usedRaidItemIds={usedRaidItemIds}
+            onRaidItemUsed={(itemId) => setUsedRaidItemIds(prev => {
+              if (prev.has(itemId)) return prev
+              const next = new Set(prev); next.add(itemId); return next
+            })}
+            onRefreshAbility={(crewId) => setUsedAbilityIds(prev => {
+              if (!prev.has(crewId)) return prev
+              const next = new Set(prev); next.delete(crewId); return next
             })}
             usedAbilitySub="Used — back soon."
             openingNote={rollStateRef.current.prevWasBoss ? 'Your crew catch their breath. Abilities refreshed.' : undefined}

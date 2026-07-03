@@ -13,6 +13,7 @@ export type RaidEffectType =
   | 'start_charge_chance'   // value = 0-1 chance to open each raid fight with 1 cannonball already loaded (the player-side "First Cut")
   | 'nonboss_damage_mult'   // value = damage multiplier vs NON-boss enemies (mobs / elites). Mirror of boss_damage_mult.
   | 'ramp_damage_per_turn'  // value = extra damage fraction PER TURN elapsed this fight (resets each enemy). turn 1 = +0, turn 2 = +value, …
+  | 'dodge_pierce_chance'   // value = 0-1 chance, when the ENEMY would dodge your shot, to land it anyway ("see through the feint"). Only fires vs a would-be dodge, so naturally infrequent.
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -27,6 +28,15 @@ export interface RaidItemDef {
   emoji: string
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
   effects: RaidEffect[]
+  /** Activatable items — a NET-NEW mechanic vs the passive `effects` above.
+   *  Surfaced as a card in the Special ▸ action menu; usable ONCE per raid run
+   *  and does NOT cost a turn. `refresh_ability` restores a random SPENT crew
+   *  ability with the given `chance` (1 = guaranteed). An activatable item can
+   *  still carry passive `effects` too (here they carry none). */
+  activated?: {
+    kind: 'refresh_ability'
+    chance: number
+  }
   source: string
   /** Tier family. Items sharing a `family` are higher/lower grades of the same
    *  drop and DO NOT stack — the better one supersedes the other. Equip enforces
@@ -412,6 +422,60 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: "Forged from Mastercraft Astrolabe + Tollmaster's Primer",
   },
+  // ── Chapter III, Raid 5 — Admiral Ruse (the deception fleet) ────────────────
+  // Anti-evasion "see through the feint": a CHANCE, when the enemy would dodge
+  // your shot, to land it anyway. Only rolls on a would-be dodge (the fleet only
+  // dodges on its dodge turns), so it stays a modest edge, never oppressive.
+  {
+    id: 'tell_tale_glass',
+    name: 'Tell-Tale Glass',
+    description: "When an enemy would dodge your shot, 20% chance to read the feint and land it anyway.",
+    image: null,
+    emoji: '🔭',
+    rarity: 'epic',
+    effects: [{ type: 'dodge_pierce_chance', value: 0.20 }],
+    source: "Admiral Ruse's Coffers",
+    family: 'tell_tale',
+  },
+  {
+    id: 'admirals_eye',
+    name: "Admiral's Eye",
+    description: "When an enemy would dodge your shot, 35% chance to read the feint and land it anyway.",
+    image: null,
+    emoji: '👁️',
+    rarity: 'legendary',
+    effects: [{ type: 'dodge_pierce_chance', value: 0.35 }],
+    source: "Admiral Ruse's Coffers",
+    family: 'tell_tale',
+  },
+  // ── Chapter III, Raid 6 — The Quartermaster (finale) ───────────────────────
+  // ACTIVATABLE (the first of its kind): beat the drum to rally a spent crew
+  // back to their station — restores a random USED crew ability. Once per raid,
+  // free action, from the Special ▸ menu. Epic gambles on it; legendary is sure.
+  {
+    id: 'war_drum',
+    name: 'War Drum',
+    description: 'Once per raid: beat the drum for a 60% chance to restore a random spent crew ability. Fires from the Special menu and does not cost your turn.',
+    image: null,
+    emoji: '🥁',
+    rarity: 'epic',
+    effects: [],
+    activated: { kind: 'refresh_ability', chance: 0.60 },
+    source: "The Quartermaster's Cache",
+    family: 'war_drum',
+  },
+  {
+    id: 'thunder_drum',
+    name: 'Thunder Drum',
+    description: 'Once per raid: beat the drum to restore a random spent crew ability, guaranteed. Fires from the Special menu and does not cost your turn.',
+    image: null,
+    emoji: '🥁',
+    rarity: 'legendary',
+    effects: [],
+    activated: { kind: 'refresh_ability', chance: 1.00 },
+    source: "The Quartermaster's Cache",
+    family: 'war_drum',
+  },
 ]
 
 // ── Forge recipes ─────────────────────────────────────────────────────────────
@@ -472,6 +536,17 @@ export function getRaidItem(id: string): RaidItemDef | undefined {
 
 export function getActiveEffects(equippedItemIds: string[]): RaidEffect[] {
   return equippedItemIds.flatMap(id => getRaidItem(id)?.effects ?? [])
+}
+
+/** The first equipped item that can be ACTIVATED (War Drum / Thunder Drum). One
+ *  is expected at most — the family dedup keeps a player from running both tiers.
+ *  Returns null when nothing activatable is equipped. */
+export function getActivatableItem(equippedItemIds: string[]): RaidItemDef | null {
+  for (const id of equippedItemIds) {
+    const it = getRaidItem(id)
+    if (it?.activated) return it
+  }
+  return null
 }
 
 /** Equipped items in `equippedIds` that belong to the SAME tier family as

@@ -283,6 +283,9 @@ export interface GauntletRunState {
   curseTiers: Record<string, number>
   /** crew ids whose ability is spent (Set serialised to array) */
   usedAbilityIds: number[]
+  /** activatable item ids spent this run (War/Thunder Drum). Optional so runs
+   *  saved before the item existed still resume (defaults to none). */
+  usedRaidItemIds?: string[]
   /** crew ids silenced by Dead Hands */
   silencedCrewIds: number[]
   /** Powder Hoard cannonballs carried into the next fight */

@@ -903,10 +903,14 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   // here than the finale. Rest is currency (signature special drops TBD in step 4).
   loot: [
     { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 5,  shipSkinId: 'coffers_hull' },
-    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 33 },
-    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 24 },
-    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 26 },
-    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 12 },
+    // Signature deception-fleet drops — the anti-evasion Tell-Tale Glass (epic)
+    // + Admiral's Eye (legendary chase). Challenge variant lifts the rare rate.
+    { id: 'tell_tale_glass', label: 'Tell-Tale Glass', image: null,      emoji: '🔭',      rarity: 'epic',      weight: 20 },
+    { id: 'admirals_eye',    label: "Admiral's Eye",   image: null,      emoji: '👁️',     rarity: 'legendary', weight: 5  },
+    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 28 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 18 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 16 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 8  },
   ],
   killRewards: {
     scout:   { gold: 75,  xp: 75  },
@@ -1025,10 +1029,14 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   // Rest is currency (signature finale special drops TBD in step 4).
   loot: [
     { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 8,  shipSkinId: 'coffers_hull' },
-    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 30 },
-    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 24 },
-    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 26 },
-    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 14 },
+    // Signature finale drops — the activatable War Drum (epic) + guaranteed
+    // Thunder Drum (legendary chase). Challenge variant lifts the legendary rate.
+    { id: 'war_drum',       label: 'War Drum',     image: null,          emoji: '🥁',      rarity: 'epic',      weight: 20 },
+    { id: 'thunder_drum',   label: 'Thunder Drum', image: null,          emoji: '🥁',      rarity: 'legendary', weight: 5  },
+    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 26 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 20 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 22 },
+    { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 12 },
   ],
   killRewards: {
     // Two genuinely strong enforcers, then the epic boss (which carries the XP

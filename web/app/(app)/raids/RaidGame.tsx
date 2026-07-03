@@ -485,6 +485,10 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // (or twice if a Rest Stop fires at the halfway point). Set of user_crew
   // ids that have already used their ability since the last reset.
   const [usedAbilityIds, setUsedAbilityIds] = useState<Set<number>>(new Set())
+  // Per-raid activatable-item use (War Drum / Thunder Drum). ONCE per whole
+  // raid — deliberately NOT reset at the Rest Stop (unlike abilities), so it's
+  // a single use for the run, not one per half.
+  const [usedRaidItemIds, setUsedRaidItemIds] = useState<Set<string>>(new Set())
   // Rest Stop interstitial — gates the advance into the second half of the
   // raid (fight at index Math.floor(sequence.length / 2)). Clears
   // usedAbilityIds on confirm.
@@ -1457,6 +1461,19 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                   if (prev.has(crewId)) return prev
                   const next = new Set(prev)
                   next.add(crewId)
+                  return next
+                })}
+                usedRaidItemIds={usedRaidItemIds}
+                onRaidItemUsed={(itemId) => setUsedRaidItemIds(prev => {
+                  if (prev.has(itemId)) return prev
+                  const next = new Set(prev)
+                  next.add(itemId)
+                  return next
+                })}
+                onRefreshAbility={(crewId) => setUsedAbilityIds(prev => {
+                  if (!prev.has(crewId)) return prev
+                  const next = new Set(prev)
+                  next.delete(crewId)
                   return next
                 })}
               />

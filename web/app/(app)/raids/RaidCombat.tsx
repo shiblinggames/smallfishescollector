@@ -59,7 +59,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
 import { MEGA_CHARGE_COST, type ShipAugment } from '@/lib/shipAugments'
-import { getActiveEffects, getRaidItem } from '@/lib/raidItems'
+import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidItems'
 import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
@@ -365,6 +365,14 @@ export interface RaidCombatProps {
    *  obvious (Gauntlet: a boss kill or a Beat to Quarters reprieve). */
   abilitiesRefreshed?: boolean
   onAbilityFired?: (crewId: number) => void
+  /** Activatable raid item (War Drum / Thunder Drum). usedRaidItemIds is the
+   *  per-raid use set owned by the parent (survives the per-fight remount, like
+   *  usedAbilityIds). onRaidItemUsed marks the item spent; onRefreshAbility asks
+   *  the parent to clear one crew id from usedAbilityIds (the actual refresh).
+   *  All optional so practice / hosts without the plumbing simply hide it. */
+  usedRaidItemIds?: Set<string>
+  onRaidItemUsed?: (itemId: string) => void
+  onRefreshAbility?: (crewId: number) => void
   /** Sub-text shown on a USED crew-ability card. Defaults to the campaign's
    *  'Already used this raid.'; the Gauntlet overrides it (rounds cooldown). */
   usedAbilitySub?: string
@@ -398,6 +406,7 @@ export default function RaidCombat({
   tideEffects = [],
   atmosphere = 'dusk',
   crewMembers = [], usedAbilityIds, abilitiesRefreshed = false, onAbilityFired,
+  usedRaidItemIds, onRaidItemUsed, onRefreshAbility,
   usedAbilitySub = 'Already used this raid.', openingNote,
   megaAugment = null,
 }: RaidCombatProps) {
@@ -819,6 +828,10 @@ export default function RaidCombat({
   // Crew-ability cast cue — themed portrait banner + ring that pops over the
   // stage so firing ANY ability has an unmistakable "you did something" tell.
   const [abilityCast, setAbilityCast] = useState<{ key: number; label: string; name: string; color: string; image?: string | null; emoji?: string } | null>(null)
+  // On-demand "Crew Abilities Restored" banner trigger (War/Thunder Drum). A
+  // bumping counter keys the banner so each activation remounts + replays the
+  // one-shot animation, separate from the fight-open `abilitiesRefreshed` prop.
+  const [restorePulse, setRestorePulse] = useState(0)
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
   const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' } | null>(null)
@@ -1645,6 +1658,36 @@ export default function RaidCombat({
     onAbilityFired?.(crew.id)
   }
 
+  // Activatable raid item — War Drum (60% chance) / Thunder Drum (guaranteed).
+  // NET-NEW mechanic: fires from the Special menu, ONCE per raid, does NOT cost
+  // the turn or the per-turn ability lock. On success it restores a random SPENT
+  // crew ability (parent clears its id from usedAbilityIds via onRefreshAbility).
+  // A fizzle still spends the item — that's the epic's gamble.
+  function activateRaidItem(item: import('@/lib/raidItems').RaidItemDef): void {
+    if (!item.activated) return
+    if (subPhase !== 'await_input') return
+    if (usedRaidItemIds?.has(item.id)) return
+    const spent = crewMembers.filter(c => usedAbilityIds?.has(c.id))
+    if (spent.length === 0) return
+
+    // Spend the use up front (a fizzle still counts) + a themed drum-beat cue.
+    onRaidItemUsed?.(item.id)
+    const castKey = Date.now()
+    setAbilityCast({ key: castKey, label: 'Beat to Quarters', name: item.name, color: '#e0a44a', image: item.image, emoji: item.emoji })
+    setTimeout(() => setAbilityCast(c => (c && c.key === castKey ? null : c)), 1150)
+    vibrate([0, 30, 40, 30])
+
+    const success = Math.random() < item.activated.chance
+    if (success) {
+      const pick = spent[Math.floor(Math.random() * spent.length)]
+      onRefreshAbility?.(pick.id)
+      setRestorePulse(k => k + 1)
+      setResolveLog(prev => [...prev, `The ${item.name} thunders across the deck — ${pick.name} is back to their station, ability restored.`])
+    } else {
+      setResolveLog(prev => [...prev, `The ${item.name} beats, but the call goes unanswered — no ability restored.`])
+    }
+  }
+
   // Shared damage applicator for legendary direct-damage abilities
   // (Leviathan, Blitz). Handles the hitsplat + shake + log line + victory
   // detection / sink animation / onEnemyDefeated dispatch, mirroring the
@@ -2349,6 +2392,19 @@ export default function RaidCombat({
             const def = rollDodge(defenderSpeed, defenderNav)
             const atk = rollAttackerVsDodge(attackerSpeed, attackerAccuracy)
             dodged = def >= atk
+            // See-through-the-feint (Tell-Tale Glass / Admiral's Eye): when the
+            // ENEMY would dodge the player's shot, anti-evasion items get ONE
+            // roll to land it anyway. Gated to the player's attack on a would-be
+            // dodge, so it never helps the enemy and only fires on dodge turns.
+            if (isAttackerPlayer && dodged) {
+              const pierce = getActiveEffects(liveItems)
+                .filter(e => e.type === 'dodge_pierce_chance')
+                .reduce((a, e) => Math.max(a, e.value), 0)
+              if (pierce > 0 && Math.random() < pierce) {
+                dodged = false
+                stepLines.push(`You read the feint — the shot slips through the dodge.`)
+              }
+            }
             // dodgeBonus: flat % shift on the player's dodge outcome.
             // Positive saves a would-be miss; negative spoils a would-be dodge.
             if (playerDefending && tide.dodgeBonus !== 0) {
@@ -4466,6 +4522,33 @@ export default function RaidCombat({
                   onClick: () => fireCrewAbility(crew, def, m),
                 })
               }
+
+              // Activatable item card (War Drum / Thunder Drum). One use per
+              // raid, greys out with a reason when spent or when there's no
+              // spent crew ability to bring back.
+              const activatable = getActivatableItem(equippedRaidItems)
+              if (activatable?.activated) {
+                const itemUsed = usedRaidItemIds?.has(activatable.id) ?? false
+                const spentCount = crewMembers.filter(c => usedAbilityIds?.has(c.id)).length
+                const chancePct = Math.round(activatable.activated.chance * 100)
+                const itemSub = itemUsed
+                  ? 'Already used this raid.'
+                  : spentCount === 0
+                    ? 'No spent crew ability to restore.'
+                    : activatable.activated.chance >= 1
+                      ? 'Restores a random spent crew ability.'
+                      : `${chancePct}% to restore a random spent crew ability.`
+                items.push({
+                  id: `item-${activatable.id}`,
+                  label: activatable.name,
+                  sub: itemSub,
+                  color: '#e0a44a',
+                  emoji: activatable.emoji,
+                  image: activatable.image,
+                  disabled: itemUsed || spentCount === 0,
+                  onClick: () => activateRaidItem(activatable),
+                })
+              }
               return items
             })()}
           />
@@ -4475,8 +4558,8 @@ export default function RaidCombat({
       {/* Crew abilities restored — a one-shot banner so the refresh is obvious
           (CSS animation runs once on mount; it ends invisible + click-through).
           Centered via a flex wrap so the keyframe's transform doesn't clobber it. */}
-      {abilitiesRefreshed && (
-        <div aria-hidden style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 70px)', left: 0, right: 0, zIndex: 95, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+      {(abilitiesRefreshed || restorePulse > 0) && (
+        <div key={`restore-${restorePulse}`} aria-hidden style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 70px)', left: 0, right: 0, zIndex: 95, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 1.05rem', borderRadius: 999,
             background: 'rgba(8,20,28,0.92)', border: '1px solid rgba(110,231,214,0.6)',
