@@ -848,7 +848,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     // flagship. Admiral Ruse's deception fleet — the name + every line is decoys.
     // Working names (Feint/Sham/Bulwark/Mirage/Admiral Ruse) are placeholders.
     scout: {
-      id: 'scout', name: 'Feint', hpBase: 78, minDmg: 8, maxDmg: 15,
+      id: 'scout', name: 'Feint', hpBase: 110, minDmg: 8, maxDmg: 15,
       shipSpeed: 8, actionMs: 3500,
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
@@ -857,7 +857,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_feint.png',
     },
     reg: {
-      id: 'reg', name: 'Sham', hpBase: 104, minDmg: 10, maxDmg: 18,
+      id: 'reg', name: 'Sham', hpBase: 145, minDmg: 10, maxDmg: 18,
       shipSpeed: 6, actionMs: 4400,
       pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
@@ -866,7 +866,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_sham.png',
     },
     brute: {
-      id: 'brute', name: 'Bulwark', hpBase: 152, minDmg: 14, maxDmg: 24,
+      id: 'brute', name: 'Bulwark', hpBase: 212, minDmg: 14, maxDmg: 24,
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
@@ -875,7 +875,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_bulwark.png',
     },
     elite: {
-      id: 'elite', name: 'Mirage', hpBase: 132, minDmg: 13, maxDmg: 22,
+      id: 'elite', name: 'Mirage', hpBase: 185, minDmg: 13, maxDmg: 22,
       shipSpeed: 9, actionMs: 3300,
       pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.13,
@@ -884,7 +884,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_mirage.png',
     },
     admiral: {
-      id: 'admiral', name: 'Admiral Ruse', hpBase: 270, minDmg: 20, maxDmg: 36,
+      id: 'admiral', name: 'Admiral Ruse', hpBase: 380, minDmg: 20, maxDmg: 36,
       shipSpeed: 7, actionMs: 4200,
       // Flagship, peak of the deception ladder (3 bands). Phase 2: at half HP he
       // drops the act and fights for real, faster and meaner.
@@ -957,7 +957,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     scout: {
       // Sinister + SNEAKY (a lamprey): fast, evasive, and spikes hard on a crit
       // — a glass-cannon assassin that punishes a careless opener.
-      id: 'scout', name: 'The Leech', hpBase: 128, minDmg: 12, maxDmg: 22,
+      id: 'scout', name: 'The Leech', hpBase: 180, minDmg: 12, maxDmg: 22,
       shipSpeed: 10, actionMs: 3000,
       pattern: ['fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.20,
@@ -970,7 +970,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     reg: {
       // BRUTE (a goliath grouper): slow and tanky, but every shot is a wrecking
       // blow — heavy volleys you have to weather or out-pace.
-      id: 'reg', name: 'The Breaker', hpBase: 220, minDmg: 18, maxDmg: 32,
+      id: 'reg', name: 'The Breaker', hpBase: 310, minDmg: 18, maxDmg: 32,
       shipSpeed: 2, actionMs: 5200,
       pattern: ['reload', 'reload', 'volley', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.06,
@@ -978,7 +978,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       portrait: '/raid6_thebreaker.png',
     },
     quartermaster: {
-      id: 'quartermaster', name: 'The Quartermaster', hpBase: 360, minDmg: 22, maxDmg: 38,
+      id: 'quartermaster', name: 'The Quartermaster', hpBase: 500, minDmg: 22, maxDmg: 38,
       shipSpeed: 7, actionMs: 4200,
       // The keeper himself, a 4-PHASE final-boss fight. SIGNATURE: Repossession —
       // at fight start he reclaims one of your equipped raid items for the whole
