@@ -789,66 +789,73 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   bossDefeatedText: 'Admiral Ruse Defeated',  // NAME TBD (placeholder)
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
   enemies: {
-    // Working names (Feint/Sham/Bulwark/Mirage/Admiral Ruse) + Ch2 hull art are
-    // placeholders. Decoys scale 1 → 3 toward the flagship.
+    // Ch3 hulls. SIGNATURE = DECOYS: false aim bands scaling 1 → 3 toward the
+    // flagship. Admiral Ruse's deception fleet — the name + every line is decoys.
+    // Working names (Feint/Sham/Bulwark/Mirage/Admiral Ruse) are placeholders.
     scout: {
       id: 'scout', name: 'Feint', hpBase: 78, minDmg: 8, maxDmg: 15,
       shipSpeed: 8, actionMs: 3500,
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
-      image: '/enemychapter2schooner_v2.png',
-      portrait: '/enemychapter2schooner_v2.png',
+      decoyCount: 1, decoyName: 'False Colours',   // deception ladder tier 1
+      image: '/enemychapter3schooner.png',
+      portrait: '/enemychapter3schooner.png',
     },
     reg: {
       id: 'reg', name: 'Sham', hpBase: 104, minDmg: 10, maxDmg: 18,
       shipSpeed: 6, actionMs: 4400,
       pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
-      image: '/enemychapter2brigantine_v2.png',
-      portrait: '/enemychapter2brigantine_v2.png',
+      decoyCount: 1, decoyName: 'False Colours',   // tier 1
+      image: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter3brigantine.png',
     },
     brute: {
       id: 'brute', name: 'Bulwark', hpBase: 152, minDmg: 14, maxDmg: 24,
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
-      image: '/enemychapter2galleon_v2.png',
-      portrait: '/enemychapter2galleon_v2.png',
+      decoyCount: 2, decoyName: 'False Colours',   // tier 2 — bigger spread
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
     },
     elite: {
       id: 'elite', name: 'Mirage', hpBase: 132, minDmg: 13, maxDmg: 22,
       shipSpeed: 9, actionMs: 3300,
       pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.13,
-      image: '/enemychapter2galleon_v2.png',
-      portrait: '/enemychapter2galleon_v2.png',
+      decoyCount: 2, decoyName: 'False Colours',   // tier 2
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
     },
     admiral: {
       id: 'admiral', name: 'Admiral Ruse', hpBase: 270, minDmg: 20, maxDmg: 36,
       shipSpeed: 7, actionMs: 4200,
-      // Flagship. Phase 2: at half HP he drops the act and fights for real,
-      // faster and meaner.
+      // Flagship, peak of the deception ladder (3 bands). Phase 2: at half HP he
+      // drops the act and fights for real, faster and meaner.
       pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.12,
+      decoyCount: 3, decoyName: 'False Colours',   // tier 3 — the whole line lies
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,
         pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
         dialogueLine: "Enough games. Run out the real guns.",
       },
-      image: '/enemychapter2galleon_v2.png',
-      portrait: '/enemychapter2galleon_v2.png',
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
     },
   },
   sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
   bossId: 'admiral',
   tides: { slots: [3, 6], maxTier: 2 },  // tier-2 tides — Chapter III's bigger swings
-  // PLACEHOLDER loot: currency only for the scaffold (no ITEM_GRANTS needed).
-  // Real Coffers special drops + a chapter trophy skin land in step 4.
+  // Chapter-III trophy skin (Coffers Hull) drops from BOTH Ch3 raids, lower rate
+  // here than the finale. Rest is currency (signature special drops TBD in step 4).
   loot: [
-    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 34 },
-    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 26 },
-    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 28 },
+    { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 5,  shipSkinId: 'coffers_hull' },
+    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 33 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 24 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 26 },
     { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 12 },
   ],
   killRewards: {
@@ -870,15 +877,13 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
 // ── CHAPTER III, Raid 6 — The Quartermaster (The Coffers finale) ─────────────
 // ADMIN-ONLY (map node adminOnly + route page guards is_admin). The keeper of
 // the Cache and his hired guns, behind the counter of the market he runs.
-// GALLEON-tier. SIGNATURE: "Flare Barrage" (decoyCount) — every few turns the
-// keeper throws up false flares the player must swat before acting; a reactive
-// whack-a-mole that LADDERS up the raid (crew tier 1-2 → the boss is the peak:
-// FEINTS, the red don't-tap live-shells, mixed in). PLUS a phase 2 (the
+// GALLEON-tier. SIGNATURE: REPOSSESSION — at fight start the keeper reclaims one
+// of the player's equipped raid items for the whole fight (prefers an offensive
+// per-shot/proc item so the theft bites). THE perfect betrayal-boss mechanic:
+// the merchant who sold you your edge switches it off. PLUS a phase 2 (the
 // chapter's two-phase finale): at half HP he opens the reserve deck. Tier-2
-// tides. (Repossession was dropped 2026-06-28 so the boss has ONE clean
-// signature instead of two stacked mechanics; the `repossess` field + its
-// RaidCombat plumbing stay dormant for any future enemy that wants it.)
-// NAMES + ART ARE PLACEHOLDERS until step 4. Caps at Galleon.
+// tides. (Decoys were moved to Raid 5's Admiral Ruse so each Ch3 boss has ONE
+// clean, distinct signature.) NAMES ARE PLACEHOLDERS until step 4. Caps at Galleon.
 export const THE_QUARTERMASTER: BossRaidConfig = {
   raidId: 'the_quartermaster',
   enemyAccuracy: 28,
@@ -886,72 +891,70 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   bossDefeatedText: 'The Quartermaster Defeated',
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
   enemies: {
-    // Working names (Tally/Ledger/Strongbox/Collector/the Quartermaster) + Ch2
-    // hull art are placeholders. The Cache's hired enforcers.
+    // Ch3 hulls. The Cache's hired enforcers — a straight escalating gauntlet
+    // into the keeper. SIGNATURE lives on the boss: REPOSSESSION. Working names
+    // (Tally/Ledger/Strongbox/Collector/the Quartermaster) are placeholders.
     scout: {
       id: 'scout', name: 'Tally', hpBase: 86, minDmg: 9, maxDmg: 16,
       shipSpeed: 8, actionMs: 3500,
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
-      decoyCount: 1, decoyName: 'False Flares',   // ladder tier 1 — gentle warmup
-      image: '/enemychapter2schooner_v2.png',
-      portrait: '/enemychapter2schooner_v2.png',
+      image: '/enemychapter3schooner.png',
+      portrait: '/enemychapter3schooner.png',
     },
     reg: {
       id: 'reg', name: 'Ledger', hpBase: 114, minDmg: 11, maxDmg: 19,
       shipSpeed: 6, actionMs: 4400,
       pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
-      decoyCount: 1, decoyName: 'False Flares',   // ladder tier 1
-      image: '/enemychapter2brigantine_v2.png',
-      portrait: '/enemychapter2brigantine_v2.png',
+      image: '/enemychapter3brigantine.png',
+      portrait: '/enemychapter3brigantine.png',
     },
     brute: {
       id: 'brute', name: 'Strongbox', hpBase: 168, minDmg: 15, maxDmg: 26,
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
-      decoyCount: 2, decoyName: 'False Flares',   // ladder tier 2 — bigger wave, heavy clusters
-      image: '/enemychapter2galleon_v2.png',
-      portrait: '/enemychapter2galleon_v2.png',
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
     },
     elite: {
       id: 'elite', name: 'Collector', hpBase: 144, minDmg: 14, maxDmg: 24,
       shipSpeed: 9, actionMs: 3300,
       pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.13,
-      decoyCount: 2, decoyName: 'False Flares',   // ladder tier 2
-      image: '/enemychapter2galleon_v2.png',
-      portrait: '/enemychapter2galleon_v2.png',
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
     },
     quartermaster: {
       id: 'quartermaster', name: 'The Quartermaster', hpBase: 300, minDmg: 22, maxDmg: 38,
       shipSpeed: 7, actionMs: 4200,
-      // The keeper himself, the peak of the Flare Barrage ladder: his waves mix
-      // in FEINTS (red live-shells you must NOT tap). PHASE 2: at half HP he
-      // opens the reserve deck and fights harder. Flares + the two phases are it.
+      // The keeper himself. SIGNATURE: Repossession — at fight start he reclaims
+      // one of your equipped raid items for the whole fight (the merchant who sold
+      // you your edge switches it off). PHASE 2: at half HP he opens the reserve deck.
       pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.12,
-      decoyCount: 3, decoyName: 'False Flares',   // ladder tier 3 — feints mixed in
+      repossess: true, repossessName: 'Repossession',
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,
         pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
-        dialogueLine: "You think the shelves are empty? I've a reserve deck for captains like you.",
+        dialogueLine: "You bought your edge off my shelf. Consider it repossessed.",
       },
-      image: '/enemychapter2galleon_v2.png',
-      portrait: '/enemychapter2galleon_v2.png',
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
     },
   },
   sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
   bossId: 'quartermaster',
   tides: { slots: [3, 6], maxTier: 2 },  // tier-2 tides
-  // PLACEHOLDER loot: currency only for the scaffold. Real Coffers finale drops
-  // + the chapter trophy skin land in step 4.
+  // Chapter-III trophy skin (Coffers Hull) drops here at the higher finale rate.
+  // Rest is currency (signature finale special drops TBD in step 4).
   loot: [
-    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 32 },
-    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 26 },
-    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 28 },
+    { id: 'coffers_hull',   label: 'Coffers Hull', image: null,          emoji: '🚢',      rarity: 'epic',     weight: 8,  shipSkinId: 'coffers_hull' },
+    { id: 'doubloons_600',  label: '+600 ⟡',   image: '/smallpile.png',  emoji: '🪙',      rarity: 'common',   weight: 30 },
+    { id: 'doubloons_1200', label: '+1,200 ⟡', image: '/dailybonus.png', emoji: '💰',      rarity: 'uncommon', weight: 24 },
+    { id: 'gems_50',        label: '50 Gems',  image: null,              emoji: GEM_GLYPH, rarity: 'rare',     weight: 26 },
     { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 14 },
   ],
   killRewards: {
@@ -965,8 +968,8 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     { speaker: 'narrator', text: "The Cache's shutters roll up into a gun-deck, and the keeper stands behind a counter of run-out cannon, smiling like he's already counted your coin." },
     { speaker: 'boss', text: "Every captain who ever beat me bought the means to do it off my own shelf. You included." },
     { speaker: 'player', text: "Then I'll sink you with your own goods. Hold still." },
-    { speaker: 'boss', text: "Hold still? I built this Cache on captains who couldn't tell a live gun from a lit rag. I'll have the whole bay flickering before you ever find me." },
-    { speaker: 'boss', text: "Swat at my flares all you like. Touch the wrong one and you'll wish you had kept your powder." },
+    { speaker: 'boss', text: "Your goods? Everything you carry was a loan, captain. And I am calling one back." },
+    { speaker: 'boss', text: "Let's see how bold you sail once I reach across the counter and take back the piece you leaned on most." },
   ],
 }
 

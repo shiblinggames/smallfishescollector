@@ -253,6 +253,7 @@ const ITEM_GRANTS: Record<string, { doubloons?: number; gems?: number; shipSkin?
   tollmasters_primer:      { raidItem: 'tollmasters_primer' },
   finndicate_hull:         { shipSkin:  'finndicate_hull' },
   chartmaker_hull:         { shipSkin:  'chartmaker_hull' },
+  coffers_hull:            { shipSkin:  'coffers_hull' },
 }
 
 /** Record a raid clear the MOMENT the boss dies — independent of the

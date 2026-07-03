@@ -329,18 +329,17 @@ const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
 export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
   withBossPhase2(buildChallengeRaid(THE_TOLLMASTER, TOLLMASTER_CHALLENGE_LOOT), 'spet', SPET_PHASE2)
 
-// The Harbour Fleet's challenge — Chapter III, Raid 5. The admiral's normal
-// phase 2 carries through scaleEnemy automatically (it spreads ...e), so the
-// challenge flagship still drops the false colours at half HP. Loot is the
-// scaffold's currency-only table; scaleLoot bumps the gem rows. Real loot +
-// override land in step 4.
+// The Harbour Fleet's challenge — Chapter III, Raid 5. Decoys + phase 2 carry
+// through scaleEnemy automatically (it spreads ...e), so the challenge flagship
+// still runs the false colours and drops the act at half HP. Loot = scaleLoot of
+// the base table (Coffers Hull + currency); an exact-rate override lands in step 4.
 export const THE_COFFERS_FLEET_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_COFFERS_FLEET)
 
 // The Quartermaster's challenge — Chapter III, Raid 6 (the chapter finale).
-// Repossession + phase 2 both carry through scaleEnemy automatically (it
-// spreads ...e), so the challenge keeper still reclaims an item at the start and
-// opens the reserve deck at half HP. Scaffold currency-only loot; real override
-// in step 4.
+// Repossession + phase 2 both carry through scaleEnemy automatically (it spreads
+// ...e), so the challenge keeper still reclaims an item at the start and opens the
+// reserve deck at half HP. Loot = scaleLoot of the base table (Coffers Hull +
+// currency); an exact-rate override lands in step 4.
 export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_QUARTERMASTER)

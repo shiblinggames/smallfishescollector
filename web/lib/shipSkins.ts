@@ -56,6 +56,26 @@ export const SHIP_SKINS: ShipSkinDef[] = [
       6: '/enemychapter2man-o-war_v2.png',
     },
   },
+  {
+    // Chapter 3 shared trophy skin. Drops from BOTH the Harbour Fleet (raid 5)
+    // and the Quartermaster (raid 6). Same swap-the-sprite mechanic, painted in
+    // the black-market colours of the Coffers.
+    id: 'coffers_hull',
+    name: 'Coffers Hull',
+    description: "Fly the black-market colours of the Coffers. The hull that ran contraband past the harbour guns is yours now.",
+    filter: 'none',
+    color: '#9a8752',
+    source: 'The Harbour Fleet + The Quartermaster',
+    imageByTier: {
+      0: '/enemychapter3rowboat.png',
+      1: '/enemychapter3dinghy.png',
+      2: '/enemychapter3sloop.png',
+      3: '/enemychapter3schooner.png',
+      4: '/enemychapter3brigantine.png',
+      5: '/enemychapter3galleon.png',
+      6: '/enemychapter3man-o-war.png',
+    },
+  },
 ]
 
 export function getShipSkin(id: string): ShipSkinDef | undefined {
