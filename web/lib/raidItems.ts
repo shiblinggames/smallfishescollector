@@ -355,6 +355,64 @@ export const RAID_ITEMS: RaidItemDef[] = [
     ],
     source: "Forged from Navigator's Compass + Tollmaster's Primer",
   },
+  // ── Farmable-only fusions ───────────────────────────────────────────────────
+  // Built entirely from REPEATABLE boss drops (never the campaign either/or
+  // choice items), so every captain can forge these regardless of which cache
+  // pick they made. Palette is limited to boss/non-boss/ramp/mitigation/parry/
+  // start-loaded (crit, speed, +HP, lethal-save only come from choice items).
+  {
+    id: 'marauders_cannon',
+    name: "Marauder's Cannon",
+    description: '+17% damage to bosses AND +17% damage to non-boss enemies. One gun that tears through anything under your sights.',
+    image: null,
+    emoji: '🏴‍☠️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'boss_damage_mult',    value: 1.17 },
+      { type: 'nonboss_damage_mult', value: 1.17 },
+    ],
+    source: "Forged from Corsair's Prime Cannon + Davy's Hand Cannon",
+  },
+  {
+    id: 'dreadnought_cannon',
+    name: 'Dreadnought Cannon',
+    description: '+17% damage to bosses AND cuts incoming enemy fire by 15%. A heavy gun on a heavier hull — trade blows with a captain and walk away.',
+    image: null,
+    emoji: '🛡️',
+    rarity: 'legendary',
+    effects: [
+      { type: 'boss_damage_mult',     value: 1.17 },
+      { type: 'incoming_damage_mult', value: 0.85 },
+    ],
+    source: "Forged from Corsair's Prime Cannon + Captain's Carapace",
+  },
+  {
+    id: 'bastion_primer',
+    name: 'Bastion Primer',
+    description: 'Cuts incoming enemy fire by 15% AND always opens each fight with a cannonball already loaded. Weather the first blow, answer with your own.',
+    image: null,
+    emoji: '🧱',
+    rarity: 'legendary',
+    effects: [
+      { type: 'incoming_damage_mult', value: 0.85 },
+      { type: 'start_charge_chance',  value: 1.00 },
+    ],
+    source: "Forged from Captain's Carapace + Tollmaster's Primer",
+  },
+  {
+    id: 'riposte_chronometer',
+    name: "Riposte Chronometer",
+    description: 'On a successful dodge, 50% chance to deflect 75% of the shot back at the attacker, AND always open each fight with a cannonball already loaded. Slip the blow and return it.',
+    image: null,
+    emoji: '🤺',
+    rarity: 'legendary',
+    effects: [
+      { type: 'parry_chance',        value: 0.50 },
+      { type: 'parry_reflect_pct',   value: 0.75 },
+      { type: 'start_charge_chance', value: 1.00 },
+    ],
+    source: "Forged from Mastercraft Astrolabe + Tollmaster's Primer",
+  },
 ]
 
 // ── Forge recipes ─────────────────────────────────────────────────────────────
@@ -390,6 +448,11 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   { components: ['quartermasters_anchor', 'reinforced_hull'],   result: 'last_bastion',           fathomCost: 300 },
   { components: ['captains_astrolabe', 'captains_carapace'],    result: 'deflector_plate',        fathomCost: 300 },
   { components: ['corsair_prime_cannon', 'gunners_sight'],      result: 'warlords_cannon',        fathomCost: 300 },
+  // Farmable-only (no campaign either/or components) — forgeable by everyone.
+  { components: ['corsair_prime_cannon', 'davys_hand_cannon'],  result: 'marauders_cannon',       fathomCost: 200 },
+  { components: ['corsair_prime_cannon', 'captains_carapace'],  result: 'dreadnought_cannon',     fathomCost: 300 },
+  { components: ['captains_carapace', 'tollmasters_primer'],    result: 'bastion_primer',         fathomCost: 300 },
+  { components: ['captains_astrolabe', 'tollmasters_primer'],   result: 'riposte_chronometer',    fathomCost: 300 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
