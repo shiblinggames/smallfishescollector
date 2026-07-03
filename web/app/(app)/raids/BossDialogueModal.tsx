@@ -65,9 +65,28 @@ export default function BossDialogueModal({
       }}
       onClick={advance}
     >
-      {/* Top bar — raid title centered, skip button on the right for
-          farmers who've heard it before. */}
-      <div style={{ width: '100%', maxWidth: 520, position: 'relative', display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+      {/* Skip — pinned to the screen's top-right CORNER, clear of the centered
+          raid title. It used to be absolute-right INSIDE the title row, so a long
+          boss/raid name slid underneath it. Safe-area padding keeps it off notches. */}
+      <button
+        onClick={e => { e.stopPropagation(); onComplete() }}
+        className="font-karla font-700 uppercase tracking-[0.1em]"
+        style={{
+          position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 0.9rem)', right: '1rem', zIndex: 2,
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          color: '#9a9488',
+          borderRadius: 8,
+          padding: '0.45rem 0.85rem',
+          fontSize: '0.62rem',
+          cursor: 'pointer',
+        }}
+      >
+        Skip ›
+      </button>
+
+      {/* Top bar — raid title centered. */}
+      <div style={{ width: '100%', maxWidth: 520, display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.3 }}
@@ -80,22 +99,6 @@ export default function BossDialogueModal({
             {raidTitle}
           </p>
         </motion.div>
-        <button
-          onClick={e => { e.stopPropagation(); onComplete() }}
-          className="font-karla font-700 uppercase tracking-[0.1em]"
-          style={{
-            position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: '#9a9488',
-            borderRadius: 8,
-            padding: '0.45rem 0.85rem',
-            fontSize: '0.62rem',
-            cursor: 'pointer',
-          }}
-        >
-          Skip ›
-        </button>
       </div>
 
       <div
