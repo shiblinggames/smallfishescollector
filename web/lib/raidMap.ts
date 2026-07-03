@@ -1245,24 +1245,46 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    id: 'coffers_fork',    type: 'fork',
-    label: 'The Door to the Coffers',
-    flavor: "Two ways past the harbour wall: run the gun-line at the mouth, or grease the dockmaster who waves ships through. One costs you a fight. The other costs you coin.",
+    // Was a `fork` (a branching path). Converted to a linear one-time `event`
+    // choice: the blockade-vs-bribe decision stays, but both doors open on the
+    // same market + fleet, so the chapter never actually splits. Node id kept so
+    // the downstream chain (coffers_lens.requiresNode) is untouched.
+    id: 'coffers_fork',    type: 'event',
+    label: 'The Harbour Wall',
+    flavor: "Two ways past the harbour wall: run the gun-line at the mouth, or grease the dockmaster who waves ships through. One costs you a fight, the other a favour. Either way you come out the same water.",
     bridge: "However you came through the wall, you're inside the Coffers now, and the market's war-fleet is already turning to meet you.",
     requiresNode: 'coffers_heading',
     adminOnly: true,
-    fork: {
-      rewardNavXp: 400,
-      routes: [
-        { id: 'blockade', label: 'Run the Blockade', description: "Sail straight through the gun-line at the harbour mouth. Loud, fast, and you make no friends doing it." },
-        { id: 'dockmaster', label: 'Bribe the Dockmaster', description: "Find the shark who waves ships through and make it worth his while. Quiet, and you keep your powder dry." },
+    image: '/raidlog.png',
+    scene: [
+      { text: "The Coffers sit behind a harbour wall, and the wall has two doors." },
+      { text: "Straight ahead, the gun-line at the mouth. Run it, and every gun in the market knows your name by dark." },
+      { text: "Or the quiet way, past the dockmaster who waves the right ships through for the right price." },
+      { text: "One door costs you a fight. The other costs you a favour, to exactly the wrong sort." },
+      { text: "Either way you come out the same water, in the market, with the war-fleet already turning." },
+      { text: "Pick your door, captain. Once." },
+    ],
+    event: {
+      choices: [
+        {
+          id: 'blockade',
+          label: 'Run the Blockade',
+          description: "Punch through the gun-line at the mouth, fast and loud. You make no friends and you owe no one, and the hard water through the guns sharpens every heading you sail after.",
+          outcome: { type: 'navXp', amount: 450 },
+        },
+        {
+          id: 'dockmaster',
+          label: 'Bribe the Dockmaster',
+          description: "Grease the shark who waves ships through and slip in quiet, powder dry. No fight, but the Finndicate now holds a marker with your name on it, and the cold water has a long memory.",
+          outcome: { type: 'none' },
+        },
       ],
     },
     detail: {
       description:
-        "The Coffers sit behind a harbour wall with two ways past it. Run the Blockade and you punch through the gun-line at the mouth, fast and loud, and the market knows you're coming. Bribe the Dockmaster and you slip in quiet on a greased palm, powder dry, owing a favour to exactly the wrong sort. Either way you come out the same water, in the market with the war-fleet turning your way.",
-      dropsNote: 'Pick your way in. The route stays on the record; both come out in the same water.',
-      ctaLabel: 'Choose Your Route',
+        "The Coffers sit behind a harbour wall with two doors. Run the Blockade and you punch through the gun-line fast and loud, owing nobody but announcing yourself to the whole market. Bribe the Dockmaster and you slip in quiet on a greased palm, powder dry, owing a favour to exactly the wrong sort. Either way you come out the same water, in the market with the war-fleet turning your way. Pick once.",
+      dropsNote: 'A one-time choice. Both doors open on the same market and the same fight beyond.',
+      ctaLabel: 'Pick Your Door',
     },
   },
   {
