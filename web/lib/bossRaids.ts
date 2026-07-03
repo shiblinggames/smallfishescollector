@@ -9,6 +9,32 @@ export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/s
 // the same resolveTurn handles it for the player.
 export type EnemyAction = 'reload' | 'fire' | 'volley' | 'dodge' | 'repair' | 'mega'
 
+/** One boss phase transition (a "false defeat" → rise-again beat). Used by both
+ *  `phase2` (single transition) and `phases[]` (multi-phase / final-boss style).
+ *  The boss appears to sink, then rises at `revivePct` of max HP with the new
+ *  pattern + damage mult + a quoted dialogue line, a red screen wash, and a big
+ *  centre-screen callout. In any phase past 1 the nameplate + hull paint crimson
+ *  so the player can't lose track of the phase. */
+export interface BossPhase {
+  /** Fraction of max HP the boss returns with after the false defeat
+   *  (e.g. 0.5 = comes back at 50% of `hpBase`). Floored to at least 1. */
+  revivePct: number
+  damageMult: number        // 1.25 = +25% damage on enemy fire/volley rolls this phase
+  pattern: EnemyAction[]    // behaviour cycle used while in this phase
+  dialogueLine: string      // shown in the action log on transition, as a quoted boss line
+  /** Optional centre-screen callout label for the transition (e.g. 'RESERVE
+   *  DECK'). Falls back to "PHASE N" when unset. */
+  badge?: string
+  // Optional chance-gated incoming-damage mitigation while in this phase.
+  // Mirrors the Ironclad affix shape: when the chance roll succeeds, dmg is
+  // multiplied by `damageTakenMult` (e.g. 0.7 for -30%) and a log line surfaces.
+  // `damageTakenVolleyBypass` skips the roll on volley shots so the player always
+  // has a clean answer to a hunkered boss.
+  damageTakenChance?: number
+  damageTakenMult?: number
+  damageTakenVolleyBypass?: boolean
+}
+
 export interface BroadsideEnemy {
   id: string
   name: string
@@ -109,24 +135,13 @@ export interface BroadsideEnemy {
    *  persistent crimson treatment so the player can never lose track
    *  of which phase they're in. Bosses without phase2 set fight as a
    *  single phase. */
-  phase2?: {
-    /** Fraction of max HP the boss returns with after the false defeat
-     *  (e.g. 0.5 = comes back at 50% of `hpBase`). Floored to at least 1. */
-    revivePct: number
-    damageMult: number        // 1.25 = +25% damage on enemy fire/volley rolls
-    pattern: EnemyAction[]    // alternate behavior cycle used from phase 2 onward
-    dialogueLine: string      // shown in the action log on transition, as a quoted boss line
-    // Optional chance-gated incoming-damage mitigation while in phase 2.
-    // Mirrors the Ironclad affix shape so the combat code can fold both
-    // into the same check style: when the chance roll succeeds, dmg is
-    // multiplied by `damageTakenMult` (e.g. 0.7 for -30%) and a log line
-    // surfaces. `damageTakenVolleyBypass` skips the roll entirely on
-    // volley shots so the player always has a clean answer to a
-    // hunkered boss. Stacks on top of any flat `damageReduction`.
-    damageTakenChance?: number
-    damageTakenMult?: number
-    damageTakenVolleyBypass?: boolean
-  }
+  phase2?: BossPhase
+  /** Multi-phase boss (a taste of a "final boss"): an ORDERED list of phase
+   *  transitions beyond phase 1. Each killing blow while a next phase remains
+   *  revives the boss into it, escalating pattern / damage / dialogue. phases[0]
+   *  = phase 2, phases[1] = phase 3, and so on. Supersedes `phase2` when set.
+   *  Bosses with neither fight as a single phase. */
+  phases?: BossPhase[]
 }
 
 export interface RaidLootItem {
@@ -891,9 +906,10 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   bossDefeatedText: 'The Quartermaster Defeated',
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
   enemies: {
-    // Ch3 hulls. The Cache's hired enforcers — a straight escalating gauntlet
-    // into the keeper. SIGNATURE lives on the boss: REPOSSESSION. Working names
-    // (Tally/Ledger/Strongbox/Collector/the Quartermaster) are placeholders.
+    // A "FINAL BOSS" duel (Chapter III finale): just a SHORT 2-ship intro (a
+    // couple of the Cache's enforcers to set the scene), then the keeper himself
+    // as a 4-PHASE epic fight — no long gauntlet. He carries Repossession (fight
+    // start) + a 4-phase escalation via `phases[]`. Names are placeholders.
     scout: {
       id: 'scout', name: 'Tally', hpBase: 86, minDmg: 9, maxDmg: 16,
       shipSpeed: 8, actionMs: 3500,
@@ -910,44 +926,38 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       image: '/enemychapter3brigantine.png',
       portrait: '/enemychapter3brigantine.png',
     },
-    brute: {
-      id: 'brute', name: 'Strongbox', hpBase: 168, minDmg: 15, maxDmg: 26,
-      shipSpeed: 3, actionMs: 5400,
-      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
-      critChance: 0.06,
-      image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
-    },
-    elite: {
-      id: 'elite', name: 'Collector', hpBase: 144, minDmg: 14, maxDmg: 24,
-      shipSpeed: 9, actionMs: 3300,
-      pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
-      critChance: 0.13,
-      image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
-    },
     quartermaster: {
-      id: 'quartermaster', name: 'The Quartermaster', hpBase: 300, minDmg: 22, maxDmg: 38,
+      id: 'quartermaster', name: 'The Quartermaster', hpBase: 360, minDmg: 22, maxDmg: 38,
       shipSpeed: 7, actionMs: 4200,
-      // The keeper himself. SIGNATURE: Repossession — at fight start he reclaims
-      // one of your equipped raid items for the whole fight (the merchant who sold
-      // you your edge switches it off). PHASE 2: at half HP he opens the reserve deck.
+      // The keeper himself, a 4-PHASE final-boss fight. SIGNATURE: Repossession —
+      // at fight start he reclaims one of your equipped raid items for the whole
+      // fight (the merchant who sold you your edge switches it off). Then he burns
+      // through 4 escalating phases (false defeat -> rise again, harder), each a
+      // fresh bar + meaner pattern + more damage + a quoted line.
       pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
       critChance: 0.12,
       repossess: true, repossessName: 'Repossession',
-      phase2: {
-        revivePct: 0.5,
-        damageMult: 1.2,
-        pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
-        dialogueLine: "You bought your edge off my shelf. Consider it repossessed.",
-      },
+      phases: [
+        // Phase 2 — the debt called in. Faster fire cadence.
+        { revivePct: 0.85, damageMult: 1.15, badge: 'Called In',
+          pattern: ['reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
+          dialogueLine: "You cracked the ledger. You have not cleared the debt." },
+        // Phase 3 — the reserve deck. Volley-heavy, meaner.
+        { revivePct: 0.72, damageMult: 1.30, badge: 'Reserve Deck',
+          pattern: ['reload', 'reload', 'volley', 'fire', 'volley', 'fire', 'dodge'],
+          dialogueLine: "You think the shelves are bare? I keep a reserve deck for captains like you." },
+        // Phase 4 — nothing left to sell. Desperation, relentless.
+        { revivePct: 0.60, damageMult: 1.50, badge: 'Empty Shelves',
+          pattern: ['fire', 'volley', 'reload', 'fire', 'fire', 'volley', 'fire'],
+          dialogueLine: "Nothing left to sell. Then I sink you and take the lot back myself." },
+      ],
       image: '/enemychapter3galleon.png',
       portrait: '/enemychapter3galleon.png',
     },
   },
-  sequence: ['scout', 'reg', 'scout', 'brute', 'elite', 'reg', 'brute', 'elite'],
+  sequence: ['scout', 'reg'],   // short 2-ship intro, then the 4-phase duel
   bossId: 'quartermaster',
-  tides: { slots: [3, 6], maxTier: 2 },  // tier-2 tides
+  // No tides — a clean, escalating duel (the phases carry the swings).
   // Chapter-III trophy skin (Coffers Hull) drops here at the higher finale rate.
   // Rest is currency (signature finale special drops TBD in step 4).
   loot: [
@@ -958,11 +968,10 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 14 },
   ],
   killRewards: {
-    scout:         { gold: 85,  xp: 85  },
-    reg:           { gold: 110, xp: 125 },
-    brute:         { gold: 150, xp: 165 },
-    elite:         { gold: 180, xp: 200 },
-    quartermaster: { gold: 680, xp: 680 },
+    // The epic boss carries the XP the mob gauntlet used to (4 phases = the fight).
+    scout:         { gold: 85,   xp: 85   },
+    reg:           { gold: 110,  xp: 125  },
+    quartermaster: { gold: 1400, xp: 1600 },
   },
   preFightDialogue: [
     { speaker: 'narrator', text: "The Cache's shutters roll up into a gun-deck, and the keeper stands behind a counter of run-out cannon, smiling like he's already counted your coin." },

@@ -742,7 +742,7 @@ export default function RaidCombat({
   useEffect(() => {
     if (!nameplateFx || nameplateFxKey === 0) return
     const enemyRestBorder =
-      enemyPhase === 2 ? '#ef4444'
+      enemyPhase >= 2 ? '#ef4444'
       : isBoss ? '#fbbf24'
       : isElite ? '#a78bfa'
       : '#2a3548'
@@ -788,6 +788,9 @@ export default function RaidCombat({
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
   const [phaseFlash, setPhaseFlash]   = useState(false)
+  // Centre-screen callout label for the current phase transition ('Phase 3' or a
+  // custom badge like 'Reserve Deck'). Set the instant the transition step plays.
+  const [phaseCallout, setPhaseCallout] = useState('Phase 2')
   const [critFreeze, setCritFreeze]   = useState(false)   // briefly freezes the aim bar at the lock moment
   // Enemy sink — set true the moment the kill step plays. Switches the
   // enemy ship sprite from its looping bob to a one-shot fall-and-fade
@@ -887,8 +890,14 @@ export default function RaidCombat({
   // PHASE 2 badge + red ship halo) so the player can never lose track
   // of which phase they're in. Phase 1 enemies never flip — both stay
   // at 1 for the whole fight.
-  const enemyPhaseRef      = useRef<1 | 2>(1)
-  const [enemyPhase, setEnemyPhase] = useState<1 | 2>(1)
+  const enemyPhaseRef      = useRef<number>(1)
+  const [enemyPhase, setEnemyPhase] = useState<number>(1)
+  // Normalized boss phase transitions (phases[] supersedes phase2). phaseList[0]
+  // = phase 2, [1] = phase 3, ... Total phases = phaseList.length + 1; the config
+  // governing the CURRENT phase p (p >= 2) is phaseList[p - 2]. A single-phase or
+  // classic phase2 boss just yields [] or [phase2], so all existing raids behave
+  // exactly as before.
+  const phaseList = useMemo(() => enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : []), [enemy.phases, enemy.phase2])
   const turnRef            = useRef(1)
   const [turn, setTurn]    = useState(1)
   // Davy's Heavy Cannon ramp — the per-fight +damage stack. Mirrors the
@@ -1282,9 +1291,8 @@ export default function RaidCombat({
     // Phase 2 swaps the boss's whole behavior cycle for the alternate
     // pattern in phase2.pattern (more aggressive for Pete). Falls back to
     // the base pattern for phase-1 enemies and any boss without phase2.
-    const pattern = enemyPhaseRef.current === 2 && enemy.phase2
-      ? enemy.phase2.pattern
-      : enemy.pattern
+    const activePhase = enemyPhaseRef.current >= 2 ? phaseList[enemyPhaseRef.current - 2] : undefined
+    const pattern = activePhase ? activePhase.pattern : enemy.pattern
     let action = pattern[enemyPatternIdxRef.current % pattern.length]
     // Sanity guards. Two failure modes:
     //
@@ -1327,7 +1335,7 @@ export default function RaidCombat({
       snareBlockedRef.current = true
     }
     return action
-  }, [enemy.pattern, enemy.phase2, enemyCharges])
+  }, [enemy.pattern, phaseList, enemyCharges])
 
   // ─── The Quartermaster raid — "Flare Barrage" (per-tier ladder) ────────────
   // Every FLARE_EVERY turns the keeper throws up false flares the player must
@@ -1807,6 +1815,10 @@ export default function RaidCombat({
       // phase-2 HP threshold. Triggers a red full-screen flash so the
       // transition reads as a beat, not a silent shift in pattern.
       phaseTransition?: boolean
+      // The phase being ENTERED (2, 3, 4…) + an optional custom callout label
+      // ('RESERVE DECK'); drive the nameplate badge + centre-screen callout.
+      phaseNumber?: number
+      phaseBadge?: string
       // Set when this hit lit an Incendiary / froze a Frozen cannonball, so the
       // enemy hull flares with the matching status aura the instant it lands.
       procStatus?: 'burn' | 'freeze'
@@ -2127,15 +2139,15 @@ export default function RaidCombat({
           // line. `damageTakenVolleyBypass` skips the roll on volley shots
           // so the player always has a clean path through plate (the
           // dialogue line is the in-fiction hint).
+          const mitPhase = enemyPhaseRef.current >= 2 ? phaseList[enemyPhaseRef.current - 2] : undefined
           if (
-            enemyPhaseRef.current === 2
-            && enemy.phase2?.damageTakenMult
+            mitPhase?.damageTakenMult
             && dmg > 0
-            && !(enemy.phase2.damageTakenVolleyBypass && action === 'volley')
-            && Math.random() < (enemy.phase2.damageTakenChance ?? 1)
+            && !(mitPhase.damageTakenVolleyBypass && action === 'volley')
+            && Math.random() < (mitPhase.damageTakenChance ?? 1)
           ) {
             const before = dmg
-            dmg = Math.max(1, Math.round(dmg * enemy.phase2.damageTakenMult))
+            dmg = Math.max(1, Math.round(dmg * mitPhase.damageTakenMult))
             stepLines.push(`Carapace! ${enemy.name}'s plate soaks the blow (${before} → ${dmg}).`)
           }
         } else {
@@ -2145,8 +2157,8 @@ export default function RaidCombat({
           // raw rolled damage before crit + dodge math so a phase-2 volley
           // hits the player's hull math at the new, scarier rate. No-op for
           // phase-1 enemies (mult stays 1).
-          if (enemyPhaseRef.current === 2 && enemy.phase2) {
-            dmg = Math.max(1, Math.floor(dmg * enemy.phase2.damageMult))
+          if (enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2]) {
+            dmg = Math.max(1, Math.floor(dmg * phaseList[enemyPhaseRef.current - 2].damageMult))
           }
           // Enemy crit — flat chance per enemy, applied after the volley
           // multiplier. Players crit through aim-bar skill; enemies don't
@@ -2304,7 +2316,7 @@ export default function RaidCombat({
           // Reaper's Tithe confluence: sinking a hull heals you a slice of ITS
           // max HP. Skips a phase-1 boss "kill" that's about to revive (it isn't
           // really sunk yet — the real phase-2 death pays out instead).
-          if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemy.phase2 && enemyPhaseRef.current === 1)) {
+          if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemyPhaseRef.current <= phaseList.length)) {
             // Scales with the sunk hull's max HP, but CAPPED at a slice of YOUR
             // own max so a big-HP boss can't near-full-heal you.
             const heal = Math.min(
@@ -2380,7 +2392,7 @@ export default function RaidCombat({
             stepLines.push(`Thermal Shock! Ice meets fire and the frozen hull shatters apart for ${burst}.`)
             // Credit Reaper's Tithe if the shatter is what sank the hull (the base
             // execute/heal checks ran before the procs, so re-check here).
-            if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemy.phase2 && enemyPhaseRef.current === 1)) {
+            if (eHp === 0 && tide.executeHealPct > 0 && pHp > 0 && !(enemyPhaseRef.current <= phaseList.length)) {
               const heal = Math.min(playerHpMax - pHp, Math.round(enemyHpMaxRef.current * tide.executeHealPct), Math.round(playerHpMax * REAPER_HEAL_CAP_PCT))
               if (heal > 0) { pHp += heal; stepLines.push(`Reaper's Tithe! The deep tithes you ${heal} HP for the kill.`) }
             }
@@ -2563,13 +2575,13 @@ export default function RaidCombat({
         eHp <= 0
         && who === 'player'
         && (action === 'fire' || action === 'volley')
-        && enemy.phase2
-        && enemyPhaseRef.current === 1
+        && enemyPhaseRef.current <= phaseList.length
       ) {
-        enemyPhaseRef.current = 2
+        const nextCfg = phaseList[enemyPhaseRef.current - 1]   // the phase we rise into
+        enemyPhaseRef.current += 1
         enemyPatternIdxRef.current = 0
         enemyFeintStreakRef.current = 0
-        const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * enemy.phase2.revivePct))
+        const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
         eHp = revivedHp
         steps.push({
           who: 'enemy',
@@ -2581,8 +2593,10 @@ export default function RaidCombat({
           splatTarget: null,
           splatText: '',
           splatColor: '#ef4444',
-          logLines: [`${enemy.name}: "${enemy.phase2.dialogueLine}"`],
+          logLines: [`${enemy.name}: "${nextCfg.dialogueLine}"`],
           phaseTransition: true,
+          phaseNumber: enemyPhaseRef.current,
+          phaseBadge: nextCfg.badge,
         })
         break
       }
@@ -2604,8 +2618,8 @@ export default function RaidCombat({
         // Phase 2 boss damage bump also covers the Frenzied bonus shot,
         // mirroring the primary fire branch above. Otherwise the headline
         // attack scales but the affix follow-up under-hits in phase 2.
-        if (enemyPhaseRef.current === 2 && enemy.phase2) {
-          dmg2 = Math.max(1, Math.floor(dmg2 * enemy.phase2.damageMult))
+        if (enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2]) {
+          dmg2 = Math.max(1, Math.floor(dmg2 * phaseList[enemyPhaseRef.current - 2].damageMult))
         }
         const baseCrit2 = enemy.critChance ?? 0
         const effCrit2  = affix?.critMult ? Math.min(1, baseCrit2 * affix.critMult) : baseCrit2
@@ -2720,7 +2734,9 @@ export default function RaidCombat({
       // for ~1.1s so the player has time to read "PHASE 2" before the
       // action menu re-enables. Paired with a longer step gap below.
       if (step.phaseTransition) {
-        setEnemyPhase(2)
+        const n = step.phaseNumber ?? 2
+        setEnemyPhase(n)
+        setPhaseCallout(step.phaseBadge ?? `Phase ${n}`)
         setPhaseFlash(true)
         setTimeout(() => setPhaseFlash(false), 1100)
       }
@@ -3484,7 +3500,7 @@ export default function RaidCombat({
           type="button"
           onClick={() => setShowEnemyStats(true)}
           aria-label={`${enemy.name} — view stats`}
-          className={enemyPhase === 2 ? 'rc-phase2-pulse' : undefined}
+          className={enemyPhase >= 2 ? 'rc-phase2-pulse' : undefined}
           animate={enemyNameplateAnim}
           style={{
             position: 'absolute', top: 10, left: 10, zIndex: 4,
@@ -3494,14 +3510,14 @@ export default function RaidCombat({
             // accent with crimson — same intensity as elite, deeper red so
             // it reads as "wounded and dangerous" not just "boss".
             border: `1px solid ${
-              enemyPhase === 2 ? '#ef4444'
+              enemyPhase >= 2 ? '#ef4444'
               : isBoss ? '#fbbf24'
               : isElite ? '#a78bfa'
               : '#2a3548'
             }`,
             borderRadius: 12,
             boxShadow:
-              enemyPhase === 2 ? '0 0 18px rgba(239,68,68,0.5)'
+              enemyPhase >= 2 ? '0 0 18px rgba(239,68,68,0.5)'
               : isElite ? '0 0 14px rgba(167,139,250,0.32)'
               : undefined,
             display: 'flex', alignItems: 'center', gap: 8,
@@ -3515,14 +3531,14 @@ export default function RaidCombat({
             <div style={{
               flexShrink: 0, width: 54, height: 54, borderRadius: '50%',
               border: `2px solid ${
-                enemyPhase === 2 ? '#ef4444'
+                enemyPhase >= 2 ? '#ef4444'
                 : isBoss ? '#fbbf24'
                 : isElite ? '#a78bfa'
                 : ENEMY_COLOR
               }`,
               overflow: 'hidden',
-              boxShadow: `0 0 ${enemyPhase === 2 ? 14 : 10}px ${
-                enemyPhase === 2 ? 'rgba(239,68,68,0.6)'
+              boxShadow: `0 0 ${enemyPhase >= 2 ? 14 : 10}px ${
+                enemyPhase >= 2 ? 'rgba(239,68,68,0.6)'
                 : isBoss ? 'rgba(251,191,36,0.45)'
                 : isElite ? 'rgba(167,139,250,0.55)'
                 : 'rgba(239,68,68,0.4)'
@@ -3570,12 +3586,12 @@ export default function RaidCombat({
                   accent, slightly larger letter-spacing so it reads as
                   the new defining label for this enemy. The fight has
                   visibly escalated; the badge says so. */}
-              {enemyPhase === 2 && (
+              {enemyPhase >= 2 && (
                 <span
                   className="font-karla font-700 uppercase rc-phase2-badge"
                   style={{ fontSize: '0.58rem', color: '#fca5a5', letterSpacing: '0.14em', textShadow: '0 0 6px rgba(239,68,68,0.7)' }}
                 >
-                  PHASE 2
+                  PHASE {enemyPhase}
                 </span>
               )}
             </div>
@@ -3656,7 +3672,7 @@ export default function RaidCombat({
                   // bosses — the persistent "wounded and dangerous"
                   // halo. Overrides the boss's normal warm tint below
                   // because the red is the new headline visual.
-                  ...(enemyPhase === 2 ? [
+                  ...(enemyPhase >= 2 ? [
                     'drop-shadow(0 0 7px rgba(239,68,68,1))',
                     'drop-shadow(0 0 18px rgba(239,68,68,0.8))',
                     'drop-shadow(0 0 36px rgba(239,68,68,0.45))',
@@ -4016,7 +4032,7 @@ export default function RaidCombat({
                     fontSize: '2.1rem', color: '#fff',
                     textShadow: '0 0 18px #fff, 0 0 40px rgba(239,68,68,1), 0 0 80px rgba(239,68,68,0.75), 0 0 140px rgba(239,68,68,0.35)',
                   }}>
-                  Phase 2
+                  {phaseCallout}
                 </p>
               </motion.div>
             </motion.div>
