@@ -1549,6 +1549,25 @@ export default function RaidCombat({
     setTimeout(() => setEHitsplat(null), 480)
     setResolveLog(prev => [...prev, logLine])
     if (newHp <= 0) {
+      // Multi-phase boss: an ability killing blow revives him into the next
+      // phase (mirrors the resolveTurn revival) instead of ending the fight.
+      if (enemyPhaseRef.current <= phaseList.length) {
+        const nextCfg = phaseList[enemyPhaseRef.current - 1]
+        enemyPhaseRef.current += 1
+        enemyPatternIdxRef.current = 0
+        enemyFeintStreakRef.current = 0
+        const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
+        setEnemyHp(revivedHp)
+        enemyHpRef.current = revivedHp
+        const n = enemyPhaseRef.current
+        setEnemyPhase(n)
+        setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
+        setPhaseFlash(true)
+        setTimeout(() => setPhaseFlash(false), 1100)
+        setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name}: "${nextCfg.dialogueLine}"`]), 300)
+        vibrate([0, 50, 40, 80])
+        return
+      }
       // Victory beat — mirrors the eHp<=0 branch in resolveTurn so loot /
       // XP messages and the kill callback fire on the same schedule the
       // cannon-fire path uses.
@@ -2574,7 +2593,7 @@ export default function RaidCombat({
       if (
         eHp <= 0
         && who === 'player'
-        && (action === 'fire' || action === 'volley')
+        && (action === 'fire' || action === 'volley' || action === 'mega')
         && enemyPhaseRef.current <= phaseList.length
       ) {
         const nextCfg = phaseList[enemyPhaseRef.current - 1]   // the phase we rise into
