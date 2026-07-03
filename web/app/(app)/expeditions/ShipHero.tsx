@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect, useMemo, Fragment } from 'react'
+import { useState, useTransition, useEffect, useMemo, Fragment, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -17,7 +17,7 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, chooseShipAugment } from './actions'
+import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen, chooseShipAugment } from './actions'
 import { SHIP_AUGMENTS, getShipAugment, canChooseAugment, AUGMENT_COST, MEGA_CHARGE_COST, AUGMENTS_LIVE, type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
@@ -25,7 +25,7 @@ import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
 import { resolveDeployedCrew, type DeployedCrew } from '@/lib/crewResolve'
 import { applyCrewEffects, resolveEffects, effectSummary, SCOPE_META } from '@/lib/crewEffects'
 import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen'
-import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems } from '@/lib/raidItems'
+import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
@@ -60,6 +60,23 @@ const RARITY_ITEM_COLOR: Record<string, string> = {
   rare:      '#60a5fa',
   epic:      '#a78bfa',
   legendary: '#f0c040',
+}
+
+// Prismatic (iridescent) treatment for forged combination items — deliberately
+// set apart from the flat rarity colours (epic purple / legendary orange). Used
+// on the item's border + name across the inventory and loadout.
+const PRISMATIC = 'linear-gradient(115deg, #ff6b8b 0%, #ffd36b 22%, #7be0a3 44%, #5fb3ff 66%, #c58bff 85%, #ff6b8b 100%)'
+// A gradient BORDER that keeps rounded corners: fill on padding-box, the
+// prismatic sweep on border-box, revealed through a transparent border.
+const prismaticBorder = (fill: string): CSSProperties => ({
+  background: `linear-gradient(${fill}, ${fill}) padding-box, ${PRISMATIC} border-box`,
+  border: '1.5px solid transparent',
+})
+const PRISMATIC_TEXT: CSSProperties = {
+  backgroundImage: PRISMATIC,
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
 }
 
 // Crew picker row — a compact, scannable list entry: small portrait + name +
@@ -207,6 +224,8 @@ interface Props {
   gauntletFathoms?: number
   /** Forge recipe result-ids the player has already learned. */
   forgeRecipesLearned?: string[]
+  /** Whether the one-time "Forge Awakens" celebration has already played. */
+  hasSeenForgeIntro?: boolean
   /** The locked-in Man-o-War volley augment id, or null. */
   manowarAugment?: string | null
   isAdmin?: boolean
@@ -284,6 +303,7 @@ export default function ShipHero({
   gauntletUpgrades = [],
   gauntletFathoms = 0,
   forgeRecipesLearned = [],
+  hasSeenForgeIntro = true,
   manowarAugment: initialManowarAugment = null,
   isAdmin = false,
 }: Props) {
@@ -681,6 +701,8 @@ export default function ShipHero({
   const [fathomsNow, setFathomsNow] = useState(gauntletFathoms)
   useEffect(() => { setFathomsNow(gauntletFathoms) }, [gauntletFathoms])
   const [learning, setLearning] = useState<string | null>(null)
+  // The prismatic "Recipe Unlocked" celebration payload (null = closed).
+  const [learnReveal, setLearnReveal] = useState<{ name: string; image: string | null } | null>(null)
   function onLearnTap(resultId: string, cost: number) {
     if (learning || !forgeUnlocked || fathomsNow < cost || learnedRecipes.includes(resultId)) return
     setLearning(resultId)
@@ -691,8 +713,24 @@ export default function ShipHero({
       if ('error' in res) return
       setLearnedRecipes(res.learned)
       setFathomsNow(res.fathoms)
+      const item = getRaidItem(resultId)
+      if (item) setLearnReveal({ name: item.name, image: item.image })
+      vibrate([14, 46, 22])
     })
   }
+  // One-time "The Forge Awakens" celebration — fires the first time the player
+  // opens the Forge tab after it's unlocked. Persisted server-side (tour
+  // convention: has_seen_forge_intro), mirrored to state for the optimistic hide.
+  const [seenForgeIntro, setSeenForgeIntro] = useState(hasSeenForgeIntro)
+  useEffect(() => { setSeenForgeIntro(hasSeenForgeIntro) }, [hasSeenForgeIntro])
+  const [showForgeIntro, setShowForgeIntro] = useState(false)
+  useEffect(() => {
+    if (loadoutTab === 'forge' && forgeUnlocked && !seenForgeIntro) {
+      setShowForgeIntro(true)
+      setSeenForgeIntro(true)
+      void markForgeIntroSeen().catch(() => {})
+    }
+  }, [loadoutTab, forgeUnlocked, seenForgeIntro])
   function onForgeTap(resultId: string) {
     if (forging || !forgeUnlocked) return
     if (forgeArmed !== resultId) {
@@ -1440,22 +1478,23 @@ export default function ShipHero({
                   const def = itemId ? getRaidItem(itemId) : null
                   if (def && itemId) {
                     const color = RARITY_ITEM_COLOR[def.rarity]
+                    const forged = isForgedRaidItem(itemId)
                     return (
                       <button
                         key={i}
                         type="button"
                         onClick={() => toggleItem(itemId)}
                         aria-label={`${def.name}, equipped. Tap to remove.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f`, cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...prismaticBorder('rgba(14,18,26,0.92)'), boxShadow: '0 0 16px rgba(160,140,255,0.3)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
                       >
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorder('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain' }} />
                             : <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{def.emoji}</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', color }}>{def.name}</p>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? PRISMATIC_TEXT : { color }) }}>{def.name}</p>
                           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap to remove</span>
                         </div>
                       </button>
@@ -1492,6 +1531,7 @@ export default function ShipHero({
                             const def = getRaidItem(itemId)
                             if (!def) return null
                             const color = RARITY_ITEM_COLOR[def.rarity]
+                            const forged = isForgedRaidItem(itemId)
                             const isNew = newRaidItems.has(itemId)
                             // A conflicting item currently equipped (same-family
                             // grade, or the ingredients this fusion was forged
@@ -1509,9 +1549,9 @@ export default function ShipHero({
                                 onClick={blocked ? undefined : () => toggleItem(itemId)}
                                 disabled={blocked}
                                 aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
-                                style={{ background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s' }}
+                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...prismaticBorder('rgba(14,18,26,0.9)'), boxShadow: '0 0 14px rgba(160,140,255,0.22)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
                               >
-                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, background: `${color}12`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorder('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                                   {def.image ? (
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
@@ -1520,7 +1560,7 @@ export default function ShipHero({
                                   )}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8', marginBottom: 2 }}>
+                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', marginBottom: 2, ...(forged ? PRISMATIC_TEXT : { color: '#f0ede8' }) }}>
                                     {def.name}
                                     {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
                                   </p>
@@ -1548,114 +1588,109 @@ export default function ShipHero({
 
               {loadoutTab === 'forge' && (<>
               {/* The Forge — its own tab, locked until the 'forge' Gauntlet upgrade
-                  is bought (depth 30+). Locked → a teaser; unlocked → the recipes.
-                  Generic over FORGE_RECIPES, so new forgeable items just appear. */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>The Forge</p>
-              {!forgeUnlocked && (
-                <div className="app-card" style={{ padding: '0.95rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid rgba(125,176,208,0.32)', background: 'rgba(18,28,40,0.55)' }}>
+                  is bought (depth 30+). Shows ALL recipes with their state (locked
+                  / learned / ready / forged) so the whole collection reads at a
+                  glance, forged ones kept as prismatic trophies. */}
+              <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1.15rem', paddingTop: 2 }}>
+                <div aria-hidden style={{ position: 'absolute', left: '50%', top: 8, width: 160, height: 104, transform: 'translateX(-50%)', background: forgeUnlocked ? 'radial-gradient(ellipse at center, rgba(255,140,60,0.2), rgba(197,139,255,0.1) 45%, transparent 72%)' : 'radial-gradient(ellipse at center, rgba(125,176,208,0.13), transparent 70%)', filter: 'blur(2px)', pointerEvents: 'none' }} />
+                <div style={{ position: 'relative', width: 60, height: 60, margin: '0 auto 8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...(forgeUnlocked ? prismaticBorder('rgba(12,16,24,0.9)') : { background: 'rgba(18,28,40,0.6)', border: '1px solid rgba(125,176,208,0.3)' }) }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={forgeUnlocked ? '#ffce8a' : '#8fb6d6'} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
+                </div>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>The Forge</p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 300, marginInline: 'auto' }}>Fuse two relics into one — both effects, a single slot.</p>
+              </div>
+
+              {!forgeUnlocked ? (
+                <div className="app-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: 9, border: '1px solid rgba(125,176,208,0.34)', background: 'rgba(18,28,40,0.55)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#8fb6d6' }}>The Forge · Locked</p>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#8fb6d6' }}>Locked</p>
                     {forgeUpg && <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.54rem', color: '#7fd0ff' }}>{forgeUpg.cost} Fathoms</span>}
                   </div>
                   <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6', lineHeight: 1.1 }}>Unlock the Forge in the Gauntlet</p>
                   <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45 }}>
-                    Combine two raid items into one, fusing both effects into a single loadout slot so you save space and stack power. A major unlock earned in the Davy Jones Gauntlet{forgeUpg ? `: reach depth ${forgeUpg.depthRequired}, then spend ${forgeUpg.cost} Fathoms.` : '.'}
+                    A major unlock earned deep in the Davy Jones Gauntlet{forgeUpg ? `: reach depth ${forgeUpg.depthRequired}, then spend ${forgeUpg.cost} Fathoms.` : '.'} Then learn recipes here and fuse your rarest relics.
                   </p>
                 </div>
-              )}
-              {forgeUnlocked && FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
-                <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#8fb6d6', marginBottom: '0.7rem' }}>
-                  Fathoms banked · <span style={{ color: '#7fd0ff' }}>{fathomsNow}</span>
-                </p>
-              )}
-              {forgeUnlocked && FORGE_RECIPES.filter(recipe => !ownedRaidItems.includes(recipe.result)).map(recipe => {
-                const result = getRaidItem(recipe.result)
-                if (!result) return null
-                const comps = recipe.components.map(id => ({ def: getRaidItem(id), owned: ownedRaidItems.includes(id) }))
-                const haveAll = comps.every(c => c.owned)
-                const armed = forgeArmed === recipe.result
-                const busy = forging === recipe.result
-                const learned = learnedRecipes.includes(recipe.result)
-                const cost = recipe.fathomCost
-                const canAfford = fathomsNow >= cost
-                const isLearning = learning === recipe.result
-                const ready = learned && haveAll
+              ) : (() => {
+                const forgedCount = FORGE_RECIPES.filter(r => ownedRaidItems.includes(r.result)).length
+                const total = FORGE_RECIPES.length
                 return (
-                  <div key={recipe.result} className="app-card app-card-gold" style={{ padding: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 9, opacity: ready ? 1 : 0.92 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: ready ? '#e8c879' : '#9a8a5a' }}>{!learned ? 'Recipe · Locked' : ready ? 'Forge Available' : 'Learned · Gather Parts'}</p>
-                      {learned
-                        ? <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a8a5a' }}>{comps.filter(c => c.owned).length}/{comps.length}</span>
-                        : <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#7fd0ff' }}>{cost} Fathoms</span>}
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#b9b2a6' }}>Forged <span style={{ color: '#ffce8a' }}>{forgedCount}</span> / {total}</span>
+                      <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.56rem', color: '#8fb6d6' }}>Fathoms · <span style={{ color: '#7fd0ff' }}>{fathomsNow}</span></span>
                     </div>
-                    <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: '#f5ecd6', lineHeight: 1.1 }}>{result.name}</p>
-                    <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.4 }}>{result.description}</p>
+                    <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '1.2rem' }}>
+                      <div style={{ height: '100%', width: `${Math.round((forgedCount / total) * 100)}%`, borderRadius: 999, background: PRISMATIC, transition: 'width 0.4s ease' }} />
+                    </div>
 
-                    {/* Component checklist */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.2rem 0' }}>
-                      {comps.map((c, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{
-                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: c.owned ? 'rgba(127,212,154,0.18)' : 'rgba(255,255,255,0.05)',
-                            border: `1px solid ${c.owned ? 'rgba(127,212,154,0.6)' : 'rgba(255,255,255,0.18)'}`,
-                          }}>
-                            {c.owned
-                              ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7fd49a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                              : null}
-                          </span>
-                          <span className="font-karla font-700" style={{ flex: 1, fontSize: '0.72rem', color: c.owned ? '#e0dccc' : '#8a8480' }}>{c.def?.name}</span>
-                          <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.52rem', color: c.owned ? '#7fd49a' : '#7a7470' }}>{c.owned ? 'Owned' : 'Needed'}</span>
+                    {FORGE_RECIPES.map(recipe => {
+                      const result = getRaidItem(recipe.result)
+                      if (!result) return null
+                      const comps = recipe.components.map(id => ({ def: getRaidItem(id), owned: ownedRaidItems.includes(id) }))
+                      const haveAll = comps.every(c => c.owned)
+                      const owned = ownedRaidItems.includes(recipe.result)
+                      const learned = learnedRecipes.includes(recipe.result)
+                      const armed = forgeArmed === recipe.result
+                      const busy = forging === recipe.result
+                      const cost = recipe.fathomCost
+                      const canAfford = fathomsNow >= cost
+                      const isLearning = learning === recipe.result
+                      const label = owned ? 'Forged' : (learned && haveAll) ? 'Ready to Forge' : learned ? 'Learned · Gather Parts' : 'Recipe · Locked'
+                      return (
+                        <div key={recipe.result} className="app-card" style={{ padding: '0.85rem', marginBottom: '0.9rem', display: 'flex', flexDirection: 'column', gap: 9, ...(owned ? prismaticBorder('rgba(12,16,24,0.9)') : (learned && haveAll) ? { border: '1px solid rgba(232,200,121,0.5)', background: 'rgba(30,24,12,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', opacity: learned ? 1 : 0.9 }) }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(owned ? prismaticBorder('rgba(20,24,32,0.9)') : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }) }}>
+                              {result.image
+                                // eslint-disable-next-line @next/next/no-img-element
+                                ? <img src={result.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain', opacity: owned ? 1 : 0.85 }} />
+                                : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: owned ? 1 : 0.7 }}>{result.emoji}</span>}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.95rem', ...(owned ? PRISMATIC_TEXT : { color: '#f5ecd6' }) }}>{result.name}</p>
+                              <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: owned ? '#c9a7ff' : (learned && haveAll) ? '#e8c879' : learned ? '#9ae6b4' : '#8fb6d6', marginTop: 2 }}>{label}</p>
+                            </div>
+                            {owned
+                              ? <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...prismaticBorder('rgba(14,18,26,0.9)') }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e6d4ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>
+                              : !learned ? <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#7fd0ff' }}>{cost} Fathoms</span>
+                              : <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#9a8a5a' }}>{comps.filter(c => c.owned).length}/{comps.length}</span>}
+                          </div>
+
+                          <p className="font-karla" style={{ fontSize: '0.7rem', color: owned ? '#b8b0c8' : '#b0aaa0', lineHeight: 1.4 }}>{result.description}</p>
+
+                          {!owned && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.1rem 0' }}>
+                              {comps.map((c, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.owned ? 'rgba(127,212,154,0.18)' : 'rgba(255,255,255,0.05)', border: `1px solid ${c.owned ? 'rgba(127,212,154,0.6)' : 'rgba(255,255,255,0.18)'}` }}>
+                                    {c.owned ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#7fd49a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg> : null}
+                                  </span>
+                                  <span className="font-karla font-700" style={{ flex: 1, fontSize: '0.7rem', color: c.owned ? '#e0dccc' : '#8a8480' }}>{c.def?.name}</span>
+                                  <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: c.owned ? '#7fd49a' : '#7a7470' }}>{c.owned ? 'Owned' : 'Needed'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {owned ? null : !learned ? (
+                            <button type="button" onClick={() => onLearnTap(recipe.result, cost)} disabled={!canAfford || isLearning} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+                              style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem', background: canAfford ? 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))' : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? 'rgba(127,208,255,0.55)' : 'rgba(255,255,255,0.16)'}`, color: canAfford ? '#cfeaff' : '#8a8480', cursor: (!canAfford || isLearning) ? 'default' : 'pointer' }}>
+                              {isLearning ? 'Learning…' : canAfford ? `Learn Recipe · ${cost} Fathoms` : `Need ${cost} Fathoms — you have ${fathomsNow}`}
+                            </button>
+                          ) : haveAll ? (
+                            <button type="button" onClick={() => onForgeTap(recipe.result)} disabled={busy} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
+                              style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem', background: armed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))', border: `1px solid ${armed ? 'rgba(248,140,90,0.7)' : 'rgba(232,200,121,0.6)'}`, color: armed ? '#ffd0b0' : '#f0d695', cursor: busy ? 'default' : 'pointer' }}>
+                              {busy ? 'Forging…' : armed ? 'Sacrifice components — tap to confirm' : `Forge ${result.name} →`}
+                            </button>
+                          ) : (
+                            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', lineHeight: 1.4, fontStyle: 'italic' }}>Recipe learned. Gather every component, then forge them here — the forge sacrifices them.</p>
+                          )}
                         </div>
-                      ))}
-                    </div>
-
-                    {!learned ? (
-                      <button
-                        type="button"
-                        onClick={() => onLearnTap(recipe.result, cost)}
-                        disabled={!canAfford || isLearning}
-                        className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                        style={{
-                          width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem',
-                          background: canAfford ? 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${canAfford ? 'rgba(127,208,255,0.55)' : 'rgba(255,255,255,0.16)'}`,
-                          color: canAfford ? '#cfeaff' : '#8a8480',
-                          cursor: (!canAfford || isLearning) ? 'default' : 'pointer',
-                        }}
-                      >
-                        {isLearning ? 'Learning…' : canAfford ? `Learn Recipe · ${cost} Fathoms` : `Need ${cost} Fathoms — you have ${fathomsNow}`}
-                      </button>
-                    ) : haveAll ? (
-                      <button
-                        type="button"
-                        onClick={() => onForgeTap(recipe.result)}
-                        disabled={busy}
-                        className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                        style={{
-                          width: '100%', padding: '0.72rem', borderRadius: 11, fontSize: '0.8rem',
-                          background: armed ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(232,200,121,0.3), rgba(196,169,106,0.14))',
-                          border: `1px solid ${armed ? 'rgba(248,140,90,0.7)' : 'rgba(232,200,121,0.6)'}`,
-                          color: armed ? '#ffd0b0' : '#f0d695',
-                          cursor: busy ? 'default' : 'pointer',
-                        }}
-                      >
-                        {busy ? 'Forging…' : armed ? 'Sacrifice components — tap to confirm' : `Forge ${result.name} →`}
-                      </button>
-                    ) : (
-                      <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', lineHeight: 1.4, fontStyle: 'italic' }}>
-                        Recipe learned. Collect every component, then forge them here — the forge sacrifices them.
-                      </p>
-                    )}
-                  </div>
+                      )
+                    })}
+                  </>
                 )
-              })}
-              {forgeUnlocked && !FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.45 }}>
-                  You&apos;ve forged every recipe. New ones are added over time.
-                </p>
-              )}
+              })()}
 
               </>)}
 
@@ -2236,6 +2271,18 @@ export default function ShipHero({
         />,
         document.body,
       )}
+
+      {/* "The Forge Awakens" — one-time unlock celebration. */}
+      {showForgeIntro && createPortal(
+        <ForgeIntroOverlay onDone={() => setShowForgeIntro(false)} />,
+        document.body,
+      )}
+
+      {/* "Recipe Unlocked" — prismatic reveal each time a recipe is learned. */}
+      {learnReveal && createPortal(
+        <RecipeUnlockedOverlay name={learnReveal.name} image={learnReveal.image} onDone={() => setLearnReveal(null)} />,
+        document.body,
+      )}
     </>
   )
 }
@@ -2381,6 +2428,60 @@ function UpgradeShipPanel({
         </>
       ) : null}
     </>
+  )
+}
+
+// One-time "The Forge Awakens" celebration — fires the first time the player
+// opens the Forge after unlocking it. Big, prismatic, event-scale.
+function ForgeIntroOverlay({ onDone }: { onDone: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1600, background: 'rgba(3,5,10,0.93)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center' }}>
+      <div style={{ position: 'relative', width: 130, height: 130, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.div aria-hidden initial={{ opacity: 0, scale: 0.6, rotate: 0 }} animate={{ opacity: 0.45, scale: 1, rotate: 360 }} transition={{ opacity: { duration: 0.6 }, scale: { duration: 0.7 }, rotate: { duration: 26, repeat: Infinity, ease: 'linear' } }}
+          style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'conic-gradient(from 0deg, rgba(255,107,139,0), rgba(255,211,107,0.5), rgba(123,224,163,0), rgba(95,179,255,0.5), rgba(197,139,255,0), rgba(255,107,139,0.5), rgba(255,107,139,0))' }} />
+        <motion.div initial={{ scale: 0.4, opacity: 0, y: 10 }} animate={{ scale: [0.4, 1.15, 1], opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1.3, 0.4, 1] }}
+          style={{ position: 'relative', width: 118, height: 118, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(255,150,70,0.22), rgba(6,10,16,0.72) 72%)', ...prismaticBorder('rgba(8,10,16,0.85)') }}>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ffce8a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
+        </motion.div>
+      </div>
+      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: '#c9a7ff', marginTop: 24 }}>Unlocked</motion.p>
+      <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }} className="font-cinzel font-800" style={{ fontSize: '2rem', lineHeight: 1.05, marginTop: 6, ...PRISMATIC_TEXT }}>The Forge Awakens</motion.h1>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.52 }} className="font-karla" style={{ fontSize: '0.85rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 320 }}>
+        The embers take. Bring your rarest relics and fuse them — two powers into a single slot. Learn a recipe to begin.
+      </motion.p>
+      <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.68 }} onClick={onDone} className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
+        style={{ marginTop: 26, padding: '0.8rem 2rem', borderRadius: 12, fontSize: '0.82rem', color: '#f0d695', ...prismaticBorder('rgba(20,16,10,0.92)') }}>
+        Enter the Forge
+      </motion.button>
+    </motion.div>
+  )
+}
+
+// "Recipe Unlocked" — a prismatic reveal each time a recipe is learned. Tap
+// anywhere to dismiss. The result art may be pending (emoji/anvil fallback).
+function RecipeUnlockedOverlay({ name, image, onDone }: { name: string; image: string | null; onDone: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onDone}
+      style={{ position: 'fixed', inset: 0, zIndex: 1600, background: 'rgba(3,5,10,0.9)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center', cursor: 'pointer' }}>
+      <div style={{ position: 'relative', width: 130, height: 130, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.div aria-hidden initial={{ scale: 0.3, opacity: 0.9 }} animate={{ scale: 2.4, opacity: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }}
+          style={{ position: 'absolute', width: 210, height: 210, borderRadius: '50%', background: 'radial-gradient(circle, rgba(197,139,255,0.5), rgba(127,208,255,0.14) 45%, transparent 72%)' }} />
+        <motion.div initial={{ scale: 0.4, opacity: 0, y: 10 }} animate={{ scale: [0.4, 1.15, 1], opacity: 1, y: 0 }} transition={{ duration: 0.55, ease: [0.22, 1.3, 0.4, 1] }}
+          style={{ position: 'relative', width: 108, height: 108, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(197,139,255,0.16), rgba(6,10,16,0.72) 72%)', ...prismaticBorder('rgba(8,10,16,0.85)') }}>
+          {image
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={image} alt={name} style={{ width: 62, height: 62, objectFit: 'contain' }} />
+            : <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#e6d4ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>}
+        </motion.div>
+      </div>
+      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: '#c9a7ff', marginTop: 22 }}>Recipe Unlocked</motion.p>
+      <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="font-cinzel font-800" style={{ fontSize: '1.6rem', lineHeight: 1.08, marginTop: 6, ...PRISMATIC_TEXT }}>{name}</motion.h1>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.44 }} className="font-karla" style={{ fontSize: '0.8rem', color: '#b9b2a6', lineHeight: 1.5, marginTop: 10, maxWidth: 300 }}>
+        You can forge this now. Gather its components and bring them to the anvil.
+      </motion.p>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.56rem', color: '#7a7470', marginTop: 22 }}>Tap to continue</motion.p>
+    </motion.div>
   )
 }
 

@@ -396,6 +396,12 @@ export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
   return FORGE_RECIPES.find(r => r.result === resultId)
 }
 
+/** Whether an item is a forged combination (a FORGE_RECIPES result) — used to
+ *  give fusions a distinct prismatic treatment vs the flat rarity colours. */
+export function isForgedRaidItem(id: string): boolean {
+  return FORGE_RECIPES.some(r => r.result === id)
+}
+
 /** The Davy recipe — its components double as the Gauntlet chest drop pool. */
 export const DAVY_FORGE = getForgeRecipe('davys_grand_cannon')!
 

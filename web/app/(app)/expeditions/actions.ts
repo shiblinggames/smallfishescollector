@@ -197,6 +197,16 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   return { ok: true, fathoms: newFathoms, learned: newLearned }
 }
 
+/** Mark the one-time "The Forge Awakens" celebration as seen (fires the first
+ *  time the player opens the Forge after unlocking it). */
+export async function markForgeIntroSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ has_seen_forge_intro: true }).eq('id', user.id)
+}
+
 export async function equipShipSkin(skinId: string | null): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
