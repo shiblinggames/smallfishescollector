@@ -5369,6 +5369,7 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
   const penaltyRef = useRef(0)
   const doneRef = useRef(false)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const rootRef = useRef<HTMLDivElement>(null)
 
   // A penalty is a real flare LET THROUGH (not tapped) or a feint TAPPED — the
   // rule flips on feints, which is the boss-tier discrimination test.
@@ -5390,14 +5391,43 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
 
   useEffect(() => {
     if (count <= 0) { onComplete(0); return }
+    // Spacing: keep a new flare's centre far enough from any flare still on
+    // screen that its 66px tap target can't overlap a live one and steal its
+    // tap. Convert the button size (+ buffer) to this stage's % per axis so it
+    // holds at any stage height. `placed` tracks each flare's live window
+    // [appear, appear+fuse]; a new flare only needs clearance from flares still
+    // alive when it pops in.
+    const rect = rootRef.current?.getBoundingClientRect()
+    const W = rect?.width  || 360
+    const H = rect?.height || 420
+    const SEP_PX = 78
+    const sepX = (SEP_PX / W) * 100
+    const sepY = (SEP_PX / H) * 100
+    const placed: { x: number; y: number; end: number }[] = []
     let t = 420
     for (let k = 0; k < count; k++) {
-      const x = 12 + Math.random() * 76
-      const y = 24 + Math.random() * 50
       const fuse = (Math.max(460, 880 - k * 40) + Math.random() * 150) * fuseScale   // tighten as it goes
+      // Rejection-sample a spot clear of every flare still live at spawn time.
+      // If the field is too crowded to fully separate, keep the roomiest pick.
+      const alive = placed.filter(p => p.end > t)
+      let best = { x: 12 + Math.random() * 76, y: 24 + Math.random() * 50 }
+      let bestClearance = -1
+      for (let attempt = 0; attempt < 28; attempt++) {
+        const cx = 12 + Math.random() * 76
+        const cy = 24 + Math.random() * 50
+        let minD = Infinity
+        for (const p of alive) {
+          const dx = (cx - p.x) / sepX, dy = (cy - p.y) / sepY
+          minD = Math.min(minD, Math.hypot(dx, dy))
+        }
+        if (minD >= 1) { best = { x: cx, y: cy }; break }   // clear of all live flares
+        if (minD > bestClearance) { bestClearance = minD; best = { x: cx, y: cy } }
+      }
+      const x = best.x, y = best.y
       // Never make the FIRST flare a feint (ease the player into the wave).
       const feint = k > 0 && Math.random() < feintChance
       const f = { id: k, x, y, fuse, feint }
+      placed.push({ x, y, end: t + fuse })
       timersRef.current.push(setTimeout(() => {
         setFlares(prev => [...prev, f])
         timersRef.current.push(setTimeout(() => resolveFlare(f, false), fuse))
@@ -5414,7 +5444,7 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
   }, [])
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 14, pointerEvents: 'none' }}>
+    <div ref={rootRef} style={{ position: 'absolute', inset: 0, zIndex: 14, pointerEvents: 'none' }}>
       {/* Tap shield — while the barrage is live, swallow every tap that ISN'T a
           flare so a stray swat can't hit the ship, your portrait, the action
           buttons, or anything else behind the stage and open something by
