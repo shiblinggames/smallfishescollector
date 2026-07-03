@@ -5215,6 +5215,15 @@ function FlareBarrage({ count, color, label, feintChance = 0, clusterChance = 0.
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 14, pointerEvents: 'none' }}>
+      {/* Tap shield — while the barrage is live, swallow every tap that ISN'T a
+          flare so a stray swat can't hit the ship, your portrait, the action
+          buttons, or anything else behind the stage and open something by
+          accident. The flare buttons render AFTER this (so above it) and stay
+          fully live; this only eats the misses. */}
+      <div aria-hidden
+        onPointerDown={(e) => { e.preventDefault(); e.stopPropagation() }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'auto', touchAction: 'none', cursor: 'default', background: 'transparent' }} />
       <style>{`
         @keyframes rc-flare-in   { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes rc-flare-fuse { 0% { transform: scale(2.6); opacity: 0.95; } 100% { transform: scale(1); opacity: 0.3; } }
