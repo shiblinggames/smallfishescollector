@@ -853,6 +853,9 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
       decoyCount: 1, decoyName: 'False Colours',   // deception ladder tier 1
+      // Endgame aim-speed bump — the needle runs faster across Ch3 so clean
+      // crits are earned, not automatic (Raid 6 + bosses climb higher still).
+      aimSpeedMult: 1.4,
       image: '/enemychapter3schooner.png',
       portrait: '/raid5_feint.png',
     },
@@ -862,6 +865,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
       decoyCount: 1, decoyName: 'False Colours',   // tier 1
+      aimSpeedMult: 1.4,
       image: '/enemychapter3brigantine.png',
       portrait: '/raid5_sham.png',
     },
@@ -871,6 +875,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2 — bigger spread
+      aimSpeedMult: 1.4,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_bulwark.png',
     },
@@ -880,6 +885,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.13,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2
+      aimSpeedMult: 1.4,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_mirage.png',
     },
@@ -897,6 +903,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
         pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
         dialogueLine: "Enough games. Run out the real guns.",
       },
+      aimSpeedMult: 1.5,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_admiralruse.png',
     },
@@ -974,6 +981,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 2, actionMs: 5200,
       pattern: ['reload', 'reload', 'volley', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.06,
+      aimSpeedMult: 1.6,
       image: '/enemychapter3brigantine.png',
       portrait: '/raid6_thebreaker.png',
     },
@@ -1026,6 +1034,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
             consequence: { kind: 'damagePctMaxHp', value: 0.55 },
           } },
       ],
+      aimSpeedMult: 1.7,
       image: '/enemychapter3galleon.png',
       portrait: '/raid6_thequartermaster.png',
     },
