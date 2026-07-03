@@ -260,12 +260,11 @@ export const RAID_ITEMS: RaidItemDef[] = [
   // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
   // Offense fusions run at ~85% of each parent effect (they trade raw numbers for
   // the slot a single mount saves); defence/tempo fusions keep full strength.
-  // Art PENDING — placeholder emoji until the fused-item sprites land (Phase 3).
   {
     id: 'siege_cannon',
     name: 'Siege Cannon',
     description: '+17% damage to bosses AND your damage climbs +4% every turn of a fight. Built for the long guns against a heavy hull.',
-    image: null,
+    image: '/forge_seigecannon.png',
     emoji: '🎆',
     rarity: 'legendary',
     effects: [
@@ -278,7 +277,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'sharpshooters_cannon',
     name: "Sharpshooter's Cannon",
     description: '+17% damage to non-boss enemies AND +13% critical damage, but non-crit shots hit for 13% less. A crew-shredder for the steady-handed.',
-    image: null,
+    image: '/forge_sharpshooterscannon.png',
     emoji: '🎯',
     rarity: 'legendary',
     effects: [
@@ -292,7 +291,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'warlords_cannon',
     name: "Warlord's Cannon",
     description: '+17% damage to bosses AND +13% critical damage, but non-crit shots hit for 13% less. The killing piece for a captain who lands his crits.',
-    image: null,
+    image: '/forge_warlordscannon.png',
     emoji: '⚔️',
     rarity: 'legendary',
     effects: [
@@ -306,7 +305,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'ironclad_bulwark',
     name: 'Ironclad Bulwark',
     description: '+15% max HP AND cuts incoming enemy fire by 15%. Heavier strakes over the captain-grade plated hide.',
-    image: null,
+    image: '/forge_ironcladbulwark.png',
     emoji: '🛡️',
     rarity: 'legendary',
     effects: [
@@ -319,7 +318,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'last_bastion',
     name: 'Last Bastion',
     description: 'Once per raid, a killing blow leaves you at 1 HP instead of sinking, AND +15% max HP. The hull that refuses the deep.',
-    image: null,
+    image: '/forge_lastbastion.png',
     emoji: '⚓',
     rarity: 'legendary',
     effects: [
@@ -332,7 +331,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'deflector_plate',
     name: 'Deflector Plate',
     description: 'On a successful dodge, 50% chance to deflect 75% of the shot back at the attacker, AND cuts incoming enemy fire by 15%.',
-    image: null,
+    image: '/forge_deflectorplate.png',
     emoji: '🪞',
     rarity: 'legendary',
     effects: [
@@ -346,7 +345,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'vanguards_chronometer',
     name: "Vanguard's Chronometer",
     description: 'Adds a fifth of your Savvy to your turn-order roll so you strike first more often, AND always open each fight with a cannonball already loaded.',
-    image: null,
+    image: '/forge_vanguardchronometer.png',
     emoji: '🧭',
     rarity: 'legendary',
     effects: [
@@ -364,7 +363,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'marauders_cannon',
     name: "Marauder's Cannon",
     description: '+17% damage to bosses AND +17% damage to non-boss enemies. One gun that tears through anything under your sights.',
-    image: null,
+    image: '/forge_marauderscannon.png',
     emoji: '🏴‍☠️',
     rarity: 'legendary',
     effects: [
@@ -377,7 +376,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'dreadnought_cannon',
     name: 'Dreadnought Cannon',
     description: '+17% damage to bosses AND cuts incoming enemy fire by 15%. A heavy gun on a heavier hull — trade blows with a captain and walk away.',
-    image: null,
+    image: '/forge_dreadnoughtcannon.png',
     emoji: '🛡️',
     rarity: 'legendary',
     effects: [
@@ -390,7 +389,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'bastion_primer',
     name: 'Bastion Primer',
     description: 'Cuts incoming enemy fire by 15% AND always opens each fight with a cannonball already loaded. Weather the first blow, answer with your own.',
-    image: null,
+    image: '/forge_bastionprimer.png',
     emoji: '🧱',
     rarity: 'legendary',
     effects: [
@@ -403,7 +402,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'riposte_chronometer',
     name: "Riposte Chronometer",
     description: 'On a successful dodge, 50% chance to deflect 75% of the shot back at the attacker, AND always open each fight with a cannonball already loaded. Slip the blow and return it.',
-    image: null,
+    image: '/forge_riposte_chronometer.png',
     emoji: '🤺',
     rarity: 'legendary',
     effects: [
