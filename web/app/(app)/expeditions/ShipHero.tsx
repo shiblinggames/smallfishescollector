@@ -435,7 +435,7 @@ export default function ShipHero({
 
   // Manage Ship section tab. Loadout (the battle decision) first; Ship
   // (upgrade / class / repair) next; cosmetic Skins last.
-  const [loadoutTab, setLoadoutTab] = useState<'loadout' | 'ship' | 'skins'>('loadout')
+  const [loadoutTab, setLoadoutTab] = useState<'loadout' | 'ship' | 'forge'>('loadout')
 
   // Ship name state
   const [shipName, setShipName] = useState(initialShipName)
@@ -1304,9 +1304,10 @@ export default function ShipHero({
                 {([
                   ['loadout', 'Loadout'],
                   ['ship', 'Ship'],
-                  ['skins', 'Skins'],
+                  ['forge', 'Forge'],
                 ] as const).map(([id, label]) => {
                   const active = loadoutTab === id
+                  const locked = id === 'forge' && !forgeUnlocked
                   return (
                     <button
                       key={id}
@@ -1321,16 +1322,21 @@ export default function ShipHero({
                         background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
                         color: active ? '#f0ede8' : 'rgba(240,237,232,0.42)',
                         transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                       }}
                     >
+                      {locked && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.75 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                      )}
                       {label}
                     </button>
                   )
                 })}
               </div>
 
-              {loadoutTab === 'skins' && (<>
-              {/* ── Ship Skins ── grid layout (mirrors fishing GearScreen boat picker) */}
+              {loadoutTab === 'ship' && (<>
+              {/* ── Ship Skins ── now the top of the Ship tab (hull stats removed —
+                  they read live in the fight). Grid mirrors the fishing boat picker. */}
               <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Ship Skins</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1.5rem' }}>
                 {/* Default */}
@@ -1538,15 +1544,14 @@ export default function ShipHero({
                 )
               })()}
 
-              {/* Forge — gated behind a major Gauntlet (Fathom) unlock. Locked →
-                  a teaser pointing at the Gauntlet; unlocked → the recipe cards.
-                  Each recipe is visible (until forged) so the result reads as a
-                  goal; the forge button only arms once every component is owned.
+              </>)}
+
+              {loadoutTab === 'forge' && (<>
+              {/* The Forge — its own tab, locked until the 'forge' Gauntlet upgrade
+                  is bought (depth 30+). Locked → a teaser; unlocked → the recipes.
                   Generic over FORGE_RECIPES, so new forgeable items just appear. */}
-              {FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
-                <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Forge</p>
-              )}
-              {!forgeUnlocked && FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
+              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>The Forge</p>
+              {!forgeUnlocked && (
                 <div className="app-card" style={{ padding: '0.95rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid rgba(125,176,208,0.32)', background: 'rgba(18,28,40,0.55)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.56rem', color: '#8fb6d6' }}>The Forge · Locked</p>
@@ -1646,6 +1651,11 @@ export default function ShipHero({
                   </div>
                 )
               })}
+              {forgeUnlocked && !FORGE_RECIPES.some(recipe => !ownedRaidItems.includes(recipe.result)) && (
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: '#8a8480', lineHeight: 1.45 }}>
+                  You&apos;ve forged every recipe. New ones are added over time.
+                </p>
+              )}
 
               </>)}
 
@@ -1658,20 +1668,9 @@ export default function ShipHero({
                   .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
                 return (
                   <>
-                    {/* ── Your Ship ── hull stats + the upgrade ladder. */}
-                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Your Ship</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 10 }}>
-                      {([['Hull HP', shipStats.durability], ['Speed', shipStats.speed], ['Min Dmg', shipStats.minDamage]] as [string, number][]).map(([label, val]) => (
-                        <div key={label} style={{ textAlign: 'center', padding: '0.6rem 0.4rem', borderRadius: 12, background: 'rgba(8,14,24,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>{val}</p>
-                          <p className="font-karla font-600 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#9a948c', marginTop: 4 }}>{label}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a7470', marginBottom: '1.4rem', textAlign: 'center' }}>
-                      {shipStats.crewSlots} crew slot{shipStats.crewSlots === 1 ? '' : 's'} · {raidItemSlots} item slot{raidItemSlots === 1 ? '' : 's'}
-                    </p>
-
+                    {/* Hull stats grid removed — those numbers read live during the
+                        fight. The upgrade ladder (and Man-o-War augment) stay. */}
+                    <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Upgrade Your Hull</p>
                     {nextShip ? (
                       <button type="button" onClick={() => { setUpgradeError(null); setUpgradeOpen(true) }}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', width: '100%', textAlign: 'left', background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.45)', borderRadius: 14, padding: '0.85rem 0.9rem', marginBottom: '1.7rem', cursor: 'pointer' }}>

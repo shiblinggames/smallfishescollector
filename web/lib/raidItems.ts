@@ -264,15 +264,15 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'siege_cannon',
     name: 'Siege Cannon',
-    description: '+8% damage to bosses AND your damage climbs +4% every turn of a fight. Built for the long guns against a heavy hull.',
+    description: '+17% damage to bosses AND your damage climbs +4% every turn of a fight. Built for the long guns against a heavy hull.',
     image: null,
     emoji: '🎆',
     rarity: 'legendary',
     effects: [
-      { type: 'boss_damage_mult',     value: 1.08 },
+      { type: 'boss_damage_mult',     value: 1.17 },
       { type: 'ramp_damage_per_turn', value: 0.04 },
     ],
-    source: "Forged from Corsair Cannon + Davy's Heavy Cannon",
+    source: "Forged from Corsair's Prime Cannon + Davy's Heavy Cannon",
   },
   {
     id: 'sharpshooters_cannon',
@@ -291,29 +291,29 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'warlords_cannon',
     name: "Warlord's Cannon",
-    description: '+8% damage to bosses AND +13% critical damage, but non-crit shots hit for 13% less. The killing piece for a captain who lands his crits.',
+    description: '+17% damage to bosses AND +13% critical damage, but non-crit shots hit for 13% less. The killing piece for a captain who lands his crits.',
     image: null,
     emoji: '⚔️',
     rarity: 'legendary',
     effects: [
-      { type: 'boss_damage_mult',    value: 1.08 },
+      { type: 'boss_damage_mult',    value: 1.17 },
       { type: 'crit_damage_mult',    value: 1.13 },
       { type: 'noncrit_damage_mult', value: 0.87 },
     ],
-    source: "Forged from Corsair Cannon + Gunner's Sight",
+    source: "Forged from Corsair's Prime Cannon + Gunner's Sight",
   },
   {
     id: 'ironclad_bulwark',
     name: 'Ironclad Bulwark',
-    description: '+15% max HP AND cuts incoming enemy fire by 10%. Heavier strakes over plated hide.',
+    description: '+15% max HP AND cuts incoming enemy fire by 15%. Heavier strakes over the captain-grade plated hide.',
     image: null,
     emoji: '🛡️',
     rarity: 'legendary',
     effects: [
       { type: 'max_hp_mult',         value: 1.15 },
-      { type: 'incoming_damage_mult', value: 0.90 },
+      { type: 'incoming_damage_mult', value: 0.85 },
     ],
-    source: "Forged from Reinforced Hull + Krust's Carapace",
+    source: "Forged from Reinforced Hull + Captain's Carapace",
   },
   {
     id: 'last_bastion',
@@ -331,29 +331,29 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'deflector_plate',
     name: 'Deflector Plate',
-    description: 'On a successful dodge, 30% chance to deflect half the shot back at the attacker, AND cuts incoming enemy fire by 10%.',
+    description: 'On a successful dodge, 50% chance to deflect 75% of the shot back at the attacker, AND cuts incoming enemy fire by 15%.',
     image: null,
     emoji: '🪞',
     rarity: 'legendary',
     effects: [
-      { type: 'parry_chance',         value: 0.30 },
-      { type: 'parry_reflect_pct',    value: 0.50 },
-      { type: 'incoming_damage_mult', value: 0.90 },
+      { type: 'parry_chance',         value: 0.50 },
+      { type: 'parry_reflect_pct',    value: 0.75 },
+      { type: 'incoming_damage_mult', value: 0.85 },
     ],
-    source: "Forged from Cartographer's Astrolabe + Krust's Carapace",
+    source: "Forged from Mastercraft Astrolabe + Captain's Carapace",
   },
   {
     id: 'vanguards_chronometer',
     name: "Vanguard's Chronometer",
-    description: 'Adds a fifth of your Savvy to your turn-order roll so you strike first more often, AND a 50% chance to open each fight with a cannonball already loaded.',
+    description: 'Adds a fifth of your Savvy to your turn-order roll so you strike first more often, AND always open each fight with a cannonball already loaded.',
     image: null,
     emoji: '🧭',
     rarity: 'legendary',
     effects: [
       { type: 'speed_roll_nav_pct',  value: 0.20 },
-      { type: 'start_charge_chance', value: 0.50 },
+      { type: 'start_charge_chance', value: 1.00 },
     ],
-    source: "Forged from Navigator's Compass + Spet's Primer",
+    source: "Forged from Navigator's Compass + Tollmaster's Primer",
   },
 ]
 
@@ -377,15 +377,19 @@ export interface ForgeRecipe {
 // forge one, then refarm the boss for another copy to forge the other. Offense
 // fusions cost less (they're nerfed to 85% + situational); the always-on defence
 // fusions and the boss-crit Warlord top out at 300.
+// Boss-drop components use the LEGENDARY ("prime"/captain-grade) tier, never the
+// standard epic — so the recipe is a real chase and the fusion reflects the
+// legendary's stronger effect. Non-boss components (Davy cannons, Gunner's
+// Sight, Reinforced Hull, Compass, Anchor) have no tier and pass through.
 export const FORGE_RECIPES: ForgeRecipe[] = [
-  { components: ['navigators_compass', 'spets_primer'],         result: 'vanguards_chronometer', fathomCost: 150 },
+  { components: ['navigators_compass', 'tollmasters_primer'],   result: 'vanguards_chronometer', fathomCost: 150 },
   { components: ['davys_heavy_cannon', 'davys_hand_cannon'],    result: 'davys_grand_cannon',     fathomCost: 200 },
-  { components: ['corsair_cannon', 'davys_heavy_cannon'],       result: 'siege_cannon',           fathomCost: 200 },
+  { components: ['corsair_prime_cannon', 'davys_heavy_cannon'], result: 'siege_cannon',           fathomCost: 200 },
   { components: ['davys_hand_cannon', 'gunners_sight'],         result: 'sharpshooters_cannon',   fathomCost: 200 },
-  { components: ['reinforced_hull', 'krusts_carapace'],         result: 'ironclad_bulwark',       fathomCost: 300 },
+  { components: ['reinforced_hull', 'captains_carapace'],       result: 'ironclad_bulwark',       fathomCost: 300 },
   { components: ['quartermasters_anchor', 'reinforced_hull'],   result: 'last_bastion',           fathomCost: 300 },
-  { components: ['cartographers_astrolabe', 'krusts_carapace'], result: 'deflector_plate',        fathomCost: 300 },
-  { components: ['corsair_cannon', 'gunners_sight'],            result: 'warlords_cannon',        fathomCost: 300 },
+  { components: ['captains_astrolabe', 'captains_carapace'],    result: 'deflector_plate',        fathomCost: 300 },
+  { components: ['corsair_prime_cannon', 'gunners_sight'],      result: 'warlords_cannon',        fathomCost: 300 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
