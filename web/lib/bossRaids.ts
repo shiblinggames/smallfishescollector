@@ -47,14 +47,15 @@ export interface BossPhase {
  *  the `consequence` lands. Deliberately BROAD (several answers per check) so a
  *  roster isn't hard-locked by one class — see [[raid-mechanic-checks]].
  *
- *  Each `MechanicResponse` maps to real combat state RaidCombat can read:
- *    brace  — Anchor brace active (anchorReductionRef > 0)
- *    shield — Tidecaller shield up (abyssalShieldRef > 0)
- *    snare  — enemy dodge jammed by a Snare (snareDodgeTurnsRef !== 0)
- *    dodge  — the player used the Dodge action during the window
- *    heal   — the player healed during the window (Mender / Tidecaller / repair kit)
- *    burst  — the player landed a crit or a legendary big shot (Leviathan / Apex) */
-export type MechanicResponse = 'brace' | 'shield' | 'snare' | 'dodge' | 'heal' | 'burst'
+ *  Each `MechanicResponse` maps to a deliberate CREW-ABILITY play RaidCombat can
+ *  read — never an incidental action (a plain Dodge or a normal crit do NOT
+ *  count, so answering a check is a real decision, found by trial and error):
+ *    brace  — an Anchor brace is active (anchorReductionRef > 0)
+ *    shield — a Tidecaller shield is up (abyssalShieldRef > 0)
+ *    snare  — the enemy's dodge is jammed by a Snare (snareDodgeTurnsRef !== 0)
+ *    heal   — a heal ABILITY fired in the window (Mender / Tidecaller / repair kit)
+ *    burst  — a legendary big-shot ABILITY fired in the window (Leviathan / Apex) */
+export type MechanicResponse = 'brace' | 'shield' | 'snare' | 'heal' | 'burst'
 
 export interface BossMechanicCheck {
   id: string
@@ -978,10 +979,10 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           dialogueLine: "You cracked the ledger. You have not cleared the debt.",
           check: {
             id: 'big_gun', name: 'The Big Gun', chargeTurns: 2,
-            telegraph: 'He hauls the reserve cannon onto the rail. Get a shield or brace up, or dodge it.',
-            responses: ['brace', 'shield', 'dodge'],
-            counteredLine: 'You get cover up in time — the big shot glances off.',
-            failLine: 'The reserve cannon speaks, and nothing was up to stop it.',
+            telegraph: 'The Quartermaster hauls the reserve cannon onto the rail and swings the muzzle toward you.',
+            responses: ['brace', 'shield'],
+            counteredLine: 'The big shot slams into your cover and glances wide.',
+            failLine: 'The reserve cannon speaks, and nothing turned it aside.',
             consequence: { kind: 'damagePctMaxHp', value: 0.75 },
           } },
         // Phase 3 — the reserve deck. Volley-heavy + a DISRUPT ("dodge cancel") check.
@@ -990,9 +991,9 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           dialogueLine: "You think the shelves are bare? I keep a reserve deck for captains like you.",
           check: {
             id: 'cooking_books', name: 'Cooking the Books', chargeTurns: 2,
-            telegraph: 'He ducks behind the counter to tally a killing ledger. Jam his helm or blast him to stop it.',
+            telegraph: 'The Quartermaster ducks low behind the counter and starts working the ledger, fast.',
             responses: ['snare', 'burst'],
-            counteredLine: 'You break his tally before it closes.',
+            counteredLine: 'You break his tally before it can close.',
             failLine: 'The ledger balances in his favour.',
             consequence: { kind: 'enemyHealPctMaxHp', value: 0.30 },
           } },
@@ -1002,7 +1003,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           dialogueLine: "Nothing left to sell. Then I sink you and take the lot back myself.",
           check: {
             id: 'fire_sale', name: 'Fire Sale', chargeTurns: 2,
-            telegraph: 'He torches the stock and lets it all burn. Heal through it or get a shield up.',
+            telegraph: 'The Quartermaster touches a torch to the stock and the whole Cache goes up in flame.',
             responses: ['heal', 'shield'],
             counteredLine: 'You ride out the blaze.',
             failLine: 'The fire sale takes its cut of your hull.',

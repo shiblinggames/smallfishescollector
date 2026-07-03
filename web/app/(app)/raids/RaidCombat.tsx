@@ -909,20 +909,27 @@ export default function RaidCombat({
   // True for the phase-transition turn the check armed on, so that turn's own
   // turn-advance doesn't burn a countdown tick (the window starts NEXT turn).
   const checkArmedThisTurnRef = useRef(false)
-  const checkFlagsRef    = useRef<{ dodge: boolean; heal: boolean; burst: boolean }>({ dodge: false, heal: false, burst: false })
+  const checkFlagsRef    = useRef<{ heal: boolean; burst: boolean }>({ heal: false, burst: false })
   const [pendingCheck, setPendingCheck] = useState<{ name: string; telegraph: string; turnsLeft: number } | null>(null)
+  // Centre-screen result callout the instant a check resolves — green "Countered!"
+  // or red "<name> hits!" so success/failure is unmistakable.
+  const [checkResultFlash, setCheckResultFlash] = useState<{ ok: boolean; label: string; key: number } | null>(null)
   // Arm the check that opens a phase (called from both revival paths).
   function armMechanicCheck(check: BossMechanicCheck | undefined) {
     if (!check) return
     pendingCheckRef.current = check
     checkTurnsLeftRef.current = check.chargeTurns
     checkArmedThisTurnRef.current = true
-    checkFlagsRef.current = { dodge: false, heal: false, burst: false }
+    checkFlagsRef.current = { heal: false, burst: false }
+    // Telegraph into the action log so the fight NARRATES what's coming (vague on
+    // purpose — the player figures out the answer by trial and error).
+    setResolveLog(prev => [...prev, `⚠ ${check.telegraph}`])
     setPendingCheck({ name: check.name, telegraph: check.telegraph, turnsLeft: check.chargeTurns })
   }
-  // Record a transient answer if a check is live (persistent answers are read at
-  // resolve time). Called from the dodge / heal / burst code paths.
-  function noteCheckResponse(r: 'dodge' | 'heal' | 'burst') {
+  // Record a transient ability answer if a check is live (persistent answers —
+  // brace/shield/snare — are read live at resolve). Only real ability plays call
+  // this; plain Dodge / normal crits deliberately don't.
+  function noteCheckResponse(r: 'heal' | 'burst') {
     if (pendingCheckRef.current) checkFlagsRef.current[r] = true
   }
   // Resolve the pending check: satisfied → countered; else the consequence.
@@ -936,17 +943,20 @@ export default function RaidCombat({
       r === 'brace'  ? (anchorReductionRef.current ?? 0) > 0
       : r === 'shield' ? (abyssalShieldRef.current ?? 0) > 0
       : r === 'snare'  ? (snareDodgeTurnsRef.current ?? 0) !== 0
-      : r === 'dodge'  ? f.dodge
       : r === 'heal'   ? f.heal
       : r === 'burst'  ? f.burst
       : false
     if (chk.responses.some(has)) {
-      setResolveLog(prev => [...prev, chk.counteredLine])
-      vibrate(24)
+      setResolveLog(prev => [...prev, `${chk.name} — countered! ${chk.counteredLine}`])
+      setCheckResultFlash({ ok: true, label: 'Countered!', key: Date.now() })
+      setTimeout(() => setCheckResultFlash(cf => (cf && cf.ok ? null : cf)), 1400)
+      vibrate([0, 25, 30, 25])
       return
     }
-    // Failed the check — the consequence lands.
-    setResolveLog(prev => [...prev, chk.failLine])
+    // Failed the check — the consequence lands, and the log/flash is LOUD about it.
+    setResolveLog(prev => [...prev, `${chk.name} lands — you did not stop the Quartermaster. ${chk.failLine}`])
+    setCheckResultFlash({ ok: false, label: `${chk.name} hits!`, key: Date.now() })
+    setTimeout(() => setCheckResultFlash(cf => (cf && !cf.ok ? null : cf)), 1700)
     if (chk.consequence.kind === 'enemyHealPctMaxHp') {
       const heal = Math.max(1, Math.round(enemyHpMaxRef.current * chk.consequence.value))
       const nHp = Math.min(enemyHpMaxRef.current, enemyHpRef.current + heal)
@@ -2159,7 +2169,6 @@ export default function RaidCombat({
           // crit mult; hit + graze multiply by the non-crit mult. Skipped
           // entirely on a miss (rollShotDamage already returns 0).
           const isCritShot = lockedAimResult === 'critical'
-          if (isCritShot) noteCheckResponse('burst')
           const aimItemMult = isCritShot
             ? getActiveEffects(liveItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
             : getActiveEffects(liveItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
@@ -2841,7 +2850,6 @@ export default function RaidCombat({
           // opens next turn); after that, each resolved turn burns one, and when
           // it hits zero the check resolves (countered or the consequence lands).
           if (pendingCheckRef.current) {
-            if (pAction === 'dodge') noteCheckResponse('dodge')   // record a dodge answer before resolving
             if (checkArmedThisTurnRef.current) {
               checkArmedThisTurnRef.current = false
             } else {
@@ -4029,21 +4037,33 @@ export default function RaidCombat({
           />
         )}
 
-        {/* Mechanic-check telegraph — a pulsing warning banner + countdown while
-            the boss winds up a move you must answer (brace / shield / dodge /
-            snare / heal / burst). Non-interactive; drives the "answer or eat it"
-            tension without hiding the fight. */}
+        {/* Mechanic-check indicator — a SLIM pulsing pill (name + turn countdown)
+            at the very top edge so it barely covers the fight. The telegraph
+            itself is narrated in the action log, not here; the player works out
+            the answer by trial and error. */}
         {pendingCheck && (
-          <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 13, width: 'min(94%, 340px)', pointerEvents: 'none', textAlign: 'center' }}>
-            <div className="rc-check-banner" style={{ borderRadius: 12, padding: '0.5rem 0.8rem', background: 'linear-gradient(180deg, rgba(120,20,20,0.92), rgba(70,10,10,0.9))', border: '1.5px solid rgba(248,113,113,0.75)', boxShadow: '0 0 22px rgba(239,68,68,0.4)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
-                <span className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '0.82rem', color: '#ffe0e0', textShadow: '0 0 12px rgba(239,68,68,0.9)' }}>{pendingCheck.name}</span>
-                <span className="font-karla font-800" style={{ fontSize: '0.72rem', color: '#fca5a5', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(248,113,113,0.6)', borderRadius: 999, padding: '0.05rem 0.42rem' }}>{pendingCheck.turnsLeft}</span>
-              </div>
-              <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#f3d0d0', lineHeight: 1.35, marginTop: 3 }}>{pendingCheck.telegraph}</p>
+          <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 13, pointerEvents: 'none' }}>
+            <div className="rc-check-banner" style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 999, padding: '0.22rem 0.55rem 0.22rem 0.6rem', background: 'linear-gradient(180deg, rgba(120,20,20,0.9), rgba(70,10,10,0.86))', border: '1px solid rgba(248,113,113,0.7)', whiteSpace: 'nowrap' }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+              <span className="font-cinzel font-800 uppercase tracking-[0.08em]" style={{ fontSize: '0.64rem', color: '#ffe0e0', textShadow: '0 0 8px rgba(239,68,68,0.8)' }}>{pendingCheck.name}</span>
+              <span className="font-karla font-800" style={{ fontSize: '0.58rem', color: '#2a0a0a', background: '#fca5a5', borderRadius: 999, minWidth: 15, textAlign: 'center', padding: '0 0.28rem' }}>{pendingCheck.turnsLeft}</span>
             </div>
           </div>
+        )}
+
+        {/* Mechanic-check RESULT — unmistakable green "Countered!" or red
+            "<name> hits!" the instant it resolves. */}
+        {checkResultFlash && (
+          <motion.div key={`checkres-${checkResultFlash.key}`} initial={{ opacity: 0, scale: 0.6, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, zIndex: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <p className="font-cinzel font-800 uppercase tracking-[0.2em]" style={{
+              fontSize: checkResultFlash.ok ? '1.5rem' : '1.7rem', textAlign: 'center', lineHeight: 1.05,
+              color: checkResultFlash.ok ? '#86efac' : '#ffffff',
+              textShadow: checkResultFlash.ok
+                ? '0 0 18px rgba(74,222,128,0.9), 0 0 44px rgba(74,222,128,0.5)'
+                : '0 0 18px #fff, 0 0 44px rgba(239,68,68,1), 0 0 90px rgba(239,68,68,0.6)',
+            }}>{checkResultFlash.label}</p>
+          </motion.div>
         )}
 
         {/* Low-hull danger — a red vignette breathes at the stage edges while
