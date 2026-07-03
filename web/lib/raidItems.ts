@@ -431,27 +431,26 @@ export interface ForgeRecipe {
 
 // The forge web: components are shared across recipes (e.g. Davy's Heavy feeds
 // both the Grand and the Siege) so one drop can be spent down different paths —
-// forge one, then refarm the boss for another copy to forge the other. Offense
-// fusions cost less (they're nerfed to 85% + situational); the always-on defence
-// fusions and the boss-crit Warlord top out at 300.
+// forge one, then refarm the boss for another copy to forge the other. Every
+// recipe learns for a flat 150 Fathoms (the component chase is the real gate).
 // Boss-drop components use the LEGENDARY ("prime"/captain-grade) tier, never the
 // standard epic — so the recipe is a real chase and the fusion reflects the
 // legendary's stronger effect. Non-boss components (Davy cannons, Gunner's
 // Sight, Reinforced Hull, Compass, Anchor) have no tier and pass through.
 export const FORGE_RECIPES: ForgeRecipe[] = [
   { components: ['navigators_compass', 'tollmasters_primer'],   result: 'vanguards_chronometer', fathomCost: 150 },
-  { components: ['davys_heavy_cannon', 'davys_hand_cannon'],    result: 'davys_grand_cannon',     fathomCost: 200 },
-  { components: ['corsair_prime_cannon', 'davys_heavy_cannon'], result: 'siege_cannon',           fathomCost: 200 },
-  { components: ['davys_hand_cannon', 'gunners_sight'],         result: 'sharpshooters_cannon',   fathomCost: 200 },
-  { components: ['reinforced_hull', 'captains_carapace'],       result: 'ironclad_bulwark',       fathomCost: 300 },
-  { components: ['quartermasters_anchor', 'reinforced_hull'],   result: 'last_bastion',           fathomCost: 300 },
-  { components: ['captains_astrolabe', 'captains_carapace'],    result: 'deflector_plate',        fathomCost: 300 },
-  { components: ['corsair_prime_cannon', 'gunners_sight'],      result: 'warlords_cannon',        fathomCost: 300 },
+  { components: ['davys_heavy_cannon', 'davys_hand_cannon'],    result: 'davys_grand_cannon',     fathomCost: 150 },
+  { components: ['corsair_prime_cannon', 'davys_heavy_cannon'], result: 'siege_cannon',           fathomCost: 150 },
+  { components: ['davys_hand_cannon', 'gunners_sight'],         result: 'sharpshooters_cannon',   fathomCost: 150 },
+  { components: ['reinforced_hull', 'captains_carapace'],       result: 'ironclad_bulwark',       fathomCost: 150 },
+  { components: ['quartermasters_anchor', 'reinforced_hull'],   result: 'last_bastion',           fathomCost: 150 },
+  { components: ['captains_astrolabe', 'captains_carapace'],    result: 'deflector_plate',        fathomCost: 150 },
+  { components: ['corsair_prime_cannon', 'gunners_sight'],      result: 'warlords_cannon',        fathomCost: 150 },
   // Farmable-only (no campaign either/or components) — forgeable by everyone.
-  { components: ['corsair_prime_cannon', 'davys_hand_cannon'],  result: 'marauders_cannon',       fathomCost: 200 },
-  { components: ['corsair_prime_cannon', 'captains_carapace'],  result: 'dreadnought_cannon',     fathomCost: 300 },
-  { components: ['captains_carapace', 'tollmasters_primer'],    result: 'bastion_primer',         fathomCost: 300 },
-  { components: ['captains_astrolabe', 'tollmasters_primer'],   result: 'riposte_chronometer',    fathomCost: 300 },
+  { components: ['corsair_prime_cannon', 'davys_hand_cannon'],  result: 'marauders_cannon',       fathomCost: 150 },
+  { components: ['corsair_prime_cannon', 'captains_carapace'],  result: 'dreadnought_cannon',     fathomCost: 150 },
+  { components: ['captains_carapace', 'tollmasters_primer'],    result: 'bastion_primer',         fathomCost: 150 },
+  { components: ['captains_astrolabe', 'tollmasters_primer'],   result: 'riposte_chronometer',    fathomCost: 150 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {

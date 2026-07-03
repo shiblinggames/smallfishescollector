@@ -740,6 +740,8 @@ export default function ShipHero({
   const [seenForgeIntro, setSeenForgeIntro] = useState(hasSeenForgeIntro)
   useEffect(() => { setSeenForgeIntro(hasSeenForgeIntro) }, [hasSeenForgeIntro])
   const [showForgeIntro, setShowForgeIntro] = useState(false)
+  // Reopenable "How the Forge works" help modal.
+  const [showForgeHelp, setShowForgeHelp] = useState(false)
   useEffect(() => {
     if (loadoutTab === 'forge' && forgeUnlocked && !seenForgeIntro) {
       setShowForgeIntro(true)
@@ -1614,6 +1616,13 @@ export default function ShipHero({
                 </div>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, ...(forgeUnlocked ? PRISMATIC_TEXT : { color: '#d4ba78' }) }}>The Forge</p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 3, lineHeight: 1.4, maxWidth: 300, marginInline: 'auto' }}>Fuse two relics into one — both effects, a single slot.</p>
+                {forgeUnlocked && (
+                  <button type="button" onClick={() => setShowForgeHelp(true)} className="font-karla font-700 uppercase tracking-[0.12em] tap"
+                    style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.32rem 0.7rem', borderRadius: 999, fontSize: '0.54rem', color: '#c9a7ff', background: 'rgba(197,139,255,0.08)', border: '1px solid rgba(197,139,255,0.3)', cursor: 'pointer' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                    How it works
+                  </button>
+                )}
               </div>
 
               {!forgeUnlocked ? (
@@ -2288,9 +2297,15 @@ export default function ShipHero({
         document.body,
       )}
 
-      {/* "The Forge Awakens" — one-time unlock celebration. */}
+      {/* "The Forge Awakens" — one-time unlock celebration + how-to. */}
       {showForgeIntro && createPortal(
         <ForgeIntroOverlay onDone={() => setShowForgeIntro(false)} />,
+        document.body,
+      )}
+
+      {/* Reopenable "How the Forge works" help. */}
+      {showForgeHelp && createPortal(
+        <ForgeHelpModal onClose={() => setShowForgeHelp(false)} />,
         document.body,
       )}
 
@@ -2447,29 +2462,75 @@ function UpgradeShipPanel({
   )
 }
 
-// One-time "The Forge Awakens" celebration — fires the first time the player
-// opens the Forge after unlocking it. Big, prismatic, event-scale.
+// The rules of the Forge — shown on first unlock (ForgeIntroOverlay) and any
+// time from the "How it works" link (ForgeHelpModal). One source of truth.
+const FORGE_RULES: { title: string; body: string }[] = [
+  { title: 'Fuse two into one', body: 'A recipe melds two relics into a single forged item that carries BOTH their effects in one loadout slot.' },
+  { title: 'Learn, then forge', body: 'Spend Fathoms once to learn a recipe. When you own both components, forge it — forging sacrifices the two components for good.' },
+  { title: 'Refarming components', body: "You only ever hold one of each relic — a boss won't drop one you already own. To get another copy of a component, forge (spend) the one you have first; then it can drop again." },
+  { title: 'No doubling up', body: "A forged item can't be equipped beside its own ingredients (or another grade of them). Equipping the fusion swaps the conflicting relic out, so the same effect never stacks twice." },
+  { title: 'Mix different fusions', body: 'Two DIFFERENT forged items CAN ride together — that pairing is a real build, not blocked. Only a fusion + its own parts conflict.' },
+  { title: 'Chase the legendary', body: "Boss-drop recipes call for the legendary grade (a Prime or master-craft relic), so every fusion is a real chase." },
+]
+
+function ForgeRules() {
+  return (
+    <div style={{ width: '100%', maxWidth: 380, marginTop: 16, display: 'flex', flexDirection: 'column', gap: 9, textAlign: 'left' }}>
+      {FORGE_RULES.map((r, i) => (
+        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '0.7rem 0.8rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+          <span className="font-cinzel font-800" style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#0c0f16', background: 'linear-gradient(135deg, #e7c8a0, #c9a7ff)' }}>{i + 1}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0e6d0', lineHeight: 1.12 }}>{r.title}</p>
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#a8a298', lineHeight: 1.45, marginTop: 2 }}>{r.body}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// One-time "The Forge Awakens" celebration + how-to — fires the first time the
+// player opens the Forge after unlocking it. Big, prismatic, then the rules.
 function ForgeIntroOverlay({ onDone }: { onDone: () => void }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: 'fixed', inset: 0, zIndex: 1600, background: 'rgba(3,5,10,0.93)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center' }}>
-      <div style={{ position: 'relative', width: 130, height: 130, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 1600, background: 'rgba(3,5,10,0.94)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', overflowY: 'auto', padding: '2.2rem 1.4rem calc(env(safe-area-inset-bottom, 0px) + 2rem)', textAlign: 'center' }}>
+      <div style={{ position: 'relative', width: 116, height: 116, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <motion.div aria-hidden initial={{ opacity: 0, scale: 0.6, rotate: 0 }} animate={{ opacity: 0.45, scale: 1, rotate: 360 }} transition={{ opacity: { duration: 0.6 }, scale: { duration: 0.7 }, rotate: { duration: 26, repeat: Infinity, ease: 'linear' } }}
-          style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'conic-gradient(from 0deg, rgba(255,107,139,0), rgba(255,211,107,0.5), rgba(123,224,163,0), rgba(95,179,255,0.5), rgba(197,139,255,0), rgba(255,107,139,0.5), rgba(255,107,139,0))' }} />
+          style={{ position: 'absolute', width: 280, height: 280, borderRadius: '50%', background: 'conic-gradient(from 0deg, rgba(255,107,139,0), rgba(255,211,107,0.5), rgba(123,224,163,0), rgba(95,179,255,0.5), rgba(197,139,255,0), rgba(255,107,139,0.5), rgba(255,107,139,0))' }} />
         <motion.div initial={{ scale: 0.4, opacity: 0, y: 10 }} animate={{ scale: [0.4, 1.15, 1], opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1.3, 0.4, 1] }}
-          style={{ position: 'relative', width: 118, height: 118, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(255,150,70,0.22), rgba(6,10,16,0.72) 72%)', ...prismaticBorder('rgba(8,10,16,0.85)') }}>
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ffce8a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
+          style={{ position: 'relative', width: 104, height: 104, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(255,150,70,0.22), rgba(6,10,16,0.72) 72%)', ...prismaticBorder('rgba(8,10,16,0.85)') }}>
+          <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#ffce8a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h9l3-3 4 1-2 4h-5" /><path d="M7 10v3a3 3 0 0 0 3 3h1" /><path d="M8 21h6" /><path d="M11 16v5" /></svg>
         </motion.div>
       </div>
-      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: '#c9a7ff', marginTop: 24 }}>Unlocked</motion.p>
-      <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }} className="font-cinzel font-800" style={{ fontSize: '2rem', lineHeight: 1.05, marginTop: 6, ...PRISMATIC_TEXT }}>The Forge Awakens</motion.h1>
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.52 }} className="font-karla" style={{ fontSize: '0.85rem', color: '#b9b2a6', lineHeight: 1.55, marginTop: 12, maxWidth: 320 }}>
-        The embers take. Bring your rarest relics and fuse them — two powers into a single slot. Learn a recipe to begin.
+      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.3em', color: '#c9a7ff', marginTop: 18 }}>Unlocked</motion.p>
+      <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }} className="font-cinzel font-800" style={{ fontSize: '1.85rem', lineHeight: 1.05, marginTop: 6, ...PRISMATIC_TEXT }}>The Forge Awakens</motion.h1>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="font-karla" style={{ fontSize: '0.82rem', color: '#b9b2a6', lineHeight: 1.5, marginTop: 10, maxWidth: 340 }}>
+        Bring your rarest relics and fuse them — two powers into a single slot. Here is how it works:
       </motion.p>
-      <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.68 }} onClick={onDone} className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
-        style={{ marginTop: 26, padding: '0.8rem 2rem', borderRadius: 12, fontSize: '0.82rem', color: '#f0d695', ...prismaticBorder('rgba(20,16,10,0.92)') }}>
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <ForgeRules />
+      </motion.div>
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75 }} onClick={onDone} className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
+        style={{ marginTop: 22, padding: '0.8rem 2.2rem', borderRadius: 12, fontSize: '0.82rem', color: '#f0d695', flexShrink: 0, ...prismaticBorder('rgba(20,16,10,0.92)') }}>
         Enter the Forge
       </motion.button>
+    </motion.div>
+  )
+}
+
+// Reopenable "How the Forge works" — same rules, no celebration. Opened from the
+// "How it works" link in the Forge tab.
+function ForgeHelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1600, background: 'rgba(3,5,10,0.92)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', overflowY: 'auto', padding: '2.2rem 1.4rem calc(env(safe-area-inset-bottom, 0px) + 2rem)', textAlign: 'center' }}>
+      <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', lineHeight: 1.05, marginTop: 6, flexShrink: 0, ...PRISMATIC_TEXT }}>How the Forge Works</p>
+      <ForgeRules />
+      <button onClick={onClose} className="font-cinzel font-700 uppercase tracking-[0.1em] tap"
+        style={{ marginTop: 22, padding: '0.75rem 2.2rem', borderRadius: 12, fontSize: '0.8rem', color: '#f0d695', flexShrink: 0, ...prismaticBorder('rgba(20,16,10,0.92)') }}>
+        Got it
+      </button>
     </motion.div>
   )
 }
