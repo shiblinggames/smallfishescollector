@@ -952,8 +952,8 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 10, actionMs: 3000,
       pattern: ['fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.20,
-      image: '/enemychapter3schooner.png',
-      portrait: '/enemychapter3schooner.png',
+      image: '/raid6_theleech.png',
+      portrait: '/raid6_theleech.png',
     },
     reg: {
       // BRUTE (a goliath grouper): slow and tanky, but every shot is a wrecking
@@ -962,8 +962,8 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 2, actionMs: 5200,
       pattern: ['reload', 'reload', 'volley', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.06,
-      image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      image: '/raid6_thebreaker.png',
+      portrait: '/raid6_thebreaker.png',
     },
     quartermaster: {
       id: 'quartermaster', name: 'The Quartermaster', hpBase: 360, minDmg: 22, maxDmg: 38,
@@ -1014,8 +1014,8 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
             consequence: { kind: 'damagePctMaxHp', value: 0.55 },
           } },
       ],
-      image: '/enemychapter3galleon.png',
-      portrait: '/enemychapter3galleon.png',
+      image: '/raid6_thequartermaster.png',
+      portrait: '/raid6_thequartermaster.png',
     },
   },
   sequence: ['scout', 'reg'],   // short 2-ship intro, then the 4-phase duel
