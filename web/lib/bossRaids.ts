@@ -964,7 +964,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       // A darting lamprey — the needle races, so landing a clean Critical on it
       // is genuinely hard (you have to catch a fast, narrow window).
       aimSpeedMult: 2.0,
-      image: '/raid6_theleech.png',
+      image: '/enemychapter3schooner.png',
       portrait: '/raid6_theleech.png',
     },
     reg: {
@@ -974,7 +974,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 2, actionMs: 5200,
       pattern: ['reload', 'reload', 'volley', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.06,
-      image: '/raid6_thebreaker.png',
+      image: '/enemychapter3brigantine.png',
       portrait: '/raid6_thebreaker.png',
     },
     quartermaster: {
@@ -1026,7 +1026,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
             consequence: { kind: 'damagePctMaxHp', value: 0.55 },
           } },
       ],
-      image: '/raid6_thequartermaster.png',
+      image: '/enemychapter3galleon.png',
       portrait: '/raid6_thequartermaster.png',
     },
   },
