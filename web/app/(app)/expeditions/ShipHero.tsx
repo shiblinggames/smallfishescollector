@@ -78,6 +78,22 @@ const PRISMATIC_TEXT: CSSProperties = {
   backgroundClip: 'text',
   color: 'transparent',
 }
+// Muted iridescence for the item treatment itself (inventory / loadout / forged
+// trophy cards) — a gentle sheen, not a loud rainbow. The bold PRISMATIC above
+// stays for the celebration moments + the Forge page title.
+const PRISMATIC_SOFT = 'linear-gradient(115deg, #d7aebb 0%, #ddcca6 26%, #abd0bd 52%, #a9c3dd 74%, #c4b2dc 100%)'
+const prismaticBorderSoft = (fill: string): CSSProperties => ({
+  background: `linear-gradient(${fill}, ${fill}) padding-box, ${PRISMATIC_SOFT} border-box`,
+  border: '1.5px solid transparent',
+})
+// Soft pearlescent text — pale so it reads clearly on dark, with only a hint of
+// colour (much subtler than the full-saturation PRISMATIC_TEXT).
+const PRISMATIC_TEXT_SOFT: CSSProperties = {
+  backgroundImage: 'linear-gradient(105deg, #e6dcef, #dde9f4, #efe6d6)',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+}
 
 // Crew picker row — a compact, scannable list entry: small portrait + name +
 // rarity + the three effective stats on one line, with trait/ability chips on a
@@ -1485,16 +1501,16 @@ export default function ShipHero({
                         type="button"
                         onClick={() => toggleItem(itemId)}
                         aria-label={`${def.name}, equipped. Tap to remove.`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...prismaticBorder('rgba(14,18,26,0.92)'), boxShadow: '0 0 16px rgba(160,140,255,0.3)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, padding: '0.6rem 0.7rem', borderRadius: 12, textAlign: 'left', cursor: 'pointer', ...(forged ? { ...prismaticBorderSoft('rgba(14,18,26,0.92)'), boxShadow: '0 0 12px rgba(150,140,180,0.18)' } : { background: `${color}1c`, border: `1.5px solid ${color}88`, boxShadow: `0 0 14px ${color}1f` }) }}
                       >
-                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorder('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
+                        <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorderSoft('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                           {def.image
                             // eslint-disable-next-line @next/next/no-img-element
                             ? <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain' }} />
                             : <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{def.emoji}</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? PRISMATIC_TEXT : { color }) }}>{def.name}</p>
+                          <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.8rem', ...(forged ? PRISMATIC_TEXT_SOFT : { color }) }}>{def.name}</p>
                           <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Tap to remove</span>
                         </div>
                       </button>
@@ -1549,9 +1565,9 @@ export default function ShipHero({
                                 onClick={blocked ? undefined : () => toggleItem(itemId)}
                                 disabled={blocked}
                                 aria-label={blocked ? `${def.name}. Hull full, free a slot first.` : wouldSwap ? `${def.name}. Tap to swap for ${swapNames.join(', ')}.` : `${def.name}. Tap to equip.`}
-                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...prismaticBorder('rgba(14,18,26,0.9)'), boxShadow: '0 0 14px rgba(160,140,255,0.22)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
+                                style={{ borderRadius: 12, padding: '0.7rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: blocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: blocked ? 0.42 : 1, transition: 'opacity 0.15s', ...(forged ? { ...prismaticBorderSoft('rgba(14,18,26,0.9)'), boxShadow: '0 0 11px rgba(150,140,180,0.16)' } : { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }) }}
                               >
-                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorder('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
+                                <div style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(forged ? prismaticBorderSoft('rgba(20,24,32,0.9)') : { background: `${color}12`, border: `1px solid ${color}40` }) }}>
                                   {def.image ? (
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img src={def.image} alt="" loading="lazy" decoding="async" style={{ width: 33, height: 33, objectFit: 'contain' }} />
@@ -1560,7 +1576,7 @@ export default function ShipHero({
                                   )}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', marginBottom: 2, ...(forged ? PRISMATIC_TEXT : { color: '#f0ede8' }) }}>
+                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', marginBottom: 2, ...(forged ? PRISMATIC_TEXT_SOFT : { color: '#f0ede8' }) }}>
                                     {def.name}
                                     {isNew && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: '#1a1206', background: '#ffd96a', borderRadius: 4, padding: '0.12rem 0.32rem', marginLeft: 7, verticalAlign: 'middle' }}>New</span>}
                                   </p>
@@ -1638,20 +1654,20 @@ export default function ShipHero({
                       const isLearning = learning === recipe.result
                       const label = owned ? 'Forged' : (learned && haveAll) ? 'Ready to Forge' : learned ? 'Learned · Gather Parts' : 'Recipe · Locked'
                       return (
-                        <div key={recipe.result} className="app-card" style={{ padding: '0.85rem', marginBottom: '0.9rem', display: 'flex', flexDirection: 'column', gap: 9, ...(owned ? prismaticBorder('rgba(12,16,24,0.9)') : (learned && haveAll) ? { border: '1px solid rgba(232,200,121,0.5)', background: 'rgba(30,24,12,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', opacity: learned ? 1 : 0.9 }) }}>
+                        <div key={recipe.result} className="app-card" style={{ padding: '0.85rem', marginBottom: '0.9rem', display: 'flex', flexDirection: 'column', gap: 9, ...(owned ? prismaticBorderSoft('rgba(12,16,24,0.9)') : (learned && haveAll) ? { border: '1px solid rgba(232,200,121,0.5)', background: 'rgba(30,24,12,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', opacity: learned ? 1 : 0.9 }) }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(owned ? prismaticBorder('rgba(20,24,32,0.9)') : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }) }}>
+                            <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...(owned ? prismaticBorderSoft('rgba(20,24,32,0.9)') : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }) }}>
                               {result.image
                                 // eslint-disable-next-line @next/next/no-img-element
                                 ? <img src={result.image} alt="" loading="lazy" decoding="async" style={{ width: 30, height: 30, objectFit: 'contain', opacity: owned ? 1 : 0.85 }} />
                                 : <span style={{ fontSize: '1.3rem', lineHeight: 1, opacity: owned ? 1 : 0.7 }}>{result.emoji}</span>}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.95rem', ...(owned ? PRISMATIC_TEXT : { color: '#f5ecd6' }) }}>{result.name}</p>
+                              <p className="font-cinzel font-700 truncate" style={{ fontSize: '0.95rem', ...(owned ? PRISMATIC_TEXT_SOFT : { color: '#f5ecd6' }) }}>{result.name}</p>
                               <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: owned ? '#c9a7ff' : (learned && haveAll) ? '#e8c879' : learned ? '#9ae6b4' : '#8fb6d6', marginTop: 2 }}>{label}</p>
                             </div>
                             {owned
-                              ? <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...prismaticBorder('rgba(14,18,26,0.9)') }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e6d4ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>
+                              ? <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', ...prismaticBorderSoft('rgba(14,18,26,0.9)') }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e6d4ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>
                               : !learned ? <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#7fd0ff' }}>{cost} Fathoms</span>
                               : <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: '#9a8a5a' }}>{comps.filter(c => c.owned).length}/{comps.length}</span>}
                           </div>
