@@ -184,7 +184,7 @@ export const GAUNTLET_UPGRADES: GauntletUpgrade[] = [
     name: 'The Forge',
     description: 'Unlock the Forge at your ship loadout: fuse a recipe’s component items into one, stacking both effects into a single slot. New recipes are added over time.',
     depthRequired: 30,
-    cost: 150,
+    cost: 200,
     scope: 'account',
     category: 'raids',
   },
