@@ -941,25 +941,29 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   bossDefeatedText: 'The Quartermaster Defeated',
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
   enemies: {
-    // A "FINAL BOSS" duel (Chapter III finale): just a SHORT 2-ship intro (a
-    // couple of the Cache's enforcers to set the scene), then the keeper himself
-    // as a 4-PHASE epic fight — no long gauntlet. He carries Repossession (fight
-    // start) + a 4-phase escalation via `phases[]`. Names are placeholders.
+    // A "FINAL BOSS" duel (Chapter III finale): a SHORT 2-ship intro of two
+    // DISTINCT, strong enforcers — The Leech (sneaky glass-cannon) then The
+    // Breaker (slow tank) — then the keeper himself as a 4-PHASE epic (no long
+    // gauntlet). He carries Repossession (fight start) + escalation via `phases[]`.
     scout: {
-      id: 'scout', name: 'Tally', hpBase: 86, minDmg: 9, maxDmg: 16,
-      shipSpeed: 8, actionMs: 3500,
-      pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
-      critChance: 0.08,
+      // Sinister + SNEAKY (a lamprey): fast, evasive, and spikes hard on a crit
+      // — a glass-cannon assassin that punishes a careless opener.
+      id: 'scout', name: 'The Leech', hpBase: 128, minDmg: 12, maxDmg: 22,
+      shipSpeed: 10, actionMs: 3000,
+      pattern: ['fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
+      critChance: 0.20,
       image: '/enemychapter3schooner.png',
       portrait: '/enemychapter3schooner.png',
     },
     reg: {
-      id: 'reg', name: 'Ledger', hpBase: 114, minDmg: 11, maxDmg: 19,
-      shipSpeed: 6, actionMs: 4400,
-      pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
-      critChance: 0.08,
-      image: '/enemychapter3brigantine.png',
-      portrait: '/enemychapter3brigantine.png',
+      // BRUTE (a goliath grouper): slow and tanky, but every shot is a wrecking
+      // blow — heavy volleys you have to weather or out-pace.
+      id: 'reg', name: 'The Breaker', hpBase: 220, minDmg: 18, maxDmg: 32,
+      shipSpeed: 2, actionMs: 5200,
+      pattern: ['reload', 'reload', 'volley', 'reload', 'reload', 'volley', 'dodge'],
+      critChance: 0.06,
+      image: '/enemychapter3galleon.png',
+      portrait: '/enemychapter3galleon.png',
     },
     quartermaster: {
       id: 'quartermaster', name: 'The Quartermaster', hpBase: 360, minDmg: 22, maxDmg: 38,
@@ -1027,9 +1031,10 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     { id: 'pack_2',         label: '200 Gems', image: null,              emoji: GEM_GLYPH, rarity: 'epic',     weight: 14 },
   ],
   killRewards: {
-    // The epic boss carries the XP the mob gauntlet used to (4 phases = the fight).
-    scout:         { gold: 85,   xp: 85   },
-    reg:           { gold: 110,  xp: 125  },
+    // Two genuinely strong enforcers, then the epic boss (which carries the XP
+    // the old mob gauntlet used to — 4 phases = the fight).
+    scout:         { gold: 130,  xp: 140  },   // The Leech
+    reg:           { gold: 180,  xp: 200  },   // The Breaker
     quartermaster: { gold: 1400, xp: 1600 },
   },
   preFightDialogue: [
