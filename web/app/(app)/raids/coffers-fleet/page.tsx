@@ -1,4 +1,4 @@
-// The Harbour Fleet — Chapter III's first raid (the Coffers' escort fleet +
+// The Harbor Fleet — Chapter III's first raid (the Coffers' escort fleet +
 // Admiral Ruse). SIGNATURE: "Decoys" (false crit bands on the aim bar). The
 // admiral runs a phase 2. ADMIN-ONLY until launch: the map node is adminOnly
 // AND this route hard-redirects non-admins (both gates are needed).

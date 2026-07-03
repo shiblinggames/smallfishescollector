@@ -329,7 +329,7 @@ const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
 export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
   withBossPhase2(buildChallengeRaid(THE_TOLLMASTER, TOLLMASTER_CHALLENGE_LOOT), 'spet', SPET_PHASE2)
 
-// The Harbour Fleet's challenge — Chapter III, Raid 5. Decoys + phase 2 carry
+// The Harbor Fleet's challenge — Chapter III, Raid 5. Decoys + phase 2 carry
 // through scaleEnemy automatically (it spreads ...e), so the challenge flagship
 // still runs the false colours and drops the act at half HP. Loot = scaleLoot of
 // the base table (Coffers Hull + currency); an exact-rate override lands in step 4.

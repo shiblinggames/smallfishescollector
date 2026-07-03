@@ -828,7 +828,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
   ],
 }
 
-// ── CHAPTER III, Raid 5 — The Harbour Fleet (The Coffers) ────────────────────
+// ── CHAPTER III, Raid 5 — The Harbor Fleet (The Coffers) ────────────────────
 // ADMIN-ONLY (the map node is adminOnly + the route page guards is_admin). The
 // Coffers' escort fleet + its admiral. GALLEON-tier hulls — the player's first
 // capital-ship fight. SIGNATURE: TBD — the Flare Barrage that used to live here
@@ -840,7 +840,7 @@ export const THE_TOLLMASTER: BossRaidConfig = {
 export const THE_COFFERS_FLEET: BossRaidConfig = {
   raidId: 'coffers_fleet',
   enemyAccuracy: 24,
-  raidTitle: 'The Harbour Fleet',
+  raidTitle: 'The Harbor Fleet',
   bossDefeatedText: 'Admiral Ruse Defeated',  // NAME TBD (placeholder)
   atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
   enemies: {
@@ -932,9 +932,9 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     admiral: { gold: 600, xp: 600 },
   },
   preFightDialogue: [
-    { speaker: 'narrator', text: "Past the harbour wall the Coffers open up: a drowned market ringed by guns, and a line of Galleons already coming about to meet you." },
+    { speaker: 'narrator', text: "Past the harbor wall the Coffers open up: a drowned market ringed by guns, and a line of Galleons already coming about to meet you." },
     { speaker: 'boss', text: "Far enough, captain. Nobody sails into the Coffers uninvited and lives to count the take." },
-    { speaker: 'player', text: "You're a long way from the docks for a harbourmaster." },
+    { speaker: 'player', text: "You're a long way from the docks for a harbormaster." },
     { speaker: 'boss', text: "Admiral, to you. I keep this wall, and my gunners fly whatever colours the market needs. You'll never know which gun is the live one until it's already in you." },
     { speaker: 'boss', text: "Run out your guns. Mine are already lying to you." },
   ],

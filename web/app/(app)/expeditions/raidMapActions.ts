@@ -5,6 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getLevelFromXP } from '@/lib/expeditionLevel'
 import { RAID_MAP, computeRaidMap, type RaidNodeView } from '@/lib/raidMap'
 import { GAUNTLET_LIVE, GAUNTLET_UNLOCK_NODE } from '@/lib/gauntlet'
+import { raidDamageProfile } from '@/lib/expeditions'
+import { getActiveEffects } from '@/lib/raidItems'
+import { getRaidPlayerStats } from '@/app/(app)/raids/actions'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -543,6 +546,103 @@ export async function rollDiceNode(
   }
 
   return { roll, bonus, total, dc: option.dc, success, doubloonsDelta, navXpDelta, newDoubloons, newExpeditionXp }
+}
+
+// Server-side shot-damage roll — mirrors RaidCombat.rollShotDamage exactly, off
+// the shared raidDamageProfile, so the DPS check uses the player's real cannon.
+function rollDpsShot(res: 'critical' | 'hit' | 'graze' | 'miss', shipMinDamage: number, totalPower: number, damagePct: number): number {
+  if (res === 'miss') return 0
+  const { hitMin, powerMax, critMax } = raidDamageProfile(totalPower, shipMinDamage, damagePct)
+  if (res === 'critical') { const min = shipMinDamage * 2; return Math.floor(Math.random() * (critMax - min + 1)) + min }
+  if (res === 'hit') return Math.floor(Math.random() * (powerMax - hitMin + 1)) + hitMin
+  const grazeMax = Math.max(1, Math.ceil(powerMax * 0.4))
+  return Math.floor(Math.random() * grazeMax) + 1
+}
+
+// DPS check node — a coin-or-skill gate (lib/raidMap RaidDpsCheck). Either PAY
+// to skip, or take ONE aim-bar shot: the client reports which zone it hit and
+// the server rolls the shot from the player's real damage profile (ship + power
+// + gear crit/non-crit mults + class mult), compares to the threshold, and
+// applies the outcome. Pass = free; fall short = owe failCost. Either clears it.
+export async function resolveDpsCheck(
+  nodeId: string,
+  action: 'pay' | 'shot',
+  aimResult?: 'critical' | 'hit' | 'graze' | 'miss',
+): Promise<
+  | { outcome: 'paid'; newDoubloons: number }
+  | { outcome: 'passed'; damage: number; threshold: number; newDoubloons: number }
+  | { outcome: 'failed'; damage: number; threshold: number; doubloonsDelta: number; newDoubloons: number }
+  | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'dps_check' || !node.dpsCheck) return { error: 'Invalid node' }
+  if (node.comingSoon) return { error: 'Coming soon' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, is_admin')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Profile not found' }
+  if (node.adminOnly && profile.is_admin !== true) return { error: 'Locked' }
+
+  const cleared = await buildClearedSet(admin, user.id, profile)
+  if (cleared.has(nodeId)) return { error: 'Already cleared' }
+  if (node.requiresNode && !cleared.has(node.requiresNode)) return { error: 'Locked' }
+  const navLevel = getLevelFromXP((profile.expedition_xp as number | null) ?? 0)
+  if (node.requiresNavLevel && navLevel < node.requiresNavLevel) return { error: 'Locked' }
+
+  const dc = node.dpsCheck
+  const uid = user.id
+  const nodeLabel = node.label
+  const doubloons = profile.doubloons ?? 0
+  const prog = (profile.raid_node_progress as { cleared?: string[]; choices?: Record<string, string> } | null) ?? {}
+  const newCleared = [...new Set([...(prog.cleared ?? []), nodeId])]
+
+  // Write the clear + a (clamped) doubloon spend + ledger row.
+  async function settle(cost: number, tag: string): Promise<{ newDoubloons: number; delta: number }> {
+    const newDoubloons = Math.max(0, doubloons - cost)
+    const delta = newDoubloons - doubloons
+    const updates: Record<string, unknown> = {
+      raid_node_progress: { ...prog, cleared: newCleared, choices: { ...(prog.choices ?? {}), [nodeId]: tag } },
+    }
+    if (delta !== 0) updates.doubloons = newDoubloons
+    await admin.from('profiles').update(updates).eq('id', uid)
+    if (delta !== 0) {
+      await admin.from('doubloon_transactions').insert({
+        user_id: uid, amount: delta, reason: `Raid: ${nodeLabel} (${tag})`,
+      }).then(() => {}, () => {})
+    }
+    return { newDoubloons, delta }
+  }
+
+  if (action === 'pay') {
+    if (doubloons < dc.payCost) return { error: `Need ${dc.payCost.toLocaleString()} doubloons` }
+    const { newDoubloons } = await settle(dc.payCost, 'paid')
+    return { outcome: 'paid', newDoubloons }
+  }
+
+  // action === 'shot' — roll the one shot from the player's real cannon.
+  const res = aimResult ?? 'miss'
+  const stats = await getRaidPlayerStats(user.id)
+  const base = rollDpsShot(res, stats.shipMinDamage, stats.totalPower, stats.raidMods.damagePct)
+  const aimItemMult = res === 'critical'
+    ? getActiveEffects(stats.equippedRaidItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
+    : getActiveEffects(stats.equippedRaidItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
+  const damage = Math.round(base * stats.classDamageMult * aimItemMult)
+  const passed = damage >= dc.threshold
+
+  if (passed) {
+    const { newDoubloons } = await settle(0, 'passed')
+    return { outcome: 'passed', damage, threshold: dc.threshold, newDoubloons }
+  }
+  const { newDoubloons, delta } = await settle(dc.failCost, 'failed')
+  return { outcome: 'failed', damage, threshold: dc.threshold, doubloonsDelta: delta, newDoubloons }
 }
 
 // Choice-gated payoff (the freed-scout debt). A story-type node whose reward

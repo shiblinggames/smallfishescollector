@@ -1,4 +1,4 @@
-// Challenge: The Harbour Fleet — the scaled-up Chapter III Raid 5. Same fleet
+// Challenge: The Harbor Fleet — the scaled-up Chapter III Raid 5. Same fleet
 // + Decoys + the admiral's phase 2, harder and more rewarding. ADMIN-ONLY until
 // launch (map node adminOnly + this route hard-redirects non-admins).
 

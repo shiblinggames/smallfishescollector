@@ -16,6 +16,7 @@ import BeaconChainPuzzle from './BeaconChainPuzzle'
 import CipherDialsPuzzle from './CipherDialsPuzzle'
 import MirrorRunPuzzle from './MirrorRunPuzzle'
 import DiceRollNode from './DiceRollNode'
+import DpsCheckNode from './DpsCheckNode'
 import StoryScene from './StoryScene'
 import { getGauntletLeaderboard } from '@/app/(app)/raids/gauntlet/actions'
 
@@ -955,6 +956,14 @@ function NodeDetailSheet({
         </button>
       )
     }
+  } else if (node.type === 'dps_check') {
+    // available → DpsCheckNode in the body owns the interaction (pay or the
+    // one-shot aim bar); cleared/locked just show a status banner here.
+    if (cleared) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: `${accent}1a`, border: `1px solid ${accent}40`, color: accent }}>Through the Wall ✓</div>
+    } else if (locked) {
+      cta = <div className="font-cinzel font-800 uppercase tracking-[0.04em]" style={{ width: '100%', padding: '0.85rem', borderRadius: 12, textAlign: 'center', fontSize: '1.02rem', background: 'rgba(255,255,255,0.06)', color: '#5a5856' }}>Locked</div>
+    }
   } else if (node.type === 'gauntlet') {
     // Repeatable daily detour — never "cleared". Locked shows a banner;
     // available routes into the gauntlet page (which owns the daily gate).
@@ -1137,6 +1146,18 @@ function NodeDetailSheet({
               dice={node.dice}
               doubloons={doubloons}
               navLevel={navLevel}
+              onResolved={() => { router.refresh(); onClose() }}
+            />
+          </div>
+        )}
+
+        {/* DPS check: pay to skip, or run the blockade (one aim-bar shot). */}
+        {node.type === 'dps_check' && node.dpsCheck && status === 'available' && (
+          <div style={{ marginTop: '1.1rem' }}>
+            <DpsCheckNode
+              nodeId={node.id}
+              dpsCheck={node.dpsCheck}
+              doubloons={doubloons}
               onResolved={() => { router.refresh(); onClose() }}
             />
           </div>

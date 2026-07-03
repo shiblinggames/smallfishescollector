@@ -21,7 +21,7 @@ import { getRaidItem } from '@/lib/raidItems'
 //  - milestone : a "collect / hold X" goal (no fight)
 //  - shop      : a contraband stall (future)
 //  - story     : an overarching-story beat (future)
-export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork'
+export type RaidNodeType = 'skirmish' | 'raid' | 'milestone' | 'shop' | 'story' | 'puzzle' | 'class_pick' | 'event' | 'dice' | 'gauntlet' | 'fork' | 'dps_check'
 
 // Branching event nodes (lib/raidMap RaidNode.event). One-time, the
 // player picks ONE option which fires its outcome and clears the node;
@@ -183,6 +183,24 @@ export interface RaidFork {
   rewardNavXp: number
 }
 
+// ── DPS check ────────────────────────────────────────────────────────────────
+// A `dps_check` node is a coin-or-skill gate. The player either PAYS `payCost`
+// to skip it, or RUNS the check: a single cannon shot on a fast-sweeping aim bar
+// (one shot, no crew abilities, crits count). The client only reports which aim
+// zone it hit; the server rolls the shot from the player's real damage profile
+// (ship + power + gear) and compares it to `threshold`. Meet it and you pass
+// free; fall short and you owe `failCost`. Either outcome clears the node.
+export interface RaidDpsCheck {
+  /** Single-shot damage you must MEET OR BEAT to pass free. */
+  threshold: number
+  /** Doubloons to skip the check outright (the safe option). */
+  payCost: number
+  /** Doubloons owed if you take the shot and fall short of the threshold. */
+  failCost: number
+  /** Aim-needle speed multiplier for the one shot (1 = normal; higher = harder). */
+  barSpeed: number
+}
+
 // ── Choice-gated payoff ──────────────────────────────────────────────────────
 // A story-type node whose reward (and which scene plays) depends on a choice the
 // player made at an EARLIER node. Used for the freed-scout payoff: if you cut the
@@ -310,6 +328,8 @@ export interface RaidNode {
   dice?: RaidDice
   /** fork: a two-route branch. Picking a route records the choice + clears it. */
   fork?: RaidFork
+  /** dps_check: a coin-or-skill gate (pay to skip, or one aim-bar shot). */
+  dpsCheck?: RaidDpsCheck
   /** story-type payoff gated on an earlier choice (the freed-scout debt). */
   payoff?: RaidPayoff
   /** In-review gate: hide + hard-block this node for non-admins. Filtered out
@@ -1048,7 +1068,7 @@ export const RAID_MAP: RaidNode[] = [
     id: 'gullet_bones',    type: 'dice',
     label: 'A Throw of the Bones',
     flavor: "A Finndicate freighter, half-swallowed and snagged on the reef, hold split open and bleeding cargo into the dark. How you plunder her is down to the bones.",
-    bridge: "The wreck slides off the reef behind you, picked over for whatever your throw was worth, and the deep harbour opens up ahead.",
+    bridge: "The wreck slides off the reef behind you, picked over for whatever your throw was worth, and the deep harbor opens up ahead.",
     requiresNode: 'gullet_cipher',
     image: '/raidlog.png',
     scene: [
@@ -1220,14 +1240,14 @@ export const RAID_MAP: RaidNode[] = [
   {
     id: 'coffers_heading',    type: 'story',
     label: 'Where the Coin Sleeps',
-    flavor: "Spet weighed everything the Gullet swallowed, but he never kept it. His manifests all point the same way, to a harbour with no name on any honest chart.",
+    flavor: "Spet weighed everything the Gullet swallowed, but he never kept it. His manifests all point the same way, to a harbor with no name on any honest chart.",
     bridge: "You have the name now: the Coffers, where every coin the sea swallowed surfaces again in the wrong hands. The only ways in are a blockade or a bribe.",
     requiresNode: 'chapter_2_class',
     adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "Tollmaster Spet weighed every crate the Gullet swallowed. He never kept a coin of it." },
-      { text: "His manifests all point past the throat, to a harbour no honest chart will name." },
+      { text: "His manifests all point past the throat, to a harbor no honest chart will name." },
       { text: "A drowned market, they say, where the whole sea's plunder gets counted and sold twice over." },
       { text: "The crews who've seen it call it the Coffers." },
       { text: "Everything the Finndicate ever took off the weak is stacked down there, behind a wall of guns." },
@@ -1235,7 +1255,7 @@ export const RAID_MAP: RaidNode[] = [
     ],
     detail: {
       description:
-        "Every manifest off Spet's deck points the same way: past the Gullet to a harbour the honest charts leave blank, a drowned black market where the whole sea's plunder gets counted and sold again. The crews call it the Coffers. Whatever the Finndicate has taken off the weak for years is stacked down there behind a wall of guns, and the hand that's been counting it is somewhere in the stalls.",
+        "Every manifest off Spet's deck points the same way: past the Gullet to a harbor the honest charts leave blank, a drowned black market where the whole sea's plunder gets counted and sold again. The crews call it the Coffers. Whatever the Finndicate has taken off the weak for years is stacked down there behind a wall of guns, and the hand that's been counting it is somewhere in the stalls.",
       drops: [
         { emoji: '📜', label: "Captain's Logbook, Fragment VIII", sublabel: "\"They don't spend the plunder. They shelve it, and sell it back to the next captain coming up.\"", rarity: 'uncommon' },
       ],
@@ -1245,53 +1265,36 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
-    // Was a `fork` (a branching path). Converted to a linear one-time `event`
-    // choice: the blockade-vs-bribe decision stays, but both doors open on the
-    // same market + fleet, so the chapter never actually splits. Node id kept so
-    // the downstream chain (coffers_lens.requiresNode) is untouched.
-    id: 'coffers_fork',    type: 'event',
-    label: 'The Harbour Wall',
-    flavor: "Two ways past the harbour wall: run the gun-line at the mouth, or grease the dockmaster who waves ships through. One costs you a fight, the other a favour. Either way you come out the same water.",
-    bridge: "However you came through the wall, you're inside the Coffers now, and the market's war-fleet is already turning to meet you.",
+    // Was a branching `fork`. Reworked into a coin-or-skill `dps_check`: bribe
+    // your way in (pay 10k), or run the blockade — one cannon shot at the boom
+    // chain. Land a big enough hit and you punch through free; fall short and
+    // you limp in under fire, owing 20k in repairs. Node id kept so the
+    // downstream chain (coffers_lens.requiresNode) is untouched.
+    id: 'coffers_fork',    type: 'dps_check',
+    label: 'Run the Blockade',
+    flavor: "The harbor mouth is barred by a boom chain and a gun-line. Bribe the dockmaster to raise it quiet, or blow the chain yourself with a single well-placed broadside.",
+    bridge: "The chain gives way and the boom drops into the water. You're inside the Coffers now, and the market's war-fleet is already turning to meet you.",
     requiresNode: 'coffers_heading',
     adminOnly: true,
     image: '/raidlog.png',
-    scene: [
-      { text: "The Coffers sit behind a harbour wall, and the wall has two doors." },
-      { text: "Straight ahead, the gun-line at the mouth. Run it, and every gun in the market knows your name by dark." },
-      { text: "Or the quiet way, past the dockmaster who waves the right ships through for the right price." },
-      { text: "One door costs you a fight. The other costs you a favour, to exactly the wrong sort." },
-      { text: "Either way you come out the same water, in the market, with the war-fleet already turning." },
-      { text: "Pick your door, captain. Once." },
-    ],
-    event: {
-      choices: [
-        {
-          id: 'blockade',
-          label: 'Run the Blockade',
-          description: "Punch through the gun-line at the mouth, fast and loud. You make no friends and you owe no one, and the hard water through the guns sharpens every heading you sail after.",
-          outcome: { type: 'navXp', amount: 450 },
-        },
-        {
-          id: 'dockmaster',
-          label: 'Bribe the Dockmaster',
-          description: "Grease the shark who waves ships through and slip in quiet, powder dry. No fight, but the Finndicate now holds a marker with your name on it, and the cold water has a long memory.",
-          outcome: { type: 'none' },
-        },
-      ],
+    dpsCheck: {
+      threshold: 60,
+      payCost: 10000,
+      failCost: 20000,
+      barSpeed: 1.7,
     },
     detail: {
       description:
-        "The Coffers sit behind a harbour wall with two doors. Run the Blockade and you punch through the gun-line fast and loud, owing nobody but announcing yourself to the whole market. Bribe the Dockmaster and you slip in quiet on a greased palm, powder dry, owing a favour to exactly the wrong sort. Either way you come out the same water, in the market with the war-fleet turning your way. Pick once.",
-      dropsNote: 'A one-time choice. Both doors open on the same market and the same fight beyond.',
-      ctaLabel: 'Pick Your Door',
+        "The Coffers sit behind a boom chain and a wall of guns. Grease the dockmaster and he raises the chain quiet, no fight, for a price. Or run the blockade: one broadside at the chain's anchor-ring, and if your guns hit hard enough you punch straight through free. Miss the mark and you limp in under the gun-line, owing the market a small fortune in repairs. One shot, no crew tricks. Make it count.",
+      dropsNote: 'Pay 10,000 to slip in quiet, or take one shot at the chain. Land a hard enough hit and you pass free; fall short and it costs you 20,000 in repairs.',
+      ctaLabel: 'Run the Blockade',
     },
   },
   {
     id: 'coffers_lens',    type: 'puzzle',
     label: 'The Signal Maze',
-    flavor: "The way past the harbour wall is to light the smugglers' own signal-lens, and the lantern that feeds it fires its beam through a maze of mirrors the market keeps deliberately crooked.",
-    bridge: "The lens flares green and the boom-chain drops into the water. The harbour fleet is dead ahead now.",
+    flavor: "The way past the harbor wall is to light the smugglers' own signal-lens, and the lantern that feeds it fires its beam through a maze of mirrors the market keeps deliberately crooked.",
+    bridge: "The lens flares green and the boom-chain drops into the water. The harbor fleet is dead ahead now.",
     requiresNode: 'coffers_fork',
     adminOnly: true,
     puzzle: {
@@ -1321,11 +1324,11 @@ export const RAID_MAP: RaidNode[] = [
         ],
       },
       reveal:
-        "The beam lands true on the lens and the whole signal flares green. Out past the wall, the harbour boom-chain groans down into the water.\n\nThe way in is open. The fleet is waiting.",
+        "The beam lands true on the lens and the whole signal flares green. Out past the wall, the harbor boom-chain groans down into the water.\n\nThe way in is open. The fleet is waiting.",
     },
     detail: {
       description:
-        "The market keeps its harbour-lantern fed through a maze of mirror-tiles set deliberately crooked, so no stranger can light the signal that drops the boom-chain. Turn the mirrors to bend the lantern's beam around the pillars and through every signal-lens at once.",
+        "The market keeps its harbor-lantern fed through a maze of mirror-tiles set deliberately crooked, so no stranger can light the signal that drops the boom-chain. Turn the mirrors to bend the lantern's beam around the pillars and through every signal-lens at once.",
       drops: [
         { emoji: '🧭', label: '650 Nav XP', sublabel: 'Lighting the signal sharpens your navigation. No coin in it, just the way through.', rarity: 'rare' },
       ],
@@ -1339,9 +1342,9 @@ export const RAID_MAP: RaidNode[] = [
     // adminOnly until tested AND the route page guards is_admin. Names/art are
     // placeholders pending step 4.
     id: 'coffers_fleet',    type: 'raid',
-    label: 'The Harbour Fleet',
+    label: 'The Harbor Fleet',
     flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
-    bridge: "The admiral's fleet is wreckage on the harbour floor, and the way to the market's heart is open. Time to re-arm at the Cache before the last push.",
+    bridge: "The admiral's fleet is wreckage on the harbor floor, and the way to the market's heart is open. Time to re-arm at the Cache before the last push.",
     requiresNode: 'coffers_lens',
     requiresNavLevel: 40,
     adminOnly: true,
@@ -1359,7 +1362,7 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     id: 'coffers_fleet_challenge',    type: 'raid',
-    label: 'Challenge: The Harbour Fleet',
+    label: 'Challenge: The Harbor Fleet',
     flavor: "The same fleet, drilled harder and flying meaner colours. The admiral does not lose his wall twice.",
     requiresNode: 'coffers_fleet',
     adminOnly: true,
@@ -1369,7 +1372,7 @@ export const RAID_MAP: RaidNode[] = [
     image: THE_COFFERS_FLEET.enemies.admiral.portrait,
     detail: {
       description:
-        "The harbour fleet again, harder for the loss. More HP, sharper guns, the same wall of false colours, and the admiral's phase 2 bites deeper. The chase rewards roll richer for the trouble.",
+        "The harbor fleet again, harder for the loss. More HP, sharper guns, the same wall of false colours, and the admiral's phase 2 bites deeper. The chase rewards roll richer for the trouble.",
       enemies: ['Feint ×2', 'Sham ×2', 'Bulwark ×2', 'Mirage ×2', 'Admiral Ruse'],
       drops: lootDrops(THE_COFFERS_FLEET_CHALLENGE.loot),
       clearReward: clearPayout(THE_COFFERS_FLEET_CHALLENGE),
@@ -1529,7 +1532,7 @@ export const RAID_MAP: RaidNode[] = [
     classPick: { chapterId: 'the_coffers' },
     detail: {
       description:
-        "You ran the harbour wall, faced the market's fleet, and put the Quartermaster under his own counter. Pick a class for the deep water where Finleone waits. It stays with you for every raid from here on, stacking with the captain you already are.",
+        "You ran the harbor wall, faced the market's fleet, and put the Quartermaster under his own counter. Pick a class for the deep water where Finleone waits. It stays with you for every raid from here on, stacking with the captain you already are.",
       dropsNote: 'Deepen the class you already sail or branch into a fresh one. Permanent, and the other options are gone for good.',
       ctaLabel: 'Pick a class',
     },
