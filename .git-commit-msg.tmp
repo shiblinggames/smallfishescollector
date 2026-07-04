@@ -1,0 +1,24 @@
+Launch Chapter III — The Coffers (raids 5 & 6 live for all players)
+
+Drop the two-layer admin gate that kept the Coffers chapter in review:
+- Removed adminOnly:true from all 15 Chapter III raid-map nodes
+  (story beats, the fork, the two Mirror Run puzzles, the dice node,
+  both raids + their challenge side-branches, finleone_named, and the
+  chapter_3_class pick).
+- Removed the is_admin redirect from all 4 route pages (coffers-fleet,
+  coffers-fleet/challenge, quartermaster, quartermaster/challenge);
+  they now guard only raid_repair_owed, matching every live raid page.
+
+Content verified launch-ready: all boss/crew portraits, Ch3 hull art,
+and item art present; signature loot (Tell-Tale Glass, Admiral's Eye,
+War Drum, Thunder Drum + Coffers Hull skin) fully wired through
+ITEM_GRANTS, raidItems defs, and crewEffects; challenge configs at the
+standard 40/10 rates; multi-phase boss engine, Repossession, Decoys,
+and tier-2 tides all live. The chapter-unlock celebration + class
+aggregation are chapter-agnostic, so Chapter III surfaces automatically
+for anyone who has cleared Chapter II.
+
+Shipping Raid 5's working names (Feint/Sham/Bulwark/Mirage/Admiral Ruse)
+and the 'overcast' atmosphere as final for now (both confirmed).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>

@@ -1,7 +1,6 @@
 // The Harbor Fleet — Chapter III's first raid (the Coffers' escort fleet +
 // Admiral Ruse). SIGNATURE: "Decoys" (false crit bands on the aim bar). The
-// admiral runs a phase 2. ADMIN-ONLY until launch: the map node is adminOnly
-// AND this route hard-redirects non-admins (both gates are needed).
+// admiral runs a phase 2.
 
 import { redirect } from 'next/navigation'
 import RaidGame from '../RaidGame'
@@ -18,8 +17,6 @@ export default async function CoffersFleetRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  // In-review gate: Chapter III is admin-only until tested.
-  if (profile?.is_admin !== true) redirect('/expeditions')
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (

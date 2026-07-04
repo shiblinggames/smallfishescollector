@@ -1,7 +1,6 @@
 // The Quartermaster — Chapter III's finale raid (the Cache keeper + his hired
 // guns). SIGNATURE: "Repossession" (reclaims one equipped raid item at fight
-// start) + a phase 2. ADMIN-ONLY until launch: the map node is adminOnly AND
-// this route hard-redirects non-admins (both gates are needed).
+// start) + a 4-phase final-boss duel.
 
 import { redirect } from 'next/navigation'
 import RaidGame from '../RaidGame'
@@ -18,7 +17,6 @@ export default async function QuartermasterRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  if (profile?.is_admin !== true) redirect('/expeditions')
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (

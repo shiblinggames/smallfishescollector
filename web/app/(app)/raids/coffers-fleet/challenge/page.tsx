@@ -1,6 +1,5 @@
 // Challenge: The Harbor Fleet — the scaled-up Chapter III Raid 5. Same fleet
-// + Decoys + the admiral's phase 2, harder and more rewarding. ADMIN-ONLY until
-// launch (map node adminOnly + this route hard-redirects non-admins).
+// + Decoys + the admiral's phase 2, harder and more rewarding.
 
 import { redirect } from 'next/navigation'
 import RaidGame from '../../RaidGame'
@@ -17,7 +16,6 @@ export default async function CoffersFleetChallengeRaidPage() {
     getRaidPlayerStats(user.id),
   ])
 
-  if (profile?.is_admin !== true) redirect('/expeditions')
   if ((profile?.raid_repair_owed ?? 0) > 0) redirect('/expeditions')
 
   return (

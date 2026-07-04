@@ -492,11 +492,10 @@ export const RAID_CHAPTERS: RaidChapter[] = [
     romanNumeral: 'III',
     title:      'The Coffers',
     subtitle:   'Follow the coin to its vault, and learn who you have been buying from.',
-    // coffers_heading → coffers_fork → coffers_fleet (Raid 5, comingSoon) →
-    // quartermaster_turn (the Cache betrayal) → the_quartermaster (Raid 6,
-    // comingSoon) → finleone_named (names Don Finleone) → chapter_3_class.
-    // ADMIN-ONLY until tested (every node carries adminOnly: true); the two
-    // raids are comingSoon stubs until their configs land in step 3.
+    // coffers_heading → coffers_fork → coffers_fleet (Raid 5) →
+    // quartermaster_turn (the Cache betrayal) → the_quartermaster (Raid 6) →
+    // finleone_named (names Don Finleone) → chapter_3_class.
+    // LIVE since 2026-07-04 (adminOnly + route is_admin guards dropped).
     lastNodeId: 'chapter_3_class',
   },
 ]
@@ -1230,18 +1229,15 @@ export const RAID_MAP: RaidNode[] = [
   },
 
   // ── CHAPTER III — The Coffers (raids 5 & 6) ──────────────────────────────
-  // ADMIN-ONLY until tested: every node carries adminOnly: true. The two raids
-  // ship as comingSoon stubs until their BossRaidConfigs land (step 3), so the
-  // chain reads end-to-end but stays gated behind the unbuilt bosses. Story
-  // spine: the Quartermaster's Cache (the shop you've bought from since Ch I) is
-  // revealed a Finndicate front, and names Don Finleone — the Ch IV hook.
+  // LIVE since 2026-07-04 (adminOnly flags + route is_admin guards dropped).
+  // Story spine: the Quartermaster's Cache (the shop you've bought from since
+  // Ch I) is revealed a Finndicate front, and names Don Finleone — the Ch IV hook.
   {
     id: 'coffers_heading',    type: 'story',
     label: 'Where the Coin Sleeps',
     flavor: "Spet weighed everything the Gullet swallowed, but he never kept it. His manifests all point the same way, to a harbor with no name on any honest chart.",
     bridge: "You have the name now: the Coffers, where every coin the sea swallowed surfaces again in the wrong hands. The only ways in are a blockade or a bribe.",
     requiresNode: 'chapter_2_class',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "Tollmaster Spet weighed every crate the Gullet swallowed. He never kept a coin of it." },
@@ -1273,7 +1269,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "A locked gate bars the way into the Coffers. Blow it open with one good cannon shot, or pay the dockmaster to wave you through.",
     bridge: "The gate's behind you, and the market's war-fleet is already turning to meet you.",
     requiresNode: 'coffers_heading',
-    adminOnly: true,
     image: THE_COFFERS_FLEET.enemies.scout.portrait,
     dpsCheck: {
       threshold: 40,
@@ -1293,7 +1288,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The way past the harbor wall is to light the smugglers' own signal-lens, and the lantern that feeds it fires its beam through a maze of mirrors the market keeps deliberately crooked.",
     bridge: "The lens flares green and the boom-chain drops into the water. The harbor fleet is dead ahead now.",
     requiresNode: 'coffers_fork',
-    adminOnly: true,
     puzzle: {
       kind: 'mirror',
       rewardNavXp: 650,
@@ -1343,7 +1337,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The Quartermaster's Cache keeps a stall even here, deep in the Coffers. The keeper waves you over, all smiles, and lays out two cuts of rigging. Take one.",
     bridge: "New rig lashed on, and the market's war-fleet dead ahead. Whatever the keeper's grinning about, it'll keep till the guns are quiet.",
     requiresNode: 'coffers_lens',
-    adminOnly: true,
     choice: { items: ['crows_nest_rigging', 'trade_wind_sails'] },
     detail: {
       description:
@@ -1362,7 +1355,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The Quartermaster who runs the Cache is too glad to see you, and too sure of your picks. He arms every captain who comes through the Coffers, and something in his smile says he knows how it ends for most of them.",
     bridge: "The war-fleet turns to meet you. Whatever the Quartermaster is playing at, it'll keep until the admiral's on the harbor floor.",
     requiresNode: 'coffers_cache',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "You re-arm at the Quartermaster's Cache, the same stall that's kitted you out since the coast, while he watches from behind his counter in no hurry at all." },
@@ -1396,7 +1388,6 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The admiral's fleet is wreckage on the harbor floor, and the way to the market's heart is open. The last push is on the keeper himself now.",
     requiresNode: 'coffers_keeper',
     requiresNavLevel: 40,
-    adminOnly: true,
     route: '/raids/coffers-fleet',
     raidId: THE_COFFERS_FLEET.raidId,
     image: THE_COFFERS_FLEET.enemies.admiral.portrait,
@@ -1414,7 +1405,6 @@ export const RAID_MAP: RaidNode[] = [
     label: 'Challenge: The Harbor Fleet',
     flavor: "The same fleet, drilled harder and flying meaner colours. The admiral does not lose his wall twice.",
     requiresNode: 'coffers_fleet',
-    adminOnly: true,
     route: '/raids/coffers-fleet/challenge',
     raidId: THE_COFFERS_FLEET_CHALLENGE.raidId,
     sideBranch: { parentId: 'coffers_fleet' },
@@ -1434,7 +1424,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "You put in at the Quartermaster's Cache to re-arm, the same shady stall that's kitted you out since the coast. This time the keeper's smiling, and the guns behind the counter are pointed your way.",
     bridge: "The Cache was theirs the whole time. Every blade they sold you was a leash, and the keeper answers to a name you've not heard yet: Don Finleone.",
     requiresNode: 'coffers_fleet',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "You put in at the Quartermaster's Cache to re-arm. Same stall that's kitted you out since the coast." },
@@ -1464,7 +1453,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The keeper's guns are out and his floor's gone to chaos. Bolted to the counting-house planks sits a strongbox fat with the day's take, and his muscle is closing fast. Time for exactly one grab.",
     bridge: "Strongbox settled one way or the other, you shove deeper into the market, toward the light-lock that bars his vault.",
     requiresNode: 'quartermaster_turn',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "The moment the keeper's guns come up, his counting-house turns into a riot." },
@@ -1522,7 +1510,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The Quartermaster's strongroom answers to a lock of light: a sunbeam channelled down through the market's roof, off a row of mirrors he can crook from behind his counter. Straighten them and the vault opens.",
     bridge: "The beam strikes the vault-eye and the strongroom bars grind back. The keeper is cornered behind them now.",
     requiresNode: 'coffers_strongbox',
-    adminOnly: true,
     puzzle: {
       kind: 'mirror',
       rewardNavXp: 750,
@@ -1570,7 +1557,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The Quartermaster's vault isn't a strongroom. It's the back-stock of a shop, drowned and kept, and chained in the middle of it is a ledger naming every captain he ever armed and how each one sank.",
     bridge: "You know now what the Cache really was. The Quartermaster's cornered against his own shelves, still smiling, and every debt in his book runs up to one name: Don Finleone.",
     requiresNode: 'coffers_vault_lens',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "The bars grind back and the vault breathes out cold, coin-smelling air." },
@@ -1606,7 +1592,6 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The Quartermaster goes down under his own counter and the Cache's hold falls open for good. Every debt in that ledger settles at once, and the account runs up past him, to the don.",
     requiresNode: 'coffers_ledger',
     requiresNavLevel: 48,
-    adminOnly: true,
     route: '/raids/quartermaster',
     raidId: THE_QUARTERMASTER.raidId,
     image: THE_QUARTERMASTER.enemies.quartermaster.portrait,
@@ -1624,7 +1609,6 @@ export const RAID_MAP: RaidNode[] = [
     label: 'Challenge: The Quartermaster',
     flavor: "The keeper again, angrier for the loss, and he reclaims more than you can spare. He does not get robbed twice.",
     requiresNode: 'the_quartermaster',
-    adminOnly: true,
     route: '/raids/quartermaster/challenge',
     raidId: THE_QUARTERMASTER_CHALLENGE.raidId,
     sideBranch: { parentId: 'the_quartermaster' },
@@ -1644,7 +1628,6 @@ export const RAID_MAP: RaidNode[] = [
     flavor: "The Quartermaster's strongbox spills its ledgers, and every page settles a debt up to one signature. A hammerhead don who runs the Coffers and everything that feeds them: Don Finleone.",
     bridge: "You have the don's name now. Finleone runs the Coffers, the Caches, the whole drowned market. Chapter's end, and the deepest water is the last that's left.",
     requiresNode: 'the_quartermaster',
-    adminOnly: true,
     image: '/raidlog.png',
     scene: [
       { text: "The Quartermaster's strongbox cracks, and the ledgers spill across the deck." },
@@ -1672,7 +1655,6 @@ export const RAID_MAP: RaidNode[] = [
     label: "Captain's Choice",
     flavor: "The Coffers in ruins, the Quartermaster under, and a don's name at the top of every ledger. Time to set what your colours mean before the deepest water.",
     requiresNode: 'the_quartermaster',
-    adminOnly: true,
     classPick: { chapterId: 'the_coffers' },
     detail: {
       description:
