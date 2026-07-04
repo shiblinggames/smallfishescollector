@@ -102,6 +102,17 @@ html, body {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
+  /* The Gauntlet depth/pot/curses header lives inside that fixed-height
+     scroller as its first child, so a tall RaidCombat layout scrolled it off
+     the top and the player lost sight of depth/pot mid-fight. Pin it to the
+     top of the region (top:0 = right below the Nav, since the region is the
+     scroll container here). Scoped to PWA so the normal-browser document
+     scroll — where you can just scroll back up — is untouched. */
+  .gauntlet-depthbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
 }
 
 .font-cinzel { font-family: var(--font-cinzel), serif; }

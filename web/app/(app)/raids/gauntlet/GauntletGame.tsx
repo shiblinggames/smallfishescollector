@@ -377,6 +377,16 @@ export default function GauntletGame(props: GauntletGameProps) {
     return () => { document.body.style.overflow = prev }
   }, [phase])
 
+  // Land every new screen at the top. Without this a tall body-scrolled meta
+  // screen (the between/dive-deeper breather, the reward crate) could inherit a
+  // scrolled-down position from the phase before it and open "locked" halfway
+  // down, hiding its own header. The fixed-height fight region resets its own
+  // scroll on remount, so this only matters for the document-scrolled screens.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    document.querySelector('.raid-combat-region')?.scrollTo(0, 0)
+  }, [phase])
+
   function dismissIntro() {
     setIntroOpen(false)
     if (!props.hasSeenIntro) markGauntletIntroSeen().catch(() => {})
@@ -2132,7 +2142,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none',
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(3,9,18,${gloom}) 100%)` }} />
         )}
-        <div style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
+        <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
           <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} />
         </div>
         <div style={{ width: '100%' }}>
@@ -3419,7 +3429,7 @@ function DepthBar({ depth, pot, isBoss, isElite, affixName, curses }: { depth: n
   const tagColor = isBoss ? '#f87171' : '#c084fc'
   return (
     <div className="flex items-center justify-between"
-      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${GOLD}28`, borderRadius: 14, padding: '0.4rem 0.8rem' }}>
+      style={{ background: 'rgba(4,10,18,0.94)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: `1px solid ${GOLD}28`, borderRadius: 14, padding: '0.4rem 0.8rem' }}>
       <div className="flex items-baseline gap-1.5">
         <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em' }}>DEPTH</span>
         <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
