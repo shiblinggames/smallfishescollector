@@ -331,15 +331,43 @@ export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
 
 // The Harbor Fleet's challenge — Chapter III, Raid 5. Decoys + phase 2 carry
 // through scaleEnemy automatically (it spreads ...e), so the challenge flagship
-// still runs the false colours and drops the act at half HP. Loot = scaleLoot of
-// the base table (Coffers Hull + currency); an exact-rate override lands in step 4.
+// still runs the false colours and drops the act at half HP. Exact-rate loot
+// override (like Pete/Krust/Cartographer/Spet) so the drops land where designed:
+// the non-legendary item (Tell-Tale Glass) at 40% and the legendary (Admiral's
+// Eye) at 10%, with the trophy skin at 10% and currency filling the table to 100.
+const COFFERS_FLEET_CHALLENGE_LOOT: typeof THE_COFFERS_FLEET['loot'] = (() => {
+  const byId = Object.fromEntries(THE_COFFERS_FLEET.loot.map(l => [l.id, l]))
+  const w = (id: string, weight: number) => ({ ...byId[id], weight })
+  return [
+    w('doubloons_600',   16),
+    w('doubloons_1200',  10),
+    w('gems_50',          9),
+    w('pack_2',           5),
+    w('coffers_hull',    10),  // 10% trophy skin (2× the 5% normal)
+    w('tell_tale_glass', 40),  // 40% normal item (2× the 20% normal)
+    w('admirals_eye',    10),  // 10% legendary (2× the 5% normal)
+  ]
+})()
 export const THE_COFFERS_FLEET_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(THE_COFFERS_FLEET)
+  buildChallengeRaid(THE_COFFERS_FLEET, COFFERS_FLEET_CHALLENGE_LOOT)
 
 // The Quartermaster's challenge — Chapter III, Raid 6 (the chapter finale).
 // Repossession + phase 2 both carry through scaleEnemy automatically (it spreads
 // ...e), so the challenge keeper still reclaims an item at the start and opens the
-// reserve deck at half HP. Loot = scaleLoot of the base table (Coffers Hull +
-// currency); an exact-rate override lands in step 4.
+// reserve deck at half HP. Exact-rate loot override: War Drum (non-legendary) at
+// 40% and Thunder Drum (legendary) at 10%, trophy skin 10%, currency to 100.
+const QUARTERMASTER_CHALLENGE_LOOT: typeof THE_QUARTERMASTER['loot'] = (() => {
+  const byId = Object.fromEntries(THE_QUARTERMASTER.loot.map(l => [l.id, l]))
+  const w = (id: string, weight: number) => ({ ...byId[id], weight })
+  return [
+    w('doubloons_600',   13),
+    w('doubloons_1200',  10),
+    w('gems_50',         11),
+    w('pack_2',           6),
+    w('coffers_hull',    10),  // 10% trophy skin
+    w('war_drum',        40),  // 40% normal item
+    w('thunder_drum',    10),  // 10% legendary
+  ]
+})()
 export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(THE_QUARTERMASTER)
+  buildChallengeRaid(THE_QUARTERMASTER, QUARTERMASTER_CHALLENGE_LOOT)
