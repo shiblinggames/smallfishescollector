@@ -5,17 +5,17 @@
 // = substantial), and the late game grows slowly enough to stay achievable
 // without a wall.
 //
-// Pacing examples at Krust = 910 XP per raid (curve TRIPLED 2026-07-04):
-//   - Lv  1→2:   1,050 XP
-//   - Lv 10→11:  2,265 XP
-//   - Lv 50→51:  7,665 XP    → mid-game grind
-//   - Lv 99→100:14,280 XP    → late-game grind
-// Total to Lv 100: ~758,835 XP (~834 Krust raids). Originally ~252,945 (~278
-// raids), tuned to the RAID path. The Gauntlet pays crew XP far faster
-// (150/depth = a depth-30 run ≈ 5 raids of crew XP, once a day), which made
-// maxing a crew trivial. Tripled to restore the long grind. Level + STATS
-// derive live from stored XP, so this retroactively lowered every existing
-// crew's level + stat ticks (an accepted trade to reset the crew economy).
+// Pacing examples (curve set for ~1M total to Lv 100, 2026-07-04):
+//   - Lv  1→2:   1,400 XP
+//   - Lv 10→11:  3,002 XP
+//   - Lv 50→51: 10,122 XP    → mid-game grind
+//   - Lv 99→100:18,844 XP    → late-game grind
+// Total to Lv 100: ~1,002,000 XP. Originally ~252,945 (tuned to the RAID path,
+// ~278 Krust raids), but the Gauntlet pays crew XP fast AND is UNCAPPED, so
+// maxing a crew was trivial. Raised to ~1M so it's a real long-haul grind
+// across all sources (raids still grant FULL crew XP — earlier raids kept full
+// on purpose). Level + STATS derive live from stored XP, so this retroactively
+// lowered every existing crew's level + stat ticks (an accepted trade).
 //
 // Tuning history: tried player-shape÷10 (BASE=6, growth=1.086 — too cheap
 // early, 910 XP = Lv 33); then gentler geometric (BASE=60, growth=1.05 —
@@ -37,8 +37,8 @@
 // play (no "next tick: Power" preview); the graveyard memorial surfaces the
 // final lifetime distribution as a tribute.
 
-const BASE_LEVEL_COST = 1050   // XP cost of Lv 1→2 (was 350; tripled 2026-07-04)
-const COST_INCREMENT  = 135    // each subsequent level costs this much more (was 45)
+const BASE_LEVEL_COST = 1400   // XP cost of Lv 1→2 (was 350; raised for ~1M total 2026-07-04)
+const COST_INCREMENT  = 178    // each subsequent level costs this much more (was 45)
 
 function computeXPTable(): number[] {
   const table: number[] = [0]
