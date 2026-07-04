@@ -2901,6 +2901,30 @@ function HaulModal({ onClose }: { onClose: () => void }) {
               <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
                 Each can drop from any chest you crack, from about {shallowOdds}% up shallow to {deepOdds}% in Davy Jones&apos; Locker. Land both and forge them into the Grand Cannon.
               </p>
+
+              {/* The prestige cosmetic — a rare Man-o-War-only hull that drops
+                  ONLY from the deepest chest. Gold-themed to set it apart from
+                  the purple cannon chase above. */}
+              {(() => {
+                const hull = getShipSkin('golden_gauntlet_hull')
+                if (!hull) return null
+                return (
+                  <>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 14, marginBottom: 6 }}>The Prize — only in Davy Jones&apos; Locker</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.55rem 0.65rem', borderRadius: 10, background: `${hull.color}14`, border: `1px solid ${hull.color}66`, boxShadow: `0 0 20px ${hull.color}1c` }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={hull.imageByTier?.[6]} alt="" loading="lazy" decoding="async" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.5))' }} />
+                      <div style={{ minWidth: 0 }}>
+                        <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f7efd8', lineHeight: 1.1 }}>{hull.name}</p>
+                        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#b0aa9c', lineHeight: 1.3, marginTop: 1 }}>{hull.description}</p>
+                      </div>
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
+                      A rare hull skin, dropping only from the Davy Jones&apos; Locker chest — the deepest tier. Fits the Man-o-War alone.
+                    </p>
+                  </>
+                )
+              })()}
         </div>
       </motion.div>
     </ModalScrim>
