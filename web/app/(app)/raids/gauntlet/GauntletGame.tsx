@@ -2487,6 +2487,27 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
               )
             })}
 
+            {/* Golden Gauntlet Hull — the rare Man-o-War-only cosmetic from the
+                deepest chest. Its own gilded card so the prestige drop lands. */}
+            {r.droppedSkinId && (() => {
+              const skin = getShipSkin(r.droppedSkinId)
+              if (!skin) return null
+              return (
+                <motion.div initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.85, type: 'spring', stiffness: 260, damping: 18 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${skin.color}18`, border: `1px solid ${skin.color}88`, boxShadow: `0 0 26px ${skin.color}33` }}>
+                  {skin.imageByTier?.[6]
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={skin.imageByTier[6]} alt="" style={{ width: 46, height: 46, objectFit: 'contain', flexShrink: 0 }} />
+                    : null}
+                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                    <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: skin.color }}>Rare hull · equip from Manage Ship</p>
+                    <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f7efd8', lineHeight: 1.1 }}>{skin.name}</p>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#b0aaa0', lineHeight: 1.35, marginTop: 1 }}>{skin.description}</p>
+                  </div>
+                </motion.div>
+              )
+            })()}
+
             {/* Depth-milestone unlocks earned by SURVIVING to this depth. Shown
                 here, in the moment, instead of a piece of mail after the fact. */}
             {r.unlockedThisRun.map((u, i) => (

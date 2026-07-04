@@ -1423,27 +1423,33 @@ export default function ShipHero({
                 })()}
                 {SHIP_SKINS.map(skin => {
                   const owned    = ownedSkins.includes(skin.id)
-                  const isEquipped = equippedSkin === skin.id
-                  // Most skins recolor via a bespoke sprite (imageByTier), not a
-                  // CSS filter — so preview the skin's OWN sprite at the player's
-                  // hull tier, falling back to base + filter for filter-only skins.
+                  // Tier-gated skins (e.g. Man-o-War-only) can't be equipped on a
+                  // smaller hull — locked until the player commands the right ship.
                   const skinTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
-                  const skinImg = skin.imageByTier?.[skinTier] ?? shipStats.image
+                  const tierLocked = skin.requiresShipTier != null && skinTier < skin.requiresShipTier
+                  const isEquipped = equippedSkin === skin.id
+                  const equippable = owned && !isEquipped && !tierLocked
+                  // Preview the skin's OWN sprite at the player's hull tier; for a
+                  // tier-gated skin below its tier, show its target-tier art so the
+                  // player sees what they're chasing. Falls back to base + filter.
+                  const skinImg = skin.imageByTier?.[skinTier]
+                    ?? (skin.requiresShipTier != null ? skin.imageByTier?.[skin.requiresShipTier] : undefined)
+                    ?? shipStats.image
                   return (
                     <button
                       key={skin.id}
-                      onClick={owned && !isEquipped ? () => handleEquipSkin(skin.id) : undefined}
-                      disabled={!owned || isEquipped}
+                      onClick={equippable ? () => handleEquipSkin(skin.id) : undefined}
+                      disabled={!equippable}
                       className="font-karla font-700"
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                         padding: '0.6rem 0.4rem 0.5rem',
                         borderRadius: 10,
                         background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)',
-                        border: `1px solid ${isEquipped ? skin.color + '90' : owned ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`,
+                        border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`,
                         boxShadow: isEquipped ? `0 0 14px ${skin.color}33` : 'none',
-                        cursor: owned && !isEquipped ? 'pointer' : 'default',
-                        opacity: owned ? 1 : 0.6,
+                        cursor: equippable ? 'pointer' : 'default',
+                        opacity: owned && !tierLocked ? 1 : 0.6,
                       }}
                     >
                       <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1455,14 +1461,16 @@ export default function ShipHero({
                           decoding="async"
                           style={{
                             width: 44, height: 44, objectFit: 'contain',
-                            filter: owned ? skin.filter : 'brightness(0.25) saturate(0)',
+                            filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)',
                             transition: 'filter 0.25s',
                           }}
                         />
                       </div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned ? '#f0ede8' : '#a8a3a0', lineHeight: 1.15, textAlign: 'center' }}>{skin.name}</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.15, textAlign: 'center' }}>{skin.name}</p>
                       {isEquipped ? (
                         <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: skin.color }}>✓ Equipped</span>
+                      ) : tierLocked ? (
+                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: skin.color, textAlign: 'center', lineHeight: 1.3 }}>{SHIPS[skin.requiresShipTier!]?.name ?? 'Top hull'} only</span>
                       ) : owned ? (
                         <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#4ade80' }}>Tap to equip</span>
                       ) : (

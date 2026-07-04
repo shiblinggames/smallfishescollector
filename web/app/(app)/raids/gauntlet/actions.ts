@@ -19,6 +19,12 @@ import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMu
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
 
+// Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
+// top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
+const GOLD_HULL_SKIN_ID = 'golden_gauntlet_hull'
+const GOLD_HULL_CHEST_TIER = 5
+const GOLD_HULL_DROP_CHANCE = 0.04
+
 /** Record a single gauntlet hit; persists the all-time biggest via greatest()
  *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
  *  so the Biggest Hit board reflects the largest blow ever landed in a descent. */
@@ -338,6 +344,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       newFathoms: number
       /** Davy cannons that dropped this cash-out (chest chase items). */
       droppedItems: string[]
+      /** Golden Gauntlet Hull skin id if it dropped this cash-out, else null. */
+      droppedSkinId: string | null
       /** Depth-milestone unlocks crossed by this CASH-OUT (surfaced on the
        *  reward screen — the Gauntlet no longer mails these). */
       unlockedThisRun: { name: string; blurb: string; where: string }[]
@@ -350,7 +358,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items, ship_skins')
     .eq('id', user.id)
     .single()
 
@@ -386,6 +394,16 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }
   }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
+
+  // Golden Gauntlet Hull — a RARE cosmetic drop from the Davy Jones' Locker chest
+  // (the top chest tier, depth 18+). Man-o-War-only skin; grants to ship_skins so
+  // it's owned even before the player has the hull to wear it.
+  const ownedSkins = (profile.ship_skins as string[] | null) ?? []
+  let droppedSkinId: string | null = null
+  if (chest.tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID) && Math.random() < GOLD_HULL_DROP_CHANCE) {
+    droppedSkinId = GOLD_HULL_SKIN_ID
+  }
+  const skinFields = droppedSkinId ? { ship_skins: [...new Set([...ownedSkins, droppedSkinId])] } : {}
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
   const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
@@ -448,6 +466,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
       gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
       raid_items: newRaidItems,
+      ...skinFields,
       ...bestFields,
       ...contestFields,
       ...snapFields,
@@ -483,6 +502,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     earnedFathoms,
     newFathoms,
     droppedItems,
+    droppedSkinId,
     unlockedThisRun,
   }
 }

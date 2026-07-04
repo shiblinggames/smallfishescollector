@@ -7,6 +7,7 @@ import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItems } from '@/lib/raidItems'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getShipAugment, AUGMENT_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
+import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
 import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { hasForge, bonusChargeSlots } from '@/lib/gauntletUpgrades'
 
@@ -214,9 +215,12 @@ export async function equipShipSkin(skinId: string | null): Promise<void> {
   if (!user) return
   const admin = createAdminClient()
   if (skinId !== null) {
-    const { data: profile } = await admin.from('profiles').select('ship_skins').eq('id', user.id).single()
+    const { data: profile } = await admin.from('profiles').select('ship_skins, ship_tier').eq('id', user.id).single()
     const owned = (profile?.ship_skins as string[] | null) ?? []
     if (!owned.includes(skinId)) return
+    // Tier-gated skins (e.g. Man-o-War-only) can't be equipped on a smaller hull.
+    const skin = getShipSkin(skinId)
+    if (skin && !canEquipShipSkin(skin, (profile?.ship_tier as number | null) ?? 0)) return
   }
   await admin.from('profiles').update({ equipped_ship_skin: skinId }).eq('id', user.id)
 }

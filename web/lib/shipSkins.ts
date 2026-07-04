@@ -11,7 +11,15 @@ export interface ShipSkinDef {
    *  CSS filter stays available alongside it for skins that want to
    *  ALSO tint the swapped image. */
   imageByTier?: Record<number, string>
+  /** Minimum ship tier required to EQUIP this skin. Late-game prestige skins
+   *  are painted for one specific hull, so they only fit that tier or above —
+   *  e.g. 6 = Man-o-War only. Undefined = equippable on any ship. As the game
+   *  approaches its endgame, more skins will be Man-o-War-only via this gate. */
+  requiresShipTier?: number
 }
+
+/** The Man-o-War is the top hull (ship tier 6). */
+export const MANOWAR_SHIP_TIER = 6
 
 export const SHIP_SKINS: ShipSkinDef[] = [
   {
@@ -76,8 +84,30 @@ export const SHIP_SKINS: ShipSkinDef[] = [
       6: '/enemychapter3man-o-war.png',
     },
   },
+  {
+    // Man-o-War-only prestige skin — the first of the late-game tier-gated
+    // hulls. A RARE drop from the Davy Jones' Locker chest (the top Gauntlet
+    // chest, depth 18+). Painted for the Man-o-War alone, so it can't be
+    // equipped on any smaller hull (requiresShipTier).
+    id: 'golden_gauntlet_hull',
+    name: 'Golden Gauntlet Hull',
+    description: "Gilded plating hauled up from Davy Jones' Locker itself. Only the Man-o-War is grand enough to carry it.",
+    filter: 'none',
+    color: '#f0c040',
+    source: "Rare drop · Davy Jones' Locker chest",
+    requiresShipTier: MANOWAR_SHIP_TIER,
+    imageByTier: {
+      6: '/goldengauntlethull.png',
+    },
+  },
 ]
 
 export function getShipSkin(id: string): ShipSkinDef | undefined {
   return SHIP_SKINS.find(s => s.id === id)
+}
+
+/** Whether a ship of the given tier can equip this skin (respects its
+ *  requiresShipTier gate). Undefined tier gate = any hull. */
+export function canEquipShipSkin(skin: ShipSkinDef, shipTier: number): boolean {
+  return skin.requiresShipTier == null || shipTier >= skin.requiresShipTier
 }
