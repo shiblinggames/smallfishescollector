@@ -14,6 +14,12 @@ const STAGE_H = 132
 const LOOP: Record<ShipAugmentId, number> = { railgun: 2200, barrage: 2600, nuke: 3400 }
 const NUKE_FLIGHT = 850
 
+// Ship positions as fractions of the stage. The target sits LEFT of centre (not
+// jammed to the right edge) so the blast/shockwave radius — tuned for a big combat
+// stage — stays inside this small diorama instead of spilling off the right.
+const PLAYER = { x: 0.16, y: 0.60 }
+const TARGET = { x: 0.54, y: 0.42 }
+
 interface Geo { x1: number; y1: number; x2: number; y2: number; len: number; angle: number }
 
 /** A small stylised hull silhouette. `foe` flips it + tints it dark. */
@@ -43,8 +49,8 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
     const measure = () => {
       const r = el.getBoundingClientRect()
       const W = r.width, H = r.height
-      const x1 = W * 0.15, y1 = H * 0.62   // player muzzle, lower-left
-      const x2 = W * 0.82, y2 = H * 0.36   // enemy hull, upper-right
+      const x1 = W * PLAYER.x, y1 = H * PLAYER.y   // player muzzle, lower-left
+      const x2 = W * TARGET.x, y2 = H * TARGET.y   // enemy hull
       const dx = x2 - x1, dy = y2 - y1
       setGeo({ x1, y1, x2, y2, len: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) * 180 / Math.PI })
     }
@@ -101,9 +107,9 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
     }}>
       {/* horizon shimmer */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: '58%', height: 1, background: `linear-gradient(90deg, transparent, ${color}33, transparent)` }} />
-      {/* player gun (lower-left) + target hull (upper-right) */}
-      <div style={{ position: 'absolute', left: '15%', top: '62%', transform: 'translate(-50%,-50%)' }}><Hull color={color} /></div>
-      <div style={{ position: 'absolute', left: '82%', top: '36%', transform: 'translate(-50%,-50%)' }}><Hull foe color={color} /></div>
+      {/* player gun (lower-left) + target hull (right-of-centre) */}
+      <div style={{ position: 'absolute', left: `${PLAYER.x * 100}%`, top: `${PLAYER.y * 100}%`, transform: 'translate(-50%,-50%)' }}><Hull color={color} /></div>
+      <div style={{ position: 'absolute', left: `${TARGET.x * 100}%`, top: `${TARGET.y * 100}%`, transform: 'translate(-50%,-50%)' }}><Hull foe color={color} /></div>
 
       {/* Geometry-driven FX render straight into the stage (pixel coords). */}
       {geo && id === 'railgun' && shot > 0 && (
