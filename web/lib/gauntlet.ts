@@ -645,9 +645,13 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     id: 'drowned_whispers',
     name: 'Drowned Whispers',
     flavor: 'Voices well up from the deep with orders that are not yours, and a rattled crew obeys the wrong one.',
+    // Tuned down 2026-07-04 (20/33 → 12/20): a scramble STEALS your turn (a
+    // loaded Fire comes out a Dodge, a needed Dodge a Reload) and the curse
+    // runs the whole descent, so the old rates read as relentless / "broken"
+    // even though the roll is a clean once-per-turn check. Still a real threat.
     tiers: [
-      { desc: '20% of your orders come out scrambled', detail: 'Each turn, a 20% chance the action you choose comes out as a DIFFERENT one — pick Fire and your crew might dodge, pick Dodge and they might reload, and so on. It only ever swaps to an action you could actually take. (Repair is never scrambled.)', effects: [{ kind: 'confuse', chance: 0.20 }] },
-      { desc: '33% of your orders come out scrambled', detail: 'The whispers grow louder. Now a 33% chance each turn that your chosen action comes out as a different valid one.', effects: [{ kind: 'confuse', chance: 0.33 }] },
+      { desc: '12% of your orders come out scrambled', detail: 'Each turn, a 12% chance the action you choose comes out as a DIFFERENT one — pick Fire and your crew might dodge, pick Dodge and they might reload, and so on. It only ever swaps to an action you could actually take. (Repair is never scrambled.)', effects: [{ kind: 'confuse', chance: 0.12 }] },
+      { desc: '20% of your orders come out scrambled', detail: 'The whispers grow louder. Now a 20% chance each turn that your chosen action comes out as a different valid one.', effects: [{ kind: 'confuse', chance: 0.20 }] },
     ],
   },
   {
