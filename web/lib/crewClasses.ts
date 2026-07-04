@@ -29,6 +29,7 @@ export type CrewClass =
   | 'abyssal_tide'  // Catfish only — heal + shield combo
   | 'leviathan'     // Doby Mick only — flat damage scaling with crew Power
   | 'blitz'         // Mako only — extra cannon shots this turn
+  | 'foresight'     // Dole only — reveal the enemy's next move(s); refresh dodge
 
 // ── Species → class map ────────────────────────────────────────────────────
 // Keyed by lower-cased cards.slug so callers can do `CLASS_BY_SLUG[slug.toLowerCase()]`.
@@ -88,6 +89,7 @@ export const CLASS_BY_SLUG: Record<string, CrewClass> = {
   catfish:       'abyssal_tide',
   doby_mick:     'leviathan',
   mako:          'blitz',
+  dole:          'foresight',
 }
 
 /** Resolve a species slug to its class. Slugs in cards.slug are Title_Case;
@@ -191,6 +193,18 @@ export interface BlitzMilestone {
   chainChance: number
   /** Lv 100: every shot in the chain lands as a guaranteed crit. */
   autoCrit?: boolean
+  desc: string
+}
+
+export interface ForesightMilestone {
+  unlockLevel: ClassMilestoneLevel
+  /** How many of the enemy's UPCOMING moves are revealed (read straight off
+   *  their attack pattern). 1 = just the next move. */
+  revealMoves: number
+  /** 0–1 chance to refresh the player's dodge — clears the one-turn dodge
+   *  cooldown so a player who dodged last turn can dodge again right now. 0 at
+   *  the early tiers (pure information), scaling up to a guaranteed refresh. */
+  dodgeRefreshChance: number
   desc: string
 }
 
@@ -342,6 +356,23 @@ export const BLITZ: ClassDef<BlitzMilestone> = {
   ],
 }
 
+// Oracle (Dole only). Pure tactical utility: reveals the enemy's upcoming
+// move(s) so the player can plan the perfect answer, and — at higher ranks —
+// refreshes the dodge cooldown, so you can read an incoming shot and slip it
+// even if you already dodged last turn. Information first, evasion on top.
+export const FORESIGHT: ClassDef<ForesightMilestone> = {
+  id: 'foresight', name: 'Oracle', shortLabel: 'Foresee',
+  blurb: "Reveals the enemy's next moves. At higher ranks, refreshes your dodge so you can slip a shot you already spent your dodge on.",
+  color: '#8b7bf0', emoji: '👁️',
+  milestones: [
+    { unlockLevel: 10,  revealMoves: 1, dodgeRefreshChance: 0,    desc: "See the enemy's next move." },
+    { unlockLevel: 25,  revealMoves: 2, dodgeRefreshChance: 0,    desc: "See the enemy's next 2 moves." },
+    { unlockLevel: 40,  revealMoves: 2, dodgeRefreshChance: 0.30, desc: "See the next 2 moves; 30% chance to refresh your dodge." },
+    { unlockLevel: 75,  revealMoves: 3, dodgeRefreshChance: 0.50, desc: "See the next 3 moves; 50% chance to refresh your dodge." },
+    { unlockLevel: 100, revealMoves: 3, dodgeRefreshChance: 1.00, desc: "See the next 3 moves and always refresh your dodge." },
+  ],
+}
+
 // ── Registry lookup ─────────────────────────────────────────────────────────
 // Union the class defs through a discriminated wrapper so callers can switch
 // on `.id` and TypeScript narrows the milestones to the right shape.
@@ -355,6 +386,7 @@ export type AnyClassDef =
   | (ClassDef<AbyssalTideMilestone> & { id: 'abyssal_tide' })
   | (ClassDef<LeviathanMilestone>   & { id: 'leviathan' })
   | (ClassDef<BlitzMilestone>       & { id: 'blitz' })
+  | (ClassDef<ForesightMilestone>   & { id: 'foresight' })
 
 export const CLASSES: Record<CrewClass, AnyClassDef> = {
   mender:       MENDER       as AnyClassDef,
@@ -365,6 +397,7 @@ export const CLASSES: Record<CrewClass, AnyClassDef> = {
   abyssal_tide: ABYSSAL_TIDE as AnyClassDef,
   leviathan:    LEVIATHAN    as AnyClassDef,
   blitz:        BLITZ        as AnyClassDef,
+  foresight:    FORESIGHT    as AnyClassDef,
 }
 
 /** Highest-tier milestone unlocked by a crew at this level. Returns null if

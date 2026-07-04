@@ -25,7 +25,7 @@ export const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krus
 export const LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako'])
 // EVERY legendary crew species (for the Six Legends badge). Add each new
 // legendary's slug here as it ships — the badge unlocks once a player owns 6.
-export const LEGENDARY_SLUGS_ALL = new Set(['catfish', 'doby_mick', 'mako'])
+export const LEGENDARY_SLUGS_ALL = new Set(['catfish', 'doby_mick', 'mako', 'dole'])
 // Number of confluences in the Gauntlet (lib/gauntlet.ts CONFLUENCES). Kept as a
 // constant to avoid importing the heavy gauntlet module here — bump if more ship.
 export const CONFLUENCE_COUNT = 7
@@ -83,10 +83,13 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const fastestCorsairs = Math.min(Infinity, ...j.raids.filter(r => r.raid_id === 'corsairs_reckoning').map(r => r.elapsed_ms ?? Infinity))
   const fastestAnyRaid = Math.min(Infinity, ...j.raids.map(r => r.elapsed_ms ?? Infinity))
   const maxCrewLevel = j.crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
-  const hasLegendaryCrew = j.crew.some(c => !!c.slug && LEGENDARY_SLUGS.has(c.slug))
-  const ownedLegendary = new Set(j.crew.map(c => c.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS.has(s)))
+  // cards.slug is Title_Case ('Catfish', 'Doby_Mick'); the LEGENDARY sets are
+  // lowercase — normalise before comparing or the legendary checks never match.
+  const ownedSlugsLc = j.crew.map(c => c.slug?.toLowerCase()).filter((s): s is string => !!s)
+  const hasLegendaryCrew = ownedSlugsLc.some(s => LEGENDARY_SLUGS.has(s))
+  const ownedLegendary = new Set(ownedSlugsLc.filter(s => LEGENDARY_SLUGS.has(s)))
   const hasAllThreeLegends = [...LEGENDARY_SLUGS].every(s => ownedLegendary.has(s))
-  const ownedLegendaryAll = new Set(j.crew.map(c => c.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS_ALL.has(s)))
+  const ownedLegendaryAll = new Set(ownedSlugsLc.filter(s => LEGENDARY_SLUGS_ALL.has(s)))
   // Gauntlet + endgame state.
   const gauntletUpgrades = p.gauntlet_upgrades ?? []
   const gauntletDeepest = Number(p.gauntlet_deepest ?? 0)

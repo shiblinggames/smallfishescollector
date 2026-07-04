@@ -34,6 +34,11 @@ export const CREW_TRAITS: Record<string, CrewTrait> = {
     rare: "Forgets every mission immediately after. Makes her the perfect courier for things nobody should know she carried.",
     legendary: "The Deepwatch interrogated her for six hours. She remembered nothing. That was the plan.",
   },
+  Dole: {
+    common: "Calls the next move before it's made. Unsettling, mostly.",
+    rare: "Read all three ambushes before the Deepwatch sprang a single one. The crew stopped doubting after the second.",
+    legendary: "They say the Oracle read Valdris's whole campaign off one tide chart. He changed his plans. It didn't matter.",
+  },
   Krill: {
     common: "Small. Expendable. Aware of both. Does it anyway.",
     rare: "The smallest crew member you've ever had. Also the one the enemy never shoots at first. That's a strategy.",

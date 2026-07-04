@@ -4,13 +4,13 @@
 // filename without extension, matching `cards.slug`).
 //
 // Group 1 = Shallows, 2 = Open Waters, 3 = Deep, 4 = Abyss (rarest;
-// legendary tier — Catfish, Doby Mick, and Mako).
+// legendary tier — Catfish, Doby Mick, Mako, and Dole).
 
 export const FISH_GROUPS: Set<string>[] = [
   new Set(['bass','eel','flounder','goldfish','krill','minnow','piranha','pufferfish','red_snapper','salmon','sardine','tuna','angelfish','clownfish','koi']),
   new Set(['anglerfish','beluga_whale','blobfish','blue_marlin','lionfish','nurse_shark','oarfish','sailfish','swordfish','hammerhead_shark','manta_ray','whale_shark']),
   new Set(['goblin_shark','tiger_shark','blue_whale','giant_squid','great_white_shark','humpback_whale','orca']),
-  new Set(['catfish','doby_mick','mako']),
+  new Set(['catfish','doby_mick','mako','dole']),
 ]
 
 export type FishZone = 'shallows' | 'open' | 'deep' | 'abyss'

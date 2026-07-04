@@ -44,8 +44,10 @@ export default async function BadgesPage() {
   const fastestCorsairs = Math.min(Infinity, ...raids.filter(r => r.raid_id === 'corsairs_reckoning').map(r => r.elapsed_ms ?? Infinity))
   const crew = (crewRes.data ?? []) as unknown as { xp: number | null; died_at: string | null; cards: { slug: string | null } | null }[]
   const maxCrewLevel = crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
-  const hasLegendaryCrew = crew.some(c => !!c.cards?.slug && LEGENDARY_SLUGS.has(c.cards.slug))
-  const legendsOwned = new Set(crew.map(c => c.cards?.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS.has(s))).size
+  // cards.slug is Title_Case; the LEGENDARY sets are lowercase — normalise.
+  const ownedCrewSlugsLc = crew.map(c => c.cards?.slug?.toLowerCase()).filter((s): s is string => !!s)
+  const hasLegendaryCrew = ownedCrewSlugsLc.some(s => LEGENDARY_SLUGS.has(s))
+  const legendsOwned = new Set(ownedCrewSlugsLc.filter(s => LEGENDARY_SLUGS.has(s))).size
   const hasLostCrew = crew.some(c => c.died_at != null)
   const challengeCleared = CHALLENGE_RAID_IDS.filter(id => raidIds.has(id)).length
   const collectionCount = (collectionRes.data ?? []).length
@@ -84,7 +86,7 @@ export default async function BadgesPage() {
   const forgeRecipesLearned = ((profile?.forge_recipes_learned as string[] | null) ?? []).length
   const hasUltimate = !!profile?.manowar_augment
   const fastestAnyRaid = Math.min(Infinity, ...raids.map(r => r.elapsed_ms ?? Infinity))
-  const legendsOwnedAll = new Set(crew.map(c => c.cards?.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS_ALL.has(s))).size
+  const legendsOwnedAll = new Set(ownedCrewSlugsLc.filter(s => LEGENDARY_SLUGS_ALL.has(s))).size
 
   const fishLevel = fishLevelFromXP(Number(profile?.fishing_xp ?? 0))
   const navLevel = navLevelFromXP(Number(profile?.expedition_xp ?? 0))

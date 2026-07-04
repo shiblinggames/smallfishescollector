@@ -718,6 +718,9 @@ export default function RaidCombat({
   // Last action the player committed to (set when the turn fully resolves).
   // Used to block back-to-back dodges so dodge-camping isn't viable.
   const [lastPlayerAction, setLastPlayerAction] = useState<EnemyAction | null>(null)
+  // Oracle (Foresight) — the enemy's revealed upcoming moves. First element is
+  // the enemy's NEXT action; one is consumed (shifted) each new player turn.
+  const [foreseenMoves, setForeseenMoves] = useState<EnemyAction[] | null>(null)
   const [aimResult, setAimResult]     = useState<ShotResult | null>(null)
   const [firstActor, setFirstActor]   = useState<Actor | null>(null)
   // Nameplate one-shot effects — combine speed-roll-win and
@@ -1023,6 +1026,11 @@ export default function RaidCombat({
     if (turnInitRef.current) { turnInitRef.current = false; return }
     setOneAbilityUsedThisTurn(false)
     setSnareDodgeTurns(prev => (prev > 0 ? prev - 1 : prev))
+    // Consume one foreseen move — the enemy just spent its turn on the first.
+    setForeseenMoves(prev => {
+      if (!prev || prev.length <= 1) return null
+      return prev.slice(1)
+    })
   }, [turn])
 
   // Ship shake / recoil controls — match the existing real-time raid keyframes
@@ -1264,7 +1272,7 @@ export default function RaidCombat({
     }
     setSubPhase('await_input')
     setPlayerAction(null); setEnemyAction(null); setAimResult(null); setFirstActor(null)
-    setLastPlayerAction(null)
+    setLastPlayerAction(null); setForeseenMoves(null)
     const intro = isBoss
       ? `${enemy.name} heaves into view!`
       : `A ${enemy.name} draws alongside!`
@@ -1652,6 +1660,28 @@ export default function RaidCombat({
         total = Math.max(1, total)
         noteCheckResponse('burst')
         applyAbilityDamage(total, `${crew.name} chains ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
+        break
+      }
+      case 'foresight': {
+        const fm = m as import('@/lib/crewClasses').ForesightMilestone
+        // Read the enemy's upcoming intent straight off their pattern (phase-
+        // aware, mirroring pickEnemyAction). Feints/situational reloads can still
+        // surprise — foresight shows intent, not a guarantee.
+        const activePhase = enemyPhaseRef.current >= 2 ? phaseList[enemyPhaseRef.current - 2] : undefined
+        const pat = activePhase ? activePhase.pattern : enemy.pattern
+        const start = enemyPatternIdxRef.current
+        const moves: EnemyAction[] = []
+        for (let k = 0; k < Math.max(1, fm.revealMoves) && pat.length > 0; k++) moves.push(pat[(start + k) % pat.length])
+        setForeseenMoves(moves)
+        // Dodge refresh — clear the one-turn dodge cooldown so a player who
+        // dodged last turn can slip the shot they just foresaw.
+        let refreshed = false
+        if (fm.dodgeRefreshChance > 0 && lastPlayerAction === 'dodge' && Math.random() < fm.dodgeRefreshChance) {
+          setLastPlayerAction(null)
+          refreshed = true
+        }
+        const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : 'Dodge'
+        setResolveLog(prev => [...prev, `${crew.name} reads the tide — the enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
         break
       }
     }
@@ -3850,6 +3880,23 @@ export default function RaidCombat({
                 Dodge Jammed · {snareDodgeTurns}
               </span>
             )}
+            {/* Foresight (Oracle) — the enemy's revealed upcoming moves. First is
+                imminent (full opacity); later moves fade back. */}
+            {foreseenMoves && foreseenMoves.length > 0 && (
+              <span className="font-karla font-700 uppercase" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 3,
+                padding: '1px 6px', borderRadius: 999, fontSize: '0.46rem', letterSpacing: '0.08em',
+                color: '#cfc4ff', background: 'rgba(139,123,240,0.16)', border: '1px solid rgba(139,123,240,0.5)',
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>
+                {foreseenMoves.map((a, i) => (
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', opacity: i === 0 ? 1 : 0.5 }}>
+                    {i > 0 && <span style={{ opacity: 0.6, margin: '0 2px' }}>→</span>}
+                    {a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : 'Dodge'}
+                  </span>
+                ))}
+              </span>
+            )}
             <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
@@ -5939,6 +5986,7 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
   abyssal_tide: 'The Abyss Calls',
   leviathan:    'Heavy Salvo',
   blitz:        'Frenzy',
+  foresight:    'Foresight',
 }
 
 // Crew-ability cast cue. A themed pill (crew portrait + ability name) pops up
