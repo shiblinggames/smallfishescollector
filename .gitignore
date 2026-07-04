@@ -8,3 +8,4 @@ build-banner.mjs
 
 # transient commit-message scratch file (git commit -F)
 commitmsg.txt
+.git-commit-msg.tmp
