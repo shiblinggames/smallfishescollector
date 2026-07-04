@@ -129,9 +129,12 @@ export interface SharpshotMilestone {
 
 export interface SnareMilestone {
   unlockLevel: ClassMilestoneLevel
-  /** How many enemy turns enemy dodge is disabled. 'rest_of_fight' caps it
-   *  at the end of the current encounter. Always 100% success. */
-  disableDodgeTurns: number | 'rest_of_fight'
+  /** How many enemy turns the snare stays active. */
+  disableDodgeTurns: number
+  /** 0-1 chance to JAM each enemy dodge attempt while the snare is active. NOT
+   *  a guaranteed lock (nerfed 2026-07-04 from always-100% rest-of-fight) — the
+   *  enemy still slips through sometimes. */
+  jamChance: number
   desc: string
 }
 
@@ -254,11 +257,11 @@ export const SNARE: ClassDef<SnareMilestone> = {
   blurb: 'Disables the enemy\'s dodge for several turns. Always lands.',
   color: '#c084fc', emoji: '⚡',
   milestones: [
-    { unlockLevel: 10,  disableDodgeTurns: 1,                desc: 'Disable enemy dodge for 1 turn.' },
-    { unlockLevel: 25,  disableDodgeTurns: 2,                desc: 'Disable enemy dodge for 2 turns.' },
-    { unlockLevel: 40,  disableDodgeTurns: 3,                desc: 'Disable enemy dodge for 3 turns.' },
-    { unlockLevel: 75,  disableDodgeTurns: 4,                desc: 'Disable enemy dodge for 4 turns.' },
-    { unlockLevel: 100, disableDodgeTurns: 'rest_of_fight',  desc: 'Disable enemy dodge for the rest of this fight.' },
+    { unlockLevel: 10,  jamChance: 0.50, disableDodgeTurns: 2, desc: '50% chance to jam enemy dodge for 2 turns.' },
+    { unlockLevel: 25,  jamChance: 0.60, disableDodgeTurns: 2, desc: '60% chance to jam enemy dodge for 2 turns.' },
+    { unlockLevel: 40,  jamChance: 0.70, disableDodgeTurns: 3, desc: '70% chance to jam enemy dodge for 3 turns.' },
+    { unlockLevel: 75,  jamChance: 0.85, disableDodgeTurns: 4, desc: '85% chance to jam enemy dodge for 4 turns.' },
+    { unlockLevel: 100, jamChance: 0.95, disableDodgeTurns: 5, desc: '95% chance to jam enemy dodge for 5 turns.' },
   ],
 }
 
@@ -299,11 +302,11 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
   blurb: 'Heals the ship and grants a temporary damage shield. Heal now, brace for what\'s coming.',
   color: '#5eead4', emoji: '🌊',
   milestones: [
-    { unlockLevel: 10,  pctMaxHp: 0.20, shieldPctMaxHp: 0.10, desc: 'Heal 20% max HP and grant a 10% max HP shield.' },
-    { unlockLevel: 25,  pctMaxHp: 0.30, shieldPctMaxHp: 0.15, desc: 'Heal 30% max HP and grant a 15% max HP shield.' },
-    { unlockLevel: 40,  pctMaxHp: 0.40, shieldPctMaxHp: 0.20, desc: 'Heal 40% max HP and grant a 20% max HP shield.' },
-    { unlockLevel: 75,  pctMaxHp: 0.50, shieldPctMaxHp: 0.25, desc: 'Heal 50% max HP and grant a 25% max HP shield.' },
-    { unlockLevel: 100, pctMaxHp: 0.60, shieldPctMaxHp: 0.30, cleanseDebuff: true, desc: 'Heal 60% max HP, grant a 30% max HP shield, and cleanse one enemy debuff.' },
+    { unlockLevel: 10,  pctMaxHp: 0.20, shieldPctMaxHp: 0.08, desc: 'Heal 20% max HP and grant an 8% max HP shield.' },
+    { unlockLevel: 25,  pctMaxHp: 0.30, shieldPctMaxHp: 0.11, desc: 'Heal 30% max HP and grant an 11% max HP shield.' },
+    { unlockLevel: 40,  pctMaxHp: 0.40, shieldPctMaxHp: 0.14, desc: 'Heal 40% max HP and grant a 14% max HP shield.' },
+    { unlockLevel: 75,  pctMaxHp: 0.50, shieldPctMaxHp: 0.17, desc: 'Heal 50% max HP and grant a 17% max HP shield.' },
+    { unlockLevel: 100, pctMaxHp: 0.60, shieldPctMaxHp: 0.20, cleanseDebuff: true, desc: 'Heal 60% max HP, grant a 20% max HP shield, and cleanse one enemy debuff.' },
   ],
 }
 

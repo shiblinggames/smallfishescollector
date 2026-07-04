@@ -635,6 +635,9 @@ export default function RaidCombat({
   // the current value without listing it as a dep.
   const snareDodgeTurnsRef = useRef(0)
   useEffect(() => { snareDodgeTurnsRef.current = snareDodgeTurns }, [snareDodgeTurns])
+  // Snare's per-attempt JAM chance while active (0-1). The snare no longer hard-
+  // locks dodge — each enemy dodge attempt in the window is jammed at this odds.
+  const snareJamChanceRef = useRef(0)
   // Set by pickEnemyAction when the snare actually substitutes an enemy dodge
   // this turn; resolveTurn reads it to surface a "jammed!" log so the player
   // SEES the snare working (otherwise the swap is invisible).
@@ -1013,8 +1016,7 @@ export default function RaidCombat({
   useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
   // Ability per-turn reset effect — every new player turn clears the
   // one-ability-per-turn lock and ticks Snare's finite duration down.
-  // -1 (rest_of_fight) sticks regardless. Skips the initial mount
-  // (turn=1 doesn't need a reset).
+  // Skips the initial mount (turn=1 doesn't need a reset).
   const turnInitRef = useRef(true)
   useEffect(() => {
     if (turnInitRef.current) { turnInitRef.current = false; return }
@@ -1429,10 +1431,11 @@ export default function RaidCombat({
     } else {
       enemyPatternIdxRef.current++
     }
-    // Snare ability — enemy can't dodge while the snare is active. Substitute
-    // dodge with their highest-value alternative (fire if charged, else
-    // reload) so they still have a turn but lose their defensive option.
-    if (action === 'dodge' && snareDodgeTurnsRef.current !== 0) {
+    // Snare ability — while active, each enemy dodge attempt is JAMMED at the
+    // snare's jam chance (not a hard lock; they slip through sometimes). A jam
+    // substitutes their highest-value alternative (fire if charged, else reload)
+    // so they still act but lose that defensive turn.
+    if (action === 'dodge' && snareDodgeTurnsRef.current > 0 && Math.random() < snareJamChanceRef.current) {
       action = enemyCharges >= 1 ? 'fire' : 'reload'
       snareBlockedRef.current = true
     }
@@ -1569,17 +1572,12 @@ export default function RaidCombat({
       }
       case 'snare': {
         const sn = m as import('@/lib/crewClasses').SnareMilestone
-        if (sn.disableDodgeTurns === 'rest_of_fight') {
-          setSnareDodgeTurns(-1)
-          snareDodgeTurnsRef.current = -1
-        } else {
-          setSnareDodgeTurns(sn.disableDodgeTurns)
-          snareDodgeTurnsRef.current = sn.disableDodgeTurns
-        }
-        const snDur = sn.disableDodgeTurns === 'rest_of_fight'
-          ? 'the rest of the fight'
-          : `${sn.disableDodgeTurns} turn${sn.disableDodgeTurns === 1 ? '' : 's'}`
-        setResolveLog(prev => [...prev, `${crew.name} jams the ${enemy.name}'s helm. No dodging for ${snDur}.`])
+        setSnareDodgeTurns(sn.disableDodgeTurns)
+        snareDodgeTurnsRef.current = sn.disableDodgeTurns
+        snareJamChanceRef.current = sn.jamChance
+        const pct = Math.round(sn.jamChance * 100)
+        const snDur = `${sn.disableDodgeTurns} turn${sn.disableDodgeTurns === 1 ? '' : 's'}`
+        setResolveLog(prev => [...prev, `${crew.name} jams the ${enemy.name}'s helm — ${pct}% to foul each dodge for ${snDur}.`])
         break
       }
       case 'anchor': {
@@ -3839,14 +3837,14 @@ export default function RaidCombat({
               </p>
             )}
             {/* Persistent snare tell — the enemy's helm is jammed, no dodging */}
-            {snareDodgeTurns !== 0 && (
+            {snareDodgeTurns > 0 && (
               <span className="font-karla font-700 uppercase" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 3,
                 padding: '1px 6px', borderRadius: 999, fontSize: '0.46rem', letterSpacing: '0.1em',
                 color: '#f0d79a', background: 'rgba(217,176,102,0.16)', border: '1px solid rgba(217,176,102,0.5)',
               }}>
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
-                Dodge Locked{snareDodgeTurns > 0 ? ` · ${snareDodgeTurns}` : ''}
+                Dodge Jammed · {snareDodgeTurns}
               </span>
             )}
             <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact />

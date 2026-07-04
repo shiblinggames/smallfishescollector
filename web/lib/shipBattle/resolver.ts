@@ -353,8 +353,9 @@ export function resolveRound(
         break
       }
       case 'snare': {
-        const turns = (m as SnareMilestone).disableDodgeTurns
-        foeFx.dodgeJammed = turns === 'rest_of_fight' ? 999 : turns
+        // Parked PvP: treat the snare as a full jam for its duration (the
+        // per-attempt jamChance nerf lives in the live PvE resolver).
+        foeFx.dodgeJammed = (m as SnareMilestone).disableDodgeTurns
         steps.push(snapshot({ actor: who, ability: true, log: `${crew.name} fouls ${foe2.l.username}'s helm — their dodge is jammed.` }))
         break
       }
