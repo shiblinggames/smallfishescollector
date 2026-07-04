@@ -28,7 +28,13 @@ export async function recordGauntletHit(dmg: number): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
   const admin = createAdminClient()
-  await admin.rpc('bump_gauntlet_hit', { uid: user.id, dmg: Math.floor(dmg) })
+  const h = Math.floor(dmg)
+  await admin.rpc('bump_gauntlet_hit', { uid: user.id, dmg: h })
+  // Also track the lifetime biggest hit on the profile (for the One Shot badge).
+  const { data: prof } = await admin.from('profiles').select('gauntlet_max_hit').eq('id', user.id).single()
+  if (h > ((prof?.gauntlet_max_hit as number | null) ?? 0)) {
+    await admin.from('profiles').update({ gauntlet_max_hit: h }).eq('id', user.id)
+  }
 }
 
 /** Sanitize a client-supplied deepest-run snapshot before storing it. It's
@@ -344,7 +350,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items')
     .eq('id', user.id)
     .single()
 
@@ -438,6 +444,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_resumes_used: 0,
       gauntlet_deepest: deepest,
       gauntlet_fathoms: newFathoms,
+      // Lifetime counters for the achievement badges (a cash-out ends a run).
+      gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
+      gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
       raid_items: newRaidItems,
       ...bestFields,
       ...contestFields,
@@ -483,7 +492,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
  *  NOT touch your deepest record, the run recap, the leaderboard, the contest,
  *  or any depth-gated unlock — those advance only when you SURVIVE and cash out
  *  the depth (see cashOutGauntlet). Dying deep is not a shortcut to anything. */
-export async function resolveGauntletDeath(rewardDepth: number, _combatDepth: number = rewardDepth, _runSnapshot?: GauntletRunSnapshot): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
+export async function resolveGauntletDeath(rewardDepth: number, combatDepth: number = rewardDepth, _runSnapshot?: GauntletRunSnapshot): Promise<{ ok: boolean; deepest: number; earnedFathoms: number; newFathoms: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, deepest: 0, earnedFathoms: 0, newFathoms: 0 }
@@ -491,7 +500,7 @@ export async function resolveGauntletDeath(rewardDepth: number, _combatDepth: nu
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_fathoms, gauntlet_upgrades')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_deepest_died, gauntlet_upgrades')
     .eq('id', user.id)
     .single()
 
@@ -507,11 +516,25 @@ export async function resolveGauntletDeath(rewardDepth: number, _combatDepth: nu
   const earnedFathoms = Math.round(fathomsForDepth(rd) * gauntletFathomsMult((profile.gauntlet_upgrades as string[] | null) ?? []))
   const newFathoms = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
 
+  // The combat depth you died at — compared against gauntlet_deepest (best cash-out)
+  // for the Greed's Price badge ("died deeper than your best, a record lost").
+  const cd = Math.max(rd, Math.min(MAX_GAUNTLET_DEPTH, Math.floor(combatDepth)))
+  const deepestDied = Math.max((profile.gauntlet_deepest_died as number | null) ?? 0, cd)
+
   // Close the run + bank Fathoms ONLY. Deepest record / recap / unlocks are left
-  // untouched — they belong to cash-outs.
+  // untouched — they belong to cash-outs. Lifetime badge counters DO advance
+  // (a death still ends a run and earns its Fathoms).
   await admin
     .from('profiles')
-    .update({ gauntlet_run_open: false, gauntlet_fathoms: newFathoms, gauntlet_run_state: null, gauntlet_resumes_used: 0 })
+    .update({
+      gauntlet_run_open: false,
+      gauntlet_fathoms: newFathoms,
+      gauntlet_run_state: null,
+      gauntlet_resumes_used: 0,
+      gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
+      gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
+      gauntlet_deepest_died: deepestDied,
+    })
     .eq('id', user.id)
 
   return { ok: true, deepest: prevDeepest, earnedFathoms, newFathoms }

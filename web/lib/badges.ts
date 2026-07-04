@@ -136,6 +136,36 @@ export const BADGES: Badge[] = [
   { id: 'first_haul',     name: 'First Haul',         description: 'Collect your first trawl',                        imageUrl: '/badges/first_haul.png',     difficulty: 'rookie'   },
   { id: 'steady_nets',    name: 'Steady Nets',        description: 'Collect 25 trawls',                               imageUrl: '/badges/steady_nets.png',    difficulty: 'seasoned' },
   { id: 'deep_trawler',   name: 'Deep Trawler',       description: 'Collect 100 trawls',                              imageUrl: '/badges/deep_trawler.png',   difficulty: 'veteran'  },
+
+  // ── 2026-07 expansion (batches 13–16) ────────────────────────────────────
+  // The Gauntlet — descent. (Depth 5 = into_the_deep, depth 10 = davy_jones.)
+  { id: 'first_descent',  name: 'First Descent',      description: 'Cash out a Gauntlet run',                         imageUrl: '/badges/first_descent.png',  difficulty: 'rookie'   },
+  { id: 'abyssward',      name: 'Abyssward',          description: 'Reach depth 20 in the Gauntlet',                  imageUrl: '/badges/abyssward.png',      difficulty: 'seasoned' },
+  { id: 'forge_worthy',   name: 'Forge-Worthy',       description: 'Reach depth 35 in the Gauntlet',                  imageUrl: '/badges/forge_worthy.png',   difficulty: 'veteran'  },
+  { id: 'davys_doorstep', name: "Davy's Doorstep",    description: 'Reach depth 60 in the Gauntlet',                  imageUrl: '/badges/davys_doorstep.png', difficulty: 'master'   },
+  // The Gauntlet — the Locker (permanent upgrades).
+  { id: 'well_provisioned', name: 'Well-Provisioned', description: 'Claim your first Gauntlet upgrade',               imageUrl: '/badges/well_provisioned.png', difficulty: 'rookie' },
+  { id: 'locker_raider',  name: 'Locker Raider',      description: 'Claim 6 Gauntlet upgrades',                       imageUrl: '/badges/locker_raider.png',  difficulty: 'seasoned' },
+  { id: 'forge_awakened', name: 'The Forge Awakens',  description: 'Unlock the Forge from the Gauntlet',              imageUrl: '/badges/forge_awakened.png', difficulty: 'veteran'  },
+  { id: 'master_of_the_locker', name: 'Master of the Locker', description: 'Own every Gauntlet upgrade',             imageUrl: '/badges/master_of_the_locker.png', difficulty: 'master' },
+  // The Gauntlet — the deep (runs, fathoms, prowess, greed, confluences).
+  { id: 'push_your_luck', name: 'Push Your Luck',     description: 'Complete 10 Gauntlet runs',                       imageUrl: '/badges/push_your_luck.png', difficulty: 'rookie'   },
+  { id: 'again_and_again', name: 'Again and Again',   description: 'Complete 50 Gauntlet runs',                       imageUrl: '/badges/again_and_again.png', difficulty: 'seasoned' },
+  { id: 'fathom_hoarder', name: 'Fathom Hoarder',     description: 'Earn 1,000 Fathoms all-time',                     imageUrl: '/badges/fathom_hoarder.png', difficulty: 'veteran'  },
+  { id: 'one_shot',       name: 'One Shot',           description: 'Land a single Gauntlet hit for 2,000 or more',    imageUrl: '/badges/one_shot.png',       difficulty: 'veteran'  },
+  { id: 'greeds_price',   name: "Greed's Price",      description: 'Die deeper than your best cash-out',              imageUrl: '/badges/greeds_price.png',   difficulty: 'seasoned' },
+  { id: 'storm_reader',   name: 'Storm Reader',       description: 'Discover your first confluence',                  imageUrl: '/badges/storm_reader.png',   difficulty: 'rookie'   },
+  { id: 'deep_cartographer', name: 'Deep Cartographer', description: 'Discover all 7 confluences',                    imageUrl: '/badges/deep_cartographer.png', difficulty: 'master' },
+  // Endgame & challenge.
+  { id: 'weapon_of_legend', name: 'Weapon of Legend', description: 'Build your Man-o-War ultimate',                   imageUrl: '/badges/weapon_of_legend.png', difficulty: 'veteran' },
+  { id: 'first_fusion',   name: 'First Fusion',       description: 'Forge your first item',                           imageUrl: '/badges/first_fusion.png',   difficulty: 'seasoned' },
+  { id: 'ruse_undone',    name: 'Ruse Undone',        description: 'Defeat Admiral Ruse in challenge mode',           imageUrl: '/badges/ruse_undone.png',    difficulty: 'seasoned' },
+  { id: 'account_settled', name: 'Account Settled',   description: 'Defeat the Quartermaster in challenge mode',      imageUrl: '/badges/account_settled.png', difficulty: 'seasoned' },
+  { id: 'grand_forgemaster', name: 'Grand Forgemaster', description: 'Learn every forge recipe',                      imageUrl: '/badges/grand_forgemaster.png', difficulty: 'master' },
+  { id: 'mark_of_mastery', name: 'Mark of Mastery',   description: 'Reach a Mark III ship class',                     imageUrl: '/badges/mark_of_mastery.png', difficulty: 'veteran' },
+  { id: 'quick_draw',     name: 'Quick Draw',         description: 'Clear any raid in under 1:00',                    imageUrl: '/badges/quick_draw.png',     difficulty: 'veteran'  },
+  { id: 'complete_captain', name: 'The Complete Captain', description: 'Reach Navigation 100 and Fishing 100',        imageUrl: '/badges/complete_captain.png', difficulty: 'master' },
+  { id: 'six_legends',    name: 'The Six Legends',    description: 'Own all six legendary crew',                      imageUrl: '/badges/six_legends.png',    difficulty: 'master'   },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -229,6 +259,31 @@ export const BADGE_DETAIL: Record<string, string> = {
   first_haul:       'Send a crew member out to trawl a zone and collect the haul they bring back. Passive fishing, your first catch of many.',
   steady_nets:      'Collect 25 trawls. The nets are always out, and the doubloons keep coming in.',
   deep_trawler:     'Collect 100 trawls. A steady second income hauled up one cycle at a time.',
+  // ── 2026-07 expansion ──
+  first_descent:    'Survive a Gauntlet run and cash out at any depth. Your first haul back up from the dark.',
+  abyssward:        'Reach depth 20 on a single Gauntlet run. The pressure is starting to bite.',
+  forge_worthy:     'Reach depth 35 in the Gauntlet, well past where the Forge is earned.',
+  davys_doorstep:   'Reach depth 60 — the deepest the Gauntlet goes. Knock on the Locker itself.',
+  well_provisioned: 'Spend Fathoms on your first permanent Gauntlet upgrade from the Locker.',
+  locker_raider:    'Claim six Gauntlet upgrades in total. The Locker is paying dividends.',
+  forge_awakened:   'Unlock the Forge by going deep in the Gauntlet — the key to fusing raid items.',
+  master_of_the_locker: 'Own every permanent Gauntlet upgrade the Locker offers. Nothing left to buy.',
+  push_your_luck:   'Complete 10 Gauntlet runs, win or lose. Every dive teaches you something.',
+  again_and_again:  'Complete 50 Gauntlet runs. A true regular of the deep.',
+  fathom_hoarder:   'Earn 1,000 Fathoms across all your Gauntlet runs, banked over a long grind.',
+  one_shot:         'Land a single Gauntlet hit for 2,000 damage or more. A deep run and a stacked build turn one blow into a kill.',
+  greeds_price:     'Die on a Gauntlet run deeper than your best cash-out. You had a new record in hand and pushed one fight too far.',
+  storm_reader:     'Discover your first confluence — two boons that combine into something greater. The Gauntlet rewards a sharp eye.',
+  deep_cartographer:'Discover all seven confluences. You have charted every way the deep’s gifts combine.',
+  weapon_of_legend: 'Build a Man-o-War ultimate from the Quartermaster’s stolen plans — the nuke, the railgun, or the barrage.',
+  first_fusion:     'Forge your first item at the Forge, fusing two raid items into one prismatic piece of gear.',
+  ruse_undone:      'Defeat Admiral Ruse and the Coffers Fleet in challenge mode — the harder cut of Raid 5.',
+  account_settled:  'Defeat the Quartermaster in challenge mode, the hard version of the Chapter III finale.',
+  grand_forgemaster:'Learn every recipe the Forge has to offer. Nothing the deep drops is beyond your fusing.',
+  mark_of_mastery:  'Take a single ship-class line all the way to its Mark III, three chapter-end picks deep.',
+  quick_draw:       'Clear any raid in under a minute. A monster build turns a fight into a formality.',
+  complete_captain: 'Reach both Navigation Level 100 and Fishing Level 100 — max the sea and the sail alike.',
+  six_legends:      'Have all six legendary crew aboard. The rarest muster the sea has ever seen.',
 }
 
 /** Detail blurb for a badge id (falls back to its short description). */

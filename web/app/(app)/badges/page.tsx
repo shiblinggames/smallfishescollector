@@ -9,6 +9,9 @@ import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
 import { reconcileBadges } from '@/app/(app)/achievements/badgeActions'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
+import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
+import { FORGE_RECIPES, isForgedRaidItem } from '@/lib/raidItems'
+import { LEGENDARY_SLUGS_ALL, CONFLUENCE_COUNT } from '@/lib/badgeConditions'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
@@ -66,6 +69,22 @@ export default async function BadgesPage() {
   const petsOwned = ((profile?.unlocked_pets as string[] | null) ?? []).length
   const shipTier = Number(profile?.ship_tier ?? 0)
   const trawlsCollected = Number(profile?.trawls_collected ?? 0)
+
+  // ── 2026-07 expansion: Gauntlet counters + endgame state ─────────────────
+  const gauntletRuns = Number(profile?.gauntlet_runs_completed ?? 0)
+  const gauntletFathomsEarned = Number(profile?.gauntlet_fathoms_earned ?? 0)
+  const gauntletMaxHit = Number(profile?.gauntlet_max_hit ?? 0)
+  const gauntletDeepestDied = Number(profile?.gauntlet_deepest_died ?? 0)
+  const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
+  const confluencesSeen = ((profile?.gauntlet_confluences_seen as string[] | null) ?? []).length
+  const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
+  const hasMarkIII = Object.values(shipClasses).some(v => typeof v === 'string' && v.endsWith('_iii'))
+  const raidItems = (profile?.raid_items as string[] | null) ?? []
+  const hasForgedItem = raidItems.some(id => isForgedRaidItem(id))
+  const forgeRecipesLearned = ((profile?.forge_recipes_learned as string[] | null) ?? []).length
+  const hasUltimate = !!profile?.manowar_augment
+  const fastestAnyRaid = Math.min(Infinity, ...raids.map(r => r.elapsed_ms ?? Infinity))
+  const legendsOwnedAll = new Set(crew.map(c => c.cards?.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS_ALL.has(s))).size
 
   const fishLevel = fishLevelFromXP(Number(profile?.fishing_xp ?? 0))
   const navLevel = navLevelFromXP(Number(profile?.expedition_xp ?? 0))
@@ -164,6 +183,7 @@ export default async function BadgesPage() {
         badgeGoal('theres_a_grave', "There's a Grave?", 'Lose a crew member for the first time', hasLostCrew ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('legendary_recruit', 'Legendary Recruit', 'Recruit a legendary crew', hasLegendaryCrew ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('three_legends', 'The Three Legends', 'Own all 3 legendary crew at once', legendsOwned, 3, '/crew'),
+        badgeGoal('six_legends', 'The Six Legends', 'Own all 6 legendary crew', legendsOwnedAll, 6, '/crew'),
         badgeGoal('crewmaster', 'Crewmaster', 'Reach the top Crew Hall tier', crewHallTier, CREW_HALL_MAX_TIER, '/crew'),
         badgeGoal('full_muster', 'Full Muster', 'Recruit 100 crew', recruits, 100, '/crew'),
         badgeGoal('old_salt', 'Old Salt', 'Level a crew to 100', maxCrewLevel, CREW_MAX_LEVEL, '/crew'),
@@ -187,16 +207,39 @@ export default async function BadgesPage() {
         badgeGoal('toll_paid', 'Toll Paid', 'Defeat Tollmaster Spet in challenge mode', raidIds.has('tollmasters_cut_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('master_navigator', 'Master Navigator', 'Reach Navigation Level 100', navLevel, 100, '/expeditions'),
         badgeGoal('finndicates_bane', "Finndicate's Bane", 'Clear all 4 raids in challenge mode', challengeCleared, 4, '/raids'),
+        badgeGoal('ruse_undone', 'Ruse Undone', 'Defeat Admiral Ruse in challenge mode', raidIds.has('coffers_fleet_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('account_settled', 'Account Settled', 'Defeat the Quartermaster in challenge mode', raidIds.has('the_quartermaster_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('quick_draw', 'Quick Draw', 'Clear any raid in under 1:00', fastestAnyRaid <= 60_000 ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('mark_of_mastery', 'Mark of Mastery', 'Reach a Mark III ship class', hasMarkIII ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('ship_of_the_line', 'Ship of the Line', 'Own the Man-o-War', shipTier, 6, '/shipyard', { binary: true }),
+        badgeGoal('weapon_of_legend', 'Weapon of Legend', 'Build your Man-o-War ultimate', hasUltimate ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('first_fusion', 'First Fusion', 'Forge your first item', hasForgedItem ? 1 : 0, 1, '/expeditions', { binary: true }),
+        badgeGoal('grand_forgemaster', 'Grand Forgemaster', 'Learn every forge recipe', forgeRecipesLearned, FORGE_RECIPES.length, '/expeditions'),
+        badgeGoal('complete_captain', 'The Complete Captain', 'Reach Navigation 100 and Fishing 100', (fishLevel >= 100 && navLevel >= 100) ? 1 : 0, 1, '/expeditions', { binary: true }),
       ],
     },
     {
       title: 'The Gauntlet',
       accent: '#a06ff2',
       goals: [
+        badgeGoal('first_descent', 'First Descent', 'Cash out a Gauntlet run', gauntletDeepest >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('into_the_deep', 'Into the Deep', 'Descend to depth 5 in the Gauntlet', gauntletDeepest, 5, '/raids/gauntlet'),
-        badgeGoal('fathomless', 'Fathomless', 'Bank 500 Fathoms all-time', gauntletFathoms, 500, '/raids/gauntlet'),
         badgeGoal('davy_jones', "Davy Jones' Locker", 'Descend to depth 10 in the Gauntlet', gauntletDeepest, 10, '/raids/gauntlet'),
+        badgeGoal('abyssward', 'Abyssward', 'Descend to depth 20 in the Gauntlet', gauntletDeepest, 20, '/raids/gauntlet'),
+        badgeGoal('forge_worthy', 'Forge-Worthy', 'Descend to depth 35 in the Gauntlet', gauntletDeepest, 35, '/raids/gauntlet'),
+        badgeGoal('davys_doorstep', "Davy's Doorstep", 'Descend to depth 60 in the Gauntlet', gauntletDeepest, 60, '/raids/gauntlet'),
+        badgeGoal('well_provisioned', 'Well-Provisioned', 'Claim your first Gauntlet upgrade', gauntletUpgrades.length, 1, '/raids/gauntlet'),
+        badgeGoal('locker_raider', 'Locker Raider', 'Claim 6 Gauntlet upgrades', gauntletUpgrades.length, 6, '/raids/gauntlet'),
+        badgeGoal('forge_awakened', 'The Forge Awakens', 'Unlock the Forge from the Gauntlet', gauntletUpgrades.includes('forge') ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
+        badgeGoal('master_of_the_locker', 'Master of the Locker', 'Own every Gauntlet upgrade', gauntletUpgrades.length, GAUNTLET_UPGRADES.length, '/raids/gauntlet'),
+        badgeGoal('push_your_luck', 'Push Your Luck', 'Complete 10 Gauntlet runs', gauntletRuns, 10, '/raids/gauntlet'),
+        badgeGoal('again_and_again', 'Again and Again', 'Complete 50 Gauntlet runs', gauntletRuns, 50, '/raids/gauntlet'),
+        badgeGoal('fathomless', 'Fathomless', 'Bank 500 Fathoms all-time', gauntletFathoms, 500, '/raids/gauntlet'),
+        badgeGoal('fathom_hoarder', 'Fathom Hoarder', 'Earn 1,000 Fathoms all-time', gauntletFathomsEarned, 1000, '/raids/gauntlet'),
+        badgeGoal('one_shot', 'One Shot', 'Land a single Gauntlet hit for 2,000+', gauntletMaxHit, 2000, '/raids/gauntlet', { record: true }),
+        badgeGoal('greeds_price', "Greed's Price", 'Die deeper than your best cash-out', gauntletDeepestDied > gauntletDeepest ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
+        badgeGoal('storm_reader', 'Storm Reader', 'Discover your first confluence', confluencesSeen, 1, '/raids/gauntlet'),
+        badgeGoal('deep_cartographer', 'Deep Cartographer', 'Discover all 7 confluences', confluencesSeen, CONFLUENCE_COUNT, '/raids/gauntlet'),
       ],
     },
     {

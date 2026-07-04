@@ -14,13 +14,21 @@ import { getLevelFromXP as fishLevelFromXP } from './fishingLevel'
 import { getLevelFromXP as navLevelFromXP } from './expeditionLevel'
 import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { CREW_HALL_MAX_TIER } from './crewHall'
+import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
+import { FORGE_RECIPES, isForgedRaidItem } from './raidItems'
 
 // Zones that prestige (Ancient Deep doesn't — see fishing/actions.ts).
 export const PRESTIGE_ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 // All four raids' challenge-completion ids (Finndicate's Bane capstone).
 export const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
-// The three legendary crew species (Legendary Recruit badge).
+// The three ORIGINAL legendary crew species (Legendary Recruit + Three Legends).
 export const LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako'])
+// EVERY legendary crew species (for the Six Legends badge). Add each new
+// legendary's slug here as it ships — the badge unlocks once a player owns 6.
+export const LEGENDARY_SLUGS_ALL = new Set(['catfish', 'doby_mick', 'mako'])
+// Number of confluences in the Gauntlet (lib/gauntlet.ts CONFLUENCES). Kept as a
+// constant to avoid importing the heavy gauntlet module here — bump if more ship.
+export const CONFLUENCE_COUNT = 7
 
 export interface BadgeProfileFields {
   fishing_xp?: number | null
@@ -49,6 +57,17 @@ export interface BadgeProfileFields {
   ship_tier?: number | null
   trawls_collected?: number | null
   unlocked_pets?: string[] | null
+  // 2026-07 expansion — Gauntlet counters + endgame state.
+  gauntlet_upgrades?: string[] | null
+  gauntlet_confluences_seen?: string[] | null
+  gauntlet_runs_completed?: number | null
+  gauntlet_fathoms_earned?: number | null
+  gauntlet_max_hit?: number | null
+  gauntlet_deepest_died?: number | null
+  manowar_augment?: string | null
+  ship_classes?: Record<string, string> | null
+  forge_recipes_learned?: string[] | null
+  raid_items?: string[] | null
 }
 
 export interface BadgeJoinData {
@@ -62,10 +81,19 @@ export interface BadgeJoinData {
 export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record<string, boolean> {
   const raidIds = new Set<string>(j.raids.map(r => r.raid_id))
   const fastestCorsairs = Math.min(Infinity, ...j.raids.filter(r => r.raid_id === 'corsairs_reckoning').map(r => r.elapsed_ms ?? Infinity))
+  const fastestAnyRaid = Math.min(Infinity, ...j.raids.map(r => r.elapsed_ms ?? Infinity))
   const maxCrewLevel = j.crew.reduce((mx, c) => Math.max(mx, crewLevelFromXP(c.xp ?? 0)), 0)
   const hasLegendaryCrew = j.crew.some(c => !!c.slug && LEGENDARY_SLUGS.has(c.slug))
   const ownedLegendary = new Set(j.crew.map(c => c.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS.has(s)))
   const hasAllThreeLegends = [...LEGENDARY_SLUGS].every(s => ownedLegendary.has(s))
+  const ownedLegendaryAll = new Set(j.crew.map(c => c.slug).filter((s): s is string => !!s && LEGENDARY_SLUGS_ALL.has(s)))
+  // Gauntlet + endgame state.
+  const gauntletUpgrades = p.gauntlet_upgrades ?? []
+  const gauntletDeepest = Number(p.gauntlet_deepest ?? 0)
+  const confluencesSeen = (p.gauntlet_confluences_seen ?? []).length
+  const shipClasses = p.ship_classes ?? {}
+  const raidItems = p.raid_items ?? []
+  const fishLvl = fishLevelFromXP(Number(p.fishing_xp ?? 0))
   const hasLostCrew = j.crew.some(c => c.died_at != null)
   const prestige = p.prestige_levels ?? {}
   const totalStars = PRESTIGE_ZONES.reduce((s, z) => s + Math.min(5, prestige[z] ?? 0), 0)
@@ -144,6 +172,35 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     first_haul:     Number(p.trawls_collected ?? 0) >= 1,
     steady_nets:    Number(p.trawls_collected ?? 0) >= 25,
     deep_trawler:   Number(p.trawls_collected ?? 0) >= 100,
+    // ── 2026-07 expansion (Gauntlet + endgame) ──
+    // Descent (depth 5 = into_the_deep, depth 10 = davy_jones, already above).
+    first_descent:  gauntletDeepest >= 1,
+    abyssward:      gauntletDeepest >= 20,
+    forge_worthy:   gauntletDeepest >= 35,
+    davys_doorstep: gauntletDeepest >= 60,
+    // The Locker.
+    well_provisioned: gauntletUpgrades.length >= 1,
+    locker_raider:  gauntletUpgrades.length >= 6,
+    forge_awakened: gauntletUpgrades.includes('forge'),
+    master_of_the_locker: gauntletUpgrades.length >= GAUNTLET_UPGRADES.length,
+    // The deep.
+    push_your_luck: Number(p.gauntlet_runs_completed ?? 0) >= 10,
+    again_and_again: Number(p.gauntlet_runs_completed ?? 0) >= 50,
+    fathom_hoarder: Number(p.gauntlet_fathoms_earned ?? 0) >= 1000,
+    one_shot:       Number(p.gauntlet_max_hit ?? 0) >= 2000,
+    greeds_price:   Number(p.gauntlet_deepest_died ?? 0) > gauntletDeepest,
+    storm_reader:   confluencesSeen >= 1,
+    deep_cartographer: confluencesSeen >= CONFLUENCE_COUNT,
+    // Endgame & challenge.
+    weapon_of_legend: !!p.manowar_augment,
+    first_fusion:   raidItems.some(id => isForgedRaidItem(id)),
+    ruse_undone:    raidIds.has('coffers_fleet_challenge'),
+    account_settled: raidIds.has('the_quartermaster_challenge'),
+    grand_forgemaster: (p.forge_recipes_learned ?? []).length >= FORGE_RECIPES.length,
+    mark_of_mastery: Object.values(shipClasses).some(v => typeof v === 'string' && v.endsWith('_iii')),
+    quick_draw:     fastestAnyRaid <= 60_000,
+    complete_captain: fishLvl >= 100 && navLevel >= 100,
+    six_legends:    ownedLegendaryAll.size >= 6,
   }
 }
 
@@ -156,4 +213,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, manowar_augment, ship_classes, forge_recipes_learned, raid_items'
