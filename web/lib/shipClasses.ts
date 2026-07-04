@@ -202,16 +202,19 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
   },
   buccaneer_iii: {
     id: 'buccaneer_iii',
+    // Damage TAPERS at the capstone (2026-07-04), same as Master Gunner III —
+    // Buccaneer touches damage, so its final step shrinks too. Kept symmetric
+    // (both halves) so it stays the balanced class.
     name: 'Buccaneer III',
-    tagline: 'Better at everything. Once more.',
-    description: 'A last small lift across the board for the captain who never specialised. Stacks on your Buccaneer II.',
+    tagline: 'Better at everything. One last time.',
+    description: 'A final, lighter lift across the board for the captain who never specialised. Stacks on your Buccaneer II.',
     bullets: [
-      { label: '+5% damage', positive: true },
-      { label: '+5% HP',     positive: true },
+      { label: '+3% damage', positive: true },
+      { label: '+3% HP',     positive: true },
     ],
     color: '#9aa6b8',
     emoji: '⊕',
-    effects: { damageMult: 1.05, hpMult: 1.05 },
+    effects: { damageMult: 1.03, hpMult: 1.03 },
   },
 }
 
