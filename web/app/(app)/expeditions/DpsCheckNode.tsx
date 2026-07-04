@@ -125,12 +125,12 @@ export default function DpsCheckNode({
           damage · needed {result.threshold}
         </p>
         <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ marginTop: '0.9rem', fontSize: '0.92rem', color: accent }}>
-          {passed ? 'The chain shatters' : 'The chain holds'}
+          {passed ? 'Gate blown open' : 'Not enough'}
         </p>
         <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.82)', marginTop: '0.45rem' }}>
           {passed
-            ? "Your broadside takes the anchor-ring clean and the boom drops into the water. You sail through free."
-            : "The shot rakes the chain but it holds. You limp in under the gun-line, and the repairs come out of your purse."}
+            ? 'Direct hit. The gate blows open and you sail straight through, free.'
+            : 'The gate holds. You limp through under fire, and the repairs come out of your purse.'}
         </p>
         {!passed && 'doubloonsDelta' in result && result.doubloonsDelta !== 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.85rem' }}>
@@ -155,7 +155,7 @@ export default function DpsCheckNode({
     return (
       <div style={{ marginTop: '1rem' }}>
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#a89e86', textAlign: 'center', marginBottom: '0.8rem' }}>
-          Fire on the gold to hit the anchor-ring
+          Tap FIRE when the marker hits the gold
         </p>
         {/* Aim bar — graze/hit/crit bands with a sweeping needle. */}
         <div style={{ position: 'relative', height: 44, borderRadius: 10, background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.12)', overflow: 'hidden' }}>
@@ -184,36 +184,39 @@ export default function DpsCheckNode({
   const cantAfford = doubloons < dpsCheck.payCost
   return (
     <div style={{ marginTop: '1rem' }}>
+      <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.8)', marginBottom: '0.8rem', textAlign: 'center' }}>
+        Get past the locked gate. Fire one shot to blast it open, or pay to be let through.
+      </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-        {/* Run the Blockade — the DPS check */}
+        {/* Fire one shot — the DPS check */}
         <button
           onClick={startAiming}
           disabled={pending}
           style={{ textAlign: 'left', padding: '0.9rem', borderRadius: 14, background: `${RED}18`, border: `1px solid ${RED}55`, cursor: pending ? 'wait' : 'pointer' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Run the Blockade</span>
-            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.62rem', color: '#ffb3b3', background: `${RED}22`, border: `1px solid ${RED}55`, borderRadius: 999, padding: '0.28rem 0.6rem' }}>1 shot</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Fire One Shot</span>
+            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.62rem', color: '#ffb3b3', background: `${RED}22`, border: `1px solid ${RED}55`, borderRadius: 999, padding: '0.28rem 0.6rem' }}>free if you pass</span>
           </div>
           <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.45 }}>
-            One broadside at the chain. Land <span style={{ color: GOLD }}>{dpsCheck.threshold}+</span> damage and you punch through free. Fall short and it costs you <span style={{ color: RED }}>{dpsCheck.failCost.toLocaleString()} ⟡</span> in repairs.
+            Deal <span style={{ color: GOLD }}>{dpsCheck.threshold}+</span> damage in one shot and you're through for free. Deal less and repairs cost you <span style={{ color: RED }}>{dpsCheck.failCost.toLocaleString()} ⟡</span>.
           </p>
         </button>
 
-        {/* Bribe the Dockmaster — pay to skip */}
+        {/* Pay to pass — skip the shot */}
         <button
           onClick={pay}
           disabled={pending || cantAfford}
           style={{ textAlign: 'left', padding: '0.9rem', borderRadius: 14, background: cantAfford ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)', border: `1px solid ${cantAfford ? 'rgba(255,255,255,0.1)' : `${GOLD}40`}`, cursor: pending || cantAfford ? 'not-allowed' : 'pointer', opacity: cantAfford ? 0.7 : 1 }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Bribe the Dockmaster</span>
+            <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Pay to Pass</span>
             <span className="font-cinzel font-700" style={{ flexShrink: 0, fontSize: '0.9rem', color: cantAfford ? RED : GOLD }}>{dpsCheck.payCost.toLocaleString()} ⟡</span>
           </div>
           <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.45 }}>
             {cantAfford
-              ? `You don't have ${dpsCheck.payCost.toLocaleString()} ⟡ to grease the chain. You'll have to run the blockade.`
-              : 'Grease his palm and he raises the chain quiet. No fight, no risk, just coin.'}
+              ? `You don't have ${dpsCheck.payCost.toLocaleString()} ⟡ to pay your way in — you'll have to take the shot.`
+              : 'Pay the dockmaster and skip the shot. No risk.'}
           </p>
         </button>
       </div>

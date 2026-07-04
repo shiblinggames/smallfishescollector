@@ -1271,9 +1271,9 @@ export const RAID_MAP: RaidNode[] = [
     // you limp in under fire, owing 20k in repairs. Node id kept so the
     // downstream chain (coffers_lens.requiresNode) is untouched.
     id: 'coffers_fork',    type: 'dps_check',
-    label: 'Run the Blockade',
-    flavor: "The harbor mouth is barred by a boom chain and a gun-line. Bribe the dockmaster to raise it quiet, or blow the chain yourself with a single well-placed broadside.",
-    bridge: "The chain gives way and the boom drops into the water. You're inside the Coffers now, and the market's war-fleet is already turning to meet you.",
+    label: 'The Harbor Gate',
+    flavor: "A locked gate bars the way into the Coffers. Blow it open with one good cannon shot, or pay the dockmaster to wave you through.",
+    bridge: "The gate's behind you, and the market's war-fleet is already turning to meet you.",
     requiresNode: 'coffers_heading',
     adminOnly: true,
     image: '/raidlog.png',
@@ -1285,9 +1285,9 @@ export const RAID_MAP: RaidNode[] = [
     },
     detail: {
       description:
-        "The Coffers sit behind a boom chain and a wall of guns. Grease the dockmaster and he raises the chain quiet, no fight, for a price. Or run the blockade: one broadside at the chain's anchor-ring, and if your guns hit hard enough you punch straight through free. Miss the mark and you limp in under the gun-line, owing the market a small fortune in repairs. One shot, no crew tricks. Make it count.",
-      dropsNote: 'Pay 10,000 to slip in quiet, or take one shot at the chain. Land a hard enough hit and you pass free; fall short and it costs you 20,000 in repairs.',
-      ctaLabel: 'Run the Blockade',
+        "One locked gate stands between you and the Coffers. Fire a single cannon shot at it: hit hard enough and it blows open for free. Come up short and you limp through under fire, and the repairs cost you 20,000 doubloons. Or skip the shot and just pay the dockmaster 10,000 to wave you in.",
+      dropsNote: 'Fire one shot and deal 60+ damage to pass for free, or pay 10,000 to skip it. A missed shot costs 20,000 in repairs.',
+      ctaLabel: 'Approach the Gate',
     },
   },
   {
