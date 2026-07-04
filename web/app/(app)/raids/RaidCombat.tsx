@@ -1319,11 +1319,13 @@ export default function RaidCombat({
     if (subPhase !== 'aiming') return
     let last = performance.now()
 
-    // Zone drift: enemy ship speed sets the pace, player Navigation
-    // slows it back down. Gauntlet curses can lurch it (zoneSpeedMult).
-    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * tide.zoneSpeedMult
-    // Needle sweep, with the curse multiplier (Racing Tide etc.) AND the
-    // per-enemy multiplier (The Leech races the needle to deny clean crits).
+    // Zone drift: enemy ship speed sets the pace, player Navigation slows it
+    // back down. Gauntlet curses (tide) + a per-enemy multiplier both lurch it —
+    // the per-enemy one is how evasive raid enemies deny clean crits (a faster
+    // TARGET rather than a faster needle).
+    const ZONE_SPEED = enemy.shipSpeed * 0.0008 * (1 / (1 + totalNavigation * 0.015)) * tide.zoneSpeedMult * (enemy.zoneSpeedMult ?? 1)
+    // Needle sweep, with the curse multiplier (Racing Tide etc.) AND any
+    // per-enemy needle multiplier (rarely used — prefer zoneSpeedMult).
     const NEEDLE_SPEED = INDICATOR_SPEED * tide.aimSpeedMult * (enemy.aimSpeedMult ?? 1)
 
     // False Colours: on a RANDOM fraction of fires, spawn N drifting decoy bands.
@@ -1387,7 +1389,7 @@ export default function RaidCombat({
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [subPhase, enemy.shipSpeed, enemy.aimSpeedMult, totalNavigation, tide.aimSpeedMult, tide.zoneSpeedMult])
+  }, [subPhase, enemy.shipSpeed, enemy.aimSpeedMult, enemy.zoneSpeedMult, totalNavigation, tide.aimSpeedMult, tide.zoneSpeedMult])
 
   // ─── Enemy AI: pick next action from pattern ───────────────────────────────
 

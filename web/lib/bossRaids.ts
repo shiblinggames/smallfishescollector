@@ -122,10 +122,16 @@ export interface BroadsideEnemy {
   aimFogDensity?: number
   aimFogName?: string
   /** Per-enemy aim-needle speed multiplier (1 = normal). Above 1 makes the
-   *  indicator sweep faster, so lining up a clean Critical is much harder —
-   *  used on darting, evasive enemies (The Leech) where a steady bead is the
-   *  whole difficulty. Folds on top of any tide aimSpeedMult. Undefined = 1. */
+   *  NEEDLE sweep faster. Generally prefer `zoneSpeedMult` (a faster TARGET
+   *  reads as the enemy being evasive; a faster needle just feels twitchy).
+   *  Folds on top of any tide aimSpeedMult. Undefined = 1. */
   aimSpeedMult?: number
+  /** Per-enemy TARGET (crit-zone) drift-speed multiplier (1 = normal). Above 1
+   *  makes the gold zone slide across the bar faster, so it's harder to line up
+   *  a clean Critical — the enemy reads as a fast, evasive ship you can't get a
+   *  steady bead on. The zone's base pace already scales with shipSpeed, so a
+   *  slow brute stays easier to crit even with a mult. Undefined = 1. */
+  zoneSpeedMult?: number
   /** The Cartographer's raid — "Riposte." When this enemy executes a
    *  `dodge` action and the player's same-turn action was offensive
    *  (`fire` or `volley`), `parryChance` (0-1) rolls. On success, the
@@ -853,9 +859,11 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
       decoyCount: 1, decoyName: 'False Colours',   // deception ladder tier 1
-      // Endgame aim-speed bump — the needle runs faster across Ch3 so clean
-      // crits are earned, not automatic (Raid 6 + bosses climb higher still).
-      aimSpeedMult: 1.4,
+      // Endgame difficulty lives in the TARGET, not the needle (2026-07-04): the
+      // crit zone drifts faster across Ch3 so clean crits are earned, not
+      // automatic. The zone's base pace scales with shipSpeed, so slow brutes
+      // need a bigger mult to reach a comparable challenge.
+      zoneSpeedMult: 1.6,
       image: '/enemychapter3schooner.png',
       portrait: '/raid5_feint.png',
     },
@@ -865,7 +873,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.08,
       decoyCount: 1, decoyName: 'False Colours',   // tier 1
-      aimSpeedMult: 1.4,
+      zoneSpeedMult: 1.9,
       image: '/enemychapter3brigantine.png',
       portrait: '/raid5_sham.png',
     },
@@ -875,7 +883,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
       critChance: 0.06,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2 — bigger spread
-      aimSpeedMult: 1.4,
+      zoneSpeedMult: 2.6,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_bulwark.png',
     },
@@ -885,7 +893,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.13,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2
-      aimSpeedMult: 1.4,
+      zoneSpeedMult: 1.6,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_mirage.png',
     },
@@ -903,7 +911,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
         pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
         dialogueLine: "Enough games. Run out the real guns.",
       },
-      aimSpeedMult: 1.5,
+      zoneSpeedMult: 1.9,
       image: '/enemychapter3galleon.png',
       portrait: '/raid5_admiralruse.png',
     },
@@ -968,9 +976,10 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 10, actionMs: 3000,
       pattern: ['fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.20,
-      // A darting lamprey — the needle races, so landing a clean Critical on it
-      // is genuinely hard (you have to catch a fast, narrow window).
-      aimSpeedMult: 2.0,
+      // A darting lamprey — the crit zone races, so landing a clean Critical on
+      // it is genuinely hard (you have to catch a fast, narrow window). Already a
+      // fast ship (10), so a modest mult on top of the shipSpeed base bites.
+      zoneSpeedMult: 1.6,
       image: '/enemychapter3schooner.png',
       portrait: '/raid6_theleech.png',
     },
@@ -981,7 +990,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       shipSpeed: 2, actionMs: 5200,
       pattern: ['reload', 'reload', 'volley', 'reload', 'reload', 'volley', 'dodge'],
       critChance: 0.06,
-      aimSpeedMult: 1.6,
+      zoneSpeedMult: 3.0,
       image: '/enemychapter3brigantine.png',
       portrait: '/raid6_thebreaker.png',
     },
@@ -1034,7 +1043,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
             consequence: { kind: 'damagePctMaxHp', value: 0.55 },
           } },
       ],
-      aimSpeedMult: 1.7,
+      zoneSpeedMult: 2.0,
       image: '/enemychapter3galleon.png',
       portrait: '/raid6_thequartermaster.png',
     },
