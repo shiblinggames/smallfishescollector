@@ -137,20 +137,38 @@ export default function DpsCheckNode({
   if (phase === 'result' && result) {
     const passed = result.outcome === 'passed'
     const accent = passed ? GREEN : RED
+    const bd = result.breakdown
+    const zoneMeta = {
+      critical: { label: 'Critical Hit!', color: GOLD },
+      hit:      { label: 'Solid Hit',     color: GREEN },
+      graze:    { label: 'Graze',         color: GREY },
+      miss:     { label: 'Miss',          color: RED },
+    }[bd.zone]
+    const hasMult = Math.abs(bd.mult - 1) > 0.001
     return (
       <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-        <p className="font-cinzel font-800" style={{ fontSize: '2.6rem', lineHeight: 1, color: accent, textShadow: `0 0 18px ${accent}66` }}>
-          {result.damage.toLocaleString()}
+        {/* Shot quality — the skill part */}
+        <p className="font-cinzel font-800 uppercase" style={{ fontSize: '1.15rem', letterSpacing: '0.05em', color: zoneMeta.color, textShadow: `0 0 14px ${zoneMeta.color}55` }}>
+          {zoneMeta.label}
         </p>
-        <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.64rem', color: '#a89e86', marginTop: 4 }}>
-          damage · needed {result.threshold}
+        {/* Calculation ledger — makes it plain the damage is built from your stats */}
+        <div style={{ margin: '0.8rem auto 0', maxWidth: 268, textAlign: 'left', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.7rem 0.85rem', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <LedgerRow label={`Your cannon (${bd.zone})`} val={`${bd.rangeMin.toLocaleString()}–${bd.rangeMax.toLocaleString()}`} />
+          <LedgerRow label="You rolled" val={bd.roll.toLocaleString()} />
+          {hasMult && <LedgerRow label="Gear & class" val={`×${bd.mult.toFixed(2)}`} valColor={GOLD} />}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '2px 0' }} />
+          <LedgerRow label="Damage dealt" val={result.damage.toLocaleString()} valColor={accent} bold />
+          <LedgerRow label="Needed to pass" val={result.threshold.toLocaleString()} />
+        </div>
+        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a7770', marginTop: '0.5rem', fontStyle: 'italic' }}>
+          Your damage range is set by your ship + crew power.
         </p>
-        <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ marginTop: '0.9rem', fontSize: '0.92rem', color: accent }}>
+        <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ marginTop: '0.85rem', fontSize: '0.92rem', color: accent }}>
           {passed ? 'Gate blown open' : 'Not enough'}
         </p>
         <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.82)', marginTop: '0.45rem' }}>
           {passed
-            ? 'Direct hit. The gate blows open and you sail straight through, free.'
+            ? 'The gate blows open and you sail straight through, free.'
             : 'The gate holds. You limp through under fire, and the repairs come out of your purse.'}
         </p>
         {!passed && 'doubloonsDelta' in result && result.doubloonsDelta !== 0 && (
@@ -251,6 +269,16 @@ export default function DpsCheckNode({
         </p>
       )}
       {err && <p className="font-karla" style={{ fontSize: '0.74rem', color: RED, marginTop: '0.7rem', textAlign: 'center' }}>{err}</p>}
+    </div>
+  )
+}
+
+// One row of the damage-calculation ledger (label left, value right).
+function LedgerRow({ label, val, valColor, bold }: { label: string; val: string; valColor?: string; bold?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+      <span className="font-karla" style={{ fontSize: '0.72rem', color: '#a89e86' }}>{label}</span>
+      <span className={bold ? 'font-cinzel font-800' : 'font-cinzel font-700'} style={{ fontSize: bold ? '1.1rem' : '0.84rem', color: valColor ?? '#f0ede8', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
     </div>
   )
 }

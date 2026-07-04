@@ -564,14 +564,15 @@ function rollDpsShot(res: 'critical' | 'hit' | 'graze' | 'miss', shipMinDamage: 
 // the server rolls the shot from the player's real damage profile (ship + power
 // + gear crit/non-crit mults + class mult), compares to the threshold, and
 // applies the outcome. Pass = free; fall short = owe failCost. Either clears it.
+type DpsBreakdown = { zone: 'critical' | 'hit' | 'graze' | 'miss'; roll: number; rangeMin: number; rangeMax: number; mult: number }
 export async function resolveDpsCheck(
   nodeId: string,
   action: 'pay' | 'shot',
   aimResult?: 'critical' | 'hit' | 'graze' | 'miss',
 ): Promise<
   | { outcome: 'paid'; newDoubloons: number }
-  | { outcome: 'passed'; damage: number; threshold: number; newDoubloons: number }
-  | { outcome: 'failed'; damage: number; threshold: number; doubloonsDelta: number; newDoubloons: number }
+  | { outcome: 'passed'; damage: number; threshold: number; newDoubloons: number; breakdown: DpsBreakdown }
+  | { outcome: 'failed'; damage: number; threshold: number; doubloonsDelta: number; newDoubloons: number; breakdown: DpsBreakdown }
   | { error: string }
 > {
   const supabase = await createClient()
@@ -632,19 +633,28 @@ export async function resolveDpsCheck(
   if (doubloons < dc.failCost) return { error: `Need ${dc.failCost.toLocaleString()} doubloons to risk the shot` }
   const res = aimResult ?? 'miss'
   const stats = await getRaidPlayerStats(user.id)
+  // The zone's damage RANGE comes straight from the player's stats (ship + crew
+  // power), so the breakdown can show it. Bounds mirror rollDpsShot exactly.
+  const dmgProfile = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods.damagePct)
+  let rangeMin = 0, rangeMax = 0
+  if (res === 'critical')   { rangeMin = stats.shipMinDamage * 2; rangeMax = dmgProfile.critMax }
+  else if (res === 'hit')   { rangeMin = dmgProfile.hitMin; rangeMax = dmgProfile.powerMax }
+  else if (res === 'graze') { rangeMin = 1; rangeMax = Math.max(1, Math.ceil(dmgProfile.powerMax * 0.4)) }
   const base = rollDpsShot(res, stats.shipMinDamage, stats.totalPower, stats.raidMods.damagePct)
   const aimItemMult = res === 'critical'
     ? getActiveEffects(stats.equippedRaidItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
     : getActiveEffects(stats.equippedRaidItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
-  const damage = Math.round(base * stats.classDamageMult * aimItemMult)
+  const mult = stats.classDamageMult * aimItemMult
+  const damage = Math.round(base * mult)
   const passed = damage >= dc.threshold
+  const breakdown: DpsBreakdown = { zone: res, roll: base, rangeMin, rangeMax, mult }
 
   if (passed) {
     const { newDoubloons } = await settle(0, 'passed')
-    return { outcome: 'passed', damage, threshold: dc.threshold, newDoubloons }
+    return { outcome: 'passed', damage, threshold: dc.threshold, newDoubloons, breakdown }
   }
   const { newDoubloons, delta } = await settle(dc.failCost, 'failed')
-  return { outcome: 'failed', damage, threshold: dc.threshold, doubloonsDelta: delta, newDoubloons }
+  return { outcome: 'failed', damage, threshold: dc.threshold, doubloonsDelta: delta, newDoubloons, breakdown }
 }
 
 // Choice-gated payoff (the freed-scout debt). A story-type node whose reward
