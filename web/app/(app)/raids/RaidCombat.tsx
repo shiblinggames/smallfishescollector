@@ -901,6 +901,14 @@ export default function RaidCombat({
   useEffect(() => () => { playStepChainRef.current.forEach(clearTimeout) }, [])
 
   const enemyPatternIdxRef = useRef(0)
+  // Did the enemy ADVANCE its pattern slot this turn? pickEnemyAction leaves the
+  // index put when it can't perform the slotted move (fire with no charges →
+  // substitute reload, retry the SAME slot next turn). Foresight's revealed-move
+  // pill must only drop its imminent entry once the slot is actually spent —
+  // otherwise a no-charge stall makes the prediction read one cycle early and the
+  // pill falls off before the enemy performs the move. Defaults true (a turn with
+  // no foresight active is a harmless no-op).
+  const enemyAdvancedThisTurnRef = useRef(true)
   // Consecutive reload-at-max FEINTS (see pickEnemyAction). Capped so a full
   // magazine can't become a guaranteed incoming fire OR an endless bluff.
   const enemyFeintStreakRef = useRef(0)
@@ -1026,12 +1034,25 @@ export default function RaidCombat({
     if (turnInitRef.current) { turnInitRef.current = false; return }
     setOneAbilityUsedThisTurn(false)
     setSnareDodgeTurns(prev => (prev > 0 ? prev - 1 : prev))
-    // Consume one foreseen move — the enemy just spent its turn on the first.
-    setForeseenMoves(prev => {
-      if (!prev || prev.length <= 1) return null
-      return prev.slice(1)
-    })
+    // Consume one foreseen move — but ONLY if the enemy actually spent its
+    // pattern slot this turn. A stalled slot (e.g. a no-charge reload
+    // substitution that retries the same move) leaves that move imminent, so
+    // the pill stays lit until the enemy really performs it, then falls off —
+    // instead of dropping a cycle early. This runs after the enemy's action has
+    // animated (turn increments at the end of resolution), so the pill always
+    // outlives the move it predicts.
+    if (enemyAdvancedThisTurnRef.current) {
+      setForeseenMoves(prev => {
+        if (!prev || prev.length <= 1) return null
+        return prev.slice(1)
+      })
+    }
   }, [turn])
+
+  // Clear stale foreseen moves whenever the enemy or its phase changes: the
+  // pattern and pattern-index both reset at those points, so a prior Foresight
+  // reading no longer lines up. The next cast re-reads the fresh pattern.
+  useEffect(() => { setForeseenMoves(null) }, [enemy.id, enemyPhase])
 
   // Ship shake / recoil controls — match the existing real-time raid keyframes
   const enemyShakeCtrl  = useAnimation()
@@ -1949,7 +1970,12 @@ export default function RaidCombat({
   }
 
   function advanceToReveal(pAction: EnemyAction, res: ShotResult | null = null) {
+    // pickEnemyAction advances enemyPatternIdxRef only when it actually spends
+    // the slotted move. Snapshot before/after so the foreseen-move consume
+    // (in the [turn] effect) can tell a real move from a stalled retry.
+    const idxBefore = enemyPatternIdxRef.current
     const eAction = pickEnemyAction()
+    enemyAdvancedThisTurnRef.current = enemyPatternIdxRef.current !== idxBefore
     setEnemyAction(eAction)
 
     // Speed roll for turn order. Navigator's Compass adds a fraction of
