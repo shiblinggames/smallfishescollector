@@ -230,8 +230,10 @@ export interface BossRaidConfig {
    *    - dusk     : default warm seascape (cool blue sky, warm sun, drifting clouds)
    *    - sunset   : Pete's coastal reef at golden hour (saturated orange + purple)
    *    - overcast : Krust's open ocean past the Bilge Strait (cold steel-grey, thick clouds, no sun)
-   *    - fog      : The Cartographer's Sounding Fog (washed-out grey, dim sun, drifting mist bands) */
-  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog'
+   *    - fog      : The Cartographer's Sounding Fog (washed-out grey, dim sun, drifting mist bands)
+   *    - harbor   : The Coffers' drowned black-market port (sickly green overcast, gun-smoke haze, black water)
+   *    - vault    : The Quartermaster's lantern-lit gun-deck (deep indigo storm-dark, warm gold lamp glow) */
+  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault'
   /** Optional dialogue sequence shown right before the boss fight starts.
    *  Tap to advance each line; the last line's button is "Engage" which
    *  closes the modal and mounts the combat. */
@@ -853,14 +855,14 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
   raidId: 'coffers_fleet',
   enemyAccuracy: 24,
   raidTitle: 'The Harbor Fleet',
-  bossDefeatedText: 'Admiral Ruse Defeated',  // NAME TBD (placeholder)
-  atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
+  bossDefeatedText: 'Admiral Ruse Defeated',
+  atmosphere: 'harbor',  // the Coffers' drowned black-market port, gun-smoke haze
   enemies: {
     // Ch3 hulls. SIGNATURE = DECOYS: false aim bands scaling 1 → 3 toward the
-    // flagship. Admiral Ruse's deception fleet — the name + every line is decoys.
-    // Working names (Feint/Sham/Bulwark/Mirage/Admiral Ruse) are placeholders.
+    // flagship. Admiral Ruse's deception fleet — the showy lionfish crew whose
+    // fanned fins are all display over a hidden sting (the "False Colours").
     scout: {
-      id: 'scout', name: 'Feint', hpBase: 110, minDmg: 8, maxDmg: 15,
+      id: 'scout', name: 'Plume', hpBase: 110, minDmg: 8, maxDmg: 15,
       shipSpeed: 8, actionMs: 3500,
       pattern: ['reload', 'fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
@@ -874,7 +876,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_feint.png',
     },
     reg: {
-      id: 'reg', name: 'Sham', hpBase: 145, minDmg: 10, maxDmg: 18,
+      id: 'reg', name: 'Fantail', hpBase: 145, minDmg: 10, maxDmg: 18,
       shipSpeed: 6, actionMs: 4400,
       pattern: ['reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'dodge', 'reload', 'fire'],
       critChance: 0.08,
@@ -884,7 +886,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_sham.png',
     },
     brute: {
-      id: 'brute', name: 'Bulwark', hpBase: 212, minDmg: 14, maxDmg: 24,
+      id: 'brute', name: 'Bristle', hpBase: 212, minDmg: 14, maxDmg: 24,
       shipSpeed: 3, actionMs: 5400,
       pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'dodge', 'volley', 'fire'],
       critChance: 0.06,
@@ -894,7 +896,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_bulwark.png',
     },
     elite: {
-      id: 'elite', name: 'Mirage', hpBase: 185, minDmg: 13, maxDmg: 22,
+      id: 'elite', name: 'Barb', hpBase: 185, minDmg: 13, maxDmg: 22,
       shipSpeed: 9, actionMs: 3300,
       pattern: ['fire', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'dodge', 'fire'],
       critChance: 0.13,
@@ -969,7 +971,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
   enemyAccuracy: 28,
   raidTitle: 'The Quartermaster',
   bossDefeatedText: 'The Quartermaster Defeated',
-  atmosphere: 'overcast',  // placeholder — pick a Coffers palette in step 4
+  atmosphere: 'vault',  // the Cache's lantern-lit gun-deck vault, storm-dark finale
   enemies: {
     // A "FINAL BOSS" duel (Chapter III finale): a SHORT 2-ship intro of two
     // DISTINCT, strong enforcers — The Leech (sneaky glass-cannon) then The

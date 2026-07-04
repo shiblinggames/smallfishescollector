@@ -1379,9 +1379,8 @@ export const RAID_MAP: RaidNode[] = [
   {
     // Raid 5. The escort-fleet admiral guarding the Coffers — the player's first
     // capital-ship fight (Galleon-tier). Signature: Decoys (false crit bands) +
-    // the admiral's phase 2 + tier-2 tides. LIVE config (THE_COFFERS_FLEET), but
-    // adminOnly until tested AND the route page guards is_admin. Names/art are
-    // placeholders pending step 4.
+    // the admiral's phase 2 + tier-2 tides. The lionfish deception fleet (Plume/
+    // Fantail/Bristle/Barb) under Admiral Ruse, on the 'harbor' backdrop. LIVE.
     id: 'coffers_fleet',    type: 'raid',
     label: 'The Harbor Fleet',
     flavor: "The market keeps a war-fleet, and an admiral who's never lost a hull. His gunners run false colours on every shot, so you never know which gun is the one that's loaded.",
@@ -1394,7 +1393,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "The Coffers' war-fleet, and the admiral who has never lost a ship. His crews fight under false colours: decoy gun-bands strewn across your aim so you can't tell the live shot from the feint. The biggest hulls you've faced yet, and the admiral rises again when you think you've sunk him.",
-      enemies: ['Feint ×2', 'Sham ×2', 'Bulwark ×2', 'Mirage ×2', 'Admiral Ruse'],
+      enemies: ['Plume ×2', 'Fantail ×2', 'Bristle ×2', 'Barb ×2', 'Admiral Ruse'],
       drops: lootDrops(THE_COFFERS_FLEET.loot),
       clearReward: clearPayout(THE_COFFERS_FLEET),
       dropsNote: 'One crate per clear, rolled once and scaled by your Fortune. Every kill pays gold + Nav XP, and the run carries two stronger Tide events between fights.',
@@ -1412,7 +1411,7 @@ export const RAID_MAP: RaidNode[] = [
     detail: {
       description:
         "The harbor fleet again, harder for the loss. More HP, sharper guns, the same wall of false colours, and the admiral's phase 2 bites deeper. The chase rewards roll richer for the trouble.",
-      enemies: ['Feint ×2', 'Sham ×2', 'Bulwark ×2', 'Mirage ×2', 'Admiral Ruse'],
+      enemies: ['Plume ×2', 'Fantail ×2', 'Bristle ×2', 'Barb ×2', 'Admiral Ruse'],
       drops: lootDrops(THE_COFFERS_FLEET_CHALLENGE.loot),
       clearReward: clearPayout(THE_COFFERS_FLEET_CHALLENGE),
       dropsNote: 'Every kill pays more and the clear bonus is steeper than the normal run.',
@@ -1583,9 +1582,9 @@ export const RAID_MAP: RaidNode[] = [
   },
   {
     // Raid 6 — the chapter finale. The Quartermaster (Galleon-tier). Signature:
-    // Repossession (reclaims one equipped raid item at fight start) + a phase 2 +
-    // tier-2 tides. LIVE config (THE_QUARTERMASTER), adminOnly until tested AND
-    // the route page guards is_admin. Names/art placeholders pending step 4.
+    // Repossession (reclaims one equipped raid item at fight start) + a 4-phase
+    // final-boss duel. LIVE config (THE_QUARTERMASTER), on the 'vault' backdrop
+    // (lantern-lit gun-deck). LIVE for all players.
     id: 'the_quartermaster',    type: 'raid',
     label: 'The Quartermaster',
     flavor: "The keeper of the Cache fights the way he sells: he opens by taking back a piece of your own kit, then makes you buy your life off him one shot at a time.",

@@ -352,7 +352,7 @@ export interface RaidCombatProps {
    *  the same look. Default ('dusk' / undefined) keeps the original
    *  warm seascape — used by the practice skirmish and any legacy
    *  caller that doesn't set the field. */
-  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog'
+  atmosphere?: 'dusk' | 'sunset' | 'overcast' | 'fog' | 'harbor' | 'vault'
   /** Crew abilities pipeline. crewMembers carries id/slug/xp/name/portrait
    *  so RaidCombat can derive each crew's class + current milestone via
    *  lib/crewClasses. usedAbilityIds is the per-raid cooldown owned by
@@ -3420,6 +3420,8 @@ export default function RaidCombat({
           atmosphere === 'fog'      ? 'linear-gradient(180deg, #4a5566 0%, #58687a 30%, #6a7888 40%, #18222e 100%)' :
           atmosphere === 'sunset'   ? 'linear-gradient(180deg, #2a1838 0%, #6e2840 16%, #c84a28 34%, #d96a38 44%, #1a0a12 100%)' :
           atmosphere === 'overcast' ? 'linear-gradient(180deg, #38485a 0%, #485868 30%, #546675 40%, #0a121a 100%)' :
+          atmosphere === 'harbor'   ? 'linear-gradient(180deg, #2b3f39 0%, #35514a 28%, #3d5e54 40%, #071310 100%)' :
+          atmosphere === 'vault'    ? 'linear-gradient(180deg, #0e1330 0%, #171d42 30%, #1e234e 40%, #04050e 100%)' :
                                       'linear-gradient(180deg, #1e3a5f 0%, #234567 30%, #2a5274 40%, #0a1c2e 100%)',
         overflow: 'hidden',
       }}>
@@ -3586,6 +3588,113 @@ export default function RaidCombat({
               position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
               background: 'linear-gradient(180deg, rgba(22,32,44,0.50) 0%, rgba(6,10,18,0.90) 100%)',
             }} />
+          </>
+        ) : atmosphere === 'harbor' ? (
+          <>
+            {/* The Coffers' drowned harbour — a grim black-market port under a
+                sickly green overcast, the air thick with gun-smoke. No clean
+                sun; just a bruised green glow where daylight fights through the
+                smoke, and drifting powder-haze instead of clouds. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: '6%', right: '14%',
+                width: 84, height: 58,
+                background: 'radial-gradient(ellipse at 50% 50%, rgba(150,190,150,0.16) 0%, rgba(120,165,140,0.07) 45%, transparent 80%)',
+                filter: 'blur(10px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Gun-smoke haze bands drifting across the harbour — warm-grey
+                powder smoke tinted by the green sky. Reuses the fog sway. */}
+            <div aria-hidden style={{ position: 'absolute', top: '11%', left: '-40%', width: '180%', height: 60, pointerEvents: 'none' }}>
+              <div className="raid-fog-slow" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(120,128,120,0.20) 28%, rgba(140,148,136,0.26) 50%, rgba(120,128,120,0.20) 72%, transparent 100%)', filter: 'blur(8px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '21%', left: '-40%', width: '180%', height: 52, pointerEvents: 'none' }}>
+              <div className="raid-fog-mid" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(108,120,110,0.20) 30%, rgba(132,142,128,0.26) 50%, rgba(108,120,110,0.20) 70%, transparent 100%)', filter: 'blur(7px)' }} />
+            </div>
+
+            {/* One heavy smoke bank up top — greener, denser than open cloud. */}
+            <div aria-hidden style={{ position: 'absolute', top: '6%', left: 0, right: 0, height: 34, pointerEvents: 'none' }}>
+              <div className="raid-cloud-slow" style={{ width: 150, height: 30, borderRadius: 15, background: 'radial-gradient(ellipse at 50% 55%, rgba(120,140,124,0.30) 0%, rgba(96,116,104,0.15) 50%, transparent 78%)', filter: 'blur(1.5px)' }} />
+            </div>
+
+            {/* Horizon — faint green line over black harbour water. */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
+              background: 'rgba(160,196,170,0.12)', boxShadow: '0 0 24px rgba(120,170,140,0.12)',
+            }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
+              background: 'linear-gradient(180deg, rgba(18,34,28,0.52) 0%, rgba(4,10,8,0.92) 100%)',
+            }} />
+
+            {/* Low smoke rolling along the water surface (replaces the sun glint). */}
+            <div aria-hidden style={{ position: 'absolute', top: '42%', left: '-40%', width: '180%', height: 34, pointerEvents: 'none' }}>
+              <div className="raid-fog-slow" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, transparent 0%, rgba(110,124,114,0.16) 30%, rgba(130,142,128,0.22) 50%, rgba(110,124,114,0.16) 70%, transparent 100%)', filter: 'blur(6px)' }} />
+            </div>
+          </>
+        ) : atmosphere === 'vault' ? (
+          <>
+            {/* The Quartermaster's Cache at night — a gun-deck vault lit only by
+                lantern-gold against deep indigo storm-dark. Cold, close and
+                oppressive: the finale's held breath. */}
+            {/* Heavy storm cap pressing down from the top of the sky. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '26%',
+                background: 'linear-gradient(180deg, rgba(10,14,34,0.65) 0%, rgba(16,20,44,0.34) 60%, transparent 100%)',
+                filter: 'blur(2px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Lantern glow low on the right — the Cache's hanging lamps, the
+                only warm light, bleeding gold into the dark (breathes via .raid-sun). */}
+            <div
+              className="raid-sun"
+              aria-hidden
+              style={{
+                position: 'absolute', top: '26%', right: '12%',
+                width: 70, height: 70, borderRadius: '50%',
+                background: 'radial-gradient(circle at 50% 50%, rgba(255,208,120,0.55) 0%, rgba(240,170,80,0.28) 34%, rgba(200,130,60,0.10) 62%, transparent 90%)',
+                filter: 'blur(2px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Dark drifting storm clouds — indigo, low and heavy. */}
+            <div aria-hidden style={{ position: 'absolute', top: '8%', left: 0, right: 0, height: 34, pointerEvents: 'none' }}>
+              <div className="raid-cloud-slow" style={{ width: 150, height: 32, borderRadius: 16, background: 'radial-gradient(ellipse at 50% 55%, rgba(40,48,86,0.42) 0%, rgba(28,34,66,0.20) 50%, transparent 78%)', filter: 'blur(1.5px)' }} />
+            </div>
+            <div aria-hidden style={{ position: 'absolute', top: '18%', left: 0, right: 0, height: 30, pointerEvents: 'none' }}>
+              <div className="raid-cloud-mid" style={{ width: 116, height: 26, borderRadius: 13, background: 'radial-gradient(ellipse at 50% 55%, rgba(34,42,78,0.38) 0%, rgba(24,30,60,0.18) 50%, transparent 78%)', filter: 'blur(1.2px)' }} />
+            </div>
+
+            {/* Horizon — faint gold lantern-line over near-black water. */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', height: 1,
+              background: 'rgba(255,206,140,0.16)', boxShadow: '0 0 26px rgba(240,180,110,0.20)',
+            }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '38%', bottom: 0,
+              background: 'linear-gradient(180deg, rgba(12,14,32,0.55) 0%, rgba(3,4,10,0.94) 100%)',
+            }} />
+
+            {/* Lantern reflection on the black water, directly below the lamps. */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', top: '38%', right: '9%',
+                width: 120, height: '36%',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(255,190,110,0.26) 0%, rgba(240,160,80,0.12) 42%, transparent 78%)',
+                mixBlendMode: 'screen',
+                pointerEvents: 'none',
+                filter: 'blur(3px)',
+              }}
+            />
           </>
         ) : (
           <>
