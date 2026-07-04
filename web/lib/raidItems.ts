@@ -546,6 +546,40 @@ export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
   return FORGE_RECIPES.find(r => r.result === resultId)
 }
 
+// Either/or campaign choices — the "pick one, and only once" Cache nodes in the
+// raid map (raidMap.ts node.choice). Taking one item means the other is gone for
+// good, so a recipe that needs the road-not-taken can never be completed. We use
+// this to BLOCK learning such a recipe (and explain why) instead of letting a
+// player burn Fathoms on something they can't build. (May open another way later.)
+export const EXCLUSIVE_CHOICE_PAIRS: { items: [string, string]; source: string }[] = [
+  { items: ['quartermasters_anchor', 'navigators_compass'], source: "the Quartermaster's Cache" },
+  { items: ['gunners_sight', 'reinforced_hull'],            source: 'the Driftwood Cache' },
+  { items: ['incendiary_cannonball', 'frozen_cannonball'],  source: 'the Sunken Cache' },
+]
+
+/** The either/or sibling of an item (the other option at its Cache), or null. */
+export function exclusiveSiblingOf(id: string): { sibling: string; source: string } | null {
+  for (const p of EXCLUSIVE_CHOICE_PAIRS) {
+    if (id === p.items[0]) return { sibling: p.items[1], source: p.source }
+    if (id === p.items[1]) return { sibling: p.items[0], source: p.source }
+  }
+  return null
+}
+
+/** Components a player can NEVER obtain for this recipe because they took the
+ *  OTHER side of an either/or Cache choice (they own the sibling). Empty = the
+ *  recipe is still buildable (missing parts are farmable / choice not yet made). */
+export function unobtainableComponents(components: string[], ownedItems: string[]): { id: string; sibling: string; source: string }[] {
+  const owned = new Set(ownedItems)
+  const out: { id: string; sibling: string; source: string }[] = []
+  for (const id of components) {
+    if (owned.has(id)) continue
+    const ex = exclusiveSiblingOf(id)
+    if (ex && owned.has(ex.sibling)) out.push({ id, sibling: ex.sibling, source: ex.source })
+  }
+  return out
+}
+
 /** Whether an item is a forged combination (a FORGE_RECIPES result) — used to
  *  give fusions a distinct prismatic treatment vs the flat rarity colours. */
 export function isForgedRaidItem(id: string): boolean {

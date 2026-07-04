@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
-import { getForgeRecipe, dedupeRaidItems } from '@/lib/raidItems'
+import { getForgeRecipe, dedupeRaidItems, unobtainableComponents } from '@/lib/raidItems'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { getShipAugment, AUGMENT_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
 import { getShipSkin, canEquipShipSkin } from '@/lib/shipSkins'
@@ -182,7 +182,7 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_upgrades, gauntlet_fathoms, forge_recipes_learned')
+    .select('gauntlet_upgrades, gauntlet_fathoms, forge_recipes_learned, raid_items')
     .eq('id', user.id)
     .single()
   if (!hasForge((profile?.gauntlet_upgrades as string[] | null) ?? [])) {
@@ -190,6 +190,11 @@ export async function learnForgeRecipe(resultId: string): Promise<{ ok: true; fa
   }
   const learned = (profile?.forge_recipes_learned as string[] | null) ?? []
   if (learned.includes(resultId)) return { error: 'Already learned.' }
+  // Block recipes the player can never complete — a component was an either/or
+  // Cache choice and they took the other option (own the sibling). Don't let
+  // them spend Fathoms on something unbuildable.
+  const blocked = unobtainableComponents(recipe.components, (profile?.raid_items as string[] | null) ?? [])
+  if (blocked.length > 0) return { error: 'You can no longer obtain a component for this recipe (a one-time Cache choice).' }
   const fathoms = (profile?.gauntlet_fathoms as number | null) ?? 0
   if (fathoms < recipe.fathomCost) return { error: `Not enough Fathoms — this recipe needs ${recipe.fathomCost}.` }
 
