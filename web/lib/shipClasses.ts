@@ -159,16 +159,20 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
   //    chapters compounds the hardest (I × II × III), tradeoff and all.
   master_gunner_iii: {
     id: 'master_gunner_iii',
+    // Damage TAPERS at the capstone (2026-07-04): late-game damage already
+    // compounds across class + items + crew + boons multiplicatively, so a third
+    // full-size +10% would runaway-scale. Smaller final bite (and a lighter HP
+    // cost to match). The defensive/economy lines keep their full Mark III.
     name: 'Master Gunner III',
-    tagline: 'All bite. Nothing held back.',
-    description: 'The gunner\'s trade taken as far as a hull will bear: maximum bite, minimum plate. Stacks on your Master Gunner II.',
+    tagline: 'The last of the powder.',
+    description: 'The gunner\'s trade as far as it goes. A smaller final gain than before, but the plate keeps thinning. Stacks on your Master Gunner II.',
     bullets: [
-      { label: '+10% damage', positive: true  },
-      { label: '−7% HP',      positive: false },
+      { label: '+6% damage', positive: true  },
+      { label: '−4% HP',     positive: false },
     ],
     color: '#f0743a',
     emoji: '✦',
-    effects: { damageMult: 1.10, hpMult: 0.93 },
+    effects: { damageMult: 1.06, hpMult: 0.96 },
   },
   ironside_iii: {
     id: 'ironside_iii',
