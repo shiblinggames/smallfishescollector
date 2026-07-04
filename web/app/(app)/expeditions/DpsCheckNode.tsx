@@ -50,6 +50,10 @@ export default function DpsCheckNode({
   const [result, setResult] = useState<ShotResult | null>(null)
   const [pending, setPending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // Lock-moment feel: the frozen zone drives the center badge, and a crit lights
+  // a full-screen flash. Both clear when the result view takes over.
+  const [locked, setLocked] = useState<AimZone | null>(null)
+  const [critFlash, setCritFlash] = useState(false)
 
   // Aim-bar RAF state (imperative so it stays at 60fps without re-render).
   const needleRef = useRef<HTMLDivElement>(null)
@@ -64,6 +68,7 @@ export default function DpsCheckNode({
   const grazeElRef = useRef<HTMLDivElement>(null)
   const hitElRef = useRef<HTMLDivElement>(null)
   const critElRef = useRef<HTMLDivElement>(null)
+  const barFlashRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), [])
 
@@ -74,6 +79,14 @@ export default function DpsCheckNode({
     posRef.current = 0
     dirRef.current = 1
     firedRef.current = false
+    setLocked(null)
+    // Reset the needle to its neutral look (a prior lock mutates these).
+    if (needleRef.current) {
+      const el = needleRef.current
+      el.style.transition = 'none'; el.style.transform = 'none'
+      el.style.width = '3px'; el.style.marginLeft = '-1.5px'
+      el.style.background = '#fff'; el.style.boxShadow = '0 0 8px #fff'
+    }
     // Start the target at a random spot + direction so it can't be memorised.
     const zLo = GRAZE_HALF, zHi = 1 - GRAZE_HALF
     zoneCenterRef.current = zLo + Math.random() * (zHi - zLo)
@@ -89,7 +102,6 @@ export default function DpsCheckNode({
       if (p >= 1) { p = 1; dirRef.current = -1 }
       if (p <= 0) { p = 0; dirRef.current = 1 }
       posRef.current = p
-      if (needleRef.current) needleRef.current.style.left = `${p * 100}%`
       // Target drift (the ship), bounded so the graze band stays on the bar.
       let z = zoneCenterRef.current + ZONE_SPEED * frames * zoneDirRef.current
       if (z >= zHi) { z = zHi; zoneDirRef.current = -1 }
@@ -98,6 +110,15 @@ export default function DpsCheckNode({
       if (grazeElRef.current) grazeElRef.current.style.left = `${(z - GRAZE_HALF) * 100}%`
       if (hitElRef.current)   hitElRef.current.style.left   = `${(z - HIT_HALF) * 100}%`
       if (critElRef.current)  critElRef.current.style.left  = `${(z - CRIT_HALF) * 100}%`
+      // Live needle colour by the zone it's over — real-time "on target" read.
+      if (needleRef.current) {
+        const zone = zoneFrom(p, z)
+        needleRef.current.style.left = `${p * 100}%`
+        needleRef.current.style.background =
+          zone === 'critical' ? GOLD : zone === 'hit' ? GREEN : zone === 'graze' ? GREY : '#fff'
+        needleRef.current.style.boxShadow =
+          zone === 'critical' ? `0 0 12px ${GOLD}` : zone === 'hit' ? `0 0 10px ${GREEN}` : '0 0 8px #fff'
+      }
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
@@ -107,19 +128,54 @@ export default function DpsCheckNode({
     if (phase !== 'aiming' || firedRef.current) return
     firedRef.current = true
     cancelAnimationFrame(rafRef.current)
-    const zone = zoneFrom(posRef.current, zoneCenterRef.current)
-    vibrate(zone === 'critical' ? [0, 30, 40, 30] : 14)
+    const pos = posRef.current
+    const zone = zoneFrom(pos, zoneCenterRef.current)
+    const zoneColor = zone === 'critical' ? GOLD : zone === 'hit' ? GREEN : zone === 'graze' ? GREY : '#8a8f98'
+
+    // ── Punch the lock so it FEELS like a hit (mirrors the raid aim bar) ──
     setPending(true)
-    const res = await resolveDpsCheck(nodeId, 'shot', zone)
-    setPending(false)
-    if ('error' in res) { setErr(res.error); setPhase('choose'); return }
-    if (res.outcome === 'paid') { onResolved(); return } // shouldn't happen for a shot
-    if ('doubloonsDelta' in res && res.doubloonsDelta !== 0) {
-      window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+    setLocked(zone)
+    if (needleRef.current) {
+      const el = needleRef.current
+      el.style.left = `${pos * 100}%`
+      el.style.background = zoneColor
+      if (zone === 'hit' || zone === 'critical') {
+        el.style.width = zone === 'critical' ? '9px' : '6px'
+        el.style.marginLeft = zone === 'critical' ? '-4.5px' : '-3px'
+        el.style.boxShadow = `0 0 16px ${zoneColor}, 0 0 34px ${zoneColor}, 0 0 58px ${zoneColor}66`
+      }
+      // Springy vertical/horizontal snap.
+      el.style.transition = 'transform 0s'
+      el.style.transform = 'scaleX(2.6) scaleY(1.12)'
+      requestAnimationFrame(() => {
+        if (!needleRef.current) return
+        needleRef.current.style.transition = 'transform 0.42s cubic-bezier(0.34,1.56,0.64,1)'
+        needleRef.current.style.transform = 'scaleX(1) scaleY(1)'
+      })
     }
-    vibrate(res.outcome === 'passed' ? [0, 40, 60, 40] : [0, 120])
-    setResult(res)
-    setPhase('result')
+    flashBar(barFlashRef.current, zoneColor, zone === 'critical' ? 0.7 : zone === 'hit' ? 0.55 : 0.3)
+    // Zone-matched haptics + a full-screen flash on a crit.
+    if (zone === 'critical')   { setCritFlash(true); setTimeout(() => setCritFlash(false), 400); vibrate([40, 60, 80]) }
+    else if (zone === 'hit')   vibrate([0, 30, 20])
+    else if (zone === 'graze') vibrate([0, 16])
+    else                       vibrate([0, 90])
+
+    // Hold the lock beat, resolve the shot server-side in parallel, then reveal.
+    const dur = zone === 'critical' ? 760 : zone === 'hit' ? 520 : zone === 'graze' ? 380 : 300
+    const t0 = performance.now()
+    const res = await resolveDpsCheck(nodeId, 'shot', zone)
+    const wait = Math.max(0, dur - (performance.now() - t0))
+    window.setTimeout(() => {
+      setPending(false)
+      if ('error' in res) { setErr(res.error); setLocked(null); setPhase('choose'); return }
+      if (res.outcome === 'paid') { onResolved(); return } // shouldn't happen for a shot
+      if ('doubloonsDelta' in res && res.doubloonsDelta !== 0) {
+        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+      }
+      if (res.outcome === 'passed') vibrate([0, 45, 60, 45])
+      setResult(res)
+      setPhase('result')
+    }, wait)
   }
 
   async function pay() {
@@ -191,28 +247,55 @@ export default function DpsCheckNode({
 
   // ── Aiming view ──────────────────────────────────────────────────────────
   if (phase === 'aiming') {
+    const lm = locked && { critical: { label: 'CRITICAL!', color: GOLD }, hit: { label: 'HIT!', color: GREEN }, graze: { label: 'GRAZE', color: GREY }, miss: { label: 'MISS', color: RED } }[locked]
     return (
-      <div style={{ marginTop: '1rem' }}>
-        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#a89e86', textAlign: 'center', marginBottom: '0.8rem' }}>
+      <div style={{ padding: '1.4rem 0 1rem' }}>
+        <style>{`
+          @keyframes dpsc-badge-pop { 0% { transform: translateX(-50%) scale(0.5); opacity: 0; } 45% { transform: translateX(-50%) scale(1.14); opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+          @keyframes dpsc-crit-flash { 0% { opacity: 0.55; } 100% { opacity: 0; } }
+        `}</style>
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.64rem', color: '#a89e86', textAlign: 'center', marginBottom: '1.5rem' }}>
           Tap FIRE when the marker hits the gold
         </p>
         {/* Aim bar — a DRIFTING target (graze/hit/crit bands) + a sweeping needle,
             both moved imperatively by the RAF so it reads like a real fight. */}
-        <div style={{ position: 'relative', height: 44, borderRadius: 10, background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: 56, borderRadius: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.14)', overflow: 'hidden' }}>
           <div ref={grazeElRef} aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: `${(0.5 - GRAZE_HALF) * 100}%`, width: `${GRAZE_HALF * 2 * 100}%`, background: GREY, opacity: 0.18 }} />
           <div ref={hitElRef}   aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: `${(0.5 - HIT_HALF) * 100}%`,   width: `${HIT_HALF * 2 * 100}%`,   background: GREEN, opacity: 0.28 }} />
-          <div ref={critElRef}  aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: `${(0.5 - CRIT_HALF) * 100}%`,  width: `${CRIT_HALF * 2 * 100}%`,  background: GOLD, opacity: 0.85 }} />
+          <div ref={critElRef}  aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: `${(0.5 - CRIT_HALF) * 100}%`,  width: `${CRIT_HALF * 2 * 100}%`,  background: GOLD, opacity: 0.9 }} />
           {/* needle */}
           <div ref={needleRef} style={{ position: 'absolute', top: -2, bottom: -2, left: '0%', width: 3, marginLeft: -1.5, background: '#fff', boxShadow: '0 0 8px #fff', borderRadius: 2 }} />
+          {/* result-colour flash overlay (driven by flashBar) */}
+          <div ref={barFlashRef} aria-hidden style={{ position: 'absolute', inset: 0, opacity: 0, pointerEvents: 'none' }} />
+        </div>
+        {/* Center lock badge — pops in on FIRE with the shot quality. */}
+        <div style={{ position: 'relative', height: 34, marginTop: 8 }}>
+          {lm && (
+            <span className="font-cinzel font-800 uppercase" aria-live="polite" style={{
+              position: 'absolute', left: '50%', top: 0, transformOrigin: 'center',
+              fontSize: '1.5rem', letterSpacing: '0.04em', color: lm.color,
+              textShadow: `0 0 16px ${lm.color}, 0 0 4px ${lm.color}`,
+              animation: 'dpsc-badge-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards',
+              whiteSpace: 'nowrap',
+            }}>{lm.label}</span>
+          )}
         </div>
         <button
           onClick={fire}
           disabled={pending}
           className="font-cinzel font-800 uppercase tracking-[0.08em]"
-          style={{ width: '100%', marginTop: '0.9rem', padding: '0.95rem', borderRadius: 12, fontSize: '1.05rem', background: pending ? 'rgba(255,255,255,0.08)' : `${RED}2a`, border: `1px solid ${RED}70`, color: pending ? '#8a8880' : '#ffb3b3', cursor: pending ? 'wait' : 'pointer' }}
+          style={{ width: '100%', marginTop: '0.6rem', padding: '1rem', borderRadius: 12, fontSize: '1.1rem', background: pending ? 'rgba(255,255,255,0.06)' : `${RED}2a`, border: `1px solid ${RED}70`, color: pending ? '#8a8880' : '#ffb3b3', cursor: pending ? 'default' : 'pointer' }}
         >
-          {pending ? 'Firing…' : 'FIRE'}
+          {pending ? '…' : 'FIRE'}
         </button>
+        {/* Full-screen crit flash — portaled feel via fixed positioning. */}
+        {critFlash && (
+          <div aria-hidden style={{
+            position: 'fixed', inset: 0, zIndex: 1100, pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.4) 0%, rgba(251,191,36,0.1) 55%, transparent 100%)',
+            animation: 'dpsc-crit-flash 0.4s ease forwards',
+          }} />
+        )}
       </div>
     )
   }
@@ -271,6 +354,23 @@ export default function DpsCheckNode({
       {err && <p className="font-karla" style={{ fontSize: '0.74rem', color: RED, marginTop: '0.7rem', textAlign: 'center' }}>{err}</p>}
     </div>
   )
+}
+
+// Flash the aim-bar background in a colour, fading out over ~320ms (mirrors the
+// raid aim bar's lock flash).
+function flashBar(el: HTMLDivElement | null, color: string, peak = 0.55) {
+  if (!el) return
+  el.style.background = color
+  el.style.opacity = String(peak)
+  let start: number | null = null
+  const fade = (t: number) => {
+    if (!el) return
+    if (start === null) start = t
+    const p = (t - start) / 320
+    el.style.opacity = String(Math.max(0, peak * (1 - p)))
+    if (p < 1) requestAnimationFrame(fade)
+  }
+  requestAnimationFrame(fade)
 }
 
 // One row of the damage-calculation ledger (label left, value right).
