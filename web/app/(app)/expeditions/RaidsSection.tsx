@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -653,6 +653,12 @@ function NodeDetailSheet({
   const [pending, startTransition] = useTransition()
   const [err, setErr] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false) // puzzle solved → show the destination
+  // Some in-sheet actions clear the node server-side without going through a
+  // handler that also refreshes (e.g. the DPS check resolves on FIRE, and the
+  // player may dismiss the result via the backdrop). Mark that so ANY close
+  // path refreshes the map, or the node stays stale + re-openable.
+  const actedRef = useRef(false)
+  const closeSheet = () => { if (actedRef.current) router.refresh(); onClose() }
   // Tap a unique-drop chip to inspect it (image, full description,
   // effect breakdown for raid items, drop chance). Cleared by tapping
   // outside the popup or its close button.
@@ -985,7 +991,7 @@ function NodeDetailSheet({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={onClose}
+      onClick={closeSheet}
       style={{
         // zIndex sits above Nav + MobileTabBar (both z-50). This is
         // portaled to <body> so it escapes the expeditions page's
@@ -1052,7 +1058,7 @@ function NodeDetailSheet({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={closeSheet}
             aria-label="Close"
             style={{
               width: 38, height: 38, borderRadius: 10, flexShrink: 0,
@@ -1158,7 +1164,8 @@ function NodeDetailSheet({
               nodeId={node.id}
               dpsCheck={node.dpsCheck}
               doubloons={doubloons}
-              onResolved={() => { router.refresh(); onClose() }}
+              onActed={() => { actedRef.current = true }}
+              onResolved={closeSheet}
             />
           </div>
         )}

@@ -28,15 +28,18 @@ function oddsTier(pct: number): { label: string; color: string } {
 }
 
 export default function DpsCheckNode({
-  nodeId, dpsCheck, doubloons, onResolved,
+  nodeId, dpsCheck, doubloons, onResolved, onActed,
 }: {
   nodeId: string
   dpsCheck: RaidDpsCheck
   doubloons: number
   /** Called once the player has seen the outcome and taps to continue. */
   onResolved: () => void
+  /** Fires the moment the node is cleared server-side (shot resolved or paid),
+   *  so the sheet refreshes the map on ANY close — not just the Sail On tap. */
+  onActed?: () => void
 }) {
-  const [phase, setPhase] = useState<'choose' | 'firing' | 'result'>('choose')
+  const [phase, setPhase] = useState<'choose' | 'confirm' | 'firing' | 'result'>('choose')
   const [preview, setPreview] = useState<Preview | null>(null)
   const [result, setResult] = useState<ShotResult | null>(null)
   const [rollDisplay, setRollDisplay] = useState(0)
@@ -68,6 +71,7 @@ export default function DpsCheckNode({
     spinning = false
     if ('error' in res) { setPending(false); setErr(res.error); setPhase('choose'); return }
     if (res.outcome === 'paid') { onResolved(); return } // shouldn't happen for a shot
+    onActed?.()   // node is cleared server-side now — any close should refresh the map
 
     // Decelerating ratchet onto the real damage, then hold + reveal the verdict.
     const finalDmg = res.damage
@@ -97,8 +101,49 @@ export default function DpsCheckNode({
     const res = await resolveDpsCheck(nodeId, 'pay')
     setPending(false)
     if ('error' in res) { setErr(res.error); return }
+    onActed?.()
     window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
     onResolved()
+  }
+
+  // ── Confirm view — make the 20k stake explicit before firing ──────────────
+  if (phase === 'confirm') {
+    const tier = preview ? oddsTier(preview.passChance) : null
+    return (
+      <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+        <p className="font-cinzel font-700 uppercase tracking-[0.1em]" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>
+          Fire one shot?
+        </p>
+        <div style={{ margin: '0.85rem auto 0', maxWidth: 300, background: `${RED}14`, border: `1px solid ${RED}44`, borderRadius: 12, padding: '0.85rem 0.9rem' }}>
+          <p className="font-karla" style={{ fontSize: '0.86rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.9)' }}>
+            You get <span style={{ color: '#f4ecd8', fontWeight: 700 }}>one shot</span>. If you fall short of {dpsCheck.threshold} damage, the repairs cost you <span style={{ color: RED, fontWeight: 700 }}>{dpsCheck.failCost.toLocaleString()} ⟡</span>. There's no second try.
+          </p>
+          {preview && tier && (
+            <p className="font-karla font-700" style={{ fontSize: '0.8rem', marginTop: '0.6rem', color: '#a89e86' }}>
+              Your odds: <span style={{ color: tier.color, fontWeight: 800 }}>{preview.passChance}% · {tier.label}</span>
+            </p>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: '1rem' }}>
+          <button
+            onClick={() => setPhase('choose')}
+            disabled={pending}
+            className="font-cinzel font-700 uppercase tracking-[0.06em]"
+            style={{ flex: 1, padding: '0.85rem', borderRadius: 12, fontSize: '0.92rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: '#d8d4cf', cursor: pending ? 'default' : 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={fire}
+            disabled={pending}
+            className="font-cinzel font-800 uppercase tracking-[0.08em]"
+            style={{ flex: 1, padding: '0.85rem', borderRadius: 12, fontSize: '0.92rem', background: `${RED}2a`, border: `1px solid ${RED}70`, color: '#ffb3b3', cursor: pending ? 'default' : 'pointer' }}
+          >
+            Fire
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // ── Firing view — the suspenseful rolling number ──────────────────────────
@@ -193,7 +238,7 @@ export default function DpsCheckNode({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         {/* Fire one shot — the damage check. Locked below the 20k a miss would cost. */}
         <button
-          onClick={() => canShoot && fire()}
+          onClick={() => canShoot && setPhase('confirm')}
           disabled={pending || !canShoot}
           style={{ textAlign: 'left', padding: '0.9rem', borderRadius: 14, background: canShoot ? `${RED}18` : 'rgba(255,255,255,0.03)', border: `1px solid ${canShoot ? `${RED}55` : 'rgba(255,255,255,0.1)'}`, cursor: pending || !canShoot ? 'not-allowed' : 'pointer', opacity: canShoot ? 1 : 0.7 }}
         >
