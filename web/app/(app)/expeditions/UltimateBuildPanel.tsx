@@ -100,6 +100,7 @@ export default function UltimateBuildPanel({
               <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: a.color }}>{a.name}</p>
               <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: a.color, background: `${a.color}1e`, border: `1px solid ${a.color}66`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>Building</span>
             </div>
+            <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: a.color, margin: '-2px 0 8px', lineHeight: 1.3 }}>{a.identity}</p>
             <UltimatePreview id={build.id} color={a.color} />
             {/* countdown */}
             <div style={{ marginTop: 11, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -142,8 +143,9 @@ export default function UltimateBuildPanel({
             <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: a.color }}>{a.name}</p>
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#0c0f14', background: a.color, borderRadius: 999, padding: '0.2rem 0.6rem' }}>Live</span>
           </div>
+          <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: a.color, margin: '2px 0 8px', lineHeight: 1.3 }}>{a.identity}</p>
           <UltimatePreview id={a.id as ShipAugmentId} color={a.color} />
-          <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a8', lineHeight: 1.45, marginTop: 9 }}>{a.tagline}</p>
+          <PerkList perks={a.perks} color={a.color} />
           {!hasRack && (
             <p className="font-karla" style={{ fontSize: '0.64rem', color: '#caa05a', lineHeight: 1.4, marginTop: 7 }}>
               It stays silent until you own the Extra Cannonball Rack (Gauntlet, depth 10) to hold {MEGA_CHARGE_COST} cannonballs and fire the Mega.
@@ -179,11 +181,12 @@ export default function UltimateBuildPanel({
             <div key={a.id} style={{ borderRadius: 14, padding: '0.8rem', background: confirming ? `${a.color}16` : `${a.color}0b`, border: `1px solid ${a.color}${confirming ? '77' : '3a'}` }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: a.color }}>{a.name}</p>
-                <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: a.color }}>×{a.megaMult.toFixed(1)} dmg</span>
+                <span className="font-karla font-700" style={{ fontSize: '0.58rem', color: a.color }}>×{a.megaMult.toFixed(1)} damage</span>
               </div>
-              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a8', lineHeight: 1.4, margin: '3px 0 8px' }}>{a.tagline}</p>
+              <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: a.color, margin: '2px 0 7px', lineHeight: 1.3 }}>{a.identity}</p>
               <UltimatePreview id={a.id} color={a.color} />
-              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7f7a72', fontStyle: 'italic', lineHeight: 1.4, marginTop: 7 }}>{a.flavor}</p>
+              <PerkList perks={a.perks} color={a.color} />
+              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7f7a72', fontStyle: 'italic', lineHeight: 1.4, marginTop: 9 }}>{a.flavor}</p>
               {!allMet ? (
                 <div style={{ marginTop: 9, width: '100%', padding: '0.55rem', borderRadius: 10, textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)' }}>
                   <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.6rem', color: '#6a6764' }}>Meet the requirements above to build</span>
@@ -226,6 +229,24 @@ export default function UltimateBuildPanel({
       )}
       {err && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#fca5a5', textAlign: 'center', marginTop: 6 }}>{err}</p>}
     </div>
+  )
+}
+
+/* ── Perk list — concrete pros/cons per weapon (a con is prefixed "—") ── */
+function PerkList({ perks, color }: { perks: string[]; color: string }) {
+  return (
+    <ul style={{ listStyle: 'none', padding: 0, margin: '9px 0 0', display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {perks.map((p, i) => {
+        const con = p.startsWith('—')
+        const text = con ? p.replace(/^—\s*/, '') : p
+        return (
+          <li key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+            <span aria-hidden style={{ flexShrink: 0, marginTop: 6, width: 5, height: 5, borderRadius: con ? 0 : '50%', background: con ? 'transparent' : color, boxShadow: con ? 'none' : `0 0 5px ${color}`, borderTop: con ? '1.5px solid rgba(255,255,255,0.3)' : undefined }} />
+            <span className="font-karla" style={{ fontSize: '0.68rem', lineHeight: 1.4, color: con ? '#8a8480' : '#c8c2b8' }}>{text}</span>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 

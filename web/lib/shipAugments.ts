@@ -41,27 +41,46 @@ export interface ShipAugment {
   procFalloff?: number
   /** Nuke: the blast leaves a burn (Fallout) — `pct` of the hit per turn. */
   fallout?: { pct: number; turns: number }
+  /** One-line "what makes this one different" summary for the header. */
+  identity: string
+  /** Concrete mechanical pros/cons, shown as bullets so each ultimate reads as a
+   *  distinct CHOICE, not just a bigger number. Prefix a con with "—". */
+  perks: string[]
 }
 
 export const SHIP_AUGMENTS: ShipAugment[] = [
   {
     id: 'railgun',
     name: 'Railgun',
-    tagline: 'A piercing beam that always lands and shrugs off enemy armour.',
+    tagline: 'A piercing lance of light that always finds its mark.',
     flavor: 'A lance of light off the gun deck. Nothing the deep can do to slip it.',
     color: '#5fd0ff',
     megaMult: 2.6,
     pierce: true,
+    identity: 'The sure thing. It never misses.',
+    perks: [
+      'Unblockable — ignores enemy dodge entirely, so it always lands clean.',
+      'Armour-piercing — no plate or carapace can soak or deflect it.',
+      'The most reliable ultimate: full damage, every single time.',
+      '— Lowest raw multiplier of the three (that certainty is the trade).',
+    ],
   },
   {
     id: 'barrage',
     name: 'Barrage',
-    tagline: 'Four rapid hits, each a fresh chance to land your on-hit effects.',
+    tagline: 'The whole broadside loosed at once — four hammer-blows in a heartbeat.',
     flavor: 'The whole broadside loosed in a heartbeat. Four hammer-blows where one fell before.',
     color: '#ffb454',
     megaMult: 2.8,
     hits: [0.40, 0.25, 0.18, 0.17],
     procFalloff: 0.3,
+    identity: 'The combo weapon. It triggers everything you carry.',
+    perks: [
+      'Strikes four times in one blow instead of once.',
+      'Every hit re-rolls your on-hit effects (burn, freeze, sunder) — the first at full odds, the rest reduced.',
+      'Best on a proc-heavy loadout: the more on-hit gear you run, the harder it hits.',
+      '— Can be dodged, though a dodge only shaves part of the volley, not all of it.',
+    ],
   },
   {
     id: 'nuke',
@@ -71,6 +90,13 @@ export const SHIP_AUGMENTS: ShipAugment[] = [
     color: '#ff5b5b',
     megaMult: 3.5,
     fallout: { pct: 0.08, turns: 3 },
+    identity: 'The finisher. Nothing else hits this hard.',
+    perks: [
+      'By far the highest damage of the three on a clean hit.',
+      'Leaves the target burning — Fallout deals extra damage for 3 turns after the blast.',
+      'The all-out swing: your best answer to a boss you need dead now.',
+      '— All-or-nothing: it can be dodged, and a dodge wastes the entire shot.',
+    ],
   },
 ]
 
