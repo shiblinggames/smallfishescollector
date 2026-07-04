@@ -890,7 +890,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       portrait: '/raid5_mirage.png',
     },
     admiral: {
-      id: 'admiral', name: 'Admiral Ruse', hpBase: 380, minDmg: 20, maxDmg: 36,
+      id: 'admiral', name: 'Admiral Ruse', hpBase: 670, minDmg: 20, maxDmg: 36,
       shipSpeed: 7, actionMs: 4200,
       // Flagship, peak of the deception ladder (3 bands). Phase 2: at half HP he
       // drops the act and fights for real, faster and meaner.
@@ -986,7 +986,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       portrait: '/raid6_thebreaker.png',
     },
     quartermaster: {
-      id: 'quartermaster', name: 'The Quartermaster', hpBase: 450, minDmg: 22, maxDmg: 38,
+      id: 'quartermaster', name: 'The Quartermaster', hpBase: 570, minDmg: 22, maxDmg: 38,
       shipSpeed: 7, actionMs: 4200,
       // The keeper himself, a 4-PHASE final-boss fight. SIGNATURE: Repossession —
       // at fight start he reclaims one of your equipped raid items for the whole
