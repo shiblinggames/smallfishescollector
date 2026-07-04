@@ -11,6 +11,8 @@ import { getRaidItem } from '@/lib/raidItems'
 import { getShipSkin } from '@/lib/shipSkins'
 import { claimMilestoneNode, markStoryNodeRead, claimScoutDebt, claimQuartermasterChoice, solvePuzzleNode, pickShipClass, markChapterUnlockSeen, pickRaidEventChoice, pickForkRoute } from './raidMapActions'
 import { repairShip } from '@/app/(app)/raids/actions'
+import { markUltimateUnlockSeen } from './actions'
+import { ULTIMATE_STORY } from '@/lib/shipAugments'
 import { getShipClass, offeredShipClasses } from '@/lib/shipClasses'
 import BeaconChainPuzzle from './BeaconChainPuzzle'
 import CipherDialsPuzzle from './CipherDialsPuzzle'
@@ -2161,6 +2163,173 @@ function ChapterUnlockOverlay({
   )
 }
 
+/* ─────────────────── Ultimate-weapon unlock overlay ───────────── */
+
+// The Chapter-3 payoff. Beating the Quartermaster reveals his stolen weapon
+// schematics; this full-screen forge-lit takeover announces it and sends the
+// player to the build screen. Themed molten gold-red (a foundry, not the sea)
+// so it reads as distinct from the chapter-unlock parchment. Fires once
+// (persisted via profiles.seen_ultimate_unlock).
+function UltimateUnlockOverlay({ onBuild, onLater }: { onBuild: () => void; onLater: () => void }) {
+  // Embers rising off the forge — deterministic positions, stable across renders.
+  const embers = (() => {
+    const arr: { left: number; size: number; delay: number; duration: number; sway: number }[] = []
+    for (let i = 0; i < 16; i++) {
+      arr.push({
+        left:     (i * 61) % 100,
+        size:     3 + ((i * 13) % 5),
+        delay:    (i * 0.19) % 2.4,
+        duration: 3.5 + ((i * 7) % 4),
+        sway:     (i % 2 === 0 ? 1 : -1) * (7 + (i * 3) % 12),
+      })
+    }
+    return arr
+  })()
+
+  return createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 3000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem',
+        background: 'radial-gradient(ellipse at center, rgba(28,10,4,0.93) 0%, rgba(10,4,2,0.97) 68%, rgba(0,0,0,0.99) 100%)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+      }}
+      onClick={onLater}
+    >
+      {/* rising embers */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {embers.map((s, i) => (
+          <motion.div
+            key={i}
+            initial={{ y: '110%', opacity: 0, x: 0 }}
+            animate={{ y: '-15%', opacity: [0, 0.9, 0.9, 0], x: [0, s.sway, 0, -s.sway, 0] }}
+            transition={{
+              y:       { duration: s.duration, delay: s.delay, repeat: Infinity, ease: 'linear' },
+              opacity: { duration: s.duration, delay: s.delay, repeat: Infinity, times: [0, 0.15, 0.8, 1], ease: 'easeInOut' },
+              x:       { duration: s.duration, delay: s.delay, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            style={{
+              position: 'absolute', left: `${s.left}%`, bottom: 0,
+              width: s.size, height: s.size, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255,200,120,0.95) 0%, rgba(240,110,50,0.6) 50%, transparent 100%)',
+              boxShadow: '0 0 12px rgba(255,140,70,0.6)',
+            }}
+          />
+        ))}
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.15, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative', width: '100%', maxWidth: 450,
+          padding: '1.6rem 1.4rem 1.5rem', borderRadius: 18,
+          background: [
+            'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255,150,70,0.2) 0%, transparent 70%)',
+            'linear-gradient(180deg, rgba(38,16,8,0.96) 0%, rgba(18,8,5,0.98) 100%)',
+          ].join(', '),
+          border: '1.5px solid rgba(240,140,70,0.5)',
+          borderTop: '2.5px solid rgba(255,180,110,0.85)',
+          boxShadow: '0 0 60px rgba(240,120,60,0.24), 0 0 140px rgba(240,120,60,0.08), inset 0 0 40px rgba(50,20,10,0.5)',
+          textAlign: 'center',
+        }}
+      >
+        {/* "Quartermaster defeated" anchor */}
+        <motion.p
+          initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.4 }}
+          className="font-karla font-700 uppercase tracking-[0.22em]"
+          style={{ fontSize: '0.56rem', color: '#4ade80', marginBottom: '0.65rem' }}
+        >
+          ✓ The Quartermaster Falls
+        </motion.p>
+
+        {/* kicker */}
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7, duration: 0.4 }}
+          className="font-karla font-700 uppercase tracking-[0.3em]"
+          style={{ fontSize: '0.56rem', color: 'rgba(255,180,110,0.8)', marginBottom: '0.7rem' }}
+        >
+          {ULTIMATE_STORY.unlockKicker}
+        </motion.p>
+
+        {/* weapon glyph — a cannon/blast mark stamping in */}
+        <motion.div
+          initial={{ opacity: 0, scale: 1.7 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.55, type: 'spring', stiffness: 210, damping: 14 }}
+          style={{ margin: '0 auto 0.7rem', width: 62, height: 62, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(255,170,90,0.28) 0%, transparent 70%)' }}
+        >
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ffb46e" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 10px rgba(255,150,70,0.7))' }}>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" />
+          </svg>
+        </motion.div>
+
+        {/* title */}
+        <motion.p
+          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.15, duration: 0.45 }}
+          className="font-cinzel font-700"
+          style={{ fontSize: '1.55rem', lineHeight: 1.12, color: '#fff2e2', letterSpacing: '0.02em', marginBottom: '0.7rem', textShadow: '0 0 22px rgba(255,150,70,0.4), 0 2px 12px rgba(0,0,0,0.7)' }}
+        >
+          {ULTIMATE_STORY.unlockTitle}
+        </motion.p>
+
+        {/* blurb */}
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4, duration: 0.5 }}
+          className="font-karla"
+          style={{ fontSize: '0.8rem', lineHeight: 1.55, color: 'rgba(245,236,228,0.8)', marginBottom: '1rem', padding: '0 0.3rem' }}
+        >
+          {ULTIMATE_STORY.unlockBlurb}
+        </motion.p>
+
+        {/* the three weapons on offer */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.65, duration: 0.45 }}
+          style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: '1.4rem' }}
+        >
+          {[['Railgun', '#5fd0ff'], ['Barrage', '#ffb454'], ['Nuke', '#ff5b5b']].map(([name, col]) => (
+            <span key={name} className="font-karla font-700 uppercase tracking-[0.08em]"
+              style={{ fontSize: '0.58rem', color: col, background: `${col}18`, border: `1px solid ${col}55`, borderRadius: 999, padding: '0.3rem 0.7rem' }}>
+              {name}
+            </span>
+          ))}
+        </motion.div>
+
+        {/* CTA */}
+        <motion.button
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.85, duration: 0.4 }}
+          whileTap={{ scale: 0.97 }} onClick={onBuild}
+          className="font-cinzel font-700 uppercase tracking-[0.16em]"
+          style={{
+            width: '100%', padding: '13px 0', borderRadius: 12,
+            background: 'linear-gradient(180deg, rgba(255,160,80,0.4) 0%, rgba(240,120,60,0.16) 100%)',
+            border: '1px solid rgba(255,160,90,0.7)', borderTop: '1.5px solid rgba(255,200,140,0.9)',
+            color: '#ffe0c0', fontSize: '0.8rem', cursor: 'pointer',
+            boxShadow: '0 0 26px rgba(240,120,60,0.28)',
+          }}
+        >
+          Study the Plans →
+        </motion.button>
+        <motion.button
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.15, duration: 0.4 }}
+          onClick={onLater}
+          className="font-karla font-600"
+          style={{ marginTop: '0.7rem', background: 'transparent', border: 'none', color: 'rgba(255,180,110,0.5)', fontSize: '0.66rem', cursor: 'pointer' }}
+        >
+          Later
+        </motion.button>
+      </motion.div>
+    </motion.div>,
+    document.body,
+  )
+}
+
 /* ─────────────────────── Repair-blocked prompt ────────────────── */
 
 // Focused modal that fires when the player taps a combat node while
@@ -2307,7 +2476,7 @@ function RepairBlockedModal({
 
 /* ─────────────────────── Collapsible section ─────────────────── */
 
-export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
+export default function RaidsSection({ views, doubloons, navLevel, playerShipImage, raidRecords, repairOwed, ownedRaidItems, equippedRaidItems, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices, topRaidProgress }: { views: RaidNodeView[]; doubloons: number; navLevel: number; playerShipImage?: string; raidRecords: Record<string, RaidRecords>; repairOwed: number; ownedRaidItems: string[]; equippedRaidItems: string[]; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string>; topRaidProgress: { username: string; score: number } | null }) {
   const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<RaidNodeView | null>(null)
   // Per-chapter manual toggle overrides. Membership means the player
@@ -2372,6 +2541,27 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
     // dismiss closes the overlay for this session. Next visit will
     // re-trigger it; the player rarely notices a single retry.
     markChapterUnlockSeen(id).catch(() => {})
+  }
+
+  // ── Ultimate-weapon unlock celebration ──────────────────────────────────
+  // Fires once when the player has beaten the Quartermaster (the final
+  // Chapter 3 raid, node id 'the_quartermaster') and never dismissed the
+  // "plans discovered" overlay. Separate from the chapter-unlock flow —
+  // Chapter 3 is currently the last chapter, so there's no "next chapter"
+  // moment; THIS is the payoff. Persisted via profiles.seen_ultimate_unlock.
+  const chapter3Cleared = views.some(v => v.node.id === 'the_quartermaster' && v.status === 'cleared')
+  const [celebratingUltimate, setCelebratingUltimate] = useState(false)
+  useEffect(() => {
+    if (chapter3Cleared && !seenUltimateUnlock) setCelebratingUltimate(true)
+  }, [chapter3Cleared, seenUltimateUnlock])
+
+  function dismissUltimate(goBuild: boolean) {
+    setCelebratingUltimate(false)
+    markUltimateUnlockSeen().catch(() => {})
+    if (goBuild) {
+      // Deep-link straight to Manage Ship → Ship tab, where the build lives.
+      window.dispatchEvent(new CustomEvent('expedition:open-loadout', { detail: { tab: 'ship' } }))
+    }
   }
 
   // The Story Campaign hub modal fires 'expedition:open-node' with a
@@ -2638,6 +2828,14 @@ export default function RaidsSection({ views, doubloons, navLevel, playerShipIma
             })()}
             onDismiss={dismissCelebration}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Ultimate-weapon unlock — the Quartermaster's plans are yours. Fires
+          once after beating him; CTA deep-links to the build screen. */}
+      <AnimatePresence>
+        {celebratingUltimate && (
+          <UltimateUnlockOverlay onBuild={() => dismissUltimate(true)} onLater={() => dismissUltimate(false)} />
         )}
       </AnimatePresence>
 

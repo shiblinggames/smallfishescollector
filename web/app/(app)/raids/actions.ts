@@ -11,6 +11,7 @@ import { aggregateShipClasses } from '@/lib/shipClasses'
 import { getShipSkin } from '@/lib/shipSkins'
 import { bonusChargeSlots, gauntletRepairHealMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
+import { settleUltimateBuild } from '@/lib/ultimateBuild'
 
 const CARD_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/card-arts/'
 
@@ -81,9 +82,14 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes, gauntlet_upgrades, manowar_augment')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build')
     .eq('id', userId)
     .single()
+
+  // Promote a finished ultimate build into the active slot before combat reads
+  // it, so a weapon that completed while the player was away fires this raid.
+  const { active: activeAugmentId } = await settleUltimateBuild(
+    admin, userId, (profile?.manowar_augment as string | null) ?? null, profile?.manowar_augment_build ?? null)
 
   const shipTier = profile?.ship_tier ?? 0
   const ship = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
@@ -173,7 +179,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     hasSeenRaidTutorial:  (profile?.has_seen_raid_tutorial as boolean | null) ?? false,
     raidMods:             { ...resolved.raid, repairHealMult: gauntletRepairHealMult(gauntletUpgrades) },
     bonusChargeSlots:     bonusChargeSlots((profile?.gauntlet_upgrades as string[] | null) ?? []),
-    manowarAugment:       shipTier === MANOWAR_TIER ? getShipAugment(profile?.manowar_augment as string | null) : null,
+    manowarAugment:       shipTier === MANOWAR_TIER ? getShipAugment(activeAugmentId) : null,
   }
 }
 

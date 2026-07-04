@@ -15,6 +15,7 @@ import { getCrewRoster } from '@/app/(app)/crew/actions'
 import { getDailyVoyageState } from './voyageActions'
 import { getRaidMapView } from './raidMapActions'
 import { getCurrentUser, getCurrentProfile } from '@/lib/userData'
+import { settleUltimateBuild } from '@/lib/ultimateBuild'
 import { SkeletonBox } from '@/components/Skeleton'
 import type { VoyageHistoryEntry } from './VoyageHistory'
 import { getShipBattles } from '@/app/(app)/social/shipBattleActions'
@@ -43,6 +44,17 @@ const cachedTrawlingCrewIds = cache(async (): Promise<number[]> => {
   return ((data ?? []) as { crew_id: number }[]).map(r => r.crew_id)
 })
 
+// Has the player cleared Chapter 3 (beaten the Quartermaster)? That reveal
+// unlocks the ultimate-weapon build surface on the ship screen.
+const cachedChapter3Cleared = cache(async (): Promise<boolean> => {
+  const user = await getCurrentUser()
+  if (!user) return false
+  const admin = createAdminClient()
+  const { data } = await admin.from('raid_completions')
+    .select('id').eq('user_id', user.id).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
+  return !!data
+})
+
 const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
   const user = await getCurrentUser()
   if (!user) return []
@@ -61,13 +73,20 @@ const cachedVoyageHistory = cache(async (): Promise<VoyageHistoryEntry[]> => {
 //    in when ready. Shared loaders are deduped by React.cache.
 
 async function ShipHeroSection() {
-  const [profile, roster, trawlingCrewIds] = await Promise.all([
+  const [profile, roster, trawlingCrewIds, chapter3Cleared] = await Promise.all([
     getCurrentProfile(),
     cachedCrewRoster(),
     cachedTrawlingCrewIds(),
+    cachedChapter3Cleared(),
   ])
   const shipTier = profile?.ship_tier ?? 0
   const shipStats = EXPEDITION_SHIP_STATS[shipTier] ?? EXPEDITION_SHIP_STATS[0]
+  // Promote a matured ultimate build into the active slot on load, so a weapon
+  // that finished while the player was away shows as live (and fires).
+  const { active: activeAugment, build: manowarBuild } = profile
+    ? await settleUltimateBuild(createAdminClient(), profile.id as string,
+        (profile.manowar_augment as string | null) ?? null, profile.manowar_augment_build ?? null)
+    : { active: null, build: null }
   return (
     <ShipHero
       shipStats={shipStats}
@@ -88,7 +107,9 @@ async function ShipHeroSection() {
       gauntletFathoms={(profile?.gauntlet_fathoms as number | null) ?? 0}
       forgeRecipesLearned={(profile?.forge_recipes_learned as string[] | null) ?? []}
       hasSeenForgeIntro={profile?.has_seen_forge_intro === true}
-      manowarAugment={(profile?.manowar_augment as string | null) ?? null}
+      manowarAugment={activeAugment}
+      manowarBuild={manowarBuild}
+      chapter3Cleared={chapter3Cleared}
       isAdmin={profile?.is_admin === true}
     />
   )
@@ -311,6 +332,7 @@ async function RaidsMapSection() {
       equippedRaidItems={(profile?.equipped_raid_items as string[] | null) ?? []}
       shipClasses={raidMap.shipClasses}
       seenChapterUnlocks={raidMap.seenChapterUnlocks}
+      seenUltimateUnlock={raidMap.seenUltimateUnlock}
       raidNodeChoices={raidMap.raidNodeChoices}
       topRaidProgress={topRaidProgress}
     />

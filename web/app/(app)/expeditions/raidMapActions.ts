@@ -116,15 +116,15 @@ async function loadRaidRecords(
   return result
 }
 
-export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; raidNodeChoices: Record<string, string> }> {
+export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloons: number; navLevel: number; raidRecords: Record<string, RaidRecords>; shipClasses: Record<string, string>; seenChapterUnlocks: string[]; seenUltimateUnlock: boolean; raidNodeChoices: Record<string, string> }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { views: [], doubloons: 0, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], raidNodeChoices: {} }
+  if (!user) return { views: [], doubloons: 0, navLevel: 1, raidRecords: {}, shipClasses: {}, seenChapterUnlocks: [], seenUltimateUnlock: false, raidNodeChoices: {} }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, is_admin')
+    .select('doubloons, expedition_xp, has_completed_practice_raid, raid_node_progress, ship_classes, seen_chapter_unlocks, seen_ultimate_unlock, is_admin')
     .eq('id', user.id)
     .single()
 
@@ -133,6 +133,7 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
   const isAdmin = profile?.is_admin === true
   const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
   const seenChapterUnlocks = (profile?.seen_chapter_unlocks as string[] | null) ?? []
+  const seenUltimateUnlock = profile?.seen_ultimate_unlock === true
   // Per-event-node "chosen option" map (raid_node_progress.choices) —
   // lets the sheet mark which card the player picked when revisiting
   // a cleared event node. Empty for any node the player hasn't run yet.
@@ -142,7 +143,7 @@ export async function getRaidMapView(): Promise<{ views: RaidNodeView[]; doubloo
     buildClearedSet(admin, user.id, profile ?? {}),
     loadRaidRecords(admin, user.id),
   ])
-  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, raidNodeChoices }
+  return { views: computeRaidMap(cleared, doubloons, navLevel, isAdmin), doubloons, navLevel, raidRecords, shipClasses, seenChapterUnlocks, seenUltimateUnlock, raidNodeChoices }
 }
 
 /** First-time celebration dismiss — appends the chapter id to

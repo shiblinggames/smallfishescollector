@@ -17,8 +17,9 @@ import { SHIP_SKINS } from '@/lib/shipSkins'
 import { getRepairKit, repairKitRange, nextRepairKit } from '@/lib/repairKits'
 import { getGauntletUpgrade } from '@/lib/gauntletUpgrades'
 import { buyRepairKit } from './repairKitActions'
-import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen, chooseShipAugment } from './actions'
-import { SHIP_AUGMENTS, getShipAugment, canChooseAugment, AUGMENT_COST, MEGA_CHARGE_COST, AUGMENTS_LIVE, type ShipAugmentId } from '@/lib/shipAugments'
+import { equipShipSkin, saveEquippedRaidItems, forgeRaidItem, learnForgeRecipe, markForgeIntroSeen } from './actions'
+import UltimateBuildPanel from './UltimateBuildPanel'
+import { type ShipAugmentId } from '@/lib/shipAugments'
 import { bonusChargeSlots, hasForge } from '@/lib/gauntletUpgrades'
 import PopupShell from '@/components/PopupShell'
 import { assignToVoyage, benchCrew } from '@/app/(app)/crew/actions'
@@ -242,8 +243,12 @@ interface Props {
   forgeRecipesLearned?: string[]
   /** Whether the one-time "Forge Awakens" celebration has already played. */
   hasSeenForgeIntro?: boolean
-  /** The locked-in Man-o-War volley augment id, or null. */
+  /** The active (completed) Man-o-War ultimate id, or null. */
   manowarAugment?: string | null
+  /** An ultimate build in progress ({ id, completesAt }), or null. */
+  manowarBuild?: { id: ShipAugmentId; completesAt: string } | null
+  /** Cleared Chapter 3 (beat the Quartermaster) — unlocks the ultimate build. */
+  chapter3Cleared?: boolean
   isAdmin?: boolean
 }
 
@@ -321,6 +326,8 @@ export default function ShipHero({
   forgeRecipesLearned = [],
   hasSeenForgeIntro = true,
   manowarAugment: initialManowarAugment = null,
+  manowarBuild = null,
+  chapter3Cleared = false,
   isAdmin = false,
 }: Props) {
   const router = useRouter()
@@ -446,28 +453,17 @@ export default function ShipHero({
   const shipTierForSlots = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
   const raidItemSlots = raidItemSlotsForTier(shipTierForSlots)
 
-  // Man-o-War volley augment — the permanent endgame "Mega" pick.
+  // Ultimate weapon (Man-o-War Mega) — the end-of-Chapter-3 build. Its four-gate
+  // checklist, previews, 24h build clock, and re-pick flow all live inside
+  // UltimateBuildPanel; here we just gather its inputs. The section appears once
+  // Chapter 3 is cleared (admins always see it) — the panel itself explains any
+  // remaining requirements.
   const navLevelNow = navLevelFromXP(expeditionXP)
-  const augmentEligible = canChooseAugment(shipTierForSlots, navLevelNow)
-  const showAugments = (AUGMENTS_LIVE || isAdmin) && augmentEligible
   const hasRack = bonusChargeSlots(gauntletUpgrades) > 0
+  const showUltimate = chapter3Cleared || isAdmin
   // The Forge is a major Gauntlet (Fathom) unlock — locked → a teaser, not the recipes.
   const forgeUnlocked = hasForge(gauntletUpgrades)
   const forgeUpg = getGauntletUpgrade('forge')
-  const [augment, setAugment] = useState<string | null>(initialManowarAugment)
-  const [augmentConfirm, setAugmentConfirm] = useState<ShipAugmentId | null>(null)
-  const [augmentBusy, setAugmentBusy] = useState(false)
-  const [augmentErr, setAugmentErr] = useState<string | null>(null)
-  async function buyAugment(id: ShipAugmentId) {
-    if (augmentBusy) return
-    setAugmentBusy(true); setAugmentErr(null)
-    const res = await chooseShipAugment(id)
-    setAugmentBusy(false)
-    if (!res.ok) { setAugmentErr(res.error ?? 'Could not augment the ship.'); return }
-    setAugment(id)
-    setAugmentConfirm(null)
-    if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
-  }
 
   // Manage Ship section tab. Loadout (the battle decision) first; Ship
   // (upgrade / class / repair) next; cosmetic Skins last.
@@ -555,7 +551,7 @@ export default function ShipHero({
   const [loadoutMode, setLoadoutMode] = useState<'campaign' | 'voyage' | null>(null)
   useEffect(() => {
     function onOpen(e: Event) {
-      const detail = (e as CustomEvent<{ mode?: 'campaign' | 'voyage'; pickSlot?: number }>).detail
+      const detail = (e as CustomEvent<{ mode?: 'campaign' | 'voyage'; pickSlot?: number; tab?: 'loadout' | 'ship' | 'forge' }>).detail
       // pickSlot path: open ONLY the slot picker — skip the loadout
       // drawer entirely so closing/confirming doesn't strand the
       // player on the drawer surface. Picker overlays whatever modal
@@ -569,6 +565,7 @@ export default function ShipHero({
         return
       }
       setLoadoutMode(detail?.mode ?? null)
+      if (detail?.tab) setLoadoutTab(detail.tab)
       setLoadoutOpen(true)
     }
     window.addEventListener('expedition:open-loadout', onOpen as EventListener)
@@ -1750,73 +1747,19 @@ export default function ShipHero({
                       </div>
                     )}
 
-                    {/* ── Man-o-War Augment ── the permanent endgame "Mega" pick.
-                        Only the Man-o-War at Nav 70+ sees this (admin until live). */}
-                    {showAugments && (
-                      <>
-                        <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>Man-o-War Augment</p>
-                        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                          Forge a signature Mega shot into your hull. It fires above your Volley for a full magazine of {MEGA_CHARGE_COST} cannonballs, then leaves you cold. {augment ? 'Your choice is locked in.' : 'You pick one, and the choice is permanent.'}
-                        </p>
-                        {augment ? (() => {
-                          const a = getShipAugment(augment)
-                          if (!a) return null
-                          return (
-                            <div style={{ marginBottom: hasRack ? '1.7rem' : '0.7rem', borderRadius: 14, padding: '0.85rem 0.9rem', background: `${a.color}14`, border: `1px solid ${a.color}55`, boxShadow: `0 0 20px ${a.color}14` }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: a.color }}>{a.name}</p>
-                                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: a.color, background: `${a.color}1e`, border: `1px solid ${a.color}66`, borderRadius: 999, padding: '0.2rem 0.55rem' }}>Locked in</span>
-                              </div>
-                              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a8', lineHeight: 1.45, marginTop: 5 }}>{a.tagline}</p>
-                            </div>
-                          )
-                        })() : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.7rem' }}>
-                            {SHIP_AUGMENTS.map(a => {
-                              const confirming = augmentConfirm === a.id
-                              const canAfford = doubloons >= AUGMENT_COST
-                              return (
-                                <div key={a.id} style={{ borderRadius: 12, padding: '0.7rem 0.8rem', background: confirming ? `${a.color}16` : `${a.color}0c`, border: `1px solid ${a.color}${confirming ? '77' : '40'}` }}>
-                                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: a.color }}>{a.name}</p>
-                                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b8b2a8', lineHeight: 1.4, marginTop: 3 }}>{a.tagline}</p>
-                                  <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7f7a72', fontStyle: 'italic', lineHeight: 1.4, marginTop: 4 }}>{a.flavor}</p>
-                                  {confirming ? (
-                                    <div style={{ marginTop: 9 }}>
-                                      <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', lineHeight: 1.4, marginBottom: 7 }}>
-                                        Permanent. {AUGMENT_COST.toLocaleString()} ⟡, and you can never change it.
-                                      </p>
-                                      <div style={{ display: 'flex', gap: 8 }}>
-                                        <button type="button" onClick={() => { setAugmentConfirm(null); setAugmentErr(null) }} disabled={augmentBusy}
-                                          className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                                          style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
-                                          Cancel
-                                        </button>
-                                        <button type="button" onClick={() => canAfford && buyAugment(a.id)} disabled={!canAfford || augmentBusy}
-                                          className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                                          style={{ flex: 1.4, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', cursor: canAfford && !augmentBusy ? 'pointer' : 'default', color: canAfford ? a.color : '#6a6764', background: canAfford ? `${a.color}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? `${a.color}66` : 'rgba(255,255,255,0.1)'}` }}>
-                                          {augmentBusy ? 'Forging…' : canAfford ? `Confirm · ${AUGMENT_COST.toLocaleString()} ⟡` : `Need ${(AUGMENT_COST - doubloons).toLocaleString()} more ⟡`}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <button type="button" onClick={() => { setAugmentConfirm(a.id); setAugmentErr(null) }}
-                                      className="font-karla font-700 uppercase tracking-[0.08em] tap"
-                                      style={{ marginTop: 9, width: '100%', padding: '0.55rem', borderRadius: 10, fontSize: '0.66rem', color: a.color, background: `${a.color}14`, border: `1px solid ${a.color}55`, cursor: 'pointer' }}>
-                                      Choose · {AUGMENT_COST.toLocaleString()} ⟡
-                                    </button>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                        {augmentErr && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#fca5a5', textAlign: 'center', marginTop: 4 }}>{augmentErr}</p>}
-                        {!hasRack && (
-                          <p className="font-karla" style={{ fontSize: '0.62rem', color: '#caa05a', lineHeight: 1.4, marginTop: 6, marginBottom: '1.7rem' }}>
-                            Needs the Extra Cannonball Rack (Gauntlet, depth 10) to hold {MEGA_CHARGE_COST} cannonballs and fire the Mega. {augment ? 'You own the augment, but it stays silent until you have the Rack.' : ''}
-                          </p>
-                        )}
-                      </>
+                    {/* ── Ultimate Weapon ── the end-of-Chapter-3 build. Appears
+                        once the Quartermaster's plans are yours; the panel owns
+                        the requirements checklist, previews, and 24h build clock. */}
+                    {showUltimate && (
+                      <UltimateBuildPanel
+                        shipTier={shipTierForSlots}
+                        navLevel={navLevelNow}
+                        hasRack={hasRack}
+                        chapter3Cleared={chapter3Cleared}
+                        doubloons={doubloons}
+                        activeId={initialManowarAugment}
+                        build={manowarBuild}
+                      />
                     )}
 
                     {/* ── Captain's Class ── permanent chapter-end buffs. */}

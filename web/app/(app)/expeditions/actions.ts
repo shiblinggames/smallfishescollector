@@ -6,8 +6,9 @@ import { RARITY_TIERS } from '@/lib/variants'
 import { applyVariantBoosts, raidItemSlotsForTier } from '@/lib/expeditions'
 import { getForgeRecipe, dedupeRaidItems } from '@/lib/raidItems'
 import { getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
-import { getShipAugment, canChooseAugment, AUGMENT_COST } from '@/lib/shipAugments'
-import { hasForge } from '@/lib/gauntletUpgrades'
+import { getShipAugment, AUGMENT_COST, ULTIMATE_BUILD_MS, canBuildUltimate, parseAugmentBuild, isBuildComplete, type ShipAugmentBuild } from '@/lib/shipAugments'
+import { settleUltimateBuild } from '@/lib/ultimateBuild'
+import { hasForge, bonusChargeSlots } from '@/lib/gauntletUpgrades'
 
 // ── Crew picker ───────────────────────────────────────────────────────────────
 
@@ -220,41 +221,110 @@ export async function equipShipSkin(skinId: string | null): Promise<void> {
   await admin.from('profiles').update({ equipped_ship_skin: skinId }).eq('id', user.id)
 }
 
-/** Choose (and permanently lock in) a Man-o-War volley augment. One-time purchase
- *  for AUGMENT_COST doubloons; gated on owning the Man-o-War at Nav 70. The
- *  conditional `.is(manowar_augment, null)` write makes it idempotent — a double
- *  tap can't double-charge or overwrite an existing pick. */
-export async function chooseShipAugment(id: string): Promise<{ ok: boolean; error?: string; doubloons?: number }> {
+/** Has the player cleared Chapter 3 (beaten the Quartermaster)? That's the raid
+ *  that reveals the ultimate schematics and unlocks the whole build flow. */
+async function hasClearedChapter3(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<boolean> {
+  const { data } = await admin.from('raid_completions')
+    .select('id').eq('user_id', userId).eq('raid_id', 'the_quartermaster').limit(1).maybeSingle()
+  return !!data
+}
+
+/** The live ultimate state, settling any matured build on read. Returns the
+ *  ACTIVE (completed) augment id + the in-progress build, if any. Promoting a
+ *  matured build here means the ultimate goes live the next time the player
+ *  loads the ship screen — no cron needed (mirrors the pending-sales pattern). */
+export async function getUltimateState(): Promise<{ active: string | null; build: ShipAugmentBuild | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { active: null, build: null }
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('manowar_augment, manowar_augment_build').eq('id', user.id).single()
+  return settleUltimateBuild(admin, user.id,
+    (profile?.manowar_augment as string | null) ?? null,
+    profile?.manowar_augment_build ?? null)
+}
+
+/** Begin building an ultimate. Charges AUGMENT_COST doubloons and stamps a 24h
+ *  build clock. Requires all four gates. A rebuild (already own an active ultimate)
+ *  is allowed — the old one keeps firing until this build completes and replaces it. */
+export async function startUltimateBuild(id: string): Promise<{ ok: boolean; error?: string; doubloons?: number; completesAt?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not signed in.' }
   const augment = getShipAugment(id)
-  if (!augment) return { ok: false, error: 'Unknown augment.' }
+  if (!augment) return { ok: false, error: 'Unknown weapon.' }
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('ship_tier, expedition_xp, doubloons, manowar_augment').eq('id', user.id).single()
+    .select('ship_tier, expedition_xp, doubloons, manowar_augment_build, gauntlet_upgrades').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
-  if (profile.manowar_augment) return { ok: false, error: 'Your ship is already augmented. The choice is permanent.' }
+
+  // A build already underway can't be double-started (re-pick it instead).
+  const existing = parseAugmentBuild(profile.manowar_augment_build ?? null)
+  if (existing && !isBuildComplete(existing, Date.now())) {
+    return { ok: false, error: 'A weapon is already being built. Change your pick instead.' }
+  }
 
   const navLevel = navLevelFromXP((profile.expedition_xp as number | null) ?? 0)
-  if (!canChooseAugment((profile.ship_tier as number | null) ?? 0, navLevel)) {
-    return { ok: false, error: 'Requires the Man-o-War at Navigation level 70.' }
-  }
+  const chapter3Cleared = await hasClearedChapter3(admin, user.id)
+  const gate = canBuildUltimate({
+    chapter3Cleared,
+    shipTier: (profile.ship_tier as number | null) ?? 0,
+    navLevel,
+    hasRack: bonusChargeSlots((profile.gauntlet_upgrades as string[] | null) ?? []) > 0,
+  })
+  if (!gate) return { ok: false, error: 'You do not meet every requirement yet.' }
+
   const doubloons = (profile.doubloons as number | null) ?? 0
   if (doubloons < AUGMENT_COST) return { ok: false, error: `You need ${AUGMENT_COST.toLocaleString()} doubloons.` }
 
+  const completesAt = new Date(Date.now() + ULTIMATE_BUILD_MS).toISOString()
+  const build: ShipAugmentBuild = { id: augment.id, completesAt }
   const newDoubloons = doubloons - AUGMENT_COST
+  // Conditional write: only start if no build is in flight (guards a double-tap).
   const { data: updated } = await admin.from('profiles')
-    .update({ manowar_augment: augment.id, doubloons: newDoubloons })
+    .update({ manowar_augment_build: build, doubloons: newDoubloons })
     .eq('id', user.id)
-    .is('manowar_augment', null)
-    .select('manowar_augment')
+    .is('manowar_augment_build', null)
+    .select('manowar_augment_build')
     .maybeSingle()
-  if (!updated) return { ok: false, error: 'Could not augment the ship.' }
+  if (!updated) return { ok: false, error: 'A weapon is already being built.' }
 
   await admin.from('doubloon_transactions').insert({
-    user_id: user.id, amount: -AUGMENT_COST, reason: `Man-o-War augment: ${augment.name}`,
+    user_id: user.id, amount: -AUGMENT_COST, reason: `Ultimate weapon build: ${augment.name}`,
   })
-  return { ok: true, doubloons: newDoubloons }
+  return { ok: true, doubloons: newDoubloons, completesAt }
+}
+
+/** Re-pick which ultimate is being built. Free, only while a build is in flight —
+ *  the clock keeps running, only the target weapon changes. */
+export async function swapUltimateBuild(id: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+  const augment = getShipAugment(id)
+  if (!augment) return { ok: false, error: 'Unknown weapon.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles')
+    .select('manowar_augment_build').eq('id', user.id).single()
+  const existing = parseAugmentBuild(profile?.manowar_augment_build ?? null)
+  if (!existing || isBuildComplete(existing, Date.now())) {
+    return { ok: false, error: 'No build in progress.' }
+  }
+  if (existing.id === augment.id) return { ok: true }
+  // Keep the same clock — you're re-tasking the shipwrights, not restarting.
+  const build: ShipAugmentBuild = { id: augment.id, completesAt: existing.completesAt }
+  await admin.from('profiles').update({ manowar_augment_build: build }).eq('id', user.id)
+  return { ok: true }
+}
+
+/** Dismiss the one-time "ultimate plans discovered" celebration. */
+export async function markUltimateUnlockSeen(): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ seen_ultimate_unlock: true }).eq('id', user.id)
 }
