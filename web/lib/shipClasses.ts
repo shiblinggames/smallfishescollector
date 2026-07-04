@@ -11,8 +11,9 @@
 // picks across classes softens or cancels the tradeoffs.
 
 export type ShipClassId =
-  | 'master_gunner' | 'ironside' | 'helmsman' | 'buccaneer'           // Mark I (chapter-1 starters)
-  | 'master_gunner_ii' | 'ironside_ii' | 'helmsman_ii' | 'buccaneer_ii' // Mark II (deepen a line you already sail)
+  | 'master_gunner' | 'ironside' | 'helmsman' | 'buccaneer'              // Mark I (chapter-1 starters)
+  | 'master_gunner_ii' | 'ironside_ii' | 'helmsman_ii' | 'buccaneer_ii'  // Mark II (deepen a line you already sail)
+  | 'master_gunner_iii' | 'ironside_iii' | 'helmsman_iii' | 'buccaneer_iii' // Mark III (deepen again — chapter-3 capstone)
 
 export interface ShipClassEffects {
   /** Multiplier on player outgoing raid damage. 1.15 = +15%, 0.90 = -10%. Default 1. */
@@ -152,6 +153,62 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     emoji: '⊕',
     effects: { damageMult: 1.05, hpMult: 1.05 },
   },
+
+  // ── Mark III — the chapter-3 capstone tier. Only offered on a line you've
+  //    already taken to Mark II, so committing to ONE identity across all three
+  //    chapters compounds the hardest (I × II × III), tradeoff and all.
+  master_gunner_iii: {
+    id: 'master_gunner_iii',
+    name: 'Master Gunner III',
+    tagline: 'All bite. Nothing held back.',
+    description: 'The gunner\'s trade taken as far as a hull will bear: maximum bite, minimum plate. Stacks on your Master Gunner II.',
+    bullets: [
+      { label: '+10% damage', positive: true  },
+      { label: '−7% HP',      positive: false },
+    ],
+    color: '#f0743a',
+    emoji: '✦',
+    effects: { damageMult: 1.10, hpMult: 0.93 },
+  },
+  ironside_iii: {
+    id: 'ironside_iii',
+    name: 'Ironside III',
+    tagline: 'An anvil the sea cannot crack.',
+    description: 'Plate on plate on plate. All but unsinkable, and slow to answer. Stacks on your Ironside II.',
+    bullets: [
+      { label: '+10% HP',    positive: true  },
+      { label: '−7% damage', positive: false },
+    ],
+    color: '#7dd3fc',
+    emoji: '▣',
+    effects: { damageMult: 0.93, hpMult: 1.10 },
+  },
+  helmsman_iii: {
+    id: 'helmsman_iii',
+    name: 'Helmsman III',
+    tagline: 'The richest hold on the water.',
+    description: 'Every coin the sea offers, and the drag that comes with it. Stacks on your Helmsman II.',
+    bullets: [
+      { label: '+15% doubloons', positive: true  },
+      { label: '−5 speed',       positive: false },
+    ],
+    color: '#f0c040',
+    emoji: '⟡',
+    effects: { doubloonMult: 1.15, speedFlat: -5 },
+  },
+  buccaneer_iii: {
+    id: 'buccaneer_iii',
+    name: 'Buccaneer III',
+    tagline: 'Better at everything. Once more.',
+    description: 'A last small lift across the board for the captain who never specialised. Stacks on your Buccaneer II.',
+    bullets: [
+      { label: '+5% damage', positive: true },
+      { label: '+5% HP',     positive: true },
+    ],
+    color: '#9aa6b8',
+    emoji: '⊕',
+    effects: { damageMult: 1.05, hpMult: 1.05 },
+  },
 }
 
 // Tier ladders, lowest → highest. A class_pick offers the LOWEST tier in each
@@ -159,10 +216,10 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
 // ("branch out") while a line you already sail offers its Mark II ("deepen").
 // Add Mark III etc. here as later chapters extend each ladder.
 export const SHIP_CLASS_LINES: ShipClassId[][] = [
-  ['master_gunner', 'master_gunner_ii'],
-  ['ironside',      'ironside_ii'],
-  ['helmsman',      'helmsman_ii'],
-  ['buccaneer',     'buccaneer_ii'],
+  ['master_gunner', 'master_gunner_ii', 'master_gunner_iii'],
+  ['ironside',      'ironside_ii',      'ironside_iii'],
+  ['helmsman',      'helmsman_ii',      'helmsman_iii'],
+  ['buccaneer',     'buccaneer_ii',     'buccaneer_iii'],
 ]
 
 /** Which class each line offers next, given the player's existing picks. The
