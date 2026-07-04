@@ -714,10 +714,21 @@ export default function ShipHero({
   const [fathomsNow, setFathomsNow] = useState(gauntletFathoms)
   useEffect(() => { setFathomsNow(gauntletFathoms) }, [gauntletFathoms])
   const [learning, setLearning] = useState<string | null>(null)
+  // Two-tap confirm for learning a recipe (spends Fathoms) — first tap ARMS,
+  // second within 3s confirms. Prevents an accidental tap from burning Fathoms.
+  const [learnArmed, setLearnArmed] = useState<string | null>(null)
   // The prismatic "Recipe Unlocked" celebration payload (null = closed).
   const [learnReveal, setLearnReveal] = useState<{ name: string; image: string | null } | null>(null)
   function onLearnTap(resultId: string, cost: number) {
     if (learning || !forgeUnlocked || fathomsNow < cost || learnedRecipes.includes(resultId)) return
+    // First tap arms the confirm; second tap (within the window) commits.
+    if (learnArmed !== resultId) {
+      setLearnArmed(resultId)
+      vibrate(10)
+      setTimeout(() => setLearnArmed(a => (a === resultId ? null : a)), 3000)
+      return
+    }
+    setLearnArmed(null)
     setLearning(resultId)
     vibrate(12)
     startTransition(async () => {
@@ -1666,6 +1677,7 @@ export default function ShipHero({
                       const cost = recipe.fathomCost
                       const canAfford = fathomsNow >= cost
                       const isLearning = learning === recipe.result
+                      const armedLearn = learnArmed === recipe.result
                       const label = owned ? 'Forged' : (learned && haveAll) ? 'Ready to Forge' : learned ? 'Learned · Gather Parts' : 'Recipe · Locked'
                       return (
                         <div key={recipe.result} className="app-card" style={{ padding: '0.85rem', marginBottom: '0.9rem', display: 'flex', flexDirection: 'column', gap: 9, ...(owned ? prismaticBorderSoft('rgba(12,16,24,0.9)') : (learned && haveAll) ? { border: '1px solid rgba(232,200,121,0.5)', background: 'rgba(30,24,12,0.4)' } : { border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', opacity: learned ? 1 : 0.9 }) }}>
@@ -1691,12 +1703,18 @@ export default function ShipHero({
                           {!owned && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '0.1rem 0' }}>
                               {comps.map((c, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.owned ? 'rgba(127,212,154,0.18)' : 'rgba(255,255,255,0.05)', border: `1px solid ${c.owned ? 'rgba(127,212,154,0.6)' : 'rgba(255,255,255,0.18)'}` }}>
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                  <span style={{ width: 15, height: 15, borderRadius: '50%', flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.owned ? 'rgba(127,212,154,0.18)' : 'rgba(255,255,255,0.05)', border: `1px solid ${c.owned ? 'rgba(127,212,154,0.6)' : 'rgba(255,255,255,0.18)'}` }}>
                                     {c.owned ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#7fd49a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg> : null}
                                   </span>
-                                  <span className="font-karla font-700" style={{ flex: 1, fontSize: '0.7rem', color: c.owned ? '#e0dccc' : '#8a8480' }}>{c.def?.name}</span>
-                                  <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: c.owned ? '#7fd49a' : '#7a7470' }}>{c.owned ? 'Owned' : 'Needed'}</span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <span className="font-karla font-700" style={{ fontSize: '0.7rem', color: c.owned ? '#e0dccc' : '#8a8480' }}>{c.def?.name}</span>
+                                    {/* Where to find a component you don't have yet. */}
+                                    {!c.owned && c.def?.source && (
+                                      <p className="font-karla" style={{ fontSize: '0.58rem', color: '#7a9ec4', lineHeight: 1.3, marginTop: 1 }}>Find it: {c.def.source}</p>
+                                    )}
+                                  </div>
+                                  <span className="font-karla font-600 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.5rem', color: c.owned ? '#7fd49a' : '#7a7470', marginTop: 1 }}>{c.owned ? 'Owned' : 'Needed'}</span>
                                 </div>
                               ))}
                             </div>
@@ -1704,8 +1722,11 @@ export default function ShipHero({
 
                           {owned ? null : !learned ? (
                             <button type="button" onClick={() => onLearnTap(recipe.result, cost)} disabled={!canAfford || isLearning} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
-                              style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem', background: canAfford ? 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))' : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? 'rgba(127,208,255,0.55)' : 'rgba(255,255,255,0.16)'}`, color: canAfford ? '#cfeaff' : '#8a8480', cursor: (!canAfford || isLearning) ? 'default' : 'pointer' }}>
-                              {isLearning ? 'Learning…' : canAfford ? `Learn Recipe · ${cost} Fathoms` : `Need ${cost} Fathoms — you have ${fathomsNow}`}
+                              style={{ width: '100%', padding: '0.7rem', borderRadius: 11, fontSize: '0.78rem',
+                                background: !canAfford ? 'rgba(255,255,255,0.04)' : armedLearn ? 'linear-gradient(180deg, rgba(248,140,90,0.34), rgba(196,90,60,0.16))' : 'linear-gradient(180deg, rgba(127,208,255,0.26), rgba(90,150,196,0.12))',
+                                border: `1px solid ${!canAfford ? 'rgba(255,255,255,0.16)' : armedLearn ? 'rgba(248,140,90,0.7)' : 'rgba(127,208,255,0.55)'}`,
+                                color: !canAfford ? '#8a8480' : armedLearn ? '#ffd0b0' : '#cfeaff', cursor: (!canAfford || isLearning) ? 'default' : 'pointer' }}>
+                              {isLearning ? 'Learning…' : !canAfford ? `Need ${cost} Fathoms — you have ${fathomsNow}` : armedLearn ? `Spend ${cost} Fathoms — tap to confirm` : `Learn Recipe · ${cost} Fathoms`}
                             </button>
                           ) : haveAll ? (
                             <button type="button" onClick={() => onForgeTap(recipe.result)} disabled={busy} className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
