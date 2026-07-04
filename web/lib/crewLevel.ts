@@ -1,27 +1,28 @@
-// Crew leveling — ARITHMETIC progression. Each level costs BASE_LEVEL_COST +
-// (lv-1) * COST_INCREMENT, so the slope is linear (each level takes a fixed
-// amount more than the last), not exponential. This avoids both failure modes
-// we hit with geometric curves: the early ramp doesn't blaze (Lv 1→2 = 350 XP
-// = substantial), and the late game grows slowly enough to stay achievable
-// without a wall.
+// Crew leveling — GEOMETRIC progression (2026-07-04). Each level costs
+// LEVEL_GROWTH× the one before it, so per-level cost COMPOUNDS: trivial early,
+// steep late. Switched from the old arithmetic (linear-slope) curve because the
+// user wanted a clear "easy early, way harder late" shape.
 //
-// Pacing examples (curve set for ~1M total to Lv 100, 2026-07-04):
-//   - Lv  1→2:   1,400 XP
-//   - Lv 10→11:  3,002 XP
-//   - Lv 50→51: 10,122 XP    → mid-game grind
-//   - Lv 99→100:18,844 XP    → late-game grind
-// Total to Lv 100: ~1,002,000 XP. Originally ~252,945 (tuned to the RAID path,
-// ~278 Krust raids), but the Gauntlet pays crew XP fast AND is UNCAPPED, so
-// maxing a crew was trivial. Raised to ~1M so it's a real long-haul grind
-// across all sources (raids still grant FULL crew XP — earlier raids kept full
-// on purpose). Level + STATS derive live from stored XP, so this retroactively
-// lowered every existing crew's level + stat ticks (an accepted trade).
+// Pacing (BASE 188, growth 1.06 → ~1.0M total to Lv 100):
+//   - Lv  1→2:      188 XP    → early levels fly (a single raid = several)
+//   - Lv 25→26:     761 XP
+//   - Lv 50→51:   3,267 XP
+//   - Lv 75→76:  14,021 XP
+//   - Lv 99→100: 56,772 XP    → the late-game wall
+// Cumulative: Lv 50 ≈ 5.5% of the whole grind, Lv 90 ≈ 59%, and the LAST 10
+// LEVELS (90→100) are ~41% — reaching 100 is a real long haul. Retune via BASE
+// (early cost) + LEVEL_GROWTH (how sharply it compounds; higher = steeper late).
 //
-// Tuning history: tried player-shape÷10 (BASE=6, growth=1.086 — too cheap
-// early, 910 XP = Lv 33); then gentler geometric (BASE=60, growth=1.05 —
-// still uneven); then pure-linear flat 1000/level (no late-game grind feel).
-// Arithmetic is the right shape for "real progress every level, more work
-// late but never a wall." Tuned 2026-06-08 against player feedback.
+// Why ~1M + geometric: original curve was ~252,945 (arithmetic, tuned to the
+// RAID path ~278 raids), but the Gauntlet pays crew XP fast AND is UNCAPPED so
+// maxing was trivial. Raids still grant FULL crew XP (per-source decouple
+// rejected — earlier raids kept full). Level + STATS derive live from stored
+// XP, so this retroactively lowered every existing crew's level + stat ticks.
+//
+// Tuning history: arithmetic BASE 1400+178/lv (~1M, moderate back-load) was the
+// prior shape; earlier small-total geometric tries (BASE 6 g1.086 too cheap
+// early, BASE 60 g1.05) informed the growth pick. g1.06 keeps the total ~1M
+// while making the top a wall — the "way harder late" the user asked for.
 //
 // What grants stats vs what's just progress:
 //   - Lv 3, 6, 9, ..., 99 → +1 stat tick (33 milestones)
@@ -37,15 +38,17 @@
 // play (no "next tick: Power" preview); the graveyard memorial surfaces the
 // final lifetime distribution as a tribute.
 
-const BASE_LEVEL_COST = 1400   // XP cost of Lv 1→2 (was 350; raised for ~1M total 2026-07-04)
-const COST_INCREMENT  = 178    // each subsequent level costs this much more (was 45)
+const BASE_LEVEL_COST = 188    // XP cost of Lv 1→2 (early levels are cheap)
+const LEVEL_GROWTH    = 1.06   // each level costs this multiple of the previous (geometric — compounds into a late wall)
 
 function computeXPTable(): number[] {
   const table: number[] = [0]
   let total = 0
+  let cost = BASE_LEVEL_COST
   for (let lv = 1; lv <= 99; lv++) {
-    total += BASE_LEVEL_COST + (lv - 1) * COST_INCREMENT
+    total += Math.round(cost)
     table.push(total)
+    cost *= LEVEL_GROWTH
   }
   return table
 }
