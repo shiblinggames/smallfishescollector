@@ -161,6 +161,12 @@ export interface BroadsideEnemy {
    *  banner. Undefined elsewhere = dormant. */
   decoyCount?: number
   decoyName?: string
+  /** Challenge-mode flare tuning (set by the Coffers Fleet challenge build so
+   *  the barrage is a real step up, not just scaled stats). `flareDmgMult`
+   *  scales the per-flare-penalty damage; `flareFuseMult` scales the fuse window
+   *  (lower = the flares close faster / harder to swat). Default 1 = normal. */
+  flareDmgMult?: number
+  flareFuseMult?: number
   /** The Coffers (Chapter 3) — "Repossession." At the START of this fight the
    *  crooked Quartermaster reclaims ONE of the player's equipped raid items for
    *  the whole fight: its COMBAT effects (the per-shot damage mults + on-hit

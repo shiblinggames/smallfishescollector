@@ -11,7 +11,7 @@
 // raid_id so completions track in their own bucket on the leaderboard.
 // PHASE 2: elite enemy variants + the affix system. PHASE 3: boss phases.
 
-import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, type BossRaidConfig, type BroadsideEnemy, type RaidLootItem } from './bossRaids'
+import { CORSAIRS_RECKONING, CAPTAIN_KRUST, THE_CARTOGRAPHER, THE_TOLLMASTER, THE_COFFERS_FLEET, THE_QUARTERMASTER, type BossRaidConfig, type BroadsideEnemy, type BossPhase, type RaidLootItem } from './bossRaids'
 
 /** Multipliers applied by buildChallengeRaid. Tweak here, not per-raid. */
 export const CHALLENGE_MODS = {
@@ -28,6 +28,12 @@ export const CHALLENGE_MODS = {
   // crate. Same numbers across mob + boss kills so the curve is uniform.
   goldMult: 1.5,
   xpMult:   1.5,
+
+  // Flare Barrage (Coffers Fleet, Chapter 3 Raid 5) — challenge makes the
+  // barrage a distinct threat, not just scaled stats: each penalty hits harder
+  // and the fuses close faster. Applied to any enemy with a flare tier (decoyCount).
+  flareDmgMult:  1.4,   // +40% damage per missed flare / tapped feint
+  flareFuseMult: 0.85,  // fuses 15% shorter — the flares snap shut quicker
 } as const
 
 // Loot crate — EXACT, uniform rates for EVERY challenge raid (buildChallengeLoot
@@ -65,6 +71,8 @@ function scaleEnemy(e: BroadsideEnemy, isBoss: boolean): BroadsideEnemy {
     hpBase: Math.round(e.hpBase * hpMult),
     minDmg: Math.max(1, Math.round(e.minDmg * dmgMult)),
     maxDmg: Math.max(1, Math.round(e.maxDmg * dmgMult)),
+    // Flare-carrying enemies (Coffers Fleet) get a harder, faster barrage.
+    ...(e.decoyCount ? { flareDmgMult: CHALLENGE_MODS.flareDmgMult, flareFuseMult: CHALLENGE_MODS.flareFuseMult } : {}),
   }
 }
 
@@ -267,5 +275,37 @@ export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
 // scaleEnemy; loot rides the same shared 40%/10% table as every other raid.
 export const THE_COFFERS_FLEET_CHALLENGE: BossRaidConfig =
   buildChallengeRaid(THE_COFFERS_FLEET)
-export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(THE_QUARTERMASTER)
+// Challenge-only 5th phase for the Quartermaster — beyond "Empty Shelves" he
+// runs out every last gun. Meaner than any base phase (damage + a brutal-but-
+// answerable liquidation check) so the finale's hard mode is a real extra beat,
+// not just scaled numbers. (damageMult multiplies his already challenge-scaled
+// damage; the check consequence is % of the PLAYER's max HP, so it stays lethal
+// unless braced/shielded.)
+const QUARTERMASTER_CHALLENGE_PHASE5: BossPhase = {
+  revivePct: 0.55, damageMult: 1.75, badge: 'Nothing Personal',
+  pattern: ['fire', 'volley', 'dodge', 'fire', 'reload', 'volley', 'fire', 'dodge', 'fire'],
+  dialogueLine: "You should have paid when the price was gold. Now it is your ship.",
+  check: {
+    id: 'total_liquidation', name: 'Total Liquidation', chargeTurns: 2,
+    telegraph: 'The Quartermaster runs out every gun the Cache has left and levels them all at your hull.',
+    responses: ['brace', 'shield'],
+    counteredLine: 'You throw up cover and the last of his stock breaks against it.',
+    failLine: 'Everything he had left lands at once.',
+    consequence: { kind: 'damagePctMaxHp', value: 0.80 },
+  },
+}
+
+// The Quartermaster's challenge adds a 5th phase on top of the scaled fight —
+// the base config's 4 phases carry through scaleEnemy; we append the extra beat.
+export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig = (() => {
+  const base = buildChallengeRaid(THE_QUARTERMASTER)
+  const qm = base.enemies.quartermaster
+  if (!qm) return base
+  return {
+    ...base,
+    enemies: {
+      ...base.enemies,
+      quartermaster: { ...qm, phases: [...(qm.phases ?? []), QUARTERMASTER_CHALLENGE_PHASE5] },
+    },
+  }
+})()
