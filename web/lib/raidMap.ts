@@ -184,21 +184,19 @@ export interface RaidFork {
 }
 
 // ── DPS check ────────────────────────────────────────────────────────────────
-// A `dps_check` node is a coin-or-skill gate. The player either PAYS `payCost`
-// to skip it, or RUNS the check: a single cannon shot on a fast-sweeping aim bar
-// (one shot, no crew abilities, crits count). The client only reports which aim
-// zone it hit; the server rolls the shot from the player's real damage profile
-// (ship + power + gear) and compares it to `threshold`. Meet it and you pass
-// free; fall short and you owe `failCost`. Either outcome clears the node.
+// A `dps_check` node is a coin-or-stats gate. The player either PAYS `payCost`
+// to skip it, or FIRES one shot: the server rolls a straight (non-critical) hit
+// from the player's real damage profile (ship + power + gear) and compares it to
+// `threshold`. Meet it and you pass free; fall short and you owe `failCost`.
+// No aiming — the roll is bounded by your stats, so it's a gear check with a
+// coin fallback. `threshold` is tuned for a non-crit hit (lower than a crit).
 export interface RaidDpsCheck {
-  /** Single-shot damage you must MEET OR BEAT to pass free. */
+  /** Single-shot (non-crit) damage you must MEET OR BEAT to pass free. */
   threshold: number
   /** Doubloons to skip the check outright (the safe option). */
   payCost: number
   /** Doubloons owed if you take the shot and fall short of the threshold. */
   failCost: number
-  /** Aim-needle speed multiplier for the one shot (1 = normal; higher = harder). */
-  barSpeed: number
 }
 
 // ── Choice-gated payoff ──────────────────────────────────────────────────────
@@ -1278,15 +1276,14 @@ export const RAID_MAP: RaidNode[] = [
     adminOnly: true,
     image: THE_COFFERS_FLEET.enemies.scout.portrait,
     dpsCheck: {
-      threshold: 60,
+      threshold: 40,
       payCost: 10000,
       failCost: 20000,
-      barSpeed: 1.7,
     },
     detail: {
       description:
         "One locked gate stands between you and the Coffers. Fire a single cannon shot at it: hit hard enough and it blows open for free. Come up short and you limp through under fire, and the repairs cost you 20,000 doubloons. Or skip the shot and just pay the dockmaster 10,000 to wave you in.",
-      dropsNote: 'Fire one shot and deal 60+ damage to pass for free, or pay 10,000 to skip it. A missed shot costs 20,000 in repairs.',
+      dropsNote: 'Fire one shot and deal 40+ damage to pass for free, or pay 10,000 to skip it. A missed shot costs 20,000 in repairs.',
       ctaLabel: 'Approach the Gate',
     },
   },
