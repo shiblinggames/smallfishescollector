@@ -181,25 +181,31 @@ export default function DpsCheckNode({
   }
 
   // ── Choose view ──────────────────────────────────────────────────────────
-  const cantAfford = doubloons < dpsCheck.payCost
+  const cantAfford = doubloons < dpsCheck.payCost          // can't cover the 10k pay
+  const canShoot = doubloons >= dpsCheck.failCost          // must hold the 20k a miss would cost
+  const hardLocked = cantAfford && !canShoot               // no coin for either way through
   return (
     <div style={{ marginTop: '1rem' }}>
       <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.8)', marginBottom: '0.8rem', textAlign: 'center' }}>
         Get past the locked gate. Fire one shot to blast it open, or pay to be let through.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-        {/* Fire one shot — the DPS check */}
+        {/* Fire one shot — the DPS check. Locked below the 20k a miss would cost. */}
         <button
-          onClick={startAiming}
-          disabled={pending}
-          style={{ textAlign: 'left', padding: '0.9rem', borderRadius: 14, background: `${RED}18`, border: `1px solid ${RED}55`, cursor: pending ? 'wait' : 'pointer' }}
+          onClick={() => canShoot && startAiming()}
+          disabled={pending || !canShoot}
+          style={{ textAlign: 'left', padding: '0.9rem', borderRadius: 14, background: canShoot ? `${RED}18` : 'rgba(255,255,255,0.03)', border: `1px solid ${canShoot ? `${RED}55` : 'rgba(255,255,255,0.1)'}`, cursor: pending || !canShoot ? 'not-allowed' : 'pointer', opacity: canShoot ? 1 : 0.7 }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f4ecd8' }}>Fire One Shot</span>
-            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.62rem', color: '#ffb3b3', background: `${RED}22`, border: `1px solid ${RED}55`, borderRadius: 999, padding: '0.28rem 0.6rem' }}>free if you pass</span>
+            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ flexShrink: 0, fontSize: '0.62rem', color: canShoot ? '#ffb3b3' : '#f0a8a8', background: canShoot ? `${RED}22` : 'rgba(248,113,113,0.12)', border: `1px solid ${canShoot ? `${RED}55` : 'rgba(248,113,113,0.35)'}`, borderRadius: 999, padding: '0.28rem 0.6rem' }}>
+              {canShoot ? 'free if you pass' : `needs ${dpsCheck.failCost.toLocaleString()} ⟡`}
+            </span>
           </div>
           <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.45 }}>
-            Deal <span style={{ color: GOLD }}>{dpsCheck.threshold}+</span> damage in one shot and you're through for free. Deal less and repairs cost you <span style={{ color: RED }}>{dpsCheck.failCost.toLocaleString()} ⟡</span>.
+            {canShoot
+              ? <>Deal <span style={{ color: GOLD }}>{dpsCheck.threshold}+</span> damage in one shot and you're through for free. Deal less and repairs cost you <span style={{ color: RED }}>{dpsCheck.failCost.toLocaleString()} ⟡</span>.</>
+              : <>You need <span style={{ color: RED }}>{dpsCheck.failCost.toLocaleString()} ⟡</span> in hand to risk the shot, since a miss costs that much in repairs.</>}
           </p>
         </button>
 
@@ -215,11 +221,16 @@ export default function DpsCheckNode({
           </div>
           <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.45 }}>
             {cantAfford
-              ? `You don't have ${dpsCheck.payCost.toLocaleString()} ⟡ to pay your way in — you'll have to take the shot.`
+              ? `You don't have ${dpsCheck.payCost.toLocaleString()} ⟡ to pay your way in.`
               : 'Pay the dockmaster and skip the shot. No risk.'}
           </p>
         </button>
       </div>
+      {hardLocked && (
+        <p className="font-karla font-700" style={{ fontSize: '0.78rem', color: '#f0a8a8', marginTop: '0.8rem', textAlign: 'center', lineHeight: 1.45 }}>
+          You need at least {dpsCheck.payCost.toLocaleString()} ⟡ to get through this gate. Go earn some coin and come back.
+        </p>
+      )}
       {err && <p className="font-karla" style={{ fontSize: '0.74rem', color: RED, marginTop: '0.7rem', textAlign: 'center' }}>{err}</p>}
     </div>
   )

@@ -627,7 +627,9 @@ export async function resolveDpsCheck(
     return { outcome: 'paid', newDoubloons }
   }
 
-  // action === 'shot' — roll the one shot from the player's real cannon.
+  // action === 'shot' — must hold the full fail cost to even attempt it (a miss
+  // owes that much), so a broke captain can't risk coin they don't have.
+  if (doubloons < dc.failCost) return { error: `Need ${dc.failCost.toLocaleString()} doubloons to risk the shot` }
   const res = aimResult ?? 'miss'
   const stats = await getRaidPlayerStats(user.id)
   const base = rollDpsShot(res, stats.shipMinDamage, stats.totalPower, stats.raidMods.damagePct)
