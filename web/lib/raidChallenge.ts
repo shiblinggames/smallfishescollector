@@ -28,22 +28,15 @@ export const CHALLENGE_MODS = {
   // crate. Same numbers across mob + boss kills so the curve is uniform.
   goldMult: 1.5,
   xpMult:   1.5,
-
-  // Loot crate — uniques (ship skins, named items) should drop at ~2× the
-  // rate they do in the normal raid (the chase reward for grinding
-  // challenge). The multiplier here is on the loot ROW WEIGHT, not the
-  // final rate: because the total weight in the denominator also grows,
-  // a 2.0× weight bump only yields ~1.7× actual drop rate. 2.5× gets us
-  // to ~2.06× actual rate against both Pete and Krust's loot tables
-  // (the math: 12.5 / 125 = 10.0% vs original 5 / 103 = 4.85%).
-  //
-  // Gems also bumped so the currency payout matches the harder fight.
-  // Doubloon entries are left unscaled — per-kill gold already covers
-  // that lane; double-dipping here would make doubloons dominate the
-  // crate roll and crowd out uniques.
-  uniqueDropWeightMult: 2.5,
-  gemDropWeightMult:    1.5,
 } as const
+
+// Loot crate — EXACT, uniform rates for EVERY challenge raid (buildChallengeLoot
+// below). The non-legendary chase item lands at 40% and the legendary at 10% on
+// every raid, no exceptions. The trophy ship skin doubles its base normal rate;
+// currency fills the table to exactly 100 so the weights read straight as
+// percentages. One rule, applied everywhere — so new raids stay consistent for free.
+export const CHALLENGE_ITEM_PCT = 40
+export const CHALLENGE_LEGENDARY_PCT = 10
 
 /** Suffix appended to raid_id so challenge completions track separately
  *  in raid_completions (lets the Boss Records block on the challenge node
@@ -81,31 +74,55 @@ function scaleEnemy(e: BroadsideEnemy, isBoss: boolean): BroadsideEnemy {
  *  drop and gets the unique multiplier. */
 function lootCategory(item: RaidLootItem): 'doubloons' | 'gems' | 'unique' {
   if (item.id.startsWith('doubloons_')) return 'doubloons'
-  if (item.id.startsWith('gems_') || item.id === 'pack') return 'gems'
+  if (item.id.startsWith('gems_') || item.id.startsWith('pack')) return 'gems'
   return 'unique'
 }
 
-function scaleLoot(loot: RaidLootItem[]): RaidLootItem[] {
-  return loot.map(item => {
-    const cat = lootCategory(item)
-    if (cat === 'unique') {
-      return { ...item, weight: Math.round(item.weight * CHALLENGE_MODS.uniqueDropWeightMult * 100) / 100 }
-    }
-    if (cat === 'gems') {
-      return { ...item, weight: Math.round(item.weight * CHALLENGE_MODS.gemDropWeightMult * 100) / 100 }
-    }
-    // Doubloons unscaled here — kill-gold already covers that lane.
-    return item
-  })
+/** Build a challenge-mode loot table from a base raid's loot with rates that are
+ *  IDENTICAL across every raid: the non-legendary item(s) total 40%, the
+ *  legendary(s) total 10%, each trophy ship skin doubles its base rate, and the
+ *  currency rows fill whatever's left so the table sums to exactly 100 (weights =
+ *  percentages). Centralised so current + future raids stay consistent for free;
+ *  a raid can still bypass it by passing an explicit lootOverride below. */
+function buildChallengeLoot(loot: RaidLootItem[]): RaidLootItem[] {
+  const isSkin = (l: RaidLootItem) => !!(l as { shipSkinId?: string }).shipSkinId
+  const currency = loot.filter(l => lootCategory(l) !== 'unique')
+  const uniques  = loot.filter(l => lootCategory(l) === 'unique')
+  const skins       = uniques.filter(isSkin)
+  const legendaries = uniques.filter(l => !isSkin(l) && l.rarity === 'legendary')
+  const items       = uniques.filter(l => !isSkin(l) && l.rarity !== 'legendary')
+
+  // Fixed-percentage specials (split evenly if a raid ever has more than one of a
+  // kind). Trophy skin doubles its base rate — the established challenge cadence.
+  const splitEven = (rows: RaidLootItem[], pct: number) =>
+    rows.map(r => ({ ...r, weight: Math.round((pct / Math.max(1, rows.length)) * 100) / 100 }))
+  const specials = [
+    ...skins.map(r => ({ ...r, weight: r.weight * 2 })),
+    ...splitEven(items, CHALLENGE_ITEM_PCT),
+    ...splitEven(legendaries, CHALLENGE_LEGENDARY_PCT),
+  ]
+  const specialTotal = specials.reduce((a, r) => a + r.weight, 0)
+
+  // Currency fills the remainder to 100, proportional to its base weights.
+  const currencyTarget = Math.max(0, 100 - specialTotal)
+  const currencyBase = currency.reduce((a, r) => a + r.weight, 0) || 1
+  const scaledCurrency = currency.map(r => ({ ...r, weight: Math.round(r.weight / currencyBase * currencyTarget) }))
+
+  // Correct any rounding drift on the largest currency row so the table totals
+  // EXACTLY 100 — that's what pins the item to a true 40% and the legendary to 10%.
+  const total = specialTotal + scaledCurrency.reduce((a, r) => a + r.weight, 0)
+  if (scaledCurrency.length && total !== 100) {
+    const biggest = scaledCurrency.reduce((a, b) => (b.weight > a.weight ? b : a))
+    biggest.weight += 100 - total
+  }
+  return [...scaledCurrency, ...specials]
 }
 
 /** Build the challenge variant of a raid. Stat-scaled enemies, scaled
  *  per-kill payouts, suffixed raid_id, title prefixed with "Challenge:".
- *  Loot is normally weight-scaled via scaleLoot, but specific raids can
- *  override the whole loot table by passing `lootOverride` — used for
- *  the chase-tier system (Corsair Cannon + Prime, Krust's Carapace +
- *  Captain's), where we want exact doubled rates rather than the
- *  factory's weight-multiplier (which inflates denominator drift). */
+ *  Loot is built via buildChallengeLoot (exact 40%/10% rates, same for every
+ *  raid), but a raid can still override the whole table by passing `lootOverride`
+ *  for a bespoke case. */
 export function buildChallengeRaid(base: BossRaidConfig, lootOverride?: BossRaidConfig['loot']): BossRaidConfig {
   const scaledEnemies: Record<string, BroadsideEnemy> = {}
   for (const [key, e] of Object.entries(base.enemies)) {
@@ -127,7 +144,7 @@ export function buildChallengeRaid(base: BossRaidConfig, lootOverride?: BossRaid
     bossDefeatedText: base.bossDefeatedText, // same line; the title prefix is enough
     enemies:          scaledEnemies,
     killRewards:      scaledKillRewards,
-    loot:             lootOverride ?? scaleLoot(base.loot),
+    loot:             lootOverride ?? buildChallengeLoot(base.loot),
     // Challenge variants skip the pre-fight dialogue — the player has
     // already played the normal raid (challenge unlocks gate on that),
     // they've seen the story beat. The challenge IS the fight, not the
@@ -219,155 +236,36 @@ const SPET_PHASE2: NonNullable<BroadsideEnemy['phase2']> = {
   dialogueLine: "You think the bill's settled? I always collect twice.",
 }
 
-// Challenge-mode loot tables. Doubled special-drop rates from normal:
-// ship skin 5%→10%, normal item 20%→40%, legendary 5%→10%. Currency
-// shrinks proportionally so the totals stay at 100. Defined as
-// overrides (rather than relying on the factory's scaleLoot weight
-// multiplier) so the percentages land exactly where designed instead
-// of inflating denominator drift.
-//
-// Pull from the source bossRaids tables to inherit images / labels;
-// the only thing that changes is the weight column.
-const PETE_CHALLENGE_LOOT: typeof CORSAIRS_RECKONING['loot'] = (() => {
-  const byId = Object.fromEntries(CORSAIRS_RECKONING.loot.map(l => [l.id, l]))
-  const w = (id: string, weight: number) => ({ ...byId[id], weight })
-  return [
-    w('doubloons_300',         16),  // 16% (+1 to absorb the freed weight)
-    w('doubloons_600',         10),  // 10%
-    w('gems_25',               10),  // 10%
-    w('pack',                   5),  //  5%
-    w('finndicate_hull',        6),  //  6% chapter-1 trophy skin (2× the
-                                       //  3% Pete normal rate; Krust drops
-                                       //  it at the same locked 3% / 6%
-                                       //  normal / challenge cadence)
-    w('corsair_cannon',        43),  // 43% normal item (was 40, +3 absorbed)
-    w('corsair_prime_cannon',  10),  // 10% legendary (2× normal)
-  ]
-})()
-
-const KRUST_CHALLENGE_LOOT: typeof CAPTAIN_KRUST['loot'] = (() => {
-  const byId = Object.fromEntries(CAPTAIN_KRUST.loot.map(l => [l.id, l]))
-  const w = (id: string, weight: number) => ({ ...byId[id], weight })
-  return [
-    w('doubloons_600',         15),
-    w('doubloons_1200',        10),
-    w('gems_50',               10),
-    w('pack_2',                 5),
-    w('finndicate_hull',        6),  //  6% chapter-1 trophy skin (2× the
-                                       //  3% Krust normal rate; same locked
-                                       //  3% / 6% cadence as Pete)
-    w('krusts_carapace',       44),  // 44% normal item — absorbed the 8 weight
-                                       //  freed when Krust's hull rate dropped
-                                       //  from 14 to 6, keeping the 30% special-
-                                       //  drop / 70% currency split intact
-    w('captains_carapace',     10),
-  ]
-})()
-
-// The Cartographer's challenge loot. Doubles the special-drop rates
-// (Cartographer's Astrolabe 20 → 40, Mastercraft Astrolabe 5 → 10,
-// Chartmaker Hull 5 → 10) so the legendary Astrolabe becomes the
-// realistic chase on challenge runs and the trophy skin stays on the
-// table at a meaningful rate. Currency shrinks proportionally to keep
-// the total at 100.
-const CARTOGRAPHER_CHALLENGE_LOOT: typeof THE_CARTOGRAPHER['loot'] = (() => {
-  const byId = Object.fromEntries(THE_CARTOGRAPHER.loot.map(l => [l.id, l]))
-  const w = (id: string, weight: number) => ({ ...byId[id], weight })
-  return [
-    w('doubloons_600',           15),
-    w('doubloons_1200',          10),
-    w('gems_50',                 10),
-    w('pack_2',                   5),
-    w('chartmaker_hull',         10),
-    w('cartographers_astrolabe', 40),
-    w('captains_astrolabe',      10),
-  ]
-})()
-
-// Pre-built challenge variants — page files + raid map import these
-// directly so the heavy lifting (the factory) only runs once at module
-// load, not per-request. EVERY challenge boss carries a two-phase fight,
-// tuned to its character (Pete = aggression, Krust = plate, the
-// Cartographer = fog-and-parry pressure, Spet = doubled cadence). The
-// Coffers admiral + the Quartermaster inherit their phase 2 from the base
-// config automatically (buildChallengeRaid spreads it through scaleEnemy).
+// Pre-built challenge variants — page files + raid map import these directly so
+// the factory only runs once at module load, not per-request. Every challenge boss
+// carries a two-phase fight tuned to its character (Pete = aggression, Krust =
+// plate, the Cartographer = fog-and-parry, Spet = doubled cadence; the Coffers
+// admiral + the Quartermaster inherit phase 2 from their base config, spread
+// through scaleEnemy). Loot comes from the shared exact-rate table
+// (buildChallengeLoot): 40% item / 10% legendary on EVERY raid.
 export const CORSAIRS_RECKONING_CHALLENGE: BossRaidConfig = {
-  ...withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING, PETE_CHALLENGE_LOOT), 'pete', PETE_PHASE2),
+  ...withBossPhase2(buildChallengeRaid(CORSAIRS_RECKONING), 'pete', PETE_PHASE2),
   // Hard mode keeps the original 6-mob grind — only the NORMAL entry raid was
   // shortened to 4 (2026-06-20). Challenge enemies still get the eased base
   // stats scaled back up by the challenge HP/dmg multipliers.
   sequence: ['brute', 'brute', 'sniper', 'sniper', 'corsair', 'corsair'],
 }
 export const CAPTAIN_KRUST_CHALLENGE: BossRaidConfig = {
-  ...withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST, KRUST_CHALLENGE_LOOT), 'krust', KRUST_PHASE2),
+  ...withBossPhase2(buildChallengeRaid(CAPTAIN_KRUST), 'krust', KRUST_PHASE2),
   // Hard mode keeps the original 8-mob gauntlet — only the NORMAL raid was
   // trimmed to 6 (2026-06-20). Challenge enemies still get the eased base
   // stats scaled up by the challenge HP/dmg multipliers.
   sequence: ['scout', 'scout', 'reg', 'reg', 'brute', 'brute', 'elite', 'elite'],
 }
 export const THE_CARTOGRAPHER_CHALLENGE: BossRaidConfig =
-  withBossPhase2(buildChallengeRaid(THE_CARTOGRAPHER, CARTOGRAPHER_CHALLENGE_LOOT), 'cartographer', CARTOGRAPHER_PHASE2)
-
-// The Tollmaster's challenge loot. Doubles the special-drop rates (Spet's Primer
-// 20 → 40, Tollmaster's Primer 5 → 10, Chartmaker Hull 9 → 16) so the
-// legendary Primer becomes the realistic chase and the chapter-2 trophy skin
-// stays on the table.
-const TOLLMASTER_CHALLENGE_LOOT: typeof THE_TOLLMASTER['loot'] = (() => {
-  const byId = Object.fromEntries(THE_TOLLMASTER.loot.map(l => [l.id, l]))
-  const w = (id: string, weight: number) => ({ ...byId[id], weight })
-  return [
-    w('doubloons_600',          15),
-    w('doubloons_1200',         10),
-    w('gems_50',                10),
-    w('pack_2',                  5),
-    w('chartmaker_hull',        16),
-    w('spets_primer',           40),
-    w('tollmasters_primer',     10),
-  ]
-})()
-
+  withBossPhase2(buildChallengeRaid(THE_CARTOGRAPHER), 'cartographer', CARTOGRAPHER_PHASE2)
 export const THE_TOLLMASTER_CHALLENGE: BossRaidConfig =
-  withBossPhase2(buildChallengeRaid(THE_TOLLMASTER, TOLLMASTER_CHALLENGE_LOOT), 'spet', SPET_PHASE2)
+  withBossPhase2(buildChallengeRaid(THE_TOLLMASTER), 'spet', SPET_PHASE2)
 
-// The Harbor Fleet's challenge — Chapter III, Raid 5. Decoys + phase 2 carry
-// through scaleEnemy automatically (it spreads ...e), so the challenge flagship
-// still runs the false colours and drops the act at half HP. Exact-rate loot
-// override (like Pete/Krust/Cartographer/Spet) so the drops land where designed:
-// the non-legendary item (Tell-Tale Glass) at 40% and the legendary (Admiral's
-// Eye) at 10%, with the trophy skin at 10% and currency filling the table to 100.
-const COFFERS_FLEET_CHALLENGE_LOOT: typeof THE_COFFERS_FLEET['loot'] = (() => {
-  const byId = Object.fromEntries(THE_COFFERS_FLEET.loot.map(l => [l.id, l]))
-  const w = (id: string, weight: number) => ({ ...byId[id], weight })
-  return [
-    w('doubloons_600',   16),
-    w('doubloons_1200',  10),
-    w('gems_50',          9),
-    w('pack_2',           5),
-    w('coffers_hull',    10),  // 10% trophy skin (2× the 5% normal)
-    w('tell_tale_glass', 40),  // 40% normal item (2× the 20% normal)
-    w('admirals_eye',    10),  // 10% legendary (2× the 5% normal)
-  ]
-})()
+// Chapter III. The Coffers admiral (Raid 5) + the Quartermaster (Raid 6, the
+// chapter finale) inherit decoys / repossession / phase 2 automatically through
+// scaleEnemy; loot rides the same shared 40%/10% table as every other raid.
 export const THE_COFFERS_FLEET_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(THE_COFFERS_FLEET, COFFERS_FLEET_CHALLENGE_LOOT)
-
-// The Quartermaster's challenge — Chapter III, Raid 6 (the chapter finale).
-// Repossession + phase 2 both carry through scaleEnemy automatically (it spreads
-// ...e), so the challenge keeper still reclaims an item at the start and opens the
-// reserve deck at half HP. Exact-rate loot override: War Drum (non-legendary) at
-// 40% and Thunder Drum (legendary) at 10%, trophy skin 10%, currency to 100.
-const QUARTERMASTER_CHALLENGE_LOOT: typeof THE_QUARTERMASTER['loot'] = (() => {
-  const byId = Object.fromEntries(THE_QUARTERMASTER.loot.map(l => [l.id, l]))
-  const w = (id: string, weight: number) => ({ ...byId[id], weight })
-  return [
-    w('doubloons_600',   13),
-    w('doubloons_1200',  10),
-    w('gems_50',         11),
-    w('pack_2',           6),
-    w('coffers_hull',    10),  // 10% trophy skin
-    w('war_drum',        40),  // 40% normal item
-    w('thunder_drum',    10),  // 10% legendary
-  ]
-})()
+  buildChallengeRaid(THE_COFFERS_FLEET)
 export const THE_QUARTERMASTER_CHALLENGE: BossRaidConfig =
-  buildChallengeRaid(THE_QUARTERMASTER, QUARTERMASTER_CHALLENGE_LOOT)
+  buildChallengeRaid(THE_QUARTERMASTER)
