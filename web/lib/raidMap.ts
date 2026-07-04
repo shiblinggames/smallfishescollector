@@ -1459,11 +1459,72 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // Pursuit dice beat — the counting-house has gone to a riot now the keeper's
+    // turned on you. Grab a strongbox before his muscle reaches you. Risk/reward
+    // d20, mirrors gullet_bones. Non-combat, one-time.
+    id: 'coffers_strongbox',    type: 'dice',
+    label: 'Crack the Strongbox',
+    flavor: "The keeper's guns are out and his floor's gone to chaos. Bolted to the counting-house planks sits a strongbox fat with the day's take, and his muscle is closing fast. Time for exactly one grab.",
+    bridge: "Strongbox settled one way or the other, you shove deeper into the market, toward the light-lock that bars his vault.",
+    requiresNode: 'quartermaster_turn',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "The moment the keeper's guns come up, his counting-house turns into a riot." },
+      { text: "Clerks bolt, coin scatters underfoot, and his hired muscle starts shoving through the crowd toward you." },
+      { text: "Bolted to the planks by the scales sits a strongbox, lid still warm from the day's counting." },
+      { text: "You'll get one grab at it before they reach you. Pick your play and be quick." },
+    ],
+    dice: {
+      bonusPerLevels: 10,
+      maxBonus: 4,
+      options: [
+        {
+          id: 'till',
+          label: 'Skim the till',
+          description: "Sweep the loose coin off the counter and keep moving. Easy, safe, and a little beneath a strongbox like that.",
+          dc: 8,
+          win: { doubloons: 1500 },
+          miss: { doubloons: 500 },
+          winText: "You come away with two fists of the market's coin and never break stride.",
+          missText: "Half of it spills as you grab, but a fair weight lands in your hold anyway.",
+        },
+        {
+          id: 'force',
+          label: 'Force the strongbox',
+          description: "Put a bar under the lid and lean on it before the muscle arrives. More coin, less time.",
+          dc: 12,
+          win: { doubloons: 2800, navXp: 200 },
+          miss: { doubloons: 700 },
+          winText: "The lid pops with a crack and you scoop the day's take clean into your hold.",
+          missText: "The lid gives late and you snatch what you can as the first of his muscle reaches you.",
+        },
+        {
+          id: 'blow',
+          label: 'Blow the safe',
+          description: "Powder-charge the whole safe and take everything at once. All or nothing, and a bad light costs you.",
+          dc: 16,
+          requiresDoubloons: 1000,
+          win: { doubloons: 5000, navXp: 500 },
+          miss: { doubloons: -1000 },
+          winText: "The charge blows the safe wide and you haul off more coin than the fleet outside was worth.",
+          missText: "The powder catches wrong, the blast throws you back empty-handed, and your own charge cost you a purse.",
+        },
+      ],
+    },
+    detail: {
+      description:
+        "The keeper's turned his guns on you and his counting-house has gone to a riot: clerks bolting, coin underfoot, his hired muscle shoving toward you through the crowd. Bolted to the planks by the scales sits a strongbox fat with the day's take. You get one grab before they reach you. Throw the bones on it: skim the loose till for safe coin, force the box for more, or powder-charge the whole safe for everything it holds, knowing a bad light costs you.",
+      dropsNote: 'Pick one grab and roll once. The safe play always pays; blowing the safe can cost you doubloons on a miss, and only opens to a captain who can cover the loss.',
+      ctaLabel: 'Throw the Bones →',
+    },
+  },
+  {
     id: 'coffers_vault_lens',    type: 'puzzle',
     label: 'The Vault Beam',
     flavor: "The Quartermaster's strongroom answers to a lock of light: a sunbeam channelled down through the market's roof, off a row of mirrors he can crook from behind his counter. Straighten them and the vault opens.",
     bridge: "The beam strikes the vault-eye and the strongroom bars grind back. The keeper is cornered behind them now.",
-    requiresNode: 'quartermaster_turn',
+    requiresNode: 'coffers_strongbox',
     adminOnly: true,
     puzzle: {
       kind: 'mirror',
@@ -1504,6 +1565,40 @@ export const RAID_MAP: RaidNode[] = [
     },
   },
   {
+    // The lore/dread payoff — inside the opened vault, the keeper's ledger of
+    // every captain he armed and how each sank. Earns Repossession + deepens
+    // Finleone one beat before the boss. Fragment X. Non-combat story.
+    id: 'coffers_ledger',    type: 'story',
+    label: 'The Ledger of Debts',
+    flavor: "The vault isn't a strongroom. It's a shop's back-stock, drowned and kept, and chained to a lectern in the middle of it is a ledger with every captain the Cache ever armed written inside.",
+    bridge: "You know now what the Cache was, and what you are to it. The keeper's cornered against his own shelves, still smiling, and there's a line in that ledger with your name half-written already.",
+    requiresNode: 'coffers_vault_lens',
+    adminOnly: true,
+    image: '/raidlog.png',
+    scene: [
+      { text: "The bars grind back and the vault breathes out cold, coin-smelling air." },
+      { text: "It isn't a strongroom. It's a shop's back-stock, sunk to the bottom of the sea and kept dry." },
+      { text: "Shelf on shelf of other captains' plunder, every piece tagged, sorted, and priced to sell back to whoever comes up next." },
+      { text: "Chained to a lectern in the heart of it, a ledger the size of a hatch cover." },
+      { text: "Every captain the Cache ever armed is written in that book, and every name has a closing line." },
+      { text: "Sunk off the Shrouds. Lost in the Gullet. Sold their own hull back a plank at a time. Debt cleared, debt cleared, debt cleared." },
+      { text: "Your name's near the bottom, in fresh ink. The closing line isn't filled in yet." },
+      { text: "And at the head of every column, the three words the whole drowned market answers to: the House of Finleone." },
+      { speaker: 'The Keeper', portrait: THE_QUARTERMASTER.enemies.quartermaster.portrait, text: "Now you see it, captain. Everything down here gets sold twice. Even the captains who come to take it." },
+      { text: "He's backed against his own shelves, and he's still smiling. Whatever he sold you, he means to reach out and take it back." },
+    ],
+    detail: {
+      description:
+        "The vault opens not on a strongroom but on a shop's drowned back-stock: shelf on shelf of other captains' plunder, tagged and priced to be sold back up the line. Chained at its heart is a ledger naming every captain the Cache ever armed, each with a tidy closing line for how they sank. Your own name sits near the bottom in fresh ink, the closing line still blank. And every column runs up to the same account: the House of Finleone. Now you understand the keeper's smile, and why he opens a fight by taking his goods back.",
+      drops: [
+        { emoji: '📜', label: "Captain's Logbook, Fragment X", sublabel: "\"Every name in his book has a closing line. Mine is the only one still open.\"", rarity: 'rare' },
+      ],
+      dropsNote: 'The truth of the Cache, and the name above the keeper: the House of Finleone. Whatever he sold you, he can take back.',
+      ctaLabel: 'Settle the Account →',
+      summary: "Inside the vault you found the keeper's ledger: every captain the Cache ever armed, each with a note on how they sank, all running up to the House of Finleone. Your name's in it, closing line still blank, and the keeper means to take his goods back.",
+    },
+  },
+  {
     // Raid 6 — the chapter finale. The Quartermaster (Galleon-tier). Signature:
     // Repossession (reclaims one equipped raid item at fight start) + a phase 2 +
     // tier-2 tides. LIVE config (THE_QUARTERMASTER), adminOnly until tested AND
@@ -1511,8 +1606,8 @@ export const RAID_MAP: RaidNode[] = [
     id: 'the_quartermaster',    type: 'raid',
     label: 'The Quartermaster',
     flavor: "The keeper of the Cache fights the way he sells: he opens by taking back a piece of your own kit, then makes you buy your life off him one shot at a time.",
-    bridge: "The Quartermaster goes down under his own counter and the Cache's hold falls open, ledgers and all. Every debt in them runs up to one name.",
-    requiresNode: 'coffers_vault_lens',
+    bridge: "The Quartermaster goes down under his own counter and the Cache's hold falls open for good. Every debt in that ledger settles at once, and the account runs up past him, to the don.",
+    requiresNode: 'coffers_ledger',
     requiresNavLevel: 48,
     adminOnly: true,
     route: '/raids/quartermaster',
