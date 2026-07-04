@@ -14,11 +14,14 @@ const STAGE_H = 132
 const LOOP: Record<ShipAugmentId, number> = { railgun: 2200, barrage: 2600, nuke: 3400 }
 const NUKE_FLIGHT = 850
 
-// Ship positions as fractions of the stage. The target sits LEFT of centre (not
-// jammed to the right edge) so the blast/shockwave radius — tuned for a big combat
-// stage — stays inside this small diorama instead of spilling off the right.
-const PLAYER = { x: 0.16, y: 0.60 }
-const TARGET = { x: 0.54, y: 0.42 }
+// Positions as fractions of the stage. MUZZLE (where the shot launches) sits on
+// the player's deck — up and forward of the hull's centre — so the beam/missile
+// doesn't appear to fire from under the boat. TARGET is the enemy hull + impact
+// point; kept off the right edge (with a tighter nuke blast box below) so the
+// blast/shockwave radius stays inside this small diorama.
+const PLAYER = { x: 0.15, y: 0.60 }   // where the player hull is drawn
+const MUZZLE = { x: 0.21, y: 0.52 }   // where the shot launches from (the deck)
+const TARGET = { x: 0.62, y: 0.42 }   // enemy hull + impact point
 
 interface Geo { x1: number; y1: number; x2: number; y2: number; len: number; angle: number }
 
@@ -49,7 +52,7 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
     const measure = () => {
       const r = el.getBoundingClientRect()
       const W = r.width, H = r.height
-      const x1 = W * PLAYER.x, y1 = H * PLAYER.y   // player muzzle, lower-left
+      const x1 = W * MUZZLE.x, y1 = H * MUZZLE.y   // launch point (player deck)
       const x2 = W * TARGET.x, y2 = H * TARGET.y   // enemy hull
       const dx = x2 - x1, dy = y2 - y1
       setGeo({ x1, y1, x2, y2, len: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) * 180 / Math.PI })
@@ -120,9 +123,11 @@ export default function UltimatePreview({ id, color }: { id: ShipAugmentId; colo
       )}
 
       {/* Percent-based FX (blast, impacts, splats) live in a box centred on the
-          target hull, matching how they sit over the enemy ship in combat. */}
+          target hull, matching how they sit over the enemy ship in combat. The
+          nuke's fireball scales off the box, so its box is tighter to keep the
+          blast in frame now that the target sits further right. */}
       {geo && (
-        <div style={{ position: 'absolute', left: geo.x2, top: geo.y2, width: 98, height: 74, marginLeft: -49, marginTop: -37, overflow: 'visible', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', left: geo.x2, top: geo.y2, width: id === 'nuke' ? 62 : 92, height: 70, marginLeft: id === 'nuke' ? -31 : -46, marginTop: -35, overflow: 'visible', pointerEvents: 'none' }}>
           {id === 'nuke' && blastKey > 0 && <NukeBlast key={blastKey} color={color} />}
           {id === 'barrage' && hits.map(k => <ImpactBurst key={k} kind="crit" />)}
           {id === 'barrage' && shot > 0 && <MegaSplats key={shot} color={color} items={splatItems} />}
