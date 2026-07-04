@@ -93,6 +93,34 @@ const PLAN = [
   [12, 1, 0, 'first_haul'],
   [12, 1, 1, 'steady_nets'],
   [12, 1, 2, 'deep_trawler'],
+  // ── batch 13 — 2026-07 expansion: Gauntlet descent + Locker (start) ──
+  [13, 0, 0, 'first_descent'],
+  [13, 0, 1, 'abyssward'],
+  [13, 0, 2, 'forge_worthy'],
+  [13, 1, 0, 'davys_doorstep'],
+  [13, 1, 1, 'well_provisioned'],
+  [13, 1, 2, 'locker_raider'],
+  // ── batch 14 — Locker (end) + the deep (start) ──
+  [14, 0, 0, 'forge_awakened'],
+  [14, 0, 1, 'master_of_the_locker'],
+  [14, 0, 2, 'push_your_luck'],
+  [14, 1, 0, 'again_and_again'],
+  [14, 1, 1, 'fathom_hoarder'],
+  [14, 1, 2, 'one_shot'],
+  // ── batch 15 — the deep (end) + endgame (start) ──
+  [15, 0, 0, 'greeds_price'],
+  [15, 0, 1, 'storm_reader'],
+  [15, 0, 2, 'deep_cartographer'],
+  [15, 1, 0, 'weapon_of_legend'],
+  [15, 1, 1, 'first_fusion'],
+  [15, 1, 2, 'ruse_undone'],
+  // ── batch 16 — endgame (end) ──
+  [16, 0, 0, 'account_settled'],
+  [16, 0, 1, 'grand_forgemaster'],
+  [16, 0, 2, 'mark_of_mastery'],
+  [16, 1, 0, 'quick_draw'],
+  [16, 1, 1, 'complete_captain'],
+  [16, 1, 2, 'six_legends'],
 ]
 
 let skipped = 0
