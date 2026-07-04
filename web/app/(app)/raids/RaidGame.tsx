@@ -1401,17 +1401,26 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         {/* Turn-based combat owns the rest of the playing-phase UI */}
         <div style={{ width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
           {(() => {
-            const currentEnemyId = getEnemyForRound(roundRef.current, config).id
+            const baseEnemy = getEnemyForRound(roundRef.current, config)
+            const currentEnemyId = baseEnemy.id
             const reward = config.killRewards[currentEnemyId]
             // Challenge-mode elite check. Resolved per round so each
             // encounter remount picks up the right scaled enemy + affix.
-            const eliteAffix = getEliteAffixForRound(roundRef.current, config, eliteAffixesRef.current)
+            const rolledAffix = getEliteAffixForRound(roundRef.current, config, eliteAffixesRef.current)
+            // Baked affix — a named enforcer whose signature IS an affix (The
+            // Leech's Vampiric, The Breaker's Ironclad). It applies in normal AND
+            // challenge play and takes precedence over a random elite roll on the
+            // same slot, so the enforcer keeps its identity. Baked enemies keep
+            // their own stats (no ×1.5/×1.25 elite bump — challenge scaling via
+            // scaleEnemy already handled the numbers); only a purely random elite
+            // gets buildEliteEnemy.
+            const bakedAffix = baseEnemy.affix ? AFFIXES[baseEnemy.affix] : undefined
+            const eliteAffix = bakedAffix ?? rolledAffix
             // Stamp the raid's baseline gunnery accuracy onto the enemy (a
             // per-enemy `accuracy` still wins if set), so the dodge contest can
             // actually land shots through a high-nav captain's dodge.
-            const baseEnemy = getEnemyForRound(roundRef.current, config)
             const enemyWithAccuracy = { ...baseEnemy, accuracy: baseEnemy.accuracy ?? config.enemyAccuracy ?? 0 }
-            const enemyForCombat = eliteAffix
+            const enemyForCombat = (rolledAffix && !bakedAffix)
               ? buildEliteEnemy(enemyWithAccuracy)
               : enemyWithAccuracy
             return (

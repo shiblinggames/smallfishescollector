@@ -1,3 +1,5 @@
+import type { AffixId } from './raidAffixes'
+
 export const ENEMY_IMG_BASE = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '') + '/storage/v1/object/public/enemy-arts/'
 
 // 'repair' is a player-only action (consumes a turn to use a repair kit).
@@ -109,6 +111,14 @@ export interface BroadsideEnemy {
    *  Krust's crew = crustacean "Carapace" defense. */
   damageReduction?: number
   abilityName?: string
+  /** BAKED elite affix — permanently attaches one of the challenge-mode elite
+   *  affixes (raidAffixes) to THIS specific enemy, in normal AND challenge play
+   *  (RaidGame reads it and passes it as the affix prop). Unlike a random
+   *  challenge-elite roll it does NOT apply the ×1.5/×1.25 elite stat bump — the
+   *  enemy's own stats stand, then challenge scaling multiplies them as usual.
+   *  Used for named enforcers whose signature IS an affix (e.g. The Leech's
+   *  Vampiric lifesteal, The Breaker's Ironclad plating). */
+  affix?: AffixId
   /** The Cartographer's raid — "Mist Veil." A drifting fog band
    *  overlaid on the player's aim bar during lock-in, partially
    *  obscuring the gold Critical center. `aimFogDensity` is the band's
@@ -979,25 +989,30 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
     // gauntlet). He carries Repossession (fight start) + escalation via `phases[]`.
     scout: {
       // Sinister + SNEAKY (a lamprey): fast, evasive, and spikes hard on a crit
-      // — a glass-cannon assassin that punishes a careless opener.
+      // — a glass-cannon assassin that punishes a careless opener. Vampiric: it
+      // repairs off the blood it draws, so a slow kill lets it claw back.
       id: 'scout', name: 'The Leech', hpBase: 180, minDmg: 12, maxDmg: 22,
       shipSpeed: 10, actionMs: 3000,
       pattern: ['fire', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'dodge', 'fire', 'reload'],
       critChance: 0.20,
-      // A darting lamprey — the crit zone races, so landing a clean Critical on
+      affix: 'vampiric',
+      // A darting lamprey — the crit zone RACES, so landing a clean Critical on
       // it is genuinely hard (you have to catch a fast, narrow window). Already a
-      // fast ship (10), so a modest mult on top of the shipSpeed base bites.
-      zoneSpeedMult: 1.6,
+      // fast ship (10); a big mult on top of the shipSpeed base makes the zone fly.
+      zoneSpeedMult: 2.7,
       image: '/enemychapter3schooner.png',
       portrait: '/raid6_theleech.png',
     },
     reg: {
-      // BRUTE (a goliath grouper): slow and tanky, but every shot is a wrecking
-      // blow — heavy volleys you have to weather or out-pace.
-      id: 'reg', name: 'The Breaker', hpBase: 310, minDmg: 18, maxDmg: 32,
+      // BRUTE (a goliath grouper): slow and TANKY, but every shot is a wrecking
+      // blow — heavy volleys you have to weather or out-pace. Ironclad: his hull
+      // plating has a real chance to shrug non-volley fire, so crack him open
+      // with volleys.
+      id: 'reg', name: 'The Breaker', hpBase: 400, minDmg: 18, maxDmg: 32,
       shipSpeed: 2, actionMs: 5200,
       pattern: ['reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'reload'],
       critChance: 0.06,
+      affix: 'ironclad',
       zoneSpeedMult: 3.0,
       image: '/enemychapter3brigantine.png',
       portrait: '/raid6_thebreaker.png',
