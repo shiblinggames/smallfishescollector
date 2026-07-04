@@ -1276,7 +1276,7 @@ export const RAID_MAP: RaidNode[] = [
     bridge: "The gate's behind you, and the market's war-fleet is already turning to meet you.",
     requiresNode: 'coffers_heading',
     adminOnly: true,
-    image: '/raidlog.png',
+    image: THE_COFFERS_FLEET.enemies.scout.portrait,
     dpsCheck: {
       threshold: 60,
       payCost: 10000,
