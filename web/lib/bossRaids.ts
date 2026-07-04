@@ -856,7 +856,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     scout: {
       id: 'scout', name: 'Feint', hpBase: 110, minDmg: 8, maxDmg: 15,
       shipSpeed: 8, actionMs: 3500,
-      pattern: ['reload', 'fire', 'reload', 'fire', 'dodge'],
+      pattern: ['reload', 'fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.07,
       decoyCount: 1, decoyName: 'False Colours',   // deception ladder tier 1
       // Endgame difficulty lives in the TARGET, not the needle (2026-07-04): the
@@ -870,7 +870,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     reg: {
       id: 'reg', name: 'Sham', hpBase: 145, minDmg: 10, maxDmg: 18,
       shipSpeed: 6, actionMs: 4400,
-      pattern: ['reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+      pattern: ['reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'dodge', 'reload', 'fire'],
       critChance: 0.08,
       decoyCount: 1, decoyName: 'False Colours',   // tier 1
       zoneSpeedMult: 1.9,
@@ -880,7 +880,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     brute: {
       id: 'brute', name: 'Bulwark', hpBase: 212, minDmg: 14, maxDmg: 24,
       shipSpeed: 3, actionMs: 5400,
-      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley'],
+      pattern: ['reload', 'reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'dodge', 'volley', 'fire'],
       critChance: 0.06,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2 — bigger spread
       zoneSpeedMult: 2.6,
@@ -890,7 +890,7 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
     elite: {
       id: 'elite', name: 'Mirage', hpBase: 185, minDmg: 13, maxDmg: 22,
       shipSpeed: 9, actionMs: 3300,
-      pattern: ['fire', 'reload', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+      pattern: ['fire', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'dodge', 'fire'],
       critChance: 0.13,
       decoyCount: 2, decoyName: 'False Colours',   // tier 2
       zoneSpeedMult: 1.6,
@@ -902,13 +902,13 @@ export const THE_COFFERS_FLEET: BossRaidConfig = {
       shipSpeed: 7, actionMs: 4200,
       // Flagship, peak of the deception ladder (3 bands). Phase 2: at half HP he
       // drops the act and fights for real, faster and meaner.
-      pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
+      pattern: ['reload', 'fire', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire', 'dodge'],
       critChance: 0.12,
       decoyCount: 3, decoyName: 'False Colours',   // tier 3 — the whole line lies
       phase2: {
         revivePct: 0.5,
         damageMult: 1.2,
-        pattern: ['fire', 'reload', 'volley', 'fire', 'reload', 'fire', 'dodge'],
+        pattern: ['fire', 'reload', 'volley', 'dodge', 'fire', 'reload', 'fire', 'dodge', 'fire'],
         dialogueLine: "Enough games. Run out the real guns.",
       },
       zoneSpeedMult: 1.9,
@@ -974,7 +974,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       // — a glass-cannon assassin that punishes a careless opener.
       id: 'scout', name: 'The Leech', hpBase: 180, minDmg: 12, maxDmg: 22,
       shipSpeed: 10, actionMs: 3000,
-      pattern: ['fire', 'dodge', 'reload', 'fire', 'reload', 'fire', 'dodge'],
+      pattern: ['fire', 'dodge', 'reload', 'fire', 'dodge', 'reload', 'dodge', 'fire', 'reload'],
       critChance: 0.20,
       // A darting lamprey — the crit zone races, so landing a clean Critical on
       // it is genuinely hard (you have to catch a fast, narrow window). Already a
@@ -988,7 +988,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       // blow — heavy volleys you have to weather or out-pace.
       id: 'reg', name: 'The Breaker', hpBase: 310, minDmg: 18, maxDmg: 32,
       shipSpeed: 2, actionMs: 5200,
-      pattern: ['reload', 'reload', 'volley', 'reload', 'reload', 'volley', 'dodge'],
+      pattern: ['reload', 'reload', 'volley', 'dodge', 'reload', 'reload', 'volley', 'dodge', 'reload'],
       critChance: 0.06,
       zoneSpeedMult: 3.0,
       image: '/enemychapter3brigantine.png',
@@ -1002,13 +1002,13 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
       // fight (the merchant who sold you your edge switches it off). Then he burns
       // through 4 escalating phases (false defeat -> rise again, harder), each a
       // fresh bar + meaner pattern + more damage + a quoted line.
-      pattern: ['reload', 'reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
+      pattern: ['reload', 'reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'dodge', 'fire', 'reload'],
       critChance: 0.12,
       repossess: true, repossessName: 'Repossession',
       phases: [
         // Phase 2 — the debt called in. Faster cadence + a MITIGATION check.
         { revivePct: 0.85, damageMult: 1.15, badge: 'Called In',
-          pattern: ['reload', 'fire', 'volley', 'reload', 'fire', 'fire', 'dodge'],
+          pattern: ['reload', 'fire', 'volley', 'dodge', 'reload', 'fire', 'dodge', 'fire', 'reload'],
           dialogueLine: "You cracked the ledger. You have not cleared the debt.",
           check: {
             id: 'big_gun', name: 'The Big Gun', chargeTurns: 2,
@@ -1020,7 +1020,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           } },
         // Phase 3 — the reserve deck. Volley-heavy + a DISRUPT ("dodge cancel") check.
         { revivePct: 0.72, damageMult: 1.30, badge: 'Reserve Deck',
-          pattern: ['reload', 'reload', 'volley', 'fire', 'volley', 'fire', 'dodge'],
+          pattern: ['reload', 'reload', 'volley', 'dodge', 'fire', 'volley', 'dodge', 'fire', 'reload'],
           dialogueLine: "You think the shelves are bare? I keep a reserve deck for captains like you.",
           check: {
             id: 'cooking_books', name: 'Cooking the Books', chargeTurns: 2,
@@ -1032,7 +1032,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           } },
         // Phase 4 — nothing left to sell. Desperation + a HEAL check.
         { revivePct: 0.60, damageMult: 1.50, badge: 'Empty Shelves',
-          pattern: ['fire', 'volley', 'reload', 'fire', 'fire', 'volley', 'fire'],
+          pattern: ['fire', 'volley', 'dodge', 'reload', 'fire', 'fire', 'volley', 'fire'],
           dialogueLine: "Nothing left to sell. Then I sink you and take the lot back myself.",
           check: {
             id: 'fire_sale', name: 'Fire Sale', chargeTurns: 2,
