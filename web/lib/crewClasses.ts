@@ -257,11 +257,11 @@ export const SNARE: ClassDef<SnareMilestone> = {
   blurb: 'Disables the enemy\'s dodge for several turns. Always lands.',
   color: '#c084fc', emoji: '⚡',
   milestones: [
-    { unlockLevel: 10,  jamChance: 0.50, disableDodgeTurns: 2, desc: '50% chance to jam enemy dodge for 2 turns.' },
-    { unlockLevel: 25,  jamChance: 0.60, disableDodgeTurns: 2, desc: '60% chance to jam enemy dodge for 2 turns.' },
-    { unlockLevel: 40,  jamChance: 0.70, disableDodgeTurns: 3, desc: '70% chance to jam enemy dodge for 3 turns.' },
-    { unlockLevel: 75,  jamChance: 0.85, disableDodgeTurns: 4, desc: '85% chance to jam enemy dodge for 4 turns.' },
-    { unlockLevel: 100, jamChance: 0.95, disableDodgeTurns: 5, desc: '95% chance to jam enemy dodge for 5 turns.' },
+    { unlockLevel: 10,  jamChance: 0.30, disableDodgeTurns: 2, desc: '30% chance to jam enemy dodge for 2 turns.' },
+    { unlockLevel: 25,  jamChance: 0.40, disableDodgeTurns: 2, desc: '40% chance to jam enemy dodge for 2 turns.' },
+    { unlockLevel: 40,  jamChance: 0.48, disableDodgeTurns: 3, desc: '48% chance to jam enemy dodge for 3 turns.' },
+    { unlockLevel: 75,  jamChance: 0.54, disableDodgeTurns: 4, desc: '54% chance to jam enemy dodge for 4 turns.' },
+    { unlockLevel: 100, jamChance: 0.60, disableDodgeTurns: 5, desc: '60% chance to jam enemy dodge for 5 turns.' },
   ],
 }
 
