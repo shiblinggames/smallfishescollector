@@ -5231,6 +5231,14 @@ function EnemyStatsPopup({
   const dr = enemy.damageReduction ?? 0
   const drPct = Math.round(dr * 100)
   const abilityName = enemy.abilityName
+  // Signal Flares / "False Colours" barrage — driven off decoyCount (the same
+  // deception tier that seeds the aim-bar decoys). Every few turns the fleet
+  // screens itself with false flares the player must swat; the boss tier (3)
+  // mixes in red live-shell feints you must NOT tap. Count mirrors RaidCombat's
+  // flareCount = 3 + tier * 2 (5 / 7 / 9).
+  const flareTier      = enemy.decoyCount ?? 0
+  const flareShots     = flareTier > 0 ? 3 + flareTier * 2 : 0
+  const flareHasFeints = flareTier >= 3
 
   const rows: { label: string; value: string; hint: string; color: string }[] = [
     { label: 'HP',          value: `${currentHp} / ${maxHp}`,          hint: 'remaining / total hull',         color: '#86efac' },
@@ -5469,6 +5477,43 @@ function EnemyStatsPopup({
                 </p>
                 <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
                   Counters a dodged strike for {Math.round(enemy.parryDamagePct * 100)}% of his damage roll, {Math.round(enemy.parryChance * 100)}% of the time. Firing into his dodge is never safe.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Signal Flares — the "False Colours" whack-a-mole interrupt carried by
+            any decoy-fleet enemy (decoyCount > 0). Warm flare-orange accent so it
+            reads apart from the cool decoy/fog abilities. Boss tier adds the
+            live-shell feint warning. */}
+        {flareShots > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#fb923c', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Ability
+            </p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.65rem 0.75rem',
+              background: 'rgba(251,146,60,0.06)',
+              border: '1px solid rgba(251,146,60,0.24)',
+              borderRadius: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(251,146,60,0.1)',
+                border: '1px solid rgba(251,146,60,0.32)',
+                borderRadius: 9,
+              }}>
+                <span style={{ fontSize: '1.1rem' }} aria-hidden>🎆</span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="font-karla font-700" style={{ fontSize: '0.85rem', color: '#fb923c', lineHeight: 1.15, marginBottom: 2 }}>
+                  Signal Flares
+                </p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.68)', lineHeight: 1.35 }}>
+                  Every few turns a screen of {flareShots} false flares goes up. Swat each amber flare before its fuse burns out — every one you let through chips your hull.{flareHasFeints ? ' Some glow red: those are live shells, so let them fizzle. Tapping a red flare hurts worse than missing an amber one.' : ''}
                 </p>
               </div>
             </div>
