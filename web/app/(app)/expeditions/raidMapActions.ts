@@ -559,11 +559,39 @@ function rollDpsShot(res: 'critical' | 'hit' | 'graze' | 'miss', shipMinDamage: 
   return Math.floor(Math.random() * grazeMax) + 1
 }
 
-// DPS check node — a coin-or-skill gate (lib/raidMap RaidDpsCheck). Either PAY
-// to skip, or take ONE aim-bar shot: the client reports which zone it hit and
-// the server rolls the shot from the player's real damage profile (ship + power
-// + gear crit/non-crit mults + class mult), compares to the threshold, and
-// applies the outcome. Pass = free; fall short = owe failCost. Either clears it.
+// Preview for the DPS check — the player's non-crit hit range, gear/class
+// multiplier, and computed odds of clearing the threshold. Read-only; the node
+// sheet shows this up front so the shot is an informed call.
+export async function getDpsCheckPreview(nodeId: string): Promise<
+  | { rangeMin: number; rangeMax: number; mult: number; threshold: number; passChance: number; power: number; shipMinDamage: number }
+  | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const node = RAID_MAP.find(n => n.id === nodeId)
+  if (!node || node.type !== 'dps_check' || !node.dpsCheck) return { error: 'Invalid node' }
+
+  const stats = await getRaidPlayerStats(user.id)
+  const dmgProfile = raidDamageProfile(stats.totalPower, stats.shipMinDamage, stats.raidMods.damagePct)
+  const rangeMin = dmgProfile.hitMin
+  const rangeMax = dmgProfile.powerMax
+  const noncritMult = getActiveEffects(stats.equippedRaidItems)
+    .filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
+  const mult = stats.classDamageMult * noncritMult
+  const threshold = node.dpsCheck.threshold
+  // Chance a uniform hit roll clears the threshold after the multiplier.
+  const needRoll = Math.ceil(threshold / mult)
+  const total = rangeMax - rangeMin + 1
+  const passing = Math.max(0, rangeMax - Math.max(rangeMin, needRoll) + 1)
+  const passChance = total > 0 ? Math.max(0, Math.min(100, Math.round((passing / total) * 100))) : 0
+  return { rangeMin, rangeMax, mult, threshold, passChance, power: stats.totalPower, shipMinDamage: stats.shipMinDamage }
+}
+
+// DPS check node — a coin-or-stats gate (lib/raidMap RaidDpsCheck). Either PAY
+// to skip, or FIRE one shot: the server rolls a straight (non-crit) hit from the
+// player's real damage profile (ship + power + gear/class mults), compares to
+// the threshold, and applies the outcome. Pass = free; fall short = owe failCost.
 type DpsBreakdown = { roll: number; rangeMin: number; rangeMax: number; mult: number }
 export async function resolveDpsCheck(
   nodeId: string,

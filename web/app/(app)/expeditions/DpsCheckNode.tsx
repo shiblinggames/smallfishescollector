@@ -3,19 +3,29 @@
 // The blockade gate — a coin-or-stats check. The player either PAYS to skip, or
 // FIRES one shot: the server rolls a straight (non-critical) hit from their real
 // damage profile (ship + power + gear) and compares it to the threshold. No
-// aiming — the roll is bounded by your stats, so it's a gear check with a coin
-// fallback. The result shows the full calculation so it doesn't read as pure RNG.
+// aiming. The sheet shows the player's stats + pass odds up front, then a
+// suspenseful rolling-number animation settles on the shot before the verdict.
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RaidDpsCheck } from '@/lib/raidMap'
-import { resolveDpsCheck } from './raidMapActions'
+import { resolveDpsCheck, getDpsCheckPreview } from './raidMapActions'
 import { vibrate } from '@/lib/haptics'
 
 const GOLD = '#e8c879'
 const GREEN = '#4ade80'
 const RED = '#f87171'
+const ORANGE = '#fb923c'
 
 type ShotResult = Extract<Awaited<ReturnType<typeof resolveDpsCheck>>, { outcome: 'passed' | 'failed' }>
+type Preview = Extract<Awaited<ReturnType<typeof getDpsCheckPreview>>, { passChance: number }>
+
+// Colour + label for a pass chance, matching the dice node's risk pills.
+function oddsTier(pct: number): { label: string; color: string } {
+  if (pct >= 75) return { label: 'Likely', color: GREEN }
+  if (pct >= 45) return { label: 'Even', color: GOLD }
+  if (pct >= 20) return { label: 'Risky', color: ORANGE }
+  return { label: 'Long shot', color: RED }
+}
 
 export default function DpsCheckNode({
   nodeId, dpsCheck, doubloons, onResolved,
@@ -27,9 +37,17 @@ export default function DpsCheckNode({
   onResolved: () => void
 }) {
   const [phase, setPhase] = useState<'choose' | 'firing' | 'result'>('choose')
+  const [preview, setPreview] = useState<Preview | null>(null)
   const [result, setResult] = useState<ShotResult | null>(null)
+  const [rollDisplay, setRollDisplay] = useState(0)
   const [pending, setPending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const timersRef = useRef<number[]>([])
+
+  useEffect(() => {
+    getDpsCheckPreview(nodeId).then(p => { if (!('error' in p)) setPreview(p) }).catch(() => {})
+    return () => { timersRef.current.forEach(clearTimeout) }
+  }, [nodeId])
 
   async function fire() {
     if (pending) return
@@ -37,21 +55,39 @@ export default function DpsCheckNode({
     setPending(true)
     setPhase('firing')
     vibrate([0, 45, 30])   // cannon boom
-    const t0 = performance.now()
+    // Plausible spin range in final (post-multiplier) damage terms.
+    const lo = preview ? Math.max(1, Math.round(preview.rangeMin * preview.mult)) : 10
+    const hi = preview ? Math.max(lo + 1, Math.round(preview.rangeMax * preview.mult)) : 80
+    const rnd = () => lo + Math.floor(Math.random() * (hi - lo + 1))
+    // Spin fast while the server settles the real roll.
+    let spinning = true
+    const spin = () => { if (!spinning) return; setRollDisplay(rnd()); timersRef.current.push(window.setTimeout(spin, 55)) }
+    spin()
+
     const res = await resolveDpsCheck(nodeId, 'shot')
-    // Hold a short beat so the shot lands before the numbers appear.
-    const wait = Math.max(0, 700 - (performance.now() - t0))
-    window.setTimeout(() => {
-      setPending(false)
-      if ('error' in res) { setErr(res.error); setPhase('choose'); return }
-      if (res.outcome === 'paid') { onResolved(); return } // shouldn't happen for a shot
-      if ('doubloonsDelta' in res && res.doubloonsDelta !== 0) {
-        window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+    spinning = false
+    if ('error' in res) { setPending(false); setErr(res.error); setPhase('choose'); return }
+    if (res.outcome === 'paid') { onResolved(); return } // shouldn't happen for a shot
+
+    // Decelerating ratchet onto the real damage, then hold + reveal the verdict.
+    const finalDmg = res.damage
+    const steps = [70, 95, 125, 165, 215, 280, 360]
+    let i = 0
+    const ratchet = () => {
+      if (i >= steps.length) {
+        setRollDisplay(finalDmg)
+        vibrate(res.outcome === 'passed' ? [0, 45, 60, 45] : [0, 110])
+        if ('doubloonsDelta' in res && res.doubloonsDelta !== 0) {
+          window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+        }
+        timersRef.current.push(window.setTimeout(() => { setPending(false); setResult(res); setPhase('result') }, 700))
+        return
       }
-      vibrate(res.outcome === 'passed' ? [0, 45, 60, 45] : [0, 110])
-      setResult(res)
-      setPhase('result')
-    }, wait)
+      // Bias the last couple of ticks to the true value so it settles cleanly.
+      setRollDisplay(i >= steps.length - 2 ? finalDmg : rnd())
+      timersRef.current.push(window.setTimeout(ratchet, steps[i++]))
+    }
+    ratchet()
   }
 
   async function pay() {
@@ -65,14 +101,18 @@ export default function DpsCheckNode({
     onResolved()
   }
 
-  // ── Firing view — a short suspense beat ────────────────────────────────────
+  // ── Firing view — the suspenseful rolling number ──────────────────────────
   if (phase === 'firing') {
     return (
-      <div style={{ padding: '2rem 0', textAlign: 'center' }}>
-        <style>{`@keyframes dpsc-boom { 0% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 0.85; } }`}</style>
-        <div style={{ fontSize: '2.6rem', animation: 'dpsc-boom 0.7s ease-in-out infinite' }}>💥</div>
-        <p className="font-cinzel font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.8rem', color: RED, marginTop: '0.8rem' }}>
+      <div style={{ padding: '1.6rem 0 1rem', textAlign: 'center' }}>
+        <p className="font-cinzel font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.72rem', color: RED }}>
           Firing…
+        </p>
+        <p className="font-cinzel font-800" style={{ fontSize: '3.4rem', lineHeight: 1.05, color: '#f4ecd8', fontVariantNumeric: 'tabular-nums', textShadow: '0 0 20px rgba(255,255,255,0.25)', marginTop: '0.4rem' }}>
+          {rollDisplay.toLocaleString()}
+        </p>
+        <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.62rem', color: '#a89e86', marginTop: 4 }}>
+          needed {dpsCheck.threshold}
         </p>
       </div>
     )
@@ -86,7 +126,10 @@ export default function DpsCheckNode({
     const hasMult = Math.abs(bd.mult - 1) > 0.001
     return (
       <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-        <p className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '1.15rem', color: accent, textShadow: `0 0 14px ${accent}55` }}>
+        <p className="font-cinzel font-800" style={{ fontSize: '3rem', lineHeight: 1, color: accent, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 20px ${accent}55` }}>
+          {result.damage.toLocaleString()}
+        </p>
+        <p className="font-cinzel font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.92rem', color: accent, marginTop: '0.3rem' }}>
           {passed ? 'Gate blown open' : 'Not enough'}
         </p>
         {/* Calculation ledger — makes it plain the damage is built from your stats */}
@@ -98,9 +141,6 @@ export default function DpsCheckNode({
           <LedgerRow label="Damage dealt" val={result.damage.toLocaleString()} valColor={accent} bold />
           <LedgerRow label="Needed to pass" val={result.threshold.toLocaleString()} />
         </div>
-        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7a7770', marginTop: '0.5rem', fontStyle: 'italic' }}>
-          Your damage range is set by your ship + crew power.
-        </p>
         <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'rgba(240,237,232,0.82)', marginTop: '0.7rem' }}>
           {passed
             ? 'The gate blows open and you sail straight through, free.'
@@ -128,11 +168,28 @@ export default function DpsCheckNode({
   const cantAfford = doubloons < dpsCheck.payCost          // can't cover the 10k pay
   const canShoot = doubloons >= dpsCheck.failCost          // must hold the 20k a miss would cost
   const hardLocked = cantAfford && !canShoot               // no coin for either way through
+  const tier = preview ? oddsTier(preview.passChance) : null
   return (
     <div style={{ marginTop: '1rem' }}>
       <p className="font-karla" style={{ fontSize: '0.82rem', lineHeight: 1.5, color: 'rgba(240,237,232,0.8)', marginBottom: '0.8rem', textAlign: 'center' }}>
         Get past the locked gate. Fire one shot to blast it open, or pay to be let through.
       </p>
+
+      {/* Stat + odds panel — what your shot can do, and the chance it clears. */}
+      {preview && tier && (
+        <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.7rem 0.85rem', marginBottom: '0.8rem', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <LedgerRow label="Crew power" val={preview.power.toLocaleString()} />
+          <LedgerRow label="Your shot (hit)" val={`${preview.rangeMin.toLocaleString()}–${preview.rangeMax.toLocaleString()}`} />
+          {Math.abs(preview.mult - 1) > 0.001 && <LedgerRow label="Gear & class" val={`×${preview.mult.toFixed(2)}`} valColor={GOLD} />}
+          <LedgerRow label="Needed to pass" val={preview.threshold.toLocaleString()} />
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '2px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+            <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.72rem', color: '#a89e86' }}>Your odds</span>
+            <span className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: tier.color }}>{preview.passChance}% · {tier.label}</span>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         {/* Fire one shot — the damage check. Locked below the 20k a miss would cost. */}
         <button
@@ -180,7 +237,7 @@ export default function DpsCheckNode({
   )
 }
 
-// One row of the damage-calculation ledger (label left, value right).
+// One row of the stat / damage ledger (label left, value right).
 function LedgerRow({ label, val, valColor, bold }: { label: string; val: string; valColor?: string; bold?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
