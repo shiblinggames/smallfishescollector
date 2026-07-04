@@ -22,11 +22,13 @@ const GREY = '#94a3b8'
 const CRIT_HALF = 0.014
 const HIT_HALF = 0.06
 const GRAZE_HALF = 0.10
-const BASE_SPEED = 0.006 // per 60fps frame, before the node's barSpeed multiplier
+const BASE_SPEED = 0.006 // needle sweep, per 60fps frame, before the barSpeed multiplier
+const ZONE_SPEED = 0.004 // target ("ship") drift per frame — moves like a real fight, a touch slower than the needle
 
 type AimZone = 'critical' | 'hit' | 'graze' | 'miss'
-function zoneAt(pos: number): AimZone {
-  const d = Math.abs(pos - 0.5)
+// Zone is measured off the DRIFTING target centre, not a fixed point.
+function zoneFrom(pos: number, center: number): AimZone {
+  const d = Math.abs(pos - center)
   if (d <= CRIT_HALF) return 'critical'
   if (d <= HIT_HALF) return 'hit'
   if (d <= GRAZE_HALF) return 'graze'
@@ -56,6 +58,12 @@ export default function DpsCheckNode({
   const rafRef = useRef(0)
   const lastRef = useRef(0)
   const firedRef = useRef(false)
+  // Drifting target (the "ship") + its band elements, moved imperatively.
+  const zoneCenterRef = useRef(0.5)
+  const zoneDirRef = useRef(1)
+  const grazeElRef = useRef<HTMLDivElement>(null)
+  const hitElRef = useRef<HTMLDivElement>(null)
+  const critElRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), [])
 
@@ -66,17 +74,30 @@ export default function DpsCheckNode({
     posRef.current = 0
     dirRef.current = 1
     firedRef.current = false
+    // Start the target at a random spot + direction so it can't be memorised.
+    const zLo = GRAZE_HALF, zHi = 1 - GRAZE_HALF
+    zoneCenterRef.current = zLo + Math.random() * (zHi - zLo)
+    zoneDirRef.current = Math.random() < 0.5 ? 1 : -1
     lastRef.current = performance.now()
     const speed = BASE_SPEED * dpsCheck.barSpeed
     const tick = (now: number) => {
       const dt = Math.min(now - lastRef.current, 50)
       lastRef.current = now
       const frames = dt / 16.67
+      // Needle sweep.
       let p = posRef.current + speed * frames * dirRef.current
       if (p >= 1) { p = 1; dirRef.current = -1 }
       if (p <= 0) { p = 0; dirRef.current = 1 }
       posRef.current = p
       if (needleRef.current) needleRef.current.style.left = `${p * 100}%`
+      // Target drift (the ship), bounded so the graze band stays on the bar.
+      let z = zoneCenterRef.current + ZONE_SPEED * frames * zoneDirRef.current
+      if (z >= zHi) { z = zHi; zoneDirRef.current = -1 }
+      if (z <= zLo) { z = zLo; zoneDirRef.current = 1 }
+      zoneCenterRef.current = z
+      if (grazeElRef.current) grazeElRef.current.style.left = `${(z - GRAZE_HALF) * 100}%`
+      if (hitElRef.current)   hitElRef.current.style.left   = `${(z - HIT_HALF) * 100}%`
+      if (critElRef.current)  critElRef.current.style.left  = `${(z - CRIT_HALF) * 100}%`
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
@@ -86,7 +107,7 @@ export default function DpsCheckNode({
     if (phase !== 'aiming' || firedRef.current) return
     firedRef.current = true
     cancelAnimationFrame(rafRef.current)
-    const zone = zoneAt(posRef.current)
+    const zone = zoneFrom(posRef.current, zoneCenterRef.current)
     vibrate(zone === 'critical' ? [0, 30, 40, 30] : 14)
     setPending(true)
     const res = await resolveDpsCheck(nodeId, 'shot', zone)
@@ -157,14 +178,12 @@ export default function DpsCheckNode({
         <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.62rem', color: '#a89e86', textAlign: 'center', marginBottom: '0.8rem' }}>
           Tap FIRE when the marker hits the gold
         </p>
-        {/* Aim bar — graze/hit/crit bands with a sweeping needle. */}
+        {/* Aim bar — a DRIFTING target (graze/hit/crit bands) + a sweeping needle,
+            both moved imperatively by the RAF so it reads like a real fight. */}
         <div style={{ position: 'relative', height: 44, borderRadius: 10, background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.12)', overflow: 'hidden' }}>
-          {/* graze band */}
-          <Band half={GRAZE_HALF} color={GREY} opacity={0.18} />
-          {/* hit band */}
-          <Band half={HIT_HALF} color={GREEN} opacity={0.28} />
-          {/* crit core */}
-          <Band half={CRIT_HALF} color={GOLD} opacity={0.85} />
+          <div ref={grazeElRef} aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: `${(0.5 - GRAZE_HALF) * 100}%`, width: `${GRAZE_HALF * 2 * 100}%`, background: GREY, opacity: 0.18 }} />
+          <div ref={hitElRef}   aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: `${(0.5 - HIT_HALF) * 100}%`,   width: `${HIT_HALF * 2 * 100}%`,   background: GREEN, opacity: 0.28 }} />
+          <div ref={critElRef}  aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: `${(0.5 - CRIT_HALF) * 100}%`,  width: `${CRIT_HALF * 2 * 100}%`,  background: GOLD, opacity: 0.85 }} />
           {/* needle */}
           <div ref={needleRef} style={{ position: 'absolute', top: -2, bottom: -2, left: '0%', width: 3, marginLeft: -1.5, background: '#fff', boxShadow: '0 0 8px #fff', borderRadius: 2 }} />
         </div>
@@ -233,16 +252,5 @@ export default function DpsCheckNode({
       )}
       {err && <p className="font-karla" style={{ fontSize: '0.74rem', color: RED, marginTop: '0.7rem', textAlign: 'center' }}>{err}</p>}
     </div>
-  )
-}
-
-// A zone band centred on the bar (0.5), given as a half-width fraction.
-function Band({ half, color, opacity }: { half: number; color: string; opacity: number }) {
-  return (
-    <div aria-hidden style={{
-      position: 'absolute', top: 0, bottom: 0,
-      left: `${(0.5 - half) * 100}%`, width: `${half * 2 * 100}%`,
-      background: color, opacity,
-    }} />
   )
 }
