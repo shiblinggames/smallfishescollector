@@ -14,7 +14,7 @@ export type RaidEffectType =
   | 'nonboss_damage_mult'   // value = damage multiplier vs NON-boss enemies (mobs / elites). Mirror of boss_damage_mult.
   | 'ramp_damage_per_turn'  // value = extra damage fraction PER TURN elapsed this fight (resets each enemy). turn 1 = +0, turn 2 = +value, …
   | 'dodge_pierce_chance'   // value = 0-1 chance, when the ENEMY would dodge your shot, to land it anyway ("see through the feint"). Only fires vs a would-be dodge, so naturally infrequent.
-  | 'crit_zone_mult'        // value = multiplier on the aim-bar CRIT zone width (1.35 = +35% wider gold band, so crits are easier to land). Stacks on the Sharpshot crew widen.
+  | 'crit_upgrade_chance'   // value = 0-1 chance for a normal HIT to upgrade to a CRITICAL. Stacks with the Keen Cutlass crew effect + any tide crit bonus.
   | 'reload_charge_chance'  // value = 0-1 chance, on each RELOAD, to load a SECOND cannonball (catch the wind). Folds on top of any tide reload proc.
 
 export interface RaidEffect {
@@ -484,21 +484,21 @@ export const RAID_ITEMS: RaidItemDef[] = [
   {
     id: 'crows_nest_rigging',
     name: "Crow's-Nest Rigging",
-    description: "A lookout high in the masts calls the range — widens your crit window by 35%, so the gold band is easier to catch.",
+    description: "Each of your normal hits has a 15% chance to become a critical hit for much bigger damage.",
     image: null,
     emoji: '🗼',
     rarity: 'epic',
-    effects: [{ type: 'crit_zone_mult', value: 1.35 }],
+    effects: [{ type: 'crit_upgrade_chance', value: 0.15 }],
     source: "The Quartermaster's Cache",
   },
   {
     id: 'trade_wind_sails',
     name: 'Trade-Wind Sails',
-    description: 'Canvas that grabs every gust. Each reload has a 30% chance to load a second cannonball.',
+    description: 'Each time you reload, a 15% chance to load 2 cannonballs at once instead of 1.',
     image: null,
     emoji: '⛵',
     rarity: 'epic',
-    effects: [{ type: 'reload_charge_chance', value: 0.30 }],
+    effects: [{ type: 'reload_charge_chance', value: 0.15 }],
     source: "The Quartermaster's Cache",
   },
 ]

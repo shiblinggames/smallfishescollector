@@ -619,14 +619,7 @@ export default function RaidCombat({
   // the tick colored against base CRIT_W while lockShot judged the widened
   // band, so the needle could glow green at the lock moment yet resolve
   // critical. Ref mirror lets the RAF read it without restarting the tick.
-  // Crow's-Nest Rigging (crit_zone_mult items) widens the gold band too — one
-  // more multiplier on the single source of truth, so the tick, judgment and
-  // drawn band all agree.
-  const critZoneItemMult = useMemo(
-    () => getActiveEffects(equippedRaidItems).filter(e => e.type === 'crit_zone_mult').reduce((a, e) => a * e.value, 1),
-    [equippedRaidItems],
-  )
-  const liveCritW = CRIT_W * tide.critZoneMult * critZoneItemMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1)
+  const liveCritW = CRIT_W * tide.critZoneMult * (sharpshotBuff ? 1 + sharpshotBuff.multiplier : 1)
   const liveCritWRef = useRef(liveCritW)
   useEffect(() => { liveCritWRef.current = liveCritW }, [liveCritW])
   // Width the shot was JUDGED at, captured in lockShot. The drawn band uses
@@ -1866,9 +1859,12 @@ export default function RaidCombat({
       const remaining = sharpshotBuff.shotsLeft - 1
       setSharpshotBuff(remaining > 0 ? { multiplier: sharpshotBuff.multiplier, shotsLeft: remaining } : null)
     }
-    // Keen Cutlass + tide critChanceBonus: a clean hit has a flat chance
-    // to upgrade to a crit. Tide bonus stacks ADDITIVELY with crew crit.
-    const critUpgradeChance = (mods.critPct / 100) + tide.critBonus
+    // Keen Cutlass + tide critChanceBonus + Crow's-Nest Rigging (item): a clean
+    // hit has a flat chance to upgrade to a crit. All stack ADDITIVELY. The item
+    // read drops any repossessed piece so the Quartermaster's theft still bites.
+    const critUpgradeItem = getActiveEffects(equippedRaidItems.filter(id => id !== repossessedItemRef.current))
+      .filter(e => e.type === 'crit_upgrade_chance').reduce((a, e) => a + e.value, 0)
+    const critUpgradeChance = (mods.critPct / 100) + tide.critBonus + critUpgradeItem
     if (res === 'hit' && critUpgradeChance > 0 && Math.random() < critUpgradeChance) res = 'critical'
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
