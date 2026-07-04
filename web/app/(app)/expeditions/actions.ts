@@ -246,8 +246,8 @@ export async function getUltimateState(): Promise<{ active: string | null; build
 }
 
 /** Begin building an ultimate. Charges AUGMENT_COST doubloons and stamps a 24h
- *  build clock. Requires all four gates. A rebuild (already own an active ultimate)
- *  is allowed — the old one keeps firing until this build completes and replaces it. */
+ *  build clock. Requires all four gates. The choice is PERMANENT — once an ultimate
+ *  is built (or building), you cannot build another; there is no rebuild/swap. */
 export async function startUltimateBuild(id: string): Promise<{ ok: boolean; error?: string; doubloons?: number; completesAt?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -257,9 +257,13 @@ export async function startUltimateBuild(id: string): Promise<{ ok: boolean; err
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles')
-    .select('ship_tier, expedition_xp, doubloons, manowar_augment_build, gauntlet_upgrades').eq('id', user.id).single()
+    .select('ship_tier, expedition_xp, doubloons, manowar_augment, manowar_augment_build, gauntlet_upgrades').eq('id', user.id).single()
   if (!profile) return { ok: false, error: 'No profile.' }
 
+  // The ultimate is a once-and-for-all choice. If one is already forged, no rebuild.
+  if (profile.manowar_augment) {
+    return { ok: false, error: 'Your ship already carries its ultimate. The choice is permanent.' }
+  }
   // A build already underway can't be double-started (re-pick it instead).
   const existing = parseAugmentBuild(profile.manowar_augment_build ?? null)
   if (existing && !isBuildComplete(existing, Date.now())) {

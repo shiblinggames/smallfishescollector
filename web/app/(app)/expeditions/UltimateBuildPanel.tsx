@@ -40,7 +40,6 @@ export default function UltimateBuildPanel({
   const [active, setActive] = useState<string | null>(activeId)
   const [build, setBuild] = useState<BuildState | null>(initialBuild)
   const [confirmId, setConfirmId] = useState<ShipAugmentId | null>(null)
-  const [rebuilding, setRebuilding] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -54,7 +53,7 @@ export default function UltimateBuildPanel({
     setBusy(false)
     if (!res.ok || !res.completesAt) { setErr(res.error ?? 'Could not start the build.'); return }
     setBuild({ id, completesAt: res.completesAt })
-    setConfirmId(null); setRebuilding(false)
+    setConfirmId(null)
     if (typeof res.doubloons === 'number') window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.doubloons }))
   }
 
@@ -132,8 +131,9 @@ export default function UltimateBuildPanel({
     )
   }
 
-  // ── State 4 (settled): a weapon is live, no build running ───────────────────
-  if (active && !rebuilding) {
+  // ── State 4 (settled): a weapon is live. Permanent — the ultimate is a
+  //    once-and-for-all choice, so there's no rebuild/swap from here. ──────────
+  if (active) {
     const a = getShipAugment(active)!
     return (
       <div style={{ marginBottom: '1.7rem' }}>
@@ -152,13 +152,9 @@ export default function UltimateBuildPanel({
             </p>
           )}
         </div>
-        {allMet && (
-          <button type="button" onClick={() => { setRebuilding(true); setErr(null) }}
-            className="font-karla font-700 uppercase tracking-[0.08em] tap"
-            style={{ marginTop: 10, width: '100%', padding: '0.6rem', borderRadius: 10, fontSize: '0.64rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
-            Forge a different weapon
-          </button>
-        )}
+        <p className="font-karla" style={{ fontSize: '0.62rem', color: '#7f7a72', textAlign: 'center', marginTop: 9, letterSpacing: '0.02em' }}>
+          Your ultimate is forged into the hull for good. There is no changing it.
+        </p>
       </div>
     )
   }
@@ -168,11 +164,6 @@ export default function UltimateBuildPanel({
     <div style={{ marginBottom: '1.7rem' }}>
       {HEADER}
       {!allMet && <RequirementsChecklist gates={gates} navLevel={navLevel} />}
-      {rebuilding && (
-        <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: '#e0a955', textAlign: 'center', marginBottom: 8 }}>
-          Forging a new weapon costs {AUGMENT_COST.toLocaleString()} ⟡ and another 24 hours. Your current weapon fires until it&rsquo;s done.
-        </p>
-      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
         {SHIP_AUGMENTS.map(a => {
           const confirming = confirmId === a.id
@@ -220,13 +211,6 @@ export default function UltimateBuildPanel({
           )
         })}
       </div>
-      {rebuilding && (
-        <button type="button" onClick={() => { setRebuilding(false); setConfirmId(null) }}
-          className="font-karla font-700 uppercase tracking-[0.08em] tap"
-          style={{ marginTop: 10, width: '100%', padding: '0.55rem', borderRadius: 10, fontSize: '0.62rem', color: '#9a948c', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
-          Keep my current weapon
-        </button>
-      )}
       {err && <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#fca5a5', textAlign: 'center', marginTop: 6 }}>{err}</p>}
     </div>
   )
