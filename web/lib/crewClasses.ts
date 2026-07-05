@@ -181,9 +181,12 @@ export interface LeviathanMilestone {
    *  normal hit's damage profile. 0.5 = half damage; 2.0 = double. */
   dmgMult: number
   /** Executioner bonus: extra fraction of damage when the shell lands on a
-   *  BOSS or ELITE (the leviathan hunts the biggest prey). 0.25 = +25%. This
-   *  is Leviathan's signature over Blitz — reliable big-game burst. */
+   *  BOSS or ELITE (the leviathan hunts the biggest prey). 0.25 = +25%. */
   bossBonusPct?: number
+  /** The flip side: the heavy shell is slightly WASTED on small fry — this
+   *  fraction is shaved off vs a REGULAR hull (non-boss, non-elite). 0.15 =
+   *  −15%. Together they make Leviathan the anti-big-target specialist. */
+  mobPenaltyPct?: number
   /** Lv 100: the extra shot lands as a guaranteed crit. */
   autoCrit?: boolean
   desc: string
@@ -195,10 +198,10 @@ export interface BlitzMilestone {
    *  First shot is guaranteed; the chain ends on the first failed roll
    *  (or a 10-shot hard cap, to keep pathological streaks bounded). */
   chainChance: number
-  /** Chip-storm sustain: the ship repairs this fraction of the TOTAL frenzy
-   *  damage (capped at max HP). 0.15 = heal 15% of the chain's damage. This is
-   *  Blitz's signature over Leviathan — aggression that keeps you afloat. */
-  lifestealPct?: number
+  /** Per-shot damage multiplier — each frenzy shot hits for this fraction of a
+   *  normal cannon shot. Blitz's identity is MANY SMALL hits (vs Leviathan's
+   *  one big one), so this stays below 1 while chainChance climbs. */
+  shotDmgMult: number
   /** Lv 100: every shot in the chain lands as a guaranteed crit. */
   autoCrit?: boolean
   desc: string
@@ -334,35 +337,34 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   id: 'leviathan', name: 'Leviathan', shortLabel: 'Salvo',
-  blurb: 'Fires one massive extra cannon shot that hits even harder against bosses and elites. Damage scales hard with rank — at the capstone a single shell hits 2.5× a normal one, guaranteed crit.',
+  blurb: 'Fires one massive extra cannon shot — a single, ship-shaking knock. Made for big prey: slightly weaker against regular hulls, but it hits far harder against bosses and elites (and crits at the cap).',
   color: '#a3b1c6', emoji: '🐋',
-  // The apex hunter of BIG prey: one reliable heavy shell with a bonus vs
-  // bosses/elites. That boss-burst identity is the counterpoint to Blitz's
-  // many-small-shots-with-lifesteal — bring Leviathan to crack a big target.
+  // The apex hunter of BIG prey: ONE reliable heavy shell, a bonus vs
+  // bosses/elites and a small penalty vs regular hulls. The anti-big-target
+  // counterpoint to Blitz's many-small-shots frenzy.
   milestones: [
-    { unlockLevel: 10,  dmgMult: 0.85, bossBonusPct: 0.15, desc: 'Fire 1 extra cannon shot at 85% damage. +15% vs bosses and elites.' },
-    { unlockLevel: 25,  dmgMult: 1.10, bossBonusPct: 0.20, desc: 'Fire 1 extra cannon shot at 110% damage. +20% vs bosses and elites.' },
-    { unlockLevel: 40,  dmgMult: 1.40, bossBonusPct: 0.25, desc: 'Fire 1 extra cannon shot at 140% damage. +25% vs bosses and elites.' },
-    { unlockLevel: 75,  dmgMult: 1.90, bossBonusPct: 0.30, desc: 'Fire 1 extra cannon shot at 190% damage. +30% vs bosses and elites.' },
-    { unlockLevel: 100, dmgMult: 2.50, bossBonusPct: 0.40, autoCrit: true, desc: 'Fire 1 extra cannon shot at 250% damage; guaranteed crit. +40% vs bosses and elites.' },
+    { unlockLevel: 10,  dmgMult: 0.85, mobPenaltyPct: 0.15, bossBonusPct: 0.15, desc: 'Fire 1 heavy shot at 85% damage. −15% vs regular hulls, +15% vs bosses and elites.' },
+    { unlockLevel: 25,  dmgMult: 1.10, mobPenaltyPct: 0.15, bossBonusPct: 0.20, desc: 'Fire 1 heavy shot at 110% damage. −15% vs regular hulls, +20% vs bosses and elites.' },
+    { unlockLevel: 40,  dmgMult: 1.40, mobPenaltyPct: 0.15, bossBonusPct: 0.25, desc: 'Fire 1 heavy shot at 140% damage. −15% vs regular hulls, +25% vs bosses and elites.' },
+    { unlockLevel: 75,  dmgMult: 1.90, mobPenaltyPct: 0.15, bossBonusPct: 0.30, desc: 'Fire 1 heavy shot at 190% damage. −15% vs regular hulls, +30% vs bosses and elites.' },
+    { unlockLevel: 100, dmgMult: 2.50, mobPenaltyPct: 0.15, bossBonusPct: 0.40, autoCrit: true, desc: 'Fire 1 heavy shot at 250% damage; guaranteed crit. −15% vs regular hulls, +40% vs bosses and elites.' },
   ],
 }
 
 export const BLITZ: ClassDef<BlitzMilestone> = {
   id: 'blitz', name: 'Apex', shortLabel: 'Frenzy',
-  blurb: 'Fires a cannon shot, then rolls to chain into another, and another. Every hit repairs your hull, so a long frenzy heals you as it hammers.',
+  blurb: 'Unloads a rapid-fire frenzy — a burst of light shots that keeps chaining until a roll fails. Each shot is small, but a hot streak buries the enemy under a storm of them.',
   color: '#f87171', emoji: '⚡',
-  // Base chain damage is tuned to land slightly under Doby's Heavy Salvo at the
-  // relevant tiers (Lv 100 expected ≈ 46 vs Leviathan's flat ~50). The DISTINCT
-  // identity is the lifesteal: a chip-storm that keeps you afloat, vs
-  // Leviathan's pure reliable boss-burst. Expected shots = 1/(1-chainChance) ×
-  // ~12 hit damage (~25 at the auto-crit capstone).
+  // MANY SMALL hits — the opposite of Leviathan's one big knock. Higher chain
+  // chance + a sub-1 per-shot mult, tuned so the expected total lands slightly
+  // under Leviathan (Lv 100 ≈ 47 across ~3 shots vs one ~50 shell). Expected
+  // shots = 1/(1-chainChance).
   milestones: [
-    { unlockLevel: 10,  chainChance: 0.15, lifestealPct: 0.10, desc: 'Fire a cannon shot. 15% chance to chain into another (repeats). Repairs 10% of the damage dealt.' },
-    { unlockLevel: 25,  chainChance: 0.25, lifestealPct: 0.12, desc: 'Fire a cannon shot. 25% chance to chain into another (repeats). Repairs 12% of the damage dealt.' },
-    { unlockLevel: 40,  chainChance: 0.30, lifestealPct: 0.15, desc: 'Fire a cannon shot. 30% chance to chain into another (repeats). Repairs 15% of the damage dealt.' },
-    { unlockLevel: 75,  chainChance: 0.40, lifestealPct: 0.20, desc: 'Fire a cannon shot. 40% chance to chain into another (repeats). Repairs 20% of the damage dealt.' },
-    { unlockLevel: 100, chainChance: 0.45, lifestealPct: 0.25, autoCrit: true, desc: 'Fire a cannon shot. 45% chance to chain into another (repeats). Every shot crits. Repairs 25% of the damage dealt.' },
+    { unlockLevel: 10,  chainChance: 0.40, shotDmgMult: 0.65, desc: 'Fire a light shot at 65% damage. 40% chance to chain into another (repeats).' },
+    { unlockLevel: 25,  chainChance: 0.48, shotDmgMult: 0.62, desc: 'Fire a light shot at 62% damage. 48% chance to chain into another (repeats).' },
+    { unlockLevel: 40,  chainChance: 0.54, shotDmgMult: 0.60, desc: 'Fire a light shot at 60% damage. 54% chance to chain into another (repeats).' },
+    { unlockLevel: 75,  chainChance: 0.62, shotDmgMult: 0.58, desc: 'Fire a light shot at 58% damage. 62% chance to chain into another (repeats).' },
+    { unlockLevel: 100, chainChance: 0.70, shotDmgMult: 0.56, autoCrit: true, desc: 'Fire a light shot at 56% damage. 70% chance to chain into another (repeats). Every shot crits.' },
   ],
 }
 

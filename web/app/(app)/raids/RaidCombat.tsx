@@ -1654,50 +1654,65 @@ export default function RaidCombat({
       }
       case 'leviathan': {
         const lv = m as import('@/lib/crewClasses').LeviathanMilestone
-        // Single heavy extra shot. Rolls through the standard damage
-        // profile so Sharpshot crit-zone buffs / damagePct mods all
-        // compound naturally, then multiplied by the milestone's dmgMult.
-        // Lv 100 forces the shot to crit.
+        // ONE big shell. Rolls through the standard damage profile (Sharpshot /
+        // damagePct mods compound), × the milestone's dmgMult; Lv 100 crits.
         const shotResult: ShotResult = lv.autoCrit ? 'critical' : 'hit'
-        let dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * lv.dmgMult))
-        // Executioner: the leviathan hunts the biggest prey — a bonus vs bosses
-        // and elites. This is its signature over Blitz's chip-storm (bring
-        // Leviathan to crack a big target).
-        const bigGame = (isBoss || isElite) && (lv.bossBonusPct ?? 0) > 0
-        if (bigGame) dmg = Math.max(1, Math.floor(dmg * (1 + lv.bossBonusPct!)))
+        let dmg = Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * lv.dmgMult)
+        // Made for BIG prey: a bonus vs bosses/elites, a small penalty vs a
+        // regular hull. The anti-big-target identity (Blitz is the swarm).
+        const bigGame = isBoss || isElite
+        if (bigGame && (lv.bossBonusPct ?? 0) > 0)        dmg = Math.floor(dmg * (1 + lv.bossBonusPct!))
+        else if (!bigGame && (lv.mobPenaltyPct ?? 0) > 0) dmg = Math.floor(dmg * (1 - lv.mobPenaltyPct!))
+        dmg = Math.max(1, dmg)
         noteCheckResponse('burst')
-        applyAbilityDamage(dmg, `${crew.name} fires a heavy salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, lv.autoCrit ? 'crit' : 'hit')
+        // Big-knock FX: a heavy muzzle flash, a beat as the shell crosses, then
+        // a massive hull impact + full screen heave landing WITH the damage.
+        const lk = Date.now()
+        setCannonShot({ key: lk, kind: 'crit' })
+        playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 240))
+        playStepChainRef.current.push(setTimeout(() => {
+          setEnemyImpact({ key: lk + 1, kind: 'crit' })
+          cameraShake('crit')
+          vibrate([0, 55, 40, 90])
+          applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, lv.autoCrit ? 'crit' : 'hit')
+          playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
+        }, 210))
         break
       }
       case 'blitz': {
         const bz = m as import('@/lib/crewClasses').BlitzMilestone
-        // Frenzy chain — first shot is guaranteed, then roll chainChance
-        // after each hit to continue. Hard-cap at 10 shots so an 80%
-        // chain can't tail off to 30+ shots in a degenerate run. Each
-        // shot rolls through the shared damage profile so Sharpshot /
-        // damagePct mods stack normally; Lv 100 forces every shot to crit.
+        // Frenzy chain — first shot guaranteed, then roll chainChance to
+        // continue (10-shot hard cap so an 80% chain can't tail to 30+). MANY
+        // SMALL hits: each shot is only shotDmgMult of a normal cannon shot
+        // (Sharpshot / damagePct still compound). Lv 100 crits every shot.
         const shotResult: ShotResult = bz.autoCrit ? 'critical' : 'hit'
         let total = 0
         let shots = 0
         const CHAIN_CAP = 10
         while (shots < CHAIN_CAP) {
-          total += Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower))
+          total += Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.shotDmgMult)
           shots++
           if (Math.random() >= bz.chainChance) break
         }
         total = Math.max(1, total)
         noteCheckResponse('burst')
-        // Chip-storm sustain: the frenzy repairs the hull off the damage it
-        // deals (capped at max HP) — Blitz's signature over Leviathan's pure
-        // burst. Computed off pre-hit HP; applied after the damage lands.
-        const heal = (bz.lifestealPct ?? 0) > 0
-          ? Math.min(Math.max(0, playerHpMax - playerHpRef.current), Math.round(total * bz.lifestealPct!))
-          : 0
-        applyAbilityDamage(total, `${crew.name} chains ${shots} shot${shots === 1 ? '' : 's'} for ${total}!${heal > 0 ? ` The frenzy repairs ${heal}.` : ''}`, bz.autoCrit ? 'crit' : 'hit')
-        if (heal > 0) {
-          setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
-          playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
+        // Rat-a-tat FX: a rapid burst of muzzle pops (one per shot, capped so a
+        // long chain doesn't drag) + hull sparks, then the total lands on a
+        // volley shake. The pops self-fade, so no per-pop cleanup needed.
+        const pops = Math.min(shots, 6)
+        for (let k = 0; k < pops; k++) {
+          playStepChainRef.current.push(setTimeout(() => {
+            const bk = Date.now() + k
+            setCannonShot({ key: bk, kind: 'normal' })
+            vibrate(10)
+            if (k % 2 === 1) setEnemyImpact({ key: bk + 300, kind: 'normal' })
+          }, k * 105))
         }
+        playStepChainRef.current.push(setTimeout(() => {
+          cameraShake('volley')
+          applyAbilityDamage(total, `${crew.name} unloads ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
+        }, pops * 105))
+        playStepChainRef.current.push(setTimeout(() => { setCannonShot(null); setEnemyImpact(null) }, pops * 105 + 520))
         break
       }
       case 'foresight': {
