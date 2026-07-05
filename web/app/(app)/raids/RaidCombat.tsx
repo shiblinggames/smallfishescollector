@@ -2260,7 +2260,14 @@ export default function RaidCombat({
           const procGain = tideProc + sailProc
           pCharges = Math.min(playerMaxCharges, pCharges + baseGain + procGain)
           if (procGain > 0) {
-            const label = tideProc > 0 ? 'Powder Keg proc' : 'The trade wind fills your sails'
+            // Credit whatever actually fired. When BOTH land on the same reload
+            // the old label hid the sails behind the Powder Keg and mislabelled
+            // the +2 as all Powder Keg — name both.
+            const label = tideProc > 0 && sailProc > 0
+              ? 'Powder Keg fires and the trade wind fills your sails'
+              : tideProc > 0
+                ? 'Powder Keg proc'
+                : 'The trade wind fills your sails'
             stepLines.push(`${label}! +${procGain} extra cannonball${procGain === 1 ? '' : 's'}. (${pCharges}/${playerMaxCharges})`)
           } else {
             stepLines.push(`You load a cannonball. (${pCharges}/${playerMaxCharges})`)
