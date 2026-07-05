@@ -1659,9 +1659,14 @@ export default function RaidCombat({
         // compound naturally, then multiplied by the milestone's dmgMult.
         // Lv 100 forces the shot to crit.
         const shotResult: ShotResult = lv.autoCrit ? 'critical' : 'hit'
-        const dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * lv.dmgMult))
+        let dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * lv.dmgMult))
+        // Executioner: the leviathan hunts the biggest prey — a bonus vs bosses
+        // and elites. This is its signature over Blitz's chip-storm (bring
+        // Leviathan to crack a big target).
+        const bigGame = (isBoss || isElite) && (lv.bossBonusPct ?? 0) > 0
+        if (bigGame) dmg = Math.max(1, Math.floor(dmg * (1 + lv.bossBonusPct!)))
         noteCheckResponse('burst')
-        applyAbilityDamage(dmg, `${crew.name} fires a heavy salvo for ${dmg}!`, lv.autoCrit ? 'crit' : 'hit')
+        applyAbilityDamage(dmg, `${crew.name} fires a heavy salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, lv.autoCrit ? 'crit' : 'hit')
         break
       }
       case 'blitz': {
@@ -1682,7 +1687,17 @@ export default function RaidCombat({
         }
         total = Math.max(1, total)
         noteCheckResponse('burst')
-        applyAbilityDamage(total, `${crew.name} chains ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
+        // Chip-storm sustain: the frenzy repairs the hull off the damage it
+        // deals (capped at max HP) — Blitz's signature over Leviathan's pure
+        // burst. Computed off pre-hit HP; applied after the damage lands.
+        const heal = (bz.lifestealPct ?? 0) > 0
+          ? Math.min(Math.max(0, playerHpMax - playerHpRef.current), Math.round(total * bz.lifestealPct!))
+          : 0
+        applyAbilityDamage(total, `${crew.name} chains ${shots} shot${shots === 1 ? '' : 's'} for ${total}!${heal > 0 ? ` The frenzy repairs ${heal}.` : ''}`, bz.autoCrit ? 'crit' : 'hit')
+        if (heal > 0) {
+          setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
+          playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
+        }
         break
       }
       case 'foresight': {

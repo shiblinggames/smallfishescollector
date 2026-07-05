@@ -180,6 +180,10 @@ export interface LeviathanMilestone {
   /** Damage multiplier on the single extra cannon shot, relative to a
    *  normal hit's damage profile. 0.5 = half damage; 2.0 = double. */
   dmgMult: number
+  /** Executioner bonus: extra fraction of damage when the shell lands on a
+   *  BOSS or ELITE (the leviathan hunts the biggest prey). 0.25 = +25%. This
+   *  is Leviathan's signature over Blitz — reliable big-game burst. */
+  bossBonusPct?: number
   /** Lv 100: the extra shot lands as a guaranteed crit. */
   autoCrit?: boolean
   desc: string
@@ -191,6 +195,10 @@ export interface BlitzMilestone {
    *  First shot is guaranteed; the chain ends on the first failed roll
    *  (or a 10-shot hard cap, to keep pathological streaks bounded). */
   chainChance: number
+  /** Chip-storm sustain: the ship repairs this fraction of the TOTAL frenzy
+   *  damage (capped at max HP). 0.15 = heal 15% of the chain's damage. This is
+   *  Blitz's signature over Leviathan — aggression that keeps you afloat. */
+  lifestealPct?: number
   /** Lv 100: every shot in the chain lands as a guaranteed crit. */
   autoCrit?: boolean
   desc: string
@@ -326,33 +334,35 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   id: 'leviathan', name: 'Leviathan', shortLabel: 'Salvo',
-  blurb: 'Fires one massive extra cannon shot. Damage scales hard with rank — at the capstone, a single shell hits 2.5× as hard as a normal one.',
+  blurb: 'Fires one massive extra cannon shot that hits even harder against bosses and elites. Damage scales hard with rank — at the capstone a single shell hits 2.5× a normal one, guaranteed crit.',
   color: '#a3b1c6', emoji: '🐋',
+  // The apex hunter of BIG prey: one reliable heavy shell with a bonus vs
+  // bosses/elites. That boss-burst identity is the counterpoint to Blitz's
+  // many-small-shots-with-lifesteal — bring Leviathan to crack a big target.
   milestones: [
-    { unlockLevel: 10,  dmgMult: 0.85, desc: 'Fire 1 extra cannon shot at 85% damage.' },
-    { unlockLevel: 25,  dmgMult: 1.10, desc: 'Fire 1 extra cannon shot at 110% damage.' },
-    { unlockLevel: 40,  dmgMult: 1.40, desc: 'Fire 1 extra cannon shot at 140% damage.' },
-    { unlockLevel: 75,  dmgMult: 1.90, desc: 'Fire 1 extra cannon shot at 190% damage.' },
-    { unlockLevel: 100, dmgMult: 2.50, autoCrit: true, desc: 'Fire 1 extra cannon shot at 250% damage; guaranteed crit.' },
+    { unlockLevel: 10,  dmgMult: 0.85, bossBonusPct: 0.15, desc: 'Fire 1 extra cannon shot at 85% damage. +15% vs bosses and elites.' },
+    { unlockLevel: 25,  dmgMult: 1.10, bossBonusPct: 0.20, desc: 'Fire 1 extra cannon shot at 110% damage. +20% vs bosses and elites.' },
+    { unlockLevel: 40,  dmgMult: 1.40, bossBonusPct: 0.25, desc: 'Fire 1 extra cannon shot at 140% damage. +25% vs bosses and elites.' },
+    { unlockLevel: 75,  dmgMult: 1.90, bossBonusPct: 0.30, desc: 'Fire 1 extra cannon shot at 190% damage. +30% vs bosses and elites.' },
+    { unlockLevel: 100, dmgMult: 2.50, bossBonusPct: 0.40, autoCrit: true, desc: 'Fire 1 extra cannon shot at 250% damage; guaranteed crit. +40% vs bosses and elites.' },
   ],
 }
 
 export const BLITZ: ClassDef<BlitzMilestone> = {
   id: 'blitz', name: 'Apex', shortLabel: 'Frenzy',
-  blurb: 'Fires a cannon shot, then rolls to chain into another, and another. Stops when the roll fails.',
+  blurb: 'Fires a cannon shot, then rolls to chain into another, and another. Every hit repairs your hull, so a long frenzy heals you as it hammers.',
   color: '#f87171', emoji: '⚡',
-  // Tuned to land slightly under Doby's Heavy Salvo at the relevant
-  // tiers — at Lv 100, expected damage ≈ 46 vs Doby's flat ~50, with the
-  // 1-shot floor meaning Mako still beats Doby's Lv 10/25 from the
-  // guaranteed first hit alone. Damage estimates: expected shots =
-  // 1/(1-chainChance), × ~12 hit damage (or × ~25 at the auto-crit
-  // capstone). See class-balance discussion in commit history.
+  // Base chain damage is tuned to land slightly under Doby's Heavy Salvo at the
+  // relevant tiers (Lv 100 expected ≈ 46 vs Leviathan's flat ~50). The DISTINCT
+  // identity is the lifesteal: a chip-storm that keeps you afloat, vs
+  // Leviathan's pure reliable boss-burst. Expected shots = 1/(1-chainChance) ×
+  // ~12 hit damage (~25 at the auto-crit capstone).
   milestones: [
-    { unlockLevel: 10,  chainChance: 0.15, desc: 'Fire a cannon shot. 15% chance to chain into another (repeats).' },
-    { unlockLevel: 25,  chainChance: 0.25, desc: 'Fire a cannon shot. 25% chance to chain into another (repeats).' },
-    { unlockLevel: 40,  chainChance: 0.30, desc: 'Fire a cannon shot. 30% chance to chain into another (repeats).' },
-    { unlockLevel: 75,  chainChance: 0.40, desc: 'Fire a cannon shot. 40% chance to chain into another (repeats).' },
-    { unlockLevel: 100, chainChance: 0.45, autoCrit: true, desc: 'Fire a cannon shot. 45% chance to chain into another (repeats). Every shot crits.' },
+    { unlockLevel: 10,  chainChance: 0.15, lifestealPct: 0.10, desc: 'Fire a cannon shot. 15% chance to chain into another (repeats). Repairs 10% of the damage dealt.' },
+    { unlockLevel: 25,  chainChance: 0.25, lifestealPct: 0.12, desc: 'Fire a cannon shot. 25% chance to chain into another (repeats). Repairs 12% of the damage dealt.' },
+    { unlockLevel: 40,  chainChance: 0.30, lifestealPct: 0.15, desc: 'Fire a cannon shot. 30% chance to chain into another (repeats). Repairs 15% of the damage dealt.' },
+    { unlockLevel: 75,  chainChance: 0.40, lifestealPct: 0.20, desc: 'Fire a cannon shot. 40% chance to chain into another (repeats). Repairs 20% of the damage dealt.' },
+    { unlockLevel: 100, chainChance: 0.45, lifestealPct: 0.25, autoCrit: true, desc: 'Fire a cannon shot. 45% chance to chain into another (repeats). Every shot crits. Repairs 25% of the damage dealt.' },
   ],
 }
 
