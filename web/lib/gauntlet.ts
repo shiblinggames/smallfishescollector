@@ -72,6 +72,45 @@ export function gauntletUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
   return GAUNTLET_LIVE && (opts.clearedNodes ?? []).includes(GAUNTLET_UNLOCK_NODE)
 }
 
+// ── Hardcore mode ─────────────────────────────────────────────────────────────
+// The Hardcore Gauntlet: the crew SQUAD you send in (your raid party) is lost
+// FOR GOOD if you die or abandon, tracked on its own hiscore (the Drowned
+// Ledger). Same depth-scaled enemies as normal — the stake IS the difficulty.
+//
+// Launch is ADMIN-ONLY: flip HARDCORE_LIVE to open it to everyone (mirrors the
+// Chapter 3 rollout). Until then non-admins see a "Coming Soon" tease. The
+// server enforces this in startGauntletRun, so the action can't be forced.
+export const HARDCORE_LIVE = false
+// Player-facing unlock once HARDCORE_LIVE: needs the Gauntlet unlocked AND a
+// normal-Gauntlet depth floor, so newcomers can't blind-permakill their crew.
+export const HC_UNLOCK_DEPTH = 5
+// Cash-out rewards for the risk: a Fathoms premium + a survivor crew-XP bonus.
+export const HC_FATHOMS_MULT = 2
+export const HC_SURVIVOR_XP_MULT = 2
+
+/** Can this player actually START a hardcore run right now? Admins always (for
+ *  pre-launch testing); everyone else only once HARDCORE_LIVE + the Gauntlet is
+ *  unlocked + they've reached HC_UNLOCK_DEPTH in the normal Gauntlet. */
+export function hardcoreUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?: string[] | null; deepest?: number | null }): boolean {
+  if (opts.isAdmin) return true
+  if (!HARDCORE_LIVE) return false
+  return gauntletUnlocked({ isAdmin: false, clearedNodes: opts.clearedNodes }) && (opts.deepest ?? 0) >= HC_UNLOCK_DEPTH
+}
+
+// Hardcore-only cosmetic unlocks — reaching these HARDCORE depths (on cash-out)
+// permanently grants a Drowned Fleet ship skin (see lib/shipSkins). Mirrors
+// GAUNTLET_DEPTH_UNLOCKS but grants a skin id. Placeholder art until real PNGs.
+export interface HardcoreUnlock {
+  depth: number
+  skinId: string
+  name: string
+}
+export const HARDCORE_UNLOCKS: HardcoreUnlock[] = [
+  { depth: 8,  skinId: 'drowned_hull',   name: 'Drowned Hull' },
+  { depth: 15, skinId: 'wraith_hull',    name: 'Wraith Hull' },
+  { depth: 25, skinId: 'leviathans_maw_hull', name: "Leviathan's Maw Hull" },
+]
+
 // ── Depth unlocks ─────────────────────────────────────────────────────────────
 // Reaching these depths permanently unlocks something OUTSIDE a single run.
 // One source of truth for the Unlocks panel + the milestone notifications.

@@ -156,6 +156,11 @@ export const BADGES: Badge[] = [
   { id: 'greeds_price',   name: "Greed's Price",      description: 'Die deeper than your best cash-out',              imageUrl: '/badges/greeds_price.png',   difficulty: 'seasoned' },
   { id: 'storm_reader',   name: 'Storm Reader',       description: 'Discover your first confluence',                  imageUrl: '/badges/storm_reader.png',   difficulty: 'rookie'   },
   { id: 'deep_cartographer', name: 'Deep Cartographer', description: 'Discover all 7 confluences',                    imageUrl: '/badges/deep_cartographer.png', difficulty: 'master' },
+  // The Gauntlet — Hardcore (the Drowned Ledger). Crew you send in die for good.
+  { id: 'drowned_ledger', name: 'The Drowned Ledger', description: 'Cash out a Hardcore Gauntlet run',                imageUrl: '/badges/drowned_ledger.png', difficulty: 'seasoned' },
+  { id: 'the_unsinkable', name: 'The Unsinkable',     description: 'Reach depth 15 in the Hardcore Gauntlet',         imageUrl: '/badges/the_unsinkable.png', difficulty: 'veteran'  },
+  { id: 'locker_bound',   name: 'Locker-Bound',       description: 'Reach depth 25 in the Hardcore Gauntlet',         imageUrl: '/badges/locker_bound.png',   difficulty: 'master'   },
+  { id: 'ferrymans_toll', name: "The Ferryman's Toll", description: 'Lose a squad to the Locker in Hardcore',         imageUrl: '/badges/ferrymans_toll.png', difficulty: 'seasoned' },
   // Endgame & challenge.
   { id: 'weapon_of_legend', name: 'Weapon of Legend', description: 'Build your Man-o-War ultimate',                   imageUrl: '/badges/weapon_of_legend.png', difficulty: 'veteran' },
   { id: 'first_fusion',   name: 'First Fusion',       description: 'Forge your first item',                           imageUrl: '/badges/first_fusion.png',   difficulty: 'seasoned' },
@@ -275,6 +280,10 @@ export const BADGE_DETAIL: Record<string, string> = {
   greeds_price:     'Die on a Gauntlet run deeper than your best cash-out. You had a new record in hand and pushed one fight too far.',
   storm_reader:     'Discover your first confluence — two boons that combine into something greater. The Gauntlet rewards a sharp eye.',
   deep_cartographer:'Discover all seven confluences. You have charted every way the deep’s gifts combine.',
+  drowned_ledger:   'Sail a squad down into the Hardcore Gauntlet and cash out — crew on the line the whole way, and you brought them home.',
+  the_unsinkable:   'Reach depth 15 in the Hardcore Gauntlet, where a single fall would take your whole squad. Nerve most captains never test.',
+  locker_bound:     'Reach depth 25 in the Hardcore Gauntlet. This deep, with your crew as the stake, few ever go and fewer return.',
+  ferrymans_toll:   'Lose a squad to the Locker in Hardcore. The deep took them for good — the toll every hardcore captain pays sooner or later.',
   weapon_of_legend: 'Build a Man-o-War ultimate from the Quartermaster’s stolen plans — the nuke, the railgun, or the barrage.',
   first_fusion:     'Forge your first item at the Forge, fusing two raid items into one prismatic piece of gear.',
   ruse_undone:      'Defeat Admiral Ruse and the Coffers Fleet in challenge mode — the harder cut of Raid 5.',

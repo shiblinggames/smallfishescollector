@@ -108,6 +108,18 @@ export interface GauntletGameProps {
   /** A crashed run's saved checkpoint, if one can still be resumed (one resume
    *  per run). Present → the run offers a Resume beat before a fresh descent. */
   resumeState: GauntletRunState | null
+  // ── Hardcore mode ──
+  /** Can this player START a hardcore run right now? (admin-only pre-launch.) */
+  hardcoreUnlocked: boolean
+  /** Is hardcore live for everyone yet? false → non-admins see a "Coming Soon" tag. */
+  hardcoreLive: boolean
+  /** This player's best hardcore cash-out depth (the Drowned Ledger). */
+  hcDeepest: number
+  /** #1 on the hardcore-only Drowned Ledger, or null if none yet. */
+  hardcoreTop: { name: string; depth: number } | null
+  /** Is the currently OPEN (resumable) run a hardcore one? Keeps a resumed run's
+   *  end-beats + abandon warning correct. */
+  runHardcore: boolean
 }
 
 // ── The Drowned Shrine (wager node) ──────────────────────────────────────────
@@ -155,6 +167,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   // player is offered their dive back before anything else.
   const [phase, setPhase] = useState<Phase>(props.resumeState ? 'resume' : props.available ? 'intro' : 'usedup')
   const [starting, setStarting] = useState(false)
+  // Hardcore: is the current run a hardcore run? Drives the death / cash-out
+  // end-beats. The mode-choice popup (Descend → Normal vs Hardcore) + the stark
+  // squad-at-risk confirmation gate opening a hardcore run.
+  const [hardcoreRun, setHardcoreRun] = useState(props.runHardcore)
+  const [modeChoiceOpen, setModeChoiceOpen] = useState(false)
+  const [hcConfirmOpen, setHcConfirmOpen] = useState(false)
+  const [hcBlockedMsg, setHcBlockedMsg] = useState<string | null>(null)
   // When the next run unlocks (cooldown). Set from props, or refreshed if a
   // start attempt races the cooldown.
   const [cooldownUntil, setCooldownUntil] = useState<string | null>(props.nextAt)
@@ -392,11 +411,21 @@ export default function GauntletGame(props: GauntletGameProps) {
     if (!props.hasSeenIntro) markGauntletIntroSeen().catch(() => {})
   }
 
-  function begin() {
+  function begin(hardcore = false) {
     if (starting) return
+    setModeChoiceOpen(false); setHcConfirmOpen(false)
     setStarting(true)
-    startGauntletRun().then(res => {
-      if (!res.started) { if (res.nextAt) setCooldownUntil(res.nextAt); setPhase('usedup'); setStarting(false); return }
+    startGauntletRun(hardcore).then(res => {
+      if (!res.started) {
+        setStarting(false)
+        if (res.reason === 'cooldown') { if (res.nextAt) setCooldownUntil(res.nextAt); setPhase('usedup'); return }
+        // Hardcore was rejected server-side (gate not met / no living squad).
+        setHcBlockedMsg(res.reason === 'no_squad'
+          ? 'Assign at least one crew to your raid party first — that party is the squad you risk.'
+          : 'The Hardcore Gauntlet is not open to you yet.')
+        return
+      }
+      setHardcoreRun(hardcore)
       // Fresh run.
       rollStateRef.current = { cleared: 0, prevWasBoss: false, roundsSinceBoss: 0 }
       playerHPRef.current = hpMax
@@ -435,9 +464,95 @@ export default function GauntletGame(props: GauntletGameProps) {
   function backToIntro() {
     setReward(null)
     setDeathFathoms(0)
+    setHardcoreRun(false)
     setPhase('intro')
     router.refresh()
   }
+
+  // Descent flow modals — shown from the home screens (intro + cooldown-ready).
+  // The Descend button opens a Normal / Hardcore CHOICE; picking Hardcore opens
+  // a stark, squad-naming confirmation before any crew are ever put at risk.
+  const HC_ACCENT = '#8b7bf0'
+  const DANGER = '#ef4444'
+  const squadAtRisk = props.crewMembers
+  const descentModals = (
+    <>
+      {modeChoiceOpen && (
+        <div onClick={() => setModeChoiceOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.84)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, borderRadius: 20, padding: '1.2rem 1.1rem 1.1rem', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GOLD}44`, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.22em', color: `${GOLD}cc`, textAlign: 'center', marginBottom: 12 }}>Choose Your Descent</p>
+            {/* Normal */}
+            <button onClick={() => begin(false)} disabled={starting} className="tap" style={{ width: '100%', textAlign: 'left', padding: '0.85rem 0.9rem', borderRadius: 14, marginBottom: 10, background: `${TEAL}12`, border: `1px solid ${TEAL}55`, cursor: starting ? 'wait' : 'pointer' }}>
+              <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: TEAL, lineHeight: 1.1 }}>Normal Descent</p>
+              <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.4, marginTop: 4 }}>Push your luck for the pot. Your crew are never at risk.</p>
+            </button>
+            {/* Hardcore */}
+            {(() => {
+              const canHc = props.hardcoreUnlocked
+              const comingSoon = !canHc && !props.hardcoreLive
+              return (
+                <button
+                  onClick={canHc ? () => { setModeChoiceOpen(false); setHcConfirmOpen(true) } : undefined}
+                  disabled={!canHc || starting}
+                  className={canHc ? 'tap' : undefined}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.85rem 0.9rem', borderRadius: 14, background: `${DANGER}${canHc ? '12' : '08'}`, border: `1px solid ${DANGER}${canHc ? '66' : '30'}`, cursor: canHc ? 'pointer' : 'default', opacity: canHc ? 1 : 0.72 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: canHc ? '#fca5a5' : 'rgba(252,165,165,0.7)', lineHeight: 1.1 }}>Hardcore Descent</p>
+                    {comingSoon && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: HC_ACCENT, background: `${HC_ACCENT}1e`, border: `1px solid ${HC_ACCENT}55`, borderRadius: 999, padding: '0.12rem 0.45rem' }}>Coming Soon</span>}
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.4, marginTop: 4 }}>The squad you send in dies for good if you fall. Its own hiscore, and cosmetics no other captain can earn.</p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: `${HC_ACCENT}cc`, marginTop: 7 }}>
+                    Drowned Ledger — {props.hardcoreTop ? `${props.hardcoreTop.name}, Depth ${props.hardcoreTop.depth}` : 'unclaimed'}
+                    {props.hcDeepest > 0 ? ` · Your best: Depth ${props.hcDeepest}` : ''}
+                  </p>
+                </button>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+
+      {hcConfirmOpen && (
+        <div onClick={() => setHcConfirmOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1310, background: 'rgba(10,2,4,0.88)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(30,10,12,0.99), rgba(14,6,8,0.99))', border: `1px solid ${DANGER}66`, boxShadow: `0 0 44px ${DANGER}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: `${DANGER}cc` }}>No Turning Back</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3d7d7', lineHeight: 1.08, marginTop: 8 }}>Send Them Down?</p>
+            <p className="font-karla" style={{ fontSize: '0.84rem', color: 'rgba(240,220,220,0.82)', lineHeight: 1.5, marginTop: 10, maxWidth: 320, marginInline: 'auto' }}>
+              If you <strong style={{ color: '#fca5a5' }}>fall or abandon</strong> this run, these crew are lost to the Locker — <strong style={{ color: '#fca5a5' }}>gone for good</strong>, and remembered only in your Crew Hall.
+            </p>
+            {/* The exact squad at risk. */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, justifyContent: 'center', marginTop: 14 }}>
+              {squadAtRisk.map(c => (
+                <div key={c.id} title={c.name} style={{ width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${DANGER}77`, background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08), rgba(20,10,12,0.9))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {c.imageUrl
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(0.85)' }} />
+                    : <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#e6b0b0' }}>{c.name.slice(0, 1)}</span>}
+                </div>
+              ))}
+            </div>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#c48a8a', marginTop: 10 }}>{squadAtRisk.length} crew at risk</p>
+            <button onClick={() => begin(true)} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+              style={{ width: '100%', marginTop: 16, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#fff0f0', background: `linear-gradient(180deg, ${DANGER}3a, ${DANGER}18)`, border: `1px solid ${DANGER}88`, cursor: starting ? 'wait' : 'pointer', boxShadow: `0 0 22px ${DANGER}22` }}>
+              {starting ? 'Descending…' : 'Descend into the Locker'}
+            </button>
+            <button onClick={() => setHcConfirmOpen(false)} className="font-karla font-600 tap" style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a8e8e', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              Not this time
+            </button>
+          </div>
+        </div>
+      )}
+
+      {hcBlockedMsg && (
+        <div onClick={() => setHcBlockedMsg(null)} style={{ position: 'fixed', inset: 0, zIndex: 1320, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 340, borderRadius: 16, padding: '1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${HC_ACCENT}55` }}>
+            <p className="font-karla" style={{ fontSize: '0.86rem', color: '#e0dccc', lineHeight: 1.5 }}>{hcBlockedMsg}</p>
+            <button onClick={() => setHcBlockedMsg(null)} className="font-karla font-700 tap" style={{ marginTop: 14, padding: '0.6rem 1.4rem', borderRadius: 10, background: `${HC_ACCENT}1e`, border: `1px solid ${HC_ACCENT}66`, color: '#cfc4ff', fontSize: '0.8rem', cursor: 'pointer' }}>Got it</button>
+          </div>
+        </div>
+      )}
+    </>
+  )
 
   // Pre-roll the next fight the moment the breather opens, so Sounding Line can
   // reveal it AND pushOn fights the very same roll (no re-roll = no lie). The
@@ -909,6 +1024,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   const exitModal = confirmLeave ? (
     <AbandonRunModal
       pot={potRef.current}
+      hardcore={hardcoreRun}
       onStay={() => { pendingNavRef.current = null; setConfirmLeave(false) }}
       onAbandon={() => {
         setConfirmLeave(false)
@@ -1085,11 +1201,12 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           {/* Leaderboard — deepest cashed-out descent + biggest single blow. */}
           <div style={{ marginTop: props.topDescender ? 6 : 9 }}>
-            <LeaderboardModal boards={['gauntletDepth', 'gauntletBigHit']} title="The Gauntlet" label="View the Ranks" />
+            <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="View the Ranks" />
           </div>
 
-          {/* Descend — the start. Big and obvious. */}
-          <button onClick={begin} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
+          {/* Descend — the start. Big and obvious. Opens the Normal / Hardcore
+              mode choice rather than starting straight away. */}
+          <button onClick={() => setModeChoiceOpen(true)} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{
               marginTop: 20, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem',
               color: GOLD, background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}10)`,
@@ -1180,6 +1297,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} onClose={() => setSynergiesOpen(false)} />}
         {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
+        {descentModals}
       </>
     )
   }
@@ -1204,7 +1322,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </p>
         {ready ? (
           <button
-            onClick={begin}
+            onClick={() => setModeChoiceOpen(true)}
             disabled={starting}
             className="font-cinzel font-700 uppercase tracking-[0.08em] tap"
             style={{ width: '100%', padding: '0.9rem', borderRadius: 12, fontSize: '1rem', background: 'rgba(232,200,121,0.2)', border: '1px solid rgba(232,200,121,0.55)', color: '#e8c879', cursor: 'pointer' }}
@@ -1224,6 +1342,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         <BackLink router={router} label="Back to the map" primary={!ready} />
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
+        {descentModals}
       </Shell>
     )
   }
@@ -1301,6 +1420,33 @@ export default function GauntletGame(props: GauntletGameProps) {
               and as much Nav XP, sunk with your ship.
             </p>
           </motion.div>
+
+          {/* Hardcore: the squad is lost for good. The heaviest beat of the run. */}
+          {hardcoreRun && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44, duration: 0.45 }}
+              style={{ marginTop: 14, padding: '1rem 0.95rem', borderRadius: 16, background: `${CRIMSON}12`, border: `1px solid ${CRIMSON}55`, boxShadow: `inset 0 0 22px ${CRIMSON}0e` }}
+            >
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.2em', color: `${CRIMSON}dd` }}>Lost to the Locker</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 11 }}>
+                {props.crewMembers.map(c => (
+                  <div key={c.id} title={c.name} style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${CRIMSON}66`, background: 'rgba(20,10,12,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, filter: 'grayscale(0.5) brightness(0.82)' }}>
+                    {c.imageUrl
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: '#c48a8a' }}>{c.name.slice(0, 1)}</span>}
+                  </div>
+                ))}
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.74rem', color: 'rgba(240,220,220,0.82)', marginTop: 11, lineHeight: 1.45 }}>
+                Your squad went down with the ship — {props.crewMembers.length} crew, gone for good. They rest now in your Crew Hall.
+              </p>
+              <button onClick={() => router.push('/crew')} className="font-karla font-700 uppercase tracking-[0.12em] tap"
+                style={{ marginTop: 12, padding: '0.5rem 1rem', borderRadius: 10, fontSize: '0.58rem', background: `${CRIMSON}18`, border: `1px solid ${CRIMSON}66`, color: '#fca5a5', cursor: 'pointer' }}>
+                Visit the Graveyard
+              </button>
+            </motion.div>
+          )}
 
           {/* Silver lining — the Fathoms you salvaged. Your deepest record is
               unchanged: only surviving and cashing out sets it. */}
@@ -2384,9 +2530,14 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
       }}>
         {!opened ? (
           <>
-            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: TEAL, marginTop: 16 }}>
-              You Climbed Back Into the Light
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.3em', color: r.hardcore ? '#8b7bf0' : TEAL, marginTop: 16 }}>
+              {r.hardcore ? 'Your Crew Sailed Home From the Locker' : 'You Climbed Back Into the Light'}
             </p>
+            {r.hardcore && (
+              <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#a99cf0', marginTop: 6 }}>
+                Hardcore · the Drowned Ledger · survivor bonus paid
+              </p>
+            )}
             <div style={{ position: 'relative', width: 200, height: 200, margin: '20px auto 6px' }}>
               <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${art.color}33 0%, transparent 68%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
               {/* Building glow as the lid strains in the wind-up beat. */}
@@ -2575,7 +2726,7 @@ function ModalScrim({ zIndex, onClose, bg = 'rgba(2,6,12,0.85)', blur = 'blur(4p
 // ── Abandon-run confirm ───────────────────────────────────────────────────────
 // The mid-fight ← is one mis-tap from wiping a whole descent. Make the player
 // say so out loud, and spell out exactly what sinks with the ship.
-function AbandonRunModal({ pot, onStay, onAbandon }: { pot: number; onStay: () => void; onAbandon: () => void }) {
+function AbandonRunModal({ pot, hardcore = false, onStay, onAbandon }: { pot: number; hardcore?: boolean; onStay: () => void; onAbandon: () => void }) {
   const CRIMSON = '#ef4444'
   return (
     <ModalScrim zIndex={1400} onClose={onStay}>
@@ -2584,13 +2735,18 @@ function AbandonRunModal({ pot, onStay, onAbandon }: { pot: number; onStay: () =
         style={{ width: '100%', maxWidth: 380, borderRadius: 18, background: 'linear-gradient(180deg, rgba(22,12,14,0.99), rgba(10,7,9,0.99))', border: `1px solid ${CRIMSON}44`, boxShadow: `0 0 44px ${CRIMSON}22, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.2rem 1.15rem', textAlign: 'center' }}>
         <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${CRIMSON}cc` }}>Abandon the Dive?</p>
         <p className="font-cinzel font-800" style={{ fontSize: '1.45rem', color: '#f3d6d6', lineHeight: 1.12, marginTop: 6 }}>
-          Leave Now and You Sink
+          {hardcore ? 'Abandon and Drown Them' : 'Leave Now and You Sink'}
         </p>
         <p className="font-karla" style={{ fontSize: '0.82rem', color: '#c9c3b8', lineHeight: 1.5, marginTop: 10 }}>
           {pot > 0
             ? <>Walk away from this run and the <strong style={{ color: '#e08a8a' }}>{fmt(pot)} ⟡</strong> you&apos;ve hauled up, along with the Nav XP and any depth unlocks, goes down with the ship. Nothing is banked until you cash out.</>
             : <>Walk away now and this descent is over for the day. Your one run is spent — there&apos;s no picking it back up.</>}
         </p>
+        {hardcore && (
+          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.5, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${CRIMSON}14`, border: `1px solid ${CRIMSON}55` }}>
+            This is a Hardcore run. Abandoning counts as a wipe — the squad you brought down here dies for good.
+          </p>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 18 }}>
           <button onClick={onStay} className="font-cinzel font-700 uppercase tracking-[0.07em] tap"
             style={{ width: '100%', padding: '0.85rem', borderRadius: 12, fontSize: '0.92rem', background: 'rgba(94,234,212,0.16)', border: `1px solid ${TEAL}55`, color: TEAL, cursor: 'pointer' }}>
@@ -2598,7 +2754,7 @@ function AbandonRunModal({ pot, onStay, onAbandon }: { pot: number; onStay: () =
           </button>
           <button onClick={onAbandon} className="font-karla font-700 tap"
             style={{ width: '100%', padding: '0.6rem', borderRadius: 11, fontSize: '0.74rem', background: 'none', border: `1px solid ${CRIMSON}40`, color: `${CRIMSON}dd`, cursor: 'pointer' }}>
-            Abandon and lose it all
+            {hardcore ? 'Abandon — drown my crew' : 'Abandon and lose it all'}
           </button>
         </div>
       </motion.div>

@@ -64,6 +64,8 @@ export interface BadgeProfileFields {
   gauntlet_fathoms_earned?: number | null
   gauntlet_max_hit?: number | null
   gauntlet_deepest_died?: number | null
+  gauntlet_hc_deepest?: number | null
+  gauntlet_hc_deepest_died?: number | null
   manowar_augment?: string | null
   ship_classes?: Record<string, string> | null
   forge_recipes_learned?: string[] | null
@@ -194,6 +196,11 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     greeds_price:   Number(p.gauntlet_deepest_died ?? 0) > gauntletDeepest,
     storm_reader:   confluencesSeen >= 1,
     deep_cartographer: confluencesSeen >= CONFLUENCE_COUNT,
+    // Hardcore (the Drowned Ledger). gauntlet_hc_deepest = best hardcore cash-out.
+    drowned_ledger: Number(p.gauntlet_hc_deepest ?? 0) >= 1,
+    the_unsinkable: Number(p.gauntlet_hc_deepest ?? 0) >= 15,
+    locker_bound:   Number(p.gauntlet_hc_deepest ?? 0) >= 25,
+    ferrymans_toll: Number(p.gauntlet_hc_deepest_died ?? 0) >= 1,
     // Endgame & challenge.
     weapon_of_legend: !!p.manowar_augment,
     first_fusion:   raidItems.some(id => isForgedRaidItem(id)),
@@ -216,4 +223,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, manowar_augment, ship_classes, forge_recipes_learned, raid_items'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, manowar_augment, ship_classes, forge_recipes_learned, raid_items'

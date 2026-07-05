@@ -64,6 +64,11 @@ export default async function GauntletPage() {
           resumeState={daily.resumeState}
           hasSeenIntro={profile?.has_seen_gauntlet_intro === true}
           topDescender={leaderboard.top}
+          hardcoreUnlocked={daily.hardcoreUnlocked}
+          hardcoreLive={daily.hardcoreLive}
+          hcDeepest={daily.hcDeepest}
+          hardcoreTop={leaderboard.hardcoreTop}
+          runHardcore={daily.runHardcore}
         />
       </div>
     </main>

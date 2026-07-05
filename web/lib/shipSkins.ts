@@ -100,6 +100,37 @@ export const SHIP_SKINS: ShipSkinDef[] = [
       6: '/goldengauntlethull.png',
     },
   },
+
+  // ── Drowned Fleet — Hardcore Gauntlet (the Drowned Ledger) ──────────────────
+  // Prestige tint skins unlocked by best HARDCORE depth (see HARDCORE_UNLOCKS in
+  // lib/gauntlet). They recolour the player's own hull via CSS `filter`, so they
+  // work on ANY ship with no art dependency — bespoke `imageByTier` hull art can
+  // be swapped in later without touching the unlock plumbing. Only worn by
+  // captains who staked their crew in the Locker and sailed back.
+  {
+    id: 'drowned_hull',
+    name: 'Drowned Hull',
+    description: 'Waterlogged and algae-dark, dredged back from the Locker. Worn only by those who risked their crew and lived.',
+    filter: 'grayscale(0.3) sepia(0.6) hue-rotate(70deg) saturate(1.6) brightness(0.82)',
+    color: '#4a7c6a',
+    source: 'Hardcore Gauntlet · depth 8',
+  },
+  {
+    id: 'wraith_hull',
+    name: 'Wraith Hull',
+    description: 'A pale, spectral hull that glows like something the deep never quite let go. The Locker took a crew for it.',
+    filter: 'grayscale(0.6) brightness(1.2) sepia(0.25) hue-rotate(175deg) saturate(0.7) drop-shadow(0 0 5px rgba(160,220,255,0.65))',
+    color: '#a8d8ff',
+    source: 'Hardcore Gauntlet · depth 15',
+  },
+  {
+    id: 'leviathans_maw_hull',
+    name: "Leviathan's Maw Hull",
+    description: 'Abyss-dark, hauled from the deepest a captain has dared take a crew and lose them. Few hulls this colour ever surface.',
+    filter: 'brightness(0.72) contrast(1.15) sepia(0.4) hue-rotate(200deg) saturate(1.5)',
+    color: '#5b4b8a',
+    source: 'Hardcore Gauntlet · depth 25',
+  },
 ]
 
 export function getShipSkin(id: string): ShipSkinDef | undefined {

@@ -673,7 +673,12 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
   // Mute the rarity color toward sepia so even Legendary cards read as
   // "remembered" rather than triumphant. Mix with parchment tone.
-  const routeName = crew.diedOnRoute ? (ROUTE_LABEL[crew.diedOnRoute] ?? crew.diedOnRoute) : 'an unknown voyage'
+  // Where they fell: the Hardcore Gauntlet ("Davy Jones's Locker, depth N") or,
+  // for the usual voyage deaths, the route they were lost on.
+  const fellHardcore = crew.diedHardcoreDepth != null
+  const routeName = fellHardcore
+    ? "Davy Jones's Locker"
+    : crew.diedOnRoute ? (ROUTE_LABEL[crew.diedOnRoute] ?? crew.diedOnRoute) : 'an unknown voyage'
   // Lifetime stat distribution + final level — surfaced here as the eulogy
   // since players don't see per-level distribution during play. Affinity is
   // the crew's own rolled stats (same signal applyLevelBonuses uses), so
@@ -737,7 +742,8 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <SkullIcon />
           <p className="font-karla" style={{ fontSize: '0.7rem', color: 'rgba(214,196,163,0.78)', lineHeight: 1.3 }}>
-            Fell on <span style={{ color: '#e6d2a8' }}>{routeName}</span>
+            Fell {fellHardcore ? 'in' : 'on'} <span style={{ color: '#e6d2a8' }}>{routeName}</span>
+            {fellHardcore && <span style={{ color: '#e6d2a8' }}> · depth {crew.diedHardcoreDepth}</span>}
             <span style={{ color: 'rgba(214,196,163,0.5)' }}> · {formatFallDate(crew.diedAt)}</span>
           </p>
         </div>

@@ -622,6 +622,7 @@ export async function promoteToCaptain(crewId: number): Promise<CrewActionResult
 export type FallenCrew = CrewMember & {
   diedAt: string                              // ISO timestamp
   diedOnRoute: string | null                  // voyage route slug (coastal/open/deep), null if voyage row missing
+  diedHardcoreDepth: number | null            // set if they drowned in the Hardcore Gauntlet (depth reached), else null
 }
 
 /** Memorial roll-call. Returns every crew member who died, most recent
@@ -637,7 +638,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
   const { meta } = await loadCards(admin)
   const { data: rows } = await admin
     .from('user_crew')
-    .select('id, card_id, rarity, power, dodge, fortune, effects, xp, nickname, died_at, died_on_voyage_id, voyage:daily_voyages!died_on_voyage_id(route)')
+    .select('id, card_id, rarity, power, dodge, fortune, effects, xp, nickname, died_at, died_on_voyage_id, died_hardcore_depth, voyage:daily_voyages!died_on_voyage_id(route)')
     .eq('user_id', user.id)
     .not('died_at', 'is', null)
     .order('died_at', { ascending: false })
@@ -659,6 +660,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
       xp: (r.xp as number | null) ?? 0,
       diedAt: r.died_at as string,
       diedOnRoute: (voyage?.route as string | undefined) ?? null,
+      diedHardcoreDepth: (r.died_hardcore_depth as number | null) ?? null,
     }
   })
 }
