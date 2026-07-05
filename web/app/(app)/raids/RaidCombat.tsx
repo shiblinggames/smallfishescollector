@@ -841,7 +841,7 @@ export default function RaidCombat({
   const [restorePulse, setRestorePulse] = useState(0)
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
-  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' } | null>(null)
+  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee' } | null>(null)
   // Thermal Shock confluence detonation — an ice+fire shatter burst over the hull.
   const [thermalShockFx, setThermalShockFx] = useState<{ key: number } | null>(null)
   // Persistent status — the enemy keeps a low ember glow while burning and a
@@ -863,7 +863,7 @@ export default function RaidCombat({
   const [enemyDeflect, setEnemyDeflect] = useState(0)
   const [playerImpact, setPlayerImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   // Heal sparkle on the player hull (Mender / Abyssal Tide / repair kit).
-  const [playerAura, setPlayerAura] = useState<{ key: number } | null>(null)
+  const [playerAura, setPlayerAura] = useState<{ key: number; kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' } | null>(null)
   // Dodge whoosh — afterimage + speed lines on whichever ship slips a shot.
   const [dodgeFx, setDodgeFx] = useState<{ key: number; actor: Actor } | null>(null)
 
@@ -1573,17 +1573,26 @@ export default function RaidCombat({
     setTimeout(() => setAbilityCast(c => (c && c.key === castKey ? null : c)), 1150)
     vibrate(18)
 
-    // Per-class hull FX alongside the banner: heals sparkle the player hull,
-    // a snare claps a jamming shimmer on the enemy (its dodge is locked).
-    if (def.id === 'mender' || def.id === 'abyssal_tide') {
-      const hk = castKey + 1
-      setPlayerAura({ key: hk })
-      setTimeout(() => setPlayerAura(a => (a && a.key === hk ? null : a)), 900)
-    } else if (def.id === 'snare') {
-      const sk = castKey + 2
-      setEnemyAura({ key: sk, kind: 'snared' })
-      setTimeout(() => setEnemyAura(a => (a && a.key === sk ? null : a)), 900)
+    // Per-ability signature stage FX alongside the banner, so every ability
+    // has its own satisfying "it landed" beat (not just a log line). Player-hull
+    // auras for self-buffs, enemy-hull auras for the ones that act ON the enemy.
+    // Leviathan / Blitz drive their own attack animations in the switch below.
+    const ak = castKey + 1
+    const themePlayer = (kind: 'heal' | 'tide' | 'aim' | 'charge' | 'brace') => {
+      setPlayerAura({ key: ak, kind })
+      setTimeout(() => setPlayerAura(a => (a && a.key === ak ? null : a)), 950)
     }
+    const themeEnemy = (kind: 'snared' | 'foresee') => {
+      setEnemyAura({ key: ak, kind })
+      setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
+    }
+    if      (def.id === 'mender')       themePlayer('heal')
+    else if (def.id === 'abyssal_tide') themePlayer('tide')
+    else if (def.id === 'sharpshot')    themePlayer('aim')
+    else if (def.id === 'navigator')    themePlayer('charge')
+    else if (def.id === 'anchor')       themePlayer('brace')
+    else if (def.id === 'snare')        themeEnemy('snared')
+    else if (def.id === 'foresight')    themeEnemy('foresee')
 
     // Dispatch on class id — TS narrows the milestone shape from the
     // per-class table.
@@ -1595,6 +1604,8 @@ export default function RaidCombat({
         playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
         if (mm.cleanseDebuff) setCleanseDebuffPending(true)
         noteCheckResponse('heal')
+        setPHitsplat({ key: ak + 1, text: `+${heal}`, color: '#4ade80', big: true })
+        setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} patches the hull. +${heal} HP${mm.cleanseDebuff ? ', debuffs cleared' : ''}.`])
         break
       }
@@ -1630,6 +1641,8 @@ export default function RaidCombat({
         const add  = two ? 2 : (one ? 1 : 0)
         if (add > 0) {
           setPlayerCharges(prev => Math.min(playerMaxCharges, prev + add))
+          setPHitsplat({ key: ak + 1, text: `+${add} ●`, color: '#f5c542', big: add > 1 })
+          setTimeout(() => setPHitsplat(null), 900)
         }
         setResolveLog(prev => [...prev, add > 0
           ? `${crew.name} runs the powder up — +${add} cannonball${add === 1 ? '' : 's'} loaded.`
@@ -1649,6 +1662,8 @@ export default function RaidCombat({
         abyssalShieldRef.current += shield
         if (at.cleanseDebuff) setCleanseDebuffPending(true)
         noteCheckResponse('heal')   // shield is read live at resolve; the heal is the transient note
+        setPHitsplat({ key: ak + 1, text: `+${heal}`, color: '#5eead4', big: true })
+        setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
         break
       }
@@ -4229,7 +4244,7 @@ export default function RaidCombat({
               </AnimatePresence>
               {/* Heal sparkle — green motes rising off the patched hull */}
               <AnimatePresence>
-                {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} />}
+                {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} kind={playerAura.kind} />}
               </AnimatePresence>
               {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
               {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} />}
@@ -5947,11 +5962,12 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
 // Enemy status aura — a brief themed glow + drifting motes over the hull when
 // a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
 // settling. Localized to the enemy ship, fades on its own.
-function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' }) {
+function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' }) {
   const burn = kind === 'burn'
   const snared = kind === 'snared'
-  const color = burn ? '#fb923c' : snared ? '#d9b066' : '#7dd3fc'
-  const moteColor = burn ? '#ffd27a' : snared ? '#f0d79a' : '#e0f4ff'
+  const foresee = kind === 'foresee'
+  const color = burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : '#7dd3fc'
+  const moteColor = burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : '#e0f4ff'
   const motes = useMemo(() => Array.from({ length: snared ? 8 : 6 }, (_, n) => ({
     // snare = motes clamp INWARD (a tightening net); burn rises, rime drifts down.
     x: snared ? (Math.random() - 0.5) * 52 : (Math.random() - 0.5) * 46,
@@ -5974,7 +5990,20 @@ function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' }) {
         position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
         background: `radial-gradient(ellipse at center, ${color}aa 0%, ${color}44 42%, transparent 70%)`,
       }} />
-      {/* Drifting motes — snare clamps inward, burn/freeze drift outward */}
+      {/* Foresee — concentric scan rings sweeping the enemy hull, like an eye
+          opening to read its next move (Oracle). */}
+      {foresee && [0, 1].map(n => (
+        <motion.div key={`fr${n}`}
+          initial={{ scale: 0.3, opacity: 0.85 }} animate={{ scale: 2.4, opacity: 0 }}
+          transition={{ duration: 0.8, delay: n * 0.16, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: '46%', top: '50%', width: 56, height: 56,
+            marginLeft: -28, marginTop: -28, borderRadius: '50%',
+            border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}aa`,
+          }}
+        />
+      ))}
+      {/* Drifting motes — snare clamps inward, burn/freeze/foresee drift outward */}
       {motes.map((m, n) => (
         <motion.div
           key={n}
@@ -6118,15 +6147,35 @@ function AnchorSaveBurst() {
 
 // Heal sparkle over the player hull — a soft green wash plus a few motes
 // rising off the deck, for Mender / Abyssal Tide / repair-kit patches.
-function PlayerStatusAura() {
-  const color = '#4ade80'
-  const motes = useMemo(() => Array.from({ length: 6 }, () => ({
-    x: (Math.random() - 0.5) * 50,
-    y: -(14 + Math.random() * 30),                    // rise off the deck
+// Player self-buff aura — one cohesive shell, themed per ability so each crew
+// ability has its OWN satisfying signature on the hull (not a shared green
+// glow). All transform/opacity, ~0.85s, localized to the player ship box.
+//   heal   — green restorative bloom + rising sparks (Mender)
+//   tide   — teal wave-wash + a shield RING snapping shut (Tidecaller)
+//   aim    — an amber reticle that locks onto the guns (Sharpshot)
+//   charge — a gold flash + fast-rising powder sparks (Navigator)
+//   brace  — a steel bulwark ring + shimmer settling over the hull (Anchor)
+function PlayerStatusAura({ kind = 'heal' }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' }) {
+  const CFG = {
+    heal:   { color: '#4ade80', mote: '#bbf7d0' },
+    tide:   { color: '#5eead4', mote: '#a7f3e8' },
+    aim:    { color: '#fbbf24', mote: '#fde68a' },
+    charge: { color: '#f5c542', mote: '#ffe9a8' },
+    brace:  { color: '#93c5fd', mote: '#dbeafe' },
+  } as const
+  const { color, mote } = CFG[kind]
+  const rise    = kind === 'heal' || kind === 'tide' || kind === 'charge'
+  const fast    = kind === 'charge'
+  const ring    = kind === 'tide' || kind === 'brace'   // a shield / bulwark forming
+  const reticle = kind === 'aim'
+  const moteCount = fast ? 8 : reticle ? 4 : 6
+  const motes = useMemo(() => Array.from({ length: moteCount }, () => ({
+    x: (Math.random() - 0.5) * (reticle ? 34 : 50),
+    y: rise ? -(14 + Math.random() * 30) : (Math.random() - 0.5) * 30,
     size: 3 + Math.random() * 3,
-    delay: Math.random() * 0.14,
-    dur: 0.65 + Math.random() * 0.3,
-  })), [])
+    delay: Math.random() * (fast ? 0.08 : 0.14),
+    dur: (fast ? 0.42 : 0.65) + Math.random() * 0.3,
+  })), [moteCount, rise, fast, reticle])
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -6135,10 +6184,40 @@ function PlayerStatusAura() {
       transition={{ duration: 0.85, times: [0, 0.2, 0.7, 1] }}
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}
     >
+      {/* Hull wash — dimmer for the aim reticle so the crosshair reads. */}
       <div style={{
         position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen',
-        background: `radial-gradient(ellipse at center, ${color}99 0%, ${color}3a 44%, transparent 72%)`,
+        background: `radial-gradient(ellipse at center, ${color}${reticle ? '55' : '99'} 0%, ${color}3a 44%, transparent 72%)`,
       }} />
+      {/* Shield / bulwark ring — snaps in for tide + brace. */}
+      {ring && (
+        <motion.div
+          initial={{ scale: 0.4, opacity: 0.9 }} animate={{ scale: 1.45, opacity: 0 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', inset: '8%', borderRadius: '50%',
+            border: `2.5px solid ${color}`, boxShadow: `0 0 18px ${color}aa, inset 0 0 12px ${color}66`,
+          }}
+        />
+      )}
+      {/* Aim reticle — a crosshair that snaps down onto the guns. */}
+      {reticle && (
+        <motion.div
+          initial={{ scale: 1.5, opacity: 0, rotate: -18 }} animate={{ scale: 1, opacity: [0, 1, 1, 0], rotate: 0 }}
+          transition={{ duration: 0.75, times: [0, 0.25, 0.7, 1], ease: 'easeOut' }}
+          style={{ position: 'absolute', left: '50%', top: '50%', width: 52, height: 52, marginLeft: -26, marginTop: -26 }}
+        >
+          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 10px ${color}aa` }} />
+          {[0, 90, 180, 270].map(a => (
+            <div key={a} style={{
+              position: 'absolute', left: '50%', top: '50%', width: 2, height: 11,
+              marginLeft: -1, marginTop: -5.5, background: color, boxShadow: `0 0 6px ${color}`,
+              transform: `rotate(${a}deg) translateY(-19px)`,
+            }} />
+          ))}
+        </motion.div>
+      )}
+      {/* Sparks — rise (heal/tide/charge) or drift (aim/brace). */}
       {motes.map((m, n) => (
         <motion.div
           key={n}
@@ -6148,7 +6227,7 @@ function PlayerStatusAura() {
           style={{
             position: 'absolute', left: '50%', top: '56%', width: m.size, height: m.size,
             marginLeft: -m.size / 2, marginTop: -m.size / 2, borderRadius: '50%',
-            background: '#bbf7d0', boxShadow: `0 0 6px ${color}`,
+            background: mote, boxShadow: `0 0 6px ${color}`,
           }}
         />
       ))}
@@ -6236,6 +6315,13 @@ function AbilityCastFx({ label, name, color, image, emoji }: { label: string; na
           animate={{ opacity: 0, scale: 2.4 }}
           transition={{ duration: 0.72, ease: 'easeOut' }}
           style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}` }}
+        />
+        {/* Second ring, trailing — reads as a real "activation" pop, not a static glow. */}
+        <motion.div
+          initial={{ opacity: 0.4, scale: 0.5 }}
+          animate={{ opacity: 0, scale: 3.1 }}
+          transition={{ duration: 0.82, delay: 0.12, ease: 'easeOut' }}
+          style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid ${color}aa` }}
         />
         <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${color}`, boxShadow: `0 0 14px ${color}aa`, background: '#0a121e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {image
