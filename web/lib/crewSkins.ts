@@ -1,0 +1,61 @@
+// Crew skins — gem-bought alternate card art for LEGENDARY crew (League-of-
+// Legends style). A skin is per SPECIES (slug), not per owned copy: buy it once,
+// equip it, and every copy of that legendary wears it everywhere in the game
+// (roster, raid summon, profile showcase, nameplates).
+//
+// Storage (profiles):
+//   owned_crew_skins:    string[]                    — skin ids the player owns
+//   equipped_crew_skins: Record<slug, skinId>        — the equipped skin per slug
+//
+// Art lives in the card-arts bucket alongside the base card art; a skin just
+// swaps the filename. Adding a skin = one entry here + the PNG in the bucket.
+
+export interface CrewSkin {
+  id: string          // stable id, e.g. 'dole_royaladmiral'
+  slug: string        // legendary species slug (lowercase), e.g. 'dole'
+  name: string        // display name, e.g. 'Royal Admiral'
+  filename: string    // card-arts bucket filename, e.g. 'Dole_royaladmiral.png'
+  gemCost: number
+  blurb: string
+  /** UI accent for the skin's frame/badge. */
+  color: string
+}
+
+export const CREW_SKINS: CrewSkin[] = [
+  { id: 'dole_royaladmiral', slug: 'dole', name: 'Royal Admiral',  filename: 'Dole_royaladmiral.png', gemCost: 500, blurb: 'Gold braid and a fleet at her back.',        color: '#f0c040' },
+  { id: 'dole_krakenhunter', slug: 'dole', name: 'Kraken Hunter',  filename: 'Dole_krakenhunter.png', gemCost: 500, blurb: 'Scarred from a hundred dives into the deep.',  color: '#2dd4bf' },
+  { id: 'dole_frostbite',    slug: 'dole', name: 'Frostbite',      filename: 'Dole_frostbite.png',    gemCost: 500, blurb: 'Rimed in the ice of the far cold seas.',       color: '#7dd3fc' },
+  { id: 'dole_cursedghost',  slug: 'dole', name: 'Cursed Ghost',   filename: 'Dole_cursedghost.png',  gemCost: 500, blurb: 'A wraith dragged back from the Locker.',        color: '#a78bfa' },
+]
+
+const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
+const BY_SLUG = new Map<string, CrewSkin[]>()
+for (const s of CREW_SKINS) {
+  const arr = BY_SLUG.get(s.slug) ?? []
+  arr.push(s)
+  BY_SLUG.set(s.slug, arr)
+}
+
+export function getCrewSkin(id: string | null | undefined): CrewSkin | undefined {
+  return id ? BY_ID.get(id) : undefined
+}
+
+/** Skins available for a legendary species (slug is case-insensitive). */
+export function crewSkinsForSlug(slug: string): CrewSkin[] {
+  return BY_SLUG.get(slug.toLowerCase()) ?? []
+}
+
+export type EquippedCrewSkins = Record<string, string>
+
+/** The effective card-art filename for a crew: the equipped skin's art if one is
+ *  set for this slug (and it's a real skin for this slug), else the base art.
+ *  Central resolver used at every crew-art build point. */
+export function resolveCrewFilename(
+  slug: string,
+  baseFilename: string,
+  equipped: EquippedCrewSkins | null | undefined,
+): string {
+  const skinId = equipped?.[slug.toLowerCase()]
+  const skin = getCrewSkin(skinId)
+  return skin && skin.slug === slug.toLowerCase() ? skin.filename : baseFilename
+}

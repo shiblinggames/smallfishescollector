@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 // (nav-level helpers no longer needed here — ProfileClient derives the level itself)
 import { isPremiumActive } from '@/lib/premium'
 import { crewDisplayName } from '@/lib/crewGen'
+import { resolveCrewFilename, type EquippedCrewSkins } from '@/lib/crewSkins'
 import type { ShowcaseCrew } from '@/components/CrewShowcase'
 import type { CareerStats, CareerAggregates } from '@/lib/careerStats'
 
@@ -25,7 +26,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const [{ data: { user } }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
     admin.from('profiles')
-      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, has_perfected_sigil, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage')
+      .select('id, username, showcase_crew_ids, is_premium, premium_expires_at, fishing_xp, expedition_xp, hook_tier, rod_tier, reel_tier, line_tier, ship_tier, ship_name, highest_perfect_streak, has_tide_turner, has_phantom_hook, has_perfected_sigil, equipped_ship_skin, raid_items, character_color, equipped_special, equipped_badges, equipped_boat, equipped_hat, equipped_pet, avatar_bg_color, avatar_border_color, profile_bg, fishing_casts, total_perfects, highest_raid_damage, equipped_crew_skins')
       .ilike('username', username)
       .single(),
   ])
@@ -99,10 +100,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const orderedCrew = showcaseCrewIds.length > 0
     ? showcaseCrewIds.map(id => rawCrew.find(r => r.id === id)).filter(Boolean)
     : rawCrew
+  const viewedEquippedSkins = (profile.equipped_crew_skins as EquippedCrewSkins | null) ?? {}
   const showcaseCrew: ShowcaseCrew[] = orderedCrew.map((r: any) => ({
     id: r.id,
     name: (r.nickname as string | null) ?? crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
-    filename: r.cards?.filename ?? '',
+    filename: resolveCrewFilename((r.cards?.slug as string | undefined)?.toLowerCase() ?? '', r.cards?.filename ?? '', viewedEquippedSkins),
     slug: (r.cards?.slug as string | undefined)?.toLowerCase() ?? '',
     rarity: r.rarity,
     power: r.power,

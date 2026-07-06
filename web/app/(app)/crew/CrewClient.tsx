@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
   assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
-  upgradeCrewHall,
+  upgradeCrewHall, buyCrewSkin, equipCrewSkin,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
+import { crewSkinsForSlug, getCrewSkin } from '@/lib/crewSkins'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
@@ -804,6 +805,27 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // milestone (Lv 10 / 25 / 40 / 75 / 100) so the player can see what
   // they're working toward. Reset on modal close.
   const [classExpanded, setClassExpanded] = useState(false)
+
+  // Crew skins (legendary-only) — the tile the player is previewing in the
+  // detail modal's Skins tab. undefined = show the currently equipped skin;
+  // null = the Original; a string = that skin id. Reset on modal close.
+  const [previewSkin, setPreviewSkin] = useState<string | null | undefined>(undefined)
+  const [skinBusy, setSkinBusy] = useState<string | null>(null)
+  // Buy / equip a crew skin, then sync state + the Nav-bar gem total.
+  function runSkinAction(tag: string, action: () => Promise<CrewActionResult>) {
+    if (skinBusy) return
+    setErr(null)
+    setSkinBusy(tag)
+    startTransition(async () => {
+      const res = await action()
+      if ('error' in res) setErr(res.error)
+      else {
+        setState(res.state)
+        window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.state.gems }))
+      }
+      setSkinBusy(null)
+    })
+  }
 
   // One-shot rename state — when the player taps the pencil next to their
   // crew's name in the detail modal, an inline input appears; saving fires
@@ -1769,6 +1791,15 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         {detail && (() => {
           const it = detail.item
           const dColor = RARITY_COLORS[(it.rarity as CrewRarity)] ?? '#8a857c'
+          // Skins (roster legendaries only). The portrait reflects the previewed
+          // (or equipped) skin; the tab below lets the player preview/buy/equip.
+          const dm = detail.kind === 'roster' ? (it as CrewMember) : null
+          const skinList = dm ? crewSkinsForSlug(dm.slug) : []
+          const equippedSkinId = dm ? (state.equippedCrewSkins[dm.slug] ?? null) : null
+          const shownSkinId = previewSkin === undefined ? equippedSkinId : previewSkin
+          const portraitFilename = dm
+            ? (shownSkinId ? (getCrewSkin(shownSkinId)?.filename ?? dm.baseFilename) : dm.baseFilename)
+            : it.filename
           const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
           // Board candidates haven't been recruited yet (no xp field) —
           // preview the hall XP seed stamped on their board row at roll
@@ -1781,7 +1812,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const dTrait = netTraitStats(it.effects)
           const dTraitLabel = traitLabel(dTrait)
           const dTraitKind = traitKind(dTrait)
-          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false); setRenameOpen(false); setRenameErr(null) }
+          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false); setRenameOpen(false); setRenameErr(null); setPreviewSkin(undefined) }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -1801,7 +1832,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 {/* Portrait */}
                 <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${dColor}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artSrc(it.filename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
+                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
@@ -2054,6 +2085,78 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         </div>
                       )}
                     </button>
+                  )
+                })()}
+
+                {/* Skins — legendary crew only. Preview (tap a tile), unlock with
+                    gems, equip. The equipped skin shows everywhere in the game. */}
+                {dm && skinList.length > 0 && (() => {
+                  const owned = state.ownedCrewSkins
+                  const tiles: { id: string | null; name: string; file: string; cost: number; color: string }[] = [
+                    { id: null, name: 'Original', file: dm.baseFilename, cost: 0, color: dColor },
+                    ...skinList.map(s => ({ id: s.id, name: s.name, file: s.filename, cost: s.gemCost, color: s.color })),
+                  ]
+                  const selName = shownSkinId ? (getCrewSkin(shownSkinId)?.name ?? 'Skin') : 'Original'
+                  const selOwned = shownSkinId === null || owned.includes(shownSkinId)
+                  const selEquipped = shownSkinId === equippedSkinId
+                  const selCost = shownSkinId ? (getCrewSkin(shownSkinId)?.gemCost ?? 0) : 0
+                  const canAfford = state.gems >= selCost
+                  return (
+                    <div style={{ marginTop: '0.9rem' }}>
+                      <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Skins</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
+                        {tiles.map(t => {
+                          const isSel = shownSkinId === t.id
+                          const isEquipped = (t.id ?? null) === equippedSkinId
+                          const isOwned = t.id === null || owned.includes(t.id)
+                          return (
+                            <button key={t.id ?? 'original'} type="button"
+                              onClick={() => { vibrate(6); setPreviewSkin(t.id) }}
+                              style={{
+                                position: 'relative', padding: 0, borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
+                                border: `2px solid ${isSel ? t.color : 'rgba(255,255,255,0.12)'}`,
+                                background: '#0a0806', aspectRatio: '1 / 1',
+                                boxShadow: isSel ? `0 0 14px ${t.color}66` : 'none',
+                                opacity: isOwned ? 1 : 0.92,
+                              }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={artSrc(t.file)} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
+                              {isEquipped && (
+                                <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: t.color, color: '#0a0806', fontSize: '0.6rem', fontWeight: 800, display: 'grid', placeItems: 'center', lineHeight: 1 }}>✓</span>
+                              )}
+                              {!isOwned && (
+                                <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(3,2,5,0.78)', color: '#c9b6f5', fontSize: '0.52rem', fontWeight: 700, textAlign: 'center', padding: '2px 0' }}>{t.cost} <span style={{ color: '#a78bfa' }}>◆</span></span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Selected-skin name + action */}
+                      <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#eae4da', textAlign: 'center', marginTop: 9 }}>{selName}</p>
+                      {shownSkinId && getCrewSkin(shownSkinId)?.blurb && (
+                        <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: 1 }}>{getCrewSkin(shownSkinId)!.blurb}</p>
+                      )}
+                      <div style={{ marginTop: 9 }}>
+                        {selEquipped ? (
+                          <button type="button" disabled className="font-karla font-700 uppercase tracking-[0.08em] w-full" style={{ padding: '0.6rem', borderRadius: 11, fontSize: '0.64rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.5)', cursor: 'default' }}>Equipped</button>
+                        ) : selOwned ? (
+                          <button type="button" disabled={!!skinBusy}
+                            onClick={() => runSkinAction(`equip:${shownSkinId ?? 'base'}`, () => equipCrewSkin(dm.slug, shownSkinId))}
+                            className="font-karla font-700 uppercase tracking-[0.08em] w-full"
+                            style={{ padding: '0.6rem', borderRadius: 11, fontSize: '0.64rem', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff', cursor: 'pointer', opacity: skinBusy ? 0.5 : 1 }}>
+                            {skinBusy ? '…' : 'Equip'}
+                          </button>
+                        ) : (
+                          <button type="button" disabled={!!skinBusy || !canAfford}
+                            onClick={() => runSkinAction(`buy:${shownSkinId}`, () => buyCrewSkin(shownSkinId as string))}
+                            className="font-karla font-700 uppercase tracking-[0.08em] w-full"
+                            style={{ padding: '0.6rem', borderRadius: 11, fontSize: '0.64rem', background: canAfford ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#f7e6b0' : 'rgba(255,255,255,0.4)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
+                            {skinBusy ? '…' : canAfford ? `Unlock · ${selCost} ◆` : `Need ${selCost} ◆`}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   )
                 })()}
 

@@ -12,6 +12,7 @@ import {
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, hallStartXP, type CrewHallTierNum } from '@/lib/crewHall'
 import { crewLevelFromXP } from '@/lib/crewLevel'
+import { getCrewSkin, resolveCrewFilename, type EquippedCrewSkins } from '@/lib/crewSkins'
 
 const REROLL_COST = 100
 
@@ -48,7 +49,11 @@ export type CrewMember = {
   /** Player-set nickname, or null if never renamed. One-shot — if non-null
    *  the rename affordance in the detail modal hides itself. */
   nickname: string | null
+  /** Effective art filename — the equipped legendary skin if one is set, else base. */
   filename: string
+  /** The un-skinned base art filename, so the Crew Hall skins tab can preview
+   *  the "Original" even while a skin is equipped. */
+  baseFilename: string
   /** Species slug (lower-cased card slug). Drives crew-class lookup via
    *  CLASS_BY_SLUG — every species maps to exactly one class. */
   slug: string
@@ -94,6 +99,10 @@ export type CrewState = {
   hallTier: CrewHallTierNum
   /** Doubloon balance — the hall upgrade currency. */
   doubloons: number
+  /** Crew skin ids the player owns (gem-bought legendary skins). */
+  ownedCrewSkins: string[]
+  /** Equipped skin per legendary slug ({ dole: 'dole_frostbite' }). */
+  equippedCrewSkins: Record<string, string>
 }
 
 export type CrewActionResult = { state: CrewState } | { error: string }
@@ -189,15 +198,18 @@ function rosterSort(a: CrewMember, b: CrewMember): number {
   )
 }
 
-function toMember(r: any, meta: Map<number, CardMeta>): CrewMember {
+function toMember(r: any, meta: Map<number, CardMeta>, equippedSkins?: EquippedCrewSkins): CrewMember {
   const m = meta.get(r.card_id)
   const nickname = (r.nickname as string | null) ?? null
+  const slug = (m?.slug ?? '').toLowerCase()
   return {
     id: r.id, cardId: r.card_id,
     name: nickname ?? (m ? crewDisplayName(m.slug, m.name) : 'Unknown'),
     nickname,
-    filename: m?.filename ?? '',
-    slug: (m?.slug ?? '').toLowerCase(),
+    // Equipped legendary skin (if any) swaps the base art everywhere toMember flows.
+    filename: resolveCrewFilename(slug, m?.filename ?? '', equippedSkins),
+    baseFilename: m?.filename ?? '',
+    slug,
     rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
     effects: (r.effects ?? []) as string[],
     voyageSlot: (r.voyage_slot as number | null) ?? null,
@@ -216,7 +228,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, discovered_coelacanth')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, discovered_coelacanth, owned_crew_skins, equipped_crew_skins')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -268,13 +280,17 @@ export async function getCrewState(): Promise<CrewState | null> {
   const lockedCrewIds: number[] = (pendingVoyage as any)?.crew_variant_ids ?? []
   const trawlingCrewIds: number[] = ((trawlRows ?? []) as any[]).map(r => r.crew_id as number)
 
+  const ownedCrewSkins = ((prof as any).owned_crew_skins as string[] | null) ?? []
+  const equippedCrewSkins = ((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}
+
   return {
     board: ((boardRows ?? []) as any[]).map(r => toCandidate(r, meta)),
-    roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)).sort(rosterSort),
+    roster: ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort),
     capacity, navLevel, gems, isPremium: premium, rerollCost: REROLL_COST,
     shipCrewSlots, lockedCrewIds, trawlingCrewIds,
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,
+    ownedCrewSkins, equippedCrewSkins,
   }
 }
 
@@ -285,14 +301,18 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
   const admin = createAdminClient()
-  const { meta } = await loadCards(admin)
+  const [{ meta }, { data: prof }] = await Promise.all([
+    loadCards(admin),
+    admin.from('profiles').select('equipped_crew_skins').eq('id', user.id).single(),
+  ])
+  const equippedCrewSkins = ((prof as any)?.equipped_crew_skins as EquippedCrewSkins | null) ?? {}
   const { data: rosterRows } = await admin
     .from('user_crew')
     .select('id, card_id, rarity, power, dodge, fortune, effects, voyage_slot, raid_slot, xp, nickname')
     .eq('user_id', user.id)
     .is('died_at', null)
     .order('recruited_at', { ascending: false })
-  return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta)).sort(rosterSort)
+  return ((rosterRows ?? []) as any[]).map(r => toMember(r, meta, equippedCrewSkins)).sort(rosterSort)
 }
 
 // ── Reroll the board for 100 gems (always 3 new, boosted odds) ──────────────
@@ -631,6 +651,85 @@ export async function promoteToCaptain(crewId: number): Promise<CrewActionResult
   return state ? { state } : { error: 'Failed to load crew' }
 }
 
+// ── Crew skins: buy (gems) + equip (per legendary species) ──────────────────
+
+/** Buy a legendary crew skin with gems. Gated: the skin must exist, the player
+ *  must OWN that legendary (a live user_crew of its species), and not already
+ *  own the skin. Guarded gem deduction prevents a double-spend race. */
+export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const skin = getCrewSkin(skinId)
+  if (!skin) return { error: 'Unknown skin' }
+
+  const admin = createAdminClient()
+  const { data: prof } = await admin
+    .from('profiles')
+    .select('gems, owned_crew_skins')
+    .eq('id', user.id)
+    .single()
+  if (!prof) return { error: 'Profile not found' }
+  const owned = ((prof as any).owned_crew_skins as string[] | null) ?? []
+  if (owned.includes(skinId)) return { error: 'Already owned' }
+  const gems = (prof as any).gems ?? 0
+  if (gems < skin.gemCost) return { error: 'Not enough gems' }
+
+  // Must own the legendary this skin is for (a live crew of that species).
+  const { data: card } = await admin.from('cards').select('id').ilike('slug', skin.slug).single()
+  if (!card) return { error: 'Legendary not found' }
+  const { count } = await admin
+    .from('user_crew')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id).eq('card_id', (card as any).id).is('died_at', null)
+  if ((count ?? 0) === 0) return { error: 'Recruit this legendary before buying its skins.' }
+
+  // Guarded deduction — only lands if gems still cover the cost.
+  const { data: updated } = await admin
+    .from('profiles')
+    .update({ gems: gems - skin.gemCost, owned_crew_skins: [...owned, skinId] })
+    .eq('id', user.id)
+    .gte('gems', skin.gemCost)
+    .select('gems')
+    .single()
+  if (!updated) return { error: 'Not enough gems' }
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
+}
+
+/** Equip a crew skin for its species (or pass null to revert to the base art).
+ *  Must own the skin. Equipped state is a { slug: skinId } map on the profile. */
+export async function equipCrewSkin(slug: string, skinId: string | null): Promise<CrewActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const key = slug.toLowerCase()
+
+  const admin = createAdminClient()
+  const { data: prof } = await admin
+    .from('profiles')
+    .select('owned_crew_skins, equipped_crew_skins')
+    .eq('id', user.id)
+    .single()
+  if (!prof) return { error: 'Profile not found' }
+  const owned = ((prof as any).owned_crew_skins as string[] | null) ?? []
+  const equipped = { ...(((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}) }
+
+  if (skinId === null) {
+    delete equipped[key]
+  } else {
+    const skin = getCrewSkin(skinId)
+    if (!skin || skin.slug !== key) return { error: 'Unknown skin' }
+    if (!owned.includes(skinId)) return { error: 'You do not own that skin' }
+    equipped[key] = skinId
+  }
+  await admin.from('profiles').update({ equipped_crew_skins: equipped }).eq('id', user.id)
+
+  const state = await getCrewState()
+  return state ? { state } : { error: 'Failed to load crew' }
+}
+
 // ── Graveyard: fallen crew with the voyage they died on ──────────────────────
 
 export type FallenCrew = CrewMember & {
@@ -667,6 +766,7 @@ export async function getCrewGraveyard(): Promise<FallenCrew[]> {
       name: nickname ?? (m ? crewDisplayName(m.slug, m.name) : 'Unknown'),
       nickname,
       filename: m?.filename ?? '',
+      baseFilename: m?.filename ?? '',
       slug: (m?.slug ?? '').toLowerCase(),
       rarity: r.rarity, power: r.power, dodge: r.dodge, fortune: r.fortune,
       effects: (r.effects ?? []) as string[],

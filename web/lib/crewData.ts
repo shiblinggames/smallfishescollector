@@ -7,6 +7,7 @@
 import type { createAdminClient } from './supabase/admin'
 import type { DeployedCrew } from './crewResolve'
 import { crewDisplayName } from './crewGen'
+import { resolveCrewFilename, type EquippedCrewSkins } from './crewSkins'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -32,7 +33,7 @@ export async function loadDeployedParty(
   // the row for the Crew Hall Graveyard tab but never deployed.
   // Crew currently "at sea" on a Trawl are reserved (hard-locked for the
   // hour) — filter them out so they can't also raid/voyage. See lib/trawls.
-  const [{ data }, { data: atSeaRows }] = await Promise.all([
+  const [{ data }, { data: atSeaRows }, { data: prof }] = await Promise.all([
     admin
       .from('user_crew')
       .select(`id, ${slotCol}, rarity, power, dodge, fortune, effects, xp, nickname, cards(name, filename, slug)`)
@@ -41,8 +42,11 @@ export async function loadDeployedParty(
       .not(slotCol, 'is', null)
       .order(slotCol),
     admin.from('trawls').select('crew_id').eq('user_id', userId),
+    admin.from('profiles').select('equipped_crew_skins').eq('id', userId).single(),
   ])
   const atSea = new Set(((atSeaRows ?? []) as { crew_id: number }[]).map(r => r.crew_id))
+  // Equipped legendary skins swap the deployed crew's art (raid summon, nameplate, voyages).
+  const equippedSkins = ((prof as { equipped_crew_skins?: EquippedCrewSkins } | null)?.equipped_crew_skins) ?? {}
   /* eslint-disable @typescript-eslint/no-explicit-any */
   return ((data ?? []) as any[])
     .filter(r => r[slotCol] < crewSlots && !atSea.has(r.id))
@@ -58,6 +62,6 @@ export async function loadDeployedParty(
       slug: (r.cards?.slug as string | undefined)?.toLowerCase() ?? '',
       name: (r.nickname as string | null) ?? crewDisplayName(r.cards?.slug ?? '', r.cards?.name ?? 'Crew'),
       catalogName: (r.cards?.name ?? 'Crew') as string,
-      filename: (r.cards?.filename ?? '') as string,
+      filename: resolveCrewFilename((r.cards?.slug as string | undefined)?.toLowerCase() ?? '', (r.cards?.filename ?? '') as string, equippedSkins),
     }))
 }
