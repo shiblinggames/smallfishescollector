@@ -870,6 +870,10 @@ export default function RaidCombat({
   // Crew-ability cast cue — themed portrait banner + ring that pops over the
   // stage so firing ANY ability has an unmistakable "you did something" tell.
   const [abilityCast, setAbilityCast] = useState<{ key: number; label: string; name: string; color: string; image?: string | null; emoji?: string } | null>(null)
+  // FF-style crew summon splash (big fade-in/hold/fade-out of the crew art when
+  // an active ability fires). Separate from abilityCast (the small pill, kept for
+  // the raid-item drum).
+  const [abilitySummon, setAbilitySummon] = useState<{ key: number; label: string; name: string; color: string; image: string | null } | null>(null)
   // On-demand "Crew Abilities Restored" banner trigger (War/Thunder Drum). A
   // bumping counter keys the banner so each activation remounts + replays the
   // one-shot animation, separate from the fight-open `abilitiesRefreshed` prop.
@@ -1380,7 +1384,7 @@ export default function RaidCombat({
       // resolveLog gets replaced wholesale and we don't want to clobber it.
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
-    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setEnemyAura(null); setThermalShockFx(null)
+    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setAbilitySummon(null); setEnemyAura(null); setThermalShockFx(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
@@ -1631,13 +1635,22 @@ export default function RaidCombat({
     if (oneAbilityUsedThisTurn) return
     if (usedAbilityIds?.has(crew.id)) return
 
-    // Themed cast cue — fires for every ability the instant it lands, so the
-    // player gets an immediate "activated something" beat even for the
-    // buff/utility abilities that otherwise only write a log line.
-    const castKey = Date.now()
-    setAbilityCast({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: `${crew.name} · ${def.name}`, color: def.color, image: crew.imageUrl, emoji: def.emoji })
-    setTimeout(() => setAbilityCast(c => (c && c.key === castKey ? null : c)), 1150)
+    // Lock the ability the instant it's chosen — BEFORE the summon plays — so
+    // nothing double-fires while the crew is being called on.
+    setOneAbilityUsedThisTurn(true)
+    onAbilityFired?.(crew.id)
     vibrate(18)
+
+    // FINAL-FANTASY-STYLE SUMMON. Instead of a small portrait pill, a big image
+    // of the crew fades in over the whole battle screen, holds a beat, then fades
+    // out — and the EFFECT follows (deferred below by SUMMON_LEAD_MS), so it reads
+    // as calling on that crew in the moment. The overlay eats taps while it plays,
+    // so the deferred effect can't race a turn action. See AbilitySummonFx.
+    const SUMMON_LEAD_MS  = 560    // the effect begins as the summon starts to fade
+    const SUMMON_TOTAL_MS = 980    // full fade-in + hold + fade-out
+    const castKey = Date.now()
+    setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: def.color, image: crew.imageUrl ?? null })
+    setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
 
     // Per-ability signature stage FX alongside the banner, so every ability
     // has its own satisfying "it landed" beat (not just a log line). Player-hull
@@ -1652,6 +1665,9 @@ export default function RaidCombat({
       setEnemyAura({ key: ak, kind })
       setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
     }
+    // Defer the EFFECT so it lands as the summon fades — you call the crew, THEN
+    // their power hits. Input stays blocked by the summon overlay meanwhile.
+    setTimeout(() => {
     if      (def.id === 'mender')       themePlayer('heal')
     else if (def.id === 'abyssal_tide') themePlayer('tide')
     else if (def.id === 'sharpshot')    themePlayer('aim')
@@ -1832,9 +1848,7 @@ export default function RaidCombat({
         break
       }
     }
-
-    setOneAbilityUsedThisTurn(true)
-    onAbilityFired?.(crew.id)
+    }, SUMMON_LEAD_MS)
   }
 
   // Activatable raid item — War Drum (60% chance) / Thunder Drum (guaranteed).
@@ -4491,12 +4505,25 @@ export default function RaidCombat({
           }} />
         )}
 
-        {/* Crew-ability cast cue — stage-anchored so it reads as a deliberate beat */}
+        {/* Crew-ability cast cue — the small pill is kept for the raid-item drum;
+            crew actives now use the big FF-style summon splash (portaled below). */}
         <AnimatePresence>
           {abilityCast && (
             <AbilityCastFx key={abilityCast.key} label={abilityCast.label} name={abilityCast.name} color={abilityCast.color} image={abilityCast.image} emoji={abilityCast.emoji} />
           )}
         </AnimatePresence>
+
+        {/* FF-style crew summon — full-screen (portaled to body so no transformed
+            ancestor clips it), eats taps while it plays so the deferred effect
+            can't race a turn action. */}
+        {typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {abilitySummon && (
+              <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} />
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
 
         {/* Aim-result feedback during the lock freeze — critical gets the full fishing-perfect treatment */}
         <AnimatePresence>
@@ -6484,6 +6511,86 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
 // Crew-ability cast cue. A themed pill (crew portrait + ability name) pops up
 // over the stage with an expanding ring behind the portrait, so firing an
 // ability — even a pure buff — reads as a real, deliberate beat.
+// FF-style crew summon splash. When a crew active fires, a big image of the crew
+// fades in over the whole battle screen, holds a beat, and fades out — then the
+// effect follows. Full-viewport (portaled to body), pointer-events auto so it
+// eats taps while it plays. All keyframed in one ~0.98s pass to match the
+// SUMMON_TOTAL_MS lifetime in fireCrewAbility.
+function AbilitySummonFx({ label, name, color, image }: { label: string; name: string; color: string; image: string | null }) {
+  return (
+    <motion.div
+      aria-hidden
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 70,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'auto',   // block taps while the summon plays
+        overflow: 'hidden',
+      }}
+    >
+      {/* Dim + color-wash backdrop so the crew art pops off the stage. */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.74, 0.74, 0] }}
+        transition={{ duration: 0.98, times: [0, 0.22, 0.6, 1], ease: 'easeInOut' }}
+        style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 70% 60% at 50% 50%, ${color}2e 0%, rgba(2,4,10,0.86) 62%)`, backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
+      />
+
+      {/* Speed lines rushing in — a few diagonal streaks for impact on entry. */}
+      {[-2, -1, 1, 2].map((n, i) => (
+        <motion.div key={`streak-${i}`}
+          initial={{ opacity: 0, scaleX: 0.2, x: n * 60 }}
+          animate={{ opacity: [0, 0.5, 0], scaleX: 1, x: 0 }}
+          transition={{ duration: 0.42, delay: 0.02 + i * 0.03, ease: 'easeOut' }}
+          style={{ position: 'absolute', top: `${38 + n * 7}%`, left: 0, right: 0, height: 2, transformOrigin: 'center', background: `linear-gradient(90deg, transparent, ${color}, transparent)`, filter: 'blur(1px)' }}
+        />
+      ))}
+
+      {/* The crew — big art, glowing frame, a light sweep across it. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 1.24, y: 16 }}
+        animate={{ opacity: [0, 1, 1, 0], scale: [1.24, 1, 1, 1.07], y: [16, 0, 0, -8] }}
+        transition={{ duration: 0.98, times: [0, 0.24, 0.62, 1], ease: 'easeOut' }}
+        style={{ position: 'relative', width: 'min(62vw, 300px)', maxHeight: '58vh' }}
+      >
+        <div style={{
+          position: 'relative', width: '100%', aspectRatio: '3 / 4', borderRadius: 20, overflow: 'hidden',
+          border: `2px solid ${color}`, boxShadow: `0 0 60px ${color}88, 0 0 120px ${color}44, inset 0 0 30px rgba(0,0,0,0.45)`,
+          background: `linear-gradient(180deg, ${color}18, rgba(4,8,16,0.9))`,
+        }}>
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: '3.4rem' }}>⚓</div>
+          )}
+          {/* Light sweep */}
+          <motion.div
+            initial={{ x: '-130%' }}
+            animate={{ x: '130%' }}
+            transition={{ delay: 0.18, duration: 0.7, ease: 'easeInOut' }}
+            style={{ position: 'absolute', inset: 0, background: `linear-gradient(105deg, transparent 40%, ${color}66 50%, transparent 60%)`, pointerEvents: 'none' }}
+          />
+        </div>
+
+        {/* Name + ability label under the portrait. */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: [0, 1, 1, 0], y: 0 }}
+          transition={{ duration: 0.98, times: [0, 0.3, 0.66, 1], ease: 'easeOut' }}
+          style={{ textAlign: 'center', marginTop: 12 }}
+        >
+          <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#fff', lineHeight: 1, textShadow: `0 0 18px ${color}, 0 2px 6px rgba(0,0,0,0.8)` }}>{name}</p>
+          <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.62rem', color, marginTop: 5, textShadow: `0 0 12px ${color}aa` }}>{label}</p>
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 function AbilityCastFx({ label, name, color, image, emoji }: { label: string; name: string; color: string; image?: string | null; emoji?: string }) {
   return (
     <motion.div
