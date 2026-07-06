@@ -69,6 +69,7 @@ export default async function GauntletPage() {
           hcDeepest={daily.hcDeepest}
           hardcoreTop={leaderboard.hardcoreTop}
           runHardcore={daily.runHardcore}
+          discoveredCoelacanth={profile?.discovered_coelacanth === true}
         />
       </div>
     </main>

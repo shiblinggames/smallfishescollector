@@ -659,6 +659,17 @@ export default function RaidCombat({
   // split as the anchor.
   const [abyssalShieldHp, setAbyssalShieldHp] = useState(0)
   const abyssalShieldRef = useRef(0)
+  // Vengeance (Laz the Coelacanth-only legendary) — an ARMED ward, current-fight
+  // only. When the ability fires we capture that crew's heal% + damage-buff% and
+  // arm the ward. If a killing blow would land THIS fight while armed, we negate
+  // it: heal from the captured %, then apply the damage buff to outgoing shots
+  // for the rest of the fight. All reset when the enemy changes (per-fight scope).
+  const vengeanceWardRef = useRef(false)
+  const vengeanceHealPctRef = useRef(0)   // captured at arm time
+  const vengeanceBuffPctRef = useRef(0)   // captured at arm time
+  const vengeanceCleanseRef = useRef(false)
+  const vengeanceDmgBuffRef = useRef(0)   // applied buff, live for rest of fight
+  const [vengeanceEruptFx, setVengeanceEruptFx] = useState(0)   // bump → crimson burst
   // Hull Render confluence: how many Volleys the player has fired THIS fight, so
   // each one ramps harder than the last. Reset on every fight start.
   const volleyCountRef = useRef(0)
@@ -1336,6 +1347,13 @@ export default function RaidCombat({
     enemyPatternIdxRef.current = 0
     enemyFeintStreakRef.current = 0
     volleyCountRef.current = 0
+    // Vengeance is CURRENT-FIGHT only — a fresh enemy clears the ward and any
+    // active rage buff (arm it again if you need it this fight).
+    vengeanceWardRef.current = false
+    vengeanceHealPctRef.current = 0
+    vengeanceBuffPctRef.current = 0
+    vengeanceCleanseRef.current = false
+    vengeanceDmgBuffRef.current = 0
     enemyPhaseRef.current = 1
     setEnemyPhase(1)
     setEnemySinking(false)  // fresh enemy — clear any leftover sink from a prior fight
@@ -1750,6 +1768,19 @@ export default function RaidCombat({
         }
         const nice = (a: EnemyAction) => a === 'fire' ? 'Fire' : a === 'volley' ? 'Volley' : a === 'reload' ? 'Reload' : a === 'mega' ? 'Mega' : a === 'repair' ? 'Repair' : 'Dodge'
         setResolveLog(prev => [...prev, `${crew.name} reads the tide — the enemy will ${moves.map(nice).join(', then ')}.${refreshed ? ' Your dodge is ready again.' : ''}`])
+        break
+      }
+      case 'vengeance': {
+        const vg = m as import('@/lib/crewClasses').VengeanceMilestone
+        // Arm the ward for THIS fight and capture its numbers now. If a killing
+        // blow lands this fight, the resolver reads these to cheat death, heal,
+        // and light the rage buff. Skill-timed: if no lethal hit comes, it just
+        // sits there (a spent ability) — arm it when you read the danger.
+        vengeanceWardRef.current = true
+        vengeanceHealPctRef.current = vg.healPctMaxHp
+        vengeanceBuffPctRef.current = vg.dmgBuffPct
+        vengeanceCleanseRef.current = !!vg.cleanseDebuff
+        setResolveLog(prev => [...prev, `${crew.name} girds your ship with a vengeance ward. Fall now and it strikes back.`])
         break
       }
     }
@@ -2396,8 +2427,11 @@ export default function RaidCombat({
           // BEFORE this volley (so the first is +0), then it's bumped below.
           const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + Math.min(tide.volleyRampPct * volleyCountRef.current, HULL_RENDER_RAMP_CAP) : 1
           const actionBaseMult = isMega ? (megaAug?.megaMult ?? 2.6) : isVolley ? 2 : 1
+          // Vengeance rage — after Laz's ward cheats a killing blow, every shot
+          // for the rest of the fight hits harder (capped +35% at the def level).
+          const vengeanceMult = vengeanceDmgBuffRef.current > 0 ? 1 + vengeanceDmgBuffRef.current : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * vengeanceMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
@@ -2793,6 +2827,27 @@ export default function RaidCombat({
             stepLines.push(abyssalShieldRef.current > 0
               ? `Your shield soaks ${soaked}.`
               : `Your shield soaks ${soaked} and shatters.`)
+          }
+          // Vengeance ward (Laz) — if this would be the killing blow while the
+          // ward is armed, cheat death: negate the hit, heal from the captured
+          // %, and light the rage buff for the rest of THIS fight. One-shot.
+          if (vengeanceWardRef.current && dmg > 0 && pHp - dmg <= 0) {
+            const healAmt = Math.round(playerHpMax * vengeanceHealPctRef.current)
+            pHp = Math.min(playerHpMax, pHp + healAmt)
+            dmg = 0
+            vengeanceDmgBuffRef.current = vengeanceBuffPctRef.current
+            vengeanceWardRef.current = false
+            shieldChanged = true   // force the HP bar to redraw the swing
+            setVengeanceEruptFx(k => k + 1)
+            stepLines.push(`The vengeance ward erupts! You cheat the Locker, surge back to ${pHp} HP, and hit +${Math.round(vengeanceBuffPctRef.current * 100)}% for the rest of the fight.`)
+            if (vengeanceCleanseRef.current) {
+              playerBurnRef.current = { turns: 0, dmg: 0 }
+              playerFrozenRef.current = false
+              playerFreezePendingRef.current = false
+              setPlayerBurning(false)
+              setPlayerFrozen(false)
+              stepLines.push('The deep washes every curse from your hull.')
+            }
           }
           pHp = Math.max(0, pHp - dmg)
           // Spiteful Wake (boon): the attacker takes a slice of what it dealt
@@ -4275,6 +4330,8 @@ export default function RaidCombat({
               )}
               {/* Lethal-save burst — Quartermaster's Anchor catches a killing blow */}
               {anchorSaveFx > 0 && <AnchorSaveBurst key={`asf-${anchorSaveFx}`} />}
+              {/* Vengeance erupt — Laz's ward cheats a killing blow */}
+              {vengeanceEruptFx > 0 && <VengeanceEruptBurst key={`vef-${vengeanceEruptFx}`} />}
               {/* Dodge whoosh — player juts back-left out of the way */}
               <AnimatePresence>
                 {dodgeFx?.actor === 'player' && (
@@ -6215,6 +6272,38 @@ function AnchorSaveBurst() {
   )
 }
 
+// Vengeance erupt — Laz's ward catches a killing blow. A crimson shockwave +
+// "Vengeance!" over the hull, redder and harder than the anchor's calm hold.
+function VengeanceEruptBurst() {
+  return (
+    <>
+      <motion.div
+        aria-hidden
+        initial={{ opacity: 0.9, scale: 0.35 }}
+        animate={{ opacity: 0, scale: 2.7 }}
+        transition={{ duration: 0.75, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: '-12%', borderRadius: '50%', border: '3px solid rgba(209,73,91,0.95)', boxShadow: '0 0 36px rgba(209,73,91,0.8)', pointerEvents: 'none', zIndex: 4 }}
+      />
+      <motion.div
+        aria-hidden
+        initial={{ opacity: 0.55, scale: 0.5 }}
+        animate={{ opacity: 0, scale: 2.0 }}
+        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.08 }}
+        style={{ position: 'absolute', inset: '-4%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(209,73,91,0.4) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 4 }}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.65 }}
+        animate={{ opacity: [0, 1, 1, 0], y: -18, scale: 1.05 }}
+        transition={{ duration: 1.35, times: [0, 0.16, 0.7, 1], ease: 'easeOut' }}
+        className="font-cinzel font-800 uppercase tracking-[0.12em]"
+        style={{ position: 'absolute', left: '50%', top: '6%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', color: '#f0556b', fontSize: '0.86rem', textShadow: '0 0 12px rgba(209,73,91,0.95), 0 1px 3px rgba(0,0,0,0.75)', pointerEvents: 'none', zIndex: 5 }}
+      >
+        Vengeance!
+      </motion.div>
+    </>
+  )
+}
+
 // Heal sparkle over the player hull — a soft green wash plus a few motes
 // rising off the deck, for Mender / Abyssal Tide / repair-kit patches.
 // Player self-buff aura — one cohesive shell, themed per ability so each crew
@@ -6355,6 +6444,7 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
   leviathan:    'Heavy Salvo',
   blitz:        'Frenzy',
   foresight:    'Foresight',
+  vengeance:    'Vengeance Ward',
 }
 
 // Crew-ability cast cue. A themed pill (crew portrait + ability name) pops up

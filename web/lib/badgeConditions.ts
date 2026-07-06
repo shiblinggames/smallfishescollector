@@ -25,7 +25,7 @@ export const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krus
 export const LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako'])
 // EVERY legendary crew species (for the Six Legends badge). Add each new
 // legendary's slug here as it ships — the badge unlocks once a player owns 6.
-export const LEGENDARY_SLUGS_ALL = new Set(['catfish', 'doby_mick', 'mako', 'dole'])
+export const LEGENDARY_SLUGS_ALL = new Set(['catfish', 'doby_mick', 'mako', 'dole', 'coelacanth'])
 // Number of confluences in the Gauntlet (lib/gauntlet.ts CONFLUENCES). Kept as a
 // constant to avoid importing the heavy gauntlet module here — bump if more ship.
 export const CONFLUENCE_COUNT = 7

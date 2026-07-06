@@ -30,6 +30,7 @@ export type CrewClass =
   | 'leviathan'     // Doby Mick only — flat damage scaling with crew Power
   | 'blitz'         // Mako only — extra cannon shots this turn
   | 'foresight'     // Dole only — reveal the enemy's next move(s); refresh dodge
+  | 'vengeance'     // Laz (Coelacanth) only — arm a ward; cheat a killing blow, heal + rage
 
 // ── Species → class map ────────────────────────────────────────────────────
 // Keyed by lower-cased cards.slug so callers can do `CLASS_BY_SLUG[slug.toLowerCase()]`.
@@ -90,6 +91,7 @@ export const CLASS_BY_SLUG: Record<string, CrewClass> = {
   doby_mick:     'leviathan',
   mako:          'blitz',
   dole:          'foresight',
+  coelacanth:    'vengeance',
 }
 
 /** Resolve a species slug to its class. Slugs in cards.slug are Title_Case;
@@ -216,6 +218,18 @@ export interface ForesightMilestone {
    *  cooldown so a player who dodged last turn can dodge again right now. 0 at
    *  the early tiers (pure information), scaling up to a guaranteed refresh. */
   dodgeRefreshChance: number
+  desc: string
+}
+
+export interface VengeanceMilestone {
+  unlockLevel: ClassMilestoneLevel
+  /** Fraction of max HP healed when the ward negates a killing blow, 0–1. */
+  healPctMaxHp: number
+  /** Damage buff granted for the REST OF THE FIGHT after the ward triggers.
+   *  Capped at 0.35 (+35%) by design — a comeback, not a runaway. */
+  dmgBuffPct: number
+  /** Lv 100: the revival also strips every enemy debuff on the player. */
+  cleanseDebuff?: boolean
   desc: string
 }
 
@@ -385,6 +399,24 @@ export const FORESIGHT: ClassDef<ForesightMilestone> = {
   ],
 }
 
+// Vengeance (Laz the Coelacanth only). The Lazarus fish, back from the dead.
+// A SKILL-TIMED active: arm the ward when you read a killing blow coming. If a
+// lethal hit lands THIS FIGHT while the ward holds, cheat death — heal part of
+// your hull and sail on with bonus damage for the rest of the fight. Misread
+// the danger and the ward fizzles, so timing is everything. Buff capped at +35%.
+export const VENGEANCE: ClassDef<VengeanceMilestone> = {
+  id: 'vengeance', name: 'Vengeance', shortLabel: 'Vengeance',
+  blurb: 'Arm a vengeance ward. If a killing blow would land while it holds, cheat death: heal part of your hull and surge with bonus damage for the rest of the fight. Arm it too early or too late and it fizzles.',
+  color: '#d1495b', emoji: '🗡️',
+  milestones: [
+    { unlockLevel: 10,  healPctMaxHp: 0.25, dmgBuffPct: 0.15, desc: 'Arm the ward. Cheat a killing blow this fight: heal 25% max HP, gain +15% damage for the rest of the fight.' },
+    { unlockLevel: 25,  healPctMaxHp: 0.25, dmgBuffPct: 0.20, desc: 'Cheat a killing blow: heal 25% max HP, gain +20% damage for the rest of the fight.' },
+    { unlockLevel: 40,  healPctMaxHp: 0.35, dmgBuffPct: 0.25, desc: 'Cheat a killing blow: heal 35% max HP, gain +25% damage for the rest of the fight.' },
+    { unlockLevel: 75,  healPctMaxHp: 0.35, dmgBuffPct: 0.30, desc: 'Cheat a killing blow: heal 35% max HP, gain +30% damage for the rest of the fight.' },
+    { unlockLevel: 100, healPctMaxHp: 0.50, dmgBuffPct: 0.35, cleanseDebuff: true, desc: 'Cheat a killing blow: heal 50% max HP, gain +35% damage for the rest of the fight, and cleanse every debuff.' },
+  ],
+}
+
 // ── Registry lookup ─────────────────────────────────────────────────────────
 // Union the class defs through a discriminated wrapper so callers can switch
 // on `.id` and TypeScript narrows the milestones to the right shape.
@@ -399,6 +431,7 @@ export type AnyClassDef =
   | (ClassDef<LeviathanMilestone>   & { id: 'leviathan' })
   | (ClassDef<BlitzMilestone>       & { id: 'blitz' })
   | (ClassDef<ForesightMilestone>   & { id: 'foresight' })
+  | (ClassDef<VengeanceMilestone>   & { id: 'vengeance' })
 
 export const CLASSES: Record<CrewClass, AnyClassDef> = {
   mender:       MENDER       as AnyClassDef,
@@ -410,6 +443,7 @@ export const CLASSES: Record<CrewClass, AnyClassDef> = {
   leviathan:    LEVIATHAN    as AnyClassDef,
   blitz:        BLITZ        as AnyClassDef,
   foresight:    FORESIGHT    as AnyClassDef,
+  vengeance:    VENGEANCE    as AnyClassDef,
 }
 
 /** Highest-tier milestone unlocked by a crew at this level. Returns null if

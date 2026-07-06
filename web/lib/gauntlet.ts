@@ -337,7 +337,18 @@ export interface GauntletRunState {
   nextShrine: number
   /** Calm Before already waved off the first curse milestone */
   calmBeforeUsed: boolean
+  /** Laz (5th legendary) was DISCOVERED this run. Only granted if the run cashes
+   *  out alive (die = lost to the Locker). Optional so pre-feature saves resume. */
+  discoveredLaz?: boolean
 }
+
+// ── The 5th legendary: discovering Laz the Coelacanth ───────────────────────
+// A very rare, HARDCORE-ONLY event: past this depth, before any between-fight
+// boon beat, a slim chance to surface the coelacanth "back from the dead." One
+// per account, ever (server flag). Marked on discovery; only KEPT if you cash
+// out alive. Chance kept tiny so it stays a genuine "did that just happen" find.
+export const LAZ_DISCOVERY_MIN_DEPTH = 30
+export const LAZ_DISCOVERY_CHANCE = 0.02
 
 export interface GauntletFight {
   enemy: BroadsideEnemy

@@ -18,6 +18,7 @@ import type { RaidMods } from '@/lib/expeditions'
 import type { RaidCrewMember } from '../actions'
 import { classForSlug, CLASSES, currentMilestone } from '@/lib/crewClasses'
 import { crewLevelFromXP } from '@/lib/crewLevel'
+import LegendDiscoveryOverlay from '@/components/LegendDiscoveryOverlay'
 import {
   generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
@@ -27,6 +28,7 @@ import {
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS,
   CHEST_TIERS, chestCannonDropChance,
+  LAZ_DISCOVERY_MIN_DEPTH, LAZ_DISCOVERY_CHANCE,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState,
 } from '@/lib/gauntlet'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms } from './actions'
@@ -42,7 +44,7 @@ import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { renownLevel } from '@/lib/renown'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 
-type Phase = 'intro' | 'usedup' | 'resume' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
+type Phase = 'intro' | 'usedup' | 'resume' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead' | 'discovery'
 
 type CashResult = Awaited<ReturnType<typeof cashOutGauntlet>>
 
@@ -120,6 +122,9 @@ export interface GauntletGameProps {
   hcDeepest: number
   /** #1 on the hardcore-only Drowned Ledger, or null if none yet. */
   hardcoreTop: { name: string; depth: number } | null
+  /** Does the player already own Laz the Coelacanth (5th legendary)? If so the
+   *  rare Hardcore discovery never rolls again. */
+  discoveredCoelacanth: boolean
   /** Is the currently OPEN (resumable) run a hardcore one? Keeps a resumed run's
    *  end-beats + abandon warning correct. */
   runHardcore: boolean
@@ -174,6 +179,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // end-beats. The mode-choice popup (Descend → Normal vs Hardcore) + the stark
   // squad-at-risk confirmation gate opening a hardcore run.
   const [hardcoreRun, setHardcoreRun] = useState(props.runHardcore)
+  // Laz (5th legendary) discovery — set true the moment the rare Hardcore event
+  // fires this run. Persisted in the checkpoint so a crash-resume keeps it, and
+  // read on cash-out to grant him (die = lost, ref just resets with a fresh run).
+  const discoveredLazRef = useRef(props.resumeState?.discoveredLaz ?? false)
   const [modeChoiceOpen, setModeChoiceOpen] = useState(false)
   const [hcConfirmOpen, setHcConfirmOpen] = useState(false)
   const [hcBlockedMsg, setHcBlockedMsg] = useState<string | null>(null)
@@ -729,6 +738,17 @@ export default function GauntletGame(props: GauntletGameProps) {
     // branch below is kept defensive in case the two ever share a depth.
     // Combat depth (Veteran's Start shifts the boon/curse cadence up too).
     const nextDepth = clearedNow + 1 + skipOffset
+    // The 5th legendary — a very rare, HARDCORE-ONLY discovery that pre-empts any
+    // between-fight beat past the min depth. Once ever (server flag + this-run
+    // ref). Marked now; only KEPT if the run cashes out alive. Checkpoint it so a
+    // crash-resume doesn't re-roll or lose the find.
+    if (hardcoreRun && !props.discoveredCoelacanth && !discoveredLazRef.current
+        && nextDepth > LAZ_DISCOVERY_MIN_DEPTH && Math.random() < LAZ_DISCOVERY_CHANCE) {
+      discoveredLazRef.current = true
+      void checkpointGauntletRun(buildCheckpoint()).catch(() => {})
+      setPhase('discovery')
+      return
+    }
     // isCurseDepth / isBoonDepth carry the cadence PAST the fixed schedule
     // (every few depths forever) so deep runs keep stacking rules.
     const atCurseDepth = isCurseDepth(nextDepth)
@@ -969,6 +989,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       runMaxHit: runMaxHitRef.current,
       nextShrine: nextShrineRef.current,
       calmBeforeUsed: calmBeforeUsedRef.current,
+      discoveredLaz: discoveredLazRef.current,
     }
   }
 
@@ -989,6 +1010,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     runMaxHitRef.current = s.runMaxHit
     nextShrineRef.current = s.nextShrine
     calmBeforeUsedRef.current = s.calmBeforeUsed
+    discoveredLazRef.current = s.discoveredLaz ?? false
     // Transient state rebuilt fresh at the breather.
     peekFightRef.current = null; setPeekFight(null)
     crewRefreshedRef.current = false; setFightOpensRefreshed(false)
@@ -1055,7 +1077,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function cashOut() {
     if (resolving) return
     setResolving(true)
-    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current, buildRunSnapshot()).then(res => {
+    cashOutGauntlet(rollStateRef.current.cleared, rollStateRef.current.cleared + skipOffset, potRef.current, buildRunSnapshot(), discoveredLazRef.current).then(res => {
       setResolving(false)
       setReward(res)
       setPhase('reward')
@@ -1517,6 +1539,20 @@ export default function GauntletGame(props: GauntletGameProps) {
             <BackLink router={router} label="Back to the map" primary onClick={backToIntro} />
           </div>
         </div>
+      </>
+    )
+  }
+
+  // ── The 5th legendary discovery — the rare Hardcore find ────────────────────
+  // A pure celebration beat: the reveal overlay over the abyss. Dismiss hands
+  // off to the breather (cash-out / push-on). Laz is only GRANTED server-side on
+  // a live cash-out (discoveredLazRef was checkpointed), so pushing on and dying
+  // still loses him — the stake the overlay warns about.
+  if (phase === 'discovery') {
+    return (
+      <>
+        <AbyssBackdrop />
+        <LegendDiscoveryOverlay open onDismiss={() => setPhase('between')} />
       </>
     )
   }
@@ -2726,6 +2762,20 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
                 </motion.div>
               )
             })()}
+
+            {/* The 5th legendary — Laz survived the climb and joined the roster.
+                A once-ever callout, richer than the depth unlocks below it. */}
+            {r.grantedLaz && (
+              <motion.div initial={{ opacity: 0, scale: 0.8, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.55, type: 'spring', stiffness: 240, damping: 16 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.8rem 0.85rem', borderRadius: 12, background: 'linear-gradient(180deg, rgba(240,192,64,0.14), rgba(209,73,91,0.1))', border: '1px solid rgba(240,192,64,0.6)', boxShadow: '0 0 26px rgba(240,192,64,0.25)' }}>
+                <span aria-hidden style={{ fontSize: '1.5rem', flexShrink: 0, filter: 'drop-shadow(0 0 8px rgba(240,192,64,0.8))' }}>✦</span>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: GOLD }}>Legendary crew · deploy from Manage Ship</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#f7efd8', lineHeight: 1.1 }}>Laz the Coelacanth sailed home with you</p>
+                  <p className="font-karla" style={{ fontSize: '0.66rem', color: '#c9b79a', lineHeight: 1.35, marginTop: 1 }}>The legend that would not stay dead is yours. His Vengeance ward cheats a killing blow.</p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Depth-milestone unlocks earned by SURVIVING to this depth. Shown
                 here, in the moment, instead of a piece of mail after the fact. */}
