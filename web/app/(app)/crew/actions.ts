@@ -106,17 +106,23 @@ function utcDate(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD in UTC
 }
 
-/** Catalog → portrait pool by group + a lookup for name/filename. */
+/** Catalog → portrait pool by group + a lookup for name/filename.
+ *  Laz the Coelacanth is held OUT of the legendary pool here — he only becomes
+ *  a rollable Crew Hall recruit once a player has DISCOVERED him in the Hardcore
+ *  Gauntlet. Callers add `coelacanthId` back into the rarity-4 pool per-player
+ *  when profiles.discovered_coelacanth is set. */
 async function loadCards(admin: ReturnType<typeof createAdminClient>) {
   const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')
   const byGroup: Record<CrewRarity, number[]> = { 1: [], 2: [], 3: [], 4: [] }
   const meta = new Map<number, CardMeta>()
+  let coelacanthId: number | null = null
   for (const c of ((data ?? []) as { id: number; name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }[])) {
     meta.set(c.id, { name: c.name, filename: c.filename, slug: c.slug, power: c.power, dodge: c.dodge, fortune: c.fortune })
+    if (c.slug.toLowerCase() === 'coelacanth') { coelacanthId = c.id; continue }  // discovery-gated
     const g = groupForSlug(c.slug)
     if (g) byGroup[g].push(c.id)
   }
-  return { byGroup, meta }
+  return { byGroup, meta, coelacanthId }
 }
 
 /** Roll N candidate rows ready for insert into daily_recruits. startXp is
@@ -131,13 +137,18 @@ function generateBoardRows(
   byGroup: Record<CrewRarity, number[]>,
   meta: Map<number, CardMeta>,
   startXp: number,
+  /** Extra legendary card ids this player has UNLOCKED into the pool (e.g. Laz,
+   *  once discovered). Folded into the rarity-4 pool only. */
+  legendaryExtra: number[] = [],
 ) {
+  // Per-rarity pool: rarity 4 adds any player-unlocked legendaries (Laz).
+  const poolFor = (r: CrewRarity) => (r === 4 ? [...byGroup[4], ...legendaryExtra] : byGroup[r])
   const rows: any[] = []
   for (let slot = 0; slot < size; slot++) {
     let rarity = rollRarity(weights)
     // Fall back to a populated group if the rolled one is empty (defensive).
-    while (byGroup[rarity].length === 0 && rarity > 1) rarity = (rarity - 1) as CrewRarity
-    const pool = byGroup[rarity]
+    while (poolFor(rarity).length === 0 && rarity > 1) rarity = (rarity - 1) as CrewRarity
+    const pool = poolFor(rarity)
     if (pool.length === 0) continue
     const cardId = pool[Math.floor(Math.random() * pool.length)]
     const m = meta.get(cardId)
@@ -205,7 +216,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, discovered_coelacanth')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -217,14 +228,16 @@ export async function getCrewState(): Promise<CrewState | null> {
   const shipTier = (prof as any).ship_tier ?? 0
   const shipCrewSlots = EXPEDITION_SHIP_STATS[shipTier]?.crewSlots ?? 1
 
-  const { byGroup, meta } = await loadCards(admin)
+  const { byGroup, meta, coelacanthId } = await loadCards(admin)
+  // Laz joins this player's legendary pool once discovered in Hardcore.
+  const legendaryExtra = (prof as any).discovered_coelacanth === true && coelacanthId ? [coelacanthId] : []
   const today = utcDate()
 
   // Free board fills once per UTC day; gem rerolls (which set the date too)
   // won't be clobbered by this.
   if ((prof as any).last_free_recruit_date !== today) {
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier))
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier), legendaryExtra)
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', user.id)
   }
@@ -290,7 +303,7 @@ export async function rerollBoard(): Promise<CrewActionResult> {
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, discovered_coelacanth').eq('id', user.id).single()
   const gems = (prof as any)?.gems ?? 0
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
 
@@ -306,9 +319,10 @@ export async function rerollBoard(): Promise<CrewActionResult> {
     .single()
   if (!updated) return { error: 'Not enough gems' }
 
-  const { byGroup, meta } = await loadCards(admin)
+  const { byGroup, meta, coelacanthId } = await loadCards(admin)
+  const legendaryExtra = (prof as any)?.discovered_coelacanth === true && coelacanthId ? [coelacanthId] : []
   await admin.from('daily_recruits').delete().eq('user_id', user.id)
-  const rows = generateBoardRows(user.id, 3, 'gem', GEM_WEIGHTS, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier))
+  const rows = generateBoardRows(user.id, 3, 'gem', GEM_WEIGHTS, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier), legendaryExtra)
   if (rows.length) await admin.from('daily_recruits').insert(rows)
 
   const state = await getCrewState()
