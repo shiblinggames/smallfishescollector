@@ -284,7 +284,29 @@ export async function castLine(baitType: string, habitat: string): Promise<
       .eq('bait_type', baitType)
   }
 
-  const fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
+  // Fish selection. In Ancient Deep the TROPHY (tier-5) roll is an EXPLICIT flat
+  // chance set by the lure — Luminous 15%, Golden 20% — so the two premium lures
+  // are meaningfully different (they used to be identical, both a flat 10% via
+  // the shared tier table). Rod + event rarity bonuses still amplify it, so
+  // special rods keep helping. Non-lure casts never reach the trophy pool (it's
+  // filtered out above), so baseTrophyChance is 0 for them and this is lure-only.
+  let fish: (typeof pool)[number]
+  if (habitat === 'ancient_deep') {
+    const trophyPool  = pool.filter(f => (f.sell_value ?? 0) === 0)   // uncaught trophies (lure casts only)
+    const regularPool = pool.filter(f => (f.sell_value ?? 0) > 0)
+    const baseTrophyChance = baitType === 'golden' ? 0.20 : baitType === 'luminous' ? 0.15 : 0
+    const trophyChance = Math.min(0.95, baseTrophyChance * (1 + (rod.rarityBonus + eventRarityBonus) * 4))
+    if (trophyPool.length > 0 && Math.random() < trophyChance) {
+      fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
+    } else if (regularPool.length > 0) {
+      fish = tierWeightedPick(regularPool, habitat, rod.rarityBonus + eventRarityBonus)
+    } else {
+      // Regulars somehow exhausted — hand back a trophy so the cast still lands.
+      fish = trophyPool[Math.floor(Math.random() * trophyPool.length)]
+    }
+  } else {
+    fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
+  }
   let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult)
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
