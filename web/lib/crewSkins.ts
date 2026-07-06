@@ -38,6 +38,16 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'doby_moltenmaw',   slug: 'doby_mick', name: 'Molten Maw',    filename: 'Doby_moltenmaw.png',   gemCost: 1500, blurb: 'Breaching from a sea of fire.',               color: '#fb7185' },
   { id: 'doby_spectral',    slug: 'doby_mick', name: 'Spectral',      filename: 'Doby_spectral.png',    gemCost: 2500, blurb: 'A ghost-grey leviathan from the black deep.',   color: '#93c5fd' },
   { id: 'doby_huntersbane', slug: 'doby_mick', name: "Hunter's Bane", filename: 'Doby_huntersbane.png', gemCost: 3000, blurb: 'The whale that hunts the hunters.',           color: '#f0c040', chase: true },
+  // ── Catfish (Cat) ──
+  { id: 'catfish_cursed',    slug: 'catfish', name: 'Cursed',    filename: 'Catfish_cursed.png',    gemCost: 1250, blurb: 'Hexed whiskers, humming with old magic.',    color: '#a78bfa' },
+  { id: 'catfish_ancient',   slug: 'catfish', name: 'Ancient',   filename: 'Catfish_ancient.png',   gemCost: 1500, blurb: 'A relic that swam the first tides.',        color: '#d4a15a' },
+  { id: 'catfish_galaxy',    slug: 'catfish', name: 'Galaxy',    filename: 'Catfish_galaxy.png',    gemCost: 2500, blurb: 'Star-flecked scales from the black deep.',   color: '#8b7bf0' },
+  { id: 'catfish_prismatic', slug: 'catfish', name: 'Prismatic', filename: 'Catfish_prismatic.png', gemCost: 3000, blurb: 'Every color of the abyss at once.',        color: '#e879f9', chase: true },
+  // ── Mako ──
+  { id: 'mako_bloodtide',  slug: 'mako', name: 'Blood Tide',  filename: 'Mako_bloodtide.png',  gemCost: 1250, blurb: 'Trailing red through the water.',        color: '#ef4444' },
+  { id: 'mako_highroller', slug: 'mako', name: 'High Roller', filename: 'Mako_highroller.png', gemCost: 1500, blurb: 'Dressed to win, built to bite.',         color: '#f0c040' },
+  { id: 'mako_wraithfin',  slug: 'mako', name: 'Wraithfin',   filename: 'Mako_wraithfin.png',  gemCost: 2500, blurb: 'A phantom that haunts the shallows.',    color: '#a5b4fc' },
+  { id: 'mako_tempest',    slug: 'mako', name: 'Tempest',     filename: 'Mako_tempest.png',    gemCost: 3000, blurb: 'Born of storm and lightning.',         color: '#38bdf8', chase: true },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
