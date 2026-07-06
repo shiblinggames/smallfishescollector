@@ -479,36 +479,79 @@ export default function GauntletGame(props: GauntletGameProps) {
     <>
       {modeChoiceOpen && (
         <div onClick={() => setModeChoiceOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,6,12,0.84)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, borderRadius: 20, padding: '1.2rem 1.1rem 1.1rem', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GOLD}44`, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
-            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.22em', color: `${GOLD}cc`, textAlign: 'center', marginBottom: 12 }}>Choose Your Descent</p>
-            {/* Normal */}
-            <button onClick={() => begin(false)} disabled={starting} className="tap" style={{ width: '100%', textAlign: 'left', padding: '0.85rem 0.9rem', borderRadius: 14, marginBottom: 10, background: `${TEAL}12`, border: `1px solid ${TEAL}55`, cursor: starting ? 'wait' : 'pointer' }}>
-              <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: TEAL, lineHeight: 1.1 }}>Normal Descent</p>
-              <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.4, marginTop: 4 }}>Push your luck for the pot. Your crew are never at risk.</p>
-            </button>
-            {/* Hardcore */}
+          <motion.div
+            initial={{ opacity: 0, y: 14, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 400, borderRadius: 22, padding: '1.25rem 1.1rem 1.15rem', background: 'linear-gradient(180deg, rgba(15,23,36,0.99), rgba(7,12,20,0.99))', border: `1px solid ${GOLD}33`, boxShadow: '0 24px 70px rgba(0,0,0,0.65)' }}>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#f3ead2', textAlign: 'center', lineHeight: 1.05 }}>Choose Your Descent</p>
+            <p className="font-karla" style={{ fontSize: '0.68rem', color: '#8a8f98', textAlign: 'center', marginTop: 4, marginBottom: 14 }}>Two ways down. One puts your crew on the line.</p>
             {(() => {
               const canHc = props.hardcoreUnlocked
               const comingSoon = !canHc && !props.hardcoreLive
-              return (
-                <button
-                  onClick={canHc ? () => { setModeChoiceOpen(false); setHcConfirmOpen(true) } : undefined}
-                  disabled={!canHc || starting}
-                  className={canHc ? 'tap' : undefined}
-                  style={{ width: '100%', textAlign: 'left', padding: '0.85rem 0.9rem', borderRadius: 14, background: `${DANGER}${canHc ? '12' : '08'}`, border: `1px solid ${DANGER}${canHc ? '66' : '30'}`, cursor: canHc ? 'pointer' : 'default', opacity: canHc ? 1 : 0.72 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <p className="font-cinzel font-800" style={{ fontSize: '1rem', color: canHc ? '#fca5a5' : 'rgba(252,165,165,0.7)', lineHeight: 1.1 }}>Hardcore Descent</p>
-                    {comingSoon && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: HC_ACCENT, background: `${HC_ACCENT}1e`, border: `1px solid ${HC_ACCENT}55`, borderRadius: 999, padding: '0.12rem 0.45rem' }}>Coming Soon</span>}
+              // Shared card shell so the two read as a matched pair.
+              const Card = ({ accent, title, titleColor, icon, desc, enabled, onClick, footer }: {
+                accent: string; title: string; titleColor: string; icon: React.ReactNode; desc: string; enabled: boolean; onClick?: () => void; footer: React.ReactNode
+              }) => (
+                <motion.button
+                  onClick={enabled ? onClick : undefined}
+                  disabled={!enabled || starting}
+                  whileHover={enabled ? { y: -4 } : undefined}
+                  whileTap={enabled ? { scale: 0.955 } : undefined}
+                  transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+                  style={{
+                    flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                    padding: '1.1rem 0.7rem 0.85rem', borderRadius: 17, position: 'relative', overflow: 'hidden',
+                    background: `linear-gradient(180deg, ${accent}26 0%, ${accent}0c 52%, rgba(8,13,22,0.35) 100%)`,
+                    border: `1px solid ${accent}${enabled ? '77' : '2e'}`,
+                    boxShadow: enabled ? `0 0 22px ${accent}22, inset 0 1px 0 ${accent}33` : 'none',
+                    cursor: enabled ? 'pointer' : 'default', opacity: enabled ? 1 : 0.58,
+                  }}
+                >
+                  {/* top sheen */}
+                  <div aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '42%', background: `radial-gradient(ellipse at 50% -20%, ${accent}22, transparent 70%)`, pointerEvents: 'none' }} />
+                  {/* emblem */}
+                  <div style={{ width: 54, height: 54, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: titleColor, background: `radial-gradient(circle at 40% 30%, ${accent}4d, ${accent}12)`, border: `1px solid ${accent}77`, boxShadow: `0 0 18px ${accent}3a`, marginBottom: 11, flexShrink: 0 }}>
+                    {icon}
                   </div>
-                  <p className="font-karla" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.7)', lineHeight: 1.4, marginTop: 4 }}>The squad you send in dies for good if you fall. Its own hiscore, and cosmetics no other captain can earn.</p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.64rem', color: `${HC_ACCENT}cc`, marginTop: 7 }}>
-                    Drowned Ledger — {props.hardcoreTop ? `${props.hardcoreTop.name}, Depth ${props.hardcoreTop.depth}` : 'unclaimed'}
-                    {props.hcDeepest > 0 ? ` · Your best: Depth ${props.hcDeepest}` : ''}
-                  </p>
-                </button>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.05rem', color: titleColor, lineHeight: 1.02 }}>{title}</p>
+                  <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.66)', lineHeight: 1.38, marginTop: 6, flex: 1 }}>{desc}</p>
+                  <div style={{ width: '100%', marginTop: 11, padding: '0.42rem 0.4rem', borderRadius: 10, background: `${accent}16`, border: `1px solid ${accent}3a` }}>
+                    {footer}
+                  </div>
+                </motion.button>
+              )
+              const chevrons = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+              const skull = <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.4" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.4" fill="currentColor" stroke="none" /><path d="M11 15.5h2" /></svg>
+              return (
+                <div style={{ display: 'flex', gap: 11, alignItems: 'stretch' }}>
+                  <Card
+                    accent={TEAL} title="Normal" titleColor={TEAL} icon={chevrons} enabled={!starting}
+                    desc="Push your luck for the pot. Your crew are never at risk."
+                    onClick={() => begin(false)}
+                    footer={<>
+                      <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${TEAL}cc` }}>Your Deepest</p>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#dbf5ef' }}>{props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}</p>
+                    </>}
+                  />
+                  <Card
+                    accent={DANGER} title="Hardcore" titleColor={canHc ? '#fca5a5' : 'rgba(252,165,165,0.8)'} icon={skull} enabled={canHc && !starting}
+                    desc="The squad you send in dies for good if you fall. Its own hiscore and cosmetics."
+                    onClick={() => { setModeChoiceOpen(false); setHcConfirmOpen(true) }}
+                    footer={comingSoon
+                      ? <p className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.12em', color: HC_ACCENT }}>Coming Soon</p>
+                      : <>
+                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${DANGER}cc` }}>Drowned Ledger</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f3d6d6' }}>
+                            {props.hcDeepest > 0 ? `Your best · ${props.hcDeepest}` : props.hardcoreTop ? `#1 · Depth ${props.hardcoreTop.depth}` : 'Unclaimed'}
+                          </p>
+                        </>}
+                  />
+                </div>
               )
             })()}
-          </div>
+            <button onClick={() => setModeChoiceOpen(false)} className="font-karla font-600 tap" style={{ display: 'block', margin: '13px auto 0', background: 'none', border: 'none', color: '#7f7a72', fontSize: '0.74rem', cursor: 'pointer' }}>Back</button>
+          </motion.div>
         </div>
       )}
 
