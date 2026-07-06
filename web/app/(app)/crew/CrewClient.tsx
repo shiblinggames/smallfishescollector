@@ -2129,6 +2129,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={artSrc(t.file)} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
+                              {/* Inner colored glow so the skin art itself gives off
+                                  light (strongest on the one being previewed). */}
+                              <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 8, boxShadow: `inset 0 0 ${isSel ? 15 : 9}px ${t.color}${isSel ? 'cc' : '80'}`, pointerEvents: 'none' }} />
                               {t.chase && !isEquipped && (
                                 <span className="font-karla font-800" style={{ position: 'absolute', top: 3, left: 3, background: t.color, color: '#0a0806', fontSize: '0.42rem', letterSpacing: '0.06em', borderRadius: 4, padding: '1px 3px', lineHeight: 1 }}>CHASE</span>
                               )}
