@@ -10,7 +10,14 @@ export interface BaitDef {
   shopCost: number        // 0 = not for sale. Per-unit shop price; a bundle of
                           // bundleSize costs shopCost * bundleSize.
   bundleSize: number      // units per shop purchase
+  /** Buyable with Fathoms in the Gauntlet's Ship & Shore shop. 0/undefined =
+   *  not Fathoms-buyable. fathomCost is the price for one fathomBundle of units. */
+  fathomCost?: number
+  fathomBundle?: number
 }
+
+/** Baits you can buy for Fathoms (the premium lures, otherwise expedition/rare only). */
+export const FATHOM_BAITS = () => BAITS.filter(b => (b.fathomCost ?? 0) > 0)
 
 export const BAITS: BaitDef[] = [
   {
@@ -76,26 +83,30 @@ export const BAITS: BaitDef[] = [
   {
     type: 'luminous',
     name: 'Luminous Lure',
-    description: 'Fish bite 40% faster. Earned from expeditions and bounties.',
+    description: 'Fish bite 40% faster. Earned from expeditions and bounties, or bought with Fathoms in the Locker.',
     color: '#4ade80',
     imageUrl: '/luminouslure.png',
     waitMult: 0.60,
     catchZoneBonus: 10,
-    acquisition: ['expedition', 'bounty'],
+    acquisition: ['expedition', 'bounty', 'fathoms'],
     shopCost: 0,
     bundleSize: 1,
+    fathomCost: 12,
+    fathomBundle: 5,
   },
   {
     type: 'golden',
     name: 'Golden Lure',
-    description: 'Fish bite 45% faster. Widens your catch zone by 10°. The finest lure in existence.',
+    description: 'Fish bite 45% faster. Widens your catch zone by 10°. The finest lure in existence — a rare drop, or bought with Fathoms in the Locker.',
     color: '#fde68a',
     imageUrl: '/goldenlure.png',
     waitMult: 0.55,
     catchZoneBonus: 10,
-    acquisition: ['rare'],
+    acquisition: ['rare', 'fathoms'],
     shopCost: 0,
     bundleSize: 1,
+    fathomCost: 20,
+    fathomBundle: 5,
   },
 ]
 

@@ -29,7 +29,8 @@ import {
   CHEST_TIERS, chestCannonDropChance,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState,
 } from '@/lib/gauntlet'
-import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun } from './actions'
+import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms } from './actions'
+import { FATHOM_BAITS } from '@/lib/bait'
 import { GAUNTLET_UPGRADES, COMING_SOON_UPGRADES, bonusChargeSlots, gauntletRunHpMult, gauntletSkipsFirstCurse, gauntletSkipOffset, gauntletDamageTakenMod, gauntletDamageMod, gauntletKillHealPct, gauntletHasSoundingLine, gauntletBoonLuck, gauntletBoonRerolls, gauntletCurseRerolls } from '@/lib/gauntletUpgrades'
 import { type ShipAugment } from '@/lib/shipAugments'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -3291,6 +3292,20 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
     }
   }
 
+  // Fathoms → lures. Repeatable (consumable), unlike the one-time upgrades.
+  const [lureBought, setLureBought] = useState<string | null>(null)
+  async function buyLure(baitType: string) {
+    if (claiming) return
+    setClaiming('lure:' + baitType); setErr(null)
+    const res = await buyBaitWithFathoms(baitType)
+    setClaiming(null)
+    if ('error' in res) { setErr(res.error); return }
+    setState(s => (s ? { ...s, fathoms: res.fathoms } : s))
+    vibrate([0, 25, 40, 35])
+    setLureBought(baitType)
+    setTimeout(() => setLureBought(b => (b === baitType ? null : b)), 1600)
+  }
+
   // A shop line item for an UN-OWNED upgrade: name + description on the left,
   // a Fathoms price tag on the right, a status accent stripe, and a buy button
   // whose label spells out exactly why you can or can't take it. (Owned upgrades
@@ -3454,6 +3469,57 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
                     </div>
                   )
                 })}
+
+                {/* Lures — Fathoms-buyable premium bait. CONSUMABLE (repeatable),
+                    so it sits apart from the one-time upgrade cards above. */}
+                {FATHOM_BAITS().length > 0 && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                      <span style={{ color: TEAL, display: 'flex' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v6" /><circle cx="12" cy="14" r="5" /><path d="M12 19v2" /></svg>
+                      </span>
+                      <span className="font-cinzel font-800" style={{ fontSize: '0.88rem', color: '#eafffb', letterSpacing: '0.02em' }}>Lures</span>
+                      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#8a8480', marginBottom: 9, lineHeight: 1.4 }}>The finest bait in the sea, restocked with Fathoms. Buy as many bundles as you like.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {FATHOM_BAITS().map(b => {
+                        const cost = b.fathomCost ?? 0
+                        const bundle = b.fathomBundle ?? 0
+                        const canAfford = state.fathoms >= cost
+                        const busy = claiming === 'lure:' + b.type
+                        const buyable = canAfford && !busy
+                        const justBought = lureBought === b.type
+                        const effect = `${Math.round((1 - b.waitMult) * 100)}% faster bites${b.catchZoneBonus > 0 ? ` · +${b.catchZoneBonus}° zone` : ''}`
+                        return (
+                          <div key={b.type} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.7rem 0.85rem 0.7rem 0.9rem', background: 'rgba(255,255,255,0.035)', border: `1px solid ${buyable ? `${b.color}44` : 'rgba(255,255,255,0.1)'}` }}>
+                            <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: b.color }} />
+                            {b.imageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={b.imageUrl} alt="" style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0, filter: `drop-shadow(0 0 8px ${b.color}55)` }} />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: '#f0ede8', lineHeight: 1.15 }}>{b.name} <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a8480' }}>· ×{bundle}</span></p>
+                              <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: b.color, marginTop: 2 }}>{effect}</p>
+                              {justBought && <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#7fd49a', marginTop: 3 }}>+{bundle} added to your bait.</p>}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={buyable ? () => buyLure(b.type) : undefined}
+                              disabled={!buyable}
+                              className="tap"
+                              style={{ flexShrink: 0, alignSelf: 'center', width: 66, padding: '0.5rem 0.4rem', borderRadius: 11, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, lineHeight: 1, cursor: buyable ? 'pointer' : 'default', color: buyable ? TEAL : '#6a6764', background: buyable ? `${TEAL}1c` : 'rgba(255,255,255,0.04)', border: `1px solid ${buyable ? `${TEAL}66` : 'rgba(255,255,255,0.1)'}` }}
+                            >
+                              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', opacity: 0.85 }}>{busy ? '' : canAfford ? 'Buy' : 'Need'}</span>
+                              <span className="font-cinzel font-800" style={{ fontSize: '1rem' }}>{busy ? '…' : fmt(cost)}</span>
+                              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.4rem', letterSpacing: '0.08em', opacity: 0.7 }}>Fathoms</span>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

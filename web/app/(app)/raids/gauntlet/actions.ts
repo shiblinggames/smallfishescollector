@@ -18,6 +18,7 @@ import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPT
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
+import { getBait } from '@/lib/bait'
 
 // Golden Gauntlet Hull — a rare Man-o-War-only cosmetic that drops only from the
 // top chest tier (Davy Jones' Locker, chest tier 5 / depth 18+). Tunable here.
@@ -648,6 +649,36 @@ export async function resolveGauntletDeath(rewardDepth: number, combatDepth: num
     .eq('id', user.id)
 
   return { ok: true, deepest: prevDeepest, earnedFathoms, newFathoms, hardcore, fallenCount }
+}
+
+/** Buy a bundle of a Fathoms-buyable lure (Golden / Luminous) with Fathoms.
+ *  Repeatable (unlike the one-time Locker upgrades): deducts the bait's
+ *  fathomCost and adds fathomBundle units to bait_inventory. Server-validated
+ *  against the bait table so only the marked lures can be bought this way. */
+export async function buyBaitWithFathoms(baitType: string): Promise<
+  { ok: true; fathoms: number; added: number; baitType: string } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+
+  const bait = getBait(baitType)
+  const cost = bait.fathomCost ?? 0
+  const bundle = bait.fathomBundle ?? 0
+  if (bait.type !== baitType || cost <= 0 || bundle <= 0) return { error: 'That lure is not for sale here.' }
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('gauntlet_fathoms').eq('id', user.id).single()
+  if (!profile) return { error: 'Profile not found.' }
+  const fathoms = (profile.gauntlet_fathoms as number | null) ?? 0
+  if (fathoms < cost) return { error: 'Not enough Fathoms.' }
+
+  const newFathoms = fathoms - cost
+  await Promise.all([
+    admin.from('profiles').update({ gauntlet_fathoms: newFathoms }).eq('id', user.id),
+    admin.rpc('upsert_bait', { p_user_id: user.id, p_bait_type: baitType, p_qty: bundle }),
+  ])
+  return { ok: true, fathoms: newFathoms, added: bundle, baitType }
 }
 
 /** Mark the first-time explainer as seen so it doesn't auto-open again. */
