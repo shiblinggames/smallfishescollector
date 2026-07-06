@@ -50,6 +50,17 @@ export async function getRenownState(skill: RenownSkill): Promise<RenownState | 
   return stateFrom(skill, xp, alloc)
 }
 
+/** Mark the one-time "you hit level 100, meet Renown" intro celebration as seen
+ *  for a skill so it never replays. Persisted per-skill (tour convention). */
+export async function markRenownIntroSeen(skill: RenownSkill): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  if (skill === 'fishing') await admin.from('profiles').update({ seen_fishing_renown_intro: true }).eq('id', user.id)
+  else                     await admin.from('profiles').update({ seen_nav_renown_intro: true }).eq('id', user.id)
+}
+
 /** Spend one banked Renown point on a stat. Server-validated: can't over-spend
  *  or target an unknown stat. */
 export async function allocateRenown(skill: RenownSkill, statId: string): Promise<RenownState | { error: string }> {

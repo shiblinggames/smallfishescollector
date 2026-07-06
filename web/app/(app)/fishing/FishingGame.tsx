@@ -56,9 +56,10 @@ import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, t
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
 import { renownLevel, renownProgress, spentPoints, fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
-import type { RenownState } from '@/app/(app)/actions/renown'
+import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
 import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
+import RenownIntroOverlay from '@/components/RenownIntroOverlay'
 import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
@@ -2997,7 +2998,7 @@ export default function FishingGame({
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
   initialEquippedPet, initialUnlockedPets, onPetStateChange,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
-  initialFishingRenownAlloc,
+  initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
   hookTier: number
   rodTier: number
@@ -3072,6 +3073,8 @@ export default function FishingGame({
   /** Persisted Fishing Renown allocations ({} when none). Renown LEVEL derives
    *  live from fishingXP; only the spend map is threaded in. */
   initialFishingRenownAlloc: RenownAlloc | null
+  /** Whether the one-time "reached 100, meet Renown" intro has already played. */
+  seenFishingRenownIntro: boolean
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
@@ -3645,6 +3648,22 @@ export default function FishingGame({
   const [fishingRenownAlloc, setFishingRenownAlloc] = useState<RenownAlloc>(initialFishingRenownAlloc ?? {})
   const [renownOpen, setRenownOpen] = useState(false)
   const [renownUpNotif, setRenownUpNotif] = useState<RenownUpInfo | null>(null)
+  // One-time "reached level 100, meet Renown" intro. Shows for players already
+  // maxed (on mount) and for a live crossing to 100 (see catch handler).
+  const [renownIntro, setRenownIntro] = useState(false)
+  const [renownIntroSeen, setRenownIntroSeen] = useState(seenFishingRenownIntro)
+  // Show the intro once on mount for players who are ALREADY level 100 (they
+  // never re-cross, so they'd otherwise never meet Renown). Live crossers get
+  // it from the catch handler instead.
+  const introCheckedRef = useRef(false)
+  useEffect(() => {
+    if (introCheckedRef.current) return
+    introCheckedRef.current = true
+    if (!renownIntroSeen && getLevelFromXP(fishingXP) >= MAX_LEVEL) {
+      const t = setTimeout(() => setRenownIntro(true), 700)
+      return () => clearTimeout(t)
+    }
+  }, [renownIntroSeen, fishingXP])
   const fishingRenownLevel = renownLevel('fishing', fishingXP)
   const fishingRenownAvailable = Math.max(0, fishingRenownLevel - spentPoints('fishing', fishingRenownAlloc))
   const fishingRenownState: RenownState = {
@@ -5146,7 +5165,13 @@ export default function FishingGame({
           setRenownUpNotif({ skill: 'fishing', toLevel: newRenown, points: newRenown - oldRenown })
         }
         setXpPopup({ value: xpGained, id: Date.now(), prestige: (prestigeLevels[fish.habitat] ?? 0) > 0 })
-        if (newLevel > oldLevel) {
+        // Crossing INTO level 100 is the pinnacle moment — show the grand
+        // max-level + Renown intro instead of the normal level-up overlay.
+        const hitMax = newLevel >= MAX_LEVEL && oldLevel < MAX_LEVEL
+        if (hitMax && !renownIntroSeen) {
+          setTimeout(() => setRenownIntro(true), 600)
+          window.dispatchEvent(new CustomEvent('fishing-leveled'))
+        } else if (newLevel > oldLevel) {
           setLevelUpNotif({ from: oldLevel, to: newLevel })
           // Tell the Trawls indicator a level-up overlay is showing, so it
           // holds any "Crew Trawls unlocked" celebration until this is dismissed
@@ -9540,6 +9565,15 @@ export default function FishingGame({
         onChange={s => setFishingRenownAlloc(s.alloc)}
       />
       <RenownUpOverlay info={renownUpNotif} onDismiss={() => setRenownUpNotif(null)} />
+      <RenownIntroOverlay
+        open={renownIntro}
+        skill="fishing"
+        onDismiss={() => {
+          setRenownIntro(false)
+          setRenownIntroSeen(true)
+          markRenownIntroSeen('fishing').catch(() => {})
+        }}
+      />
 
       {/* ── Low-bait warning — surfaces the moment total bait drops to 5
             or fewer (see effect that watches baitInventory). Fires once

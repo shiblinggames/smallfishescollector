@@ -233,6 +233,7 @@ export default async function FishingPage() {
           initialFinnRevealed={profile?.finn_revealed ?? false}
           initialFinnLastOutcome={(profile?.finn_last_outcome as 'won' | 'lost' | 'passed' | null) ?? null}
           initialFishingRenownAlloc={(profile?.fishing_renown_alloc as Record<string, number> | null) ?? null}
+          seenFishingRenownIntro={profile?.seen_fishing_renown_intro === true}
         />
       </main>
     </>

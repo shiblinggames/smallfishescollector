@@ -51,7 +51,7 @@ export default function FishingPageClient({
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
-  initialFishingRenownAlloc,
+  initialFishingRenownAlloc, seenFishingRenownIntro,
 }: {
   hookTier: number
   rodTier: number
@@ -110,6 +110,7 @@ export default function FishingPageClient({
   initialFinnRevealed: boolean
   initialFinnLastOutcome: 'won' | 'lost' | 'passed' | null
   initialFishingRenownAlloc: RenownAlloc | null
+  seenFishingRenownIntro: boolean
 }) {
   const router = useRouter()
   const fishingLevel = getLevelFromXP(initialFishingXP)
@@ -278,6 +279,7 @@ export default function FishingPageClient({
       initialFinnRevealed={initialFinnRevealed}
       initialFinnLastOutcome={initialFinnLastOutcome}
       initialFishingRenownAlloc={initialFishingRenownAlloc}
+      seenFishingRenownIntro={seenFishingRenownIntro}
     />
   )
 }

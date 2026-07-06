@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect, useMemo, Fragment, type CSSProperties } from 'react'
+import { useState, useTransition, useEffect, useRef, useMemo, Fragment, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -30,8 +30,9 @@ import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedR
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
 import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
-import type { RenownState } from '@/app/(app)/actions/renown'
+import { markRenownIntroSeen, type RenownState } from '@/app/(app)/actions/renown'
 import RenownPanel from '@/components/RenownPanel'
+import RenownIntroOverlay from '@/components/RenownIntroOverlay'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
@@ -256,6 +257,8 @@ interface Props {
   /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
    *  derives live from expeditionXP. */
   navRenownAlloc?: RenownAlloc | null
+  /** Whether the one-time "reached 100, meet Renown" intro has already played. */
+  seenNavRenownIntro?: boolean
 }
 
 // Drag handle for the loadout drawer. Touching this strip starts a
@@ -336,6 +339,7 @@ export default function ShipHero({
   chapter3Cleared = false,
   isAdmin = false,
   navRenownAlloc = null,
+  seenNavRenownIntro = true,
 }: Props) {
   const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
@@ -350,6 +354,19 @@ export default function ShipHero({
     spent: spentPoints('nav', navRenownAllocState),
     available: navRenownAvailable, alloc: navRenownAllocState,
   }
+  // One-time "reached Nav 100, meet Renown" intro. The hub is always visited,
+  // so showing it here on mount catches both existing maxed captains and anyone
+  // who just crossed 100 out in a raid or voyage.
+  const [navRenownIntro, setNavRenownIntro] = useState(false)
+  const navIntroCheckedRef = useRef(false)
+  useEffect(() => {
+    if (navIntroCheckedRef.current) return
+    navIntroCheckedRef.current = true
+    if (!seenNavRenownIntro && xpProgress.level >= MAX_LEVEL) {
+      const t = setTimeout(() => setNavRenownIntro(true), 700)
+      return () => clearTimeout(t)
+    }
+  }, [seenNavRenownIntro, xpProgress.level])
 
   // Featured crew on the left side of the hero. Up to 3 distinct
   // members picked at random for a triangle composition: trio[0]
@@ -2216,6 +2233,14 @@ export default function ShipHero({
         skill="nav"
         initial={navRenownState}
         onChange={s => setNavRenownAllocState(s.alloc)}
+      />
+      <RenownIntroOverlay
+        open={navRenownIntro}
+        skill="nav"
+        onDismiss={() => {
+          setNavRenownIntro(false)
+          markRenownIntroSeen('nav').catch(() => {})
+        }}
       />
 
       {/* Navigation-level info modal — opens from the Lv pill in the hero
