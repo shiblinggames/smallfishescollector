@@ -670,6 +670,30 @@ export default function RaidCombat({
   const vengeanceCleanseRef = useRef(false)
   const vengeanceDmgBuffRef = useRef(0)   // applied buff, live for rest of fight
   const [vengeanceEruptFx, setVengeanceEruptFx] = useState(0)   // bump → crimson burst
+  // Laz's Vengeance ward is the FIRST line against death — it runs BEFORE any
+  // item save (Quartermaster's Anchor) at every lethal gate, so the anchor is
+  // never spent while Laz can catch the blow. When armed and a would-be-lethal
+  // hit lands (from ANY source: a shot, a burn tick, a failed mechanic check),
+  // this consumes the ward, revives to a % of max HP, and lights the rage buff
+  // for the rest of the fight (Lv 100 also cleanses debuffs). Returns the revive
+  // HP + buff for the caller to apply + log, or null when the ward isn't up.
+  function tryVengeanceRevive(): { hp: number; buffPct: number } | null {
+    if (!vengeanceWardRef.current) return null
+    const reviveHp = Math.max(1, Math.round(playerHpMax * vengeanceHealPctRef.current))
+    const buffPct = vengeanceBuffPctRef.current
+    vengeanceDmgBuffRef.current = buffPct
+    vengeanceWardRef.current = false
+    setVengeanceEruptFx(k => k + 1)
+    vibrate([0, 55, 45, 95])
+    if (vengeanceCleanseRef.current) {
+      playerBurnRef.current = { turns: 0, dmg: 0 }
+      playerFrozenRef.current = false
+      playerFreezePendingRef.current = false
+      setPlayerBurning(false)
+      setPlayerFrozen(false)
+    }
+    return { hp: reviveHp, buffPct }
+  }
   // Hull Render confluence: how many Volleys the player has fired THIS fight, so
   // each one ramps harder than the last. Reset on every fight start.
   const volleyCountRef = useRef(0)
@@ -1013,16 +1037,23 @@ export default function RaidCombat({
     if (newHp > 0) {
       playerHpRef.current = newHp; setPlayerHp(newHp)
       setResolveLog(prev => [...prev, `It rakes you for ${dmg}.`])
-    } else if (anchorSaveAvailable && !anchorUsedRef.current) {
-      // Quartermaster's Anchor catches a would-be wipe, once per run.
-      anchorUsedRef.current = true; onAnchorSave?.()
-      playerHpRef.current = 1; setPlayerHp(1)
-      setAnchorSaveFx(k => k + 1)
-      setResolveLog(prev => [...prev, `It should have sunk you — the anchor holds at 1 HP.`])
     } else {
-      playerHpRef.current = 0; setPlayerHp(0)
-      setResolveLog(prev => [...prev, `It rakes you for ${dmg} — your hull gives way.`])
-      setSubPhase('done'); onPlayerDefeated()
+      const vRevive = tryVengeanceRevive()
+      if (vRevive) {
+        // Laz FIRST — the vengeance ward catches even a one-shot wipe.
+        playerHpRef.current = vRevive.hp; setPlayerHp(vRevive.hp)
+        setResolveLog(prev => [...prev, `It should have sunk you — the vengeance ward erupts, and you surge back to ${vRevive.hp} HP (+${Math.round(vRevive.buffPct * 100)}% damage).`])
+      } else if (anchorSaveAvailable && !anchorUsedRef.current) {
+        // Quartermaster's Anchor catches a would-be wipe, once per run.
+        anchorUsedRef.current = true; onAnchorSave?.()
+        playerHpRef.current = 1; setPlayerHp(1)
+        setAnchorSaveFx(k => k + 1)
+        setResolveLog(prev => [...prev, `It should have sunk you — the anchor holds at 1 HP.`])
+      } else {
+        playerHpRef.current = 0; setPlayerHp(0)
+        setResolveLog(prev => [...prev, `It rakes you for ${dmg} — your hull gives way.`])
+        setSubPhase('done'); onPlayerDefeated()
+      }
     }
   }
   const turnRef            = useRef(1)
@@ -1223,7 +1254,14 @@ export default function RaidCombat({
         // as the other hit paths. This was inverted here (1 - pct/100); harmless
         // while the value is 0, wrong the moment anything sets it.
         const dmg = Math.max(1, Math.round(base * (1 + (mods.damageTakenPct ?? 0) / 100)))
-        const next = Math.max(0, playerHpRef.current - dmg)
+        let next = Math.max(0, playerHpRef.current - dmg)
+        // Laz FIRST — a lethal parting shot is still a killing blow the ward catches.
+        let revived = false
+        if (next <= 0) {
+          const vRevive = tryVengeanceRevive()
+          if (vRevive) { next = vRevive.hp; revived = true }
+        }
+        playerHpRef.current = next
         setPlayerHp(next)
         setPHitsplat({ key: Date.now(), text: `-${dmg}`, color: '#ef4444' })
         setPlayerShakeKey(k => k + 1)
@@ -1232,7 +1270,9 @@ export default function RaidCombat({
         // cleanup, leaving the "-N" number stuck on the ship until the next
         // turn's splat clobbered it.
         setTimeout(() => setPHitsplat(null), 480)
-        setResolveLog(prev => [...prev, next <= 0
+        setResolveLog(prev => [...prev, revived
+          ? `${enemy.name} runs you down — but the vengeance ward erupts and drags you back at ${next} HP!`
+          : next <= 0
           ? `You break for it, but ${enemy.name} runs you down for ${dmg}!`
           : `You try to flee, but ${enemy.name} lands a parting shot for ${dmg}.`])
         setFleeResult({ natural, success: false, dmg, defeated: next <= 0 })
@@ -1539,16 +1579,24 @@ export default function RaidCombat({
       playerHpRef.current = newHp; setPlayerHp(newHp)
       setResolveLog(prev => [...prev, `You ${what} — the barrage rakes you for ${dmg}.`])
       setSubPhase('await_input')
-    } else if (anchorSaveAvailable && !anchorUsedRef.current) {
-      anchorUsedRef.current = true; onAnchorSave?.()
-      playerHpRef.current = 1; setPlayerHp(1)
-      setAnchorSaveFx(k => k + 1)
-      setResolveLog(prev => [...prev, `You ${what} — it should have sunk you, but the anchor holds at 1 HP.`])
-      setSubPhase('await_input')
     } else {
-      playerHpRef.current = 0; setPlayerHp(0)
-      setResolveLog(prev => [...prev, `You ${what} — the barrage rakes you for ${dmg} and your hull gives way.`])
-      setSubPhase('done'); onPlayerDefeated()
+      const vRevive = tryVengeanceRevive()
+      if (vRevive) {
+        // Laz FIRST — the vengeance ward catches even a failed-mechanic wipe.
+        playerHpRef.current = vRevive.hp; setPlayerHp(vRevive.hp)
+        setResolveLog(prev => [...prev, `You ${what} — it should have sunk you, but the vengeance ward erupts, and you surge back to ${vRevive.hp} HP (+${Math.round(vRevive.buffPct * 100)}% damage).`])
+        setSubPhase('await_input')
+      } else if (anchorSaveAvailable && !anchorUsedRef.current) {
+        anchorUsedRef.current = true; onAnchorSave?.()
+        playerHpRef.current = 1; setPlayerHp(1)
+        setAnchorSaveFx(k => k + 1)
+        setResolveLog(prev => [...prev, `You ${what} — it should have sunk you, but the anchor holds at 1 HP.`])
+        setSubPhase('await_input')
+      } else {
+        playerHpRef.current = 0; setPlayerHp(0)
+        setResolveLog(prev => [...prev, `You ${what} — the barrage rakes you for ${dmg} and your hull gives way.`])
+        setSubPhase('done'); onPlayerDefeated()
+      }
     }
   }
 
@@ -2828,27 +2876,6 @@ export default function RaidCombat({
               ? `Your shield soaks ${soaked}.`
               : `Your shield soaks ${soaked} and shatters.`)
           }
-          // Vengeance ward (Laz) — if this would be the killing blow while the
-          // ward is armed, cheat death: negate the hit, heal from the captured
-          // %, and light the rage buff for the rest of THIS fight. One-shot.
-          if (vengeanceWardRef.current && dmg > 0 && pHp - dmg <= 0) {
-            const healAmt = Math.round(playerHpMax * vengeanceHealPctRef.current)
-            pHp = Math.min(playerHpMax, pHp + healAmt)
-            dmg = 0
-            vengeanceDmgBuffRef.current = vengeanceBuffPctRef.current
-            vengeanceWardRef.current = false
-            shieldChanged = true   // force the HP bar to redraw the swing
-            setVengeanceEruptFx(k => k + 1)
-            stepLines.push(`The vengeance ward erupts! You cheat the Locker, surge back to ${pHp} HP, and hit +${Math.round(vengeanceBuffPctRef.current * 100)}% for the rest of the fight.`)
-            if (vengeanceCleanseRef.current) {
-              playerBurnRef.current = { turns: 0, dmg: 0 }
-              playerFrozenRef.current = false
-              playerFreezePendingRef.current = false
-              setPlayerBurning(false)
-              setPlayerFrozen(false)
-              stepLines.push('The deep washes every curse from your hull.')
-            }
-          }
           pHp = Math.max(0, pHp - dmg)
           // Spiteful Wake (boon): the attacker takes a slice of what it dealt
           // straight back. Reads the post-shield, post-mitigation damage (what
@@ -3038,7 +3065,14 @@ export default function RaidCombat({
       if (i >= steps.length) {
         setTimeout(() => {
           if (pHp <= 0) {
-            if (anchorSaveAvailable && !anchorUsedRef.current) {
+            const vRevive = tryVengeanceRevive()
+            if (vRevive) {
+              // Laz FIRST — cheat the killing blow before the anchor is ever spent.
+              pHp = vRevive.hp
+              setPlayerHp(vRevive.hp)
+              setResolveLog(prev => [...prev, `The vengeance ward erupts! You cheat the Locker, surge back to ${vRevive.hp} HP, and hit +${Math.round(vRevive.buffPct * 100)}% for the rest of the fight.`])
+              // fall through to the normal next-turn continuation below
+            } else if (anchorSaveAvailable && !anchorUsedRef.current) {
               // Quartermaster's Anchor: cling on at 1 HP instead of
               // sinking. Once per mount; parent spends the run charge.
               anchorUsedRef.current = true
