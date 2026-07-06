@@ -58,7 +58,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
-import { MEGA_CHARGE_COST, type ShipAugment } from '@/lib/shipAugments'
+import { MEGA_CHARGE_COST, RAILGUN_GRAZE_PCT, type ShipAugment } from '@/lib/shipAugments'
 import { CannonShotBurst, ImpactBurst, RailgunBeam, NukeMissile, NukeBlast, MegaSplats } from './megaFx'
 import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidItems'
 import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
@@ -2582,6 +2582,7 @@ export default function RaidCombat({
         // button always pays for itself, and a failed dodge now still shrugs off
         // most of the blow. Symmetric: applies to both player and enemy dodges.
         let partialDodge = false
+        let railgunGraze = false   // railgun beam grazed a dodging enemy (reduced, not avoided)
         // A frozen defender can't weave aside — its dodge stance is forfeit this
         // round (mirrors its skipped turn), so the shot lands clean.
         const defenderFrozen = isAttackerPlayer ? enemyFrozenThisRound : playerFrozenThisRound
@@ -2590,8 +2591,17 @@ export default function RaidCombat({
             ? `The ${enemy.name} is frozen solid — it can't weave aside.`
             : `Your ship is frozen solid — you can't weave aside.`)
         } else if (defenderAction === 'dodge' && isAttackerPlayer && isMega && megaAug?.pierce) {
-          // Railgun: the beam can't be dodged. The shot lands clean (no roll).
-          stepLines.push(`The beam pierces straight through — no slipping it.`)
+          // Railgun: can't be FULLY dodged, but a clean dodge now GRAZES it to
+          // RAILGUN_GRAZE_PCT of the hit instead of landing full (was: always
+          // full, no roll). A failed dodge still eats the whole beam. Player is
+          // the attacker here, so accuracy is 0 (the fair ~50/50 contest).
+          const def = rollDodge(defenderSpeed, defenderNav)
+          const atk = rollAttackerVsDodge(attackerSpeed, 0)
+          if (def >= atk) {
+            railgunGraze = true
+            dmg = Math.max(1, Math.floor(dmg * RAILGUN_GRAZE_PCT))
+          }
+          // else: full damage lands — the standard hit line fires downstream.
         } else if (defenderAction === 'dodge') {
           // Tide dodge effects only help the PLAYER (when the player is the
           // one defending = the enemy is attacking = !isAttackerPlayer).
@@ -2843,7 +2853,11 @@ export default function RaidCombat({
               stepLines.push(`The wreck goes up in flame, scorching you for ${burn}.`)
             }
           }
-          if (partialDodge) {
+          if (railgunGraze) {
+            stepLines.push(`The ${enemy.name} twists aside, but the beam still grazes clean through for ${dmg}.`)
+            splatText = `-${dmg}`
+            splatColor = '#5fd0ff'
+          } else if (partialDodge) {
             stepLines.push(action === 'volley'
               ? `Enemy partially dodges your volley — grazed for ${dmg}.`
               : `Enemy partially dodges — grazed for ${dmg}.`)

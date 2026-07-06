@@ -48,6 +48,11 @@ export interface ShipAugment {
   perks: string[]
 }
 
+/** Railgun: a successful dodge no longer avoids it entirely — the beam still
+ *  grazes for this fraction of the hit. (It can never be FULLY dodged; a failed
+ *  dodge, or no dodge, still eats the whole beam.) Tunable balance knob. */
+export const RAILGUN_GRAZE_PCT = 0.55
+
 export const SHIP_AUGMENTS: ShipAugment[] = [
   {
     id: 'railgun',
@@ -57,11 +62,11 @@ export const SHIP_AUGMENTS: ShipAugment[] = [
     color: '#5fd0ff',
     megaMult: 2.6,
     pierce: true,
-    identity: 'The sure thing. It never misses.',
+    identity: 'The sure thing. It never fully misses.',
     perks: [
-      'Unblockable — ignores enemy dodge entirely, so it always lands clean.',
+      `Can't be fully dodged — even a clean dodge only grazes it (still ~${Math.round(RAILGUN_GRAZE_PCT * 100)}% damage), never a whiff.`,
       'Armour-piercing — no plate or carapace can soak or deflect it.',
-      'The most reliable ultimate: full damage, every single time.',
+      'The most reliable ultimate: it always lands something.',
       '— Lowest raw multiplier of the three (that certainty is the trade).',
     ],
   },
