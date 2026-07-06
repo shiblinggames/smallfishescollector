@@ -810,6 +810,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // they're working toward. Reset on modal close.
   const [classExpanded, setClassExpanded] = useState(false)
 
+  // Which tab of the crew detail modal is showing. Falls back to Stats when the
+  // active tab isn't available for the viewed crew (e.g. Skins on a non-skin
+  // crew). Reset on modal close.
+  const [detailTab, setDetailTab] = useState<'stats' | 'ability' | 'skins'>('stats')
+
   // Crew skins (legendary-only) — the tile the player is previewing in the
   // detail modal's Skins tab. undefined = show the currently equipped skin;
   // null = the Original; a string = that skin id. Reset on modal close.
@@ -1799,6 +1804,17 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           // (or equipped) skin; the tab below lets the player preview/buy/equip.
           const dm = detail.kind === 'roster' ? (it as CrewMember) : null
           const skinList = dm ? crewSkinsForSlug(dm.slug) : []
+          // Tab strip: Stats always, Ability if the crew has a class, Skins for a
+          // legendary that has skins. activeTab falls back to Stats if the stored
+          // tab isn't valid for this crew.
+          const hasAbility = !!classForSlug(it.slug)
+          const hasSkins = !!dm && skinList.length > 0
+          const detailTabs = [
+            { id: 'stats' as const, label: 'Stats' },
+            ...(hasAbility ? [{ id: 'ability' as const, label: 'Ability' }] : []),
+            ...(hasSkins ? [{ id: 'skins' as const, label: 'Skins' }] : []),
+          ]
+          const activeTab = detailTabs.some(t => t.id === detailTab) ? detailTab : 'stats'
           const equippedSkinId = dm ? (state.equippedCrewSkins[dm.slug] ?? null) : null
           const shownSkinId = previewSkin === undefined ? equippedSkinId : previewSkin
           const portraitFilename = dm
@@ -1820,7 +1836,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const dTrait = netTraitStats(it.effects)
           const dTraitLabel = traitLabel(dTrait)
           const dTraitKind = traitKind(dTrait)
-          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false); setRenameOpen(false); setRenameErr(null); setPreviewSkin(undefined) }
+          const close = () => { setConfirmDismiss(null); setDetail(null); setStatsGlossaryOpen(false); setClassExpanded(false); setRenameOpen(false); setRenameErr(null); setPreviewSkin(undefined); setDetailTab('stats') }
           return (
             <motion.div key="crew-detail-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               onClick={close}
@@ -1981,12 +1997,37 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   )
                 })()}
 
-                {/* Class section — species-locked active ability surfaced
-                    in raid combat through the Special chooser. Always
-                    shown for crew with a class (recruits + roster +
-                    fallen). Sub-Lv-10 crew get a "Unlocks at Lv 10" hint
-                    instead of an effect line so players understand WHY
-                    they don't see an ability yet. */}
+                {/* Tab strip — splits the detail into Stats / Ability / Skins so
+                    it isn't a wall of info. Only shows tabs that apply. */}
+                {detailTabs.length > 1 && (
+                  <div style={{ display: 'flex', gap: 5, marginTop: '0.95rem', padding: 4, background: 'rgba(0,0,0,0.28)', borderRadius: 11, border: '1px solid rgba(255,255,255,0.06)' }}>
+                    {detailTabs.map(t => {
+                      const on = activeTab === t.id
+                      return (
+                        <button key={t.id} type="button"
+                          onClick={() => { vibrate(5); setDetailTab(t.id) }}
+                          className="font-karla font-700 uppercase"
+                          style={{
+                            flex: 1, padding: '0.5rem 0.3rem', borderRadius: 8,
+                            fontSize: '0.62rem', letterSpacing: '0.09em',
+                            background: on ? `${dColor}26` : 'transparent',
+                            border: `1px solid ${on ? dColor + '88' : 'transparent'}`,
+                            color: on ? '#f4ecd8' : 'rgba(255,255,255,0.5)',
+                            boxShadow: on ? `0 0 12px ${dColor}33` : 'none',
+                            cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+                          }}>
+                          {t.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* ── ABILITY tab — species-locked active ability surfaced in raid
+                    combat through the Special chooser. Sub-Lv-10 crew get an
+                    "Unlocks at Lv 10" hint instead of an effect line. */}
+                {activeTab === 'ability' && (
+                <motion.div key="tab-ability" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} style={{ marginTop: '0.7rem' }}>
                 {(() => {
                   const cls = classForSlug(it.slug)
                   if (!cls) return null
@@ -2002,7 +2043,6 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       aria-expanded={classExpanded}
                       aria-label={classExpanded ? 'Hide full ability progression' : 'Show full ability progression'}
                       style={{
-                        marginTop: '0.9rem',
                         padding: '0.65rem 0.75rem 0.7rem',
                         background: `${accent}0e`,
                         border: `1px solid ${accent}44`,
@@ -2099,10 +2139,14 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     </button>
                   )
                 })()}
+                </motion.div>
+                )}
 
-                {/* Skins — legendary crew only. Preview (tap a tile), unlock with
-                    gems, equip. The equipped skin shows everywhere in the game. */}
-                {dm && skinList.length > 0 && (() => {
+                {/* ── SKINS tab — legendary crew only. Preview (tap a tile), unlock
+                    with gems, equip. The equipped skin shows everywhere in-game. */}
+                {activeTab === 'skins' && dm && skinList.length > 0 && (
+                <motion.div key="tab-skins" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} style={{ marginTop: '0.7rem' }}>
+                {(() => {
                   const owned = state.ownedCrewSkins
                   const tiles: { id: string | null; name: string; file: string; cost: number; color: string; chase?: boolean }[] = [
                     { id: null, name: 'Original', file: dm.baseFilename, cost: 0, color: dColor },
@@ -2114,7 +2158,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   const selCost = shownSkinId ? (getCrewSkin(shownSkinId)?.gemCost ?? 0) : 0
                   const canAfford = state.gems >= selCost
                   return (
-                    <div style={{ marginTop: '0.9rem' }}>
+                    <div>
                       <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Skins</p>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
                         {tiles.map(t => {
@@ -2177,11 +2221,16 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     </div>
                   )
                 })()}
+                </motion.div>
+                )}
 
+                {/* ── STATS tab — stat grid, trained-from breakdown, glossary, trait. */}
+                {activeTab === 'stats' && (
+                <motion.div key="tab-stats" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} style={{ marginTop: '0.7rem' }}>
                 {/* Stats header + ? toggle. Inline glossary below
                     explains what each stat actually does in raids +
                     voyages — match the Traits header styling above. */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.9rem', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>Stats</p>
                   <button
                     type="button"
@@ -2309,13 +2358,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     </div>
                   </>
                 )}
+                </motion.div>
+                )}
 
-                {/* Make Captain — only for roster crew that are on a track
-                    but not already at slot 0. The track they're on doesn't
-                    need to be picked separately; promoteToCaptain figures
-                    it out from voyage_slot / raid_slot on the row. Sits
-                    just above Dismiss so the destructive action stays at
-                    the bottom of the modal. */}
+                {/* ── Actions (always visible below the tabs) ────────────────────
+                    Make Captain — only for roster crew on a track but not already
+                    at slot 0. promoteToCaptain figures the track from the row. Sits
+                    just above Dismiss so the destructive action stays at the bottom. */}
                 {detail.kind === 'roster' && (() => {
                   const m = it as CrewMember
                   const onVoyage = m.voyageSlot !== null
