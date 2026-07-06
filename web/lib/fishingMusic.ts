@@ -697,6 +697,73 @@ export function playForgeSfx(descend = false): void {
   } catch {}
 }
 
+/** Renown point spend — a short crystalline two-note "ting" for allocating a
+ *  banked Renown point. Deliberately light + quick so rapid clicks feel tactile
+ *  rather than fatiguing. Fully synthesized. Routed through sfxOut. */
+export function playRenownPointSfx(): void {
+  if (!audioCtx) return
+  const out = sfxOut(); if (!out) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const ctx = audioCtx
+    const t0 = ctx.currentTime
+    // Rising two-note blip: G5 → C6, bright and glassy.
+    ;[783.99, 1046.5].forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.value = freq
+      const start = t0 + i * 0.05
+      const peak = 0.2 - i * 0.03
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(peak, start + 0.008)
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.22)
+      osc.connect(g).connect(out)
+      osc.start(start); osc.stop(start + 0.26)
+    })
+  } catch {}
+}
+
+/** Renown level earned — a fuller ascending swell (past level 100, a real
+ *  moment). Warmer + longer than the point-spend ting. Fully synthesized. */
+export function playRenownUpSfx(): void {
+  if (!audioCtx) return
+  const out = sfxOut(); if (!out) return
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
+    const ctx = audioCtx
+    const t0 = ctx.currentTime
+    // Ascending perfect-fifth stack: C5 G5 C6 E6 — regal, gold.
+    const notes = [523.25, 783.99, 1046.5, 1318.5]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = i === notes.length - 1 ? 'triangle' : 'sine'
+      osc.frequency.value = freq
+      const start = t0 + i * 0.08
+      const peak = 0.26 - i * 0.02
+      g.gain.setValueAtTime(0.0001, start)
+      g.gain.exponentialRampToValueAtTime(Math.max(0.06, peak), start + 0.016)
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.7)
+      osc.connect(g).connect(out)
+      osc.start(start); osc.stop(start + 0.75)
+    })
+    // High shimmer riding the top.
+    const noise = ctx.createBufferSource()
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.1), ctx.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+    noise.buffer = buf
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'; bp.frequency.value = 6000; bp.Q.value = 0.7
+    const ng = ctx.createGain()
+    ng.gain.setValueAtTime(0.12, t0 + 0.18)
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.34)
+    noise.connect(bp).connect(ng).connect(out)
+    noise.start(t0 + 0.18); noise.stop(t0 + 0.35)
+  } catch {}
+}
+
 /** Treasure-chest open fanfare — fully synthesized (no asset). A low lid
  *  "thunk", a bright ascending major arpeggio (the payoff), and a couple of
  *  high coin-shimmer sparkles. Routed through sfxOut so the SFX mute applies.

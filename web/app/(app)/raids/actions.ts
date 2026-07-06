@@ -8,6 +8,7 @@ import { loadDeployedParty } from '@/lib/crewData'
 import { resolveDeployedCrew } from '@/lib/crewResolve'
 import { getActiveEffects, dedupeRaidItems } from '@/lib/raidItems'
 import { aggregateShipClasses } from '@/lib/shipClasses'
+import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { getShipSkin } from '@/lib/shipSkins'
 import { bonusChargeSlots, gauntletRepairHealMult } from '@/lib/gauntletUpgrades'
 import { getShipAugment, MANOWAR_TIER, type ShipAugment } from '@/lib/shipAugments'
@@ -82,7 +83,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build')
+    .select('ship_tier, saved_crew, ship_name, username, character_color, equipped_hat, avatar_bg_color, avatar_border_color, equipped_ship_skin, ship_skins, raid_items, equipped_raid_items, equipped_repair_kit, has_seen_raid_tutorial, expedition_xp, nav_renown_alloc, ship_classes, gauntlet_upgrades, manowar_augment, manowar_augment_build')
     .eq('id', userId)
     .single()
 
@@ -121,6 +122,11 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const navLevel = getLevelFromXP((profile?.expedition_xp as number | null) ?? 0)
   const navBonus = navLevelBonuses(navLevel)
 
+  // Navigation Renown (post-100): tiny captain boosts. Hull adds flat HP into
+  // the pool below (before item/class mults); damage folds into the mult sent
+  // to the client. Identity (1× / +0) when unallocated.
+  const navRenown = navRenownEffects(profile?.nav_renown_alloc as RenownAlloc | null)
+
   // Reinforced Hull etc. — raid items can scale max HP at raid start.
   // Multiplies after the ship + nav HP are summed so it applies to the
   // full pool. Multiple max_hp_mult items stack multiplicatively.
@@ -150,7 +156,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
   const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
 
   return {
-    playerHPMax:      Math.round((ship.durability + navBonus.hp) * hpMaxMult * classEffects.hpMult),
+    playerHPMax:      Math.round((ship.durability + navBonus.hp + navRenown.hullFlat) * hpMaxMult * classEffects.hpMult),
     shipMinDamage:    ship.minDamage,
     shipSpeed:        Math.max(0, ship.speed + classEffects.speedFlat),
     totalPower:       totalPower   + navBonus.power,
@@ -172,7 +178,7 @@ export async function getRaidPlayerStats(userId: string): Promise<RaidPlayerStat
     shipSkins:            (profile?.ship_skins as string[] | null) ?? [],
     equippedRaidItems:    equippedItems,
     ownedRaidItems:       (profile?.raid_items as string[] | null) ?? [],
-    classDamageMult:      classEffects.damageMult,
+    classDamageMult:      classEffects.damageMult * navRenown.damageMult,
     classDoubloonMult:    classEffects.doubloonMult,
     shipClasses:          shipClassPicks,
     equippedRepairKit:    (profile?.equipped_repair_kit as string | null) ?? 'basic_repair_kit',

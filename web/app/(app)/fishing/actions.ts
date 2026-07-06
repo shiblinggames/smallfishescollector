@@ -8,6 +8,7 @@ import { getFishHold } from '@/lib/fishHold'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
 import { catchXP, getLevelFromXP } from '@/lib/fishingLevel'
+import { fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { fishingColorsToGrant } from '@/lib/characters'
 import { getLineForSpeciesCount } from '@/lib/lines'
 import { getSpecialItem } from '@/lib/specialItems'
@@ -46,7 +47,7 @@ const ZONE_WAIT_BASE: Record<string, [number, number]> = {
   abyss:       [12000, 45000],
   ancient_deep: [45000, 120000],
 }
-function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number): number {
+function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishingLevel: number, renownWaitMult = 1): number {
   const [zMin, zMax] = ZONE_WAIT_BASE[habitat] ?? [5000, 20000]
   const frac = Math.max(0, Math.min(1, (catchScore - 8) / 90))
   const base = zMin + frac * (zMax - zMin)
@@ -58,7 +59,7 @@ function fishWaitMs(catchScore: number, habitat: string, baitType: string, fishi
   // worm-baited cast in that zone to a flat 60s and erasing the bait
   // choice the player just made. 3s floor stays as a sanity check
   // against negative-wait pathologies from stacked future buffs.
-  return Math.max(3000, Math.round(base * baitMult * levelMult))
+  return Math.max(3000, Math.round(base * baitMult * levelMult * renownWaitMult))
 }
 
 // Two-stage fish selection:
@@ -177,13 +178,14 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event, catch_pending')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event, catch_pending, fishing_renown_alloc')
     .eq('id', user.id)
     .single()
 
   if (!profile) return { error: 'Profile not found' }
 
   const bait = getBait(baitType)
+  const renownWaitMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).biteWaitMult
 
   // Validate zone access by fishing level
   const fishingLevel = getLevelFromXP(profile.fishing_xp ?? 0)
@@ -283,7 +285,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   }
 
   const fish = tierWeightedPick(pool, habitat, rod.rarityBonus + eventRarityBonus)
-  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel)
+  let waitMs = fishWaitMs(fish.catch_score, habitat, baitType, fishingLevel, renownWaitMult)
 
   // Lightsaber Rod — "Lightspeed": a chance the bite is near-instant. This is
   // the only rod stat that actually changes the bite wait (biteIntervalMs is
@@ -402,11 +404,14 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
   if (!fish || !profile) return { error: 'Data not found' }
+
+  // Fishing Renown (post-100): a tiny XP multiplier on every catch (Wisdom).
+  const renownXpMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).xpMult
 
   // Trophy path: ancient_deep fish WITH sell_value 0 are the original 6
   // prehistoric trophies — they go straight to trophy_catches, skip
@@ -419,7 +424,7 @@ export async function reelIn(
   if (fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0) {
     const existing = ((profile.trophy_catches as number[] | null) ?? [])
     const isNewTrophy = !existing.includes(fishId)
-    const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3)
+    const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3 * renownXpMult)
     const newXP = (profile.fishing_xp ?? 0) + xpGained
     // Perfect streak counts in ancient too (it grants no streak XP bonus here,
     // by design), tracked server-side so it can't be spoofed.
@@ -610,7 +615,7 @@ export async function reelIn(
   // it can't be inflated to mint XP.
   const newPerfectStreak = result === 'perfect' ? (profile.current_perfect_streak ?? 0) + 1 : 0
   const serverStreakBonus = newPerfectStreak * newPerfectStreak * 3 // streak 1=+3, 2=+12, 3=+27, … (0 when not perfect)
-  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult)
+  const xpGained = Math.round((catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') + serverStreakBonus) * prestigeXPMult * perfectXpMult * renownXpMult)
   const newXP = (profile.fishing_xp ?? 0) + xpGained
 
   // Perfected Sigil — equipped Shrouded Reach drop pays a streak-scaling
@@ -1145,20 +1150,21 @@ export async function sellFish(
   const [{ data: invRow }, { data: fish }, { data: profile }] = await Promise.all([
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id).eq('fish_id', fishId).single(),
     admin.from('fish_species').select('sell_value').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, active_event').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc').eq('id', user.id).single(),
   ])
 
   if (!invRow || !fish || !profile) return { error: 'Data not found' }
   if (invRow.quantity < quantity) return { error: 'Not enough fish' }
 
   const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
+  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult
   // Quick-sell at 75% (was 65%) — gives new players a softer floor so
   // one bad early sell doesn't lock them out of their next rod tier.
   // The two-lane design is unchanged: market still pays full price,
   // delayed liquidate still pays 87% after fees, this just narrows
   // the gap between "convenient" and "punishing." See review notes
   // on economy: quick-sell was the largest self-inflicted-wound state.
-  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.75)) * quantity
+  const earned = Math.floor(fish.sell_value * (fullPrice ? 1.0 : 0.75) * renownSellMult) * quantity
   const newDoubloons = (profile.doubloons ?? 0) + earned
 
   await Promise.all([
@@ -1193,7 +1199,7 @@ export async function quickSellAllFish(): Promise<
       .select('fish_id, quantity, fish_species(sell_value)')
       .eq('user_id', user.id)
       .gt('quantity', 0),
-    admin.from('profiles').select('doubloons, active_event').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, active_event, fishing_renown_alloc').eq('id', user.id).single(),
   ])
 
   if (!profile) return { error: 'Profile not found' }
@@ -1203,7 +1209,8 @@ export async function quickSellAllFish(): Promise<
   if (inventory.length === 0) return { error: 'Nothing to sell' }
 
   const fullPrice = getActiveEvent(profile.active_event)?.type === 'fullmoon'
-  const rate = fullPrice ? 1.0 : 0.75
+  const renownSellMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).sellMult
+  const rate = (fullPrice ? 1.0 : 0.75) * renownSellMult
 
   let totalEarned = 0
   let totalFishSold = 0
@@ -1637,14 +1644,15 @@ export async function sellGoldenTrophy(
   if (trophy.status !== 'hold') return { error: 'Trophy already resolved' }
   if (!trophy.fish_species) return { error: 'Species not found' }
 
-  const earned = (trophy.fish_species.sell_value ?? 0) * SHINY_SELL_MULT
-  if (earned <= 0) return { error: 'Trophy has no value' }
-
   const { data: profile } = await admin
     .from('profiles')
-    .select('doubloons')
+    .select('doubloons, fishing_renown_alloc')
     .eq('id', user.id)
     .single()
+  const renownSellMult = fishingRenownEffects(profile?.fishing_renown_alloc as RenownAlloc | null).sellMult
+  const earned = Math.floor((trophy.fish_species.sell_value ?? 0) * SHINY_SELL_MULT * renownSellMult)
+  if (earned <= 0) return { error: 'Trophy has no value' }
+
   const newDoubloons = (profile?.doubloons ?? 0) + earned
 
   await Promise.all([

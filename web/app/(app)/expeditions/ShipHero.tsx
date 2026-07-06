@@ -29,6 +29,9 @@ import { RARITY_COLORS as CREW_RARITY_COLORS, RARITY_NAMES } from '@/lib/crewGen
 import { RAID_ITEMS, getRaidItem, FORGE_RECIPES, conflictingRaidItems, isForgedRaidItem, unobtainableComponents } from '@/lib/raidItems'
 import { renameShip, buyShip } from '@/app/shipyard/actions'
 import { getXPProgress, navLevelBonuses, MAX_LEVEL, getLevelFromXP as navLevelFromXP } from '@/lib/expeditionLevel'
+import { renownLevel, renownProgress, spentPoints, type RenownAlloc } from '@/lib/renown'
+import type { RenownState } from '@/app/(app)/actions/renown'
+import RenownPanel from '@/components/RenownPanel'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 
 const IMG_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/storage/v1/object/public/card-arts/'
@@ -250,6 +253,9 @@ interface Props {
   /** Cleared Chapter 3 (beat the Quartermaster) — unlocks the ultimate build. */
   chapter3Cleared?: boolean
   isAdmin?: boolean
+  /** Persisted Navigation Renown allocations ({} when none). Renown LEVEL
+   *  derives live from expeditionXP. */
+  navRenownAlloc?: RenownAlloc | null
 }
 
 // Drag handle for the loadout drawer. Touching this strip starts a
@@ -329,9 +335,21 @@ export default function ShipHero({
   manowarBuild = null,
   chapter3Cleared = false,
   isAdmin = false,
+  navRenownAlloc = null,
 }: Props) {
   const router = useRouter()
   const xpProgress = getXPProgress(expeditionXP)
+  // Navigation Renown (post-100). Level derives from expeditionXP; the spend
+  // map is stateful so the bar badge updates when the panel allocates.
+  const [navRenownAllocState, setNavRenownAllocState] = useState<RenownAlloc>(navRenownAlloc ?? {})
+  const [renownOpen, setRenownOpen] = useState(false)
+  const navRenownLevel = renownLevel('nav', expeditionXP)
+  const navRenownAvailable = Math.max(0, navRenownLevel - spentPoints('nav', navRenownAllocState))
+  const navRenownState: RenownState = {
+    skill: 'nav', level: navRenownLevel,
+    spent: spentPoints('nav', navRenownAllocState),
+    available: navRenownAvailable, alloc: navRenownAllocState,
+  }
 
   // Featured crew on the left side of the hero. Up to 3 distinct
   // members picked at random for a triangle composition: trio[0]
@@ -912,13 +930,14 @@ export default function ShipHero({
               modal (captain bonuses + next-level carrot). */}
           {(() => {
             const atMax = xpProgress.level >= MAX_LEVEL
-            const fillPct = atMax ? 100 : xpProgress.progress * 100
+            const rn = atMax ? renownProgress('nav', expeditionXP) : null
+            const fillPct = atMax ? (rn ? rn.progress * 100 : 100) : xpProgress.progress * 100
             const toGo = Math.max(0, xpProgress.xpForLevel - xpProgress.xpInLevel)
             return (
               <button
                 type="button"
-                onClick={() => setNavInfoOpen(true)}
-                aria-label="Show navigation level info"
+                onClick={() => (atMax ? setRenownOpen(true) : setNavInfoOpen(true))}
+                aria-label={atMax ? 'Open Navigation Renown' : 'Show navigation level info'}
                 className="font-karla font-600"
                 style={{
                   position: 'relative',
@@ -937,21 +956,30 @@ export default function ShipHero({
                 </div>
                 <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                   <motion.div
-                    key={xpProgress.level}
+                    key={atMax ? `rn-${rn?.level ?? 0}` : xpProgress.level}
                     initial={{ width: '0%' }}
                     animate={{ width: `${fillPct}%` }}
                     transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                     style={{
                       height: '100%', borderRadius: 999,
-                      background: 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)',
-                      boxShadow: '0 0 10px #7da0d870',
+                      background: atMax ? 'linear-gradient(90deg, #a07a2a 0%, #f0c040 100%)' : 'linear-gradient(90deg, #4a6090 0%, #7da0d8 100%)',
+                      boxShadow: atMax ? '0 0 10px #f0c04070' : '0 0 10px #7da0d870',
                     }}
                   />
                 </div>
-                <span className="font-karla font-600 shrink-0"
-                  style={{ fontSize: '0.62rem', color: atMax ? '#f0c040' : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                  {atMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
-                </span>
+                {atMax && rn ? (
+                  <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.62rem', color: '#f0c040', lineHeight: 1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    ✦ R{rn.level}
+                    {navRenownAvailable > 0 && (
+                      <span style={{ fontSize: '0.5rem', color: '#0a0f1c', background: '#f0c040', borderRadius: 999, padding: '1px 5px', fontWeight: 800 }}>+{navRenownAvailable}</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="font-karla font-600 shrink-0"
+                    style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    {`${toGo.toLocaleString()} xp`}
+                  </span>
+                )}
               </button>
             )
           })()}
@@ -2173,6 +2201,15 @@ export default function ShipHero({
           )}
         </motion.div>
       </PopupShell>
+
+      {/* Navigation Renown board — opens from the Lv pill once Nav hits 100. */}
+      <RenownPanel
+        open={renownOpen}
+        onClose={() => setRenownOpen(false)}
+        skill="nav"
+        initial={navRenownState}
+        onChange={s => setNavRenownAllocState(s.alloc)}
+      />
 
       {/* Navigation-level info modal — opens from the Lv pill in the hero
           header. Shows the current captain bonuses (HP, Power, Navigation,

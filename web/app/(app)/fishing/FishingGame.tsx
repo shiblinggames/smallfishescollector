@@ -55,6 +55,10 @@ import { buyHook } from '@/app/(app)/hooks/actions'
 import { buildFishZones, FISH_DIFFICULTY_SPEED, ZONE_DIFFICULTY, CATCH_CENTER, type ZoneDef, type ZoneType } from './depths'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import { getXPProgress, getLevelFromXP, levelCatchBonus, MAX_LEVEL } from '@/lib/fishingLevel'
+import { renownLevel, renownProgress, spentPoints, fishingRenownEffects, type RenownAlloc } from '@/lib/renown'
+import type { RenownState } from '@/app/(app)/actions/renown'
+import RenownPanel from '@/components/RenownPanel'
+import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 import { fishingGearUnlockedBetween } from '@/lib/gearUnlocks'
 import GearUnlockRow from '@/components/GearUnlockRow'
 import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
@@ -2592,22 +2596,32 @@ function FishInventory({ inventory, onSell }: {
 
 // ─── XPBar ───────────────────────────────────────────────────────────────────
 
-function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
+function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: {
+  xp: number; bestStreak?: number
+  /** Banked Renown points (post-100). When defined, MAX becomes a tappable
+   *  "Renown N" chip + the bar tracks progress to the next Renown level. */
+  renownAvailable?: number
+  onOpenRenown?: () => void
+}) {
   const { level, progress, xpInLevel, xpForLevel } = getXPProgress(xp)
   const isMax = level >= MAX_LEVEL
-  const fillPct = isMax ? 100 : progress * 100
+  const rn = isMax ? renownProgress('fishing', xp) : null
+  const fillPct = isMax ? (rn ? rn.progress * 100 : 100) : progress * 100
   const toGo = xpForLevel - xpInLevel
   const c = isMax ? '#f0c040' : '#60a5fa'
+  const clickable = isMax && !!onOpenRenown
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2"
-      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28`, borderRadius: 20 }}>
+    <div
+      onClick={clickable ? onOpenRenown : undefined}
+      className="flex items-center gap-2.5 px-3 py-2"
+      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28`, borderRadius: 20, cursor: clickable ? 'pointer' : 'default' }}>
       <div className="shrink-0 flex items-baseline gap-0.5">
         <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: c + 'bb', letterSpacing: '0.08em' }}>LV</span>
         <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c, lineHeight: 1 }}>{level}</span>
       </div>
       <div style={{ flex: 1, height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
         <motion.div
-          key={level}
+          key={isMax ? `rn-${rn?.level ?? 0}` : level}
           style={{
             height: '100%', borderRadius: 999,
             background: `linear-gradient(90deg, ${c}88 0%, ${c} 100%)`,
@@ -2619,10 +2633,22 @@ function XPBarDisplay({ xp, bestStreak }: { xp: number; bestStreak?: number }) {
         />
       </div>
       <div className="shrink-0 flex items-center gap-2">
-        <p className="font-karla font-600"
-          style={{ fontSize: '0.6rem', color: isMax ? c : 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1 }}>
-          {isMax ? 'MAX' : `${toGo.toLocaleString()} xp`}
-        </p>
+        {isMax && rn ? (
+          <span className="font-karla font-700 flex items-center gap-1" style={{ fontSize: '0.6rem', color: c, lineHeight: 1 }}>
+            ✦ R{rn.level}
+            {(renownAvailable ?? 0) > 0 && (
+              <span style={{
+                fontSize: '0.5rem', color: '#0a0f1c', background: c, borderRadius: 999,
+                padding: '1px 5px', fontWeight: 800,
+              }}>+{renownAvailable}</span>
+            )}
+          </span>
+        ) : (
+          <p className="font-karla font-600"
+            style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', textAlign: 'right', lineHeight: 1 }}>
+            {`${toGo.toLocaleString()} xp`}
+          </p>
+        )}
         {(bestStreak ?? 0) > 0 && (
           <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: 'rgba(251,146,60,0.9)', lineHeight: 1 }}>
             🔥{bestStreak}
@@ -2965,6 +2991,7 @@ export default function FishingGame({
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
   initialEquippedPet, initialUnlockedPets, onPetStateChange,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
+  initialFishingRenownAlloc,
 }: {
   hookTier: number
   rodTier: number
@@ -3036,6 +3063,9 @@ export default function FishingGame({
   initialFinnSeenBeats: string[]
   initialFinnRevealed: boolean
   initialFinnLastOutcome: 'won' | 'lost' | 'passed' | null
+  /** Persisted Fishing Renown allocations ({} when none). Renown LEVEL derives
+   *  live from fishingXP; only the spend map is threaded in. */
+  initialFishingRenownAlloc: RenownAlloc | null
 }) {
 
   const [localCharacterColor, setLocalCharacterColor] = useState(characterColor)
@@ -3604,6 +3634,18 @@ export default function FishingGame({
   }, [collectionOpen])
   const [fishingXP, setFishingXP]   = useState(initialFishingXP)
   const [xpPopup, setXpPopup]       = useState<{ value: number; id: number; prestige?: boolean } | null>(null)
+  // Fishing Renown (post-100). Level derives live from fishingXP; only the
+  // spend map is stateful (updated when the panel allocates/respecs).
+  const [fishingRenownAlloc, setFishingRenownAlloc] = useState<RenownAlloc>(initialFishingRenownAlloc ?? {})
+  const [renownOpen, setRenownOpen] = useState(false)
+  const [renownUpNotif, setRenownUpNotif] = useState<RenownUpInfo | null>(null)
+  const fishingRenownLevel = renownLevel('fishing', fishingXP)
+  const fishingRenownAvailable = Math.max(0, fishingRenownLevel - spentPoints('fishing', fishingRenownAlloc))
+  const fishingRenownState: RenownState = {
+    skill: 'fishing', level: fishingRenownLevel,
+    spent: spentPoints('fishing', fishingRenownAlloc),
+    available: fishingRenownAvailable, alloc: fishingRenownAlloc,
+  }
   // Trawls (crew passive fishing) collect off-screen in the Trawls panel; when
   // a haul lands it dispatches these so the fishing screen's own XP bar + purse
   // tick live (the Nav purse already listens to doubloons-changed separately).
@@ -3680,7 +3722,10 @@ export default function FishingGame({
   const [sessionOverlayDismissed, setSessionOverlayDismissed] = useState(false)
 
   const fishingLevel = getLevelFromXP(fishingXP)
-  const levelBonus   = levelCatchBonus(fishingLevel)
+  // Renown Precision widens the catch window a hair per point (post-100). Folds
+  // into the same catch-zone budget as level/bait/rod bonuses.
+  const renownZoneBonus = fishingRenownEffects(fishingRenownAlloc).catchZoneBonus
+  const levelBonus   = levelCatchBonus(fishingLevel) + renownZoneBonus
 
   // Needle state
   const [angle, setAngle]           = useState(270)
@@ -5086,7 +5131,14 @@ export default function FishingGame({
         if (res.unlockedSkinId) { setSkinUnlockToast(res.unlockedSkinId); setTimeout(() => setSkinUnlockToast(null), 6000) }
         const oldLevel = getLevelFromXP(fishingXP)
         const newLevel = getLevelFromXP(newXP)
+        // Renown crossing (post-100): one banked point per level crossed. The
+        // overlay fires after the level-up overlay is dismissed if both hit.
+        const oldRenown = renownLevel('fishing', fishingXP)
+        const newRenown = renownLevel('fishing', newXP)
         setFishingXP(newXP)
+        if (newRenown > oldRenown) {
+          setRenownUpNotif({ skill: 'fishing', toLevel: newRenown, points: newRenown - oldRenown })
+        }
         setXpPopup({ value: xpGained, id: Date.now(), prestige: (prestigeLevels[fish.habitat] ?? 0) > 0 })
         if (newLevel > oldLevel) {
           setLevelUpNotif({ from: oldLevel, to: newLevel })
@@ -6118,7 +6170,7 @@ export default function FishingGame({
           {/* XP bar */}
           <div style={{ marginBottom: '0.6rem' }}>
             <div style={{ position: 'relative' }}>
-              <XPBarDisplay xp={fishingXP} bestStreak={highestPerfectStreak} />
+              <XPBarDisplay xp={fishingXP} bestStreak={highestPerfectStreak} renownAvailable={fishingRenownAvailable} onOpenRenown={() => setRenownOpen(true)} />
               <AnimatePresence>
                 {xpPopup && (
                   <motion.p
@@ -9472,6 +9524,16 @@ export default function FishingGame({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Fishing Renown board + level-earned celebration (post-100). */}
+      <RenownPanel
+        open={renownOpen}
+        onClose={() => setRenownOpen(false)}
+        skill="fishing"
+        initial={fishingRenownState}
+        onChange={s => setFishingRenownAlloc(s.alloc)}
+      />
+      <RenownUpOverlay info={renownUpNotif} onDismiss={() => setRenownUpNotif(null)} />
 
       {/* ── Low-bait warning — surfaces the moment total bait drops to 5
             or fewer (see effect that watches baitInventory). Fires once

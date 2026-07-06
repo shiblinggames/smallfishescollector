@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
+import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 
 export async function awardRaidKill(
@@ -16,31 +17,34 @@ export async function awardRaidKill(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('expedition_xp, doubloons, ship_classes')
+    .select('expedition_xp, doubloons, ship_classes, nav_renown_alloc')
     .eq('id', user.id)
     .single()
 
   // Ship-class doubloon multiplier (Helmsman + future picks). Applied
   // server-side so the client can't inflate it. XP isn't class-modified
   // (gunner doesn't earn more XP per fight, they just hit harder);
-  // only the gold scales.
+  // only the gold scales. Nav Renown (Plunder) stacks a tiny bit more gold,
+  // and (Command) a tiny bit more crew XP — both identity when unallocated.
   const classPicks = (profile?.ship_classes as Record<string, string> | null) ?? {}
-  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
+  const navRenown = navRenownEffects(profile?.nav_renown_alloc as RenownAlloc | null)
+  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult * navRenown.doubloonMult
   const scaledDoubloons = Math.round(doubloons * doubloonMult)
+  const crewXP_amount = Math.round(xp * navRenown.crewXpMult)
 
   const newExpeditionXP  = (profile?.expedition_xp ?? 0) + xp
   const newDoubloonTotal = (profile?.doubloons ?? 0) + scaledDoubloons
 
-  // Crew earn the SAME per-kill XP the player just earned (no nav multiplier —
-  // gunner-buffed captains don't grow crew faster). Every alive, assigned
-  // crew gets bumped via a single atomic RPC; level-up deltas come back so
-  // the end-of-encounter overlay can flash crew level-ups.
+  // Crew earn the per-kill XP the player just earned, nudged by nav Renown
+  // (Command) only — ship classes still don't grow crew faster. Every alive,
+  // assigned crew gets bumped via a single atomic RPC; level-up deltas come
+  // back so the end-of-encounter overlay can flash crew level-ups.
   const [, crewXP] = await Promise.all([
     admin.from('profiles').update({
       expedition_xp: newExpeditionXP,
       doubloons: newDoubloonTotal,
     }).eq('id', user.id),
-    grantXPToAssignedCrew(admin, user.id, xp),
+    grantXPToAssignedCrew(admin, user.id, crewXP_amount),
   ])
 
   return { newExpeditionXP, newDoubloonTotal, crewXP }

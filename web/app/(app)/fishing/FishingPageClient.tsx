@@ -7,6 +7,7 @@ import { startFishingMusic, fadeOutFishingMusic, setFishingTrack, primeFishingTr
 import ZoneLanding, { type ZoneKey, type ZoneStat } from './ZoneLanding'
 import type { FishSpecies } from './actions'
 import { getLevelFromXP } from '@/lib/fishingLevel'
+import type { RenownAlloc } from '@/lib/renown'
 import { ZONE_MIN_LEVEL } from './zoneData'
 import type { ActiveSession } from '@/app/(app)/social/challengeActions'
 import type { DailyChallengeState } from '@/lib/dailyChallenges'
@@ -50,6 +51,7 @@ export default function FishingPageClient({
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, trophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
+  initialFishingRenownAlloc,
 }: {
   hookTier: number
   rodTier: number
@@ -107,6 +109,7 @@ export default function FishingPageClient({
   initialFinnSeenBeats: string[]
   initialFinnRevealed: boolean
   initialFinnLastOutcome: 'won' | 'lost' | 'passed' | null
+  initialFishingRenownAlloc: RenownAlloc | null
 }) {
   const router = useRouter()
   const fishingLevel = getLevelFromXP(initialFishingXP)
@@ -274,6 +277,7 @@ export default function FishingPageClient({
       initialFinnSeenBeats={initialFinnSeenBeats}
       initialFinnRevealed={initialFinnRevealed}
       initialFinnLastOutcome={initialFinnLastOutcome}
+      initialFishingRenownAlloc={initialFishingRenownAlloc}
     />
   )
 }

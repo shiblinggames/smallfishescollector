@@ -39,6 +39,8 @@ import { getRaidItem, getActiveEffects } from '@/lib/raidItems'
 import LeaderboardModal from '@/components/LeaderboardModal'
 import { vibrate } from '@/lib/haptics'
 import { getXPProgress, MAX_LEVEL } from '@/lib/expeditionLevel'
+import { renownLevel } from '@/lib/renown'
+import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
 
 type Phase = 'intro' | 'usedup' | 'resume' | 'descending' | 'fighting' | 'curse' | 'boon' | 'shrine' | 'between' | 'reward' | 'dead'
 
@@ -2535,6 +2537,17 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
     ? { duration: 1.7, times: [0, 0.4, 0.42, 1], ease: 'easeOut' as const }
     : { duration: 1, ease: 'easeOut' as const }
 
+  // Navigation Renown crossing (post-100) — the banked XP can push past one or
+  // more Renown levels. Fires once the XP has visibly flowed into the bar.
+  const gainedRenown = renownLevel('nav', r.newExpeditionXP) - renownLevel('nav', oldXp)
+  const [renownUp, setRenownUp] = useState<RenownUpInfo | null>(null)
+  useEffect(() => {
+    if (counting && gainedRenown > 0) {
+      const t = window.setTimeout(() => setRenownUp({ skill: 'nav', toLevel: renownLevel('nav', r.newExpeditionXP), points: gainedRenown }), 1400)
+      return () => window.clearTimeout(t)
+    }
+  }, [counting, gainedRenown, r.newExpeditionXP])
+
   function open() {
     if (opening || opened) return
     const grand = r.chest.tier >= 4    // the richest chests open louder
@@ -2562,6 +2575,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
   return (
     <>
       <AbyssBackdrop />
+      <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
         padding: '10px 0.95rem', textAlign: 'center',

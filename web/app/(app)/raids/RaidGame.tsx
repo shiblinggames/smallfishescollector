@@ -22,6 +22,8 @@ import BossDialogueModal from './BossDialogueModal'
 import TideModal from './TideModal'
 import { drawTides, expireAfterFight, type TideEvent, type TideEffect, type TideChoice } from '@/lib/tides'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
+import RenownUpOverlay, { type RenownUpInfo } from '@/components/RenownUpOverlay'
+import { renownLevel } from '@/lib/renown'
 import TapToContinueGate from '@/components/TapToContinueGate'
 
 type GamePhase  = 'idle' | 'ready' | 'playing' | 'clear' | 'dead' | 'loot'
@@ -572,6 +574,18 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // player knows the extra came from finishing the whole raid.
   const [bonusCallout, setBonusCallout] = useState<number | null>(null)
   const [levelUp, setLevelUp]           = useState<NavLevelUpInfo | null>(null)
+  // Navigation Renown crossing (post-100). Watched centrally off navXP so it
+  // fires no matter which award path (kill / clear-bonus / boss) bumped the XP.
+  const [renownUp, setRenownUp]         = useState<RenownUpInfo | null>(null)
+  const lastRenownRef                   = useRef(renownLevel('nav', initialExpeditionXP))
+  useEffect(() => {
+    const now = renownLevel('nav', navXP)
+    if (now > lastRenownRef.current) {
+      const gained = now - lastRenownRef.current
+      setTimeout(() => setRenownUp({ skill: 'nav', toLevel: now, points: gained }), 900)
+    }
+    lastRenownRef.current = now
+  }, [navXP])
   // Tap-to-continue gate shown after every kill (no level-up branch).
   // Lets the player sit on the log + XP totals as long as they want
   // instead of being auto-advanced into the next fight.
@@ -1502,6 +1516,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
             fn?.()
           }}
         />
+        <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
 
         {/* Tap-to-continue gate after every kill (when no level-up). Lets
             the player sit on the action log + XP totals at their own pace
@@ -1743,6 +1758,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           info={levelUp}
           onDismiss={() => setLevelUp(null)}
         />
+        <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       </div>
     )
   }
@@ -1935,6 +1951,7 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
           fn?.()
         }}
       />
+      <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
 
       {/* ── Crew info popup ─────────────────────────────────────────────────── */}
       {showCrewInfo && (

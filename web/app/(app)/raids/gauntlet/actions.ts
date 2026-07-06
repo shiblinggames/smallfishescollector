@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
+import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
 import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
@@ -404,7 +405,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms')
     .eq('id', user.id)
     .single()
 
@@ -464,7 +465,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const skinFields = grantSkins.length > 0 ? { ship_skins: [...new Set([...ownedSkins, ...grantSkins])] } : {}
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
-  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult
+  const navRenown = navRenownEffects(profile.nav_renown_alloc as RenownAlloc | null)
+  const doubloonMult = aggregateShipClasses(classPicks).doubloonMult * navRenown.doubloonMult
 
   const bankedDoubloons = Math.round(cleanPot * chest.potMult * doubloonMult * gauntletHaulMult(upgrades))
   // Nav XP is decoupled from the doubloon pot onto its own gentler depth curve
@@ -543,7 +545,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     }),
     // Crew XP is DECOUPLED from the player's Nav XP onto a raid-calibrated scale.
     // Hardcore survivors earn a bonus for bringing the squad home alive.
-    grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(rd) * (hc ? HC_SURVIVOR_XP_MULT : 1))),
+    grantXPToAssignedCrew(admin, user.id, Math.round(gauntletCrewXp(rd) * (hc ? HC_SURVIVOR_XP_MULT : 1) * navRenown.crewXpMult)),
   ])
 
   // Depth-milestone unlocks crossed by SURVIVING to this depth (cash-out only).

@@ -111,6 +111,7 @@ async function ShipHeroSection() {
       manowarBuild={manowarBuild}
       chapter3Cleared={chapter3Cleared}
       isAdmin={profile?.is_admin === true}
+      navRenownAlloc={(profile?.nav_renown_alloc as Record<string, number> | null) ?? null}
     />
   )
 }
