@@ -2092,9 +2092,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     gems, equip. The equipped skin shows everywhere in the game. */}
                 {dm && skinList.length > 0 && (() => {
                   const owned = state.ownedCrewSkins
-                  const tiles: { id: string | null; name: string; file: string; cost: number; color: string }[] = [
+                  const tiles: { id: string | null; name: string; file: string; cost: number; color: string; chase?: boolean }[] = [
                     { id: null, name: 'Original', file: dm.baseFilename, cost: 0, color: dColor },
-                    ...skinList.map(s => ({ id: s.id, name: s.name, file: s.filename, cost: s.gemCost, color: s.color })),
+                    ...skinList.map(s => ({ id: s.id, name: s.name, file: s.filename, cost: s.gemCost, color: s.color, chase: s.chase })),
                   ]
                   const selName = shownSkinId ? (getCrewSkin(shownSkinId)?.name ?? 'Skin') : 'Original'
                   const selOwned = shownSkinId === null || owned.includes(shownSkinId)
@@ -2121,6 +2121,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={artSrc(t.file)} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
+                              {t.chase && !isEquipped && (
+                                <span className="font-karla font-800" style={{ position: 'absolute', top: 3, left: 3, background: t.color, color: '#0a0806', fontSize: '0.42rem', letterSpacing: '0.06em', borderRadius: 4, padding: '1px 3px', lineHeight: 1 }}>CHASE</span>
+                              )}
                               {isEquipped && (
                                 <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: t.color, color: '#0a0806', fontSize: '0.6rem', fontWeight: 800, display: 'grid', placeItems: 'center', lineHeight: 1 }}>✓</span>
                               )}
