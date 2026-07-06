@@ -342,6 +342,13 @@ export default function TackleShopClient({
                   )}
                 </div>
 
+                {/* Deliberately-vague hint on the premium lures — nudges that
+                    they draw the Ancient Deep's oldest prizes, without spelling
+                    it out. */}
+                {bait.hint && (
+                  <p className="font-karla font-400 italic" style={{ fontSize: '0.6rem', color: '#8a857c', lineHeight: 1.35, position: 'relative' }}>{bait.hint}</p>
+                )}
+
                 {/* Buy buttons or earned badge */}
                 {bait.shopCost > 0 ? (
                   <div style={{ display: 'flex', gap: '0.4rem', marginTop: 'auto', position: 'relative' }}>
@@ -381,7 +388,7 @@ export default function TackleShopClient({
                 ) : (
                   <Link href="/expeditions" style={{ textDecoration: 'none', display: 'block', marginTop: 'auto', padding: '0.45rem 0.5rem', borderRadius: 9, background: `${bait.color}12`, border: `1px solid ${bait.color}32`, textAlign: 'center', position: 'relative' }}>
                     <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: bait.color }}>
-                      Earned from voyages →
+                      {bait.acquisition.includes('fathoms') ? 'Voyages, or buy with Fathoms in the Locker →' : 'Earned from voyages →'}
                     </span>
                   </Link>
                 )}

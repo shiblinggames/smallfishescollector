@@ -14,6 +14,11 @@ export interface BaitDef {
    *  not Fathoms-buyable. fathomCost is the price for one fathomBundle of units. */
   fathomCost?: number
   fathomBundle?: number
+  /** A short, deliberately-vague flavour line shown under the lure in both
+   *  shops. Hints (without spelling out) that the premium lures are what draw
+   *  the Ancient Deep's prehistoric trophies. Golden's reads stronger than
+   *  Luminous's — Golden has the better trophy odds. */
+  hint?: string
 }
 
 /** Baits you can buy for Fathoms (the premium lures, otherwise expedition/rare only). */
@@ -83,7 +88,7 @@ export const BAITS: BaitDef[] = [
   {
     type: 'luminous',
     name: 'Luminous Lure',
-    description: 'Fish bite 40% faster. Earned from expeditions and bounties, or bought with Fathoms in the Locker.',
+    description: 'Fish bite 40% faster and the catch zone widens by 10°. Earned from expeditions and bounties, or bought with Fathoms in the Locker. Something ancient stirs when it glows.',
     color: '#4ade80',
     imageUrl: '/luminouslure.png',
     waitMult: 0.60,
@@ -93,11 +98,12 @@ export const BAITS: BaitDef[] = [
     bundleSize: 1,
     fathomCost: 12,
     fathomBundle: 5,
+    hint: 'Something ancient stirs when it glows.',
   },
   {
     type: 'golden',
     name: 'Golden Lure',
-    description: 'Fish bite 45% faster. Widens your catch zone by 10°. The finest lure in existence — a rare drop, or bought with Fathoms in the Locker.',
+    description: 'Fish bite 45% faster. Widens your catch zone by 10°. The finest lure in existence — a rare drop, or bought with Fathoms in the Locker. The oldest things in the deep rise for its shine.',
     color: '#fde68a',
     imageUrl: '/goldenlure.png',
     waitMult: 0.55,
@@ -107,6 +113,7 @@ export const BAITS: BaitDef[] = [
     bundleSize: 1,
     fathomCost: 20,
     fathomBundle: 5,
+    hint: 'The oldest things in the deep rise for its shine.',
   },
 ]
 

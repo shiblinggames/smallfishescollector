@@ -3565,6 +3565,7 @@ function LockerUpgradesModal({ section, onClose, onClaimed }: { section: 'run' |
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p className="font-cinzel font-700" style={{ fontSize: '0.96rem', color: '#f0ede8', lineHeight: 1.15 }}>{b.name} <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#8a8480' }}>· ×{bundle}</span></p>
                               <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: b.color, marginTop: 2 }}>{effect}</p>
+                              {b.hint && <p className="font-karla font-400 italic" style={{ fontSize: '0.6rem', color: '#8a8480', marginTop: 2, lineHeight: 1.3 }}>{b.hint}</p>}
                               {justBought && <p className="font-karla font-700" style={{ fontSize: '0.62rem', color: '#7fd49a', marginTop: 3 }}>+{bundle} added to your bait.</p>}
                             </div>
                             <button
