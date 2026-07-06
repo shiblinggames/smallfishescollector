@@ -2,9 +2,10 @@
 
 // Shared Renown board for both skills (Fishing / Navigation). Post-level-100
 // progression: each Renown level banks ONE point you spend here on a small
-// board of tiny stat boosts. Points bank freely (never forced), respec is free.
+// board of tiny stat boosts. Points bank until you spend them — but allocation
+// is PERMANENT (no resets), so each point is a real, deliberate choice.
 //
-// Server-authoritative: allocate/respec go through actions/renown.ts, which
+// Server-authoritative: allocate goes through actions/renown.ts, which
 // re-derives the level from XP and can't be over-spent. We update optimistically
 // for feel, then reconcile with the returned state.
 
@@ -12,12 +13,12 @@ import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PopupShell from '@/components/PopupShell'
 import { vibrate } from '@/lib/haptics'
-import { playRenownPointSfx, playForgeSfx } from '@/lib/fishingMusic'
+import { playRenownPointSfx } from '@/lib/fishingMusic'
 import {
   renownStats, formatRenownTotal, spentPoints,
   type RenownSkill, type RenownStat, type RenownAlloc,
 } from '@/lib/renown'
-import { allocateRenown, respecRenown, type RenownState } from '@/app/(app)/actions/renown'
+import { allocateRenown, type RenownState } from '@/app/(app)/actions/renown'
 
 interface Props {
   open: boolean
@@ -25,8 +26,8 @@ interface Props {
   skill: RenownSkill
   /** Server-read state to seed the board (level, spent, available, alloc). */
   initial: RenownState
-  /** Fired after every allocate/respec so a parent can sync its own copy of
-   *  the alloc (e.g. to update a "points to spend" badge on the XP bar). */
+  /** Fired after every allocate so a parent can sync its own copy of the alloc
+   *  (e.g. to update a "points to spend" badge on the XP bar). */
   onChange?: (state: RenownState) => void
 }
 
@@ -41,7 +42,6 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
 
   const [state, setState] = useState<RenownState>(initial)
   const [busy, setBusy] = useState(false)
-  const [confirmRespec, setConfirmRespec] = useState(false)
   // Drives the per-stat "pop" — bump a stat's key so its value re-mounts and
   // springs. Also a short color-burst flag per stat id.
   const [burst, setBurst] = useState<string | null>(null)
@@ -73,19 +73,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
     }
   }, [busy, available, skill, onChange])
 
-  const onRespec = useCallback(async () => {
-    if (busy) return
-    setBusy(true)
-    vibrate([8, 30, 8])
-    playForgeSfx(true)
-    try {
-      const res = await respecRenown(skill)
-      if (res && !('error' in res)) { setState(res); onChange?.(res) }
-    } finally {
-      setBusy(false)
-      setConfirmRespec(false)
-    }
-  }, [busy, skill, onChange])
+  const has = available > 0
 
   return (
     <PopupShell open={open} onClose={onClose}>
@@ -103,44 +91,65 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
           boxShadow: `0 0 60px ${meta.accent}22, 0 24px 60px rgba(0,0,0,0.6)`,
         }}
       >
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '0.9rem' }}>
+        {/* Header — title + a single efficient status line: Renown level on the
+            left, a prominent (pulsing) "points to spend" pill on the right. No
+            big stat cards; the numbers live inline. */}
+        <div style={{ marginBottom: '1rem' }}>
           <p className="font-cinzel font-700 uppercase tracking-[0.18em]"
-             style={{ fontSize: '0.95rem', color: '#fff', textShadow: `0 0 22px ${meta.accent}66` }}>
+             style={{ fontSize: '0.95rem', color: '#fff', textShadow: `0 0 22px ${meta.accent}66`, textAlign: 'center' }}>
             {meta.title}
           </p>
-          <p className="font-karla font-400" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+          <p className="font-karla font-400" style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.4)', marginTop: 2, textAlign: 'center' }}>
             {meta.sub}
           </p>
-        </div>
 
-        {/* Renown level + banked points */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: '1rem' }}>
-          <div style={{
-            flex: 1, textAlign: 'center', padding: '0.7rem 0.5rem', borderRadius: 14,
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-          }}>
-            <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.4)' }}>Renown</p>
-            <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', lineHeight: 1.1, color: meta.accent, textShadow: `0 0 20px ${meta.accent}55` }}>
-              {state.level}
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: '0.85rem' }}>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: meta.accent, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ opacity: 0.85 }}>✦</span> Renown {state.level}
+            </span>
+            {has ? (
+              <motion.span
+                key={available}
+                initial={{ scale: 1.18 }}
+                animate={{
+                  scale: 1,
+                  boxShadow: [`0 0 0px ${meta.accent}00`, `0 0 20px ${meta.accent}88`, `0 0 0px ${meta.accent}00`],
+                }}
+                transition={{ scale: { type: 'spring', stiffness: 480, damping: 18 }, boxShadow: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } }}
+                className="font-karla font-700 uppercase tracking-[0.06em]"
+                style={{
+                  fontSize: '0.64rem', color: '#0a0f1c', background: meta.accent,
+                  borderRadius: 999, padding: '0.32rem 0.7rem', whiteSpace: 'nowrap',
+                }}
+              >
+                {available} point{available === 1 ? '' : 's'} to spend
+              </motion.span>
+            ) : (
+              <span className="font-karla font-700 uppercase tracking-[0.06em]"
+                style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>
+                {state.spent > 0 ? 'All points spent' : 'Earn Renown for points'}
+              </span>
+            )}
           </div>
-          <PointsBadge available={available} accent={meta.accent} />
         </div>
 
-        {/* Stat board */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Stat board — each stat is its own card. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {stats.map(stat => {
             const pts = state.alloc[stat.id] ?? 0
             const canBuy = available > 0 && !busy
+            const active = pts > 0
             return (
               <div key={stat.id} style={{
                 position: 'relative', overflow: 'hidden',
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '0.65rem 0.7rem', borderRadius: 14,
-                background: 'rgba(255,255,255,0.025)',
-                border: `1px solid ${pts > 0 ? stat.color + '55' : 'rgba(255,255,255,0.07)'}`,
-                transition: 'border-color 0.25s',
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '0.85rem 0.9rem', borderRadius: 16,
+                background: active
+                  ? `linear-gradient(180deg, ${stat.color}14 0%, rgba(255,255,255,0.02) 100%)`
+                  : 'rgba(255,255,255,0.035)',
+                border: `1px solid ${active ? stat.color + '66' : 'rgba(255,255,255,0.08)'}`,
+                boxShadow: active ? `inset 3px 0 0 ${stat.color}` : 'inset 3px 0 0 rgba(255,255,255,0.06)',
+                transition: 'border-color 0.25s, background 0.25s, box-shadow 0.25s',
               }}>
                 {/* Color-burst flash on allocate */}
                 <AnimatePresence>
@@ -152,7 +161,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.32, ease: 'easeOut' }}
                       style={{
-                        position: 'absolute', inset: 0, borderRadius: 14,
+                        position: 'absolute', inset: 0, borderRadius: 16,
                         background: `radial-gradient(circle at 82% 50%, ${stat.color}55 0%, transparent 65%)`,
                         pointerEvents: 'none',
                       }}
@@ -162,28 +171,28 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
 
                 <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{stat.name}</span>
-                    {pts > 0 && (
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.88rem', color: '#f0ede8' }}>{stat.name}</span>
+                    {active && (
                       <motion.span
                         key={pts}                       /* re-mount → spring pop on change */
                         initial={{ scale: 1.5, opacity: 0.4 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: 'spring', stiffness: 520, damping: 16 }}
                         className="font-karla font-700"
-                        style={{ fontSize: '0.72rem', color: stat.color, textShadow: `0 0 12px ${stat.color}66` }}
+                        style={{ fontSize: '0.74rem', color: stat.color, textShadow: `0 0 12px ${stat.color}66` }}
                       >
                         {formatRenownTotal(stat, pts)}
                       </motion.span>
                     )}
                   </div>
-                  <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', marginTop: 1 }}>
+                  <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
                     {stat.blurb}
                   </p>
                 </div>
 
-                {/* Allocated pips + the + button */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-                  <span className="font-karla font-700" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', minWidth: 16, textAlign: 'right' }}>
+                {/* Allocated count + the + button */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: active ? stat.color : 'rgba(255,255,255,0.35)', minWidth: 18, textAlign: 'right' }}>
                     {pts}
                   </span>
                   <button
@@ -191,12 +200,12 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
                     disabled={!canBuy}
                     aria-label={`Add point to ${stat.name}`}
                     style={{
-                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                      width: 38, height: 38, borderRadius: 11, flexShrink: 0,
                       display: 'grid', placeItems: 'center',
-                      fontSize: '1.2rem', lineHeight: 1, fontWeight: 700,
-                      background: canBuy ? `${stat.color}22` : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${canBuy ? stat.color + '77' : 'rgba(255,255,255,0.08)'}`,
-                      color: canBuy ? stat.color : 'rgba(255,255,255,0.25)',
+                      fontSize: '1.3rem', lineHeight: 1, fontWeight: 700,
+                      background: canBuy ? `${stat.color}26` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${canBuy ? stat.color + '88' : 'rgba(255,255,255,0.08)'}`,
+                      color: canBuy ? stat.color : 'rgba(255,255,255,0.22)',
                       cursor: canBuy ? 'pointer' : 'default',
                       transition: 'background 0.15s, border-color 0.15s',
                     }}
@@ -207,63 +216,10 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
           })}
         </div>
 
-        {/* Respec */}
-        <div style={{ marginTop: '1rem' }}>
-          {!confirmRespec ? (
-            <button
-              onClick={() => setConfirmRespec(true)}
-              disabled={busy || state.spent === 0}
-              className="font-karla font-700 uppercase tracking-[0.1em] w-full"
-              style={{
-                padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem',
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-                color: state.spent === 0 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)',
-                cursor: state.spent === 0 ? 'default' : 'pointer',
-              }}
-            >
-              Reset points {state.spent > 0 ? `(${state.spent})` : ''} · free
-            </button>
-          ) : (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmRespec(false)} disabled={busy}
-                className="font-karla font-700 uppercase tracking-[0.08em]"
-                style={{ flex: 1, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button onClick={onRespec} disabled={busy}
-                className="font-karla font-700 uppercase tracking-[0.08em]"
-                style={{ flex: 1, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff', cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
-                Reset all
-              </button>
-            </div>
-          )}
-          <p className="font-karla font-400" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: 8, letterSpacing: '0.04em' }}>
-            Points bank freely. Spend whenever, reset anytime.
-          </p>
-        </div>
+        <p className="font-karla font-400" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.32)', textAlign: 'center', marginTop: '1rem', letterSpacing: '0.03em' }}>
+          Points bank until you spend them. Allocation is permanent, so choose your build deliberately.
+        </p>
       </motion.div>
     </PopupShell>
-  )
-}
-
-/** Banked "points to spend" — pulses gently when you have points waiting so the
- *  player is nudged (never forced) to go spend them. */
-function PointsBadge({ available, accent }: { available: number; accent: string }) {
-  const has = available > 0
-  return (
-    <motion.div
-      animate={has ? { boxShadow: [`0 0 0px ${accent}00`, `0 0 22px ${accent}66`, `0 0 0px ${accent}00`] } : {}}
-      transition={has ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : {}}
-      style={{
-        flex: 1, textAlign: 'center', padding: '0.7rem 0.5rem', borderRadius: 14,
-        background: has ? `${accent}12` : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${has ? accent + '66' : 'rgba(255,255,255,0.08)'}`,
-      }}
-    >
-      <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: has ? accent : 'rgba(255,255,255,0.4)' }}>To spend</p>
-      <p className="font-cinzel font-700" style={{ fontSize: '1.8rem', lineHeight: 1.1, color: has ? '#fff' : 'rgba(255,255,255,0.35)', textShadow: has ? `0 0 20px ${accent}88` : 'none' }}>
-        {available}
-      </p>
-    </motion.div>
   )
 }

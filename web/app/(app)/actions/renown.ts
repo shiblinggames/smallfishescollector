@@ -66,14 +66,3 @@ export async function allocateRenown(skill: RenownSkill, statId: string): Promis
   await writeAlloc(admin, user.id, skill, next)
   return stateFrom(skill, xp, next)
 }
-
-/** Reset all allocations for a skill (free respec) — the points return to the bank. */
-export async function respecRenown(skill: RenownSkill): Promise<RenownState | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not signed in.' }
-  const admin = createAdminClient()
-  const { xp } = await readRow(admin, user.id, skill)
-  await writeAlloc(admin, user.id, skill, {})
-  return stateFrom(skill, xp, {})
-}

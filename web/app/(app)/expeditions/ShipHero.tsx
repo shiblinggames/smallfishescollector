@@ -933,22 +933,26 @@ export default function ShipHero({
             const rn = atMax ? renownProgress('nav', expeditionXP) : null
             const fillPct = atMax ? (rn ? rn.progress * 100 : 100) : xpProgress.progress * 100
             const toGo = Math.max(0, xpProgress.xpForLevel - xpProgress.xpInLevel)
+            const hasNavPoints = atMax && navRenownAvailable > 0
             return (
-              <button
+              <motion.button
                 type="button"
                 onClick={() => (atMax ? setRenownOpen(true) : setNavInfoOpen(true))}
                 aria-label={atMax ? 'Open Navigation Renown' : 'Show navigation level info'}
                 className="font-karla font-600"
+                animate={hasNavPoints ? { boxShadow: ['0 0 0px #f0c04000', '0 0 16px #f0c040aa', '0 0 0px #f0c04000'] } : { boxShadow: '0 0 0px #f0c04000' }}
+                transition={hasNavPoints ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
                 style={{
                   position: 'relative',
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                   padding: '0.3rem 0.35rem', borderRadius: 12,
-                  background: 'transparent', border: '1px solid transparent',
+                  background: hasNavPoints ? 'rgba(240,192,64,0.06)' : 'transparent',
+                  border: `1px solid ${hasNavPoints ? 'rgba(240,192,64,0.4)' : 'transparent'}`,
                   color: 'inherit', cursor: 'pointer',
                   transition: 'background 0.15s, border-color 0.15s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = 'rgba(125,160,216,0.22)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.background = hasNavPoints ? 'rgba(240,192,64,0.12)' : 'rgba(125,160,216,0.08)'; e.currentTarget.style.borderColor = hasNavPoints ? 'rgba(240,192,64,0.6)' : 'rgba(125,160,216,0.22)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = hasNavPoints ? 'rgba(240,192,64,0.06)' : 'transparent'; e.currentTarget.style.borderColor = hasNavPoints ? 'rgba(240,192,64,0.4)' : 'transparent' }}
               >
                 <div className="shrink-0" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <span className="font-karla font-600" style={{ fontSize: '0.55rem', color: '#7da0d8bb', letterSpacing: '0.08em' }}>LV</span>
@@ -968,10 +972,13 @@ export default function ShipHero({
                   />
                 </div>
                 {atMax && rn ? (
-                  <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.62rem', color: '#f0c040', lineHeight: 1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span className="font-karla font-700 shrink-0" style={{ fontSize: '0.62rem', color: '#f0c040', lineHeight: 1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     ✦ R{rn.level}
-                    {navRenownAvailable > 0 && (
-                      <span style={{ fontSize: '0.5rem', color: '#0a0f1c', background: '#f0c040', borderRadius: 999, padding: '1px 5px', fontWeight: 800 }}>+{navRenownAvailable}</span>
+                    {hasNavPoints && (
+                      <motion.span
+                        animate={{ scale: [1, 1.12, 1] }}
+                        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ fontSize: '0.52rem', color: '#0a0f1c', background: '#f0c040', borderRadius: 999, padding: '2px 6px', fontWeight: 800 }}>{navRenownAvailable} spend</motion.span>
                     )}
                   </span>
                 ) : (
@@ -980,7 +987,7 @@ export default function ShipHero({
                     {`${toGo.toLocaleString()} xp`}
                   </span>
                 )}
-              </button>
+              </motion.button>
             )
           })()}
 

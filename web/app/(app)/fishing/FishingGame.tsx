@@ -2610,11 +2610,14 @@ function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: {
   const toGo = xpForLevel - xpInLevel
   const c = isMax ? '#f0c040' : '#60a5fa'
   const clickable = isMax && !!onOpenRenown
+  const hasPoints = isMax && (renownAvailable ?? 0) > 0
   return (
-    <div
+    <motion.div
       onClick={clickable ? onOpenRenown : undefined}
       className="flex items-center gap-2.5 px-3 py-2"
-      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${c}28`, borderRadius: 20, cursor: clickable ? 'pointer' : 'default' }}>
+      animate={hasPoints ? { boxShadow: [`0 0 0px ${c}00`, `0 0 16px ${c}99`, `0 0 0px ${c}00`] } : { boxShadow: `0 0 0px ${c}00` }}
+      transition={hasPoints ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+      style={{ background: 'rgba(4,10,18,0.72)', border: `1px solid ${hasPoints ? c + '99' : c + '28'}`, borderRadius: 20, cursor: clickable ? 'pointer' : 'default' }}>
       <div className="shrink-0 flex items-baseline gap-0.5">
         <span className="font-karla font-600" style={{ fontSize: '0.48rem', color: c + 'bb', letterSpacing: '0.08em' }}>LV</span>
         <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: c, lineHeight: 1 }}>{level}</span>
@@ -2634,13 +2637,16 @@ function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: {
       </div>
       <div className="shrink-0 flex items-center gap-2">
         {isMax && rn ? (
-          <span className="font-karla font-700 flex items-center gap-1" style={{ fontSize: '0.6rem', color: c, lineHeight: 1 }}>
+          <span className="font-karla font-700 flex items-center gap-1.5" style={{ fontSize: '0.6rem', color: c, lineHeight: 1 }}>
             ✦ R{rn.level}
-            {(renownAvailable ?? 0) > 0 && (
-              <span style={{
-                fontSize: '0.5rem', color: '#0a0f1c', background: c, borderRadius: 999,
-                padding: '1px 5px', fontWeight: 800,
-              }}>+{renownAvailable}</span>
+            {hasPoints && (
+              <motion.span
+                animate={{ scale: [1, 1.12, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                  fontSize: '0.52rem', color: '#0a0f1c', background: c, borderRadius: 999,
+                  padding: '2px 6px', fontWeight: 800, whiteSpace: 'nowrap',
+                }}>{renownAvailable} spend</motion.span>
             )}
           </span>
         ) : (
@@ -2655,7 +2661,7 @@ function XPBarDisplay({ xp, bestStreak, renownAvailable, onOpenRenown }: {
           </span>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
