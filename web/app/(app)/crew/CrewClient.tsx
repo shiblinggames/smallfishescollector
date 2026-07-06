@@ -376,9 +376,10 @@ function CrewPanel({
   onClick?: () => void
   children?: ReactNode
 }) {
-  // An equipped legendary skin tints the whole roster tile in its accent color;
-  // else the rarity color. (Board recruits show base art → rarity color.)
-  const color = getCrewSkinByFilename(filename)?.color ?? RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
+  // Frame stays the rarity color; an equipped skin makes the ART glow instead.
+  const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
+  const skinGlow = getCrewSkinByFilename(filename)?.color
+  const skinGlowFilter = skinGlow ? `drop-shadow(0 0 5px ${skinGlow}) drop-shadow(0 0 12px ${skinGlow}bb)` : undefined
   const eff = applyCrewEffects(base, effects, xp)
 
   const corner = (pos: React.CSSProperties): React.CSSProperties => ({
@@ -454,6 +455,7 @@ function CrewPanel({
           <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async" style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
+            filter: skinGlowFilter,
           }} />
           {/* inner frame line */}
           <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
@@ -1802,9 +1804,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const portraitFilename = dm
             ? (shownSkinId ? (getCrewSkin(shownSkinId)?.filename ?? dm.baseFilename) : dm.baseFilename)
             : it.filename
-          // Portrait frame/glow follows the shown skin's color (so skins feel
-          // legendary at preview/buy time), falling back to the rarity color.
-          const portraitAccent = (shownSkinId ? getCrewSkin(shownSkinId)?.color : null) ?? dColor
+          // Frame stays the rarity color; the shown skin makes the ART glow
+          // (so a skin feels legendary at preview/buy time without a lit border).
+          const portraitSkin = shownSkinId ? getCrewSkin(shownSkinId)?.color : null
+          const portraitGlow = portraitSkin ? `drop-shadow(0 0 7px ${portraitSkin}) drop-shadow(0 0 18px ${portraitSkin}cc)` : undefined
           const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
           // Board candidates haven't been recruited yet (no xp field) —
           // preview the hall XP seed stamped on their board row at roll
@@ -1834,10 +1837,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <button onClick={close} aria-label="Close" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0.3rem' }}>✕</button>
                 </div>
 
-                {/* Portrait — frame + glow themed to the shown skin's color. */}
-                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${portraitAccent}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 20px ${portraitAccent}55`, background: `radial-gradient(ellipse at 50% 30%, ${portraitAccent}2e 0%, #070504 74%)`, transition: 'border-color 0.25s, box-shadow 0.25s' }}>
+                {/* Portrait — rarity frame; the skin ART glows in its own color. */}
+                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${dColor}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
+                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4, filter: portraitGlow, transition: 'filter 0.25s' }} />
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
