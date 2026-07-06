@@ -5315,13 +5315,18 @@ function EnemyStatsPopup({
   // only findable by trial and error, so the popup now spells out what each
   // phase does and how to answer its check.
   const popupPhases = enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : [])
-  const RESPONSE_LABEL: Record<MechanicResponse, string> = {
-    brace:  'an Anchor brace',
-    shield: 'a Tidecaller shield',
-    snare:  'the boss Snared',
-    heal:   'a heal (Mender, Tidecaller, or a repair kit)',
-    burst:  'a big-shot ability (Leviathan or Apex)',
+  // HINT at the KIND of answer, not the exact crew ability — working out the
+  // play is still on the player. A per-check authored `hint` wins; otherwise
+  // fall back to the broad category of the valid responses.
+  const RESPONSE_CATEGORY: Record<MechanicResponse, string> = {
+    brace:  'a defensive play',
+    shield: 'a defensive play',
+    snare:  'a disrupting play',
+    heal:   'a recovery play',
+    burst:  'a heavy hit',
   }
+  const checkHint = (chk: BossMechanicCheck): string =>
+    chk.hint ?? `Meet it with ${[...new Set(chk.responses.map(r => RESPONSE_CATEGORY[r]))].join(' or ')}.`
   const describeConsequence = (c: BossMechanicCheck['consequence']): string =>
     c.kind === 'damagePctMaxHp'
       ? `hits you for ${Math.round(c.value * 100)}% of your max hull`
@@ -5626,7 +5631,7 @@ function EnemyStatsPopup({
                           Telegraphed: “{chk.name}” — {chk.telegraph}
                         </p>
                         <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.4, marginTop: 4 }}>
-                          <span style={{ color: '#86efac', fontWeight: 700 }}>Answer</span> within {chk.chargeTurns} turn{chk.chargeTurns === 1 ? '' : 's'} with any of: {chk.responses.map(r => RESPONSE_LABEL[r]).join(', ')}. Otherwise it {describeConsequence(chk.consequence)}.
+                          <span style={{ color: '#86efac', fontWeight: 700 }}>Hint:</span> {checkHint(chk)} You get {chk.chargeTurns} turn{chk.chargeTurns === 1 ? '' : 's'} to answer, or it {describeConsequence(chk.consequence)}.
                         </p>
                       </div>
                     )}

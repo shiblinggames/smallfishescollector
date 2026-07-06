@@ -63,6 +63,11 @@ export interface BossMechanicCheck {
   id: string
   name: string          // banner label, e.g. 'The Big Gun'
   telegraph: string     // warning line the moment the wind-up begins
+  /** A NUDGE toward the KIND of answer (defend / disrupt / survive / hit hard),
+   *  shown on the enemy stats popup — deliberately does NOT name the exact crew
+   *  ability, so working out the play is still on the player. Falls back to a
+   *  generic category hint derived from `responses` when unset. */
+  hint?: string
   chargeTurns: number   // player turns to answer before it resolves (1-2)
   responses: MechanicResponse[]   // ANY ONE clears it (kept broad on purpose)
   counteredLine: string // action-log line on a successful counter
@@ -1036,6 +1041,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'big_gun', name: 'The Big Gun', chargeTurns: 2,
             telegraph: 'The Quartermaster hauls the reserve cannon onto the rail and swings the muzzle toward you.',
+            hint: 'A shot this heavy rewards a hard defensive answer. Get something between you and the muzzle before it fires.',
             responses: ['brace', 'shield'],
             counteredLine: 'The big shot slams into your cover and glances wide.',
             failLine: 'The reserve cannon speaks, and nothing turned it aside.',
@@ -1048,6 +1054,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'cooking_books', name: 'Cooking the Books', chargeTurns: 2,
             telegraph: 'The Quartermaster ducks low behind the counter and starts working the ledger, fast.',
+            hint: "Don't let him finish the tally. Break his concentration or overpower him before the count closes, or he balances it in his favour.",
             responses: ['snare', 'burst'],
             counteredLine: 'You break his tally before it can close.',
             failLine: 'The ledger balances in his favour.',
@@ -1060,6 +1067,7 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'fire_sale', name: 'Fire Sale', chargeTurns: 2,
             telegraph: 'The Quartermaster touches a torch to the stock and the whole Cache goes up in flame.',
+            hint: 'The whole stock goes up at once. This is one to weather, not to trade blows through. Be ready to soak or outlast the burn.',
             responses: ['heal', 'shield'],
             counteredLine: 'You ride out the blaze.',
             failLine: 'The fire sale takes its cut of your hull.',
