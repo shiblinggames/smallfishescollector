@@ -1853,8 +1853,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <button onClick={close} aria-label="Close" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0.3rem' }}>✕</button>
                 </div>
 
-                {/* Portrait — rarity frame; the skin ART glows in its own color. */}
-                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${dColor}26 0%, #070504 74%)` }}>
+                {/* Portrait — rarity frame; a shown skin makes it glow (a colored
+                    halo + inner aura) in that skin's color. */}
+                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 ${portraitSkin ? `28px ${portraitSkin}cc` : `14px ${dColor}33`}`, background: `radial-gradient(ellipse at 50% 30%, ${(portraitSkin ?? dColor)}2a 0%, #070504 74%)`, transition: 'box-shadow 0.25s' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
                   {/* Skin glow — inset, arch-shaped, so it never spills past the frame. */}
@@ -2023,6 +2024,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   </div>
                 )}
 
+                {/* Fixed-min-height tab body so the modal doesn't jump between
+                    tabs. Only grows past this if the player expands the ability
+                    milestones or the stat glossary (both opt-in). */}
+                <div style={{ minHeight: 292 }}>
+
                 {/* ── ABILITY tab — species-locked active ability surfaced in raid
                     combat through the Special chooser. Sub-Lv-10 crew get an
                     "Unlocks at Lv 10" hint instead of an effect line. */}
@@ -2172,14 +2178,15 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                                 position: 'relative', padding: 0, borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
                                 border: `2px solid ${isSel ? t.color : 'rgba(255,255,255,0.12)'}`,
                                 background: '#0a0806', aspectRatio: '1 / 1',
-                                // Every tile emits its skin color; the previewed one strongest.
-                                boxShadow: `0 0 ${isSel ? 18 : 8}px ${t.color}${isSel ? 'aa' : '4d'}`,
+                                // Every tile emits its skin color as a halo (visible on the
+                                // dark modal even when the art is the same hue); previewed strongest.
+                                boxShadow: `0 0 ${isSel ? 24 : 14}px ${t.color}${isSel ? 'ff' : 'aa'}`,
                                 opacity: isOwned ? 1 : 0.92,
                               }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={artSrc(t.file)} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
                               {/* Inner colored glow so the skin art itself gives off light. */}
-                              <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 8, boxShadow: `inset 0 0 ${isSel ? 16 : 11}px ${t.color}${isSel ? 'e0' : 'aa'}`, pointerEvents: 'none' }} />
+                              <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 8, boxShadow: `inset 0 0 ${isSel ? 18 : 12}px ${t.color}${isSel ? 'f0' : 'bb'}`, pointerEvents: 'none' }} />
                               {t.chase && !isEquipped && (
                                 <span className="font-karla font-800" style={{ position: 'absolute', top: 3, left: 3, background: t.color, color: '#0a0806', fontSize: '0.42rem', letterSpacing: '0.06em', borderRadius: 4, padding: '1px 3px', lineHeight: 1 }}>CHASE</span>
                               )}
@@ -2360,6 +2367,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 )}
                 </motion.div>
                 )}
+
+                </div>{/* end fixed-min-height tab body */}
 
                 {/* ── Actions (always visible below the tabs) ────────────────────
                     Make Captain — only for roster crew on a track but not already
