@@ -22,10 +22,16 @@ export interface CrewSkin {
 }
 
 export const CREW_SKINS: CrewSkin[] = [
-  { id: 'dole_royaladmiral', slug: 'dole', name: 'Royal Admiral',  filename: 'Dole_royaladmiral.png', gemCost: 500, blurb: 'Gold braid and a fleet at her back.',        color: '#f0c040' },
-  { id: 'dole_krakenhunter', slug: 'dole', name: 'Kraken Hunter',  filename: 'Dole_krakenhunter.png', gemCost: 500, blurb: 'Scarred from a hundred dives into the deep.',  color: '#2dd4bf' },
-  { id: 'dole_frostbite',    slug: 'dole', name: 'Frostbite',      filename: 'Dole_frostbite.png',    gemCost: 500, blurb: 'Rimed in the ice of the far cold seas.',       color: '#7dd3fc' },
-  { id: 'dole_cursedghost',  slug: 'dole', name: 'Cursed Ghost',   filename: 'Dole_cursedghost.png',  gemCost: 500, blurb: 'A wraith dragged back from the Locker.',        color: '#a78bfa' },
+  // ── Dole ──
+  { id: 'dole_cursedghost',  slug: 'dole', name: 'Cursed Ghost',   filename: 'Dole_cursedghost.png',  gemCost: 1000, blurb: 'A wraith dragged back from the Locker.',        color: '#a78bfa' },
+  { id: 'dole_frostbite',    slug: 'dole', name: 'Frostbite',      filename: 'Dole_frostbite.png',    gemCost: 1250, blurb: 'Rimed in the ice of the far cold seas.',       color: '#7dd3fc' },
+  { id: 'dole_krakenhunter', slug: 'dole', name: 'Kraken Hunter',  filename: 'Dole_krakenhunter.png', gemCost: 1500, blurb: 'Scarred from a hundred dives into the deep.',  color: '#2dd4bf' },
+  { id: 'dole_royaladmiral', slug: 'dole', name: 'Royal Admiral',  filename: 'Dole_royaladmiral.png', gemCost: 2000, blurb: 'Gold braid and a fleet at her back.',        color: '#f0c040' },
+  // ── Doby (sperm whale) ──
+  { id: 'doby_spectral',    slug: 'doby_mick', name: 'Spectral',      filename: 'Doby_spectral.png',    gemCost: 1000, blurb: 'A ghost-grey leviathan from the black deep.',   color: '#93c5fd' },
+  { id: 'doby_huntersbane', slug: 'doby_mick', name: "Hunter's Bane", filename: 'Doby_huntersbane.png', gemCost: 1250, blurb: 'The whale that hunts the hunters.',           color: '#f0c040' },
+  { id: 'doby_moltenmaw',   slug: 'doby_mick', name: 'Molten Maw',    filename: 'Doby_moltenmaw.png',   gemCost: 1750, blurb: 'Breaching from a sea of fire.',               color: '#fb7185' },
+  { id: 'doby_warmachine',  slug: 'doby_mick', name: 'War Machine',   filename: 'Doby_warmachine.png',  gemCost: 2000, blurb: 'Ironclad and built for the kill.',           color: '#9ca3af' },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
