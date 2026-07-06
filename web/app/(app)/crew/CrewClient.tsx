@@ -1853,15 +1853,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <button onClick={close} aria-label="Close" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0.3rem' }}>✕</button>
                 </div>
 
-                {/* Portrait — rarity frame; a shown skin makes it glow (a colored
-                    halo + inner aura) in that skin's color. */}
-                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 ${portraitSkin ? `28px ${portraitSkin}cc` : `14px ${dColor}33`}`, background: `radial-gradient(ellipse at 50% 30%, ${(portraitSkin ?? dColor)}2a 0%, #070504 74%)`, transition: 'box-shadow 0.25s' }}>
+                {/* Portrait — rarity frame; a shown skin makes the ART itself glow
+                    in its color (drop-shadow aura on the image). clip-path keeps
+                    the glow inside the arch so it never spills past the frame. */}
+                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', clipPath: 'inset(0 round 70px 70px 6px 6px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
-                  {/* Skin glow — inset, arch-shaped, so it never spills past the frame. */}
-                  {portraitSkin && (
-                    <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '70px 70px 6px 6px', boxShadow: `inset 0 0 22px ${portraitSkin}cc`, pointerEvents: 'none', transition: 'box-shadow 0.25s' }} />
-                  )}
+                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 6, filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined, transition: 'filter 0.25s' }} />
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
@@ -2175,18 +2172,16 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                             <button key={t.id ?? 'original'} type="button"
                               onClick={() => { vibrate(6); setPreviewSkin(t.id) }}
                               style={{
-                                position: 'relative', padding: 0, borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
-                                border: `2px solid ${isSel ? t.color : 'rgba(255,255,255,0.12)'}`,
+                                position: 'relative', padding: 0, borderRadius: 10, overflow: 'visible', cursor: 'pointer',
+                                border: `2px solid ${isSel ? t.color : 'rgba(255,255,255,0.14)'}`,
                                 background: '#0a0806', aspectRatio: '1 / 1',
-                                // Every tile emits its skin color as a halo (visible on the
-                                // dark modal even when the art is the same hue); previewed strongest.
-                                boxShadow: `0 0 ${isSel ? 24 : 14}px ${t.color}${isSel ? 'ff' : 'aa'}`,
-                                opacity: isOwned ? 1 : 0.92,
+                                opacity: isOwned ? 1 : 0.9,
                               }}>
+                              {/* The skin ART itself glows — a drop-shadow aura in the
+                                  skin color (like the summon). objectFit contain leaves
+                                  a letterbox so the glow shows even though the tile clips. */}
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={artSrc(t.file)} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
-                              {/* Inner colored glow so the skin art itself gives off light. */}
-                              <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 8, boxShadow: `inset 0 0 ${isSel ? 18 : 12}px ${t.color}${isSel ? 'f0' : 'bb'}`, pointerEvents: 'none' }} />
+                              <img src={artSrc(t.file)} alt={t.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', padding: 7, filter: `drop-shadow(0 0 5px ${t.color}) drop-shadow(0 0 13px ${t.color}${isSel ? 'ee' : 'aa'})` }} />
                               {t.chase && !isEquipped && (
                                 <span className="font-karla font-800" style={{ position: 'absolute', top: 3, left: 3, background: t.color, color: '#0a0806', fontSize: '0.42rem', letterSpacing: '0.06em', borderRadius: 4, padding: '1px 3px', lineHeight: 1 }}>CHASE</span>
                               )}
