@@ -1646,8 +1646,8 @@ export default function RaidCombat({
     // out — and the EFFECT follows (deferred below by SUMMON_LEAD_MS), so it reads
     // as calling on that crew in the moment. The overlay eats taps while it plays,
     // so the deferred effect can't race a turn action. See AbilitySummonFx.
-    const SUMMON_LEAD_MS  = 980    // the effect begins as the summon starts to fade
-    const SUMMON_TOTAL_MS = 1750   // full fade-in + longer hold + fade-out
+    const SUMMON_LEAD_MS  = 1040   // the effect begins as the summon starts to fade
+    const SUMMON_TOTAL_MS = 2100   // full fade-in + longer hold + fade-out
     const castKey = Date.now()
     setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: def.color, image: crew.imageUrl ?? null })
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
@@ -6521,7 +6521,7 @@ function AbilitySummonFx({ label, name, color, image }: { label: string; name: s
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
   // behind a smaller portrait, a white impact flash lands on arrival, and the
   // ABILITY NAME slams up huge underneath so it reads as an RPG summon.
-  const HOLD: number[] = [0, 0.12, 0.8, 1]   // fade-in / hold / fade-out keyframe times
+  const HOLD: number[] = [0, 0.1, 0.86, 1]   // fade-in / long hold / fade-out keyframe times
   return (
     <motion.div
       aria-hidden
@@ -6540,7 +6540,7 @@ function AbilitySummonFx({ label, name, color, image }: { label: string; name: s
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0.92, 0.92, 0] }}
-        transition={{ duration: 1.75, times: HOLD, ease: 'easeInOut' }}
+        transition={{ duration: 2.1, times: HOLD, ease: 'easeInOut' }}
         style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.94) 60%)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
       />
 
@@ -6548,7 +6548,7 @@ function AbilitySummonFx({ label, name, color, image }: { label: string; name: s
       <motion.div
         initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
         animate={{ opacity: [0, 0.5, 0.32, 0], scale: [0.4, 1.1, 1.15, 1.2], rotate: [-30, 20, 40, 55] }}
-        transition={{ duration: 1.75, times: HOLD, ease: 'easeOut' }}
+        transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
         style={{
           position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%',
           background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}55 6deg, ${color}00 14deg)`,
@@ -6561,7 +6561,7 @@ function AbilitySummonFx({ label, name, color, image }: { label: string; name: s
         <motion.div key={`ring-${i}`}
           initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
           animate={{ opacity: [0, 0.85, 0.55, 0], scale: [0.3, 1, 1, 1.08], rotate: r.dir * 90 }}
-          transition={{ duration: 1.75, times: HOLD, ease: 'easeOut' }}
+          transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
           style={{
             position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%',
             border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, pointerEvents: 'none',
@@ -6583,7 +6583,7 @@ function AbilitySummonFx({ label, name, color, image }: { label: string; name: s
       <motion.div
         initial={{ opacity: 0, scale: 1.34, y: 10 }}
         animate={{ opacity: [0, 1, 1, 0], scale: [1.34, 1, 1, 1.05], y: [10, 0, 0, -6] }}
-        transition={{ duration: 1.75, times: [0, 0.15, 0.82, 1], ease: [0.18, 0.9, 0.3, 1] }}
+        transition={{ duration: 2.1, times: [0, 0.12, 0.88, 1], ease: [0.18, 0.9, 0.3, 1] }}
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
         {image ? (
@@ -6598,7 +6598,7 @@ function AbilitySummonFx({ label, name, color, image }: { label: string; name: s
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: [0, 1, 1, 0], y: [14, 0, 0, -6] }}
-        transition={{ duration: 1.75, times: [0, 0.24, 0.8, 1], ease: 'easeOut' }}
+        transition={{ duration: 2.1, times: [0, 0.24, 0.8, 1], ease: 'easeOut' }}
         style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
       >
         <p className="font-karla font-700 uppercase tracking-[0.32em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{name}</p>
