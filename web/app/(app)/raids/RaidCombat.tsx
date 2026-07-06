@@ -1646,8 +1646,8 @@ export default function RaidCombat({
     // out — and the EFFECT follows (deferred below by SUMMON_LEAD_MS), so it reads
     // as calling on that crew in the moment. The overlay eats taps while it plays,
     // so the deferred effect can't race a turn action. See AbilitySummonFx.
-    const SUMMON_LEAD_MS  = 560    // the effect begins as the summon starts to fade
-    const SUMMON_TOTAL_MS = 980    // full fade-in + hold + fade-out
+    const SUMMON_LEAD_MS  = 820    // the effect begins as the summon starts to fade
+    const SUMMON_TOTAL_MS = 1450   // full fade-in + longer hold + fade-out
     const castKey = Date.now()
     setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: def.color, image: crew.imageUrl ?? null })
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
@@ -6517,6 +6517,11 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
 // eats taps while it plays. All keyframed in one ~0.98s pass to match the
 // SUMMON_TOTAL_MS lifetime in fireCrewAbility.
 function AbilitySummonFx({ label, name, color, image }: { label: string; name: string; color: string; image: string | null }) {
+  // One ~1.45s pass: fast fade-in, a long hold, then fade-out (matches
+  // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
+  // behind a smaller portrait, a white impact flash lands on arrival, and the
+  // ABILITY NAME slams up huge underneath so it reads as an RPG summon.
+  const HOLD: number[] = [0, 0.12, 0.8, 1]   // fade-in / hold / fade-out keyframe times
   return (
     <motion.div
       aria-hidden
@@ -6526,66 +6531,96 @@ function AbilitySummonFx({ label, name, color, image }: { label: string; name: s
       transition={{ duration: 0.12 }}
       style={{
         position: 'fixed', inset: 0, zIndex: 70,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         pointerEvents: 'auto',   // block taps while the summon plays
         overflow: 'hidden',
       }}
     >
-      {/* Dim + color-wash backdrop so the crew art pops off the stage. */}
+      {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.74, 0.74, 0] }}
-        transition={{ duration: 0.98, times: [0, 0.22, 0.6, 1], ease: 'easeInOut' }}
-        style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 70% 60% at 50% 50%, ${color}2e 0%, rgba(2,4,10,0.86) 62%)`, backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
+        animate={{ opacity: [0, 0.92, 0.92, 0] }}
+        transition={{ duration: 1.45, times: HOLD, ease: 'easeInOut' }}
+        style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.94) 60%)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
       />
 
-      {/* Speed lines rushing in — a few diagonal streaks for impact on entry. */}
-      {[-2, -1, 1, 2].map((n, i) => (
-        <motion.div key={`streak-${i}`}
-          initial={{ opacity: 0, scaleX: 0.2, x: n * 60 }}
-          animate={{ opacity: [0, 0.5, 0], scaleX: 1, x: 0 }}
-          transition={{ duration: 0.42, delay: 0.02 + i * 0.03, ease: 'easeOut' }}
-          style={{ position: 'absolute', top: `${38 + n * 7}%`, left: 0, right: 0, height: 2, transformOrigin: 'center', background: `linear-gradient(90deg, transparent, ${color}, transparent)`, filter: 'blur(1px)' }}
+      {/* Rotating light rays fanning out behind the crew (conic gradient). */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
+        animate={{ opacity: [0, 0.5, 0.32, 0], scale: [0.4, 1.1, 1.15, 1.2], rotate: [-30, 20, 40, 55] }}
+        transition={{ duration: 1.45, times: HOLD, ease: 'easeOut' }}
+        style={{
+          position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%',
+          background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}55 6deg, ${color}00 14deg)`,
+          filter: 'blur(2px)', pointerEvents: 'none',
+        }}
+      />
+
+      {/* Summoning rune ring — two counter-rotating rings that snap in. */}
+      {[{ d: 300, dir: 1, dash: '14 12', w: 2 }, { d: 240, dir: -1, dash: '4 16', w: 3 }].map((r, i) => (
+        <motion.div key={`ring-${i}`}
+          initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
+          animate={{ opacity: [0, 0.85, 0.55, 0], scale: [0.3, 1, 1, 1.08], rotate: r.dir * 90 }}
+          transition={{ duration: 1.45, times: HOLD, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%',
+            border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, pointerEvents: 'none',
+          }}
         />
       ))}
 
-      {/* The crew — big art, glowing frame, a light sweep across it. */}
+      {/* White impact flash on the crew's arrival. */}
       <motion.div
-        initial={{ opacity: 0, scale: 1.24, y: 16 }}
-        animate={{ opacity: [0, 1, 1, 0], scale: [1.24, 1, 1, 1.07], y: [16, 0, 0, -8] }}
-        transition={{ duration: 0.98, times: [0, 0.24, 0.62, 1], ease: 'easeOut' }}
-        style={{ position: 'relative', width: 'min(62vw, 300px)', maxHeight: '58vh' }}
+        initial={{ opacity: 0, scale: 0.4 }}
+        animate={{ opacity: [0, 0.85, 0], scale: [0.4, 1.6, 2] }}
+        transition={{ duration: 0.45, delay: 0.1, ease: 'easeOut' }}
+        style={{ position: 'absolute', top: '43%', width: 260, height: 260, marginTop: -130, borderRadius: '50%', background: `radial-gradient(circle, #ffffffcc 0%, ${color}55 40%, transparent 70%)`, pointerEvents: 'none' }}
+      />
+
+      {/* The crew — SMALLER art, overshoot scale-in, glowing frame + light sweep. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 1.4, y: 10 }}
+        animate={{ opacity: [0, 1, 1, 0], scale: [1.4, 1, 1, 1.05], y: [10, 0, 0, -6] }}
+        transition={{ duration: 1.45, times: [0, 0.16, 0.8, 1], ease: [0.18, 0.9, 0.3, 1] }}
+        style={{ position: 'relative', width: 'min(46vw, 216px)', maxHeight: '46vh', zIndex: 2 }}
       >
         <div style={{
-          position: 'relative', width: '100%', aspectRatio: '3 / 4', borderRadius: 20, overflow: 'hidden',
-          border: `2px solid ${color}`, boxShadow: `0 0 60px ${color}88, 0 0 120px ${color}44, inset 0 0 30px rgba(0,0,0,0.45)`,
+          position: 'relative', width: '100%', aspectRatio: '3 / 4', borderRadius: 18, overflow: 'hidden',
+          border: `2px solid ${color}`, boxShadow: `0 0 50px ${color}99, 0 0 110px ${color}55, inset 0 0 26px rgba(0,0,0,0.5)`,
           background: `linear-gradient(180deg, ${color}18, rgba(4,8,16,0.9))`,
         }}>
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: '3.4rem' }}>⚓</div>
+            <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: '3rem' }}>⚓</div>
           )}
-          {/* Light sweep */}
           <motion.div
             initial={{ x: '-130%' }}
             animate={{ x: '130%' }}
-            transition={{ delay: 0.18, duration: 0.7, ease: 'easeInOut' }}
-            style={{ position: 'absolute', inset: 0, background: `linear-gradient(105deg, transparent 40%, ${color}66 50%, transparent 60%)`, pointerEvents: 'none' }}
+            transition={{ delay: 0.22, duration: 0.75, ease: 'easeInOut' }}
+            style={{ position: 'absolute', inset: 0, background: `linear-gradient(105deg, transparent 40%, ${color}77 50%, transparent 60%)`, pointerEvents: 'none' }}
           />
         </div>
+      </motion.div>
 
-        {/* Name + ability label under the portrait. */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: [0, 1, 1, 0], y: 0 }}
-          transition={{ duration: 0.98, times: [0, 0.3, 0.66, 1], ease: 'easeOut' }}
-          style={{ textAlign: 'center', marginTop: 12 }}
+      {/* Small crew name, then the BIG ability name slamming up underneath. */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: [0, 1, 1, 0], y: [14, 0, 0, -6] }}
+        transition={{ duration: 1.45, times: [0, 0.24, 0.8, 1], ease: 'easeOut' }}
+        style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
+      >
+        <p className="font-karla font-700 uppercase tracking-[0.32em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{name}</p>
+        <motion.p
+          className="font-cinzel font-800 uppercase"
+          initial={{ scale: 1.35, opacity: 0, letterSpacing: '0.3em' }}
+          animate={{ scale: 1, opacity: 1, letterSpacing: '0.06em' }}
+          transition={{ delay: 0.18, duration: 0.34, ease: [0.2, 1, 0.3, 1] }}
+          style={{ fontSize: '2.15rem', lineHeight: 1.05, color: '#fff', marginTop: 4, textShadow: `0 0 22px ${color}, 0 0 54px ${color}aa, 0 3px 8px rgba(0,0,0,0.85)` }}
         >
-          <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#fff', lineHeight: 1, textShadow: `0 0 18px ${color}, 0 2px 6px rgba(0,0,0,0.8)` }}>{name}</p>
-          <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.62rem', color, marginTop: 5, textShadow: `0 0 12px ${color}aa` }}>{label}</p>
-        </motion.div>
+          {label}
+        </motion.p>
       </motion.div>
     </motion.div>
   )
