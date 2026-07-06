@@ -2124,14 +2124,14 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                                 position: 'relative', padding: 0, borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
                                 border: `2px solid ${isSel ? t.color : 'rgba(255,255,255,0.12)'}`,
                                 background: '#0a0806', aspectRatio: '1 / 1',
-                                boxShadow: isSel ? `0 0 14px ${t.color}66` : 'none',
+                                // Every tile emits its skin color; the previewed one strongest.
+                                boxShadow: `0 0 ${isSel ? 18 : 8}px ${t.color}${isSel ? 'aa' : '4d'}`,
                                 opacity: isOwned ? 1 : 0.92,
                               }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={artSrc(t.file)} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
-                              {/* Inner colored glow so the skin art itself gives off
-                                  light (strongest on the one being previewed). */}
-                              <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 8, boxShadow: `inset 0 0 ${isSel ? 15 : 9}px ${t.color}${isSel ? 'cc' : '80'}`, pointerEvents: 'none' }} />
+                              {/* Inner colored glow so the skin art itself gives off light. */}
+                              <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 8, boxShadow: `inset 0 0 ${isSel ? 16 : 11}px ${t.color}${isSel ? 'e0' : 'aa'}`, pointerEvents: 'none' }} />
                               {t.chase && !isEquipped && (
                                 <span className="font-karla font-800" style={{ position: 'absolute', top: 3, left: 3, background: t.color, color: '#0a0806', fontSize: '0.42rem', letterSpacing: '0.06em', borderRadius: 4, padding: '1px 3px', lineHeight: 1 }}>CHASE</span>
                               )}
