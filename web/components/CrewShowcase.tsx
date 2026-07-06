@@ -6,6 +6,7 @@
 import { applyCrewEffects } from '@/lib/crewEffects'
 import { RARITY_COLORS, RARITY_NAMES, type CrewRarity } from '@/lib/crewGen'
 import { crewLevelFromXP } from '@/lib/crewLevel'
+import { getCrewSkinByFilename } from '@/lib/crewSkins'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
@@ -34,7 +35,9 @@ export type ShowcaseCrew = {
 
 /** One crew portrait tile (effective stats shown). */
 export function CrewPortrait({ crew, w = 100, dimmed }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean }) {
-  const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
+  // An equipped legendary skin themes the whole tile in its accent color (this
+  // is where other players see your skin); else the rarity color.
+  const color = getCrewSkinByFilename(crew.filename)?.color ?? RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
   const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects, crew.xp ?? 0)
   const level = crewLevelFromXP(crew.xp ?? 0)
   return (

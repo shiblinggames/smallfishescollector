@@ -51,6 +51,7 @@ export const CREW_SKINS: CrewSkin[] = [
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
+const BY_FILENAME = new Map(CREW_SKINS.map(s => [s.filename, s]))
 const BY_SLUG = new Map<string, CrewSkin[]>()
 for (const s of CREW_SKINS) {
   const arr = BY_SLUG.get(s.slug) ?? []
@@ -60,6 +61,15 @@ for (const s of CREW_SKINS) {
 
 export function getCrewSkin(id: string | null | undefined): CrewSkin | undefined {
   return id ? BY_ID.get(id) : undefined
+}
+
+/** Look up a skin by its art filename (or a full art URL ending in it). Lets a
+ *  render site that only has the resolved image (e.g. the raid summon) recover
+ *  the skin's accent color so its glow matches. */
+export function getCrewSkinByFilename(filenameOrUrl: string | null | undefined): CrewSkin | undefined {
+  if (!filenameOrUrl) return undefined
+  const file = filenameOrUrl.split('/').pop() ?? filenameOrUrl
+  return BY_FILENAME.get(file)
 }
 
 /** Skins available for a legendary species (slug is case-insensitive). */

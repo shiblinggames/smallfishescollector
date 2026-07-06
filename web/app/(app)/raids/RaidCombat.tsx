@@ -64,6 +64,7 @@ import { getActiveEffects, getRaidItem, getActivatableItem } from '@/lib/raidIte
 import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
+import { getCrewSkinByFilename } from '@/lib/crewSkins'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -1649,7 +1650,10 @@ export default function RaidCombat({
     const SUMMON_LEAD_MS  = 1040   // the effect begins as the summon starts to fade
     const SUMMON_TOTAL_MS = 2100   // full fade-in + longer hold + fade-out
     const castKey = Date.now()
-    setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: def.color, image: crew.imageUrl ?? null })
+    // Glow color follows the EQUIPPED SKIN if there is one (so each legendary
+    // skin themes its whole summon in its own color), else the class color.
+    const summonColor = getCrewSkinByFilename(crew.imageUrl)?.color ?? def.color
+    setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: summonColor, image: crew.imageUrl ?? null })
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
 
     // Per-ability signature stage FX alongside the banner, so every ability
