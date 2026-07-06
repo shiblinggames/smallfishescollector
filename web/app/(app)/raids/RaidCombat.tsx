@@ -1817,7 +1817,7 @@ export default function RaidCombat({
         setEnemyPhase(n)
         setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
         setPhaseFlash(true)
-        setTimeout(() => setPhaseFlash(false), 1100)
+        setTimeout(() => setPhaseFlash(false), 2400)
         setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name}: "${nextCfg.dialogueLine}"`]), 300)
         armMechanicCheck(nextCfg.check)
         vibrate([0, 50, 40, 80])
@@ -3013,7 +3013,7 @@ export default function RaidCombat({
             const n = enemyPhaseRef.current
             setEnemyPhase(n)
             setPhaseCallout(nextCfg.badge ?? `Phase ${n}`)
-            setPhaseFlash(true); setTimeout(() => setPhaseFlash(false), 1100)
+            setPhaseFlash(true); setTimeout(() => setPhaseFlash(false), 2400)
             setTimeout(() => setResolveLog(prev => [...prev, `${enemy.name}: "${nextCfg.dialogueLine}"`]), 300)
             armMechanicCheck(nextCfg.check)
             vibrate([0, 50, 40, 80])
@@ -3082,7 +3082,7 @@ export default function RaidCombat({
         setEnemyPhase(n)
         setPhaseCallout(step.phaseBadge ?? `Phase ${n}`)
         setPhaseFlash(true)
-        setTimeout(() => setPhaseFlash(false), 1100)
+        setTimeout(() => setPhaseFlash(false), 2400)
         // Arm this phase's mechanic check (if any) as the phase begins.
         armMechanicCheck(step.phaseCheck)
       }
@@ -4359,16 +4359,20 @@ export default function RaidCombat({
           />
         )}
 
-        {/* Mechanic-check indicator — a SLIM pulsing pill (name + turn countdown)
-            at the very top edge so it barely covers the fight. The telegraph
-            itself is narrated in the action log, not here; the player works out
-            the answer by trial and error. */}
+        {/* Mechanic-check indicator — a pulsing banner at the top edge. Shows the
+            move name + a live turn countdown, AND the telegraph line (what the
+            boss is winding up) so a player can SEE what's happening for the whole
+            window, not just catch it once as it scrolls past in the log. The
+            "how to answer" hint lives on the enemy stats popup. */}
         {pendingCheck && (
-          <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 13, pointerEvents: 'none' }}>
-            <div className="rc-check-banner" style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 999, padding: '0.22rem 0.55rem 0.22rem 0.6rem', background: 'linear-gradient(180deg, rgba(120,20,20,0.9), rgba(70,10,10,0.86))', border: '1px solid rgba(248,113,113,0.7)', whiteSpace: 'nowrap' }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
-              <span className="font-cinzel font-800 uppercase tracking-[0.08em]" style={{ fontSize: '0.64rem', color: '#ffe0e0', textShadow: '0 0 8px rgba(239,68,68,0.8)' }}>{pendingCheck.name}</span>
-              <span className="font-karla font-800" style={{ fontSize: '0.58rem', color: '#2a0a0a', background: '#fca5a5', borderRadius: 999, minWidth: 15, textAlign: 'center', padding: '0 0.28rem' }}>{pendingCheck.turnsLeft}</span>
+          <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 13, pointerEvents: 'none', width: 'min(340px, 92%)' }}>
+            <div className="rc-check-banner" style={{ display: 'flex', flexDirection: 'column', gap: 2, borderRadius: 12, padding: '0.34rem 0.6rem', background: 'linear-gradient(180deg, rgba(120,20,20,0.92), rgba(70,10,10,0.9))', border: '1px solid rgba(248,113,113,0.7)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+                <span className="font-cinzel font-800 uppercase tracking-[0.08em]" style={{ fontSize: '0.64rem', color: '#ffe0e0', textShadow: '0 0 8px rgba(239,68,68,0.8)' }}>{pendingCheck.name}</span>
+                <span className="font-karla font-800" style={{ fontSize: '0.58rem', color: '#2a0a0a', background: '#fca5a5', borderRadius: 999, minWidth: 15, textAlign: 'center', padding: '0 0.28rem' }}>{pendingCheck.turnsLeft}</span>
+              </div>
+              <p className="font-karla font-500" style={{ fontSize: '0.6rem', color: '#ffd7d7', lineHeight: 1.3, textAlign: 'center' }}>{pendingCheck.telegraph}</p>
             </div>
           </div>
         )}
@@ -5306,6 +5310,23 @@ function EnemyStatsPopup({
   // (volleys, dodges, aggression) without giving away turn-by-turn timing.
   const behaviorHint = enemyBehaviorHint(enemy.pattern)
 
+  // Multi-phase bosses (phases[] supersedes phase2). Surface each phase + its
+  // telegraphed mechanic check here — the fights were too opaque with the answer
+  // only findable by trial and error, so the popup now spells out what each
+  // phase does and how to answer its check.
+  const popupPhases = enemy.phases ?? (enemy.phase2 ? [enemy.phase2] : [])
+  const RESPONSE_LABEL: Record<MechanicResponse, string> = {
+    brace:  'an Anchor brace',
+    shield: 'a Tidecaller shield',
+    snare:  'the boss Snared',
+    heal:   'a heal (Mender, Tidecaller, or a repair kit)',
+    burst:  'a big-shot ability (Leviathan or Apex)',
+  }
+  const describeConsequence = (c: BossMechanicCheck['consequence']): string =>
+    c.kind === 'damagePctMaxHp'
+      ? `hits you for ${Math.round(c.value * 100)}% of your max hull`
+      : `the boss heals ${Math.round(c.value * 100)}% of its HP`
+
   if (typeof document === 'undefined') return null
 
   return createPortal(
@@ -5568,6 +5589,50 @@ function EnemyStatsPopup({
                   Every few turns a screen of {flareShots} false flares goes up. Swat each amber flare before its fuse burns out — every one you let through chips your hull.{flareHasFeints ? ' Some glow red: those are live shells, so let them fizzle. Tapping a red flare hurts worse than missing an amber one.' : ''}
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Phases — for multi-phase bosses (the Quartermaster etc.). Each phase
+            revives the boss meaner; a phase with a telegraphed check spells out
+            what it does + how to answer, so the fight is readable, not opaque. */}
+        {popupPhases.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.66rem', color: '#f0a0a0', letterSpacing: '0.16em', marginBottom: 6 }}>
+              Phases · {popupPhases.length + 1}
+            </p>
+            <p className="font-karla" style={{ fontSize: '0.68rem', color: 'rgba(240,237,232,0.55)', lineHeight: 1.4, marginBottom: 8 }}>
+              This boss falls, then rises again — meaner each time. Watch for a telegraphed move and answer it in time.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {popupPhases.map((ph, i) => {
+                const n = i + 2 // phaseList[0] = phase 2
+                const chk = ph.check
+                return (
+                  <div key={i} style={{
+                    padding: '0.65rem 0.75rem', borderRadius: 12,
+                    background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap' }}>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.1em', color: '#fca5a5' }}>Phase {n}</span>
+                      {ph.badge && <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f3d6d6' }}>{ph.badge}</span>}
+                      <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: 'rgba(240,237,232,0.5)' }}>
+                        revives ~{Math.round(ph.revivePct * 100)}% HP{ph.damageMult > 1 ? ` · +${Math.round((ph.damageMult - 1) * 100)}% damage` : ''}
+                      </span>
+                    </div>
+                    {chk && (
+                      <div style={{ marginTop: 6 }}>
+                        <p className="font-karla font-700" style={{ fontSize: '0.74rem', color: '#f3c0c0', lineHeight: 1.35 }}>
+                          Telegraphed: “{chk.name}” — {chk.telegraph}
+                        </p>
+                        <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(240,237,232,0.72)', lineHeight: 1.4, marginTop: 4 }}>
+                          <span style={{ color: '#86efac', fontWeight: 700 }}>Answer</span> within {chk.chargeTurns} turn{chk.chargeTurns === 1 ? '' : 's'} with any of: {chk.responses.map(r => RESPONSE_LABEL[r]).join(', ')}. Otherwise it {describeConsequence(chk.consequence)}.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
