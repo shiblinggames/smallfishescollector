@@ -1804,10 +1804,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const portraitFilename = dm
             ? (shownSkinId ? (getCrewSkin(shownSkinId)?.filename ?? dm.baseFilename) : dm.baseFilename)
             : it.filename
-          // Frame stays the rarity color; the shown skin makes the ART glow
-          // (so a skin feels legendary at preview/buy time without a lit border).
+          // Frame stays the rarity color; the shown skin makes the ART glow via
+          // an inner overlay that follows the arch shape (a drop-shadow on the
+          // rectangular art poked past the arch curve — this stays inside it).
           const portraitSkin = shownSkinId ? getCrewSkin(shownSkinId)?.color : null
-          const portraitGlow = portraitSkin ? `drop-shadow(0 0 7px ${portraitSkin}) drop-shadow(0 0 18px ${portraitSkin}cc)` : undefined
           const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
           // Board candidates haven't been recruited yet (no xp field) —
           // preview the hall XP seed stamped on their board row at roll
@@ -1840,7 +1840,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 {/* Portrait — rarity frame; the skin ART glows in its own color. */}
                 <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${dColor}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4, filter: portraitGlow, transition: 'filter 0.25s' }} />
+                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 4 }} />
+                  {/* Skin glow — inset, arch-shaped, so it never spills past the frame. */}
+                  {portraitSkin && (
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '70px 70px 6px 6px', boxShadow: `inset 0 0 22px ${portraitSkin}cc`, pointerEvents: 'none', transition: 'box-shadow 0.25s' }} />
+                  )}
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
