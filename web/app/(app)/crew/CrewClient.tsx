@@ -2383,10 +2383,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     tinted Make Captain (only when on a track) beside a low-emphasis
                     ghost Dismiss, so this rarely-touched pair stops eating space
                     and shouting for attention. */}
-                <div style={{ marginTop: 12 }}>
                 {detail.kind === 'board' ? (
-                  renderAction(detail.kind, it, { onDone: close })
-                ) : (() => {
+                  <div style={{ marginTop: 12 }}>{renderAction(detail.kind, it, { onDone: close })}</div>
+                ) : activeTab === 'stats' ? (
+                  <div style={{ marginTop: 12 }}>{(() => {
                   const m = it as CrewMember
                   const isCap = m.voyageSlot === 0 || m.raidSlot === 0
                   const canPromote = !isCap && (m.voyageSlot !== null || m.raidSlot !== null)
@@ -2420,8 +2420,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       </button>
                     </div>
                   )
-                })()}
-                </div>
+                })()}</div>
+                ) : null}
               </motion.div>
             </motion.div>
           )
