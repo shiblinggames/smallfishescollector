@@ -1,0 +1,95 @@
+
+> web@0.1.0 build
+> next build
+
+▲ Next.js 16.2.4 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.7s
+  Running TypeScript ...
+  Finished TypeScript in 16.5s ...
+  Collecting page data using 19 workers ...
+  Generating static pages using 19 workers (0/65) ...
+  Generating static pages using 19 workers (16/65) 
+  Generating static pages using 19 workers (32/65) 
+  Generating static pages using 19 workers (48/65) 
+✓ Generating static pages using 19 workers (65/65) in 408ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /achievements
+├ ƒ /admin
+├ ƒ /api/cron/midnight
+├ ƒ /api/cron/turn-timeout
+├ ƒ /api/webhooks/shopify
+├ ƒ /api/webhooks/stripe
+├ ƒ /auth/callback
+├ ƒ /badges
+├ ƒ /charting
+├ ƒ /charting/minefield
+├ ○ /claim
+├ ƒ /contact
+├ ƒ /crew
+├ ƒ /demo
+├ ○ /dev/avatar
+├ ○ /dev/clouds
+├ ƒ /dev/stats
+├ ƒ /expeditions
+├ ƒ /fishing
+├ ○ /fishing-test
+├ ƒ /hooks
+├ ƒ /leaderboard
+├ ○ /login
+├ ƒ /marketplace/shipyard
+├ ƒ /marketplace/tackle-shop
+├ ƒ /packs
+├ ƒ /privacy
+├ ƒ /profile
+├ ƒ /raids
+├ ƒ /raids/cartographer
+├ ƒ /raids/cartographer/challenge
+├ ƒ /raids/challenge
+├ ƒ /raids/coffers-fleet
+├ ƒ /raids/coffers-fleet/challenge
+├ ƒ /raids/gauntlet
+├ ƒ /raids/gullet
+├ ƒ /raids/gullet/challenge
+├ ƒ /raids/krust
+├ ƒ /raids/krust/challenge
+├ ƒ /raids/practice
+├ ƒ /raids/quartermaster
+├ ƒ /raids/quartermaster/challenge
+├ ƒ /raids/turnbased
+├ ○ /register
+├ ○ /robots.txt
+├ ○ /sitemap.xml
+├ ƒ /social
+├ ƒ /social/shipbattle/[id]
+├ ƒ /tavern
+├ ƒ /tavern/blackjack
+├ ƒ /tavern/bounties
+├ ƒ /tavern/casino
+├ ƒ /tavern/chart-room
+├ ƒ /tavern/chart-room/hold
+├ ƒ /tavern/chart-room/rigging
+├ ƒ /tavern/contests
+├ ƒ /tavern/daily-bonus
+├ ƒ /tavern/market
+├ ƒ /tavern/roulette
+├ ƒ /tavern/slots
+├ ƒ /tavern/tide-run
+├ ƒ /tavern/trivia
+├ ƒ /tavern/trivia/board
+├ ƒ /tavern/trivia/king
+├ ƒ /terms
+└ ƒ /u/[username]
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
