@@ -1855,10 +1855,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
                 {/* Portrait — rarity frame; a shown skin makes the ART itself glow
                     in its color (drop-shadow aura on the image). clip-path keeps
-                    the glow inside the arch so it never spills past the frame. */}
-                <div style={{ position: 'relative', width: 150, height: 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', clipPath: 'inset(0 round 70px 70px 6px 6px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% 30%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
+                    the glow inside the arch so it never spills past the frame.
+                    On the Skins tab it's a pure skin preview (no trait pill below
+                    it), so the art centers + fills the frame to close the dead
+                    space; other tabs keep the top-anchored framing. */}
+                <div style={{ position: 'relative', width: 150, height: activeTab === 'skins' ? 150 : 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', clipPath: 'inset(0 round 70px 70px 6px 6px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% ${activeTab === 'skins' ? 40 : 30}%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 20%', padding: 6, filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined, transition: 'filter 0.25s' }} />
+                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined, transition: 'filter 0.25s' }} />
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
