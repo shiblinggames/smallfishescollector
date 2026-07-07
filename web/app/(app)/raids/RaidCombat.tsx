@@ -876,6 +876,12 @@ export default function RaidCombat({
   // an active ability fires). Separate from abilityCast (the small pill, kept for
   // the raid-item drum).
   const [abilitySummon, setAbilitySummon] = useState<{ key: number; label: string; name: string; color: string; image: string | null; chase: boolean; skinId: string | null } | null>(null)
+  // Plain (non-animated) tap-blocker that outlives the animated summon: it keeps
+  // eating taps from the moment a crew ability fires until its deferred effect
+  // has resolved, so the animated summon can UNMOUNT the instant it's faded (no
+  // lingering framer tree for a rapid effect like Mako's Frenzy to re-render and
+  // pop back in).
+  const [summonGuard, setSummonGuard] = useState(false)
   // On-demand "Crew Abilities Restored" banner trigger (War/Thunder Drum). A
   // bumping counter keys the banner so each activation remounts + replays the
   // one-shot animation, separate from the fight-open `abilitiesRefreshed` prop.
@@ -1648,14 +1654,17 @@ export default function RaidCombat({
     // out — and the EFFECT follows (deferred below by SUMMON_LEAD_MS), so it reads
     // as calling on that crew in the moment. The overlay eats taps while it plays,
     // so the deferred effect can't race a turn action. See AbilitySummonFx.
-    // The summon's CONTENT (character + backdrop + name) holds, then ALL fades
-    // out together over ~0.25s, fully gone by ~1.9s (see the matched fade times
-    // below). Only AFTER it's gone does the effect fire, so the battle-stage
-    // animation (damage on the enemy, etc.) plays on a clear stage. The overlay
-    // stays mounted (transparent) until SUMMON_TOTAL_MS to keep eating taps until
-    // the deferred effect has resolved.
-    const SUMMON_LEAD_MS  = 1980   // effect begins after the summon has fully vanished
-    const SUMMON_TOTAL_MS = 2200   // overlay lifetime (blocks taps through resolve)
+    // The summon's CONTENT holds, then ALL fades out together over ~0.25s, fully
+    // gone by ~1.9s (matched fade times below). The animated summon then UNMOUNTS
+    // at SUMMON_TOTAL_MS, so there's no framer tree left for the deferred effect
+    // to re-render (that was making Mako's Frenzy pop the art back in). The effect
+    // fires only after that (SUMMON_LEAD_MS) on a clear stage, and a plain
+    // tap-guard keeps blocking input across the whole window until it resolves.
+    const SUMMON_TOTAL_MS = 1960   // animated summon unmounts once it's faded
+    const SUMMON_LEAD_MS  = 2140   // effect begins after the summon is fully gone
+    const GUARD_MS        = 2320   // plain tap-blocker lifetime (covers the effect)
+    setSummonGuard(true)
+    setTimeout(() => setSummonGuard(false), GUARD_MS)
     const castKey = Date.now()
     // Glow color follows the EQUIPPED SKIN if there is one (so each legendary
     // skin themes its whole summon in its own color), else the class color.
@@ -4571,6 +4580,13 @@ export default function RaidCombat({
               <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} chase={abilitySummon.chase} skinId={abilitySummon.skinId} />
             )}
           </AnimatePresence>,
+          document.body,
+        )}
+        {/* Plain, un-animated tap-guard — outlives the animated summon so input
+            stays blocked until the deferred effect resolves, without keeping a
+            framer tree mounted that a rapid effect could re-render. */}
+        {summonGuard && typeof document !== 'undefined' && createPortal(
+          <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 69, pointerEvents: 'auto' }} />,
           document.body,
         )}
 
