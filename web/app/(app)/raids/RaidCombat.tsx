@@ -6562,10 +6562,20 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
         overflow: 'hidden',
       }}
     >
+      {/* ONE wrapper drives the exit: every piece of the summon holds at full
+          opacity, then this fades them ALL out together on a single curve — so
+          nothing lingers or leaves on its own easing. The effect fires only
+          after this has finished (SUMMON_LEAD_MS). */}
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={{ opacity: [1, 1, 0] }}
+        transition={{ duration: 2.1, times: [0, 0.8, 0.92], ease: 'easeInOut' }}
+        style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+      >
       {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.92, 0.92, 0] }}
+        animate={{ opacity: [0, 0.92, 0.92, 0.92] }}
         transition={{ duration: 2.1, times: HOLD, ease: 'easeInOut' }}
         style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.94) 60%)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
       />
@@ -6573,7 +6583,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
       {/* Rotating light rays fanning out behind the crew (conic gradient). */}
       <motion.div
         initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
-        animate={{ opacity: [0, 0.5, 0.32, 0], scale: [0.4, 1.1, 1.15, 1.2], rotate: [-30, 20, 40, 55] }}
+        animate={{ opacity: [0, 0.5, 0.32, 0.32], scale: [0.4, 1.1, 1.15, 1.2], rotate: [-30, 20, 40, 55] }}
         transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
         style={{
           position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%',
@@ -6586,7 +6596,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
       {[{ d: 300, dir: 1, dash: '14 12', w: 2 }, { d: 240, dir: -1, dash: '4 16', w: 3 }].map((r, i) => (
         <motion.div key={`ring-${i}`}
           initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
-          animate={{ opacity: [0, 0.85, 0.55, 0], scale: [0.3, 1, 1, 1.08], rotate: r.dir * 90 }}
+          animate={{ opacity: [0, 0.85, 0.55, 0.55], scale: [0.3, 1, 1, 1.08], rotate: r.dir * 90 }}
           transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
           style={{
             position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%',
@@ -6622,7 +6632,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
           over the character. */}
       <motion.div
         initial={{ opacity: 0, scale: 1.34, y: 10 }}
-        animate={{ opacity: [0, 1, 1, 0], scale: [1.34, 1, 1, 1.05], y: [10, 0, 0, -6] }}
+        animate={{ opacity: [0, 1, 1, 1], scale: [1.34, 1, 1, 1], y: [10, 0, 0, 0] }}
         transition={{ duration: 2.1, times: [0, 0.09, 0.78, 0.9], ease: [0.18, 0.9, 0.3, 1] }}
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
@@ -6642,7 +6652,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
       {/* Small crew name, then the BIG ability name slamming up underneath. */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: [0, 1, 1, 0], y: [14, 0, 0, -6] }}
+        animate={{ opacity: [0, 1, 1, 1], y: [14, 0, 0, 0] }}
         transition={{ duration: 2.1, times: [0, 0.2, 0.78, 0.9], ease: 'easeOut' }}
         style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
       >
@@ -6657,6 +6667,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
           {label}
         </motion.p>
       </motion.div>
+      </motion.div>{/* end synchronized-fade wrapper */}
     </motion.div>
   )
 }
