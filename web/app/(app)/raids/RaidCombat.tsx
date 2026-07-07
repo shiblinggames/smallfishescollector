@@ -53,7 +53,7 @@
 //   (shipSpeed + speedDelta) · dodge (rollDodge vs attacker) · incoming-damage
 //   mitigation (incomingDmgMult). Nothing "overrides"; it's one big multiply.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { BroadsideEnemy, EnemyAction, type BossMechanicCheck, type MechanicResponse } from '@/lib/bossRaids'
@@ -1813,9 +1813,9 @@ export default function RaidCombat({
         for (let k = 0; k < shots; k++) { cum += shotDmgs[k]; if (cum >= curHp) { killIdx = k; break } }
         const lastIdx = killIdx >= 0 ? killIdx : shots - 1
         // Rat-a-tat: EACH shot pops a muzzle flash + a hull impact + its OWN
-        // damage number in rapid succession, so the frenzy visibly chains the
-        // hits instead of one lump landing at the end.
-        const INTERVAL = 120
+        // damage number, so the frenzy visibly chains the hits instead of one
+        // lump landing at the end. Paced so each hit reads as its own blow.
+        const INTERVAL = 200
         for (let k = 0; k <= lastIdx; k++) {
           playStepChainRef.current.push(setTimeout(() => {
             const bk = Date.now() + k
@@ -6565,7 +6565,11 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
 // effect follows. Full-viewport (portaled to body), pointer-events auto so it
 // eats taps while it plays. All keyframed in one ~0.98s pass to match the
 // SUMMON_TOTAL_MS lifetime in fireCrewAbility.
-function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: string; name: string; color: string; image: string | null; chase?: boolean; skinId?: string | null }) {
+// memo: the summon's props are stable for its whole lifetime, so once it's up
+// nothing should re-render it. Without this, a rapid burst of parent setState
+// during the deferred effect (e.g. Mako's Frenzy chain) re-renders this and
+// restarts its keyframe animations — the crew art visibly fades then pops back.
+const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: string; name: string; color: string; image: string | null; chase?: boolean; skinId?: string | null }) {
   // One ~1.45s pass: fast fade-in, a long hold, then fade-out (matches
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
   // behind a smaller portrait, a white impact flash lands on arrival, and the
@@ -6693,7 +6697,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
       </motion.div>{/* end synchronized-fade wrapper */}
     </motion.div>
   )
-}
+})
 
 function AbilityCastFx({ label, name, color, image, emoji }: { label: string; name: string; color: string; image?: string | null; emoji?: string }) {
   return (
