@@ -2024,10 +2024,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   </div>
                 )}
 
-                {/* Fixed-min-height tab body so the modal doesn't jump between
-                    tabs. Only grows past this if the player expands the ability
-                    milestones or the stat glossary (both opt-in). */}
-                <div style={{ minHeight: 292 }}>
+                {/* Tab body — flexes to each tab's own content so actions sit
+                    right under it (no dead space padding the modal to a fixed
+                    height). */}
+                <div>
 
                 {/* ── ABILITY tab — species-locked active ability surfaced in raid
                     combat through the Special chooser. Sub-Lv-10 crew get an
