@@ -2153,11 +2153,17 @@ export default function RaidCombat({
                            '#6b7280'
     snapIndicator(indicatorRef.current)
     flashBar(barFlashRef.current, flashColor, res === 'critical' ? 0.7 : res === 'hit' ? 0.55 : 0.35)
-    // Indicator glow boost for hit/crit
+    // Indicator glow boost for hit/crit. Re-center the WIDENED needle on the
+    // judged pos: it's anchored by `left` for a 4px needle (pos% − 2px), so
+    // just growing `width` would balloon it to the RIGHT and shift its visual
+    // centre ~(w−4)/2 px right of the real hit point — which read as the crit
+    // zone being offset right of the gold band. Offset left by half the new
+    // width so the fat needle stays centred on `pos`.
     if (indicatorRef.current && (res === 'hit' || res === 'critical')) {
       const w = res === 'critical' ? 10 : 7
       const glow = res === 'critical' ? '#fbbf24' : '#4ade80'
       indicatorRef.current.style.width = `${w}px`
+      indicatorRef.current.style.left = `calc(${pos * 100}% - ${w / 2}px)`
       indicatorRef.current.style.boxShadow = `0 0 18px ${glow}, 0 0 36px ${glow}, 0 0 60px ${glow}66`
     }
 
