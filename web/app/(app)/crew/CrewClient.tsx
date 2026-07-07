@@ -21,6 +21,7 @@ import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
 import { crewLevelFromXP, crewXPProgress, levelStatBonuses, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { classForSlug, CLASSES, currentMilestone, nextMilestone, CLASS_UNLOCK_LEVEL, type AnyClassDef } from '@/lib/crewClasses'
 import { vibrate } from '@/lib/haptics'
+import { playChestSfx } from '@/lib/fishingMusic'
 // TickingNumber + the local Stat helper were used by the removed
 // gems/nav/roster pill row in the header. Dropped along with them.
 
@@ -829,7 +830,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // null = the Original; a string = that skin id. Reset on modal close.
   const [previewSkin, setPreviewSkin] = useState<string | null | undefined>(undefined)
   const [skinBusy, setSkinBusy] = useState<string | null>(null)
-  // Buy / equip a crew skin, then sync state + the Nav-bar gem total.
+  // A freshly-UNLOCKED skin id — drives the celebratory reveal overlay.
+  const [skinUnlock, setSkinUnlock] = useState<string | null>(null)
+  // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
+  // fires the unlock reveal so earning a new skin feels like a real moment.
   function runSkinAction(tag: string, action: () => Promise<CrewActionResult>) {
     if (skinBusy) return
     setErr(null)
@@ -840,6 +844,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
       else {
         setState(res.state)
         window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.state.gems }))
+        if (tag.startsWith('buy:')) {
+          const boughtId = tag.slice(4)
+          vibrate([0, 45, 55, 30])
+          try { playChestSfx(true) } catch { /* audio best-effort */ }
+          setSkinUnlock(boughtId)
+          setTimeout(() => setSkinUnlock(id => (id === boughtId ? null : id)), 3400)
+        }
       }
       setSkinBusy(null)
     })
@@ -2437,6 +2448,52 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           )
         })()}
       </AnimatePresence>
+
+      {/* ── Skin unlock reveal ── a real moment when a skin is bought: the art
+          bursts in on a ray-fan in the skin's colour, its name slams up, and a
+          chase skin plays its signature FX. Portaled so no transformed ancestor
+          clips it. Auto-dismisses; tap to continue. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {skinUnlock && (() => {
+            const skin = getCrewSkin(skinUnlock)
+            if (!skin) return null
+            const c = skin.color
+            return (
+              <motion.div key="skin-unlock" onClick={() => setSkinUnlock(null)}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', cursor: 'pointer', background: 'rgba(3,2,6,0.9)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+                {/* Ray-fan burst behind the art */}
+                <motion.div aria-hidden initial={{ opacity: 0, scale: 0.35, rotate: -25 }} animate={{ opacity: [0, 0.55, 0.4], scale: [0.35, 1.15, 1.22], rotate: [-25, 15, 30] }} transition={{ duration: 2.4, ease: 'easeOut' }}
+                  style={{ position: 'absolute', width: 540, height: 540, borderRadius: '50%', background: `repeating-conic-gradient(from 0deg, ${c}00 0deg, ${c}44 6deg, ${c}00 15deg)`, filter: 'blur(2px)', pointerEvents: 'none' }} />
+                {/* White pop flash on arrival */}
+                <motion.div aria-hidden initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: [0, 0.8, 0], scale: [0.4, 1.7, 2.1] }} transition={{ duration: 0.55, delay: 0.05, ease: 'easeOut' }}
+                  style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: `radial-gradient(circle, #ffffffcc 0%, ${c}55 40%, transparent 70%)`, pointerEvents: 'none' }} />
+
+                <motion.p className="font-cinzel font-700 uppercase" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.4 }}
+                  style={{ position: 'relative', fontSize: '0.7rem', letterSpacing: '0.3em', color: c, textShadow: `0 0 18px ${c}88`, marginBottom: 16 }}>New Skin Unlocked</motion.p>
+
+                <motion.div initial={{ opacity: 0, scale: 1.32, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 220, damping: 18, delay: 0.04 }}
+                  style={{ position: 'relative', width: 'min(62vw, 250px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {skin.chase && <ChaseSkinFx skinId={skin.id} color={c} variant="summon" />}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={artSrc(skin.filename)} alt={skin.name} style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 0 26px ${c}) drop-shadow(0 0 72px ${c}88)` }} />
+                </motion.div>
+
+                <motion.p className="font-pirata" initial={{ opacity: 0, scale: 1.2, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.4, ease: [0.2, 1, 0.3, 1] }}
+                  style={{ position: 'relative', fontSize: '2.1rem', color: '#f4ead2', marginTop: 18, textAlign: 'center', lineHeight: 1.04, textShadow: `0 0 26px ${c}aa` }}>{skin.name}</motion.p>
+                {skin.blurb && (
+                  <motion.p className="font-karla" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.38 }}
+                    style={{ position: 'relative', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, textAlign: 'center', maxWidth: 320, lineHeight: 1.4 }}>{skin.blurb}</motion.p>
+                )}
+                <motion.p className="font-karla font-700 uppercase" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
+                  style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.32)', marginTop: 22 }}>Tap to continue</motion.p>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   )
 }
