@@ -407,15 +407,14 @@ export function resolveRound(
         const itemMult = isCrit ? me.l.critDamageMult : me.l.noncritDamageMult
         const foeTakenMult = foe2.l.incomingDamageMult * (1 + (foe2.l.damageTakenPct ?? 0) / 100)
         const rampMult = 1 + (me.l.rampDamagePerTurn ?? 0) * roundIndex
-        let shots = 0
-        do {
-          shots++
+        // Barrage — a fixed, guaranteed number of shots (no RNG chain).
+        for (let shots = 1; shots <= mm.shots; shots++) {
           const raw = rollShotDamage(res, me.l.shipMinDamage, me.l.totalPower, me.l.damagePct)
           const outgoing = Math.max(1, Math.floor(raw * me.l.classDamageMult * itemMult * foeTakenMult * rampMult))
           const { hpDmg, absorbed } = dealDamage(foeWho2, outgoing)
-          steps.push(snapshot({ actor: who, action: 'fire', damage: hpDmg, crit: isCrit, log: `${crew.name} frenzies — shot ${shots} hits for ${hpDmg}${isCrit ? ' (crit!)' : ''}${absorbed ? ` (${absorbed} soaked)` : ''}.` }))
+          steps.push(snapshot({ actor: who, action: 'fire', damage: hpDmg, crit: isCrit, log: `${crew.name} barrages — shot ${shots} hits for ${hpDmg}${isCrit ? ' (crit!)' : ''}${absorbed ? ` (${absorbed} soaked)` : ''}.` }))
           if (foe2.s.hp <= 0) { winner = who; break }
-        } while (shots < 10 && Math.random() < mm.chainChance)
+        }
         break
       }
     }

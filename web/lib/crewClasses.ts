@@ -196,15 +196,14 @@ export interface LeviathanMilestone {
 
 export interface BlitzMilestone {
   unlockLevel: ClassMilestoneLevel
-  /** Probability (0–1) that each landed shot will chain into another.
-   *  First shot is guaranteed; the chain ends on the first failed roll
-   *  (or a 10-shot hard cap, to keep pathological streaks bounded). */
-  chainChance: number
-  /** Per-shot damage multiplier — each frenzy shot hits for this fraction of a
-   *  normal cannon shot. Blitz's identity is MANY SMALL hits (vs Leviathan's
-   *  one big one), so this stays below 1 while chainChance climbs. */
+  /** GUARANTEED number of shots in the barrage. No RNG chain — every shot
+   *  lands, so the ability is reliable VOLUME, not a coin-flip streak. */
+  shots: number
+  /** Per-shot damage multiplier — each barrage shot hits for this fraction of a
+   *  normal cannon shot. Deliberately low: the power is in the COUNT, not the
+   *  per-hit number (vs Leviathan's one big shell). */
   shotDmgMult: number
-  /** Lv 100: every shot in the chain lands as a guaranteed crit. */
+  /** Lv 100: every shot in the barrage lands as a guaranteed crit. */
   autoCrit?: boolean
   desc: string
 }
@@ -367,18 +366,19 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
 
 export const BLITZ: ClassDef<BlitzMilestone> = {
   id: 'blitz', name: 'Apex', shortLabel: 'Frenzy',
-  blurb: 'Unloads a rapid-fire frenzy — a burst of light shots that keeps chaining until a roll fails. Each shot is small, but a hot streak buries the enemy under a storm of them.',
+  blurb: 'Unloads a fixed barrage of light shots — every one lands, so it never whiffs. Weak per hit, but the volume adds up, and the count grows as the crew ranks up.',
   color: '#f87171', emoji: '⇶',
-  // MANY SMALL hits — the opposite of Leviathan's one big knock. Higher chain
-  // chance + a sub-1 per-shot mult, tuned so the expected total lands slightly
-  // under Leviathan (Lv 100 ≈ 47 across ~3 shots vs one ~50 shell). Expected
-  // shots = 1/(1-chainChance).
+  // MANY SMALL hits — the opposite of Leviathan's one big knock. A GUARANTEED
+  // shot count (no RNG chain) so it's reliable volume, with a low per-shot mult.
+  // Totals land at/just under Leviathan's REGULAR-hull damage and well under its
+  // boss bonus — Blitz is the steady grinder, Leviathan the boss-killer. (Shots
+  // × mult: 3×.28=.84, 4×.28=1.12, 5×.28=1.40, 6×.30=1.80, 8×.28=2.24.)
   milestones: [
-    { unlockLevel: 10,  chainChance: 0.40, shotDmgMult: 0.65, desc: 'Fire a light shot at 65% damage. 40% chance to chain into another (repeats).' },
-    { unlockLevel: 25,  chainChance: 0.48, shotDmgMult: 0.62, desc: 'Fire a light shot at 62% damage. 48% chance to chain into another (repeats).' },
-    { unlockLevel: 40,  chainChance: 0.54, shotDmgMult: 0.60, desc: 'Fire a light shot at 60% damage. 54% chance to chain into another (repeats).' },
-    { unlockLevel: 75,  chainChance: 0.62, shotDmgMult: 0.58, desc: 'Fire a light shot at 58% damage. 62% chance to chain into another (repeats).' },
-    { unlockLevel: 100, chainChance: 0.70, shotDmgMult: 0.56, autoCrit: true, desc: 'Fire a light shot at 56% damage. 70% chance to chain into another (repeats). Every shot crits.' },
+    { unlockLevel: 10,  shots: 3, shotDmgMult: 0.28, desc: 'Fire a 3-shot barrage at 28% damage each.' },
+    { unlockLevel: 25,  shots: 4, shotDmgMult: 0.28, desc: 'Fire a 4-shot barrage at 28% damage each.' },
+    { unlockLevel: 40,  shots: 5, shotDmgMult: 0.28, desc: 'Fire a 5-shot barrage at 28% damage each.' },
+    { unlockLevel: 75,  shots: 6, shotDmgMult: 0.30, desc: 'Fire a 6-shot barrage at 30% damage each.' },
+    { unlockLevel: 100, shots: 8, shotDmgMult: 0.28, autoCrit: true, desc: 'Fire an 8-shot barrage at 28% damage each; every shot crits.' },
   ],
 }
 

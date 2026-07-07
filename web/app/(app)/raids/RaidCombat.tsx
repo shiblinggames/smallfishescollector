@@ -1799,18 +1799,16 @@ export default function RaidCombat({
       }
       case 'blitz': {
         const bz = m as import('@/lib/crewClasses').BlitzMilestone
-        // Frenzy chain — first shot guaranteed, then roll chainChance to
-        // continue (10-shot hard cap). MANY SMALL hits: each shot is only
-        // shotDmgMult of a normal cannon shot (Sharpshot / damagePct still
-        // compound). Lv 100 crits every shot.
+        // Barrage — a GUARANTEED number of light shots (no RNG chain), so it
+        // never whiffs. MANY SMALL hits: each shot is only shotDmgMult of a
+        // normal cannon shot (Sharpshot / damagePct still compound). Lv 100
+        // crits every shot.
         const shotResult: ShotResult = bz.autoCrit ? 'critical' : 'hit'
+        const shots = bz.shots
         const shotDmgs: number[] = []
-        const CHAIN_CAP = 10
-        while (shotDmgs.length < CHAIN_CAP) {
+        for (let s = 0; s < shots; s++) {
           shotDmgs.push(Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.shotDmgMult)))
-          if (Math.random() >= bz.chainChance) break
         }
-        const shots = shotDmgs.length
         const total = shotDmgs.reduce((a, b) => a + b, 0)
         const isCrit = !!bz.autoCrit
         noteCheckResponse('burst')
