@@ -443,10 +443,13 @@ function CrewPanel({
         position: 'relative', width: 102, height: 112,
         flexShrink: 0, alignSelf: 'flex-start',
       }}>
-        {/* Arched portrait niche */}
+        {/* Arched portrait niche. clip-path (not just overflow:hidden) so an
+            equipped-skin drop-shadow glow is clipped to the arch instead of
+            bleeding past the rounded top. */}
         <div style={{
           position: 'absolute', inset: 0,
           borderRadius: '46px 46px 5px 5px', overflow: 'hidden',
+          clipPath: 'inset(0 round 46px 46px 5px 5px)',
           border: `2px solid ${color}`,
           boxShadow: `inset 0 -12px 20px rgba(0,0,0,0.65), 0 0 10px ${color}33`,
           background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
