@@ -126,49 +126,51 @@ function GalaxyFx({ color, summon }: { color: string; summon: boolean }) {
   )
 }
 
-// Fossil (Laz) — ancient / amber. The living fossil sits in a warm amber haze
-// with gold flecks suspended and fine sediment settling down through the water.
-const FOSSIL_HAZE = [
-  { l: 40, t: 34, s: 74, d: 0 }, { l: 64, t: 56, s: 62, d: 2.6 }, { l: 44, t: 72, s: 58, d: 4.4 },
-]
-const FOSSIL_FLECKS: [number, number][] = [
-  [26, 28], [70, 24], [46, 46], [80, 56], [18, 58], [58, 70], [34, 82], [86, 40], [50, 34],
-]
+// Fossil (Laz) — ancient living-fossil leviathan. Jade + amber bioluminescence:
+// two counter-rotating rings of runic glyphs (his stone astrolabe-relic), a warm
+// jade/amber haze, and glowing primordial motes rising UPWARD (his inverted
+// drips) through drifting deep-sea light.
+const FOSSIL_AMBER = '#e6b455'
 function FossilFx({ color, summon }: { color: string; summon: boolean }) {
-  const dustN = summon ? 16 : 11
+  const amber = FOSSIL_AMBER
+  const moteN = summon ? 16 : 11
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      {/* Warm amber haze. */}
-      {FOSSIL_HAZE.map((h, i) => (
+      {/* Orbiting glyph rings — the ancient astrolabe-relic slowly turning. */}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        <g style={{ transformOrigin: '50% 50%', animation: `chase-reticle-spin ${summon ? 13 : 26}s linear infinite`, opacity: summon ? 0.5 : 0.32 }}>
+          <circle cx="50" cy="50" r="39" fill="none" stroke={amber} strokeWidth="0.6" strokeDasharray="2 5" />
+          {Array.from({ length: 12 }).map((_, k) => (
+            <line key={k} x1="50" y1="7" x2="50" y2="13" stroke={k % 2 ? amber : color} strokeWidth="1.1" transform={`rotate(${k * 30} 50 50)`} />
+          ))}
+        </g>
+        <g style={{ transformOrigin: '50% 50%', animation: `chase-reticle-spin ${summon ? 9 : 18}s linear infinite reverse`, opacity: summon ? 0.5 : 0.3 }}>
+          <circle cx="50" cy="50" r="29" fill="none" stroke={color} strokeWidth="0.5" strokeDasharray="1 6" />
+          {Array.from({ length: 8 }).map((_, k) => (
+            <line key={k} x1="50" y1="19" x2="50" y2="24" stroke={k % 2 ? color : amber} strokeWidth="1" transform={`rotate(${k * 45} 50 50)`} />
+          ))}
+        </g>
+      </svg>
+      {/* Jade + amber bioluminescent haze. */}
+      {[{ c: color, l: 42, t: 42, s: 72, d: 0 }, { c: amber, l: 60, t: 58, s: 58, d: 2.6 }].map((h, i) => (
         <div key={`hz-${i}`} style={{
           position: 'absolute', left: `${h.l}%`, top: `${h.t}%`, width: h.s, height: h.s, marginLeft: -h.s / 2, marginTop: -h.s / 2,
-          borderRadius: '50%', background: `radial-gradient(circle, ${color}55 0%, transparent 70%)`, filter: 'blur(9px)',
+          borderRadius: '50%', background: `radial-gradient(circle, ${h.c}55 0%, transparent 70%)`, filter: 'blur(9px)',
           mixBlendMode: summon ? undefined : 'screen', opacity: 0,
           animation: `chase-caustic ${summon ? 5 : 9}s ${h.d}s ease-in-out infinite`,
         }} />
       ))}
-      {/* Settling sediment — fine amber dust drifting down. */}
-      {Array.from({ length: dustN }).map((_, i) => {
-        const left = 6 + ((i * 79) / dustN) % 88
-        const dur = (summon ? 3.2 : 5.5) + (i % 4) * 0.9
-        const size = 1.5 + (i % 3)
+      {/* Primordial motes rising upward (inverted drips), jade + amber. */}
+      {Array.from({ length: moteN }).map((_, i) => {
+        const left = 8 + ((i * 77) / moteN) % 84
+        const c = i % 2 ? amber : color
+        const dur = (summon ? 2.4 : 4.2) + (i % 4) * 0.8
+        const size = 2 + (i % 3)
         return (
-          <div key={`dust-${i}`} style={{
-            position: 'absolute', left: `${left}%`, top: '-8%', width: size, height: size, borderRadius: '50%',
-            background: `${color}`, boxShadow: `0 0 3px ${color}`, opacity: 0,
-            animation: `chase-dust-drift ${dur.toFixed(2)}s ${(i * 0.4).toFixed(2)}s linear infinite`,
-          }} />
-        )
-      })}
-      {/* Suspended gold flecks twinkling. */}
-      {FOSSIL_FLECKS.map(([l, t], i) => {
-        const sz = summon ? 4.5 : 3
-        return (
-          <div key={`flk-${i}`} style={{
-            position: 'absolute', left: `${l}%`, top: `${t}%`, width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2,
-            background: '#fff4d6', borderRadius: 1, opacity: 0,
-            boxShadow: `0 0 3px #fff, 0 0 7px ${color}, 0 0 12px ${color}`,
-            animation: `chase-star-twinkle ${((summon ? 1.8 : 3) + (i % 4) * 0.5).toFixed(2)}s ${(i * 0.3).toFixed(2)}s ease-in-out infinite`,
+          <div key={`mote-${i}`} style={{
+            position: 'absolute', left: `${left}%`, top: '108%', width: size, height: size, borderRadius: '50%',
+            background: c, boxShadow: `0 0 4px ${c}, 0 0 9px ${c}`, opacity: 0,
+            animation: `chase-bubble-rise ${dur.toFixed(2)}s ${(i * 0.32).toFixed(2)}s linear infinite`,
           }} />
         )
       })}

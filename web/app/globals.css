@@ -1167,13 +1167,8 @@ html, body {
   4% { opacity: 0.95; }
   13% { opacity: 0; transform: translate(185%, 64%); }
 }
-/* Fossil (Laz) — ancient amber: warm haze + slow-settling dust/sediment. */
-@keyframes chase-dust-drift {
-  0% { top: -8%; opacity: 0; }
-  16% { opacity: 0.75; }
-  84% { opacity: 0.4; }
-  100% { top: 106%; opacity: 0; }
-}
+/* Fossil (Laz) reuses chase-reticle-spin (orbiting glyph rings), chase-caustic
+   (jade/amber haze) and chase-bubble-rise (motes rising upward). */
 /* Hunter's Bane (Doby) — assassin: a reticle turns and the target lock pulses. */
 @keyframes chase-reticle-spin { to { transform: rotate(360deg); } }
 @keyframes chase-reticle-lock {

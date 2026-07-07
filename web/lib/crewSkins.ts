@@ -52,7 +52,7 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'coelacanth_deadeye',    slug: 'coelacanth', name: 'Deadeye',      filename: 'Laz_deadeye.png',    gemCost: 1250, blurb: 'One cold eye on the deep, one on the kill.', color: '#67e8f9' },
   { id: 'coelacanth_goldenrelic', slug: 'coelacanth', name: 'Golden Relic', filename: 'Laz_goldenrelic.png', gemCost: 2000, blurb: 'Gilded by ages beneath the waves.', color: '#f0c040' },
   { id: 'coelacanth_undying',    slug: 'coelacanth', name: 'Undying',      filename: 'Laz_undying.png',    gemCost: 2500, blurb: 'Dragged back from the Locker, unwilling to stay dead.', color: '#86efac' },
-  { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3000, blurb: 'A living fossil, older than the tides themselves.', color: '#d9a441', chase: true },
+  { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3000, blurb: 'A living fossil, older than the tides themselves.', color: '#34d399', chase: true },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
