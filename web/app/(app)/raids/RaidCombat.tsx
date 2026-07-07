@@ -837,6 +837,10 @@ export default function RaidCombat({
   const [resolveLog, setResolveLog] = useState<string[]>([])
   const [pHitsplat, setPHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean; volley?: boolean } | null>(null)
   const [eHitsplat, setEHitsplat]     = useState<{ key: number; text: string; color: string; big?: boolean; volley?: boolean } | null>(null)
+  // Per-shot floating numbers for the Frenzy barrage — each shot gets its own,
+  // scattered across the hull, so the whole volley's numbers rack up (the single
+  // eHitsplat can only show one at a time).
+  const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean }[]>([])
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -1392,7 +1396,7 @@ export default function RaidCombat({
       // resolveLog gets replaced wholesale and we don't want to clobber it.
       setResolveLog(prev => (prev.length === introLines.length && prev[0] === intro ? [...introLines, 'What will you do?'] : prev))
     }, 600)
-    setPHitsplat(null); setEHitsplat(null); setAbilityCast(null); setAbilitySummon(null); setEnemyAura(null); setThermalShockFx(null)
+    setPHitsplat(null); setEHitsplat(null); setBarrageSplats([]); setAbilityCast(null); setAbilitySummon(null); setEnemyAura(null); setThermalShockFx(null)
     setEnemyMuzzle(null); setPlayerImpact(null); setPlayerAura(null); setDodgeFx(null)
     setEnemyBurning(false); setEnemyFrozen(false); setEnemyDeflect(0)
     setPlayerBurning(false); setPlayerFrozen(false)
@@ -1805,9 +1809,19 @@ export default function RaidCombat({
         // crits every shot.
         const shotResult: ShotResult = bz.autoCrit ? 'critical' : 'hit'
         const shots = bz.shots
+        // Feeding frenzy — each shot scales up as the target weakens. Simulate
+        // the HP dropping across the volley (nothing else hits the enemy mid-
+        // barrage) so the frenzy ACCELERATES and rewards using it as a finisher.
+        // ~0 bonus on a fresh boss keeps Leviathan the boss-killer.
+        const frMaxHp = Math.max(1, enemyHpMaxRef.current)
+        let frSimHp = enemyHpRef.current
         const shotDmgs: number[] = []
         for (let s = 0; s < shots; s++) {
-          shotDmgs.push(Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.shotDmgMult)))
+          const hpFrac = Math.max(0, Math.min(1, frSimHp / frMaxHp))
+          const frenzyMult = 1 + bz.frenzyMaxPct * (1 - hpFrac)
+          const dmg = Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.shotDmgMult * frenzyMult))
+          shotDmgs.push(dmg)
+          frSimHp = Math.max(0, frSimHp - dmg)
         }
         const total = shotDmgs.reduce((a, b) => a + b, 0)
         const isCrit = !!bz.autoCrit
@@ -1831,11 +1845,18 @@ export default function RaidCombat({
             setEnemyImpact({ key: bk + 300, kind: isCrit ? 'crit' : 'normal' })
             playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 150))
             vibrate(isCrit ? 16 : 9)
+            // Each shot floats its OWN damage number, scattered across the hull so
+            // the whole barrage's numbers read (not just the first). skipSplat on
+            // the damage helpers suppresses the single eHitsplat for these.
+            const dx = (k - lastIdx / 2) * 16 + (k % 2 ? 7 : -7)
+            const sk = bk + 900
+            setBarrageSplats(s => [...s, { key: sk, text: `-${shotDmgs[k]}`, dx, crit: isCrit }])
+            playStepChainRef.current.push(setTimeout(() => setBarrageSplats(s => s.filter(x => x.key !== sk)), 680))
             if (k === lastIdx) {
               cameraShake('volley')
-              applyAbilityDamage(shotDmgs[k], `${crew.name} unloads ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, isCrit ? 'crit' : 'hit')
+              applyAbilityDamage(shotDmgs[k], `${crew.name} unloads ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, isCrit ? 'crit' : 'hit', true)
             } else {
-              applyChainHit(shotDmgs[k], isCrit ? 'crit' : 'hit')
+              applyChainHit(shotDmgs[k], isCrit ? 'crit' : 'hit', true)
             }
           }, k * INTERVAL))
         }
@@ -1915,14 +1936,16 @@ export default function RaidCombat({
   // detection / sink animation / onEnemyDefeated dispatch, mirroring the
   // step-playback path inside resolveTurn so kills landed via an ability
   // run the same outro as kills landed via cannon fire.
-  function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit') {
+  function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit', skipSplat = false) {
     const newHp = Math.max(0, enemyHpRef.current - rawDmg)
     setEnemyHp(newHp)
     enemyHpRef.current = newHp
-    setEHitsplat({ key: Date.now(), text: String(rawDmg), color: hitKind === 'crit' ? '#fbbf24' : '#f87171', big: hitKind === 'crit' })
+    if (!skipSplat) {
+      setEHitsplat({ key: Date.now(), text: String(rawDmg), color: hitKind === 'crit' ? '#fbbf24' : '#f87171', big: hitKind === 'crit' })
+      setTimeout(() => setEHitsplat(null), 480)
+    }
     setEnemyShakeKind(hitKind === 'crit' ? 'crit' : 'hit')
     setEnemyShakeKey(k => k + 1)
-    setTimeout(() => setEHitsplat(null), 480)
     setResolveLog(prev => [...prev, logLine])
     if (newHp <= 0) {
       // Multi-phase boss: an ability killing blow revives him into the next
@@ -1967,14 +1990,16 @@ export default function RaidCombat({
   // One link of the Blitz frenzy chain — shaves a small shot off the enemy with
   // its OWN damage number + shake, no log/kill. The FINAL shot in the chain runs
   // applyAbilityDamage instead (that one owns the summary line + kill outro).
-  function applyChainHit(rawDmg: number, hitKind: 'hit' | 'crit') {
+  function applyChainHit(rawDmg: number, hitKind: 'hit' | 'crit', skipSplat = false) {
     const newHp = Math.max(0, enemyHpRef.current - rawDmg)
     setEnemyHp(newHp)
     enemyHpRef.current = newHp
-    setEHitsplat({ key: Date.now(), text: String(rawDmg), color: hitKind === 'crit' ? '#fbbf24' : '#f87171', big: false })
+    if (!skipSplat) {
+      setEHitsplat({ key: Date.now(), text: String(rawDmg), color: hitKind === 'crit' ? '#fbbf24' : '#f87171', big: false })
+      setTimeout(() => setEHitsplat(null), 200)
+    }
     setEnemyShakeKind('hit')
     setEnemyShakeKey(k => k + 1)
-    setTimeout(() => setEHitsplat(null), 200)
   }
 
   function selectAction(action: EnemyAction) {
@@ -4348,6 +4373,8 @@ export default function RaidCombat({
             <AnimatePresence>
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} volley={eHitsplat.volley} />}
             </AnimatePresence>
+            {/* Frenzy barrage — each shot's own floating number, scattered. */}
+            {barrageSplats.map(s => <BarrageSplat key={s.key} text={s.text} dx={s.dx} crit={s.crit} />)}
           </motion.div>
         </motion.div>
 
@@ -6207,6 +6234,27 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
     >
       {text}
     </motion.div>
+  )
+}
+
+// One floating number for a single Frenzy barrage shot. Lighter than the full
+// HitsplatOverlay (many can be on screen at once); each drifts up + fades and is
+// removed by its own timer, and dx scatters them across the hull.
+function BarrageSplat({ text, dx, crit }: { text: string; dx: number; crit?: boolean }) {
+  const color = crit ? '#fbbf24' : '#f87171'
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: '-50%', y: 4, scale: 0.55 }}
+      animate={{ opacity: [0, 1, 1, 0], x: '-50%', y: -32, scale: 1 }}
+      transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1], opacity: { duration: 0.62, times: [0, 0.16, 0.68, 1] } }}
+      style={{
+        position: 'absolute', left: `calc(50% + ${dx}px)`, top: '40%',
+        pointerEvents: 'none', zIndex: 10, color,
+        fontFamily: 'var(--font-cinzel)', fontWeight: 800, fontSize: '19px', lineHeight: 1,
+        textShadow: `1px 1px 0 #0b0e14, -1px 1px 0 #0b0e14, 1px -1px 0 #0b0e14, -1px -1px 0 #0b0e14, 0 0 8px ${color}99`,
+        whiteSpace: 'nowrap',
+      }}
+    >{text}</motion.div>
   )
 }
 

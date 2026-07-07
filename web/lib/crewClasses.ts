@@ -203,6 +203,12 @@ export interface BlitzMilestone {
    *  normal cannon shot. Deliberately low: the power is in the COUNT, not the
    *  per-hit number (vs Leviathan's one big shell). */
   shotDmgMult: number
+  /** "Feeding frenzy" — each shot scales UP as the target's HP falls:
+   *  bonus = frenzyMaxPct × (1 − hpFraction). ~0 on a fresh hull (so it never
+   *  steps on Leviathan's boss burst), full bonus as prey nears death. Blitz's
+   *  signature: the relentless FINISHER to Leviathan's alpha strike. Applied per
+   *  shot off the LIVE (dropping) HP, so a barrage accelerates as it chews in. */
+  frenzyMaxPct: number
   /** Lv 100: every shot in the barrage lands as a guaranteed crit. */
   autoCrit?: boolean
   desc: string
@@ -366,19 +372,22 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
 
 export const BLITZ: ClassDef<BlitzMilestone> = {
   id: 'blitz', name: 'Apex', shortLabel: 'Frenzy',
-  blurb: 'Unloads a fixed barrage of light shots — every one lands, so it never whiffs. Weak per hit, but the volume adds up, and the count grows as the crew ranks up.',
+  blurb: 'A feeding frenzy of light shots — a fixed barrage that never whiffs and BITES HARDER the more wounded the target is. Middling on a fresh hull, devastating as a finisher.',
   color: '#f87171', emoji: '⇶',
   // MANY SMALL hits — the opposite of Leviathan's one big knock. A GUARANTEED
-  // shot count (no RNG chain) so it's reliable volume, with a low per-shot mult.
-  // Totals land at/just under Leviathan's REGULAR-hull damage and well under its
-  // boss bonus — Blitz is the steady grinder, Leviathan the boss-killer. (Shots
-  // × mult: 3×.28=.84, 4×.28=1.12, 5×.28=1.40, 6×.30=1.80, 8×.28=2.24.)
+  // shot count (no RNG chain) with a low per-shot mult, PLUS the feeding-frenzy
+  // ramp: each shot scales up as the target's HP falls. On a fresh boss the
+  // bonus is ~0 (Leviathan stays the boss-killer); on wounded prey it devours.
+  // No auto-crit — the feeding-frenzy ramp IS the payoff (crit-on-every-shot
+  // stacked far too hard). Base (fresh-target) totals — shots × mult: 3×.28=.84,
+  // 4×.28=1.12, 5×.28=1.40, 6×.30=1.80, 8×.30=2.40 — at/just under Leviathan's
+  // regular-hull damage; the frenzy pushes it above only as the target dies.
   milestones: [
-    { unlockLevel: 10,  shots: 3, shotDmgMult: 0.28, desc: 'Fire a 3-shot barrage at 28% damage each.' },
-    { unlockLevel: 25,  shots: 4, shotDmgMult: 0.28, desc: 'Fire a 4-shot barrage at 28% damage each.' },
-    { unlockLevel: 40,  shots: 5, shotDmgMult: 0.28, desc: 'Fire a 5-shot barrage at 28% damage each.' },
-    { unlockLevel: 75,  shots: 6, shotDmgMult: 0.30, desc: 'Fire a 6-shot barrage at 30% damage each.' },
-    { unlockLevel: 100, shots: 8, shotDmgMult: 0.28, autoCrit: true, desc: 'Fire an 8-shot barrage at 28% damage each; every shot crits.' },
+    { unlockLevel: 10,  shots: 3, shotDmgMult: 0.28, frenzyMaxPct: 0.20, desc: 'Fire a 3-shot barrage at 28% damage each — up to +20% per shot as the target weakens.' },
+    { unlockLevel: 25,  shots: 4, shotDmgMult: 0.28, frenzyMaxPct: 0.25, desc: 'Fire a 4-shot barrage at 28% each — up to +25% as the target weakens.' },
+    { unlockLevel: 40,  shots: 5, shotDmgMult: 0.28, frenzyMaxPct: 0.35, desc: 'Fire a 5-shot barrage at 28% each — up to +35% as the target weakens.' },
+    { unlockLevel: 75,  shots: 6, shotDmgMult: 0.30, frenzyMaxPct: 0.45, desc: 'Fire a 6-shot barrage at 30% each — up to +45% as the target weakens.' },
+    { unlockLevel: 100, shots: 8, shotDmgMult: 0.30, frenzyMaxPct: 0.60, desc: 'Fire an 8-shot barrage at 30% each — up to +60% per shot as the target weakens.' },
   ],
 }
 
