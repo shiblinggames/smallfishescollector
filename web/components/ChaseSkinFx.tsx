@@ -23,16 +23,15 @@ const wrap = (_summon: boolean): React.CSSProperties => ({
 // Tempest (Mako) — electric storm. A lightning FLASH lights the character and
 // bright sparks crackle erratically around it. No drawn bolts.
 const SPARK_PTS: [number, number][] = [
-  [24, 22], [70, 20], [42, 34], [60, 44], [30, 50], [78, 40], [18, 40], [50, 62],
-  [36, 70], [66, 66], [82, 58], [16, 62], [46, 18], [58, 78], [28, 84], [74, 82],
+  [26, 24], [72, 28], [40, 44], [66, 54], [22, 58], [56, 72], [80, 46], [34, 76],
 ]
 function TempestFx({ color, summon }: { color: string; summon: boolean }) {
   const sz = summon ? 4 : 3
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      {/* Lightning flash lighting the character. */}
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, ${color}66 0%, ${color}22 42%, transparent 70%)`, mixBlendMode: 'screen', opacity: 0, animation: `chase-storm-flash ${summon ? 2.6 : 4}s ease-out infinite` }} />
-      {/* Crackling sparks around the character. */}
+      {/* Lightning flash lighting the character — bright white core. */}
+      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, #ffffffdd 0%, ${color}aa 26%, ${color}44 52%, transparent 74%)`, mixBlendMode: 'screen', opacity: 0, animation: `chase-storm-flash ${summon ? 2.6 : 4}s ease-out infinite` }} />
+      {/* A few crackling sparks around the character. */}
       {SPARK_PTS.map(([l, t], i) => (
         <div key={i} style={{
           position: 'absolute', left: `${l}%`, top: `${t}%`, width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2,

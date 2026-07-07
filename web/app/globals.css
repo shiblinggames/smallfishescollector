@@ -1140,8 +1140,8 @@ html, body {
    erratically around it. No drawn bolts. */
 @keyframes chase-storm-flash {
   0%, 100% { opacity: 0; }
-  2% { opacity: 0.55; } 3.5% { opacity: 0.12; } 5% { opacity: 0.4; } 7% { opacity: 0; }
-  58% { opacity: 0; } 60% { opacity: 0.45; } 61.5% { opacity: 0.1; } 63% { opacity: 0; }
+  1.5% { opacity: 1; } 3% { opacity: 0.3; } 4.5% { opacity: 0.85; } 6.5% { opacity: 0; }
+  56% { opacity: 0; } 58% { opacity: 0.95; } 59.5% { opacity: 0.28; } 61% { opacity: 0; }
 }
 @keyframes chase-spark-crackle {
   0%, 100% { opacity: 0; transform: scale(0.3); }

@@ -1648,13 +1648,14 @@ export default function RaidCombat({
     // out — and the EFFECT follows (deferred below by SUMMON_LEAD_MS), so it reads
     // as calling on that crew in the moment. The overlay eats taps while it plays,
     // so the deferred effect can't race a turn action. See AbilitySummonFx.
-    // The summon's CONTENT (character + backdrop + name) is fully faded out by
-    // ~1.55s (see the fade times below); the effect fires just AFTER that so the
-    // character never covers the effect resolving on the battle stage. The
-    // overlay stays mounted (transparent) until SUMMON_TOTAL_MS so it keeps
-    // eating taps until the deferred effect has resolved.
-    const SUMMON_LEAD_MS  = 1650   // effect begins once the summon art has cleared
-    const SUMMON_TOTAL_MS = 2100   // overlay lifetime (blocks taps through resolve)
+    // The summon's CONTENT (character + backdrop + name) holds, then ALL fades
+    // out together over ~0.25s, fully gone by ~1.9s (see the matched fade times
+    // below). Only AFTER it's gone does the effect fire, so the battle-stage
+    // animation (damage on the enemy, etc.) plays on a clear stage. The overlay
+    // stays mounted (transparent) until SUMMON_TOTAL_MS to keep eating taps until
+    // the deferred effect has resolved.
+    const SUMMON_LEAD_MS  = 1980   // effect begins after the summon has fully vanished
+    const SUMMON_TOTAL_MS = 2200   // overlay lifetime (blocks taps through resolve)
     const castKey = Date.now()
     // Glow color follows the EQUIPPED SKIN if there is one (so each legendary
     // skin themes its whole summon in its own color), else the class color.
@@ -6546,7 +6547,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
   // behind a smaller portrait, a white impact flash lands on arrival, and the
   // ABILITY NAME slams up huge underneath so it reads as an RPG summon.
-  const HOLD: number[] = [0, 0.09, 0.6, 0.74]   // fade-in / hold / fade-out (content clears by ~74% = 1.55s, then holds transparent)
+  const HOLD: number[] = [0, 0.09, 0.78, 0.9]   // fade-in / hold / synchronized fade-out (all content gone by ~90% = 1.9s)
   return (
     <motion.div
       aria-hidden
@@ -6622,7 +6623,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
       <motion.div
         initial={{ opacity: 0, scale: 1.34, y: 10 }}
         animate={{ opacity: [0, 1, 1, 0], scale: [1.34, 1, 1, 1.05], y: [10, 0, 0, -6] }}
-        transition={{ duration: 2.1, times: [0, 0.1, 0.6, 0.74], ease: [0.18, 0.9, 0.3, 1] }}
+        transition={{ duration: 2.1, times: [0, 0.09, 0.78, 0.9], ease: [0.18, 0.9, 0.3, 1] }}
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
         {image ? (
@@ -6642,7 +6643,7 @@ function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: 
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: [0, 1, 1, 0], y: [14, 0, 0, -6] }}
-        transition={{ duration: 2.1, times: [0, 0.2, 0.6, 0.74], ease: 'easeOut' }}
+        transition={{ duration: 2.1, times: [0, 0.2, 0.78, 0.9], ease: 'easeOut' }}
         style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
       >
         <p className="font-karla font-700 uppercase tracking-[0.32em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{name}</p>
