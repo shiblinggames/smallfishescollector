@@ -1132,6 +1132,32 @@ html, body {
   .chase-skin-glow { animation: none; filter: drop-shadow(0 0 6px var(--chase-c)) drop-shadow(0 0 15px var(--chase-c)); }
 }
 
+/* ── Per-chase-skin SIGNATURE effects, played ON the crew art (ambient loop on
+   every card surface + a bolder pass during the raid summon). Each chase skin
+   gets its own themed motion so the art itself sells what the skin is. */
+/* Tempest (Mako) — thunder god: lightning bolts strike over the art. */
+@keyframes chase-bolt-flicker {
+  0%, 100% { opacity: 0; }
+  2% { opacity: 1; } 4% { opacity: 0.2; } 6% { opacity: 0.9; } 9% { opacity: 0; }
+  50% { opacity: 0; } 52% { opacity: 0.95; } 55% { opacity: 0.3; } 58% { opacity: 0; }
+}
+@keyframes chase-electric-pulse { 0%, 100% { opacity: 0.28; } 5%, 53% { opacity: 0.7; } 12%, 60% { opacity: 0.28; } }
+/* Kraken Hunter (Dole) — deep dive: tentacles sway, bubbles rise. */
+@keyframes chase-tentacle-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes chase-bubble-rise { 0% { top: 108%; opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.45; } 100% { top: -12%; opacity: 0; } }
+/* Prismatic (Catfish) — spectrum sheen sweeps across the art. */
+@keyframes chase-rainbow-sweep { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+/* Hunter's Bane (Doby) — assassin: a reticle turns, a blade glint sweeps. */
+@keyframes chase-reticle-spin { to { transform: rotate(360deg); } }
+@keyframes chase-slash-glint {
+  0% { transform: translateX(-40%) rotate(24deg); opacity: 0; }
+  6% { opacity: 1; } 15% { opacity: 1; }
+  24%, 100% { transform: translateX(460%) rotate(24deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chase-skin-fx * { animation: none !important; }
+}
+
 /* ── Voyage card: gentle bob when a voyage is in progress ──────────────── */
 /* Boat rocks on its center axis to signal "underway" without yanking the
    eye. Slow + low amplitude — playful, not distracting. */

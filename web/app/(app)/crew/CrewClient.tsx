@@ -11,6 +11,7 @@ import {
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename } from '@/lib/crewSkins'
+import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
 import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
@@ -464,6 +465,7 @@ function CrewPanel({
             objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
             ...(skinChase ? { ['--chase-c']: skinGlow } : { filter: skinGlowFilter }),
           } as React.CSSProperties} />
+          {skinChase && skinGlow && <ChaseSkinFx skinId={skinDef?.id} color={skinGlow} />}
           {/* inner frame line */}
           <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
         {/* Class nameplate — replaces the old trait teaser. Class is now the
@@ -1872,6 +1874,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined }) } as React.CSSProperties} />
+                  {portraitChase && portraitSkin && <ChaseSkinFx skinId={shownSkinId} color={portraitSkin} />}
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
@@ -2204,6 +2207,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               <img src={artSrc(t.file)} alt={t.name}
                                 className={t.chase ? 'chase-skin-glow' : undefined}
                                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', padding: 7, ...(t.chase ? { ['--chase-c']: t.color } : { filter: t.id === null ? undefined : `drop-shadow(0 0 5px ${t.color}) drop-shadow(0 0 13px ${t.color}${isSel ? 'ee' : 'aa'})` }) } as React.CSSProperties} />
+                              {t.chase && <ChaseSkinFx skinId={t.id} color={t.color} />}
                               {isEquipped && (
                                 <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: t.color, color: '#0a0806', fontSize: '0.6rem', fontWeight: 800, display: 'grid', placeItems: 'center', lineHeight: 1 }}>✓</span>
                               )}

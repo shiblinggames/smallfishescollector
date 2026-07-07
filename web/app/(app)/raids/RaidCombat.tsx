@@ -65,6 +65,7 @@ import { describeEffect, effectTone, type TideEffect } from '@/lib/tides'
 import { getRepairKit, rollRepairKitHeal, repairKitRange } from '@/lib/repairKits'
 import { classForSlug, CLASSES, currentMilestone, type AnyClassDef } from '@/lib/crewClasses'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
+import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { type AffixDef } from '@/lib/raidAffixes'
 import { getShipClass, aggregateShipClasses } from '@/lib/shipClasses'
@@ -874,7 +875,7 @@ export default function RaidCombat({
   // FF-style crew summon splash (big fade-in/hold/fade-out of the crew art when
   // an active ability fires). Separate from abilityCast (the small pill, kept for
   // the raid-item drum).
-  const [abilitySummon, setAbilitySummon] = useState<{ key: number; label: string; name: string; color: string; image: string | null; chase: boolean } | null>(null)
+  const [abilitySummon, setAbilitySummon] = useState<{ key: number; label: string; name: string; color: string; image: string | null; chase: boolean; skinId: string | null } | null>(null)
   // On-demand "Crew Abilities Restored" banner trigger (War/Thunder Drum). A
   // bumping counter keys the banner so each activation remounts + replays the
   // one-shot animation, separate from the fight-open `abilitiesRefreshed` prop.
@@ -1654,7 +1655,7 @@ export default function RaidCombat({
     // skin themes its whole summon in its own color), else the class color.
     const summonSkin = getCrewSkinByFilename(crew.imageUrl)
     const summonColor = summonSkin?.color ?? def.color
-    setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: summonColor, image: crew.imageUrl ?? null, chase: !!summonSkin?.chase })
+    setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: summonColor, image: crew.imageUrl ?? null, chase: !!summonSkin?.chase, skinId: summonSkin?.id ?? null })
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
 
     // Per-ability signature stage FX alongside the banner, so every ability
@@ -4538,7 +4539,7 @@ export default function RaidCombat({
         {typeof document !== 'undefined' && createPortal(
           <AnimatePresence>
             {abilitySummon && (
-              <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} chase={abilitySummon.chase} />
+              <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} chase={abilitySummon.chase} skinId={abilitySummon.skinId} />
             )}
           </AnimatePresence>,
           document.body,
@@ -6535,7 +6536,7 @@ const ABILITY_CAST_LABEL: Record<string, string> = {
 // effect follows. Full-viewport (portaled to body), pointer-events auto so it
 // eats taps while it plays. All keyframed in one ~0.98s pass to match the
 // SUMMON_TOTAL_MS lifetime in fireCrewAbility.
-function AbilitySummonFx({ label, name, color, image, chase }: { label: string; name: string; color: string; image: string | null; chase?: boolean }) {
+function AbilitySummonFx({ label, name, color, image, chase, skinId }: { label: string; name: string; color: string; image: string | null; chase?: boolean; skinId?: string | null }) {
   // One ~1.45s pass: fast fade-in, a long hold, then fade-out (matches
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
   // behind a smaller portrait, a white impact flash lands on arrival, and the
@@ -6596,51 +6597,23 @@ function AbilitySummonFx({ label, name, color, image, chase }: { label: string; 
         style={{ position: 'absolute', top: '43%', width: 260, height: 260, marginTop: -130, borderRadius: '50%', background: `radial-gradient(circle, #ffffffcc 0%, ${color}55 40%, transparent 70%)`, pointerEvents: 'none' }}
       />
 
-      {/* ── CHASE-only summon flourish. The top-tier skins get a grander
-          arrival: an ornate third ring, a fan of sparkle motes bursting out,
-          and a big gold-white flare — so calling on a chase skin feels like a
-          prize, not a normal summon. ───────────────────────────────────── */}
+      {/* Chase arrival pop — a big gold-white flare so a top-tier skin lands
+          with extra weight. The skin's signature motion (below, over the art)
+          carries the identity. */}
       {chase && (
-        <>
-          {/* Ornate slow-turning outer ring. */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, rotate: 0 }}
-            animate={{ opacity: [0, 0.7, 0.4, 0], scale: [0.5, 1.05, 1.1, 1.18], rotate: -70 }}
-            transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
-            style={{ position: 'absolute', top: '43%', width: 372, height: 372, marginTop: -186, borderRadius: '50%', border: `1.5px solid ${color}`, boxShadow: `0 0 30px ${color}66, inset 0 0 24px ${color}44`, pointerEvents: 'none' }}
-          />
-          {/* Extra gold-white flare, bigger + a touch later than the base flash. */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.3 }}
-            animate={{ opacity: [0, 0.9, 0], scale: [0.3, 2, 2.6] }}
-            transition={{ duration: 0.7, delay: 0.14, ease: 'easeOut' }}
-            style={{ position: 'absolute', top: '43%', width: 320, height: 320, marginTop: -160, borderRadius: '50%', background: `radial-gradient(circle, #fffbe8ee 0%, ${color}77 34%, transparent 68%)`, pointerEvents: 'none' }}
-          />
-          {/* Sparkle motes fanning out from the crew. */}
-          {Array.from({ length: 14 }).map((_, i) => {
-            const ang = (i / 14) * Math.PI * 2
-            const dist = 150 + (i % 3) * 30
-            const dx = Math.cos(ang) * dist
-            const dy = Math.sin(ang) * dist
-            return (
-              <motion.div key={`chase-spark-${i}`}
-                initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
-                animate={{ opacity: [0, 1, 1, 0], x: [0, dx * 0.55, dx], y: [0, dy * 0.55 - 8, dy - 26], scale: [0, 1, 0.7, 0] }}
-                transition={{ duration: 2.1, times: [0, 0.22, 0.72, 1], delay: 0.1 + (i % 5) * 0.04, ease: 'easeOut' }}
-                style={{
-                  position: 'absolute', top: '43%', left: '50%', width: 9, height: 9, marginTop: -4, marginLeft: -4,
-                  background: i % 2 ? '#fff' : color, borderRadius: 2, transform: 'rotate(45deg)',
-                  boxShadow: `0 0 8px ${color}, 0 0 15px ${color}`, pointerEvents: 'none',
-                }}
-              />
-            )
-          })}
-        </>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.3 }}
+          animate={{ opacity: [0, 0.9, 0], scale: [0.3, 2, 2.6] }}
+          transition={{ duration: 0.7, delay: 0.14, ease: 'easeOut' }}
+          style={{ position: 'absolute', top: '43%', width: 320, height: 320, marginTop: -160, borderRadius: '50%', background: `radial-gradient(circle, #fffbe8ee 0%, ${color}77 34%, transparent 68%)`, pointerEvents: 'none' }}
+        />
       )}
 
       {/* The crew — JUST the art, no card frame. A colored glow (drop-shadow)
           instead of a border/background so it reads as summoning the character,
-          not flashing a card. Overshoot scale-in for impact. */}
+          not flashing a card. Overshoot scale-in for impact. A chase skin's
+          signature FX (lightning, tentacles, spectrum, reticle) plays right
+          over the character. */}
       <motion.div
         initial={{ opacity: 0, scale: 1.34, y: 10 }}
         animate={{ opacity: [0, 1, 1, 0], scale: [1.34, 1, 1, 1.05], y: [10, 0, 0, -6] }}
@@ -6648,10 +6621,13 @@ function AbilitySummonFx({ label, name, color, image, chase }: { label: string; 
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt={name} style={{ height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block', filter: chase
-            ? `drop-shadow(0 0 34px ${color}) drop-shadow(0 0 80px ${color}) drop-shadow(0 0 130px ${color}66) drop-shadow(0 12px 32px rgba(0,0,0,0.7))`
-            : `drop-shadow(0 0 28px ${color}) drop-shadow(0 0 66px ${color}88) drop-shadow(0 12px 32px rgba(0,0,0,0.65))` }} />
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image} alt={name} style={{ height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block', filter: chase
+              ? `drop-shadow(0 0 34px ${color}) drop-shadow(0 0 80px ${color}) drop-shadow(0 0 130px ${color}66) drop-shadow(0 12px 32px rgba(0,0,0,0.7))`
+              : `drop-shadow(0 0 28px ${color}) drop-shadow(0 0 66px ${color}88) drop-shadow(0 12px 32px rgba(0,0,0,0.65))` }} />
+            {chase && skinId && <ChaseSkinFx skinId={skinId} color={color} variant="summon" />}
+          </div>
         ) : (
           <div style={{ fontSize: '3.4rem', filter: `drop-shadow(0 0 22px ${color})` }}>⚓</div>
         )}
