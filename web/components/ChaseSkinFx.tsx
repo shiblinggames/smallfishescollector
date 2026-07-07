@@ -11,9 +11,13 @@
 
 type Variant = 'ambient' | 'summon'
 
-const wrap = (summon: boolean): React.CSSProperties => ({
+// The overlay always CLIPS to its parent (the crew-art box) so every signature
+// effect stays around the art and never spills onto the rest of the screen. No
+// z-index — it layers by DOM order (above the art image it follows, beneath any
+// chrome placed after it: frame lines, nameplates, badges, captions).
+const wrap = (_summon: boolean): React.CSSProperties => ({
   position: 'absolute', inset: 0, pointerEvents: 'none',
-  overflow: summon ? 'visible' : 'hidden', zIndex: 2,
+  overflow: 'hidden',
 })
 
 // Tempest (Mako) — thunder god. Lightning bolts flash across the art.
