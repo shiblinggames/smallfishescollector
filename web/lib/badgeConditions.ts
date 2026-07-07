@@ -16,16 +16,34 @@ import { crewLevelFromXP, CREW_MAX_LEVEL } from './crewLevel'
 import { CREW_HALL_MAX_TIER } from './crewHall'
 import { GAUNTLET_UPGRADES } from './gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem } from './raidItems'
+import { CREW_SKINS } from './crewSkins'
+
+// Chase-skin ids (the animated legendary skins) — for "The Chase".
+export const CHASE_SKIN_IDS = new Set(CREW_SKINS.filter(s => s.chase).map(s => s.id))
+// Per-legendary full skin sets (a "legendary" set is any slug that has a chase
+// skin) — for "Full Wardrobe" (own all skins for one legendary crew).
+export const LEGENDARY_SKIN_SETS: string[][] = (() => {
+  const bySlug = new Map<string, { id: string; chase: boolean }[]>()
+  for (const s of CREW_SKINS) {
+    const arr = bySlug.get(s.slug) ?? []
+    arr.push({ id: s.id, chase: !!s.chase })
+    bySlug.set(s.slug, arr)
+  }
+  return [...bySlug.values()].filter(set => set.some(s => s.chase)).map(set => set.map(s => s.id))
+})()
 
 // Zones that prestige (Ancient Deep doesn't — see fishing/actions.ts).
 export const PRESTIGE_ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 // All four raids' challenge-completion ids (Finndicate's Bane capstone).
 export const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
-// The three ORIGINAL legendary crew species (Legendary Recruit + Three Legends).
+// The three ORIGINAL legendary crew species (Legendary Recruit).
 export const LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako'])
-// EVERY legendary crew species (for the Six Legends badge). Add each new
-// legendary's slug here as it ships — the badge unlocks once a player owns 6.
+// EVERY legendary crew species (Three Legends = own any 3 of these). Add each
+// new legendary's slug here as it ships.
 export const LEGENDARY_SLUGS_ALL = new Set(['catfish', 'doby_mick', 'mako', 'dole', 'coelacanth'])
+// The FIVE BASE legendaries — FROZEN, never grows (for "The Avengers" = own all
+// 5 base). New legendaries go in LEGENDARY_SLUGS_ALL, NOT here.
+export const BASE_LEGENDARY_SLUGS = new Set(['catfish', 'doby_mick', 'mako', 'dole', 'coelacanth'])
 // Number of confluences in the Gauntlet (lib/gauntlet.ts CONFLUENCES). Kept as a
 // constant to avoid importing the heavy gauntlet module here — bump if more ship.
 export const CONFLUENCE_COUNT = 7
@@ -70,6 +88,8 @@ export interface BadgeProfileFields {
   ship_classes?: Record<string, string> | null
   forge_recipes_learned?: string[] | null
   raid_items?: string[] | null
+  owned_crew_skins?: string[] | null
+  equipped_crew_skins?: Record<string, string> | null
 }
 
 export interface BadgeJoinData {
@@ -89,9 +109,8 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   // lowercase — normalise before comparing or the legendary checks never match.
   const ownedSlugsLc = j.crew.map(c => c.slug?.toLowerCase()).filter((s): s is string => !!s)
   const hasLegendaryCrew = ownedSlugsLc.some(s => LEGENDARY_SLUGS.has(s))
-  const ownedLegendary = new Set(ownedSlugsLc.filter(s => LEGENDARY_SLUGS.has(s)))
-  const hasAllThreeLegends = [...LEGENDARY_SLUGS].every(s => ownedLegendary.has(s))
   const ownedLegendaryAll = new Set(ownedSlugsLc.filter(s => LEGENDARY_SLUGS_ALL.has(s)))
+  const ownedBaseLegendary = new Set(ownedSlugsLc.filter(s => BASE_LEGENDARY_SLUGS.has(s)))
   // Gauntlet + endgame state.
   const gauntletUpgrades = p.gauntlet_upgrades ?? []
   const gauntletDeepest = Number(p.gauntlet_deepest ?? 0)
@@ -110,6 +129,10 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   const tideBest = Number(p.tide_run_best_distance ?? 0)
   const puzzlePoints = Number(p.puzzle_points ?? 0)
   const recruits = Number(p.lifetime_recruits ?? 0)
+  // Crew skins owned / equipped (for the skin badges).
+  const ownedSkins = new Set(p.owned_crew_skins ?? [])
+  const equippedSkinCount = Object.keys(p.equipped_crew_skins ?? {}).length
+  const trophySpecies = ((p.trophy_catches as number[] | null) ?? []).length
 
   return {
     master_angler:  fishLevelFromXP(Number(p.fishing_xp ?? 0)) >= 100,
@@ -169,7 +192,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     hundred_fins:   j.collectionCount >= 100,
     long_haul:      Number(p.tide_run_total_distance ?? 0) >= 100_000,
     salted_through: Number(p.fishing_casts ?? 0) >= 10_000,
-    three_legends:  hasAllThreeLegends,
+    three_legends:  ownedLegendaryAll.size >= 3,
     // ── 2026-06 expansion II (the 6 derivable ones; the other 6 are hooks) ──
     friend_at_sea:  (p.unlocked_pets ?? []).length >= 1,
     ship_of_the_line: Number(p.ship_tier ?? 0) >= 6,
@@ -210,7 +233,18 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     mark_of_mastery: Object.values(shipClasses).some(v => typeof v === 'string' && v.endsWith('_iii')),
     quick_draw:     fastestAnyRaid <= 60_000,
     complete_captain: fishLvl >= 100 && navLevel >= 100,
-    six_legends:    ownedLegendaryAll.size >= 6,
+    six_legends:    ownedBaseLegendary.size >= BASE_LEGENDARY_SLUGS.size,  // "The Avengers" — own all 5 base legendaries
+    // ── Crew skins + feats (batches 17–18) — the 5 challenge-run badges
+    //    (all_hands_legends / iron_ruse / not_a_shot_fired / tight_quarters /
+    //    dead_reckoning) are moment-only and keep dedicated hooks, so they are
+    //    NOT derived here. ──
+    colors_raised:  ownedSkins.size >= 1,
+    the_chase:      [...ownedSkins].some(id => CHASE_SKIN_IDS.has(id)),
+    fashionista:    equippedSkinCount >= 5,
+    full_wardrobe:  LEGENDARY_SKIN_SETS.some(set => set.every(id => ownedSkins.has(id))),
+    dressed_to_the_nines: ownedSkins.size >= 10,
+    trophy_hunter:  trophySpecies >= 25,
+    overkill:       raidDmg >= 500,
   }
 }
 
@@ -223,4 +257,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, manowar_augment, ship_classes, forge_recipes_learned, raid_items'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, manowar_augment, ship_classes, forge_recipes_learned, raid_items, owned_crew_skins, equipped_crew_skins'

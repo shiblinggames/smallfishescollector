@@ -121,6 +121,20 @@ const PLAN = [
   [16, 1, 0, 'quick_draw'],
   [16, 1, 1, 'complete_captain'],
   [16, 1, 2, 'six_legends'],
+  // ── batch 17 — crew skins ──
+  [17, 0, 0, 'colors_raised'],
+  [17, 0, 1, 'the_chase'],
+  [17, 0, 2, 'fashionista'],
+  [17, 1, 0, 'full_wardrobe'],
+  [17, 1, 1, 'dressed_to_the_nines'],
+  [17, 1, 2, 'trophy_hunter'],
+  // ── batch 18 — challenge feats ──
+  [18, 0, 0, 'overkill'],
+  [18, 0, 1, 'all_hands_legends'],
+  [18, 0, 2, 'iron_ruse'],
+  [18, 1, 0, 'not_a_shot_fired'],
+  [18, 1, 1, 'tight_quarters'],
+  [18, 1, 2, 'dead_reckoning'],
 ]
 
 let skipped = 0

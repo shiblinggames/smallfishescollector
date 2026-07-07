@@ -666,7 +666,7 @@ export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
   const admin = createAdminClient()
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, owned_crew_skins')
+    .select('gems, owned_crew_skins, equipped_crew_skins')
     .eq('id', user.id)
     .single()
   if (!prof) return { error: 'Profile not found' }
@@ -684,10 +684,16 @@ export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
     .eq('user_id', user.id).eq('card_id', (card as any).id).is('died_at', null)
   if ((count ?? 0) === 0) return { error: 'Recruit this crew before buying its skins.' }
 
+  // A first-time skin auto-equips — nearly everyone wants to wear what they
+  // just bought. (They can still switch back to Original or another owned skin
+  // from the Skins tab.)
+  const equipped = { ...(((prof as any).equipped_crew_skins as EquippedCrewSkins | null) ?? {}) }
+  equipped[skin.slug.toLowerCase()] = skinId
+
   // Guarded deduction — only lands if gems still cover the cost.
   const { data: updated } = await admin
     .from('profiles')
-    .update({ gems: gems - skin.gemCost, owned_crew_skins: [...owned, skinId] })
+    .update({ gems: gems - skin.gemCost, owned_crew_skins: [...owned, skinId], equipped_crew_skins: equipped })
     .eq('id', user.id)
     .gte('gems', skin.gemCost)
     .select('gems')

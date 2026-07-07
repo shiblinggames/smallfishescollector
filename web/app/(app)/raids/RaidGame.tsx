@@ -10,6 +10,7 @@ import { getShipSkin } from '@/lib/shipSkins'
 import { getActiveEffects } from '@/lib/raidItems'
 import { getXPProgress, getLevelFromXP, MAX_LEVEL } from '@/lib/expeditionLevel'
 import { raidDamageProfile, type RaidMods } from '@/lib/expeditions'
+import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { type ShipAugment } from '@/lib/shipAugments'
 import {
   BossRaidConfig, BroadsideEnemy, RaidLootItem, RARITY_COLOR, raidCompletionBonusXp,
@@ -624,6 +625,13 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
   // strands the player on a locked next node. The ref guarantees one
   // insert per run even if handleEnemyDefeated is re-entered.
   const clearRecordedRef      = useRef(false)
+  // Achievement telemetry, aggregated across the whole raid (survives RaidCombat
+  // remounts, which are per-fight). Reset when a run starts; read at boss-kill to
+  // grant the challenge-run badges (iron_ruse / tight_quarters / dead_reckoning /
+  // all_hands_legends). not_a_shot_fired is granted the instant it happens.
+  const featTookDamageRef     = useRef(false)
+  const featUsedAbilityRef    = useRef(false)
+  const featMissedCritRef     = useRef(false)
   // Crate loot is granted at boss-kill (so closing the app on the loot screen
   // can't lose it). lootGrantedRef guarantees claimRaidLoot runs exactly once
   // per run (it adds doubloons every call); lootResultRef holds the result so
@@ -692,6 +700,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
     clearRecordedRef.current     = false
     lootGrantedRef.current       = false
     lootResultRef.current        = null
+    featTookDamageRef.current    = false
+    featUsedAbilityRef.current   = false
+    featMissedCritRef.current    = false
 
     resetEnemyForRound(0)
 
@@ -1154,6 +1165,27 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
         if (challengeBadgeId) {
           try { await unlockBadge(challengeBadgeId) } catch { /* badge unlock is best-effort */ }
         }
+        // Challenge-run feat badges — read the raid-long telemetry refs at the
+        // kill and grant HERE (awaited, before the doubloons-changed dispatch
+        // below) so BadgeWatcher pops the celebration this run. Raid-specific
+        // feats gate on config.raidId; the fleet flex checks ship + party.
+        {
+          const LEGEND_SLUGS = new Set(['catfish', 'doby_mick', 'mako', 'dole', 'coelacanth'])
+          const manOWar = !!shipName && shipName.includes('Man-o-War')
+          // All Hands, All Legends: Man-o-War + 5 legendary crew, every one Lv 100.
+          const maxLegendsAboard = crewMembers.filter(c =>
+            LEGEND_SLUGS.has(c.slug.toLowerCase()) && crewLevelFromXP(c.xp ?? 0) >= CREW_MAX_LEVEL,
+          ).length
+          const featBadges: string[] = []
+          // startsWith so the (harder) challenge variants count too.
+          if (manOWar && maxLegendsAboard >= 5) featBadges.push('all_hands_legends')
+          if (config.raidId.startsWith('coffers_fleet') && !featTookDamageRef.current) featBadges.push('iron_ruse')
+          if (config.raidId.startsWith('the_quartermaster') && !featUsedAbilityRef.current) featBadges.push('tight_quarters')
+          if (config.raidId.startsWith('cartographer') && !featMissedCritRef.current) featBadges.push('dead_reckoning')
+          for (const id of featBadges) {
+            try { await unlockBadge(id) } catch { /* best-effort */ }
+          }
+        }
         // Persist the raid_completions row NOW (boss is dead) — not
         // inside claimRaidLoot, which used to be the only writer and
         // silently dropped the clear if the player closed the tab on
@@ -1468,6 +1500,9 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 onEnemyDefeated={handleEnemyDefeated}
                 onPlayerDefeated={handlePlayerDefeated}
                 onPlayerHit={(d) => { if (d > maxHitRef.current) { maxHitRef.current = d; recordRaidHit(d).catch(() => {}) } }}
+                onDamageTaken={() => { featTookDamageRef.current = true }}
+                onShotResolved={(isCrit) => { if (!isCrit) featMissedCritRef.current = true }}
+                onNoShotKill={() => { unlockBadge('not_a_shot_fired').catch(() => {}); window.dispatchEvent(new Event('badges-may-have-changed')) }}
                 anchorSaveAvailable={anchorSavesLeftRef.current > 0}
                 onAnchorSave={() => { anchorSavesLeftRef.current = Math.max(0, anchorSavesLeftRef.current - 1) }}
                 onLeave={() => router.push('/expeditions')}
@@ -1480,12 +1515,12 @@ export default function RaidGame({ config, equippedShipSkin, shipSkins, equipped
                 tideEffects={activeTideEffects}
                 crewMembers={crewMembers}
                 usedAbilityIds={usedAbilityIds}
-                onAbilityFired={(crewId) => setUsedAbilityIds(prev => {
+                onAbilityFired={(crewId) => { featUsedAbilityRef.current = true; setUsedAbilityIds(prev => {
                   if (prev.has(crewId)) return prev
                   const next = new Set(prev)
                   next.add(crewId)
                   return next
-                })}
+                }) }}
                 usedRaidItemIds={usedRaidItemIds}
                 onRaidItemUsed={(itemId) => setUsedRaidItemIds(prev => {
                   if (prev.has(itemId)) return prev

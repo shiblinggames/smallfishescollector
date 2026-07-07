@@ -118,7 +118,7 @@ export const BADGES: Badge[] = [
   { id: 'maiden_voyage',  name: 'Maiden Voyage',      description: 'Complete your first voyage',                      imageUrl: '/badges/maiden_voyage.png',  difficulty: 'rookie'   },
   { id: 'old_sea_dog',    name: 'Old Sea Dog',        description: 'Complete 50 voyages',                             imageUrl: '/badges/old_sea_dog.png',    difficulty: 'seasoned' },
   { id: 'hundred_fins',   name: 'A Hundred Fins',     description: 'Catch 100 fish species',                          imageUrl: '/badges/hundred_fins.png',   difficulty: 'veteran'  },
-  { id: 'three_legends',  name: 'The Three Legends',  description: 'Own all three legendary crew at once',            imageUrl: '/badges/three_legends.png',  difficulty: 'master'   },
+  { id: 'three_legends',  name: 'The Three Legends',  description: 'Own 3 legendary crew at once',                    imageUrl: '/badges/three_legends.png',  difficulty: 'veteran'  },
   { id: 'beacon_breaker', name: 'Beacon Breaker',     description: 'Smash 500 beacons across all Tide Runs',          imageUrl: '/badges/beacon_breaker.png', difficulty: 'seasoned' },
   { id: 'long_haul',      name: 'The Long Haul',      description: 'Swim 100,000m total across Tide Runs',            imageUrl: '/badges/long_haul.png',      difficulty: 'veteran'  },
   { id: 'captains_colors', name: "Captain's Colors",  description: 'Become a Captain',                                imageUrl: '/badges/captains_colors.png', difficulty: 'rookie'  },
@@ -170,7 +170,23 @@ export const BADGES: Badge[] = [
   { id: 'mark_of_mastery', name: 'Mark of Mastery',   description: 'Reach a Mark III ship class',                     imageUrl: '/badges/mark_of_mastery.png', difficulty: 'veteran' },
   { id: 'quick_draw',     name: 'Quick Draw',         description: 'Clear any raid in under 1:00',                    imageUrl: '/badges/quick_draw.png',     difficulty: 'veteran'  },
   { id: 'complete_captain', name: 'The Complete Captain', description: 'Reach Navigation 100 and Fishing 100',        imageUrl: '/badges/complete_captain.png', difficulty: 'master' },
-  { id: 'six_legends',    name: 'The Six Legends',    description: 'Own all six legendary crew',                      imageUrl: '/badges/six_legends.png',    difficulty: 'master'   },
+  { id: 'six_legends',    name: 'The Avengers',       description: 'Own all 5 base legendary crew',                   imageUrl: '/badges/six_legends.png',    difficulty: 'master'   },
+
+  // ── 2026-07 expansion (batches 17–18) — crew skins + master feats ────────
+  // Sheet 17 — crew skins.
+  { id: 'colors_raised',  name: 'Colors Raised',      description: 'Own your first crew skin',                        imageUrl: '/badges/colors_raised.png',  difficulty: 'rookie'   },
+  { id: 'the_chase',      name: 'The Chase',          description: 'Own a chase skin',                                imageUrl: '/badges/the_chase.png',      difficulty: 'veteran'  },
+  { id: 'fashionista',    name: 'Fashionista',        description: 'Have a skin equipped on 5 crew at once',          imageUrl: '/badges/fashionista.png',    difficulty: 'veteran'  },
+  { id: 'full_wardrobe',  name: 'Full Wardrobe',      description: 'Own all four skins for one legendary crew',       imageUrl: '/badges/full_wardrobe.png',  difficulty: 'master'   },
+  { id: 'dressed_to_the_nines', name: 'Dressed to the Nines', description: 'Own 10 crew skins',                      imageUrl: '/badges/dressed_to_the_nines.png', difficulty: 'master' },
+  { id: 'trophy_hunter',  name: 'Trophy Hunter',      description: 'Land a Trophy-size catch of 25 species',          imageUrl: '/badges/trophy_hunter.png',  difficulty: 'master'   },
+  // Sheet 18 — challenge feats.
+  { id: 'overkill',       name: 'Overkill',           description: 'Land a single raid hit for 500 or more',          imageUrl: '/badges/overkill.png',       difficulty: 'veteran'  },
+  { id: 'all_hands_legends', name: 'All Hands, All Legends', description: 'Raid in the Man-o-War with 5 Level 100 legendary crew', imageUrl: '/badges/all_hands_legends.png', difficulty: 'master' },
+  { id: 'iron_ruse',      name: 'Iron Ruse',          description: 'Beat the Admiral Ruse raid taking no damage',     imageUrl: '/badges/iron_ruse.png',      difficulty: 'master'   },
+  { id: 'not_a_shot_fired', name: 'Not a Shot Fired', description: 'Sink a boss without a shot or a crew ability',    imageUrl: '/badges/not_a_shot_fired.png', difficulty: 'seasoned' },
+  { id: 'tight_quarters', name: 'Tight Quarters',     description: 'Beat the Quartermaster raid using no crew abilities', imageUrl: '/badges/tight_quarters.png', difficulty: 'master' },
+  { id: 'dead_reckoning', name: 'Dead Reckoning',     description: 'Clear the Cartographer raid missing no critical hits', imageUrl: '/badges/dead_reckoning.png', difficulty: 'master' },
 ]
 
 export const BADGE_MAP: Record<string, Badge> = Object.fromEntries(
@@ -248,7 +264,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   maiden_voyage:    'Send your crew out on their very first voyage. Every fleet starts with one ship leaving port.',
   old_sea_dog:      'Complete 50 voyages. Patience, a steady fleet, and a lot of time at the wheel.',
   hundred_fins:     'Catch 100 different fish species. The logbook is starting to look serious.',
-  three_legends:    'Have all three legendary crew aboard at once: Catfish, Doby Mick, and Mako. The rarest muster in the game.',
+  three_legends:    'Have any three legendary crew aboard at the same time. The start of a truly rare muster.',
   beacon_breaker:   'Smash 500 beacons across all your Tide Runs. Every run chips away at the total.',
   long_haul:        'Cover 100,000 meters in total across every Tide Run you have ever made. The long, steady grind of the open channel.',
   captains_colors:  'Become a Captain and back the studio. The badge worn by those who keep the seas afloat.',
@@ -292,7 +308,19 @@ export const BADGE_DETAIL: Record<string, string> = {
   mark_of_mastery:  'Take a single ship-class line all the way to its Mark III, three chapter-end picks deep.',
   quick_draw:       'Clear any raid in under a minute. A monster build turns a fight into a formality.',
   complete_captain: 'Reach both Navigation Level 100 and Fishing Level 100 — max the sea and the sail alike.',
-  six_legends:      'Have all six legendary crew aboard. The rarest muster the sea has ever seen.',
+  six_legends:      'Have all five base legendary crew aboard at once: Catfish, Doby Mick, Mako, Dole, and Laz. The rarest muster the sea has ever seen.',
+  colors_raised:    'Buy and own your first crew skin — alternate art for a legendary, rare, or epic crew. Skins are bought with gems from the Crew screen.',
+  the_chase:        'Own a chase skin — the rarest, animated art reserved for legendary crew, sold at the top of each skin set. A real gem investment.',
+  fashionista:      'Have a skin equipped on five different crew at the same time. A whole deck dressed to impress.',
+  full_wardrobe:    'Own all four skins for a single legendary crew at once. The complete wardrobe for one legend runs deep into the gems.',
+  dressed_to_the_nines: 'Own ten crew skins across your roster. A serious wardrobe, and a serious pile of gems spent looking good.',
+  trophy_hunter:    'Land a Trophy-size catch of twenty-five different species. Roughly one cast in thirty rolls Trophy, so this is a long, patient hunt across the whole sea.',
+  overkill:         'Land a single raid hit of 500 or more. It takes a monster build — stacked classes, forged items, and a perfect crit — to break the ceiling.',
+  all_hands_legends: 'Sail into a raid aboard the Man-o-War with all five crew slots filled by legendary crew, every one of them at Level 100. The finest fleet a captain can muster.',
+  iron_ruse:        'Beat the entire Admiral Ruse raid without your ship taking a single point of damage. Perfect dodges and perfect reads, start to finish.',
+  not_a_shot_fired: 'Sink a raid boss without ever firing a shot OR using a crew ability — let riposte and damage over time do all the killing. A build puzzle, not a lucky break.',
+  tight_quarters:   'Clear the whole Quartermaster raid without using a single crew ability. Just you, your guns, and your nerve.',
+  dead_reckoning:   'Clear the entire Cartographer raid without missing one critical hit. Every shot lands true across the longest fight on the map.',
 }
 
 /** Detail blurb for a badge id (falls back to its short description). */

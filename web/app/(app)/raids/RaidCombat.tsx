@@ -322,6 +322,13 @@ export interface RaidCombatProps {
   /** Fires with each damage value the player lands, so the parent can track
    *  the biggest hit of the run (career stat). */
   onPlayerHit?: (dmg: number) => void
+  /** Achievement telemetry, aggregated across the raid by RaidGame:
+   *  onDamageTaken — the ship lost HP (any source); onShotResolved — a player
+   *  shot was locked in (isCrit = it landed critical); onNoShotKill — the enemy
+   *  was sunk this fight without the player ever firing a shot. */
+  onDamageTaken?: () => void
+  onShotResolved?: (isCrit: boolean) => void
+  onNoShotKill?: () => void
   /** Quartermaster's Anchor: when true, the next killing blow leaves the
    *  player at 1 HP instead of sinking (raids only — wired by RaidGame,
    *  never PracticeRaidGame). `onAnchorSave` fires once when consumed so
@@ -403,6 +410,7 @@ export default function RaidCombat({
   equippedRepairKit,
   killReward,
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
+  onDamageTaken, onShotResolved, onNoShotKill,
   initialCharges = 0,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
@@ -734,6 +742,23 @@ export default function RaidCombat({
   const [playerHp, setPlayerHp]       = useState(() =>
     Math.max(0, Math.min(playerHpMax, initialPlayerHp + tide.hpStartDelta + tide.everyFightHeal + Math.round(tide.everyFightHealPct * playerHpMax)))
   )
+  // ── Achievement telemetry ──────────────────────────────────────────────
+  // Shots the player has locked in THIS fight + whether any crew ability fired
+  // this fight (both reset naturally per remount — each fight is its own
+  // RaidCombat mount). Drive "Not a Shot Fired": sink a BOSS having neither
+  // fired a shot NOR used an ability (a pure riposte / DoT kill).
+  const shotsThisFightRef = useRef(0)
+  const abilityUsedThisFightRef = useRef(false)
+  // "Iron Ruse" needs to know if the ship ever lost HP. Rather than tag every
+  // damage site (many, and fragile), watch the HP state for any drop — this
+  // catches every source (turn hits, mechanic checks, flares, DoT) in one spot
+  // and can't affect combat math. Start-of-fight tide debuffs sit in the
+  // initial value, so they're not counted as damage.
+  const prevHpRef = useRef(playerHp)
+  useEffect(() => {
+    if (playerHp < prevHpRef.current) onDamageTaken?.()
+    prevHpRef.current = playerHp
+  }, [playerHp, onDamageTaken])
   const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
   // The enemy's ACTUAL max HP this fight = base × any enemyHpScale (Barnacled
   // Hull curse, half-HP tides). Drives the HP bar denominator + stat sheet so
@@ -1650,6 +1675,7 @@ export default function RaidCombat({
     // Lock the ability the instant it's chosen — BEFORE the summon plays — so
     // nothing double-fires while the crew is being called on.
     setOneAbilityUsedThisTurn(true)
+    abilityUsedThisFightRef.current = true
     onAbilityFired?.(crew.id)
     vibrate(18)
 
@@ -1998,6 +2024,9 @@ export default function RaidCombat({
         setTimeout(() => setResolveLog(prev => [...prev, `Nav XP: +${killReward.xp}`]), 800)
         cbDelay = 1600
       }
+      // Sank a BOSS with no shot fired AND no crew ability used — a pure
+      // riposte / DoT kill. (Non-boss mobs + ability kills don't qualify.)
+      if (isBoss && shotsThisFightRef.current === 0 && !abilityUsedThisFightRef.current) onNoShotKill?.()
       setTimeout(() => onEnemyDefeated(playerHpRef.current, playerChargesRef.current), cbDelay)
     }
   }
@@ -2083,6 +2112,9 @@ export default function RaidCombat({
     // flash the bar red, and skip the normal aim judgment entirely.
     if (decoyRunRef.current.some(d => Math.abs(firePosRef.current - d.pos) <= DECOY_HALF)) {
       decoyFumbleRef.current = true
+      // A locked shot, even a dud — counts as firing, and it's not a crit.
+      shotsThisFightRef.current++
+      onShotResolved?.(false)
       if (indicatorRef.current) {
         indicatorRef.current.style.left = `calc(${firePosRef.current * 100}% - 2px)`
         indicatorRef.current.style.background = '#ef4444'
@@ -2140,6 +2172,10 @@ export default function RaidCombat({
       .filter(e => e.type === 'crit_upgrade_chance').reduce((a, e) => a + e.value, 0)
     const critUpgradeChance = (mods.critPct / 100) + tide.critBonus + critUpgradeItem
     if (res === 'hit' && critUpgradeChance > 0 && Math.random() < critUpgradeChance) res = 'critical'
+    // Telemetry: a locked shot (post crit-upgrade). "Dead Reckoning" wants every
+    // shot to be a crit; "Not a Shot Fired" wants zero shots taken all fight.
+    shotsThisFightRef.current++
+    onShotResolved?.(res === 'critical')
     setAimResult(res)
     setCritFreeze(true)  // freezes the aim bar at the lock position regardless of result
 
@@ -3242,6 +3278,8 @@ export default function RaidCombat({
               setTimeout(() => setResolveLog(prev => [...prev, `Nav XP: +${killReward.xp}`]), 800)
               cbDelay = 1600
             }
+            // Sank without firing a shot this fight (riposte / crew ability / DoT).
+            if (shotsThisFightRef.current === 0) onNoShotKill?.()
             setTimeout(() => onEnemyDefeated(pHp, pCharges), cbDelay)
             return
           }

@@ -11,7 +11,7 @@ import { crewLevelFromXP, CREW_MAX_LEVEL } from '@/lib/crewLevel'
 import { CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { GAUNTLET_UPGRADES } from '@/lib/gauntletUpgrades'
 import { FORGE_RECIPES, isForgedRaidItem } from '@/lib/raidItems'
-import { LEGENDARY_SLUGS_ALL, CONFLUENCE_COUNT } from '@/lib/badgeConditions'
+import { LEGENDARY_SLUGS_ALL, BASE_LEGENDARY_SLUGS, CONFLUENCE_COUNT, CHASE_SKIN_IDS, LEGENDARY_SKIN_SETS } from '@/lib/badgeConditions'
 
 const ZONES = ['shallows', 'open_waters', 'deep', 'abyss'] as const
 const CHALLENGE_RAID_IDS = ['corsairs_reckoning_challenge', 'captain_krust_challenge', 'cartographer_challenge', 'tollmasters_cut_challenge']
@@ -47,7 +47,6 @@ export default async function BadgesPage() {
   // cards.slug is Title_Case; the LEGENDARY sets are lowercase — normalise.
   const ownedCrewSlugsLc = crew.map(c => c.cards?.slug?.toLowerCase()).filter((s): s is string => !!s)
   const hasLegendaryCrew = ownedCrewSlugsLc.some(s => LEGENDARY_SLUGS.has(s))
-  const legendsOwned = new Set(ownedCrewSlugsLc.filter(s => LEGENDARY_SLUGS.has(s))).size
   const hasLostCrew = crew.some(c => c.died_at != null)
   const challengeCleared = CHALLENGE_RAID_IDS.filter(id => raidIds.has(id)).length
   const collectionCount = (collectionRes.data ?? []).length
@@ -87,6 +86,12 @@ export default async function BadgesPage() {
   const hasUltimate = !!profile?.manowar_augment
   const fastestAnyRaid = Math.min(Infinity, ...raids.map(r => r.elapsed_ms ?? Infinity))
   const legendsOwnedAll = new Set(ownedCrewSlugsLc.filter(s => LEGENDARY_SLUGS_ALL.has(s))).size
+  const baseLegendsOwned = new Set(ownedCrewSlugsLc.filter(s => BASE_LEGENDARY_SLUGS.has(s))).size
+  // Crew skins (batches 17–18).
+  const ownedSkins = new Set((profile?.owned_crew_skins as string[] | null) ?? [])
+  const hasChaseSkin = [...ownedSkins].some(id => CHASE_SKIN_IDS.has(id))
+  const maxWardrobe = LEGENDARY_SKIN_SETS.reduce((mx, set) => Math.max(mx, set.filter(id => ownedSkins.has(id)).length), 0)
+  const equippedSkinCount = Object.keys((profile?.equipped_crew_skins as Record<string, string> | null) ?? {}).length
 
   const fishLevel = fishLevelFromXP(Number(profile?.fishing_xp ?? 0))
   const navLevel = navLevelFromXP(Number(profile?.expedition_xp ?? 0))
@@ -174,6 +179,7 @@ export default async function BadgesPage() {
         badgeGoal('half_the_sea', 'Half the Sea', 'Catch 50 fish species', collectionCount, 50, '/fishing'),
         badgeGoal('hundred_fins', 'A Hundred Fins', 'Catch 100 fish species', collectionCount, 100, '/fishing'),
         badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep trophies', trophies, 6, '/fishing'),
+        badgeGoal('trophy_hunter', 'Trophy Hunter', 'Land a Trophy-size catch of 25 species', trophies, 25, '/fishing'),
         badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/fishing'),
       ],
     },
@@ -184,11 +190,16 @@ export default async function BadgesPage() {
         badgeGoal('growing_crew', 'Growing Crew', 'Recruit 25 crew', recruits, 25, '/crew'),
         badgeGoal('theres_a_grave', "There's a Grave?", 'Lose a crew member for the first time', hasLostCrew ? 1 : 0, 1, '/crew', { binary: true }),
         badgeGoal('legendary_recruit', 'Legendary Recruit', 'Recruit a legendary crew', hasLegendaryCrew ? 1 : 0, 1, '/crew', { binary: true }),
-        badgeGoal('three_legends', 'The Three Legends', 'Own all 3 legendary crew at once', legendsOwned, 3, '/crew'),
-        badgeGoal('six_legends', 'The Six Legends', 'Own all 6 legendary crew', legendsOwnedAll, 6, '/crew'),
+        badgeGoal('three_legends', 'The Three Legends', 'Own 3 legendary crew at once', legendsOwnedAll, 3, '/crew'),
+        badgeGoal('six_legends', 'The Avengers', 'Own all 5 base legendary crew', baseLegendsOwned, BASE_LEGENDARY_SLUGS.size, '/crew'),
         badgeGoal('crewmaster', 'Crewmaster', 'Reach the top Crew Hall tier', crewHallTier, CREW_HALL_MAX_TIER, '/crew'),
         badgeGoal('full_muster', 'Full Muster', 'Recruit 100 crew', recruits, 100, '/crew'),
         badgeGoal('old_salt', 'Old Salt', 'Level a crew to 100', maxCrewLevel, CREW_MAX_LEVEL, '/crew'),
+        badgeGoal('colors_raised', 'Colors Raised', 'Own your first crew skin', ownedSkins.size >= 1 ? 1 : 0, 1, '/crew', { binary: true }),
+        badgeGoal('the_chase', 'The Chase', 'Own a chase skin', hasChaseSkin ? 1 : 0, 1, '/crew', { binary: true }),
+        badgeGoal('fashionista', 'Fashionista', 'Have a skin equipped on 5 crew at once', equippedSkinCount, 5, '/crew'),
+        badgeGoal('full_wardrobe', 'Full Wardrobe', 'Own all 4 skins for one legendary crew', maxWardrobe, 4, '/crew'),
+        badgeGoal('dressed_to_the_nines', 'Dressed to the Nines', 'Own 10 crew skins', ownedSkins.size, 10, '/crew'),
       ],
     },
     {
@@ -202,6 +213,7 @@ export default async function BadgesPage() {
         badgeGoal('opening_salvo', 'Opening Salvo', 'Land a single raid hit for 50+', highestRaidDmg, 50, '/raids'),
         badgeGoal('hard_hitter', 'Hard Hitter', 'Land a single raid hit for 100+', highestRaidDmg, 100, '/raids'),
         badgeGoal('heavy_broadside', 'Heavy Broadside', 'Land a single raid hit for 250+', highestRaidDmg, 250, '/raids'),
+        badgeGoal('overkill', 'Overkill', 'Land a single raid hit for 500+', highestRaidDmg, 500, '/raids'),
         badgeGoal('swift_reckoning', 'Swift Reckoning', "Clear Corsair's Reckoning in under 1:30", fastestCorsairs <= 90_000 ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('corsairs_bane', "Corsair's Bane", 'Defeat Barnacle Pete in challenge mode', raidIds.has('corsairs_reckoning_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
         badgeGoal('ghost_ship', "Krust's Crutch", 'Defeat Captain Krust in challenge mode', raidIds.has('captain_krust_challenge') ? 1 : 0, 1, '/raids', { binary: true }),
@@ -218,6 +230,12 @@ export default async function BadgesPage() {
         badgeGoal('first_fusion', 'First Fusion', 'Forge your first item', hasForgedItem ? 1 : 0, 1, '/expeditions', { binary: true }),
         badgeGoal('grand_forgemaster', 'Grand Forgemaster', 'Learn every forge recipe', forgeRecipesLearned, FORGE_RECIPES.length, '/expeditions'),
         badgeGoal('complete_captain', 'The Complete Captain', 'Reach Navigation 100 and Fishing 100', (fishLevel >= 100 && navLevel >= 100) ? 1 : 0, 1, '/expeditions', { binary: true }),
+        // Challenge-run feats — hook-granted at the moment they happen.
+        badgeGoal('all_hands_legends', 'All Hands, All Legends', 'Raid in the Man-o-War with 5 Level 100 legendary crew', has('all_hands_legends') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('not_a_shot_fired', 'Not a Shot Fired', 'Sink a boss without a shot or crew ability', has('not_a_shot_fired') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('iron_ruse', 'Iron Ruse', 'Beat the Admiral Ruse raid taking no damage', has('iron_ruse') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('tight_quarters', 'Tight Quarters', 'Beat the Quartermaster raid using no crew abilities', has('tight_quarters') ? 1 : 0, 1, '/raids', { binary: true }),
+        badgeGoal('dead_reckoning', 'Dead Reckoning', 'Clear the Cartographer raid missing no critical hits', has('dead_reckoning') ? 1 : 0, 1, '/raids', { binary: true }),
       ],
     },
     {
