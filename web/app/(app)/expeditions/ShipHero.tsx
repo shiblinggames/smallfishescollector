@@ -2291,8 +2291,9 @@ export default function ShipHero({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 4 }}
               transition={{ duration: 0.18 }}
-              style={{ margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: `1px solid ${top.color}55`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: `0 0 30px ${top.color}22` }}
+              style={{ position: 'relative', margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: `1px solid ${top.color}55`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: `0 0 30px ${top.color}22` }}
             >
+              <button onClick={() => setClassDetail(null)} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 3, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 4 }}>
                 <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, background: `${top.color}20`, border: `1px solid ${top.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: top.color }}>{top.emoji}</span>
                 <div style={{ minWidth: 0 }}>
@@ -2324,11 +2325,6 @@ export default function ShipHero({
                   </div>
                 ))}
               </div>
-              <button type="button" onClick={() => setClassDetail(null)}
-                className="font-karla font-700 uppercase tracking-[0.08em]"
-                style={{ marginTop: 13, width: '100%', padding: '0.6rem', borderRadius: 11, fontSize: '0.66rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
-                Close
-              </button>
             </motion.div>
           )
         })()}

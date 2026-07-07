@@ -92,7 +92,7 @@ export default function RenownPanel({ open, onClose, skill, initial, onChange }:
           boxShadow: `0 0 60px ${meta.accent}22, 0 24px 60px rgba(0,0,0,0.6)`,
         }}
       >
-        {/* Close — X at the top-right for an easy dismiss. */}
+        {/* Close — X at the top-right, matching the app's other modals. */}
         <button onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 3, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
 
         {/* Header — title + a single efficient status line: Renown level on the
