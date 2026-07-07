@@ -4619,13 +4619,12 @@ export default function RaidCombat({
 
         {/* FF-style crew summon — full-screen (portaled to body so no transformed
             ancestor clips it), eats taps while it plays so the deferred effect
-            can't race a turn action. */}
-        {typeof document !== 'undefined' && createPortal(
-          <AnimatePresence>
-            {abilitySummon && (
-              <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} chase={abilitySummon.chase} skinId={abilitySummon.skinId} />
-            )}
-          </AnimatePresence>,
+            can't race a turn action. NO AnimatePresence: the summon fades its own
+            content out via the inner wrapper before it unmounts, so it needs no
+            exit animation — and AnimatePresence's exit RE-RENDER was restarting
+            the wrapper's keyframes, flashing the crew image a faint second time. */}
+        {typeof document !== 'undefined' && abilitySummon && createPortal(
+          <AbilitySummonFx key={abilitySummon.key} label={abilitySummon.label} name={abilitySummon.name} color={abilitySummon.color} image={abilitySummon.image} chase={abilitySummon.chase} skinId={abilitySummon.skinId} />,
           document.body,
         )}
         {/* Plain, un-animated tap-guard — outlives the animated summon so input
