@@ -2378,48 +2378,50 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
                 </div>{/* end fixed-min-height tab body */}
 
-                {/* ── Actions (always visible below the tabs) ────────────────────
-                    Make Captain — only for roster crew on a track but not already
-                    at slot 0. promoteToCaptain figures the track from the row. Sits
-                    just above Dismiss so the destructive action stays at the bottom. */}
-                {detail.kind === 'roster' && (() => {
+                {/* ── Actions (below the tabs). Board recruits keep the Recruit
+                    button; roster crew get a single compact footer row — a quiet
+                    tinted Make Captain (only when on a track) beside a low-emphasis
+                    ghost Dismiss, so this rarely-touched pair stops eating space
+                    and shouting for attention. */}
+                <div style={{ marginTop: 12 }}>
+                {detail.kind === 'board' ? (
+                  renderAction(detail.kind, it, { onDone: close })
+                ) : (() => {
                   const m = it as CrewMember
-                  const onVoyage = m.voyageSlot !== null
-                  const onRaid   = m.raidSlot   !== null
-                  const isCap    = m.voyageSlot === 0 || m.raidSlot === 0
-                  if (isCap) return null
-                  if (!onVoyage && !onRaid) return null  // benched — nothing to promote within
-                  const trackLabel = onVoyage ? 'Voyage' : 'Raid'
-                  const accent = onVoyage ? ASSIGN_VOYAGE : ASSIGN_RAID
+                  const isCap = m.voyageSlot === 0 || m.raidSlot === 0
+                  const canPromote = !isCap && (m.voyageSlot !== null || m.raidSlot !== null)
+                  const accent = m.voyageSlot !== null ? ASSIGN_VOYAGE : ASSIGN_RAID
+                  const armed = confirmDismiss === m.id
+                  if (armed) {
+                    return (
+                      <div className="flex items-center" style={{ gap: 8 }}>
+                        <span className="font-karla font-600" style={{ flex: 1, minWidth: 0, fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dismiss {it.name}?</span>
+                        <button type="button" disabled={pending} onClick={() => run(() => dismissCrew(m.id), m.id, close)}
+                          className="font-karla font-700 uppercase" style={{ padding: '0.42rem 0.8rem', borderRadius: 8, fontSize: '0.66rem', letterSpacing: '0.04em', background: 'rgba(212,84,84,0.24)', border: '1px solid rgba(228,114,114,0.55)', color: '#f8d2d2', cursor: pending ? 'not-allowed' : 'pointer' }}>{busyId === m.id ? '…' : 'Dismiss'}</button>
+                        <button type="button" disabled={pending} onClick={() => setConfirmDismiss(null)}
+                          className="font-karla font-700 uppercase" style={{ padding: '0.42rem 0.8rem', borderRadius: 8, fontSize: '0.66rem', letterSpacing: '0.04em', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    )
+                  }
                   return (
-                    <button
-                      type="button"
-                      onClick={() => run(() => promoteToCaptain(m.id), m.id, close)}
-                      disabled={pending}
-                      className="font-karla font-700"
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        width: '100%', padding: '0.55rem',
-                        borderRadius: 9, marginBottom: 8,
-                        fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase',
-                        background: `linear-gradient(180deg, ${accent}28 0%, ${accent}10 100%)`,
-                        border: `1px solid ${accent}88`,
-                        color: '#1a1206',
-                        cursor: pending ? 'not-allowed' : 'pointer',
-                        opacity: pending ? 0.6 : 1,
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.2" strokeLinejoin="round">
-                        <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
-                      </svg>
-                      <span style={{ color: accent, textShadow: '0 1px 1px rgba(0,0,0,0.4)' }}>
-                        Make Captain ({trackLabel})
-                      </span>
-                    </button>
+                    <div className="flex items-center" style={{ gap: 8 }}>
+                      {canPromote && (
+                        <button type="button" disabled={pending} onClick={() => run(() => promoteToCaptain(m.id), m.id, close)}
+                          className="font-karla font-700 uppercase"
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.52rem 0.7rem', borderRadius: 9, fontSize: '0.72rem', letterSpacing: '0.05em', background: `${accent}1f`, border: `1px solid ${accent}66`, color: accent, cursor: pending ? 'not-allowed' : 'pointer', opacity: pending ? 0.6 : 1 }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#f0c040" stroke="none"><path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" /></svg>
+                          Make Captain
+                        </button>
+                      )}
+                      <button type="button" disabled={pending} onClick={() => setConfirmDismiss(m.id)}
+                        className="font-karla font-700 uppercase"
+                        style={{ marginLeft: canPromote ? undefined : 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '0.52rem 0.7rem', borderRadius: 9, fontSize: '0.68rem', letterSpacing: '0.04em', background: 'transparent', border: '1px solid rgba(228,114,114,0.26)', color: 'rgba(232,150,150,0.82)', cursor: pending ? 'not-allowed' : 'pointer' }}>
+                        <XIcon /> Dismiss
+                      </button>
+                    </div>
                   )
                 })()}
-
-                {renderAction(detail.kind, it, { onDone: close })}
+                </div>
               </motion.div>
             </motion.div>
           )
