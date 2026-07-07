@@ -126,6 +126,56 @@ function GalaxyFx({ color, summon }: { color: string; summon: boolean }) {
   )
 }
 
+// Fossil (Laz) — ancient / amber. The living fossil sits in a warm amber haze
+// with gold flecks suspended and fine sediment settling down through the water.
+const FOSSIL_HAZE = [
+  { l: 40, t: 34, s: 74, d: 0 }, { l: 64, t: 56, s: 62, d: 2.6 }, { l: 44, t: 72, s: 58, d: 4.4 },
+]
+const FOSSIL_FLECKS: [number, number][] = [
+  [26, 28], [70, 24], [46, 46], [80, 56], [18, 58], [58, 70], [34, 82], [86, 40], [50, 34],
+]
+function FossilFx({ color, summon }: { color: string; summon: boolean }) {
+  const dustN = summon ? 16 : 11
+  return (
+    <div className="chase-skin-fx" style={wrap(summon)}>
+      {/* Warm amber haze. */}
+      {FOSSIL_HAZE.map((h, i) => (
+        <div key={`hz-${i}`} style={{
+          position: 'absolute', left: `${h.l}%`, top: `${h.t}%`, width: h.s, height: h.s, marginLeft: -h.s / 2, marginTop: -h.s / 2,
+          borderRadius: '50%', background: `radial-gradient(circle, ${color}55 0%, transparent 70%)`, filter: 'blur(9px)',
+          mixBlendMode: summon ? undefined : 'screen', opacity: 0,
+          animation: `chase-caustic ${summon ? 5 : 9}s ${h.d}s ease-in-out infinite`,
+        }} />
+      ))}
+      {/* Settling sediment — fine amber dust drifting down. */}
+      {Array.from({ length: dustN }).map((_, i) => {
+        const left = 6 + ((i * 79) / dustN) % 88
+        const dur = (summon ? 3.2 : 5.5) + (i % 4) * 0.9
+        const size = 1.5 + (i % 3)
+        return (
+          <div key={`dust-${i}`} style={{
+            position: 'absolute', left: `${left}%`, top: '-8%', width: size, height: size, borderRadius: '50%',
+            background: `${color}`, boxShadow: `0 0 3px ${color}`, opacity: 0,
+            animation: `chase-dust-drift ${dur.toFixed(2)}s ${(i * 0.4).toFixed(2)}s linear infinite`,
+          }} />
+        )
+      })}
+      {/* Suspended gold flecks twinkling. */}
+      {FOSSIL_FLECKS.map(([l, t], i) => {
+        const sz = summon ? 4.5 : 3
+        return (
+          <div key={`flk-${i}`} style={{
+            position: 'absolute', left: `${l}%`, top: `${t}%`, width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2,
+            background: '#fff4d6', borderRadius: 1, opacity: 0,
+            boxShadow: `0 0 3px #fff, 0 0 7px ${color}, 0 0 12px ${color}`,
+            animation: `chase-star-twinkle ${((summon ? 1.8 : 3) + (i % 4) * 0.5).toFixed(2)}s ${(i * 0.3).toFixed(2)}s ease-in-out infinite`,
+          }} />
+        )
+      })}
+    </div>
+  )
+}
+
 // Hunter's Bane (Doby) — assassin. A targeting reticle slowly turns and the
 // lock brackets pulse in on the mark. No sweep — it's a scope settling on prey.
 function HuntersBaneFx({ color, summon }: { color: string; summon: boolean }) {
@@ -165,6 +215,7 @@ export function ChaseSkinFx({ skinId, color, variant = 'ambient' }: { skinId: st
     case 'mako_tempest':     return <TempestFx color={color} summon={summon} />
     case 'dole_krakenhunter': return <KrakenFx color={color} summon={summon} />
     case 'catfish_galaxy':    return <GalaxyFx color={color} summon={summon} />
+    case 'coelacanth_fossil': return <FossilFx color={color} summon={summon} />
     case 'doby_huntersbane':  return <HuntersBaneFx color={color} summon={summon} />
     default: return null
   }
