@@ -26,7 +26,7 @@ export const RARITY_COLORS: Record<CrewRarity, string> = {
 // back to their catalog name.
 const CREW_NAMES: Record<string, string> = {
   angelfish: 'Ang', anglerfish: 'Anglerr', bass: 'Bob', beluga_whale: 'Bellie',
-  blobfish: 'Bloo', blue_marlin: 'Marl', blue_whale: 'Big Blue', catfish: 'Cat',
+  blobfish: 'Bloo', blue_marlin: 'Marl', blue_whale: 'Big Blue', catfish: 'Kat',
   clownfish: 'Chloe', doby_mick: 'Doby', eel: 'Ell', flounder: 'Floop',
   giant_squid: 'Skwid', goblin_shark: 'Gob', goldfish: 'Goldie',
   great_white_shark: 'Great White', hammerhead_shark: 'Hammer', humpback_whale: 'Humps',
