@@ -100,7 +100,8 @@ export default async function BadgesPage() {
   const prestigedZones = ZONES.filter(z => (prestige[z] ?? 0) >= 1).length
   const totalStars = ZONES.reduce((s, z) => s + Math.min(5, prestige[z] ?? 0), 0)
 
-  const trophies = ((profile?.trophy_catches as number[] | null) ?? []).length
+  const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
+  const trophySizeCatches = Number(profile?.trophy_size_catches ?? 0)
 
   const nonAncientIds = new Set(
     ((speciesRes.data ?? []) as { id: number; habitat: string }[])
@@ -178,8 +179,8 @@ export default async function BadgesPage() {
       goals: [
         badgeGoal('half_the_sea', 'Half the Sea', 'Catch 50 fish species', collectionCount, 50, '/fishing'),
         badgeGoal('hundred_fins', 'A Hundred Fins', 'Catch 100 fish species', collectionCount, 100, '/fishing'),
-        badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep trophies', trophies, 6, '/fishing'),
-        badgeGoal('trophy_hunter', 'Trophy Hunter', 'Land a Trophy-size catch of 25 species', trophies, 25, '/fishing'),
+        badgeGoal('ancient_ones', 'Ancient Ones', 'Catch all 6 Ancient Deep giants', ancientsCaught, 6, '/fishing'),
+        badgeGoal('trophy_hunter', 'Trophy Hunter', 'Land 25 Trophy-size catches', trophySizeCatches, 25, '/fishing'),
         badgeGoal('full_collection', 'Full Collection', `Catch every fish species (${collected}/${speciesTotal})`, collected, speciesTotal, '/fishing'),
       ],
     },

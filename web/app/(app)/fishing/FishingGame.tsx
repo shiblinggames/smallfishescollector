@@ -187,7 +187,7 @@ type BossMechanic = 'shrink' | 'drift' | 'accelerate' | 'randomize' | 'split' | 
 // inherits the same "primitive, unpredictable" feel at the lower tier).
 interface BossConfig { mechanic: BossMechanic; phases: number; wildcard?: boolean }
 const BOSS_CONFIG: Record<string, BossConfig> = {
-  // ── Trophies (sell_value 0, route to trophy_catches) ──
+  // ── Ancients (sell_value 0, route to ancient_catches) ──
   'Megalodon':         { mechanic: 'shrink',     phases: 3 },
   'Plesiosaurus':      { mechanic: 'drift',      phases: 3 },
   'Dunkleosteus':      { mechanic: 'accelerate', phases: 3 },
@@ -3000,7 +3000,7 @@ export default function FishingGame({
   selectedZone: initialZone, onBack, activeSession, zoneRewardsClaimed,
   initialDailyChallenge, onDailyChallengeChange,
   hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil,
-  initialPrestigeLevels, initialTrophyCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
+  initialPrestigeLevels, initialAncientCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges,
   marketMultipliers, isPremium, initialEquippedBoat, initialUnlockedBoats, onBoatStateChange,
   initialEquippedHat, initialUnlockedHats, onHatStateChange,
   initialEquippedPet, initialUnlockedPets, onPetStateChange,
@@ -3056,7 +3056,7 @@ export default function FishingGame({
   gauntletUpgrades: string[]
   hasPerfectedSigil: boolean
   initialPrestigeLevels: Record<string, number>
-  initialTrophyCatches: number[]
+  initialAncientCatches: number[]
   characterColor: string
   unlockedCharacterColors: string[]
   equippedBadges: string[]
@@ -3336,7 +3336,7 @@ export default function FishingGame({
   const [prestigingZone, setPrestigingZone] = useState<string | null>(null)
   const [confirmPrestigeZone, setConfirmPrestigeZone] = useState<string | null>(null)
   const [tappedFishId, setTappedFishId] = useState<number | null>(null)
-  const [trophyCatches, setTrophyCatches] = useState(() => new Set(initialTrophyCatches))
+  const [ancientCatches, setAncientCatches] = useState(() => new Set(initialAncientCatches))
 
   // Lock body scroll while the trophy detail modal is open. Without
   // this, the collection drawer's overflowY:auto underneath catches
@@ -4460,7 +4460,7 @@ export default function FishingGame({
   function fireFinnEncounter() {
     // Reveal supersedes every other beat once the player has landed an
     // Ancient Deep trophy and hasn't seen the climax yet.
-    const hasAncientTrophy = trophyCatches.size > 0
+    const hasAncientTrophy = ancientCatches.size > 0
     if (hasAncientTrophy && !finnRevealed) {
       setFinnOverlay({ mode: 'reveal', lines: FINN_REVEAL_BEAT.lines })
       setFinnRevealed(true)
@@ -5123,7 +5123,7 @@ export default function FishingGame({
         }
         if (isNewSpecies) {
           if (fish.habitat === 'ancient_deep') {
-            setTrophyCatches(prev => new Set([...prev, fish.id]))
+            setAncientCatches(prev => new Set([...prev, fish.id]))
           } else {
             setCaughtFishIds(prev => new Set([...prev, fish.id]))
             setUncheckedNewFishIds(prev => new Set([...prev, fish.id]))
@@ -5673,7 +5673,7 @@ export default function FishingGame({
   const allAncientCaught = selectedZone === 'ancient_deep'
     && ancientSpecies.length > 0
     && ancientSpecies.every(f => (f.sell_value ?? 0) === 0
-        ? trophyCatches.has(f.id)
+        ? ancientCatches.has(f.id)
         : caughtFishIds.has(f.id))
   const isFullMoon = activeEvent?.type === 'fullmoon'
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.75)) * i.quantity, 0)
@@ -6799,7 +6799,7 @@ export default function FishingGame({
                       streakBonusXP={catchResult.streakBonusXP}
                       jackpotMultiplier={catchResult.jackpotMultiplier}
                       perfectXpMult={catchResult.perfectXpMult}
-                      ancientCount={trophyCatches.size}
+                      ancientCount={ancientCatches.size}
                       ancientTotal={allFishSpecies.filter(f => f.habitat === 'ancient_deep').length || 6}
                       sizeIn={catchResult.sizeIn}
                       sizeMin={catchResult.sizeMin}
@@ -8219,7 +8219,7 @@ export default function FishingGame({
                 normal catches, so they need the same image-card format.
                 Trophies stay in their distinct row format with the 🏆
                 icon since they're ceremonial unlocks tracked via
-                trophy_catches, not the regular fish_collection. */}
+                ancient_catches, not the regular fish_collection. */}
             {(() => {
               const zone = 'ancient_deep'
               const zoneColor = HABITAT_COLOR[zone]
@@ -8227,7 +8227,7 @@ export default function FishingGame({
               const regulars = allAncient.filter(f => (f.sell_value ?? 0) > 0)
               const trophies = allAncient.filter(f => (f.sell_value ?? 0) === 0)
               const regularsCaught = regulars.filter(f => caughtFishIds.has(f.id)).length
-              const trophiesCaught = trophies.filter(f => trophyCatches.has(f.id)).length
+              const trophiesCaught = trophies.filter(f => ancientCatches.has(f.id)).length
               const caughtCount = regularsCaught + trophiesCaught
               const bossSpecies = allAncient   // header sizing uses the combined total
               const isExpanded = expandedZone === zone
@@ -8411,7 +8411,7 @@ export default function FishingGame({
                         ✦ The Ancients · {trophiesCaught} of {trophies.length} awakened
                       </p>
                       {trophies.map(f => {
-                        const caught = trophyCatches.has(f.id)
+                        const caught = ancientCatches.has(f.id)
                         const monoVariants = {
                           hidden:  { opacity: 0, y: 6, scale: 0.98 },
                           visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.2, 0.7, 0.3, 1] as [number, number, number, number] } },

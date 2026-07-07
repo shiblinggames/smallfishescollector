@@ -178,7 +178,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, trophy_catches, active_event, catch_pending, fishing_renown_alloc')
+    .select('rod_tier, completionist_effects, hook_tier, fishing_xp, fish_hold_tier, ancient_catches, active_event, catch_pending, fishing_renown_alloc')
     .eq('id', user.id)
     .single()
 
@@ -208,8 +208,8 @@ export async function castLine(baitType: string, habitat: string): Promise<
   ])
 
   // Hold check applies to every zone now. Used to bypass for ancient_deep
-  // back when the only catches there were trophies (which skip inventory
-  // entirely, going to trophy_catches instead). The 12 sellable regulars
+  // back when the only catches there were the Ancients (which skip inventory
+  // entirely, going to ancient_catches instead). The 12 sellable regulars
   // added 2026-06-09 flow through fish_inventory like every other zone,
   // so a full hold + ancient_deep cast was silently dropping the catch
   // (catchQty clamped to 0 because no slots free). Restore the gate so
@@ -235,7 +235,7 @@ export async function castLine(baitType: string, habitat: string): Promise<
   //      in the catch handler below).
   let pool = candidates
   if (habitat === 'ancient_deep') {
-    const caught = new Set<number>((profile.trophy_catches as number[] | null) ?? [])
+    const caught = new Set<number>((profile.ancient_catches as number[] | null) ?? [])
     const isLure = baitType === 'luminous' || baitType === 'golden'
     pool = candidates.filter(f => {
       if (caught.has(f.id)) return false
@@ -426,7 +426,7 @@ export async function reelIn(
 
   const [{ data: fish }, { data: profile }, { data: holdRows }] = await Promise.all([
     admin.from('fish_species').select('*').eq('id', fishId).single(),
-    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, trophy_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc').eq('id', user.id).single(),
+    admin.from('profiles').select('doubloons, fishing_abyss_streak, fishing_xp, rod_tier, completionist_effects, fish_hold_tier, has_phantom_hook, has_perfected_sigil, equipped_special, line_tier, prestige_levels, ancient_catches, unlocked_character_colors, total_perfects, current_perfect_streak, highest_perfect_streak, force_shiny_next_perfect, force_shiny_always, fishing_renown_alloc').eq('id', user.id).single(),
     admin.from('fish_inventory').select('quantity').eq('user_id', user.id),
   ])
 
@@ -435,16 +435,16 @@ export async function reelIn(
   // Fishing Renown (post-100): a tiny XP multiplier on every catch (Wisdom).
   const renownXpMult = fishingRenownEffects(profile.fishing_renown_alloc as RenownAlloc | null).xpMult
 
-  // Trophy path: ancient_deep fish WITH sell_value 0 are the original 6
-  // prehistoric trophies — they go straight to trophy_catches, skip
-  // hold/collection/bounty. Sellable ancient_deep fish (sell_value > 0)
+  // Ancients path: ancient_deep fish WITH sell_value 0 are the original 6
+  // prehistoric giants (the Ancients) — they go straight to ancient_catches,
+  // skip hold/collection/bounty. Sellable ancient_deep fish (sell_value > 0)
   // are the new 6 regulars added 2026-06-10; they fall through to the
   // normal catch path below so they stack in fish_inventory like every
   // other zone's catches. The multi-phase boss reel UI on the client
   // applies to ALL ancient_deep fish regardless — that's a client-only
   // catch-mechanic concern, not a server routing one.
   if (fish.habitat === 'ancient_deep' && (fish.sell_value ?? 0) === 0) {
-    const existing = ((profile.trophy_catches as number[] | null) ?? [])
+    const existing = ((profile.ancient_catches as number[] | null) ?? [])
     const isNewTrophy = !existing.includes(fishId)
     const xpGained = Math.round(catchXP(fish.catch_difficulty, fish.habitat, result === 'perfect') * 3 * renownXpMult)
     const newXP = (profile.fishing_xp ?? 0) + xpGained
@@ -458,7 +458,7 @@ export async function reelIn(
       updates.highest_streak_set_at = new Date().toISOString()
       updates.best_streak_zone = 'ancient_deep'
     }
-    if (isNewTrophy) updates.trophy_catches = [...existing, fishId]
+    if (isNewTrophy) updates.ancient_catches = [...existing, fishId]
     const newTrophies = isNewTrophy ? [...existing, fishId] : existing
     if (newTrophies.length >= 6) await unlockBadge('ancient_ones')
     if (aStreak >= 10) await unlockBadge('unbroken')
@@ -501,7 +501,7 @@ export async function reelIn(
     }
     // Ancients have one canonical size each (length_min_in === length_max_in
     // per the migration). No PB chase since each ancient is a one-time catch
-    // stored in trophy_catches. Display the size for flavor; skip tier chrome
+    // stored in ancient_catches. Display the size for flavor; skip tier chrome
     // + range bar (no comparison to make).
     const ancientSize = Number(fish.length_min_in ?? 0)
     return {
@@ -739,7 +739,12 @@ export async function reelIn(
     }
 
     // Trophy Catch badge — landing a top-size-tier fish (or a forced-shiny max).
-    if (sizeTier === 'trophy') { try { await unlockBadge('trophy_catch') } catch { /* best-effort */ } }
+    // Also tick the lifetime Trophy-SIZE counter (feeds the Trophy Hunter badge;
+    // distinct from ancient_catches, which is the 6 Ancient Deep giants).
+    if (sizeTier === 'trophy') {
+      try { await unlockBadge('trophy_catch') } catch { /* best-effort */ }
+      void admin.rpc('bump_profile_stat', { uid: user.id, col: 'trophy_size_catches', n: 1 }).then(() => {}, () => {})
+    }
 
     const { data: pbRow } = await admin
       .from('fish_personal_bests')

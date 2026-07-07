@@ -179,7 +179,7 @@ export const BADGES: Badge[] = [
   { id: 'fashionista',    name: 'Fashionista',        description: 'Have a skin equipped on 5 crew at once',          imageUrl: '/badges/fashionista.png',    difficulty: 'veteran'  },
   { id: 'full_wardrobe',  name: 'Full Wardrobe',      description: 'Own all four skins for one legendary crew',       imageUrl: '/badges/full_wardrobe.png',  difficulty: 'master'   },
   { id: 'dressed_to_the_nines', name: 'Dressed to the Nines', description: 'Own 10 crew skins',                      imageUrl: '/badges/dressed_to_the_nines.png', difficulty: 'master' },
-  { id: 'trophy_hunter',  name: 'Trophy Hunter',      description: 'Land a Trophy-size catch of 25 species',          imageUrl: '/badges/trophy_hunter.png',  difficulty: 'master'   },
+  { id: 'trophy_hunter',  name: 'Trophy Hunter',      description: 'Land 25 Trophy-size catches',                     imageUrl: '/badges/trophy_hunter.png',  difficulty: 'master'   },
   // Sheet 18 — challenge feats.
   { id: 'overkill',       name: 'Overkill',           description: 'Land a single raid hit for 500 or more',          imageUrl: '/badges/overkill.png',       difficulty: 'veteran'  },
   { id: 'all_hands_legends', name: 'All Hands, All Legends', description: 'Raid in the Man-o-War with 5 Level 100 legendary crew', imageUrl: '/badges/all_hands_legends.png', difficulty: 'master' },
@@ -314,7 +314,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   fashionista:      'Have a skin equipped on five different crew at the same time. A whole deck dressed to impress.',
   full_wardrobe:    'Own all four skins for a single legendary crew at once. The complete wardrobe for one legend runs deep into the gems.',
   dressed_to_the_nines: 'Own ten crew skins across your roster. A serious wardrobe, and a serious pile of gems spent looking good.',
-  trophy_hunter:    'Land a Trophy-size catch of twenty-five different species. Roughly one cast in thirty rolls Trophy, so this is a long, patient hunt across the whole sea.',
+  trophy_hunter:    'Land twenty-five Trophy-size catches. Roughly one cast in thirty rolls the top size band, so this is a long, patient hunt across the whole sea.',
   overkill:         'Land a single raid hit of 500 or more. It takes a monster build — stacked classes, forged items, and a perfect crit — to break the ceiling.',
   all_hands_legends: 'Sail into a raid aboard the Man-o-War with all five crew slots filled by legendary crew, every one of them at Level 100. The finest fleet a captain can muster.',
   iron_ruse:        'Beat the entire Admiral Ruse raid without your ship taking a single point of damage. Perfect dodges and perfect reads, start to finish.',

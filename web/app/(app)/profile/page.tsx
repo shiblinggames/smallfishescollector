@@ -43,10 +43,10 @@ export default async function ProfilePage() {
     .map(r => r.fish_species)
     .filter(Boolean) as { id: number; name: string; bite_rarity: number; habitat?: string }[]
 
-  const trophyIds = ((profile?.trophy_catches as number[] | null) ?? [])
-  const trophyIdSet = new Set(trophyIds)
+  const ancientIds = ((profile?.ancient_catches as number[] | null) ?? [])
+  const ancientIdSet = new Set(ancientIds)
   const ancientTrophies = ((allFishSpecies ?? []) as { id: number; name: string }[])
-    .filter(f => trophyIdSet.has(f.id))
+    .filter(f => ancientIdSet.has(f.id))
 
   const agg = (careerAgg ?? {}) as Partial<CareerAggregates>
   const career: CareerStats = {

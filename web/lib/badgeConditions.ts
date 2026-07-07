@@ -62,7 +62,8 @@ export interface BadgeProfileFields {
   tide_run_best_distance?: number | string | null
   gauntlet_deepest?: number | null
   gauntlet_fathoms?: number | null
-  trophy_catches?: number[] | null
+  ancient_catches?: number[] | null   // the ≤6 Ancient Deep giants (Megalodon etc.)
+  trophy_size_catches?: number | null  // lifetime count of Trophy-SIZE catches
   prestige_levels?: Record<string, number> | null
   fishing_casts?: number | null
   fishing_double_catches?: number | null
@@ -132,7 +133,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
   // Crew skins owned / equipped (for the skin badges).
   const ownedSkins = new Set(p.owned_crew_skins ?? [])
   const equippedSkinCount = Object.keys(p.equipped_crew_skins ?? {}).length
-  const trophySpecies = ((p.trophy_catches as number[] | null) ?? []).length
+  const ancientsCaught = ((p.ancient_catches as number[] | null) ?? []).length
 
   return {
     master_angler:  fishLevelFromXP(Number(p.fishing_xp ?? 0)) >= 100,
@@ -149,7 +150,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     prestige_i:     PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 1),
     zone_legend:    PRESTIGE_ZONES.every(z => (prestige[z] ?? 0) >= 1),
     prestige_stars: totalStars >= 20,
-    ancient_ones:   ((p.trophy_catches as number[] | null) ?? []).length >= 6,
+    ancient_ones:   ancientsCaught >= 6,
     crewmaster:     Number(p.crew_hall_tier ?? 0) >= CREW_HALL_MAX_TIER,
     growing_crew:   recruits >= 25,
     full_muster:    recruits >= 100,
@@ -243,7 +244,7 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     fashionista:    equippedSkinCount >= 5,
     full_wardrobe:  LEGENDARY_SKIN_SETS.some(set => set.every(id => ownedSkins.has(id))),
     dressed_to_the_nines: ownedSkins.size >= 10,
-    trophy_hunter:  trophySpecies >= 25,
+    trophy_hunter:  Number(p.trophy_size_catches ?? 0) >= 25,
     overkill:       raidDmg >= 500,
   }
 }
@@ -257,4 +258,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, trophy_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, manowar_augment, ship_classes, forge_recipes_learned, raid_items, owned_crew_skins, equipped_crew_skins'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, manowar_augment, ship_classes, forge_recipes_learned, raid_items, owned_crew_skins, equipped_crew_skins'

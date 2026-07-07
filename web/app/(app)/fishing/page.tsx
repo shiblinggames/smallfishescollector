@@ -215,7 +215,7 @@ export default async function FishingPage() {
           gauntletUpgrades={gauntletUpgrades}
           hasPerfectedSigil={hasPerfectedSigil}
           prestigeLevels={(profile?.prestige_levels as Record<string, number> | null) ?? {}}
-          trophyCatches={(profile?.trophy_catches as number[] | null) ?? []}
+          ancientCatches={(profile?.ancient_catches as number[] | null) ?? []}
           characterColor={characterColor}
           unlockedCharacterColors={unlockedCharacterColors}
           equippedBadges={(profile?.equipped_badges as string[] | null) ?? []}
