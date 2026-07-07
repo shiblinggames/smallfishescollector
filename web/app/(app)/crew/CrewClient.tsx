@@ -14,7 +14,7 @@ import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow } fro
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
-import { RARITY_NAMES, RARITY_COLORS, type CrewRarity } from '@/lib/crewGen'
+import { RARITY_NAMES, RARITY_COLORS, groupForSlug, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
@@ -2464,6 +2464,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             const skin = getCrewSkin(skinUnlock)
             if (!skin) return null
             const c = skin.color
+            // Reveal art glow scales with rarity too — legendary keeps the big
+            // aura; rare/epic get a lighter one so it stays consistent with their
+            // subtle in-game glow.
+            const revealGlow = (groupForSlug(skin.slug) ?? 4) >= 4
+              ? `drop-shadow(0 0 26px ${c}) drop-shadow(0 0 72px ${c}88)`
+              : `drop-shadow(0 0 12px ${c}) drop-shadow(0 0 30px ${c}66)`
             return (
               <motion.div key="skin-unlock" onClick={() => setSkinUnlock(null)}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}
@@ -2502,7 +2508,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   style={{ position: 'relative', width: 'min(62vw, 250px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {skin.chase && <ChaseSkinFx skinId={skin.id} color={c} variant="summon" />}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artSrc(skin.filename)} alt={skin.name} style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 0 26px ${c}) drop-shadow(0 0 72px ${c}88)` }} />
+                  <img src={artSrc(skin.filename)} alt={skin.name} style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', filter: revealGlow }} />
                 </motion.div>
 
                 <motion.p className="font-pirata" initial={{ opacity: 0, scale: 1.2, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.4, ease: [0.2, 1, 0.3, 1] }}
@@ -2543,7 +2549,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     {skin.chase && <ChaseSkinFx skinId={skin.id} color={c} />}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={artSrc(skin.filename)} alt={skin.name} className={skin.chase ? 'chase-skin-glow' : undefined}
-                      style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', padding: 8, ...(skin.chase ? { ['--chase-c']: c } : { filter: `drop-shadow(0 0 6px ${c}) drop-shadow(0 0 16px ${c}aa)` }) } as React.CSSProperties} />
+                      style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', padding: 8, ...(skin.chase ? { ['--chase-c']: c } : { filter: skinArtGlow(c, groupForSlug(skin.slug) ?? 4, true) }) } as React.CSSProperties} />
                   </div>
                   <p className="font-pirata" style={{ fontSize: '1.35rem', color: '#f4ead2', textAlign: 'center', marginTop: 10, lineHeight: 1.05 }}>{skin.name}</p>
                   {skin.blurb && <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 3, lineHeight: 1.4 }}>{skin.blurb}</p>}
