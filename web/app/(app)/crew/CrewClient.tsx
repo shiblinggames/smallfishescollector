@@ -2211,10 +2211,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       {shownSkinId && getCrewSkin(shownSkinId)?.blurb && (
                         <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: 1 }}>{getCrewSkin(shownSkinId)!.blurb}</p>
                       )}
+                      {!selEquipped && (
                       <div style={{ marginTop: 9 }}>
-                        {selEquipped ? (
-                          <p className="font-karla font-700 uppercase tracking-[0.08em] text-center" style={{ padding: '0.5rem', fontSize: '0.6rem', color: '#8fd39a', letterSpacing: '0.08em' }}>✓ Equipped · shows everywhere</p>
-                        ) : selOwned ? (
+                        {selOwned ? (
                           <button type="button" disabled={!!skinBusy}
                             onClick={() => runSkinAction(`equip:${shownSkinId ?? 'base'}`, () => equipCrewSkin(dm.slug, shownSkinId))}
                             className="font-karla font-700 uppercase tracking-[0.08em] w-full"
@@ -2230,6 +2229,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           </button>
                         )}
                       </div>
+                      )}
                     </div>
                   )
                 })()}
