@@ -74,6 +74,9 @@ export const CREW_SKINS: CrewSkin[] = [
   // ── Humpback Whale (Humps) — Epic ──
   { id: 'humpback_whale_admiral',       slug: 'humpback_whale', name: 'Admiral',        filename: 'Humpback_admiral.png',        gemCost: 1000, blurb: 'The fleet answers to his flag.', color: '#5b7fb0' },
   { id: 'humpback_whale_goldenhelmsman', slug: 'humpback_whale', name: 'Golden Helmsman', filename: 'Humpback_goldenhelmsman.png', gemCost: 1000, blurb: 'The richest hand on the wheel.',  color: '#f0c040' },
+  // ── Giant Squid (Skwid) — Epic ──
+  { id: 'giant_squid_abyssal',  slug: 'giant_squid', name: 'Abyssal',  filename: 'Giant_Squid_abyssal.png',  gemCost: 1000, blurb: 'Born where no light reaches.',    color: '#3aa8a0' },
+  { id: 'giant_squid_sorcerer', slug: 'giant_squid', name: 'Sorcerer', filename: 'Giant_Squid_sorcerer.png', gemCost: 1000, blurb: 'Ink and old magic in every arm.', color: '#a78bfa' },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
