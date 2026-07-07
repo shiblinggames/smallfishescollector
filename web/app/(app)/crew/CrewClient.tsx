@@ -835,6 +835,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // A quick flash + light sweep over the portrait when a skin is EQUIPPED, so
   // the swap feels tactile. Keyed so each equip re-triggers it.
   const [equipFlash, setEquipFlash] = useState<{ key: number; color: string } | null>(null)
+  // Skin id pending a purchase confirmation (tapping a locked skin opens it).
+  const [skinBuyConfirm, setSkinBuyConfirm] = useState<string | null>(null)
   // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
   // fires the unlock reveal so earning a new skin feels like a real moment.
   function runSkinAction(tag: string, action: () => Promise<CrewActionResult>) {
@@ -2202,15 +2204,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     ...skinList.map(s => ({ id: s.id, name: s.name, file: s.filename, cost: s.gemCost, color: s.color, chase: s.chase })),
                   ]
                   const selName = shownSkinId ? (getCrewSkin(shownSkinId)?.name ?? 'Skin') : 'Original'
-                  const selOwned = shownSkinId === null || owned.includes(shownSkinId)
-                  const selEquipped = shownSkinId === equippedSkinId
-                  const selCost = shownSkinId ? (getCrewSkin(shownSkinId)?.gemCost ?? 0) : 0
-                  const canAfford = state.gems >= selCost
                   return (
                     <div>
                       <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
                         <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>Skins</p>
-                        <p className="font-karla font-400" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.32)' }}>tap an owned skin to equip</p>
+                        <p className="font-karla font-400" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.32)' }}>tap to equip or unlock</p>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
                         {tiles.map(t => {
@@ -2222,10 +2220,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               onClick={() => {
                                 vibrate(6)
                                 setPreviewSkin(t.id)
-                                // Owned skin → tapping equips it straight away (no
-                                // separate button step). Locked skins just preview,
-                                // surfacing the Unlock action below.
-                                if (isOwned && !isEquipped) runSkinAction(`equip:${t.id ?? 'base'}`, () => equipCrewSkin(dm.slug, t.id))
+                                // Locked skin → open a purchase confirmation. Owned
+                                // skin → tapping equips it straight away. No buttons,
+                                // no shifting UI.
+                                if (!isOwned) { setSkinBuyConfirm(t.id as string); return }
+                                if (!isEquipped) runSkinAction(`equip:${t.id ?? 'base'}`, () => equipCrewSkin(dm.slug, t.id))
                               }}
                               style={{
                                 position: 'relative', padding: 0, borderRadius: 10, overflow: 'visible', cursor: 'pointer',
@@ -2252,30 +2251,14 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         })}
                       </div>
 
-                      {/* Selected-skin name + action */}
-                      <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#eae4da', textAlign: 'center', marginTop: 9 }}>{selName}</p>
-                      {shownSkinId && getCrewSkin(shownSkinId)?.blurb && (
-                        <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: 1 }}>{getCrewSkin(shownSkinId)!.blurb}</p>
-                      )}
-                      {!selEquipped && (
-                      <div style={{ marginTop: 9 }}>
-                        {selOwned ? (
-                          <button type="button" disabled={!!skinBusy}
-                            onClick={() => runSkinAction(`equip:${shownSkinId ?? 'base'}`, () => equipCrewSkin(dm.slug, shownSkinId))}
-                            className="font-karla font-700 uppercase tracking-[0.08em] w-full"
-                            style={{ padding: '0.6rem', borderRadius: 11, fontSize: '0.64rem', background: 'rgba(96,165,250,0.16)', border: '1px solid rgba(96,165,250,0.55)', color: '#cfe2ff', cursor: 'pointer', opacity: skinBusy ? 0.5 : 1 }}>
-                            {skinBusy ? '…' : 'Equip'}
-                          </button>
-                        ) : (
-                          <button type="button" disabled={!!skinBusy || !canAfford}
-                            onClick={() => runSkinAction(`buy:${shownSkinId}`, () => buyCrewSkin(shownSkinId as string))}
-                            className="font-karla font-700 uppercase tracking-[0.08em] w-full"
-                            style={{ padding: '0.6rem', borderRadius: 11, fontSize: '0.64rem', background: canAfford ? 'rgba(240,192,64,0.16)' : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? 'rgba(240,192,64,0.6)' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#f7e6b0' : 'rgba(255,255,255,0.4)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
-                            {skinBusy ? '…' : canAfford ? `Unlock · ${selCost} ◆` : `Need ${selCost} ◆`}
-                          </button>
+                      {/* Selected-skin name + blurb. Fixed min-height so nothing
+                          below the grid ever shifts as you tap between skins. */}
+                      <div style={{ minHeight: 42, marginTop: 9 }}>
+                        <p className="font-karla font-700" style={{ fontSize: '0.72rem', color: '#eae4da', textAlign: 'center' }}>{selName}</p>
+                        {shownSkinId && getCrewSkin(shownSkinId)?.blurb && (
+                          <p className="font-karla font-400" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: 2 }}>{getCrewSkin(shownSkinId)!.blurb}</p>
                         )}
                       </div>
-                      )}
                     </div>
                   )
                 })()}
@@ -2530,6 +2513,58 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 )}
                 <motion.p className="font-karla font-700 uppercase" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
                   style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.32)', marginTop: 22 }}>Tap to continue</motion.p>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>,
+        document.body,
+      )}
+
+      {/* ── Skin purchase confirmation ── tapping a locked skin opens this
+          instead of extending a bottom button. Portaled above the detail modal. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {skinBuyConfirm && (() => {
+            const skin = getCrewSkin(skinBuyConfirm)
+            if (!skin) return null
+            const c = skin.color
+            const canAfford = state.gems >= skin.gemCost
+            return (
+              <motion.div key="skin-buy-bg" onClick={() => { if (!skinBusy) setSkinBuyConfirm(null) }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.4rem', background: 'rgba(3,2,6,0.82)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}>
+                <motion.div onClick={e => e.stopPropagation()}
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
+                  style={{ position: 'relative', width: '100%', maxWidth: 300, borderRadius: 18, padding: '1.1rem 1.05rem 1.15rem', background: 'rgba(10,8,14,0.98)', border: `1px solid ${c}66`, boxShadow: `0 0 40px ${c}22, 0 20px 50px rgba(0,0,0,0.6)` }}>
+                  <button onClick={() => { if (!skinBusy) setSkinBuyConfirm(null) }} aria-label="Close" style={{ position: 'absolute', top: 8, right: 10, zIndex: 3, color: 'rgba(255,255,255,0.5)', fontSize: '1.2rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+
+                  <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.2em', color: c, textAlign: 'center', marginBottom: 8 }}>Unlock Skin</p>
+                  <div style={{ position: 'relative', width: 118, height: 118, margin: '0 auto', borderRadius: 12, overflow: 'hidden', border: `1px solid ${c}55`, background: `radial-gradient(ellipse at 50% 38%, ${c}22 0%, #060409 74%)` }}>
+                    {skin.chase && <ChaseSkinFx skinId={skin.id} color={c} />}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={artSrc(skin.filename)} alt={skin.name} className={skin.chase ? 'chase-skin-glow' : undefined}
+                      style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', padding: 8, ...(skin.chase ? { ['--chase-c']: c } : { filter: `drop-shadow(0 0 6px ${c}) drop-shadow(0 0 16px ${c}aa)` }) } as React.CSSProperties} />
+                  </div>
+                  <p className="font-pirata" style={{ fontSize: '1.35rem', color: '#f4ead2', textAlign: 'center', marginTop: 10, lineHeight: 1.05 }}>{skin.name}</p>
+                  {skin.blurb && <p className="font-karla" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 3, lineHeight: 1.4 }}>{skin.blurb}</p>}
+
+                  <div className="flex items-center justify-center" style={{ gap: 6, margin: '11px 0 12px' }}>
+                    <span className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#c9b6f5' }}>{skin.gemCost.toLocaleString()} ◆</span>
+                    <span className="font-karla" style={{ fontSize: '0.6rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0' }}>· you have {state.gems.toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex" style={{ gap: 8 }}>
+                    <button type="button" disabled={!!skinBusy} onClick={() => { if (!skinBusy) setSkinBuyConfirm(null) }}
+                      className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <button type="button" disabled={!!skinBusy || !canAfford}
+                      onClick={() => { if (skinBusy || !canAfford) return; const id = skin.id; setSkinBuyConfirm(null); runSkinAction(`buy:${id}`, () => buyCrewSkin(id)) }}
+                      className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1.4, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: canAfford ? `${c}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? c + '77' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#fff' : 'rgba(255,255,255,0.4)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
+                      {skinBusy ? '…' : canAfford ? `Unlock · ${skin.gemCost.toLocaleString()} ◆` : `Need ${(skin.gemCost - state.gems).toLocaleString()} ◆`}
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
             )
           })()}
