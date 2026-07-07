@@ -20,61 +20,136 @@ const wrap = (_summon: boolean): React.CSSProperties => ({
   overflow: 'hidden',
 })
 
-// A jagged lightning bolt radiating from near the centre outward toward `ang`
-// (degrees) to length `len`, in the 0-100 viewBox. Perpendicular jitter tapers
-// to zero at both ends so it reads as a forked bolt, not a wobbly line.
-// Deterministic (seeded) so it stays stable across re-renders.
-function makeBolt(ang: number, len: number, seed: number): string {
-  const segs = 6
-  const rad = (ang * Math.PI) / 180
-  const dx = Math.cos(rad), dy = Math.sin(rad)
-  const px = -dy, py = dx          // perpendicular
-  const cx = 50, cy = 50, start = 9
-  let s = seed
+// A forked lightning bolt radiating from near the centre toward `ang` (degrees)
+// to length `len`, in the 0-100 viewBox. Sharp, many-segment jitter (barely
+// tapered) so it looks like a real jagged strike, plus 1-2 branch forks. Returns
+// all polyline point-strings (main first). Deterministic (seeded).
+function makeBolt(ang: number, len: number, seed: number): string[] {
+  let s = seed >>> 0
   const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff }
-  const pts: string[] = []
+  const rad = (ang * Math.PI) / 180
+  const dx = Math.cos(rad), dy = Math.sin(rad), px = -dy, py = dx
+  const cx = 50, cy = 50, start = 6, segs = 9
+  const cl: { x: number; y: number }[] = []
   for (let i = 0; i <= segs; i++) {
     const t = i / segs
     const r = start + t * (len - start)
-    const taper = Math.sin(t * Math.PI)        // 0 at ends, 1 mid
-    const j = (rnd() - 0.5) * 13 * taper
-    pts.push(`${(cx + dx * r + px * j).toFixed(1)},${(cy + dy * r + py * j).toFixed(1)}`)
+    const taper = Math.pow(Math.sin(t * Math.PI), 0.5)   // stays jagged along most of its length
+    const j = (rnd() * 2 - 1) * 17 * taper
+    cl.push({ x: cx + dx * r + px * j, y: cy + dy * r + py * j })
   }
-  return pts.join(' ')
+  const toStr = (arr: { x: number; y: number }[]) => arr.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+  const parts = [toStr(cl)]
+  const branches = 1 + (rnd() > 0.5 ? 1 : 0)
+  for (let b = 0; b < branches; b++) {
+    const ki = 3 + Math.floor(rnd() * 4)
+    const bp = cl[Math.min(ki, segs)]
+    const fa = rad + (rnd() * 2 - 1) * 1.0
+    const fdx = Math.cos(fa), fdy = Math.sin(fa), fpx = -fdy, fpy = fdx
+    const flen = len * (0.25 + 0.22 * rnd()), fseg = 4
+    const fl: { x: number; y: number }[] = []
+    for (let i = 0; i <= fseg; i++) {
+      const t = i / fseg
+      const taper = Math.pow(Math.sin(t * Math.PI), 0.5)
+      const j = (rnd() * 2 - 1) * 9 * taper
+      fl.push({ x: bp.x + fdx * (t * flen) + fpx * j, y: bp.y + fdy * (t * flen) + fpy * j })
+    }
+    parts.push(toStr(fl))
+  }
+  return parts
 }
 
-// Tempest (Mako) — thunder god. Forked bolts crackle outward AROUND the
-// character in every direction, flickering asynchronously like a live arc.
+// Tempest (Mako) — thunder god. Real forked lightning STRIKES crack around the
+// crew from random directions: a bolt flashes on one side, holds dark, another
+// snaps out elsewhere. Slow, staggered cycles — not a fast constant strobe.
 const TEMPEST_BOLTS: [number, number][] = [
-  [12, 45], [48, 40], [82, 46], [118, 39], [152, 45], [188, 41],
-  [222, 46], [256, 39], [292, 45], [328, 41], [66, 33], [300, 33],
+  [18, 46], [60, 40], [100, 44], [145, 41], [190, 45], [232, 40], [270, 44], [312, 41], [340, 46],
 ]
 function TempestFx({ color, summon }: { color: string; summon: boolean }) {
-  const base = summon ? 0.9 : 2.1
-  const sw = summon ? 1.3 : 0.95
+  const sw = summon ? 1.2 : 0.85
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}>
-        {TEMPEST_BOLTS.map(([ang, len], i) => (
-          <polyline key={i} points={makeBolt(ang, len, i * 97 + 13)} fill="none" stroke="#ffffff" strokeWidth={sw} strokeLinejoin="round" strokeLinecap="round"
-            style={{ opacity: 0, filter: `drop-shadow(0 0 1.5px ${color}) drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color})`, animation: `chase-bolt-flicker ${(base + (i % 4) * 0.35).toFixed(2)}s ${(i * 0.16).toFixed(2)}s infinite` }} />
-        ))}
+        {TEMPEST_BOLTS.map(([ang, len], i) => {
+          const parts = makeBolt(ang, len, i * 131 + 7)
+          const dur = (summon ? 2.8 : 4.2) + (i % 5) * 0.6
+          const delay = ((i * 0.83) % dur).toFixed(2)
+          return (
+            <g key={i} style={{ opacity: 0, filter: `drop-shadow(0 0 1.5px ${color}) drop-shadow(0 0 5px ${color}) drop-shadow(0 0 10px ${color})`, animation: `chase-lightning ${dur.toFixed(2)}s ${delay}s infinite` }}>
+              {parts.map((pts, j) => (
+                <polyline key={j} points={pts} fill="none" stroke="#ffffff" strokeWidth={j === 0 ? sw : sw * 0.6} strokeLinejoin="round" strokeLinecap="round" />
+              ))}
+            </g>
+          )
+        })}
       </svg>
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 48%, ${color}30 0%, transparent 60%)`, mixBlendMode: 'screen', animation: `chase-electric-pulse ${(base * 1.4).toFixed(2)}s ease-in-out infinite` }} />
+      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 48%, ${color}26 0%, transparent 60%)`, mixBlendMode: 'screen', animation: `chase-electric-pulse ${(summon ? 2.8 : 4.2).toFixed(1)}s ease-in-out infinite` }} />
     </div>
   )
 }
 
-// Kraken Hunter (Dole) — the deep. Tentacles sway up from below; bubbles rise.
+// A tapering, curling tentacle as a filled outline in the 0-100 viewBox, rising
+// from (baseX, baseY) pointing `startAngleDeg` and curling by `curlDeg` (curl
+// tightens toward the tip). Returns the fill path + sucker dots down its length.
+function makeTentacle(baseX: number, baseY: number, startAngleDeg: number, curlDeg: number, length: number, maxW: number) {
+  const N = 16
+  let x = baseX, y = baseY, ang = (startAngleDeg * Math.PI) / 180
+  const curlRad = (curlDeg * Math.PI) / 180
+  const step = length / N
+  const center: { x: number; y: number }[] = []
+  for (let i = 0; i <= N; i++) {
+    center.push({ x, y })
+    const t = i / N
+    x += Math.cos(ang) * step
+    y += Math.sin(ang) * step
+    ang += (curlRad * (0.35 + 1.3 * t)) / N     // curl tightens toward the tip
+  }
+  const left: string[] = [], right: string[] = []
+  for (let i = 0; i <= N; i++) {
+    const t = i / N
+    const hw = maxW * Math.pow(1 - t, 0.9) + 0.15   // taper to a point
+    const p0 = center[Math.max(0, i - 1)], p1 = center[Math.min(N, i + 1)]
+    const tx = p1.x - p0.x, ty = p1.y - p0.y
+    const tl = Math.hypot(tx, ty) || 1
+    const nx = -ty / tl, ny = tx / tl
+    const c = center[i]
+    left.push(`${(c.x + nx * hw).toFixed(1)},${(c.y + ny * hw).toFixed(1)}`)
+    right.push(`${(c.x - nx * hw).toFixed(1)},${(c.y - ny * hw).toFixed(1)}`)
+  }
+  const d = `M${left.join(' L')} L${right.reverse().join(' L')} Z`
+  const suckers: { x: number; y: number; r: number }[] = []
+  for (let i = 3; i < N - 1; i += 2) {
+    const c = center[i]
+    suckers.push({ x: +c.x.toFixed(1), y: +c.y.toFixed(1), r: +Math.max(0.5, maxW * Math.pow(1 - i / N, 0.9) * 0.4).toFixed(1) })
+  }
+  return { d, suckers }
+}
+
+// Kraken Hunter (Dole) — the deep. Tapering, sucker-lined tentacles curl up and
+// wrap around the character; bubbles rise past it.
+const KRAKEN_TENTS = [
+  { bx: 13, ang: -78, curl: 95, len: 74, w: 6.5 },
+  { bx: 87, ang: -102, curl: -95, len: 74, w: 6.5 },
+  { bx: 30, ang: -86, curl: 62, len: 62, w: 5 },
+  { bx: 70, ang: -94, curl: -62, len: 62, w: 5 },
+  { bx: 50, ang: -90, curl: 34, len: 54, w: 4.3 },
+]
 function KrakenFx({ color, summon }: { color: string; summon: boolean }) {
-  const count = summon ? 12 : 7
+  const count = summon ? 12 : 8
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}>
-        {[{ d: 'M10,104 C 16,74 40,74 30,44', delay: 0 }, { d: 'M90,104 C 84,74 60,74 70,44', delay: 0.7 }].map((t, i) => (
-          <path key={i} d={t.d} fill="none" stroke={color} strokeWidth={summon ? 3.5 : 2.4} strokeLinecap="round"
-            style={{ opacity: summon ? 0.85 : 0.42, filter: `drop-shadow(0 0 3px ${color})`, transformOrigin: '50% 100%', animation: `chase-tentacle-sway ${summon ? 2.3 : 4.2}s ${t.delay}s ease-in-out infinite` }} />
-        ))}
+        {KRAKEN_TENTS.map((t, i) => {
+          const { d, suckers } = makeTentacle(t.bx, 104, t.ang, t.curl, t.len, t.w * (summon ? 1.12 : 1))
+          return (
+            <g key={i} style={{ transformOrigin: '50% 100%', transformBox: 'fill-box', animation: `chase-tentacle-sway ${((summon ? 2.2 : 3.8) + (i % 3) * 0.5).toFixed(1)}s ${(i * 0.3).toFixed(1)}s ease-in-out infinite`, opacity: summon ? 0.9 : 0.5 }}>
+              <path d={d} fill={color} fillOpacity={0.6} style={{ filter: `drop-shadow(0 0 4px ${color}bb)` }} />
+              {suckers.map((s, j) => (
+                <circle key={j} cx={s.x} cy={s.y} r={s.r} fill="#eafffb" fillOpacity={0.55} />
+              ))}
+            </g>
+          )
+        })}
       </svg>
       {Array.from({ length: count }).map((_, i) => {
         const left = 8 + ((i * 83) / count) % 84
