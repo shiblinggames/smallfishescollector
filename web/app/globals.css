@@ -1118,6 +1118,20 @@ html, body {
   .crew-levelup-halo { animation: none; box-shadow: 0 0 10px rgba(255,217,106,0.35); }
 }
 
+/* ── Chase-skin aura: the top-tier legendary skins get a living, breathing
+   glow so they stand apart from the regular skins. Colour is passed in per
+   skin via the --chase-c custom property, so one keyframe serves every chase
+   skin (Kraken Hunter, Hunter's Bane, Prismatic, Tempest, …). Applied to the
+   ART element itself, wherever a chase skin is shown. */
+@keyframes chase-skin-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--chase-c)) drop-shadow(0 0 11px var(--chase-c)); }
+  50%      { filter: drop-shadow(0 0 8px var(--chase-c)) drop-shadow(0 0 24px var(--chase-c)) brightness(1.07); }
+}
+.chase-skin-glow { animation: chase-skin-glow 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .chase-skin-glow { animation: none; filter: drop-shadow(0 0 6px var(--chase-c)) drop-shadow(0 0 15px var(--chase-c)); }
+}
+
 /* ── Voyage card: gentle bob when a voyage is in progress ──────────────── */
 /* Boat rocks on its center axis to signal "underway" without yanking the
    eye. Slow + low amplitude — playful, not distracting. */

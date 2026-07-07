@@ -378,7 +378,9 @@ function CrewPanel({
 }) {
   // Frame stays the rarity color; an equipped skin makes the ART glow instead.
   const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
-  const skinGlow = getCrewSkinByFilename(filename)?.color
+  const skinDef = getCrewSkinByFilename(filename)
+  const skinGlow = skinDef?.color
+  const skinChase = !!skinDef?.chase
   const skinGlowFilter = skinGlow ? `drop-shadow(0 0 5px ${skinGlow}) drop-shadow(0 0 12px ${skinGlow}bb)` : undefined
   const eff = applyCrewEffects(base, effects, xp)
 
@@ -455,11 +457,13 @@ function CrewPanel({
           background: `radial-gradient(ellipse at 50% 30%, ${color}26 0%, #070504 74%)`,
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async" style={{
+          <img src={artSrc(filename)} alt={name} loading="lazy" decoding="async"
+            className={skinChase ? 'chase-skin-glow' : undefined}
+            style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'contain', objectPosition: 'center 20%', padding: 2,
-            filter: skinGlowFilter,
-          }} />
+            ...(skinChase ? { ['--chase-c']: skinGlow } : { filter: skinGlowFilter }),
+          } as React.CSSProperties} />
           {/* inner frame line */}
           <div style={{ position: 'absolute', inset: 3, borderRadius: '44px 44px 4px 4px', border: '1px solid rgba(255,225,170,0.18)', pointerEvents: 'none' }} />
         {/* Class nameplate — replaces the old trait teaser. Class is now the
@@ -1827,6 +1831,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           // an inner overlay that follows the arch shape (a drop-shadow on the
           // rectangular art poked past the arch curve — this stays inside it).
           const portraitSkin = shownSkinId ? getCrewSkin(shownSkinId)?.color : null
+          const portraitChase = shownSkinId ? !!getCrewSkin(shownSkinId)?.chase : false
           const dBase = { power: it.power, dodge: it.dodge, fortune: it.fortune }
           // Board candidates haven't been recruited yet (no xp field) —
           // preview the hall XP seed stamped on their board row at roll
@@ -1864,7 +1869,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     space; other tabs keep the top-anchored framing. */}
                 <div style={{ position: 'relative', width: 150, height: activeTab === 'skins' ? 150 : 158, margin: '0 auto', borderRadius: '70px 70px 6px 6px', overflow: 'hidden', clipPath: 'inset(0 round 70px 70px 6px 6px)', border: `2px solid ${dColor}`, boxShadow: `inset 0 -14px 24px rgba(0,0,0,0.65), 0 0 14px ${dColor}33`, background: `radial-gradient(ellipse at 50% ${activeTab === 'skins' ? 40 : 30}%, ${(portraitSkin ?? dColor)}26 0%, #070504 74%)` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={artSrc(portraitFilename)} alt={it.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined, transition: 'filter 0.25s' }} />
+                  <img src={artSrc(portraitFilename)} alt={it.name}
+                    className={portraitChase ? 'chase-skin-glow' : undefined}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined }) } as React.CSSProperties} />
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
@@ -2194,7 +2201,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                                   skin color (like the summon). objectFit contain leaves
                                   a letterbox so the glow shows even though the tile clips. */}
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={artSrc(t.file)} alt={t.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', padding: 7, filter: t.id === null ? undefined : `drop-shadow(0 0 5px ${t.color}) drop-shadow(0 0 13px ${t.color}${isSel ? 'ee' : 'aa'})` }} />
+                              <img src={artSrc(t.file)} alt={t.name}
+                                className={t.chase ? 'chase-skin-glow' : undefined}
+                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', padding: 7, ...(t.chase ? { ['--chase-c']: t.color } : { filter: t.id === null ? undefined : `drop-shadow(0 0 5px ${t.color}) drop-shadow(0 0 13px ${t.color}${isSel ? 'ee' : 'aa'})` }) } as React.CSSProperties} />
                               {t.chase && !isEquipped && (
                                 <span className="font-karla font-800" style={{ position: 'absolute', top: 3, left: 3, background: t.color, color: '#0a0806', fontSize: '0.42rem', letterSpacing: '0.06em', borderRadius: 4, padding: '1px 3px', lineHeight: 1 }}>CHASE</span>
                               )}

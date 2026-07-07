@@ -39,7 +39,9 @@ export type ShowcaseCrew = {
  *  slim stat line is the only chrome. */
 export function CrewPortrait({ crew, w = 148, dimmed }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
-  const skinColor = getCrewSkinByFilename(crew.filename)?.color
+  const skin = getCrewSkinByFilename(crew.filename)
+  const skinColor = skin?.color
+  const skinChase = !!skin?.chase
   const glow = skinColor ?? color
   const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects, crew.xp ?? 0)
   const level = crewLevelFromXP(crew.xp ?? 0)
@@ -53,7 +55,8 @@ export function CrewPortrait({ crew, w = 148, dimmed }: { crew: ShowcaseCrew; w?
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={artSrc(crew.filename)} alt={crew.name} loading="lazy" decoding="async"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 34%', padding: 6, filter: skinColor ? `drop-shadow(0 0 5px ${skinColor}) drop-shadow(0 0 13px ${skinColor}bb)` : undefined }} />
+          className={skinChase ? 'chase-skin-glow' : undefined}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 34%', padding: 6, ...(skinChase ? { ['--chase-c']: skinColor } : { filter: skinColor ? `drop-shadow(0 0 5px ${skinColor}) drop-shadow(0 0 13px ${skinColor}bb)` : undefined }) } as React.CSSProperties} />
         {/* Lv badge — the headline brag on a visit-by-anyone profile. */}
         <span className="font-cinzel font-700" style={{
           position: 'absolute', top: 6, right: 6,
