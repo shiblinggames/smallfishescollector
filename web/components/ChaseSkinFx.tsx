@@ -75,29 +75,53 @@ function KrakenFx({ color, summon }: { color: string; summon: boolean }) {
   )
 }
 
-// Prismatic (Catfish) — spectrum gem-sparkles twinkle across the art, each in
-// a different hue so the whole thing reads as refracted light.
-const PRISM_HUES = ['#ff4d6d', '#ff9f43', '#ffe14d', '#4dff9e', '#4dc9ff', '#b17dff', '#ff6ad5']
-const PRISM_PTS = [
-  { l: 26, t: 30 }, { l: 68, t: 26 }, { l: 45, t: 50 }, { l: 80, t: 58 }, { l: 16, t: 60 },
-  { l: 57, t: 74 }, { l: 34, t: 84 }, { l: 84, t: 40 }, { l: 12, t: 42 }, { l: 62, t: 90 },
+// Galaxy (Catfish) — galactic / ethereal. A drifting nebula haze in cosmic
+// hues, a field of twinkling stars, and rare shooting stars streaking across —
+// so the crew looks like it's swimming through deep space.
+const GALAXY_STARS: [number, number, number][] = [
+  // left%, top%, size multiplier
+  [22, 24, 1], [70, 20, 1.3], [44, 40, 0.8], [80, 52, 1], [16, 56, 1.1],
+  [58, 66, 0.9], [34, 80, 1.2], [86, 36, 0.8], [12, 40, 1], [64, 88, 1],
+  [50, 30, 0.7], [30, 62, 0.9],
 ]
-function PrismaticFx({ summon }: { summon: boolean }) {
-  const dur = summon ? 1.1 : 2.4
-  const sz = summon ? 12 : 7
+const GALAXY_NEBULA = [
+  { l: 38, t: 30, s: 72, hue: '#8b7bf0', d: 0 },
+  { l: 66, t: 52, s: 60, hue: '#4dc9ff', d: 2.2 },
+  { l: 46, t: 72, s: 64, hue: '#b17dff', d: 4 },
+]
+function GalaxyFx({ color, summon }: { color: string; summon: boolean }) {
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      {PRISM_PTS.map((p, i) => {
-        const h = PRISM_HUES[i % PRISM_HUES.length]
+      {/* Nebula haze drifting behind the crew. */}
+      {GALAXY_NEBULA.map((n, i) => (
+        <div key={`neb-${i}`} style={{
+          position: 'absolute', left: `${n.l}%`, top: `${n.t}%`, width: n.s, height: n.s, marginLeft: -n.s / 2, marginTop: -n.s / 2,
+          borderRadius: '50%', background: `radial-gradient(circle, ${n.hue}66 0%, transparent 70%)`, filter: 'blur(8px)',
+          mixBlendMode: summon ? undefined : 'screen', opacity: 0,
+          animation: `chase-caustic ${summon ? 4.5 : 8}s ${n.d}s ease-in-out infinite`,
+        }} />
+      ))}
+      {/* Twinkling starfield. */}
+      {GALAXY_STARS.map(([l, t, sm], i) => {
+        const sz = (summon ? 5 : 3.2) * sm
         return (
-          <div key={i} style={{
-            position: 'absolute', left: `${p.l}%`, top: `${p.t}%`, width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2,
+          <div key={`star-${i}`} style={{
+            position: 'absolute', left: `${l}%`, top: `${t}%`, width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2,
             background: '#ffffff', borderRadius: 1, opacity: 0,
-            boxShadow: `0 0 4px #fff, 0 0 9px ${h}, 0 0 15px ${h}`,
-            animation: `chase-prism-twinkle ${dur}s ${(i * 0.26).toFixed(2)}s ease-in-out infinite`,
+            boxShadow: `0 0 3px #fff, 0 0 7px ${color}, 0 0 12px ${color}`,
+            animation: `chase-star-twinkle ${((summon ? 1.6 : 2.8) + (i % 4) * 0.5).toFixed(2)}s ${(i * 0.24).toFixed(2)}s ease-in-out infinite`,
           }} />
         )
       })}
+      {/* Rare shooting stars streaking across. */}
+      {[{ top: 22, dur: summon ? 3 : 7, delay: summon ? 0.5 : 2 }, { top: 58, dur: summon ? 3.6 : 8.5, delay: summon ? 1.7 : 5 }].map((s, i) => (
+        <div key={`shoot-${i}`} style={{
+          position: 'absolute', left: 0, top: `${s.top}%`, width: '40%', height: 2, borderRadius: 2, opacity: 0,
+          background: `linear-gradient(90deg, transparent, ${color}cc, #ffffff)`,
+          boxShadow: `0 0 6px ${color}`,
+          animation: `chase-shooting-star ${s.dur}s ${s.delay}s ease-out infinite`,
+        }} />
+      ))}
     </div>
   )
 }
@@ -140,7 +164,7 @@ export function ChaseSkinFx({ skinId, color, variant = 'ambient' }: { skinId: st
   switch (skinId) {
     case 'mako_tempest':     return <TempestFx color={color} summon={summon} />
     case 'dole_krakenhunter': return <KrakenFx color={color} summon={summon} />
-    case 'catfish_prismatic': return <PrismaticFx summon={summon} />
+    case 'catfish_galaxy':    return <GalaxyFx color={color} summon={summon} />
     case 'doby_huntersbane':  return <HuntersBaneFx color={color} summon={summon} />
     default: return null
   }
