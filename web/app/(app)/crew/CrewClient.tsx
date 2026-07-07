@@ -832,6 +832,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [skinBusy, setSkinBusy] = useState<string | null>(null)
   // A freshly-UNLOCKED skin id — drives the celebratory reveal overlay.
   const [skinUnlock, setSkinUnlock] = useState<string | null>(null)
+  // A quick flash + light sweep over the portrait when a skin is EQUIPPED, so
+  // the swap feels tactile. Keyed so each equip re-triggers it.
+  const [equipFlash, setEquipFlash] = useState<{ key: number; color: string } | null>(null)
   // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
   // fires the unlock reveal so earning a new skin feels like a real moment.
   function runSkinAction(tag: string, action: () => Promise<CrewActionResult>) {
@@ -850,6 +853,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           try { playChestSfx(true) } catch { /* audio best-effort */ }
           setSkinUnlock(boughtId)
           setTimeout(() => setSkinUnlock(id => (id === boughtId ? null : id)), 3400)
+        } else if (tag.startsWith('equip:')) {
+          const id = tag.slice(6)
+          const color = (id !== 'base' ? getCrewSkin(id)?.color : undefined) ?? '#f0c040'
+          const key = Date.now()
+          vibrate(14)
+          setEquipFlash({ key, color })
+          setTimeout(() => setEquipFlash(f => (f && f.key === key ? null : f)), 640)
         }
       }
       setSkinBusy(null)
@@ -1886,6 +1896,18 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     className={portraitChase ? 'chase-skin-glow' : undefined}
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined }) } as React.CSSProperties} />
                   {portraitChase && portraitSkin && <ChaseSkinFx skinId={shownSkinId} color={portraitSkin} />}
+                  {/* Equip flash + light sweep — a tactile beat the moment a skin
+                      is equipped. Clipped to the arch by the portrait's overflow. */}
+                  {equipFlash && (
+                    <div key={equipFlash.key} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                      <motion.div
+                        initial={{ opacity: 0.8 }} animate={{ opacity: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}
+                        style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 42%, #ffffffcc 0%, ${equipFlash.color}66 38%, transparent 72%)` }} />
+                      <motion.div
+                        initial={{ x: '-130%' }} animate={{ x: '130%' }} transition={{ duration: 0.55, ease: 'easeInOut' }}
+                        style={{ position: 'absolute', top: 0, bottom: 0, width: '55%', background: 'linear-gradient(105deg, transparent, rgba(255,255,255,0.5), transparent)' }} />
+                    </div>
+                  )}
                 </div>
                 {/* Crew name + one-shot rename. Roster crew with no
                     nickname yet get a small pencil next to the name; tap
@@ -2469,6 +2491,26 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 {/* White pop flash on arrival */}
                 <motion.div aria-hidden initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: [0, 0.8, 0], scale: [0.4, 1.7, 2.1] }} transition={{ duration: 0.55, delay: 0.05, ease: 'easeOut' }}
                   style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: `radial-gradient(circle, #ffffffcc 0%, ${c}55 40%, transparent 70%)`, pointerEvents: 'none' }} />
+                {/* Gems flying out — acknowledges the spend. They scatter from the
+                    centre and fall away as the art lands. */}
+                {Array.from({ length: 11 }).map((_, i) => {
+                  const ang = (i / 11) * Math.PI * 2
+                  const dist = 110 + (i % 3) * 46
+                  const dx = Math.cos(ang) * dist
+                  const dy = Math.sin(ang) * dist
+                  return (
+                    <motion.span key={`gem-${i}`} aria-hidden className="font-cinzel"
+                      initial={{ opacity: 0, x: 0, y: 0, scale: 0.4 }}
+                      animate={{ opacity: [0, 1, 1, 0], x: dx, y: dy + 52, scale: [0.4, 1, 0.95, 0.7] }}
+                      transition={{ duration: 1.25, delay: 0.08 + (i % 5) * 0.03, ease: 'easeOut' }}
+                      style={{ position: 'absolute', fontSize: '1.05rem', color: '#a78bfa', textShadow: '0 0 10px #a78bfa', pointerEvents: 'none' }}>◆</motion.span>
+                  )
+                })}
+                {skin.gemCost > 0 && (
+                  <motion.p aria-hidden className="font-cinzel font-700"
+                    initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 1, 1, 0], y: -34 }} transition={{ duration: 1.5, delay: 0.1, ease: 'easeOut' }}
+                    style={{ position: 'absolute', top: '30%', fontSize: '0.9rem', color: '#c9b6f5', textShadow: '0 0 12px #a78bfa88', pointerEvents: 'none' }}>−{skin.gemCost.toLocaleString()} ◆</motion.p>
+                )}
 
                 <motion.p className="font-cinzel font-700 uppercase" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.4 }}
                   style={{ position: 'relative', fontSize: '0.7rem', letterSpacing: '0.3em', color: c, textShadow: `0 0 18px ${c}88`, marginBottom: 16 }}>New Skin Unlocked</motion.p>
