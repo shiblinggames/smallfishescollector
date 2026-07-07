@@ -87,6 +87,21 @@ export function crewSkinsForSlug(slug: string): CrewSkin[] {
   return BY_SLUG.get(slug.toLowerCase()) ?? []
 }
 
+/** Drop-shadow glow for a NON-chase equipped skin, scaled by the crew's rarity:
+ *  Rare (2) and Epic (3) skins get a MUCH softer, tighter glow so they read as a
+ *  tasteful tint, not a legendary aura; Legendary (4) non-chase skins keep the
+ *  fuller glow. Chase skins don't use this (they animate via chase-skin-glow).
+ *  `big` bumps the radii for the larger portrait/poster surfaces. */
+export function skinArtGlow(color: string, rarity: number, big = false): string {
+  if (rarity >= 4) {
+    return big
+      ? `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 16px ${color})`
+      : `drop-shadow(0 0 5px ${color}) drop-shadow(0 0 13px ${color}bb)`
+  }
+  // Rare / Epic — a single soft, low-alpha shadow.
+  return `drop-shadow(0 0 ${big ? 4 : 3}px ${color}55)`
+}
+
 export type EquippedCrewSkins = Record<string, string>
 
 /** The effective card-art filename for a crew: the equipped skin's art if one is

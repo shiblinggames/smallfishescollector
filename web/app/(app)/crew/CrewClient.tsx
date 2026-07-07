@@ -10,7 +10,7 @@ import {
   upgradeCrewHall, buyCrewSkin, equipCrewSkin,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
-import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename } from '@/lib/crewSkins'
+import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
@@ -383,7 +383,7 @@ function CrewPanel({
   const skinDef = getCrewSkinByFilename(filename)
   const skinGlow = skinDef?.color
   const skinChase = !!skinDef?.chase
-  const skinGlowFilter = skinGlow ? `drop-shadow(0 0 5px ${skinGlow}) drop-shadow(0 0 12px ${skinGlow}bb)` : undefined
+  const skinGlowFilter = skinGlow ? skinArtGlow(skinGlow, rarity, false) : undefined
   const eff = applyCrewEffects(base, effects, xp)
 
   const corner = (pos: React.CSSProperties): React.CSSProperties => ({
@@ -1896,7 +1896,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={artSrc(portraitFilename)} alt={it.name}
                     className={portraitChase ? 'chase-skin-glow' : undefined}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? `drop-shadow(0 0 6px ${portraitSkin}) drop-shadow(0 0 16px ${portraitSkin})` : undefined }) } as React.CSSProperties} />
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: activeTab === 'skins' ? 'center' : 'center 20%', padding: activeTab === 'skins' ? 8 : 6, transition: 'filter 0.25s', ...(portraitChase ? { ['--chase-c']: portraitSkin } : { filter: portraitSkin ? skinArtGlow(portraitSkin, it.rarity, true) : undefined }) } as React.CSSProperties} />
                   {portraitChase && portraitSkin && <ChaseSkinFx skinId={shownSkinId} color={portraitSkin} />}
                   {/* Equip flash + light sweep — a tactile beat the moment a skin
                       is equipped. Clipped to the arch by the portrait's overflow. */}
@@ -2238,7 +2238,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={artSrc(t.file)} alt={t.name}
                                 className={t.chase ? 'chase-skin-glow' : undefined}
-                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', padding: 7, ...(t.chase ? { ['--chase-c']: t.color } : { filter: t.id === null ? undefined : `drop-shadow(0 0 5px ${t.color}) drop-shadow(0 0 13px ${t.color}${isSel ? 'ee' : 'aa'})` }) } as React.CSSProperties} />
+                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', padding: 7, ...(t.chase ? { ['--chase-c']: t.color } : { filter: t.id === null ? undefined : skinArtGlow(t.color, it.rarity, false) }) } as React.CSSProperties} />
                               {t.chase && <ChaseSkinFx skinId={t.id} color={t.color} />}
                               {isEquipped && (
                                 <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: t.color, color: '#0a0806', fontSize: '0.6rem', fontWeight: 800, display: 'grid', placeItems: 'center', lineHeight: 1 }}>✓</span>

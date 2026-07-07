@@ -6,7 +6,7 @@
 import { applyCrewEffects } from '@/lib/crewEffects'
 import { RARITY_COLORS, RARITY_NAMES, type CrewRarity } from '@/lib/crewGen'
 import { crewLevelFromXP } from '@/lib/crewLevel'
-import { getCrewSkinByFilename } from '@/lib/crewSkins'
+import { getCrewSkinByFilename, skinArtGlow } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -57,7 +57,7 @@ export function CrewPortrait({ crew, w = 148, dimmed }: { crew: ShowcaseCrew; w?
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={artSrc(crew.filename)} alt={crew.name} loading="lazy" decoding="async"
           className={skinChase ? 'chase-skin-glow' : undefined}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 34%', padding: 6, ...(skinChase ? { ['--chase-c']: skinColor } : { filter: skinColor ? `drop-shadow(0 0 5px ${skinColor}) drop-shadow(0 0 13px ${skinColor}bb)` : undefined }) } as React.CSSProperties} />
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 34%', padding: 6, ...(skinChase ? { ['--chase-c']: skinColor } : { filter: skinColor ? skinArtGlow(skinColor, crew.rarity, true) : undefined }) } as React.CSSProperties} />
         {skinChase && skinColor && <ChaseSkinFx skinId={skin?.id} color={skinColor} />}
         {/* Lv badge — the headline brag on a visit-by-anyone profile. */}
         <span className="font-cinzel font-700" style={{
