@@ -87,21 +87,34 @@ function PrismaticFx({ summon }: { summon: boolean }) {
   )
 }
 
-// Hunter's Bane (Doby) — assassin. A targeting reticle turns; a blade glint sweeps.
+// Hunter's Bane (Doby) — assassin. A targeting reticle slowly turns and the
+// lock brackets pulse in on the mark. No sweep — it's a scope settling on prey.
 function HuntersBaneFx({ color, summon }: { color: string; summon: boolean }) {
+  const bw = summon ? 2.5 : 1.6                 // bracket arm thickness (px)
+  const arm = summon ? '24%' : '26%'            // bracket arm length
+  const corners: React.CSSProperties[] = [
+    { top: 0, left: 0, borderTop: `${bw}px solid ${color}`, borderLeft: `${bw}px solid ${color}` },
+    { top: 0, right: 0, borderTop: `${bw}px solid ${color}`, borderRight: `${bw}px solid ${color}` },
+    { bottom: 0, left: 0, borderBottom: `${bw}px solid ${color}`, borderLeft: `${bw}px solid ${color}` },
+    { bottom: 0, right: 0, borderBottom: `${bw}px solid ${color}`, borderRight: `${bw}px solid ${color}` },
+  ]
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
+      {/* Slow-turning reticle rings + tick marks. */}
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        <g style={{ transformOrigin: '50% 50%', animation: `chase-reticle-spin ${summon ? 8 : 17}s linear infinite`, opacity: summon ? 0.7 : 0.4 }}>
-          <circle cx="50" cy="50" r="36" fill="none" stroke={color} strokeWidth="0.7" strokeDasharray="3 4" />
-          <circle cx="50" cy="50" r="25" fill="none" stroke={color} strokeWidth="0.5" />
+        <g style={{ transformOrigin: '50% 50%', animation: `chase-reticle-spin ${summon ? 9 : 18}s linear infinite`, opacity: summon ? 0.6 : 0.35 }}>
+          <circle cx="50" cy="50" r="37" fill="none" stroke={color} strokeWidth="0.7" strokeDasharray="3 4" />
+          <circle cx="50" cy="50" r="26" fill="none" stroke={color} strokeWidth="0.5" />
           {[0, 90, 180, 270].map(a => (
-            <line key={a} x1="50" y1="8" x2="50" y2="17" stroke={color} strokeWidth="1" transform={`rotate(${a} 50 50)`} style={{ filter: `drop-shadow(0 0 1px ${color})` }} />
+            <line key={a} x1="50" y1="7" x2="50" y2="16" stroke={color} strokeWidth="1" transform={`rotate(${a} 50 50)`} />
           ))}
         </g>
       </svg>
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-30%', left: 0, width: '38%', height: '160%', background: `linear-gradient(90deg, transparent, ${color}, #ffffff, ${color}, transparent)`, filter: 'blur(1px)', animation: `chase-slash-glint ${summon ? 1.9 : 4.6}s ${summon ? 0.2 : 1.2}s ease-in-out infinite` }} />
+      {/* Lock brackets that pulse in on the target. */}
+      <div style={{ position: 'absolute', left: '50%', top: '50%', width: '58%', height: '58%', marginLeft: '-29%', marginTop: '-29%', transformOrigin: '50% 50%', animation: `chase-reticle-lock ${summon ? 1.7 : 3.2}s ease-in-out infinite`, filter: `drop-shadow(0 0 3px ${color})` }}>
+        {corners.map((c, i) => (
+          <div key={i} style={{ position: 'absolute', width: arm, height: arm, ...c }} />
+        ))}
       </div>
     </div>
   )

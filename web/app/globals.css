@@ -1150,12 +1150,11 @@ html, body {
   0%, 100% { opacity: 0; transform: scale(0.2) rotate(45deg); }
   50% { opacity: 1; transform: scale(1) rotate(45deg); }
 }
-/* Hunter's Bane (Doby) — assassin: a reticle turns, a blade glint sweeps. */
+/* Hunter's Bane (Doby) — assassin: a reticle turns and the target lock pulses. */
 @keyframes chase-reticle-spin { to { transform: rotate(360deg); } }
-@keyframes chase-slash-glint {
-  0% { transform: translateX(-40%) rotate(24deg); opacity: 0; }
-  6% { opacity: 1; } 15% { opacity: 1; }
-  24%, 100% { transform: translateX(460%) rotate(24deg); opacity: 0; }
+@keyframes chase-reticle-lock {
+  0%, 100% { opacity: 0.12; transform: scale(1.16); }
+  50% { opacity: 0.85; transform: scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
   .chase-skin-fx * { animation: none !important; }
