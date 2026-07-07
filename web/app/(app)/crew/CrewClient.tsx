@@ -2204,9 +2204,6 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               <img src={artSrc(t.file)} alt={t.name}
                                 className={t.chase ? 'chase-skin-glow' : undefined}
                                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 28%', padding: 7, ...(t.chase ? { ['--chase-c']: t.color } : { filter: t.id === null ? undefined : `drop-shadow(0 0 5px ${t.color}) drop-shadow(0 0 13px ${t.color}${isSel ? 'ee' : 'aa'})` }) } as React.CSSProperties} />
-                              {t.chase && !isEquipped && (
-                                <span className="font-karla font-800" style={{ position: 'absolute', top: 3, left: 3, background: t.color, color: '#0a0806', fontSize: '0.42rem', letterSpacing: '0.06em', borderRadius: 4, padding: '1px 3px', lineHeight: 1 }}>CHASE</span>
-                              )}
                               {isEquipped && (
                                 <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: t.color, color: '#0a0806', fontSize: '0.6rem', fontWeight: 800, display: 'grid', placeItems: 'center', lineHeight: 1 }}>✓</span>
                               )}

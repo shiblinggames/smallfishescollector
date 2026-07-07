@@ -6664,14 +6664,6 @@ function AbilitySummonFx({ label, name, color, image, chase }: { label: string; 
         transition={{ duration: 2.1, times: [0, 0.24, 0.8, 1], ease: 'easeOut' }}
         style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
       >
-        {chase && (
-          <motion.p className="font-cinzel font-700 uppercase" aria-hidden
-            initial={{ opacity: 0, letterSpacing: '0.5em' }}
-            animate={{ opacity: [0, 1, 1, 0], letterSpacing: '0.34em' }}
-            transition={{ duration: 2.1, times: [0, 0.24, 0.8, 1], ease: 'easeOut' }}
-            style={{ fontSize: '0.52rem', color, marginBottom: 4, textShadow: `0 0 12px ${color}, 0 1px 3px rgba(0,0,0,0.8)` }}
-          >✦ Prized Skin ✦</motion.p>
-        )}
         <p className="font-karla font-700 uppercase tracking-[0.32em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{name}</p>
         <motion.p
           className="font-cinzel font-800 uppercase"
