@@ -53,6 +53,11 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'coelacanth_goldenrelic', slug: 'coelacanth', name: 'Golden Relic', filename: 'Laz_goldenrelic.png', gemCost: 2000, blurb: 'Gilded by ages beneath the waves.', color: '#f0c040' },
   { id: 'coelacanth_undying',    slug: 'coelacanth', name: 'Undying',      filename: 'Laz_undying.png',    gemCost: 2500, blurb: 'Dragged back from the Locker, unwilling to stay dead.', color: '#86efac' },
   { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3000, blurb: 'A living fossil, older than the tides themselves.', color: '#c8a45c', chase: true },
+
+  // ── EPIC crews ── 2 skins each, flat 1000 gems, NO chase (no animated FX). ──
+  // ── Hammerhead (Hammer) ──
+  { id: 'hammerhead_shark_bloodtide', slug: 'hammerhead_shark', name: 'Blood Tide', filename: 'Hammerhead_bloodtide.png', gemCost: 1000, blurb: 'The hunt turns the water red.',        color: '#ef4444' },
+  { id: 'hammerhead_shark_kingpin',   slug: 'hammerhead_shark', name: 'Kingpin',    filename: 'Hammerhead_kingpin.png',  gemCost: 1000, blurb: 'Boss of the reef. Everyone pays up.',   color: '#f0c040' },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))

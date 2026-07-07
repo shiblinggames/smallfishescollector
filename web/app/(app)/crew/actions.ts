@@ -675,14 +675,14 @@ export async function buyCrewSkin(skinId: string): Promise<CrewActionResult> {
   const gems = (prof as any).gems ?? 0
   if (gems < skin.gemCost) return { error: 'Not enough gems' }
 
-  // Must own the legendary this skin is for (a live crew of that species).
+  // Must own the crew this skin is for (a live crew of that species).
   const { data: card } = await admin.from('cards').select('id').ilike('slug', skin.slug).single()
-  if (!card) return { error: 'Legendary not found' }
+  if (!card) return { error: 'Crew not found' }
   const { count } = await admin
     .from('user_crew')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id).eq('card_id', (card as any).id).is('died_at', null)
-  if ((count ?? 0) === 0) return { error: 'Recruit this legendary before buying its skins.' }
+  if ((count ?? 0) === 0) return { error: 'Recruit this crew before buying its skins.' }
 
   // Guarded deduction — only lands if gems still cover the cost.
   const { data: updated } = await admin
