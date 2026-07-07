@@ -8,13 +8,6 @@ import { RARITY_COLORS, RARITY_NAMES, type CrewRarity } from '@/lib/crewGen'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkinByFilename } from '@/lib/crewSkins'
 
-// Extra glow radius (px) added under a crew's art when a legendary skin is
-// equipped, so the SKIN ITSELF emits a colored aura (not the tile border).
-const SKIN_GLOW = (filename: string): string | undefined => {
-  const c = getCrewSkinByFilename(filename)?.color
-  return c ? `drop-shadow(0 0 5px ${c}) drop-shadow(0 0 12px ${c}bb)` : undefined
-}
-
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (f: string) => `${SUPA}/storage/v1/object/public/card-arts/${f}`
 
@@ -40,49 +33,53 @@ export type ShowcaseCrew = {
   slug?: string
 }
 
-/** One crew portrait tile (effective stats shown). */
-export function CrewPortrait({ crew, w = 100, dimmed }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean }) {
-  // Frame stays the rarity color; a skin instead makes the ART itself glow.
+/** One crew "poster" — borderless showcase art, meant to look like you're
+ *  showing the crew off, not reading a stat card. Rarity (or equipped-skin)
+ *  colour becomes a soft aura; name + rank sit on a scrim over the art; a
+ *  slim stat line is the only chrome. */
+export function CrewPortrait({ crew, w = 118, dimmed }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
+  const skinColor = getCrewSkinByFilename(crew.filename)?.color
+  const glow = skinColor ?? color
   const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects, crew.xp ?? 0)
   const level = crewLevelFromXP(crew.xp ?? 0)
   return (
-    <div style={{
-      width: w, flexShrink: 0, borderRadius: 10, overflow: 'hidden',
-      background: 'linear-gradient(160deg, #1b1622 0%, #0d0b12 100%)',
-      border: `1.5px solid ${color}`, boxShadow: `0 4px 12px rgba(0,0,0,0.4), 0 0 12px ${color}33`,
-      opacity: dimmed ? 0.4 : 1, transition: 'opacity 0.15s',
-    }}>
-      <div style={{ position: 'relative', width: '100%', height: w, background: `radial-gradient(ellipse at 50% 32%, ${color}26 0%, #070504 74%)` }}>
+    <div style={{ width: w, flexShrink: 0, opacity: dimmed ? 0.4 : 1, transition: 'opacity 0.15s' }}>
+      {/* Borderless art hero — a poster, not a card. Aura in the rarity (or
+          skin) colour; identity caption overlaid on a bottom scrim. */}
+      <div style={{
+        position: 'relative', width: '100%', aspectRatio: '4 / 5', borderRadius: 14, overflow: 'hidden',
+        background: `radial-gradient(ellipse at 50% 34%, ${glow}30 0%, #06050a 76%)`,
+      }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={artSrc(crew.filename)} alt={crew.name} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 4, filter: SKIN_GLOW(crew.filename) }} />
-        {/* Lv chip — always shown, top-right corner of the portrait. Reads
-            as bragging surface on visit-by-anyone profiles ("oh damn this
-            player has a Lv 47 Doby"); also clarifies for Lv 1 that the
-            system is universal, not "only veterans have levels". */}
+        <img src={artSrc(crew.filename)} alt={crew.name} loading="lazy" decoding="async"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center 34%', padding: 6, filter: skinColor ? `drop-shadow(0 0 5px ${skinColor}) drop-shadow(0 0 13px ${skinColor}bb)` : undefined }} />
+        {/* Lv badge — the headline brag on a visit-by-anyone profile. */}
         <span className="font-cinzel font-700" style={{
-          position: 'absolute', top: 4, right: 4,
-          fontSize: '0.52rem', letterSpacing: '0.06em',
-          color: '#f0c040', background: 'rgba(7,5,4,0.85)',
-          border: '1px solid rgba(240,192,64,0.5)',
-          padding: '0.1rem 0.32rem', borderRadius: 3, lineHeight: 1,
+          position: 'absolute', top: 6, right: 6,
+          fontSize: '0.5rem', letterSpacing: '0.06em',
+          color: '#f7e4a8', background: 'rgba(7,5,4,0.7)',
+          border: '1px solid rgba(240,192,64,0.4)',
+          padding: '0.12rem 0.34rem', borderRadius: 4, lineHeight: 1,
         }}>
           Lv {level}
         </span>
-      </div>
-      <div style={{ padding: '0.3rem 0.4rem 0.42rem' }}>
-        <p className="font-pirata" style={{ fontSize: '0.92rem', color: '#ecdcbd', lineHeight: 1, textAlign: 'center' }}>{crew.name}</p>
-        <p className="font-cinzel font-700" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', textTransform: 'uppercase', color, textAlign: 'center', marginTop: 3 }}>
-          {RARITY_NAMES[(crew.rarity as CrewRarity)] ?? 'Common'}
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-          {STAT.map(s => (
-            <div key={s.k} style={{ textAlign: 'center' }}>
-              <p className="font-cinzel font-700" style={{ fontSize: '0.7rem', color: s.c, lineHeight: 1 }}>{eff[s.k]}</p>
-              <p style={{ fontSize: '0.38rem', color: '#5a5858', lineHeight: 1, marginTop: 2 }}>{s.l}</p>
-            </div>
-          ))}
+        {/* Identity caption over a bottom scrim. */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '1.5rem 0.5rem 0.55rem', background: 'linear-gradient(180deg, transparent 0%, rgba(6,5,10,0.86) 62%)' }}>
+          <p className="font-pirata" style={{ fontSize: '1.02rem', color: '#f4ead2', lineHeight: 1.02, textAlign: 'center', textShadow: '0 1px 4px rgba(0,0,0,0.75)' }}>{crew.name}</p>
+          <p className="font-cinzel font-700" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', textTransform: 'uppercase', color, textAlign: 'center', marginTop: 3, textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
+            {RARITY_NAMES[(crew.rarity as CrewRarity)] ?? 'Common'}
+          </p>
         </div>
+      </div>
+      {/* Slim stat line — the three numbers to brag with, no box. */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 7 }}>
+        {STAT.map(s => (
+          <span key={s.k} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 3 }}>
+            <span className="font-cinzel font-700" style={{ fontSize: '0.76rem', color: s.c, lineHeight: 1 }}>{eff[s.k]}</span>
+            <span style={{ fontSize: '0.4rem', color: 'rgba(255,255,255,0.34)', letterSpacing: '0.06em' }}>{s.l}</span>
+          </span>
+        ))}
       </div>
     </div>
   )
