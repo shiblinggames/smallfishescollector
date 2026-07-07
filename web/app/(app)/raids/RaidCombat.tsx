@@ -6681,11 +6681,14 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
       >
         {image ? (
           <div style={{ position: 'relative', display: 'inline-block' }}>
+            {/* Chase FX sits BEHIND the character (img is z-lifted above it), so a
+                bright flash backlights the hero instead of washing over it — a
+                white wash on top read as the art vanishing then reappearing. */}
+            {chase && skinId && <ChaseSkinFx skinId={skinId} color={color} variant="summon" />}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt={name} style={{ height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block', filter: chase
+            <img src={image} alt={name} style={{ position: 'relative', zIndex: 1, height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block', filter: chase
               ? `drop-shadow(0 0 34px ${color}) drop-shadow(0 0 80px ${color}) drop-shadow(0 0 130px ${color}66) drop-shadow(0 12px 32px rgba(0,0,0,0.7))`
               : `drop-shadow(0 0 28px ${color}) drop-shadow(0 0 66px ${color}88) drop-shadow(0 12px 32px rgba(0,0,0,0.65))` }} />
-            {chase && skinId && <ChaseSkinFx skinId={skinId} color={color} variant="summon" />}
           </div>
         ) : (
           <div style={{ fontSize: '3.4rem', filter: `drop-shadow(0 0 22px ${color})` }}>⚓</div>
