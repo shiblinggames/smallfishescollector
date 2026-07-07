@@ -29,8 +29,10 @@ function TempestFx({ color, summon }: { color: string; summon: boolean }) {
   const sz = summon ? 3 : 2
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      {/* Lightning flash lighting the character — bright white core. THE effect. */}
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, #ffffffdd 0%, ${color}aa 26%, ${color}44 52%, transparent 74%)`, mixBlendMode: 'screen', opacity: 0, animation: `chase-storm-flash ${summon ? 2.6 : 4}s ease-out infinite` }} />
+      {/* Lightning flash lighting the character — bright white core. THE effect.
+          No blend mode in the summon: mix-blend-mode breaks the summon's opacity
+          fade-out (the blended layer won't fade with everything else). */}
+      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, #ffffffdd 0%, ${color}aa 26%, ${color}44 52%, transparent 74%)`, mixBlendMode: summon ? undefined : 'screen', opacity: 0, animation: `chase-storm-flash ${summon ? 2.6 : 4}s ease-out infinite` }} />
       {/* Rare, subtle sparks — occasional accents, not the focus. */}
       {SPARK_PTS.map(([l, t], i) => (
         <div key={i} style={{
@@ -56,7 +58,7 @@ function KrakenFx({ color, summon }: { color: string; summon: boolean }) {
       {CAUSTICS.map((c, i) => (
         <div key={`c${i}`} style={{
           position: 'absolute', left: `${c.l}%`, top: `${c.t}%`, width: c.s, height: c.s, marginLeft: -c.s / 2, marginTop: -c.s / 2,
-          borderRadius: '50%', background: `radial-gradient(circle, ${color}66 0%, transparent 70%)`, filter: 'blur(7px)', mixBlendMode: 'screen', opacity: 0,
+          borderRadius: '50%', background: `radial-gradient(circle, ${color}66 0%, transparent 70%)`, filter: 'blur(7px)', mixBlendMode: summon ? undefined : 'screen', opacity: 0,
           animation: `chase-caustic ${summon ? 4 : 7}s ${c.d}s ease-in-out infinite`,
         }} />
       ))}
