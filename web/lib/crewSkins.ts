@@ -68,6 +68,12 @@ export const CREW_SKINS: CrewSkin[] = [
   // ── Goblin Shark (Gob) — Epic ──
   { id: 'goblin_shark_bloodbaron', slug: 'goblin_shark', name: 'Blood Baron', filename: 'Goblin_Shark_bloodbaron.png', gemCost: 1000, blurb: 'Old blood, and plenty of it.',            color: '#dc2626' },
   { id: 'goblin_shark_ghastly',    slug: 'goblin_shark', name: 'Ghastly',     filename: 'Goblin_Shark_ghastly.png',    gemCost: 1000, blurb: 'A pale terror drifting up from the dark.', color: '#a7b8c4' },
+  // ── Blue Whale (Big Blue) — Epic ──
+  { id: 'blue_whale_bulwark',    slug: 'blue_whale', name: 'Bulwark',    filename: 'Blue_Whale_bulwark.png',    gemCost: 1000, blurb: 'The sea breaks on him and loses.',    color: '#6ba8d9' },
+  { id: 'blue_whale_songkeeper', slug: 'blue_whale', name: 'Songkeeper', filename: 'Blue_Whale_songkeeper.png', gemCost: 1000, blurb: 'Keeper of the old songs of the deep.', color: '#a5b4fc' },
+  // ── Humpback Whale (Humps) — Epic ──
+  { id: 'humpback_whale_admiral',       slug: 'humpback_whale', name: 'Admiral',        filename: 'Humpback_admiral.png',        gemCost: 1000, blurb: 'The fleet answers to his flag.', color: '#5b7fb0' },
+  { id: 'humpback_whale_goldenhelmsman', slug: 'humpback_whale', name: 'Golden Helmsman', filename: 'Humpback_goldenhelmsman.png', gemCost: 1000, blurb: 'The richest hand on the wheel.',  color: '#f0c040' },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
