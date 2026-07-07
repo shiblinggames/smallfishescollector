@@ -2165,7 +2165,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   const canAfford = state.gems >= selCost
                   return (
                     <div>
-                      <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Skins</p>
+                      <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
+                        <p className="font-cinzel font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>Skins</p>
+                        <p className="font-karla font-400" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.32)' }}>tap an owned skin to equip</p>
+                      </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
                         {tiles.map(t => {
                           const isSel = shownSkinId === t.id
@@ -2173,7 +2176,14 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           const isOwned = t.id === null || owned.includes(t.id)
                           return (
                             <button key={t.id ?? 'original'} type="button"
-                              onClick={() => { vibrate(6); setPreviewSkin(t.id) }}
+                              onClick={() => {
+                                vibrate(6)
+                                setPreviewSkin(t.id)
+                                // Owned skin → tapping equips it straight away (no
+                                // separate button step). Locked skins just preview,
+                                // surfacing the Unlock action below.
+                                if (isOwned && !isEquipped) runSkinAction(`equip:${t.id ?? 'base'}`, () => equipCrewSkin(dm.slug, t.id))
+                              }}
                               style={{
                                 position: 'relative', padding: 0, borderRadius: 10, overflow: 'visible', cursor: 'pointer',
                                 border: `2px solid ${isSel ? t.color : 'rgba(255,255,255,0.14)'}`,
@@ -2206,7 +2216,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       )}
                       <div style={{ marginTop: 9 }}>
                         {selEquipped ? (
-                          <button type="button" disabled className="font-karla font-700 uppercase tracking-[0.08em] w-full" style={{ padding: '0.6rem', borderRadius: 11, fontSize: '0.64rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.5)', cursor: 'default' }}>Equipped</button>
+                          <p className="font-karla font-700 uppercase tracking-[0.08em] text-center" style={{ padding: '0.5rem', fontSize: '0.6rem', color: '#8fd39a', letterSpacing: '0.08em' }}>✓ Equipped · shows everywhere</p>
                         ) : selOwned ? (
                           <button type="button" disabled={!!skinBusy}
                             onClick={() => runSkinAction(`equip:${shownSkinId ?? 'base'}`, () => equipCrewSkin(dm.slug, shownSkinId))}
