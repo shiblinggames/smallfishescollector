@@ -60,13 +60,29 @@ function KrakenFx({ color, summon }: { color: string; summon: boolean }) {
   )
 }
 
-// Prismatic (Catfish) — a full-spectrum sheen sweeps across the actual art.
+// Prismatic (Catfish) — spectrum gem-sparkles twinkle across the art, each in
+// a different hue so the whole thing reads as refracted light.
+const PRISM_HUES = ['#ff4d6d', '#ff9f43', '#ffe14d', '#4dff9e', '#4dc9ff', '#b17dff', '#ff6ad5']
+const PRISM_PTS = [
+  { l: 26, t: 30 }, { l: 68, t: 26 }, { l: 45, t: 50 }, { l: 80, t: 58 }, { l: 16, t: 60 },
+  { l: 57, t: 74 }, { l: 34, t: 84 }, { l: 84, t: 40 }, { l: 12, t: 42 }, { l: 62, t: 90 },
+]
 function PrismaticFx({ summon }: { summon: boolean }) {
-  const dur = summon ? 2.4 : 5.5
+  const dur = summon ? 1.1 : 2.4
+  const sz = summon ? 12 : 7
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      <div style={{ position: 'absolute', inset: '-20%', backgroundImage: 'linear-gradient(115deg, transparent 16%, rgba(255,0,76,0.55), rgba(255,138,0,0.55), rgba(255,230,0,0.55), rgba(0,230,118,0.55), rgba(0,176,255,0.55), rgba(124,77,255,0.55), transparent 84%)', backgroundSize: '260% 100%', mixBlendMode: 'overlay', animation: `chase-rainbow-sweep ${dur}s linear infinite`, opacity: summon ? 1 : 0.9 }} />
-      <div style={{ position: 'absolute', inset: '-20%', backgroundImage: 'linear-gradient(115deg, transparent 34%, rgba(255,255,255,0.22), transparent 66%)', backgroundSize: '260% 100%', mixBlendMode: 'screen', animation: `chase-rainbow-sweep ${dur}s linear infinite` }} />
+      {PRISM_PTS.map((p, i) => {
+        const h = PRISM_HUES[i % PRISM_HUES.length]
+        return (
+          <div key={i} style={{
+            position: 'absolute', left: `${p.l}%`, top: `${p.t}%`, width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2,
+            background: '#ffffff', borderRadius: 1, opacity: 0,
+            boxShadow: `0 0 4px #fff, 0 0 9px ${h}, 0 0 15px ${h}`,
+            animation: `chase-prism-twinkle ${dur}s ${(i * 0.26).toFixed(2)}s ease-in-out infinite`,
+          }} />
+        )
+      })}
     </div>
   )
 }

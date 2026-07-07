@@ -1145,8 +1145,11 @@ html, body {
 /* Kraken Hunter (Dole) — deep dive: tentacles sway, bubbles rise. */
 @keyframes chase-tentacle-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 @keyframes chase-bubble-rise { 0% { top: 108%; opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.45; } 100% { top: -12%; opacity: 0; } }
-/* Prismatic (Catfish) — spectrum sheen sweeps across the art. */
-@keyframes chase-rainbow-sweep { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+/* Prismatic (Catfish) — spectrum gem-sparkles twinkle across the art. */
+@keyframes chase-prism-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.2) rotate(45deg); }
+  50% { opacity: 1; transform: scale(1) rotate(45deg); }
+}
 /* Hunter's Bane (Doby) — assassin: a reticle turns, a blade glint sweeps. */
 @keyframes chase-reticle-spin { to { transform: rotate(360deg); } }
 @keyframes chase-slash-glint {
