@@ -297,6 +297,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Blood Gems balance, mirrored so a Hardcore cash-out can tick it live.
   const [bloodGemsNow, setBloodGemsNow] = useState(props.bloodGems)
   useEffect(() => { setBloodGemsNow(props.bloodGems) }, [props.bloodGems])
+  // Currency info popup (tap a purse pill to learn what it's for).
+  const [infoCurrency, setInfoCurrency] = useState<'fathoms' | 'blood' | null>(null)
   const [shrineStake, setShrineStake] = useState(SHRINE_WAGER_MAX)
   // Whether the current boon draft came from a shrine's Blood Price (reflavors
   // the draft header) vs a normal depth draft.
@@ -1279,19 +1281,25 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           )}
 
-          {/* Fathoms purse — the shop currency, sitting right above the shops. */}
-          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-              <span className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: TEAL, lineHeight: 1 }}>{fmt(props.fathoms)}</span>
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: '#8aa39e' }}>Fathoms to spend</span>
-            </div>
-            {/* Blood Gems — the premium Hardcore spoil. A small crimson chip,
-                only shown once the player holds any. */}
+          {/* Currency pills — symbol + amount, tap to learn what each is for. */}
+          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?"
+              className="active:scale-95"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'rgba(45,212,191,0.12)', border: `1px solid ${TEAL}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
+              {/* Anchor = Fathoms (depth). */}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+              <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: TEAL, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
+            </button>
+            {/* Blood Gems — only shown once the player holds any (Hardcore spoil). */}
             {bloodGemsNow > 0 && (
-              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5, padding: '0.2rem 0.6rem', borderRadius: 999, background: 'linear-gradient(180deg, rgba(192,56,74,0.16), rgba(120,20,32,0.1))', border: '1px solid rgba(220,38,38,0.5)', boxShadow: '0 0 12px rgba(192,56,74,0.22)' }}>
+              <button onClick={() => setInfoCurrency('blood')} title="What are Blood Gems?"
+                className="active:scale-95"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'linear-gradient(180deg, rgba(192,56,74,0.18), rgba(120,20,32,0.12))', border: '1px solid rgba(220,38,38,0.55)', boxShadow: '0 0 12px rgba(192,56,74,0.22)', cursor: 'pointer', transition: 'transform 0.08s' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden style={{ filter: 'drop-shadow(0 0 2.5px rgba(220,38,38,0.7))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
                 <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f2536a', lineHeight: 1, textShadow: '0 0 10px rgba(220,38,38,0.6)' }}>{fmt(bloodGemsNow)}</span>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#e88a97' }}>Blood Gems</span>
-              </div>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f2536a" strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.6 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
+              </button>
             )}
           </div>
 
@@ -1356,6 +1364,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </div>
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal onClose={() => setHaulOpen(false)} />}
+        {infoCurrency && <CurrencyInfoModal kind={infoCurrency} onClose={() => setInfoCurrency(null)} />}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} onClose={() => setSynergiesOpen(false)} />}
         {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
@@ -3066,6 +3075,60 @@ function SynergiesModal({ owned, seen, onClose }: { owned: Record<string, number
               </div>
             )
           })}
+        </div>
+      </motion.div>
+    </ModalScrim>
+  )
+}
+
+// Tap a purse pill on the intro screen → this explains the currency + where to
+// spend it. Themed teal (Fathoms) or crimson (Blood Gems).
+function CurrencyInfoModal({ kind, onClose }: { kind: 'fathoms' | 'blood'; onClose: () => void }) {
+  const blood = kind === 'blood'
+  const accent = blood ? '#d1394b' : TEAL
+  const title = blood ? 'Blood Gems' : 'Fathoms'
+  const kicker = blood ? 'Hardcore Spoils' : 'Gauntlet Currency'
+  const earn = blood
+    ? 'Pulled from the cash-out chest at the end of a Hardcore run. You only keep them if you bring your crew home alive.'
+    : 'Earned by sinking ships in the Gauntlet, one Fathom for each, kept even if you go down.'
+  const uses = blood
+    ? [
+        { h: 'Blood-charged reroll', b: 'In the Crew Hall, spend them alongside gems to sway a reroll toward Epic and Legendary recruits.' },
+        { h: 'Skin gamble', b: 'Wager them for a random crew skin you don’t own yet.' },
+      ]
+    : [
+        { h: 'Run Upgrades', b: 'Boons for the descent itself, bought before you dive.' },
+        { h: 'Locker Upgrades', b: 'Permanent unlocks, like the Auto Catcher, that stay with you for good.' },
+      ]
+  const icon = blood
+    ? <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden style={{ filter: `drop-shadow(0 0 4px ${accent}88)` }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill={accent} /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
+    : <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+  return (
+    <ModalScrim zIndex={1300} onClose={onClose}>
+      <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 380, borderRadius: 18, background: 'linear-gradient(180deg, rgba(16,13,18,0.99), rgba(9,7,11,0.99))', border: `1px solid ${accent}44`, boxShadow: `0 0 44px ${accent}22, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.2rem 1.1rem 1.15rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {icon}
+            <div>
+              <p className="font-karla font-700 uppercase tracking-[0.2em]" style={{ fontSize: '0.5rem', color: `${accent}cc` }}>{kicker}</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.3rem', color: '#f4ead2', lineHeight: 1.1, marginTop: 2 }}>{title}</p>
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p className="font-karla" style={{ fontSize: '0.76rem', color: '#b8b2a6', lineHeight: 1.5, marginTop: 12, textAlign: 'left' }}>{earn}</p>
+        <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 14, marginBottom: 6 }}>Spend them on</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {uses.map(u => (
+            <div key={u.h} style={{ padding: '0.55rem 0.7rem', borderRadius: 10, background: `${accent}0f`, border: `1px solid ${accent}2e`, textAlign: 'left' }}>
+              <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#f0ede8' }}>{u.h}</p>
+              <p className="font-karla" style={{ fontSize: '0.68rem', color: '#9a948a', lineHeight: 1.45, marginTop: 2 }}>{u.b}</p>
+            </div>
+          ))}
         </div>
       </motion.div>
     </ModalScrim>
