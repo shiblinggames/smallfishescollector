@@ -527,6 +527,14 @@ function getZone(zones: ZoneDef[], deg: number, rotation = 0): ZoneDef {
   return zones.find(z => a >= z.from && a < z.to) ?? zones[0]
 }
 
+// Forward lookahead (in display frames) applied when the player locks a reel-in:
+// the freeze + verdict both resolve at where the needle WILL be this many frames
+// ahead, to compensate input latency. Forward-only, so it never snaps backward.
+// TUNING KNOB — higher = more latency forgiveness but the freeze jumps further
+// AHEAD of where you tapped; lower = the frozen needle matches the tapped spot
+// more closely. Was 2; dialed to 1 (2 read a touch aggressive on the jump).
+const REEL_LOOKAHEAD_FRAMES = 1
+
 // ─── DialSVG ─────────────────────────────────────────────────────────────────
 
 function DialSVG({
@@ -4715,7 +4723,7 @@ export default function FishingGame({
     // two renders of this component before it reached the glass.
     let resolveAngle: number
     if (spinAnimRef.current) {
-      const lookaheadMs = 2 * frameDurRef.current
+      const lookaheadMs = REEL_LOOKAHEAD_FRAMES * frameDurRef.current
       const a = spinAngleNow() + dirRef.current * speedRef.current * lookaheadMs / 1000
       resolveAngle = ((a % 360) + 360) % 360
     } else {
@@ -5305,7 +5313,7 @@ export default function FishingGame({
     const startAt = performance.now()
     const predictAngle = () => {
       if (spinAnimRef.current) {
-        const lookaheadMs = 2 * frameDurRef.current
+        const lookaheadMs = REEL_LOOKAHEAD_FRAMES * frameDurRef.current
         const a = spinAngleNow() + dirRef.current * speedRef.current * lookaheadMs / 1000
         return (((a % 360) + 360) % 360)
       }
