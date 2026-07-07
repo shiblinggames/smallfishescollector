@@ -12,7 +12,8 @@ import {
 } from '@/lib/crewGen'
 import { clampHallTier, nextHallTier, hallStartXP, type CrewHallTierNum } from '@/lib/crewHall'
 import { crewLevelFromXP } from '@/lib/crewLevel'
-import { getCrewSkin, resolveCrewFilename, type EquippedCrewSkins } from '@/lib/crewSkins'
+import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
+import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 
 const REROLL_COST = 100
 
@@ -99,6 +100,9 @@ export type CrewState = {
   hallTier: CrewHallTierNum
   /** Doubloon balance — the hall upgrade currency. */
   doubloons: number
+  /** Blood Gem balance — Hardcore Gauntlet premium currency; fuels blood-charged
+   *  rerolls + the skin gamble. Shown only in the Crew Hall + Gauntlet. */
+  bloodGems: number
   /** Crew skin ids the player owns (gem-bought legendary skins). */
   ownedCrewSkins: string[]
   /** Equipped skin per legendary slug ({ dole: 'dole_frostbite' }). */
@@ -115,23 +119,19 @@ function utcDate(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD in UTC
 }
 
-/** Catalog → portrait pool by group + a lookup for name/filename.
- *  Laz the Coelacanth is held OUT of the legendary pool here — he only becomes
- *  a rollable Crew Hall recruit once a player has DISCOVERED him in the Hardcore
- *  Gauntlet. Callers add `coelacanthId` back into the rarity-4 pool per-player
- *  when profiles.discovered_coelacanth is set. */
+/** Catalog → portrait pool by group + a lookup for name/filename. Laz the
+ *  Coelacanth is a normal legendary in the pool (fully released 2026-07-07 — no
+ *  longer Hardcore-discovery-gated). */
 async function loadCards(admin: ReturnType<typeof createAdminClient>) {
   const { data } = await admin.from('cards').select('id, name, filename, slug, power, dodge, fortune')
   const byGroup: Record<CrewRarity, number[]> = { 1: [], 2: [], 3: [], 4: [] }
   const meta = new Map<number, CardMeta>()
-  let coelacanthId: number | null = null
   for (const c of ((data ?? []) as { id: number; name: string; filename: string; slug: string; power: number; dodge: number; fortune: number }[])) {
     meta.set(c.id, { name: c.name, filename: c.filename, slug: c.slug, power: c.power, dodge: c.dodge, fortune: c.fortune })
-    if (c.slug.toLowerCase() === 'coelacanth') { coelacanthId = c.id; continue }  // discovery-gated
     const g = groupForSlug(c.slug)
     if (g) byGroup[g].push(c.id)
   }
-  return { byGroup, meta, coelacanthId }
+  return { byGroup, meta }
 }
 
 /** Roll N candidate rows ready for insert into daily_recruits. startXp is
@@ -146,12 +146,8 @@ function generateBoardRows(
   byGroup: Record<CrewRarity, number[]>,
   meta: Map<number, CardMeta>,
   startXp: number,
-  /** Extra legendary card ids this player has UNLOCKED into the pool (e.g. Laz,
-   *  once discovered). Folded into the rarity-4 pool only. */
-  legendaryExtra: number[] = [],
 ) {
-  // Per-rarity pool: rarity 4 adds any player-unlocked legendaries (Laz).
-  const poolFor = (r: CrewRarity) => (r === 4 ? [...byGroup[4], ...legendaryExtra] : byGroup[r])
+  const poolFor = (r: CrewRarity) => byGroup[r]
   const rows: any[] = []
   for (let slot = 0; slot < size; slot++) {
     let rarity = rollRarity(weights)
@@ -228,7 +224,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, discovered_coelacanth, owned_crew_skins, equipped_crew_skins')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -240,16 +236,14 @@ export async function getCrewState(): Promise<CrewState | null> {
   const shipTier = (prof as any).ship_tier ?? 0
   const shipCrewSlots = EXPEDITION_SHIP_STATS[shipTier]?.crewSlots ?? 1
 
-  const { byGroup, meta, coelacanthId } = await loadCards(admin)
-  // Laz joins this player's legendary pool once discovered in Hardcore.
-  const legendaryExtra = (prof as any).discovered_coelacanth === true && coelacanthId ? [coelacanthId] : []
+  const { byGroup, meta } = await loadCards(admin)
   const today = utcDate()
 
   // Free board fills once per UTC day; gem rerolls (which set the date too)
   // won't be clobbered by this.
   if ((prof as any).last_free_recruit_date !== today) {
     await admin.from('daily_recruits').delete().eq('user_id', user.id)
-    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier), legendaryExtra)
+    const rows = generateBoardRows(user.id, premium ? 3 : 2, 'free', FREE_WEIGHTS, byGroup, meta, hallStartXP((prof as any).crew_hall_tier))
     if (rows.length) await admin.from('daily_recruits').insert(rows)
     await admin.from('profiles').update({ last_free_recruit_date: today }).eq('id', user.id)
   }
@@ -290,6 +284,7 @@ export async function getCrewState(): Promise<CrewState | null> {
     shipCrewSlots, lockedCrewIds, trawlingCrewIds,
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,
+    bloodGems: ((prof as any).blood_gems as number | null) ?? 0,
     ownedCrewSkins, equippedCrewSkins,
   }
 }
@@ -316,37 +311,84 @@ export async function getCrewRoster(): Promise<CrewMember[]> {
 }
 
 // ── Reroll the board for 100 gems (always 3 new, boosted odds) ──────────────
+// Optional `bloodTierId` = a Blood Gem "blood-charged reroll" (BLOOD_REROLL_TIERS):
+// spend Blood Gems ALONGSIDE the 100 gems to swap in a tier's boosted Epic +
+// Legendary weights. Blood Gems come only from the Hardcore Gauntlet.
 
-export async function rerollBoard(): Promise<CrewActionResult> {
+export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, discovered_coelacanth').eq('id', user.id).single()
-  const gems = (prof as any)?.gems ?? 0
-  if (gems < REROLL_COST) return { error: 'Not enough gems' }
+  const tier = bloodRerollTier(bloodTierId)
+  if (bloodTierId && !tier) return { error: 'Unknown reroll tier' }
 
-  // Guarded deduction: gte() stops concurrent rerolls from overdrawing. Also
-  // stamp today's date so getCrewState() won't regenerate a free board over
-  // this gem roll.
-  const { data: updated } = await admin
+  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems').eq('id', user.id).single()
+  const gems = (prof as any)?.gems ?? 0
+  const bloodGems = ((prof as any)?.blood_gems as number | null) ?? 0
+  if (gems < REROLL_COST) return { error: 'Not enough gems' }
+  if (tier && bloodGems < tier.bloodCost) return { error: 'Not enough Blood Gems' }
+
+  // Guarded deduction: gte() on BOTH currencies stops concurrent rerolls from
+  // overdrawing gems OR blood gems. Also stamp today's date so getCrewState()
+  // won't regenerate a free board over this gem roll.
+  let q = admin
     .from('profiles')
-    .update({ gems: gems - REROLL_COST, last_free_recruit_date: utcDate() })
+    .update({ gems: gems - REROLL_COST, ...(tier ? { blood_gems: bloodGems - tier.bloodCost } : {}), last_free_recruit_date: utcDate() })
     .eq('id', user.id)
     .gte('gems', REROLL_COST)
-    .select('gems')
-    .single()
-  if (!updated) return { error: 'Not enough gems' }
+  if (tier) q = q.gte('blood_gems', tier.bloodCost)
+  const { data: updated } = await q.select('gems').single()
+  if (!updated) return { error: tier ? 'Not enough gems or Blood Gems' : 'Not enough gems' }
 
-  const { byGroup, meta, coelacanthId } = await loadCards(admin)
-  const legendaryExtra = (prof as any)?.discovered_coelacanth === true && coelacanthId ? [coelacanthId] : []
+  const { byGroup, meta } = await loadCards(admin)
   await admin.from('daily_recruits').delete().eq('user_id', user.id)
-  const rows = generateBoardRows(user.id, 3, 'gem', GEM_WEIGHTS, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier), legendaryExtra)
+  const weights = tier ? tier.weights : GEM_WEIGHTS
+  const rows = generateBoardRows(user.id, 3, 'gem', weights, byGroup, meta, hallStartXP((prof as any)?.crew_hall_tier))
   if (rows.length) await admin.from('daily_recruits').insert(rows)
 
   const state = await getCrewState()
   return state ? { state } : { error: 'Failed to load crew' }
+}
+
+// ── Blood Gem skin gamble ───────────────────────────────────────────────────
+// Spend BLOOD_SKIN_GAMBLE_COST Blood Gems for ONE random skin the player doesn't
+// own yet, from the NON-legendary pool (Rare + Epic crews). No dupes — dead once
+// every non-legendary skin is owned. Granted to owned_crew_skins (not auto-
+// equipped; the result is random).
+export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNullable<Awaited<ReturnType<typeof getCrewState>>> } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in' }
+  const admin = createAdminClient()
+
+  const { data: prof } = await admin.from('profiles').select('blood_gems, owned_crew_skins').eq('id', user.id).single()
+  if (!prof) return { error: 'Profile not found' }
+  const bloodGems = ((prof as any).blood_gems as number | null) ?? 0
+  if (bloodGems < BLOOD_SKIN_GAMBLE_COST) return { error: 'Not enough Blood Gems' }
+
+  const ownedArr = ((prof as any).owned_crew_skins as string[] | null) ?? []
+  const owned = new Set(ownedArr)
+  // Pool = non-legendary (group ≠ 4) skins not yet owned.
+  const pool = CREW_SKINS.filter(s => groupForSlug(s.slug) !== 4 && !owned.has(s.id))
+  if (pool.length === 0) return { error: 'You already own every non-legendary skin.' }
+
+  const skin = pool[Math.floor(Math.random() * pool.length)]
+
+  // Guarded deduction + grant in one write (gte stops an overdraw double-tap).
+  const { data: updated } = await admin
+    .from('profiles')
+    .update({ blood_gems: bloodGems - BLOOD_SKIN_GAMBLE_COST, owned_crew_skins: [...ownedArr, skin.id] })
+    .eq('id', user.id)
+    .gte('blood_gems', BLOOD_SKIN_GAMBLE_COST)
+    .select('blood_gems')
+    .single()
+  if (!updated) return { error: 'Not enough Blood Gems' }
+
+  const state = await getCrewState()
+  if (!state) return { error: 'Failed to load crew' }
+  return { skinId: skin.id, state }
 }
 
 // ── Recruit a candidate (free, capacity-gated) ──────────────────────────────

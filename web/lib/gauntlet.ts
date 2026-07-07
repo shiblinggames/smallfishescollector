@@ -84,9 +84,43 @@ export const HARDCORE_LIVE = false
 // Player-facing unlock once HARDCORE_LIVE: needs the Gauntlet unlocked AND a
 // normal-Gauntlet depth floor, so newcomers can't blind-permakill their crew.
 export const HC_UNLOCK_DEPTH = 5
-// Cash-out rewards for the risk: a Fathoms premium + a survivor crew-XP bonus.
-export const HC_FATHOMS_MULT = 2
-export const HC_SURVIVOR_XP_MULT = 2
+// Hardcore is limited to ONE run per day (the normal Gauntlet has no cooldown).
+// Keyed off gauntlet_hc_last_run_at; admins bypass for testing.
+export const HARDCORE_COOLDOWN_MS = 24 * 60 * 60 * 1000
+// Hardcore pays EXACTLY like normal Gauntlet now (no 2× premium) — the only
+// added benefit is Blood Gems (below). Kept as 1× constants so callsites read
+// clearly and can be re-tuned in one place.
+export const HC_FATHOMS_MULT = 1
+export const HC_SURVIVOR_XP_MULT = 1
+
+// ── Blood Gems ────────────────────────────────────────────────────────────────
+// The Hardcore Gauntlet's premium currency. Dropped ONLY in the cash-out chest
+// (survive + cash out; die = none). Spent in the Crew Hall on blood-charged
+// rerolls + a random-skin gamble. Shown only in the Gauntlet + Recruit Hall.
+export const BLOOD_GEM_MIN_PER_DEPTH = 0.5
+export const BLOOD_GEM_MAX_PER_DEPTH = 0.7
+/** Blood Gems earned on a Hardcore cash-out at `depth`. `rand` ∈ [0,1) — pass
+ *  Math.random() at the callsite so the amount is a live server roll (~0.5–0.7
+ *  per depth). */
+export function bloodGemsForDepth(depth: number, rand: number): number {
+  const per = BLOOD_GEM_MIN_PER_DEPTH + (BLOOD_GEM_MAX_PER_DEPTH - BLOOD_GEM_MIN_PER_DEPTH) * rand
+  return Math.max(0, Math.round(Math.max(0, depth) * per))
+}
+/** Skin gamble: this many Blood Gems → one random UNOWNED non-legendary skin. */
+export const BLOOD_SKIN_GAMBLE_COST = 150
+/** Blood-charged reroll tiers. Attaching a tier to a gem reroll swaps the
+ *  per-candidate C/R/E/L weights for the tier's (in place of GEM_WEIGHTS),
+ *  boosting Epic + a light Legendary nudge. Weights sum to 100 = exact per-
+ *  candidate %s. */
+export interface BloodRerollTier { id: string; name: string; bloodCost: number; weights: [number, number, number, number] }
+export const BLOOD_REROLL_TIERS: BloodRerollTier[] = [
+  { id: 'bloodied', name: 'Bloodied', bloodCost: 10, weights: [59,   34, 6,  1   ] },
+  { id: 'cursed',   name: 'Cursed',   bloodCost: 25, weights: [55.5, 34, 9,  1.5 ] },
+  { id: 'sanguine', name: 'Sanguine', bloodCost: 45, weights: [52,   34, 12, 2   ] },
+]
+export function bloodRerollTier(id: string | null | undefined): BloodRerollTier | undefined {
+  return id ? BLOOD_REROLL_TIERS.find(t => t.id === id) : undefined
+}
 
 /** Can this player actually START a hardcore run right now? Admins always (for
  *  pre-launch testing); everyone else only once HARDCORE_LIVE + the Gauntlet is
@@ -337,18 +371,7 @@ export interface GauntletRunState {
   nextShrine: number
   /** Calm Before already waved off the first curse milestone */
   calmBeforeUsed: boolean
-  /** Laz (5th legendary) was DISCOVERED this run. Only granted if the run cashes
-   *  out alive (die = lost to the Locker). Optional so pre-feature saves resume. */
-  discoveredLaz?: boolean
 }
-
-// ── The 5th legendary: discovering Laz the Coelacanth ───────────────────────
-// A very rare, HARDCORE-ONLY event: past this depth, before any between-fight
-// boon beat, a slim chance to surface the coelacanth "back from the dead." One
-// per account, ever (server flag). Marked on discovery; only KEPT if you cash
-// out alive. Chance kept tiny so it stays a genuine "did that just happen" find.
-export const LAZ_DISCOVERY_MIN_DEPTH = 30
-export const LAZ_DISCOVERY_CHANCE = 0.02
 
 export interface GauntletFight {
   enemy: BroadsideEnemy

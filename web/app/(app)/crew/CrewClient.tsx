@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   rerollBoard, recruitCrew, dismissCrew, getCrewGraveyard,
   assignToVoyage, assignToRaid, benchCrew, promoteToCaptain, renameCrew,
-  upgradeCrewHall, buyCrewSkin, equipCrewSkin,
+  upgradeCrewHall, buyCrewSkin, equipCrewSkin, gambleBloodSkin,
   type CrewState, type BoardCandidate, type CrewMember, type CrewActionResult, type FallenCrew,
 } from './actions'
+import { BLOOD_REROLL_TIERS, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
 import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow } from '@/lib/crewSkins'
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
@@ -27,6 +28,17 @@ import { playChestSfx } from '@/lib/fishingMusic'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL
 const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts/${filename}`
+
+// Blood Gem accent + glyph (Hardcore Gauntlet premium currency).
+const BLOOD = '#d1394b'
+function BloodDrop({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ filter: `drop-shadow(0 0 2.5px ${BLOOD}99)`, flexShrink: 0 }}>
+      <path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill={BLOOD} />
+      <path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 const STAT_COLOR = { power: '#f87171', dodge: '#60a5fa', fortune: '#f0c040' }
 const STAT_LABEL = { power: 'PWR', dodge: 'SAV', fortune: 'FTN' }
@@ -783,8 +795,11 @@ function FallenPanel({ crew }: { crew: FallenCrew }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function CrewClient({ initial }: { initial: CrewState }) {
   const [state, setState] = useState<CrewState>(initial)
+  // Blood Gem skin gamble: null = closed, 'rolling' = suspense build-up,
+  // 'revealed' = the won skin slams in. skinId set once the server returns it.
+  const [skinGamble, setSkinGamble] = useState<{ phase: 'rolling' | 'revealed'; skinId?: string } | null>(null)
   const [pending, startTransition] = useTransition()
-  const [busyId, setBusyId] = useState<number | 'reroll' | null>(null)
+  const [busyId, setBusyId] = useState<number | string | null>(null)
   const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
   // Inline glossary toggle on the crew detail modal — explains what
   // each stat actually does in raids + voyages. Reset when the modal
@@ -1051,21 +1066,47 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
 
   // Reroll runs the action, swaps the board underneath, then plays the reveal
   // over the top so the new recruits flip in with pack-opening flair.
-  function handleReroll() {
+  // bloodTierId set = a blood-charged reroll (spends Blood Gems for boosted odds).
+  function handleReroll(bloodTierId?: string) {
     if (pending || reveal.revealing) return // no re-roll mid-action or mid-reveal
     setErr(null)
-    vibrate(14)
-    setBusyId('reroll')
+    vibrate(bloodTierId ? [0, 20, 40, 20] : 14)
+    setBusyId(bloodTierId ? `reroll:${bloodTierId}` : 'reroll')
     startTransition(async () => {
-      const res = await rerollBoard()
+      const res = await rerollBoard(bloodTierId)
       if ('error' in res) setErr(res.error)
       else {
         setState(res.state)
         // Keep the Nav-bar gem total in sync (it has its own displayGems state).
         window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.state.gems }))
+        window.dispatchEvent(new CustomEvent('blood-gems-changed', { detail: res.state.bloodGems }))
         reveal.startReveal(res.state.board)
       }
       setBusyId(null)
+    })
+  }
+
+  // Blood Gem skin gamble — spend BLOOD_SKIN_GAMBLE_COST for one random unowned
+  // non-legendary skin. Two-beat reveal: a suspense roll, then the skin slams in.
+  function handleGambleSkin() {
+    if (pending || skinGamble) return
+    if (state.bloodGems < BLOOD_SKIN_GAMBLE_COST) { setErr('Not enough Blood Gems'); return }
+    setErr(null)
+    vibrate([0, 40, 60, 40])
+    setSkinGamble({ phase: 'rolling' })
+    setBusyId('gamble')
+    startTransition(async () => {
+      const res = await gambleBloodSkin()
+      if ('error' in res) { setErr(res.error); setSkinGamble(null); setBusyId(null); return }
+      setState(res.state)
+      window.dispatchEvent(new CustomEvent('blood-gems-changed', { detail: res.state.bloodGems }))
+      // Hold the suspense a beat so the roll reads, then reveal the win.
+      setTimeout(() => {
+        setSkinGamble({ phase: 'revealed', skinId: res.skinId })
+        vibrate([0, 60, 40, 90])
+        try { playChestSfx(true) } catch { /* audio best-effort */ }
+        setBusyId(null)
+      }, 1500)
     })
   }
 
@@ -1371,7 +1412,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             return (
               <div className="flex items-center" style={{ gap: 12, marginBottom: '1.1rem' }}>
                 <button
-                  onClick={handleReroll}
+                  onClick={() => handleReroll()}
                   disabled={cannot}
                   title="Spend gems for 3 brand-new recruits"
                   className="font-karla font-700 uppercase active:scale-95"
@@ -1406,6 +1447,50 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               </div>
             )
           })()}
+
+          {/* ── Blood Gems — Hardcore Gauntlet spoils. Only shown once the player
+               HAS some, so non-hardcore captains never see dead controls. ── */}
+          {state.bloodGems > 0 && (
+            <div style={{ marginBottom: '1.1rem', borderRadius: 16, padding: '0.85rem 0.9rem', background: 'linear-gradient(160deg, rgba(64,10,17,0.55), rgba(18,6,9,0.5))', border: `1px solid ${BLOOD}44` }}>
+              <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+                <span className="font-cinzel font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.16em', color: '#e99aa2', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <BloodDrop size={13} /> Blood Gems
+                </span>
+                <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f3c0c6', display: 'inline-flex', alignItems: 'center', gap: 5, textShadow: `0 0 10px ${BLOOD}66` }}>
+                  {state.bloodGems.toLocaleString()} <BloodDrop size={13} />
+                </span>
+              </div>
+              <p className="font-karla font-600 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>
+                Blood-charged reroll · boosts Epic + Legendary
+              </p>
+              <div className="flex" style={{ gap: 6, marginBottom: 11 }}>
+                {BLOOD_REROLL_TIERS.map(t => {
+                  const cannot = pending || reveal.revealing || state.gems < state.rerollCost || state.bloodGems < t.bloodCost
+                  const busy = busyId === `reroll:${t.id}`
+                  return (
+                    <button key={t.id} onClick={() => handleReroll(t.id)} disabled={cannot}
+                      title={`${t.name} — spend ${state.rerollCost} gems + ${t.bloodCost} Blood Gems for boosted odds`}
+                      className="font-karla font-700 uppercase active:scale-95"
+                      style={{ flex: '1 1 0', minWidth: 0, padding: '0.5rem 0.3rem', borderRadius: 11, background: cannot ? `${BLOOD}14` : `${BLOOD}26`, border: `1px solid ${BLOOD}80`, color: cannot ? 'rgba(243,192,198,0.5)' : '#f7d0d5', opacity: cannot ? 0.6 : 1, cursor: cannot ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'transform 0.08s, opacity 0.18s' }}>
+                      <span style={{ fontSize: '0.58rem', letterSpacing: '0.04em' }}>{busy ? '…' : t.name}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.5rem', color: 'rgba(255,255,255,0.62)' }}>
+                        {t.bloodCost}<BloodDrop size={8} /> + {state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <button onClick={handleGambleSkin} disabled={pending || !!skinGamble || state.bloodGems < BLOOD_SKIN_GAMBLE_COST}
+                className="font-karla font-700 uppercase active:scale-95 w-full"
+                style={{ padding: '0.62rem', borderRadius: 12, fontSize: '0.64rem', letterSpacing: '0.08em', background: state.bloodGems < BLOOD_SKIN_GAMBLE_COST ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}44, rgba(140,20,32,0.5))`, border: `1px solid ${BLOOD}99`, color: state.bloodGems < BLOOD_SKIN_GAMBLE_COST ? 'rgba(243,192,198,0.5)' : '#fce3e6', cursor: state.bloodGems < BLOOD_SKIN_GAMBLE_COST ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: state.bloodGems >= BLOOD_SKIN_GAMBLE_COST ? `0 0 18px ${BLOOD}3a` : 'none' }}>
+                <BloodDrop size={13} /> Gamble a Skin
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, letterSpacing: 0 }}>{BLOOD_SKIN_GAMBLE_COST}<BloodDrop size={11} /></span>
+              </button>
+              <p className="font-karla" style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.34)', textAlign: 'center', marginTop: 5, fontStyle: 'italic' }}>
+                A random crew skin you don&apos;t own yet.
+              </p>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
             {state.board.map((c: BoardCandidate) => {
@@ -2550,6 +2635,76 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     </button>
                   </div>
                 </motion.div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>,
+        document.body,
+      )}
+
+      {/* ── Blood Gem skin gamble reveal ── two beats: a crimson suspense roll,
+           then the won skin slams in on a shockwave. Portaled above everything. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {skinGamble && (() => {
+            const rolling = skinGamble.phase === 'rolling'
+            const won = skinGamble.phase === 'revealed' && skinGamble.skinId ? getCrewSkin(skinGamble.skinId) : null
+            return (
+              <motion.div key="blood-gamble" onClick={() => { if (!rolling) setSkinGamble(null) }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center', cursor: rolling ? 'default' : 'pointer', overflow: 'hidden', background: 'radial-gradient(ellipse at center, rgba(52,6,12,0.95) 0%, rgba(6,2,4,0.98) 100%)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+                {/* Rotating crimson ray-fan — faster while rolling, grand on reveal. */}
+                <motion.div aria-hidden
+                  initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: rolling ? 0.4 : 0.6, scale: rolling ? 1 : 1.15, rotate: 360 }}
+                  transition={{ opacity: { duration: 0.5 }, scale: { duration: 0.7 }, rotate: { duration: rolling ? 7 : 26, ease: 'linear', repeat: Infinity } }}
+                  style={{ position: 'absolute', width: 680, height: 680, borderRadius: '50%', background: `conic-gradient(from 0deg, ${BLOOD}00, ${BLOOD}40, ${BLOOD}00, ${BLOOD}00, ${BLOOD}40, ${BLOOD}00, ${BLOOD}00, ${BLOOD}40, ${BLOOD}00)`, maskImage: 'radial-gradient(circle, transparent 24%, #000 42%, transparent 74%)', WebkitMaskImage: 'radial-gradient(circle, transparent 24%, #000 42%, transparent 74%)' }} />
+
+                {rolling ? (
+                  <>
+                    <motion.div aria-hidden animate={{ scale: [1, 1.16, 1], boxShadow: [`0 0 30px ${BLOOD}88`, `0 0 64px ${BLOOD}`, `0 0 30px ${BLOOD}88`] }} transition={{ duration: 0.7, repeat: Infinity }}
+                      style={{ position: 'relative', width: 116, height: 116, borderRadius: '50%', background: `radial-gradient(circle at 40% 35%, ${BLOOD}, #5f0d16)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.9, ease: 'linear', repeat: Infinity }}><BloodDrop size={42} /></motion.div>
+                    </motion.div>
+                    {[...Array(7)].map((_, i) => {
+                      const ang = (i / 7) * Math.PI * 2
+                      return (
+                        <motion.span key={i} aria-hidden
+                          initial={{ opacity: 0, x: 0, y: 0 }}
+                          animate={{ opacity: [0, 0.9, 0], x: Math.cos(ang) * 90, y: Math.sin(ang) * 90, rotate: 360 }}
+                          transition={{ duration: 1, delay: i * 0.09, repeat: Infinity }}
+                          style={{ position: 'absolute' }}><BloodDrop size={11 + (i % 3) * 3} /></motion.span>
+                      )
+                    })}
+                    <motion.p className="font-cinzel font-700 uppercase" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.9, repeat: Infinity }}
+                      style={{ position: 'relative', marginTop: 28, fontSize: '0.8rem', letterSpacing: '0.24em', color: '#f0a9b1', textIndent: '0.24em' }}>The blood churns</motion.p>
+                  </>
+                ) : won ? (() => {
+                  const c = won.color
+                  const glow = skinArtGlow(c, groupForSlug(won.slug) ?? 3, true)
+                  return (
+                    <>
+                      {[0, 0.1, 0.22].map((d, i) => (
+                        <motion.div key={i} aria-hidden initial={{ scale: 0, opacity: 0.85 }} animate={{ scale: 4.6, opacity: 0 }} transition={{ duration: 1.25, ease: 'easeOut', delay: d }}
+                          style={{ position: 'absolute', width: 130, height: 130, borderRadius: '50%', border: `2px solid ${BLOOD}`, boxShadow: `0 0 26px ${BLOOD}` }} />
+                      ))}
+                      <motion.p className="font-cinzel font-700 uppercase" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 0.9, y: 0 }} transition={{ delay: 0.14 }}
+                        style={{ position: 'relative', fontSize: '0.66rem', letterSpacing: '0.34em', color: '#f3c0c6', marginBottom: 14, textIndent: '0.34em' }}>New Skin</motion.p>
+                      <motion.div initial={{ scale: 0, opacity: 0, rotate: -8 }} animate={{ scale: [0, 1.2, 1], opacity: 1, rotate: 0 }} transition={{ duration: 0.7, ease: 'easeOut', times: [0, 0.6, 1] }}
+                        style={{ position: 'relative', width: 'min(64vw, 260px)', aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={artSrc(won.filename)} alt={won.name} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: glow }} />
+                      </motion.div>
+                      <motion.p className="font-pirata" initial={{ opacity: 0, scale: 1.2, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4, ease: [0.2, 1, 0.3, 1] }}
+                        style={{ position: 'relative', fontSize: '2.2rem', color: '#f4ead2', marginTop: 16, lineHeight: 1.04, textShadow: `0 0 26px ${c}aa` }}>{won.name}</motion.p>
+                      {won.blurb && (
+                        <motion.p className="font-karla" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.36 }}
+                          style={{ position: 'relative', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, maxWidth: 320, lineHeight: 1.4 }}>{won.blurb}</motion.p>
+                      )}
+                      <motion.p className="font-karla font-700 uppercase" initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ delay: 1 }}
+                        style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.4)', marginTop: 22 }}>Tap to continue · equip it in the Skins tab</motion.p>
+                    </>
+                  )
+                })() : null}
               </motion.div>
             )
           })()}

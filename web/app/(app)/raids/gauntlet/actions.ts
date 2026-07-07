@@ -15,8 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, LAZ_DISCOVERY_MIN_DEPTH, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
-import { rollCrew } from '@/lib/crewGen'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_COOLDOWN_MS, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -326,7 +325,7 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress')
+    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at')
     .eq('id', user.id)
     .single()
 
@@ -347,6 +346,12 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
     // be forced from the client), then unlock + normal-Gauntlet depth floor.
     if (!hardcoreUnlocked({ isAdmin, clearedNodes, deepest })) {
       return { started: false, reason: 'locked', deepest }
+    }
+    // Hardcore is once per day (admins bypass so they can test).
+    const hcLastAt = profile?.gauntlet_hc_last_run_at ? new Date(profile.gauntlet_hc_last_run_at as string).getTime() : 0
+    const hcNextMs = hcLastAt + HARDCORE_COOLDOWN_MS
+    if (!isAdmin && Date.now() < hcNextMs) {
+      return { started: false, reason: 'cooldown', deepest, nextAt: new Date(hcNextMs).toISOString() }
     }
     // The squad = the living raid party. Snapshot their ids; these are the crew
     // that drown on death/abandon (resolveGauntletDeath reads gauntlet_hc_squad).
@@ -371,7 +376,7 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
 
 /** Cash out an open run at the reached depth, banking the (clamped) pot ×
  *  chest multiplier + the chest's gem bonus. Closes the run. */
-export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, pot: number, runSnapshot?: GauntletRunSnapshot, discoveredLaz = false): Promise<
+export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, pot: number, runSnapshot?: GauntletRunSnapshot): Promise<
   | { ok: false }
   | {
       ok: true
@@ -388,6 +393,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       /** Fathoms banked this run (= depth reached) + new total. */
       earnedFathoms: number
       newFathoms: number
+      /** Blood Gems from the chest (Hardcore cash-out only; 0 on normal) + new total. */
+      earnedBloodGems: number
+      newBloodGems: number
       /** Davy cannons that dropped this cash-out (chest chase items). */
       droppedItems: string[]
       /** Golden Gauntlet Hull skin id if it dropped this cash-out, else null. */
@@ -397,9 +405,6 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       unlockedThisRun: { name: string; blurb: string; where: string }[]
       /** Was this a Hardcore run? Drives the "your crew sailed home" cash-out beat. */
       hardcore: boolean
-      /** True if Laz the Coelacanth (5th legendary) was discovered this run AND
-       *  survived to be claimed — surfaced on the reward screen. */
-      grantedLaz: boolean
     }
 > {
   const supabase = await createClient()
@@ -409,7 +414,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, discovered_coelacanth')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems')
     .eq('id', user.id)
     .single()
 
@@ -468,26 +473,11 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const grantSkins = [...(droppedSkinId ? [droppedSkinId] : []), ...hcSkinIds]
   const skinFields = grantSkins.length > 0 ? { ship_skins: [...new Set([...ownedSkins, ...grantSkins])] } : {}
 
-  // The 5th legendary — Laz the Coelacanth. Discovered this run in Hardcore and
-  // SURVIVED to the surface (cash-out), so he's claimed for good. Server-checked
-  // (hardcore + past the discovery depth + one-time flag), inserted straight into
-  // the roster OVER the cap (too rare to bounce; the cap only blocks new daily
-  // recruits). The flag is flipped so the rare roll never fires again.
-  let grantedLaz = false
-  if (hc && discoveredLaz && cd > LAZ_DISCOVERY_MIN_DEPTH && profile.discovered_coelacanth !== true) {
-    const { data: lazCard } = await admin.from('cards').select('id, power, dodge, fortune').eq('slug', 'Coelacanth').single()
-    if (lazCard) {
-      const rolled = rollCrew(lazCard.id as number, 4, {
-        power: lazCard.power as number, dodge: lazCard.dodge as number, fortune: lazCard.fortune as number,
-      })
-      await admin.from('user_crew').insert({
-        user_id: user.id, card_id: rolled.cardId, rarity: 4,
-        power: rolled.power, dodge: rolled.dodge, fortune: rolled.fortune,
-        effects: rolled.effects, voyage_slot: null, raid_slot: null, xp: 0,
-      })
-      grantedLaz = true
-    }
-  }
+  // Blood Gems — the Hardcore premium currency, dropped in the cash-out chest
+  // (survive-only). Amount is a live server roll (~0.5–0.7 per reward depth), so
+  // deeper survival = more. Normal runs earn none.
+  const earnedBloodGems = hc ? bloodGemsForDepth(rd, Math.random()) : 0
+  const newBloodGems    = ((profile.blood_gems as number | null) ?? 0) + earnedBloodGems
 
   const classPicks = (profile.ship_classes as Record<string, string> | null) ?? {}
   const navRenown = navRenownEffects(profile.nav_renown_alloc as RenownAlloc | null)
@@ -504,7 +494,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Fathoms (meta-currency) bank on ships SUNK (rewardDepth), so Veteran's Start
   // never farms the currency that buys upgrades — only the deepest record /
   // contest / leaderboard below count the combat depth.
-  // Hardcore banks Fathoms at a premium (the risk); normal at the base rate.
+  // Hardcore now banks Fathoms at the SAME rate as normal (HC_*_MULT = 1); its
+  // only added payout is Blood Gems above.
   const earnedFathoms    = Math.round(fathomsForDepth(rd) * gauntletFathomsMult(upgrades) * (hc ? HC_FATHOMS_MULT : 1))
   const newFathoms       = ((profile.gauntlet_fathoms as number | null) ?? 0) + earnedFathoms
   const newDoubloons     = (profile.doubloons ?? 0) + bankedDoubloons
@@ -556,13 +547,13 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_run_state: null,
       gauntlet_resumes_used: 0,
       gauntlet_fathoms: newFathoms,
+      blood_gems: newBloodGems,
       // Lifetime counters for the achievement badges (a cash-out ends a run).
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
       gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,
       raid_items: newRaidItems,
       ...skinFields,
       ...recordFields,
-      ...(grantedLaz ? { discovered_coelacanth: true } : {}),
     }).eq('id', user.id),
     admin.from('doubloon_transactions').insert({
       user_id: user.id,
@@ -597,11 +588,12 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     crewXP,
     earnedFathoms,
     newFathoms,
+    earnedBloodGems,
+    newBloodGems,
     droppedItems,
     droppedSkinId,
     unlockedThisRun,
     hardcore: hc,
-    grantedLaz,
   }
 }
 
