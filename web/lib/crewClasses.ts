@@ -239,7 +239,7 @@ export interface ClassDef<M> {
   shortLabel: string           // "Heal" — used as the Special chooser card title
   blurb: string                // one-line identity, for the detail modal
   color: string                // accent / icon tint
-  emoji: string                // chooser card emoji
+  emoji: string                // chooser card glyph — monochrome typographic symbol (NO emoji), tinted by `color`
   milestones: [M, M, M, M, M]
 }
 
@@ -294,7 +294,7 @@ export const SHARPSHOT: ClassDef<SharpshotMilestone> = {
 export const SNARE: ClassDef<SnareMilestone> = {
   id: 'snare', name: 'Snare', shortLabel: 'Jam Dodge',
   blurb: 'Disables the enemy\'s dodge for several turns. Always lands.',
-  color: '#c084fc', emoji: '⚡',
+  color: '#c084fc', emoji: '⊘',
   milestones: [
     { unlockLevel: 10,  jamChance: 0.30, disableDodgeTurns: 2, desc: '30% chance to jam enemy dodge for 2 turns.' },
     { unlockLevel: 25,  jamChance: 0.40, disableDodgeTurns: 2, desc: '40% chance to jam enemy dodge for 2 turns.' },
@@ -339,7 +339,7 @@ export const NAVIGATOR: ClassDef<NavigatorMilestone> = {
 export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
   id: 'abyssal_tide', name: 'Tidecaller', shortLabel: 'Tide',
   blurb: 'Heals the ship and grants a temporary damage shield. Heal now, brace for what\'s coming.',
-  color: '#5eead4', emoji: '🌊',
+  color: '#5eead4', emoji: '≋',
   milestones: [
     { unlockLevel: 10,  pctMaxHp: 0.20, shieldPctMaxHp: 0.08, desc: 'Heal 20% max HP and grant an 8% max HP shield.' },
     { unlockLevel: 25,  pctMaxHp: 0.30, shieldPctMaxHp: 0.11, desc: 'Heal 30% max HP and grant an 11% max HP shield.' },
@@ -352,7 +352,7 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   id: 'leviathan', name: 'Leviathan', shortLabel: 'Salvo',
   blurb: 'Fires one massive extra cannon shot — a single, ship-shaking knock. Made for big prey: slightly weaker against regular hulls, but it hits far harder against bosses and elites (and crits at the cap).',
-  color: '#a3b1c6', emoji: '🐋',
+  color: '#a3b1c6', emoji: '➤',
   // The apex hunter of BIG prey: ONE reliable heavy shell, a bonus vs
   // bosses/elites and a small penalty vs regular hulls. The anti-big-target
   // counterpoint to Blitz's many-small-shots frenzy.
@@ -368,7 +368,7 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
 export const BLITZ: ClassDef<BlitzMilestone> = {
   id: 'blitz', name: 'Apex', shortLabel: 'Frenzy',
   blurb: 'Unloads a rapid-fire frenzy — a burst of light shots that keeps chaining until a roll fails. Each shot is small, but a hot streak buries the enemy under a storm of them.',
-  color: '#f87171', emoji: '⚡',
+  color: '#f87171', emoji: '⇶',
   // MANY SMALL hits — the opposite of Leviathan's one big knock. Higher chain
   // chance + a sub-1 per-shot mult, tuned so the expected total lands slightly
   // under Leviathan (Lv 100 ≈ 47 across ~3 shots vs one ~50 shell). Expected
@@ -389,7 +389,7 @@ export const BLITZ: ClassDef<BlitzMilestone> = {
 export const FORESIGHT: ClassDef<ForesightMilestone> = {
   id: 'foresight', name: 'Oracle', shortLabel: 'Foresee',
   blurb: "Reveals the enemy's next moves. At higher ranks, refreshes your dodge so you can slip a shot you already spent your dodge on.",
-  color: '#8b7bf0', emoji: '👁️',
+  color: '#8b7bf0', emoji: '◉',
   milestones: [
     { unlockLevel: 10,  revealMoves: 1, dodgeRefreshChance: 0,    desc: "See the enemy's next move." },
     { unlockLevel: 25,  revealMoves: 2, dodgeRefreshChance: 0,    desc: "See the enemy's next 2 moves." },
@@ -407,7 +407,7 @@ export const FORESIGHT: ClassDef<ForesightMilestone> = {
 export const VENGEANCE: ClassDef<VengeanceMilestone> = {
   id: 'vengeance', name: 'Vengeance', shortLabel: 'Vengeance',
   blurb: 'Arm a vengeance ward. If a killing blow would land while it holds, cheat death: heal part of your hull and surge with bonus damage for the rest of the fight. Arm it too early or too late and it fizzles.',
-  color: '#d1495b', emoji: '🗡️',
+  color: '#d1495b', emoji: '†',
   milestones: [
     { unlockLevel: 10,  healPctMaxHp: 0.25, dmgBuffPct: 0.15, desc: 'Arm the ward. Cheat a killing blow this fight: heal 25% max HP, gain +15% damage for the rest of the fight.' },
     { unlockLevel: 25,  healPctMaxHp: 0.25, dmgBuffPct: 0.20, desc: 'Cheat a killing blow: heal 25% max HP, gain +20% damage for the rest of the fight.' },
