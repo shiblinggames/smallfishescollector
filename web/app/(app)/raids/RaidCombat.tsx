@@ -840,7 +840,7 @@ export default function RaidCombat({
   // Per-shot floating numbers for the Frenzy barrage — each shot gets its own,
   // scattered across the hull, so the whole volley's numbers rack up (the single
   // eHitsplat can only show one at a time).
-  const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean }[]>([])
+  const [barrageSplats, setBarrageSplats] = useState<{ key: number; text: string; dx: number; crit?: boolean; color?: string }[]>([])
   const [critFlash, setCritFlash]     = useState(false)
   // Brief red wash when the boss flips to phase 2 (challenge-mode Pete).
   // Same shape as critFlash — fixed full-screen radial gradient, ~400ms.
@@ -892,7 +892,7 @@ export default function RaidCombat({
   const [restorePulse, setRestorePulse] = useState(0)
   // Enemy status aura — a themed glow over the enemy hull while a tide/raid-item
   // status (burn, freeze) procs on it, so those effects read on the ship itself.
-  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee' } | null>(null)
+  const [enemyAura, setEnemyAura] = useState<{ key: number; kind: 'burn' | 'freeze' | 'snared' | 'foresee'; color?: string } | null>(null)
   // Thermal Shock confluence detonation — an ice+fire shatter burst over the hull.
   const [thermalShockFx, setThermalShockFx] = useState<{ key: number } | null>(null)
   // Persistent status — the enemy keeps a low ember glow while burning and a
@@ -914,7 +914,7 @@ export default function RaidCombat({
   const [enemyDeflect, setEnemyDeflect] = useState(0)
   const [playerImpact, setPlayerImpact] = useState<{ key: number; kind: 'normal' | 'volley' | 'crit' } | null>(null)
   // Heal sparkle on the player hull (Mender / Abyssal Tide / repair kit).
-  const [playerAura, setPlayerAura] = useState<{ key: number; kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' } | null>(null)
+  const [playerAura, setPlayerAura] = useState<{ key: number; kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace'; color?: string } | null>(null)
   // Dodge whoosh — afterimage + speed lines on whichever ship slips a shot.
   const [dodgeFx, setDodgeFx] = useState<{ key: number; actor: Actor } | null>(null)
 
@@ -1674,6 +1674,11 @@ export default function RaidCombat({
     // skin themes its whole summon in its own color), else the class color.
     const summonSkin = getCrewSkinByFilename(crew.imageUrl)
     const summonColor = summonSkin?.color ?? def.color
+    // If an equipped CHASE skin is on this crew, its accent colour themes the
+    // ability's whole payoff — damage/heal numbers, auras — so the effect reads
+    // as the skin (Tempest's shots strike lightning-blue, Hunter's Bane's blow
+    // lands blood-red, Galaxy's heal glows cosmic, etc.). null for base/regular.
+    const chaseColor: string | null = summonSkin?.chase ? summonSkin.color : null
     setAbilitySummon({ key: castKey, label: ABILITY_CAST_LABEL[def.id] ?? def.name, name: crew.name, color: summonColor, image: crew.imageUrl ?? null, chase: !!summonSkin?.chase, skinId: summonSkin?.id ?? null })
     setTimeout(() => setAbilitySummon(s => (s && s.key === castKey ? null : s)), SUMMON_TOTAL_MS)
 
@@ -1682,24 +1687,25 @@ export default function RaidCombat({
     // auras for self-buffs, enemy-hull auras for the ones that act ON the enemy.
     // Leviathan / Blitz drive their own attack animations in the switch below.
     const ak = castKey + 1
-    const themePlayer = (kind: 'heal' | 'tide' | 'aim' | 'charge' | 'brace') => {
-      setPlayerAura({ key: ak, kind })
+    const themePlayer = (kind: 'heal' | 'tide' | 'aim' | 'charge' | 'brace', color?: string | null) => {
+      setPlayerAura({ key: ak, kind, color: color ?? undefined })
       setTimeout(() => setPlayerAura(a => (a && a.key === ak ? null : a)), 950)
     }
-    const themeEnemy = (kind: 'snared' | 'foresee') => {
-      setEnemyAura({ key: ak, kind })
+    const themeEnemy = (kind: 'snared' | 'foresee', color?: string | null) => {
+      setEnemyAura({ key: ak, kind, color: color ?? undefined })
       setTimeout(() => setEnemyAura(a => (a && a.key === ak ? null : a)), 950)
     }
     // Defer the EFFECT so it lands as the summon fades — you call the crew, THEN
     // their power hits. Input stays blocked by the summon overlay meanwhile.
     setTimeout(() => {
     if      (def.id === 'mender')       themePlayer('heal')
-    else if (def.id === 'abyssal_tide') themePlayer('tide')
+    else if (def.id === 'abyssal_tide') themePlayer('tide', chaseColor)
     else if (def.id === 'sharpshot')    themePlayer('aim')
     else if (def.id === 'navigator')    themePlayer('charge')
     else if (def.id === 'anchor')       themePlayer('brace')
     else if (def.id === 'snare')        themeEnemy('snared')
-    else if (def.id === 'foresight')    themeEnemy('foresee')
+    else if (def.id === 'foresight')    themeEnemy('foresee', chaseColor)
+    else if (def.id === 'vengeance')    themePlayer('brace', chaseColor)
 
     // Dispatch on class id — TS narrows the milestone shape from the
     // per-class table.
@@ -1769,7 +1775,7 @@ export default function RaidCombat({
         abyssalShieldRef.current += shield
         if (at.cleanseDebuff) setCleanseDebuffPending(true)
         noteCheckResponse('heal')   // shield is read live at resolve; the heal is the transient note
-        setPHitsplat({ key: ak + 1, text: `+${heal}`, color: '#5eead4', big: true })
+        setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
         setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
         break
@@ -1795,9 +1801,18 @@ export default function RaidCombat({
         playStepChainRef.current.push(setTimeout(() => {
           setEnemyImpact({ key: lk + 1, kind: 'crit' })
           cameraShake('crit')
-          vibrate([0, 55, 40, 90])
-          applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, lv.autoCrit ? 'crit' : 'hit')
+          vibrate(chaseColor ? [0, 70, 45, 110] : [0, 55, 40, 90])
+          applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, lv.autoCrit ? 'crit' : 'hit', false, chaseColor ?? undefined)
           playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
+          // Hunter's Bane lands heavier — a second delayed thud + shake so the
+          // blow feels weighty, not just recolored.
+          if (chaseColor) {
+            playStepChainRef.current.push(setTimeout(() => {
+              setEnemyImpact({ key: lk + 2, kind: 'crit' })
+              cameraShake('crit')
+              playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 500))
+            }, 150))
+          }
         }, 210))
         break
       }
@@ -1850,7 +1865,7 @@ export default function RaidCombat({
             // the damage helpers suppresses the single eHitsplat for these.
             const dx = (k - lastIdx / 2) * 16 + (k % 2 ? 7 : -7)
             const sk = bk + 900
-            setBarrageSplats(s => [...s, { key: sk, text: `-${shotDmgs[k]}`, dx, crit: isCrit }])
+            setBarrageSplats(s => [...s, { key: sk, text: `-${shotDmgs[k]}`, dx, crit: isCrit, color: chaseColor ?? undefined }])
             playStepChainRef.current.push(setTimeout(() => setBarrageSplats(s => s.filter(x => x.key !== sk)), 680))
             if (k === lastIdx) {
               cameraShake('volley')
@@ -1936,12 +1951,12 @@ export default function RaidCombat({
   // detection / sink animation / onEnemyDefeated dispatch, mirroring the
   // step-playback path inside resolveTurn so kills landed via an ability
   // run the same outro as kills landed via cannon fire.
-  function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit', skipSplat = false) {
+  function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit', skipSplat = false, splatColor?: string) {
     const newHp = Math.max(0, enemyHpRef.current - rawDmg)
     setEnemyHp(newHp)
     enemyHpRef.current = newHp
     if (!skipSplat) {
-      setEHitsplat({ key: Date.now(), text: String(rawDmg), color: hitKind === 'crit' ? '#fbbf24' : '#f87171', big: hitKind === 'crit' })
+      setEHitsplat({ key: Date.now(), text: String(rawDmg), color: splatColor ?? (hitKind === 'crit' ? '#fbbf24' : '#f87171'), big: true })
       setTimeout(() => setEHitsplat(null), 480)
     }
     setEnemyShakeKind(hitKind === 'crit' ? 'crit' : 'hit')
@@ -4345,7 +4360,7 @@ export default function RaidCombat({
             {(enemyBurning || enemyFrozen) && <ShipStatusAura burning={enemyBurning} frozen={enemyFrozen} />}
             {/* Status aura — burning embers / freezing rime / snare jam over the hull */}
             <AnimatePresence>
-              {enemyAura && <EnemyStatusAura key={`ea-${enemyAura.key}`} kind={enemyAura.kind} />}
+              {enemyAura && <EnemyStatusAura key={`ea-${enemyAura.key}`} kind={enemyAura.kind} color={enemyAura.color} />}
             </AnimatePresence>
             {/* Muzzle flash when the enemy fires back (toward the player, left) */}
             {enemyMuzzle && (
@@ -4374,7 +4389,7 @@ export default function RaidCombat({
               {eHitsplat && <HitsplatOverlay key={eHitsplat.key} text={eHitsplat.text} color={eHitsplat.color} big={eHitsplat.big} volley={eHitsplat.volley} />}
             </AnimatePresence>
             {/* Frenzy barrage — each shot's own floating number, scattered. */}
-            {barrageSplats.map(s => <BarrageSplat key={s.key} text={s.text} dx={s.dx} crit={s.crit} />)}
+            {barrageSplats.map(s => <BarrageSplat key={s.key} text={s.text} dx={s.dx} crit={s.crit} color={s.color} />)}
           </motion.div>
         </motion.div>
 
@@ -4430,7 +4445,7 @@ export default function RaidCombat({
               </AnimatePresence>
               {/* Heal sparkle — green motes rising off the patched hull */}
               <AnimatePresence>
-                {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} kind={playerAura.kind} />}
+                {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} kind={playerAura.kind} color={playerAura.color} />}
               </AnimatePresence>
               {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
               {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} />}
@@ -6240,8 +6255,8 @@ function HitsplatOverlay({ text, color, big, volley }: { text: string; color: st
 // One floating number for a single Frenzy barrage shot. Lighter than the full
 // HitsplatOverlay (many can be on screen at once); each drifts up + fades and is
 // removed by its own timer, and dx scatters them across the hull.
-function BarrageSplat({ text, dx, crit }: { text: string; dx: number; crit?: boolean }) {
-  const color = crit ? '#fbbf24' : '#f87171'
+function BarrageSplat({ text, dx, crit, color: colorProp }: { text: string; dx: number; crit?: boolean; color?: string }) {
+  const color = colorProp ?? (crit ? '#fbbf24' : '#f87171')
   return (
     <motion.div
       initial={{ opacity: 0, x: '-50%', y: 4, scale: 0.55 }}
@@ -6261,12 +6276,12 @@ function BarrageSplat({ text, dx, crit }: { text: string; dx: number; crit?: boo
 // Enemy status aura — a brief themed glow + drifting motes over the hull when
 // a burn or freeze status ticks. Burn = embers rising; freeze = cold rime
 // settling. Localized to the enemy ship, fades on its own.
-function EnemyStatusAura({ kind }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee' }) {
+function EnemyStatusAura({ kind, color: colorOverride }: { kind: 'burn' | 'freeze' | 'snared' | 'foresee'; color?: string }) {
   const burn = kind === 'burn'
   const snared = kind === 'snared'
   const foresee = kind === 'foresee'
-  const color = burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : '#7dd3fc'
-  const moteColor = burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : '#e0f4ff'
+  const color = colorOverride ?? (burn ? '#fb923c' : snared ? '#d9b066' : foresee ? '#8b7bf0' : '#7dd3fc')
+  const moteColor = colorOverride ?? (burn ? '#ffd27a' : snared ? '#f0d79a' : foresee ? '#cfc4ff' : '#e0f4ff')
   const motes = useMemo(() => Array.from({ length: snared ? 8 : 6 }, (_, n) => ({
     // snare = motes clamp INWARD (a tightening net); burn rises, rime drifts down.
     x: snared ? (Math.random() - 0.5) * 52 : (Math.random() - 0.5) * 46,
@@ -6486,7 +6501,7 @@ function VengeanceEruptBurst() {
 //   aim    — an amber reticle that locks onto the guns (Sharpshot)
 //   charge — a gold flash + fast-rising powder sparks (Navigator)
 //   brace  — a steel bulwark ring + shimmer settling over the hull (Anchor)
-function PlayerStatusAura({ kind = 'heal' }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace' }) {
+function PlayerStatusAura({ kind = 'heal', color: colorOverride }: { kind?: 'heal' | 'tide' | 'aim' | 'charge' | 'brace'; color?: string }) {
   const CFG = {
     heal:   { color: '#4ade80', mote: '#bbf7d0' },
     tide:   { color: '#5eead4', mote: '#a7f3e8' },
@@ -6494,7 +6509,8 @@ function PlayerStatusAura({ kind = 'heal' }: { kind?: 'heal' | 'tide' | 'aim' | 
     charge: { color: '#f5c542', mote: '#ffe9a8' },
     brace:  { color: '#93c5fd', mote: '#dbeafe' },
   } as const
-  const { color, mote } = CFG[kind]
+  const color = colorOverride ?? CFG[kind].color
+  const mote = colorOverride ?? CFG[kind].mote
   const rise    = kind === 'heal' || kind === 'tide' || kind === 'charge'
   const fast    = kind === 'charge'
   const ring    = kind === 'tide' || kind === 'brace'   // a shield / bulwark forming
