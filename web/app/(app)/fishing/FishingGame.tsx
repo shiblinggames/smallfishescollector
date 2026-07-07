@@ -8869,7 +8869,7 @@ export default function FishingGame({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/rod_completionist_thumb.png" alt="Completionist Rod" width={220} height={220}
-                  style={{ width: 220, height: 220, objectFit: 'contain', filter: 'drop-shadow(0 0 20px rgba(245,205,110,0.5)) drop-shadow(0 0 46px rgba(245,205,110,0.28))' }} />
+                  style={{ width: 220, height: 220, objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(242,109,109,0.65)) drop-shadow(0 0 20px rgba(90,169,240,0.5)) drop-shadow(0 0 30px rgba(87,208,106,0.45)) drop-shadow(0 0 44px rgba(242,193,78,0.55))' }} />
               </motion.div>
               <motion.p className="font-cinzel font-700"
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
