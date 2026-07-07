@@ -144,7 +144,8 @@ export default function UltimateBuildPanel({
             <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#0c0f14', background: a.color, borderRadius: 999, padding: '0.2rem 0.6rem' }}>Live</span>
           </div>
           <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: a.color, margin: '2px 0 8px', lineHeight: 1.3 }}>{a.identity}</p>
-          <UltimatePreview id={a.id as ShipAugmentId} color={a.color} />
+          {/* No looping preview once it's forged and live — you already own it;
+              the perks are the useful reference now. */}
           <PerkList perks={a.perks} color={a.color} />
           {!hasRack && (
             <p className="font-karla" style={{ fontSize: '0.64rem', color: '#caa05a', lineHeight: 1.4, marginTop: 7 }}>

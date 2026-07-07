@@ -10,7 +10,7 @@ import { repairShip } from '@/app/(app)/raids/actions'
 import { motion, AnimatePresence, useDragControls, type DragControls } from 'framer-motion'
 import type { ShipStats } from '@/lib/expeditions'
 import { computeCombatRating, computeVoyageScore, EXPEDITION_SHIP_STATS, getRankTitle, raidItemSlotsForTier } from '@/lib/expeditions'
-import { getShipClass } from '@/lib/shipClasses'
+import { getShipClass, SHIP_CLASS_LINES, aggregateShipClasses, type ShipClassId } from '@/lib/shipClasses'
 import { navLevelReqForShip } from '@/lib/gearGating'
 import { SHIPS } from '@/lib/ships'
 import { SHIP_SKINS } from '@/lib/shipSkins'
@@ -548,6 +548,8 @@ export default function ShipHero({
   // one-tap upgrade for the next available tier, with a fall-through link to
   // the full shipyard if the player wants to browse skins/lower tiers.
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  // Captain's-class detail popup — the owned tier ids of the tapped class line.
+  const [classDetail, setClassDetail] = useState<ShipClassId[] | null>(null)
   const [upgradeBusy, setUpgradeBusy] = useState(false)
   const [upgradeError, setUpgradeError] = useState<string | null>(null)
   // Tappable Nav-level info modal — shows captain bonuses, XP to next level,
@@ -1450,101 +1452,9 @@ export default function ShipHero({
                 })}
               </div>
 
-              {loadoutTab === 'ship' && (<>
-              {/* ── Ship Skins ── now the top of the Ship tab (hull stats removed —
-                  they read live in the fight). Grid mirrors the fishing boat picker. */}
-              <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.7rem', letterSpacing: '0.04em' }}>Ship Skins</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: '1.5rem' }}>
-                {/* Default */}
-                {(() => {
-                  const isEquipped = equippedSkin === null
-                  return (
-                    <button
-                      onClick={() => { if (!isEquipped) handleEquipSkin(null) }}
-                      disabled={isEquipped}
-                      className="font-karla font-700"
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                        padding: '0.6rem 0.4rem 0.5rem',
-                        borderRadius: 10,
-                        background: isEquipped ? 'rgba(255,255,255,0.06)' : 'rgba(4,10,18,0.72)',
-                        border: `1px solid ${isEquipped ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.09)'}`,
-                        cursor: isEquipped ? 'default' : 'pointer',
-                      }}
-                    >
-                      <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={shipStats.image} alt="" loading="lazy" decoding="async" style={{ width: 44, height: 44, objectFit: 'contain' }} />
-                      </div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.15, textAlign: 'center' }}>Default</p>
-                      {isEquipped
-                        ? <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#e0ddd8' }}>✓ Equipped</span>
-                        : <span className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#7a7674' }}>Original</span>
-                      }
-                    </button>
-                  )
-                })()}
-                {SHIP_SKINS.map(skin => {
-                  const owned    = ownedSkins.includes(skin.id)
-                  // Tier-gated skins (e.g. Man-o-War-only) can't be equipped on a
-                  // smaller hull — locked until the player commands the right ship.
-                  const skinTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
-                  const tierLocked = skin.requiresShipTier != null && skinTier < skin.requiresShipTier
-                  const isEquipped = equippedSkin === skin.id
-                  const equippable = owned && !isEquipped && !tierLocked
-                  // Preview the skin's OWN sprite at the player's hull tier; for a
-                  // tier-gated skin below its tier, show its target-tier art so the
-                  // player sees what they're chasing. Falls back to base + filter.
-                  const skinImg = skin.imageByTier?.[skinTier]
-                    ?? (skin.requiresShipTier != null ? skin.imageByTier?.[skin.requiresShipTier] : undefined)
-                    ?? shipStats.image
-                  return (
-                    <button
-                      key={skin.id}
-                      onClick={equippable ? () => handleEquipSkin(skin.id) : undefined}
-                      disabled={!equippable}
-                      className="font-karla font-700"
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                        padding: '0.6rem 0.4rem 0.5rem',
-                        borderRadius: 10,
-                        background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)',
-                        border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`,
-                        boxShadow: isEquipped ? `0 0 14px ${skin.color}33` : 'none',
-                        cursor: equippable ? 'pointer' : 'default',
-                        opacity: owned && !tierLocked ? 1 : 0.6,
-                      }}
-                    >
-                      <div style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={skinImg}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            width: 44, height: 44, objectFit: 'contain',
-                            filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)',
-                            transition: 'filter 0.25s',
-                          }}
-                        />
-                      </div>
-                      <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.15, textAlign: 'center' }}>{skin.name}</p>
-                      {isEquipped ? (
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: skin.color }}>✓ Equipped</span>
-                      ) : tierLocked ? (
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: skin.color, textAlign: 'center', lineHeight: 1.3 }}>{SHIPS[skin.requiresShipTier!]?.name ?? 'Top hull'} only</span>
-                      ) : owned ? (
-                        <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.6rem', color: '#4ade80' }}>Tap to equip</span>
-                      ) : (
-                        <span className="font-karla font-600" style={{ fontSize: '0.6rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.3 }}>{skin.source}</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              </>)}
+              {/* Ship Skins moved to the BOTTOM of the Ship tab (cosmetic, least
+                  important) and condensed into a single scrollable row — see the
+                  Ship-tab block further down. */}
 
               {loadoutTab === 'loadout' && (<>
               {/* ── Battle Loadout ── the ACTIVE equipped items shown as real
@@ -1815,9 +1725,6 @@ export default function ShipHero({
               {(() => {
                 const shipTier = Math.max(0, SHIPS.findIndex(s => s.name === shipStats.name))
                 const nextShip = SHIPS[shipTier + 1]
-                const picks = Object.values(shipClasses)
-                  .map(id => getShipClass(id))
-                  .filter((c): c is NonNullable<ReturnType<typeof getShipClass>> => !!c)
                 return (
                   <>
                     {/* Hull stats grid removed — those numbers read live during the
@@ -1857,59 +1764,44 @@ export default function ShipHero({
                       />
                     )}
 
-                    {/* ── Captain's Class ── permanent chapter-end buffs. */}
+                    {/* ── Captain's Class ── permanent chapter-end buffs. Collapse
+                        each class LINE to just its top tier (own I+II+III → show
+                        III), all on one scrollable row; tap a card for the full
+                        breakdown + combined effect. */}
                     <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>Captain&rsquo;s Class</p>
                     <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
                       Permanent buffs you pick at the end of each chapter. They stack.
                     </p>
-                    {picks.length === 0 ? (
-                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.3rem 1rem', marginBottom: '1.7rem' }}>
-                        <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#7a7470', lineHeight: 1.5 }}>No class yet. Clear a chapter to choose one.</p>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.7rem' }}>
-                        {picks.map(cls => (
-                          <div key={cls.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 11, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${cls.color}12`, border: `1px solid ${cls.color}45` }}>
-                            <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: `${cls.color}20`, border: `1px solid ${cls.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', color: cls.color }}>{cls.emoji}</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8' }}>{cls.name}</p>
-                              <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a39a', lineHeight: 1.4, marginTop: 2 }}>{cls.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* ── From the Locker ── permanent perks earned in the Davy
-                        Jones Gauntlet. Display-only; buying happens in the
-                        Gauntlet shop. Hidden until you own at least one. */}
                     {(() => {
-                      const owned = gauntletUpgrades
-                        .map(getGauntletUpgrade)
-                        .filter((u): u is NonNullable<ReturnType<typeof getGauntletUpgrade>> => !!u)
-                      if (owned.length === 0) return null
-                      return (
-                        <>
-                          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#d4ba78', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>From the Locker</p>
-                          <p className="font-karla" style={{ fontSize: '0.74rem', color: '#8a8480', marginBottom: '0.85rem', lineHeight: 1.45 }}>
-                            Permanent upgrades hauled up from the Davy Jones Gauntlet.
-                          </p>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.7rem' }}>
-                            {owned.map(u => (
-                              <div key={u.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 11, padding: '0.7rem 0.8rem', borderRadius: 12, background: 'rgba(94,234,212,0.08)', border: '1px solid rgba(94,234,212,0.3)' }}>
-                                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: 'rgba(94,234,212,0.14)', border: '1px solid rgba(94,234,212,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5eead4' }}>
-                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h18l-1.5 13.5a1 1 0 0 1-1 .9H5.5a1 1 0 0 1-1-.9L3 7Z" /><path d="M3 7V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2" /><path d="M12 11v6" /></svg>
-                                </span>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f0ede8' }}>{u.name}</p>
-                                  <p className="font-karla" style={{ fontSize: '0.7rem', color: '#a8a39a', lineHeight: 1.4, marginTop: 2 }}>{u.description}</p>
-                                </div>
-                              </div>
-                            ))}
+                      const ownedIds = new Set(Object.values(shipClasses))
+                      const lines = SHIP_CLASS_LINES
+                        .map(line => line.filter(id => ownedIds.has(id)) as ShipClassId[])
+                        .filter(owned => owned.length > 0)
+                        .map(owned => ({ owned, top: getShipClass(owned[owned.length - 1])! }))
+                      if (lines.length === 0) {
+                        return (
+                          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.14)', borderRadius: 14, padding: '1.3rem 1rem', marginBottom: '1.7rem' }}>
+                            <p className="font-karla text-center" style={{ fontSize: '0.78rem', color: '#7a7470', lineHeight: 1.5 }}>No class yet. Clear a chapter to choose one.</p>
                           </div>
-                        </>
+                        )
+                      }
+                      return (
+                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, marginBottom: '1.7rem', WebkitOverflowScrolling: 'touch' }}>
+                          {lines.map(({ owned, top }) => (
+                            <button key={top.id} type="button" onClick={() => setClassDetail(owned)}
+                              style={{ flexShrink: 0, width: 116, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '0.7rem 0.5rem', borderRadius: 12, background: `${top.color}12`, border: `1px solid ${top.color}45`, cursor: 'pointer', textAlign: 'center' }}>
+                              <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, background: `${top.color}20`, border: `1px solid ${top.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.05rem', color: top.color }}>{top.emoji}</span>
+                              <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f0ede8', lineHeight: 1.15 }}>{top.name}</p>
+                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.52rem', color: `${top.color}` }}>Details ›</span>
+                            </button>
+                          ))}
+                        </div>
                       )
                     })()}
+
+                    {/* From the Locker section removed — Gauntlet upgrades are
+                        surfaced in the Gauntlet itself; repeating them here was
+                        redundant. */}
 
                     {/* ── Repair Kit ── once-per-battle hull patch (Special action). */}
                     {(() => {
@@ -1956,6 +1848,48 @@ export default function ShipHero({
                         </>
                       )
                     })()}
+
+                    {/* ── Ship Skins ── cosmetic, least important, so they sit at
+                        the very bottom as ONE compact scrollable row. */}
+                    <p className="font-cinzel font-700" style={{ fontSize: '1rem', color: '#b8a878', marginBottom: '0.5rem', letterSpacing: '0.04em' }}>Ship Skins</p>
+                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' }}>
+                      {(() => {
+                        const isEquipped = equippedSkin === null
+                        return (
+                          <button onClick={() => { if (!isEquipped) handleEquipSkin(null) }} disabled={isEquipped}
+                            style={{ flexShrink: 0, width: 92, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? 'rgba(255,255,255,0.06)' : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.09)'}`, cursor: isEquipped ? 'default' : 'pointer' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={shipStats.image} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain' }} />
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: '#f0ede8', lineHeight: 1.1, textAlign: 'center' }}>Default</p>
+                            <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: isEquipped ? '#e0ddd8' : '#7a7674' }}>{isEquipped ? '✓ Equipped' : 'Original'}</span>
+                          </button>
+                        )
+                      })()}
+                      {SHIP_SKINS.map(skin => {
+                        const owned = ownedSkins.includes(skin.id)
+                        const tierLocked = skin.requiresShipTier != null && shipTier < skin.requiresShipTier
+                        const isEquipped = equippedSkin === skin.id
+                        const equippable = owned && !isEquipped && !tierLocked
+                        const skinImg = skin.imageByTier?.[shipTier] ?? (skin.requiresShipTier != null ? skin.imageByTier?.[skin.requiresShipTier] : undefined) ?? shipStats.image
+                        return (
+                          <button key={skin.id} onClick={equippable ? () => handleEquipSkin(skin.id) : undefined} disabled={!equippable}
+                            style={{ flexShrink: 0, width: 92, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '0.5rem 0.35rem', borderRadius: 10, background: isEquipped ? `${skin.color}1f` : 'rgba(4,10,18,0.72)', border: `1px solid ${isEquipped ? skin.color + '90' : owned && !tierLocked ? 'rgba(255,255,255,0.09)' : `${skin.color}22`}`, boxShadow: isEquipped ? `0 0 12px ${skin.color}33` : 'none', cursor: equippable ? 'pointer' : 'default', opacity: owned && !tierLocked ? 1 : 0.6 }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={skinImg} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, objectFit: 'contain', filter: owned && !tierLocked ? skin.filter : 'brightness(0.25) saturate(0)', transition: 'filter 0.25s' }} />
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.68rem', color: owned && !tierLocked ? '#f0ede8' : '#a8a3a0', lineHeight: 1.1, textAlign: 'center' }}>{skin.name}</p>
+                            {isEquipped ? (
+                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: skin.color }}>✓ Equipped</span>
+                            ) : tierLocked ? (
+                              <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.5rem', color: skin.color, textAlign: 'center', lineHeight: 1.25 }}>{SHIPS[skin.requiresShipTier!]?.name ?? 'Top hull'} only</span>
+                            ) : owned ? (
+                              <span className="font-karla font-700 uppercase tracking-[0.08em]" style={{ fontSize: '0.5rem', color: '#4ade80' }}>Tap to equip</span>
+                            ) : (
+                              <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#7a7674', textAlign: 'center', lineHeight: 1.25 }}>{skin.source}</span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </>
                 )
               })()}
@@ -2336,6 +2270,68 @@ export default function ShipHero({
             onClose={() => { setKitOpen(false); setKitErr(null) }}
           />
         </motion.div>
+      </PopupShell>
+
+      {/* Captain's-class detail — the tiers you own in this line + their combined
+          effect. Opened from a class card on the Ship tab. */}
+      <PopupShell open={!!classDetail} onClose={() => setClassDetail(null)}>
+        {classDetail && (() => {
+          const tiers = classDetail.map(id => getShipClass(id)!).filter(Boolean)
+          const top = tiers[tiers.length - 1]
+          const agg = aggregateShipClasses(Object.fromEntries(classDetail.map((id, i) => [i, id])))
+          const pct = (m: number) => `${m >= 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`
+          const combined: string[] = []
+          if (agg.damageMult !== 1)   combined.push(`${pct(agg.damageMult)} damage`)
+          if (agg.hpMult !== 1)       combined.push(`${pct(agg.hpMult)} HP`)
+          if (agg.doubloonMult !== 1) combined.push(`${pct(agg.doubloonMult)} doubloons`)
+          if (agg.speedFlat !== 0)    combined.push(`${agg.speedFlat > 0 ? '+' : ''}${agg.speedFlat} speed`)
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 4 }}
+              transition={{ duration: 0.18 }}
+              style={{ margin: 'auto', width: '100%', maxWidth: 380, background: 'rgba(8,14,24,0.98)', border: `1px solid ${top.color}55`, borderRadius: 18, padding: '1.1rem 1rem 1.2rem', boxShadow: `0 0 30px ${top.color}22` }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 4 }}>
+                <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, background: `${top.color}20`, border: `1px solid ${top.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: top.color }}>{top.emoji}</span>
+                <div style={{ minWidth: 0 }}>
+                  <p className="font-cinzel font-700" style={{ fontSize: '1.05rem', color: '#f0ede8', lineHeight: 1.1 }}>{top.name}</p>
+                  <p className="font-karla font-700" style={{ fontSize: '0.66rem', color: top.color, lineHeight: 1.3, marginTop: 1 }}>{top.tagline}</p>
+                </div>
+              </div>
+              {combined.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '10px 0 12px' }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.52rem', color: '#8a8480', alignSelf: 'center' }}>Combined</span>
+                  {combined.map((c, i) => (
+                    <span key={i} className="font-karla font-700" style={{ fontSize: '0.66rem', color: top.color, background: `${top.color}18`, border: `1px solid ${top.color}44`, borderRadius: 999, padding: '0.15rem 0.55rem' }}>{c}</span>
+                  ))}
+                </div>
+              )}
+              <p className="font-karla font-700 uppercase tracking-[0.12em]" style={{ fontSize: '0.52rem', color: '#8a8480', marginBottom: 7 }}>{tiers.length === 1 ? 'Your tier' : `Your ${tiers.length} tiers, stacked`}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {tiers.map(t => (
+                  <div key={t.id} style={{ padding: '0.6rem 0.7rem', borderRadius: 11, background: `${t.color}0e`, border: `1px solid ${t.color}33` }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f0ede8' }}>{t.name}</p>
+                      <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {t.bullets.map((b, i) => (
+                          <span key={i} className="font-karla font-700" style={{ fontSize: '0.56rem', color: b.positive ? '#8fd39a' : '#d99', whiteSpace: 'nowrap' }}>{b.label}</span>
+                        ))}
+                      </span>
+                    </div>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#9a948c', lineHeight: 1.4, marginTop: 3 }}>{t.description}</p>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={() => setClassDetail(null)}
+                className="font-karla font-700 uppercase tracking-[0.08em]"
+                style={{ marginTop: 13, width: '100%', padding: '0.6rem', borderRadius: 11, fontSize: '0.66rem', color: '#cfc9bf', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer' }}>
+                Close
+              </button>
+            </motion.div>
+          )
+        })()}
       </PopupShell>
 
       {/* Cinematic forge — the two components slam together and the forged item
