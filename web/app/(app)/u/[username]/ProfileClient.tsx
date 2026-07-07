@@ -490,7 +490,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
             background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
             border: `1px solid ${ship.color}33`,
             borderRadius: CARD_RADIUS,
-            padding: '24px 16px 16px',
+            padding: '14px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
             <img
@@ -499,7 +499,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
               loading="lazy"
               decoding="async"
               style={{
-                width: 200, height: 155,
+                width: 210, height: 'auto', maxHeight: 150,
                 objectFit: 'contain',
                 filter: shipSkin
                   ? shipSkin.filter

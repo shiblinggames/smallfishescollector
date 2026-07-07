@@ -1013,7 +1013,7 @@ export default function ProfileClient({
             background: `radial-gradient(ellipse at 50% 65%, ${ship.color}1c 0%, transparent 68%)`,
             border: `1px solid ${ship.color}33`,
             borderRadius: CARD_RADIUS,
-            padding: '24px 16px 16px',
+            padding: '14px 16px 16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
             <img
@@ -1022,7 +1022,7 @@ export default function ProfileClient({
               loading="lazy"
               decoding="async"
               style={{
-                width: 200, height: 155, objectFit: 'contain',
+                width: 210, height: 'auto', maxHeight: 150, objectFit: 'contain',
                 filter: shipSkinDef ? shipSkinDef.filter : `drop-shadow(0 4px 28px ${ship.color}60)`,
               }}
             />
