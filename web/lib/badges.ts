@@ -184,7 +184,7 @@ export const BADGES: Badge[] = [
   { id: 'overkill',       name: 'Overkill',           description: 'Land a single raid hit for 500 or more',          imageUrl: '/badges/overkill.png',       difficulty: 'veteran'  },
   { id: 'all_hands_legends', name: 'All Hands, All Legends', description: 'Raid in the Man-o-War with 5 Level 100 legendary crew', imageUrl: '/badges/all_hands_legends.png', difficulty: 'master' },
   { id: 'iron_ruse',      name: 'Iron Ruse',          description: 'Beat the Admiral Ruse raid taking no damage',     imageUrl: '/badges/iron_ruse.png',      difficulty: 'master'   },
-  { id: 'not_a_shot_fired', name: 'Not a Shot Fired', description: 'Sink a boss without a shot or a crew ability',    imageUrl: '/badges/not_a_shot_fired.png', difficulty: 'seasoned' },
+  { id: 'not_a_shot_fired', name: 'Not a Shot Fired', description: 'Sink a boss without a shot or a crew ability',    imageUrl: '/badges/not_a_shot_fired.png', difficulty: 'veteran'  },
   { id: 'tight_quarters', name: 'Tight Quarters',     description: 'Beat the Quartermaster raid using no crew abilities', imageUrl: '/badges/tight_quarters.png', difficulty: 'master' },
   { id: 'dead_reckoning', name: 'Dead Reckoning',     description: 'Clear the Cartographer raid missing no critical hits', imageUrl: '/badges/dead_reckoning.png', difficulty: 'master' },
 ]
