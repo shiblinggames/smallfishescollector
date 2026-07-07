@@ -1791,37 +1791,47 @@ export default function RaidCombat({
       case 'blitz': {
         const bz = m as import('@/lib/crewClasses').BlitzMilestone
         // Frenzy chain — first shot guaranteed, then roll chainChance to
-        // continue (10-shot hard cap so an 80% chain can't tail to 30+). MANY
-        // SMALL hits: each shot is only shotDmgMult of a normal cannon shot
-        // (Sharpshot / damagePct still compound). Lv 100 crits every shot.
+        // continue (10-shot hard cap). MANY SMALL hits: each shot is only
+        // shotDmgMult of a normal cannon shot (Sharpshot / damagePct still
+        // compound). Lv 100 crits every shot.
         const shotResult: ShotResult = bz.autoCrit ? 'critical' : 'hit'
-        let total = 0
-        let shots = 0
+        const shotDmgs: number[] = []
         const CHAIN_CAP = 10
-        while (shots < CHAIN_CAP) {
-          total += Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.shotDmgMult)
-          shots++
+        while (shotDmgs.length < CHAIN_CAP) {
+          shotDmgs.push(Math.max(1, Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * bz.shotDmgMult)))
           if (Math.random() >= bz.chainChance) break
         }
-        total = Math.max(1, total)
+        const shots = shotDmgs.length
+        const total = shotDmgs.reduce((a, b) => a + b, 0)
+        const isCrit = !!bz.autoCrit
         noteCheckResponse('burst')
-        // Rat-a-tat FX: a rapid burst of muzzle pops (one per shot, capped so a
-        // long chain doesn't drag) + hull sparks, then the total lands on a
-        // volley shake. The pops self-fade, so no per-pop cleanup needed.
-        const pops = Math.min(shots, 6)
-        for (let k = 0; k < pops; k++) {
+        // Find the shot that lands the kill (running total vs current HP) so the
+        // chain STOPS there and that shot runs the outro. Nothing else damages
+        // the enemy mid-burst (turn resolution), so this is stable.
+        const curHp = enemyHpRef.current
+        let cum = 0, killIdx = -1
+        for (let k = 0; k < shots; k++) { cum += shotDmgs[k]; if (cum >= curHp) { killIdx = k; break } }
+        const lastIdx = killIdx >= 0 ? killIdx : shots - 1
+        // Rat-a-tat: EACH shot pops a muzzle flash + a hull impact + its OWN
+        // damage number in rapid succession, so the frenzy visibly chains the
+        // hits instead of one lump landing at the end.
+        const INTERVAL = 120
+        for (let k = 0; k <= lastIdx; k++) {
           playStepChainRef.current.push(setTimeout(() => {
             const bk = Date.now() + k
-            setCannonShot({ key: bk, kind: 'normal' })
-            vibrate(10)
-            if (k % 2 === 1) setEnemyImpact({ key: bk + 300, kind: 'normal' })
-          }, k * 105))
+            setCannonShot({ key: bk, kind: isCrit ? 'crit' : 'normal' })
+            playStepChainRef.current.push(setTimeout(() => setCannonShot(null), 85))
+            setEnemyImpact({ key: bk + 300, kind: isCrit ? 'crit' : 'normal' })
+            playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 150))
+            vibrate(isCrit ? 16 : 9)
+            if (k === lastIdx) {
+              cameraShake('volley')
+              applyAbilityDamage(shotDmgs[k], `${crew.name} unloads ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, isCrit ? 'crit' : 'hit')
+            } else {
+              applyChainHit(shotDmgs[k], isCrit ? 'crit' : 'hit')
+            }
+          }, k * INTERVAL))
         }
-        playStepChainRef.current.push(setTimeout(() => {
-          cameraShake('volley')
-          applyAbilityDamage(total, `${crew.name} unloads ${shots} shot${shots === 1 ? '' : 's'} for ${total}!`, bz.autoCrit ? 'crit' : 'hit')
-        }, pops * 105))
-        playStepChainRef.current.push(setTimeout(() => { setCannonShot(null); setEnemyImpact(null) }, pops * 105 + 520))
         break
       }
       case 'foresight': {
@@ -1945,6 +1955,19 @@ export default function RaidCombat({
       }
       setTimeout(() => onEnemyDefeated(playerHpRef.current, playerChargesRef.current), cbDelay)
     }
+  }
+
+  // One link of the Blitz frenzy chain — shaves a small shot off the enemy with
+  // its OWN damage number + shake, no log/kill. The FINAL shot in the chain runs
+  // applyAbilityDamage instead (that one owns the summary line + kill outro).
+  function applyChainHit(rawDmg: number, hitKind: 'hit' | 'crit') {
+    const newHp = Math.max(0, enemyHpRef.current - rawDmg)
+    setEnemyHp(newHp)
+    enemyHpRef.current = newHp
+    setEHitsplat({ key: Date.now(), text: String(rawDmg), color: hitKind === 'crit' ? '#fbbf24' : '#f87171', big: false })
+    setEnemyShakeKind('hit')
+    setEnemyShakeKey(k => k + 1)
+    setTimeout(() => setEHitsplat(null), 200)
   }
 
   function selectAction(action: EnemyAction) {
