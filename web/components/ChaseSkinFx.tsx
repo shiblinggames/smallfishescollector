@@ -23,20 +23,20 @@ const wrap = (_summon: boolean): React.CSSProperties => ({
 // Tempest (Mako) — electric storm. A lightning FLASH lights the character and
 // bright sparks crackle erratically around it. No drawn bolts.
 const SPARK_PTS: [number, number][] = [
-  [26, 24], [72, 28], [40, 44], [66, 54], [22, 58], [56, 72], [80, 46], [34, 76],
+  [30, 30], [70, 40], [46, 62], [22, 52], [64, 74],
 ]
 function TempestFx({ color, summon }: { color: string; summon: boolean }) {
-  const sz = summon ? 4 : 3
+  const sz = summon ? 3 : 2
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
-      {/* Lightning flash lighting the character — bright white core. */}
+      {/* Lightning flash lighting the character — bright white core. THE effect. */}
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, #ffffffdd 0%, ${color}aa 26%, ${color}44 52%, transparent 74%)`, mixBlendMode: 'screen', opacity: 0, animation: `chase-storm-flash ${summon ? 2.6 : 4}s ease-out infinite` }} />
-      {/* A few crackling sparks around the character. */}
+      {/* Rare, subtle sparks — occasional accents, not the focus. */}
       {SPARK_PTS.map(([l, t], i) => (
         <div key={i} style={{
           position: 'absolute', left: `${l}%`, top: `${t}%`, width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2,
-          borderRadius: '50%', background: '#f0fdff', boxShadow: `0 0 3px #fff, 0 0 7px ${color}, 0 0 13px ${color}`, opacity: 0,
-          animation: `chase-spark-crackle ${((summon ? 0.7 : 1.2) + (i % 5) * 0.28).toFixed(2)}s ${(i * 0.17).toFixed(2)}s infinite`,
+          borderRadius: '50%', background: color, boxShadow: `0 0 2px ${color}, 0 0 5px ${color}`, opacity: 0,
+          animation: `chase-spark-crackle ${((summon ? 3 : 4.6) + (i % 5) * 0.7).toFixed(2)}s ${(i * 0.9).toFixed(2)}s infinite`,
         }} />
       ))}
     </div>
