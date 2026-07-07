@@ -20,19 +20,47 @@ const wrap = (_summon: boolean): React.CSSProperties => ({
   overflow: 'hidden',
 })
 
-// Tempest (Mako) — thunder god. Lightning bolts flash across the art.
+// A jagged lightning bolt radiating from near the centre outward toward `ang`
+// (degrees) to length `len`, in the 0-100 viewBox. Perpendicular jitter tapers
+// to zero at both ends so it reads as a forked bolt, not a wobbly line.
+// Deterministic (seeded) so it stays stable across re-renders.
+function makeBolt(ang: number, len: number, seed: number): string {
+  const segs = 6
+  const rad = (ang * Math.PI) / 180
+  const dx = Math.cos(rad), dy = Math.sin(rad)
+  const px = -dy, py = dx          // perpendicular
+  const cx = 50, cy = 50, start = 9
+  let s = seed
+  const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff }
+  const pts: string[] = []
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs
+    const r = start + t * (len - start)
+    const taper = Math.sin(t * Math.PI)        // 0 at ends, 1 mid
+    const j = (rnd() - 0.5) * 13 * taper
+    pts.push(`${(cx + dx * r + px * j).toFixed(1)},${(cy + dy * r + py * j).toFixed(1)}`)
+  }
+  return pts.join(' ')
+}
+
+// Tempest (Mako) — thunder god. Forked bolts crackle outward AROUND the
+// character in every direction, flickering asynchronously like a live arc.
+const TEMPEST_BOLTS: [number, number][] = [
+  [12, 45], [48, 40], [82, 46], [118, 39], [152, 45], [188, 41],
+  [222, 46], [256, 39], [292, 45], [328, 41], [66, 33], [300, 33],
+]
 function TempestFx({ color, summon }: { color: string; summon: boolean }) {
-  const bolts = ['50,-4 43,30 57,50 46,74 54,104', '64,-4 72,26 58,54 69,80 61,104', '36,-2 28,32 45,56 34,104']
-  const dur = summon ? 1.15 : 3.6
+  const base = summon ? 0.9 : 2.1
+  const sw = summon ? 1.3 : 0.95
   return (
     <div className="chase-skin-fx" style={wrap(summon)}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}>
-        {bolts.map((pts, i) => (
-          <polyline key={i} points={pts} fill="none" stroke="#ffffff" strokeWidth={summon ? 1.5 : 1.1} strokeLinejoin="round" strokeLinecap="round"
-            style={{ opacity: 0, filter: `drop-shadow(0 0 2px ${color}) drop-shadow(0 0 5px ${color}) drop-shadow(0 0 9px ${color})`, animation: `chase-bolt-flicker ${dur}s ${i * 0.42}s infinite` }} />
+        {TEMPEST_BOLTS.map(([ang, len], i) => (
+          <polyline key={i} points={makeBolt(ang, len, i * 97 + 13)} fill="none" stroke="#ffffff" strokeWidth={sw} strokeLinejoin="round" strokeLinecap="round"
+            style={{ opacity: 0, filter: `drop-shadow(0 0 1.5px ${color}) drop-shadow(0 0 4px ${color}) drop-shadow(0 0 8px ${color})`, animation: `chase-bolt-flicker ${(base + (i % 4) * 0.35).toFixed(2)}s ${(i * 0.16).toFixed(2)}s infinite` }} />
         ))}
       </svg>
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 44%, ${color}33 0%, transparent 66%)`, mixBlendMode: 'screen', animation: `chase-electric-pulse ${dur}s ease-in-out infinite` }} />
+      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 48%, ${color}30 0%, transparent 60%)`, mixBlendMode: 'screen', animation: `chase-electric-pulse ${(base * 1.4).toFixed(2)}s ease-in-out infinite` }} />
     </div>
   )
 }
