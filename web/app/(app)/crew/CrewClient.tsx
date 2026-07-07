@@ -498,59 +498,28 @@ function CrewPanel({
         })()}
         </div>{/* end arched niche */}
 
-        {/* Status badges sit on the WRAPPER (overflow:visible), so they
-            can hang at the top corners without being clipped by the
-            niche's arch + overflow:hidden. Tucked just outside the niche
-            border so they read as decals attached to the portrait. */}
-        {/* A trawling crew has its voyage/raid slot freed on deploy, so it
-            reads as benched — but it's actually away at sea. Show a teal net
-            pip (lockKind === 'trawl') so an at-sea crew never looks idle; the
-            voyage/raid pip still draws for crew genuinely in a party. */}
-        {(lockKind === 'trawl' || (assignment && assignment !== 'bench')) && (() => {
-          const isTrawl = lockKind === 'trawl'
-          const accent  = isTrawl ? '#3fc8aa' : assignment === 'voyage' ? ASSIGN_VOYAGE : ASSIGN_RAID
-          const label   = isTrawl ? 'Out on a trawl' : (isCaptain ? 'Captain · ' : '') + (assignment === 'voyage' ? 'On Voyage' : 'On Raid')
-          const Icon    = isTrawl ? NetIconSvg : assignment === 'voyage' ? AnchorIconSvg : CrossedSwordsIconSvg
-          return (
-            <>
-              <div
-                title={label}
-                aria-label={label}
-                style={{
-                  position: 'absolute', top: -6, right: -6,
-                  width: 26, height: 26, borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: `radial-gradient(circle at 35% 30%, ${accent}ff 0%, ${accent}d0 70%)`,
-                  border: `1.5px solid ${accent}`,
-                  boxShadow: `0 2px 7px rgba(0,0,0,0.6), 0 0 12px ${accent}66, inset 0 1px 0 rgba(255,255,255,0.3)`,
-                  pointerEvents: 'none',
-                  zIndex: 2,
-                }}
-              >
-                <Icon size={14} color="#0a0a0a" />
-              </div>
-              {/* Captain crown sits above the assignment pip — tiny gold
-                  silhouette so the player can tell at a glance who's
-                  going to anchor the slot-0 captain seat on this track. */}
-              {isCaptain && !isTrawl && (
-                <div
-                  aria-hidden
-                  style={{
-                    position: 'absolute', top: -19, right: -2,
-                    width: 18, height: 14,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    pointerEvents: 'none',
-                    zIndex: 3,
-                  }}
-                >
-                  <svg width="18" height="14" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.3" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.75))' }}>
-                    <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
-                  </svg>
-                </div>
-              )}
-            </>
-          )
-        })()}
+        {/* Only the "out on a trawl" pip lives on the portrait now — raid/voyage
+            assignment reads in the dedicated party sections, so those tags were
+            removed from the card. A trawl is NOT a party (the crew's away
+            fishing), so its pip stays. Captain crown moved next to the name. */}
+        {lockKind === 'trawl' && (
+          <div
+            title="Out on a trawl"
+            aria-label="Out on a trawl"
+            style={{
+              position: 'absolute', top: -6, right: -6,
+              width: 26, height: 26, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'radial-gradient(circle at 35% 30%, #3fc8aaff 0%, #3fc8aad0 70%)',
+              border: '1.5px solid #3fc8aa',
+              boxShadow: '0 2px 7px rgba(0,0,0,0.6), 0 0 12px #3fc8aa66, inset 0 1px 0 rgba(255,255,255,0.3)',
+              pointerEvents: 'none',
+              zIndex: 2,
+            }}
+          >
+            <NetIconSvg size={14} color="#0a0a0a" />
+          </div>
+        )}
         {locked && (
           <div
             title={lockLabel}
@@ -579,9 +548,19 @@ function CrewPanel({
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-            <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p className="font-pirata" style={{ fontSize: '1.18rem', color: '#ecdcbd', lineHeight: 1, letterSpacing: '0.02em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {name}
             </p>
+            {/* Captain crown — party captain (slot 0), now beside the name. */}
+            {isCaptain && (
+              <span aria-label="Captain" title="Captain" style={{ flexShrink: 0, alignSelf: 'center', display: 'inline-flex', alignItems: 'center' }}>
+                <svg width="15" height="12" viewBox="0 0 24 24" fill="#f0c040" stroke="#1a1206" strokeWidth="1.3" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))' }}>
+                  <path d="M5 17h14l1-9-5 3.5L12 5 9 11.5 4 8z" />
+                </svg>
+              </span>
+            )}
+            {/* spacer pushes the LV token to the right of name + crown */}
+            <span style={{ flex: 1, minWidth: 0 }} />
             {/* Level — plain text alongside the name. Cinzel font (matches
                 the stats/rarity treatment elsewhere) reads cleanly at small
                 sizes; pirata had the right vibe but its calligraphic 'L'
