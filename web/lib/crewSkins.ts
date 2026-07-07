@@ -37,7 +37,7 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'doby_warmachine',  slug: 'doby_mick', name: 'War Machine',   filename: 'Doby_warmachine.png',  gemCost: 1250, blurb: 'Ironclad and built for the kill.',           color: '#9ca3af' },
   { id: 'doby_moltenmaw',   slug: 'doby_mick', name: 'Molten Maw',    filename: 'Doby_moltenmaw.png',   gemCost: 1500, blurb: 'Breaching from a sea of fire.',               color: '#fb7185' },
   { id: 'doby_spectral',    slug: 'doby_mick', name: 'Spectral',      filename: 'Doby_spectral.png',    gemCost: 2500, blurb: 'A ghost-grey leviathan from the black deep.',   color: '#93c5fd' },
-  { id: 'doby_huntersbane', slug: 'doby_mick', name: "Hunter's Bane", filename: 'Doby_huntersbane.png', gemCost: 3000, blurb: 'The whale that hunts the hunters.',           color: '#f0c040', chase: true },
+  { id: 'doby_huntersbane', slug: 'doby_mick', name: "Hunter's Bane", filename: 'Doby_huntersbane.png', gemCost: 3000, blurb: 'The whale that hunts the hunters.',           color: '#dc2626', chase: true },
   // ── Catfish (Cat) ──
   { id: 'catfish_ancient',   slug: 'catfish', name: 'Ancient',   filename: 'Catfish_ancient.png',   gemCost: 1500, blurb: 'A relic that swam the first tides.',        color: '#d4a15a' },
   { id: 'catfish_cursed',    slug: 'catfish', name: 'Cursed',    filename: 'Catfish_cursed.png',    gemCost: 2500, blurb: 'Hexed whiskers, humming with old magic.',    color: '#a78bfa' },
@@ -52,7 +52,7 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'coelacanth_deadeye',    slug: 'coelacanth', name: 'Deadeye',      filename: 'Laz_deadeye.png',    gemCost: 1250, blurb: 'One cold eye on the deep, one on the kill.', color: '#67e8f9' },
   { id: 'coelacanth_goldenrelic', slug: 'coelacanth', name: 'Golden Relic', filename: 'Laz_goldenrelic.png', gemCost: 2000, blurb: 'Gilded by ages beneath the waves.', color: '#f0c040' },
   { id: 'coelacanth_undying',    slug: 'coelacanth', name: 'Undying',      filename: 'Laz_undying.png',    gemCost: 2500, blurb: 'Dragged back from the Locker, unwilling to stay dead.', color: '#86efac' },
-  { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3000, blurb: 'A living fossil, older than the tides themselves.', color: '#0d9488', chase: true },
+  { id: 'coelacanth_fossil',     slug: 'coelacanth', name: 'Fossil',       filename: 'Laz_fossil.png',     gemCost: 3000, blurb: 'A living fossil, older than the tides themselves.', color: '#c8a45c', chase: true },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))

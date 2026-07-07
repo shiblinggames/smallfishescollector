@@ -126,11 +126,11 @@ function GalaxyFx({ color, summon }: { color: string; summon: boolean }) {
   )
 }
 
-// Fossil (Laz) — ancient living-fossil leviathan. Jade + amber bioluminescence:
-// two counter-rotating rings of runic glyphs (his stone astrolabe-relic), a warm
-// jade/amber haze, and glowing primordial motes rising UPWARD (his inverted
-// drips) through drifting deep-sea light.
-const FOSSIL_AMBER = '#e6b455'
+// Fossil (Laz) — ancient living-fossil leviathan. Warm SEPIA / aged-parchment
+// (wanted-poster feel): two counter-rotating rings of runic glyphs (his stone
+// astrolabe-relic), a sepia/cream haze, and glowing primordial motes rising
+// UPWARD (his inverted drips) through drifting deep-sea light.
+const FOSSIL_AMBER = '#ead6a6'
 function FossilFx({ color, summon }: { color: string; summon: boolean }) {
   const amber = FOSSIL_AMBER
   const moteN = summon ? 16 : 11
