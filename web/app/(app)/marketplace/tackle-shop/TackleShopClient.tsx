@@ -17,6 +17,8 @@ import { getLevelFromXP } from '@/lib/fishingLevel'
 import { fishingGearLevelReq } from '@/lib/gearGating'
 import ShopHeader from '@/components/ShopHeader'
 import ShopStatusPill from '@/components/ShopStatusPill'
+import { vibrate } from '@/lib/haptics'
+import { playChestSfx } from '@/lib/fishingMusic'
 
 const HookViewer3D = dynamic(() => import('./HookViewer3D'), { ssr: false })
 
@@ -70,6 +72,7 @@ export default function TackleShopClient({
   const [isClaiming, setIsClaiming] = useState(false)
   const [previewTier, setPreviewTier] = useState(initialHookTier)
   const [showCompModal, setShowCompModal] = useState(false)
+  const [showClaimReveal, setShowClaimReveal] = useState(false)
 
   const baitMap = Object.fromEntries(baitInventory.map(b => [b.bait_type, b.quantity]))
   const totalBait = Object.values(baitMap).reduce((a, b) => a + b, 0)
@@ -133,7 +136,13 @@ export default function TackleShopClient({
       const result = await claimCompletionistRod()
       setIsClaiming(false)
       if ('error' in result) { setError(result.error) }
-      else { setOwnedRods(result.ownedRods) }
+      else {
+        setOwnedRods(result.ownedRods)
+        setShowCompModal(false)
+        setShowClaimReveal(true)
+        vibrate([0, 55, 70, 45, 90, 60])
+        try { playChestSfx(true) } catch {}
+      }
     })
   }
 
@@ -939,6 +948,102 @@ export default function TackleShopClient({
           })}
         </div>
       )}
+
+      {/* ── Completionist Rod claim reveal — the capstone "you've seen it all"
+           moment. Fires once on a successful claim: the real rod art rises on a
+           slow rotating ray-fan + gold rings, its seven folded gifts stream in,
+           tap to dismiss. ── */}
+      {showClaimReveal && (() => {
+        const revRod = RODS.find(r => r.tier === 14)!
+        const gold = '#f0c86a'
+        const gifts = ['Always double catch', '50% miss retry', 'Snag immune', '+50% rare bias', '+16° catch zone', 'Perfect +5°', 'Fastest bites']
+        return (
+          <motion.div
+            key="comp-claim-reveal"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}
+            onClick={() => setShowClaimReveal(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100000,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'radial-gradient(ellipse at center, rgba(28,20,6,0.92) 0%, rgba(4,5,9,0.97) 100%)',
+              backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+              padding: '2rem', textAlign: 'center', cursor: 'pointer', overflow: 'hidden',
+            }}
+          >
+            {/* Slow rotating ray-fan behind the rod. */}
+            <motion.div aria-hidden
+              initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 0.5, scale: 1, rotate: 360 }}
+              transition={{ opacity: { duration: 0.8 }, scale: { duration: 0.9, ease: 'easeOut' }, rotate: { duration: 26, ease: 'linear', repeat: Infinity } }}
+              style={{
+                position: 'absolute', width: 620, height: 620, borderRadius: '50%',
+                background: `conic-gradient(from 0deg, ${gold}00 0deg, ${gold}30 12deg, ${gold}00 24deg, ${gold}00 42deg, ${gold}26 54deg, ${gold}00 66deg, ${gold}00 90deg, ${gold}30 102deg, ${gold}00 114deg, ${gold}00 138deg, ${gold}26 150deg, ${gold}00 162deg, ${gold}00 186deg, ${gold}30 198deg, ${gold}00 210deg, ${gold}00 234deg, ${gold}26 246deg, ${gold}00 258deg, ${gold}00 282deg, ${gold}30 294deg, ${gold}00 306deg, ${gold}00 330deg, ${gold}26 342deg, ${gold}00 354deg)`,
+                maskImage: 'radial-gradient(circle, transparent 26%, #000 40%, transparent 72%)',
+                WebkitMaskImage: 'radial-gradient(circle, transparent 26%, #000 40%, transparent 72%)',
+              }}
+            />
+            {/* Expanding gold rings. */}
+            {[0, 0.14, 0.28].map((d, i) => (
+              <motion.div key={i} aria-hidden
+                initial={{ scale: 0, opacity: 0.85 }} animate={{ scale: 4.6, opacity: 0 }}
+                transition={{ duration: 1.5, ease: 'easeOut', delay: 0.18 + d }}
+                style={{ position: 'absolute', width: 130, height: 130, borderRadius: '50%', border: `2px solid ${gold}b0`, boxShadow: `0 0 26px ${gold}88` }}
+              />
+            ))}
+            <motion.span className="font-karla font-700 uppercase"
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 0.8, y: 0 }} transition={{ delay: 0.3 }}
+              style={{ position: 'relative', fontSize: '0.62rem', letterSpacing: '0.42em', color: gold, marginBottom: '0.9rem', textIndent: '0.42em' }}
+            >
+              Completionist
+            </motion.span>
+            {/* The rod, rising in. */}
+            <motion.div
+              initial={{ scale: 0, opacity: 0, y: 24 }}
+              animate={{ scale: [0, 1.18, 1], opacity: 1, y: 0 }}
+              transition={{ duration: 0.85, ease: 'easeOut', times: [0, 0.62, 1] }}
+              style={{ position: 'relative', marginBottom: '1.1rem' }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/rod_completionist_thumb.png" alt={revRod.name} width={230} height={230}
+                style={{ width: 230, height: 230, objectFit: 'contain', filter: `drop-shadow(0 0 22px ${gold}90) drop-shadow(0 0 54px ${gold}55)` }} />
+            </motion.div>
+            <motion.p className="font-cinzel font-700"
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+              style={{
+                position: 'relative', fontSize: '2rem', lineHeight: 1.05, marginBottom: '0.35rem',
+                background: 'linear-gradient(180deg, #fff6d8 0%, #f0c86a 52%, #a87a2e 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                filter: `drop-shadow(0 0 20px ${gold}80)`,
+              }}
+            >
+              {revRod.name}
+            </motion.p>
+            <motion.p className="font-karla"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.72 }}
+              style={{ position: 'relative', fontSize: '0.82rem', color: '#d6c9a8', maxWidth: 330, lineHeight: 1.55, marginBottom: '1.1rem' }}
+            >
+              You have seen every fish the sea holds. Every gift it gave you now folds into one rod, yours to forge as you please.
+            </motion.p>
+            {/* The seven folded gifts, streaming in. */}
+            <div className="flex flex-wrap justify-center gap-1.5" style={{ position: 'relative', maxWidth: 340, marginBottom: '1.5rem' }}>
+              {gifts.map((g, i) => (
+                <motion.span key={g} className="font-karla font-600"
+                  initial={{ opacity: 0, scale: 0.7, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 0.9 + i * 0.09, type: 'spring', stiffness: 320, damping: 20 }}
+                  style={{ fontSize: '0.62rem', color: `${gold}ee`, background: `${gold}1c`, border: `1px solid ${gold}44`, padding: '0.16rem 0.55rem', borderRadius: '2rem' }}
+                >
+                  {g}
+                </motion.span>
+              ))}
+            </div>
+            <motion.span className="font-karla font-700 uppercase"
+              initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ delay: 1.7 }}
+              style={{ position: 'relative', fontSize: '0.64rem', letterSpacing: '0.2em', color: '#9a8a60' }}
+            >
+              Tap to continue
+            </motion.span>
+          </motion.div>
+        )
+      })()}
     </div>
   )
 }

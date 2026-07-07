@@ -66,7 +66,6 @@ import { formatFishLength, type FishSizeTier } from '@/lib/fishSize'
 import { SHINY_FISH_FILTER, SHINY_THEME, SHINY_SELL_MULT, pickShinyMessage } from '@/lib/shiny'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
 import { getRod, getEffectiveRod, RODS, rodGlowClass, jackpotChanceForZone, type RodDef } from '@/lib/rods'
-import ForgeRodEmblem from './ForgeRodEmblem'
 import { vibrate } from '@/lib/haptics'
 import { getReel, REELS } from '@/lib/reels'
 import { getLine } from '@/lib/lines'
@@ -8868,7 +8867,9 @@ export default function FishingGame({
                 transition={{ duration: 0.7, ease: 'easeOut', times: [0, 0.6, 1] }}
                 style={{ position: 'relative', marginBottom: '1.1rem' }}
               >
-                <ForgeRodEmblem size={220} power={1} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/rod_completionist_thumb.png" alt="Completionist Rod" width={220} height={220}
+                  style={{ width: 220, height: 220, objectFit: 'contain', filter: 'drop-shadow(0 0 20px rgba(245,205,110,0.5)) drop-shadow(0 0 46px rgba(245,205,110,0.28))' }} />
               </motion.div>
               <motion.p className="font-cinzel font-700"
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
