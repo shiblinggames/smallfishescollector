@@ -1135,23 +1135,27 @@ html, body {
 /* ── Per-chase-skin SIGNATURE effects, played ON the crew art (ambient loop on
    every card surface + a bolder pass during the raid summon). Each chase skin
    gets its own themed motion so the art itself sells what the skin is. */
-/* Tempest (Mako) — thunder god. A real lightning STRIKE: dark most of the
-   cycle, then a sudden multi-flicker flash, then dark again. Long cycles +
-   staggered per-bolt delays make strikes crack around the crew at random,
-   never a constant strobe. */
-@keyframes chase-lightning {
+/* Tempest (Mako) — electric storm. A lightning FLASH lights the character (dark
+   most of the cycle, then a sudden multi-flicker), and bright sparks crackle
+   erratically around it. No drawn bolts. */
+@keyframes chase-storm-flash {
   0%, 100% { opacity: 0; }
-  1.5% { opacity: 1; }
-  3%   { opacity: 0.2; }
-  4.5% { opacity: 0.95; }
-  6%   { opacity: 0.1; }
-  7.5% { opacity: 0.6; }
-  9%   { opacity: 0; }
+  2% { opacity: 0.55; } 3.5% { opacity: 0.12; } 5% { opacity: 0.4; } 7% { opacity: 0; }
+  58% { opacity: 0; } 60% { opacity: 0.45; } 61.5% { opacity: 0.1; } 63% { opacity: 0; }
 }
-@keyframes chase-electric-pulse { 0%, 100% { opacity: 0.18; } 3% { opacity: 0.55; } 8% { opacity: 0.18; } }
-/* Kraken Hunter (Dole) — deep dive: tentacles sway, bubbles rise. */
-@keyframes chase-tentacle-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes chase-spark-crackle {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  7% { opacity: 1; transform: scale(1); }
+  14% { opacity: 0.05; }
+  20% { opacity: 0.8; transform: scale(0.85); }
+  28% { opacity: 0; }
+}
+/* Kraken Hunter (Dole) — the abyss: rising bubbles + drifting caustic light. */
 @keyframes chase-bubble-rise { 0% { top: 108%; opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.45; } 100% { top: -12%; opacity: 0; } }
+@keyframes chase-caustic {
+  0%, 100% { opacity: 0.1; transform: translate(-4%, 0) scale(1); }
+  50% { opacity: 0.26; transform: translate(4%, 3%) scale(1.16); }
+}
 /* Prismatic (Catfish) — spectrum gem-sparkles twinkle across the art. */
 @keyframes chase-prism-twinkle {
   0%, 100% { opacity: 0; transform: scale(0.2) rotate(45deg); }
