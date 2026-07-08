@@ -1056,12 +1056,10 @@ export default function RaidCombat({
   function noteCheckResponse(r: 'heal' | 'burst') {
     if (pendingCheckRef.current) checkFlagsRef.current[r] = true
   }
-  // Resolve the pending check: satisfied → countered; else the consequence.
-  function resolveMechanicCheck() {
-    const chk = pendingCheckRef.current
-    if (!chk) return
-    pendingCheckRef.current = null
-    setPendingCheck(null)
+  // Is the armed check already satisfied by the player's answers so far?
+  // Persistent answers (brace/shield/snare) are read live off their refs;
+  // transient ones (heal/burst) off the flags recorded during the window.
+  function isCheckSatisfied(chk: BossMechanicCheck): boolean {
     const f = checkFlagsRef.current
     const has = (r: MechanicResponse) =>
       r === 'brace'  ? (anchorReductionRef.current ?? 0) > 0
@@ -1070,13 +1068,28 @@ export default function RaidCombat({
       : r === 'heal'   ? f.heal
       : r === 'burst'  ? f.burst
       : false
-    if (chk.responses.some(has)) {
-      setResolveLog(prev => [...prev, `${chk.name} — countered! ${chk.counteredLine}`])
-      setCheckResultFlash({ ok: true, label: 'Countered!', key: Date.now() })
-      setTimeout(() => setCheckResultFlash(cf => (cf && cf.ok ? null : cf)), 1400)
-      vibrate([0, 25, 30, 25])
-      return
-    }
+    return chk.responses.some(has)
+  }
+  // The player answered correctly — cancel the phase's threat. `early` fires the
+  // MOMENT the right move is made (not at countdown end), so the callout is
+  // extra clear they nailed it.
+  function counterMechanicCheck(chk: BossMechanicCheck, early: boolean) {
+    pendingCheckRef.current = null
+    setPendingCheck(null)
+    setResolveLog(prev => [...prev, early
+      ? `✓ ${chk.name} COUNTERED — you made the right move! ${chk.counteredLine}`
+      : `${chk.name} — countered! ${chk.counteredLine}`])
+    setCheckResultFlash({ ok: true, label: early ? 'Right move!' : 'Countered!', key: Date.now() })
+    setTimeout(() => setCheckResultFlash(cf => (cf && cf.ok ? null : cf)), 1400)
+    vibrate([0, 25, 30, 25])
+  }
+  // Resolve the pending check at countdown end: satisfied → countered; else the consequence.
+  function resolveMechanicCheck() {
+    const chk = pendingCheckRef.current
+    if (!chk) return
+    if (isCheckSatisfied(chk)) { counterMechanicCheck(chk, false); return }
+    pendingCheckRef.current = null
+    setPendingCheck(null)
     // Failed the check — the consequence lands, and the log/flash is LOUD about it.
     setResolveLog(prev => [...prev, `${chk.name} lands — you did not stop the Quartermaster. ${chk.failLine}`])
     setCheckResultFlash({ ok: false, label: `${chk.name} hits!`, key: Date.now() })
@@ -3379,6 +3392,10 @@ export default function RaidCombat({
           if (pendingCheckRef.current) {
             if (checkArmedThisTurnRef.current) {
               checkArmedThisTurnRef.current = false
+            } else if (isCheckSatisfied(pendingCheckRef.current)) {
+              // Right move already made — cancel the phase NOW instead of making
+              // the player wait out the countdown wondering if it worked.
+              counterMechanicCheck(pendingCheckRef.current, true)
             } else {
               checkTurnsLeftRef.current -= 1
               if (checkTurnsLeftRef.current <= 0) resolveMechanicCheck()
