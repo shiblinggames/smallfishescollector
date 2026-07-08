@@ -86,6 +86,8 @@ export interface BadgeProfileFields {
   gauntlet_hc_deepest?: number | null
   gauntlet_hc_deepest_died?: number | null
   blood_gems_earned?: number | null
+  has_seen_forge_flourish?: boolean | null
+  completionist_effects?: number[] | null
   manowar_augment?: string | null
   ship_classes?: Record<string, string> | null
   forge_recipes_learned?: string[] | null
@@ -151,6 +153,10 @@ export function badgeConditions(p: BadgeProfileFields, j: BadgeJoinData): Record
     prestige_i:     PRESTIGE_ZONES.some(z => (prestige[z] ?? 0) >= 1),
     zone_legend:    PRESTIGE_ZONES.every(z => (prestige[z] ?? 0) >= 1),
     prestige_stars: totalStars >= 20,
+    // Completionist Rod (the claim itself is hook-granted at claim time; these
+    // two derive off the forge state, which only exists once you own the rod).
+    rodsmith:       p.has_seen_forge_flourish === true,
+    fully_rigged:   ((p.completionist_effects as number[] | null)?.length ?? 0) >= 3,
     ancient_ones:   ancientsCaught >= 6,
     crewmaster:     Number(p.crew_hall_tier ?? 0) >= CREW_HALL_MAX_TIER,
     growing_crew:   recruits >= 25,
@@ -263,4 +269,4 @@ export function earnedBadgeIds(p: BadgeProfileFields, j: BadgeJoinData): string[
 
 /** Columns a query must select to feed badgeConditions(). */
 export const BADGE_PROFILE_COLUMNS =
-  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, manowar_augment, ship_classes, forge_recipes_learned, raid_items, owned_crew_skins, equipped_crew_skins'
+  'fishing_xp, expedition_xp, highest_perfect_streak, total_perfects, doubloons, crew_hall_tier, lifetime_recruits, highest_raid_damage, pvp_wins, puzzle_points, tide_run_best_distance, gauntlet_deepest, gauntlet_fathoms, ancient_catches, trophy_size_catches, prestige_levels, fishing_casts, fishing_double_catches, fishing_crates_opened, fishing_snags, fishing_jackpots, tide_run_beacons_smashed, tide_run_total_distance, is_premium, ship_tier, trawls_collected, unlocked_pets, gauntlet_upgrades, gauntlet_confluences_seen, gauntlet_runs_completed, gauntlet_fathoms_earned, gauntlet_max_hit, gauntlet_deepest_died, gauntlet_hc_deepest, gauntlet_hc_deepest_died, blood_gems_earned, has_seen_forge_flourish, completionist_effects, manowar_augment, ship_classes, forge_recipes_learned, raid_items, owned_crew_skins, equipped_crew_skins'

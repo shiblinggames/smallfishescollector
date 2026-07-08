@@ -200,6 +200,14 @@ export async function claimCompletionistRod(): Promise<{ ownedRods: number[] } |
 
   await admin.from('rod_inventory').insert({ user_id: user.id, rod_tier: COMPLETIONIST_TIER })
 
+  // The Completionist badge — hook-granted at the moment of claim (not derivable
+  // from profile columns; rod ownership lives in rod_inventory).
+  const { data: badgeRow } = await admin.from('profiles').select('unlocked_badges').eq('id', user.id).single()
+  const badges = (badgeRow?.unlocked_badges as string[] | null) ?? []
+  if (!badges.includes('completionist_rod')) {
+    await admin.from('profiles').update({ unlocked_badges: [...badges, 'completionist_rod'] }).eq('id', user.id)
+  }
+
   const { data: rows } = await admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id)
   const ownedRods = (rows ?? []).map(r => r.rod_tier)
 
