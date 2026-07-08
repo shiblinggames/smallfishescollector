@@ -38,7 +38,7 @@ export type ShowcaseCrew = {
  *  showing the crew off, not reading a stat card. Rarity (or equipped-skin)
  *  colour becomes a soft aura; name + rank sit on a scrim over the art; a
  *  slim stat line is the only chrome. */
-export function CrewPortrait({ crew, w = 148, dimmed }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean }) {
+export function CrewPortrait({ crew, w = 148, dimmed, fill }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean; fill?: boolean }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
   const skin = getCrewSkinByFilename(crew.filename)
   const skinColor = skin?.color
@@ -47,7 +47,7 @@ export function CrewPortrait({ crew, w = 148, dimmed }: { crew: ShowcaseCrew; w?
   const eff = applyCrewEffects({ power: crew.power, dodge: crew.dodge, fortune: crew.fortune }, crew.effects, crew.xp ?? 0)
   const level = crewLevelFromXP(crew.xp ?? 0)
   return (
-    <div style={{ width: w, flexShrink: 0, opacity: dimmed ? 0.4 : 1, transition: 'opacity 0.15s' }}>
+    <div style={{ width: fill ? '100%' : w, flexShrink: 0, opacity: dimmed ? 0.4 : 1, transition: 'opacity 0.15s' }}>
       {/* Borderless art hero — a poster, not a card. Aura in the rarity (or
           skin) colour; identity caption overlaid on a bottom scrim. */}
       <div style={{

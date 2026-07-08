@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { CrewShowcase, CrewPortrait } from '@/components/CrewShowcase'
+import { CrewPortrait } from '@/components/CrewShowcase'
+import { RarestCatchesTrophy, FeaturedCrew } from '@/components/ProfileShowcase'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcaseCrew, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
@@ -74,13 +75,6 @@ function avatarColor(str: string) {
 
 function fishImageUrl(name: string) {
   return `/fish/${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.png`
-}
-
-const RARITY_COLOR: Record<number, string> = {
-  1: '#94a3b8', 2: '#4ade80', 3: '#60a5fa', 4: '#c084fc', 5: '#f59e0b',
-}
-const RARITY_LABEL: Record<number, string> = {
-  1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary',
 }
 
 const CARD_W = 140
@@ -951,41 +945,7 @@ export default function ProfileClient({
           {rarestFish.length > 0 && (
             <div>
               <SectionLabel>Rarest Catches</SectionLabel>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rarestFish.length}, 1fr)`, gap: 8 }}>
-                {rarestFish.map(fish => {
-                  const isAncient = fish.habitat === 'ancient_deep'
-                  const c = isAncient ? '#a78bfa' : RARITY_COLOR[fish.bite_rarity]
-                  const label = isAncient ? 'Ancient' : (RARITY_LABEL[fish.bite_rarity] ?? 'Unknown')
-                  return (
-                    <div key={fish.id} style={{
-                      background: `${c}0a`, border: `1px solid ${c}38`,
-                      borderRadius: 12, padding: '0.85rem 0.6rem',
-                      textAlign: 'center', boxShadow: `0 0 18px ${c}18`,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                    }}>
-                      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img
-                          src={fishImageUrl(fish.name)}
-                          alt={fish.name}
-                          loading="lazy"
-                          decoding="async"
-                          style={{ maxWidth: 52, maxHeight: 52, objectFit: 'contain', filter: `drop-shadow(0 2px 8px ${c}55)` }}
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                        />
-                      </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.75rem', color: '#f0ede8', lineHeight: 1.2 }}>{fish.name}</p>
-                      <span style={{
-                        fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '2rem',
-                        background: `${c}14`, border: `1px solid ${c}38`, color: c,
-                        fontFamily: 'var(--font-karla)', fontWeight: 700,
-                        textTransform: 'uppercase', letterSpacing: '0.1em',
-                      }}>
-                        {label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+              <RarestCatchesTrophy fish={rarestFish} />
             </div>
           )}
 
@@ -1057,8 +1017,8 @@ export default function ProfileClient({
           {/* Showcase — falls back to the live ship roster when the
               player hasn't featured anyone yet (see showcaseCrew above). */}
           <div>
-            <SectionLabel color="#c084fc">{featuredCrew.length > 0 ? 'Showcase' : 'Active Crew'}</SectionLabel>
-            <CrewShowcase crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Assign crew to your ship, or feature your favorites here" />
+            <SectionLabel color="#c084fc">{featuredCrew.length > 0 ? 'Featured Crew' : 'Active Crew'}</SectionLabel>
+            <FeaturedCrew crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Assign crew to your ship, or feature your favorites here" />
           </div>
 
         </div>
