@@ -1190,11 +1190,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} />
-        {/* Bottom padding clears the fixed mobile tab bar (~60px), so only mobile
-            needs it — on sm+ the bar is hidden, so drop to a small pad instead
-            of leaving ~88px of empty space under "Not today". */}
+        {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
+            this + the global page footer below (~25px) lands "Not today" just
+            above the bar. No safe-area inset (the bar already sits at bottom:0,
+            so the inset was pure excess — the old relic that stacked to ~120px
+            on an iPhone PWA). On sm+ the bar is hidden, so drop to a small pad. */}
         <div
-          className="pb-[76px] sm:pb-6"
+          className="pb-10 sm:pb-6"
           style={{
             position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
             paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
@@ -1235,11 +1237,13 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} />
-        {/* Bottom padding clears the fixed mobile tab bar (~60px), so only mobile
-            needs it — on sm+ the bar is hidden, so drop to a small pad instead
-            of leaving ~88px of empty space under "Not today". */}
+        {/* Just enough bottom pad to clear the fixed mobile tab bar (~58px):
+            this + the global page footer below (~25px) lands "Not today" just
+            above the bar. No safe-area inset (the bar already sits at bottom:0,
+            so the inset was pure excess — the old relic that stacked to ~120px
+            on an iPhone PWA). On sm+ the bar is hidden, so drop to a small pad. */}
         <div
-          className="pb-[76px] sm:pb-6"
+          className="pb-10 sm:pb-6"
           style={{
             position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
             paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
