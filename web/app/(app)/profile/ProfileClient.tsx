@@ -562,7 +562,7 @@ export default function ProfileClient({
           {/* Angler hero + headline career stats */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <RankHero color="#60a5fa" kicker="Angler" icon={FishIcon}
-              title={level >= 100 ? 'Master Angler' : `Level ${level}`} />
+              title={`Level ${level}`} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
@@ -964,7 +964,7 @@ export default function ProfileClient({
           {/* Navigator hero + headline career stats */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <RankHero color="#c084fc" kicker="Navigator" icon={CompassIcon}
-              title={expeditionLevel >= 100 ? 'Master Navigator' : `Level ${expeditionLevel}`} />
+              title={`Level ${expeditionLevel}`} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
               <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />

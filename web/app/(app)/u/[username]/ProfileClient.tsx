@@ -259,7 +259,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           {/* Angler hero + headline career stats */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <RankHero color="#60a5fa" kicker="Angler" icon={FishIcon}
-              title={fishingLevel >= 100 ? 'Master Angler' : `Level ${fishingLevel}`}
+              title={`Level ${fishingLevel}`}
               sub={stats.uniqueSpecies > 0 ? `${stats.uniqueSpecies} species logged` : undefined} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
@@ -438,7 +438,7 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
           {/* Navigator hero + headline career stats */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <RankHero color="#c084fc" kicker="Navigator" icon={CompassIcon}
-              title={expLevel >= 100 ? 'Master Navigator' : `Level ${expLevel}`} />
+              title={`Level ${expLevel}`} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
               <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
