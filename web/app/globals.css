@@ -699,12 +699,15 @@ html, body {
 /* Prismatic — the Completionist Rod. A smooth rainbow shimmer cycling the rod's
    own four energy-strand colors (red / amber / green / blue) with a two-tone
    glow that's always shifting, so the aura reads as multi-colored like the art. */
+/* One drop-shadow per frame (was two) so the per-frame filter raster is ~half
+   the cost — the rod overlay shares a composited layer with the boat bob, so a
+   cheaper glow keeps the bob smoother. Still cycles the four prismatic hues. */
 @keyframes rod-glow-prismatic {
-  0%   { filter: drop-shadow(0 0 5px #f26d6d) drop-shadow(0 0 18px #f2c14eaa); }
-  25%  { filter: drop-shadow(0 0 5px #f2c14e) drop-shadow(0 0 18px #57d06aaa); }
-  50%  { filter: drop-shadow(0 0 5px #57d06a) drop-shadow(0 0 18px #5aa9f0aa); }
-  75%  { filter: drop-shadow(0 0 5px #5aa9f0) drop-shadow(0 0 18px #f26d6daa); }
-  100% { filter: drop-shadow(0 0 5px #f26d6d) drop-shadow(0 0 18px #f2c14eaa); }
+  0%   { filter: drop-shadow(0 0 12px #f26d6d); }
+  25%  { filter: drop-shadow(0 0 12px #f2c14e); }
+  50%  { filter: drop-shadow(0 0 12px #57d06a); }
+  75%  { filter: drop-shadow(0 0 12px #5aa9f0); }
+  100% { filter: drop-shadow(0 0 12px #f26d6d); }
 }
 .rod-glow-prismatic { animation: rod-glow-prismatic 4.2s linear infinite; }
 

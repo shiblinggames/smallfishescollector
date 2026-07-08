@@ -6000,11 +6000,7 @@ export default function FishingGame({
                       transformOrigin: 'center center',
                       pointerEvents: 'none',
                       maxWidth: 'none',
-                      // Isolate an ANIMATED rod glow (esp. the Completionist's
-                      // prismatic drop-shadow) onto its own GPU layer so its
-                      // per-frame filter re-raster doesn't drag the boat bob
-                      // transform on the shared parent (see the layer note above).
-                      ...(rod.glow ? { willChange: 'filter', ['--rod-glow-color' as string]: rod.color } : {}),
+                      ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                     } as React.CSSProperties}
                   />
                 ) : rod.imageUrl && (
@@ -6014,7 +6010,7 @@ export default function FishingGame({
                     transform: `rotate(${rc.rotate}deg)`,
                     transformOrigin: 'bottom right',
                     pointerEvents: 'none',
-                    ...(rod.glow ? { willChange: 'filter', ['--rod-glow-color' as string]: rod.color } : {}),
+                    ...(rod.glow ? { ['--rod-glow-color' as string]: rod.color } : {}),
                   } as React.CSSProperties} />
                 )}
                 {/* Reel — sits on the rod handle. Same per-frame coords
