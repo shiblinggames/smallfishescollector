@@ -37,6 +37,9 @@ const BLOOD = '#d1394b'
 const perRerollPct = (perCandPct: number) => 1 - Math.pow(1 - perCandPct / 100, 3)
 const rerollEpicPct = (w: readonly number[]) => Math.round(perRerollPct(w[2]) * 100)
 const rerollLegOdds = (w: readonly number[]) => Math.max(1, Math.round(1 / perRerollPct(w[3])))
+// "How many times better than a plain reroll" — the noob-friendly benefit (e.g.
+// 5× Epic). idx 2 = Epic, 3 = Legendary. Base = GEM_WEIGHTS.
+const rerollMult = (w: readonly number[], idx: 2 | 3, base: readonly number[]) => Math.max(2, Math.round(perRerollPct(w[idx]) / perRerollPct(base[idx])))
 function BloodDrop({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ filter: `drop-shadow(0 0 2.5px ${BLOOD}99)`, flexShrink: 0 }}>
@@ -1699,8 +1702,6 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const totalNonLeg = nonLegSkins.length
           const skinPoolEmpty = ownedNonLeg >= totalNonLeg
           const canGamble = !skinPoolEmpty && !pending && !skinGamble && state.bloodGems >= BLOOD_SKIN_GAMBLE_COST
-          const baseEpic = rerollEpicPct(GEM_WEIGHTS)
-          const baseLeg = rerollLegOdds(GEM_WEIGHTS)
           return (
             <div>
               {/* Header — glowing sigil, title, help pill (mirrors the Forge). */}
@@ -1735,28 +1736,33 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#c98a92', marginTop: 2 }}>Sway the recruit board</p>
                   </div>
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.42, marginBottom: 9 }}>
-                  Spend gems and Blood Gems together to tilt a reroll toward Epic and Legendary recruits.
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.42, marginBottom: 10 }}>
+                  Add Blood Gems to a reroll for a much better shot at Epic and Legendary crew.
                 </p>
-                {/* Base (no blood) rates for comparison. */}
-                <div className="flex items-center justify-between" style={{ padding: '0.4rem 0.6rem', borderRadius: 9, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 9 }}>
-                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#8a8480' }}>Base reroll</span>
-                  <span className="font-karla font-600" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.55)' }}>~{baseEpic}% Epic · 1-in-{baseLeg} Legendary</span>
-                </div>
                 <div className="flex" style={{ gap: 8 }}>
                   {BLOOD_REROLL_TIERS.map(t => {
                     const cannot = pending || reveal.revealing || state.gems < state.rerollCost || state.bloodGems < t.bloodCost
                     const busy = busyId === `reroll:${t.id}`
-                    const epicPct = rerollEpicPct(t.weights)
-                    const legOdds = rerollLegOdds(t.weights)
+                    const epicMult = rerollMult(t.weights, 2, GEM_WEIGHTS)
+                    const legMult = rerollMult(t.weights, 3, GEM_WEIGHTS)
+                    const boost = '#7ee0a3' // green = "this is better"
                     return (
                       <button key={t.id} onClick={() => setBloodConfirm({ kind: 'reroll', tierId: t.id })} disabled={cannot}
                         className="active:scale-95"
-                        style={{ flex: '1 1 0', minWidth: 0, padding: '0.7rem 0.4rem 0.6rem', borderRadius: 12, background: cannot ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}2e, ${BLOOD}1a)`, border: `1px solid ${BLOOD}80`, opacity: cannot ? 0.6 : 1, cursor: cannot ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'transform 0.08s, opacity 0.18s' }}>
-                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.04em', color: cannot ? 'rgba(243,192,198,0.5)' : '#f7d0d5' }}>{busy ? '…' : t.name}</span>
-                        <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f3c0c6' }}>{epicPct}% Epic</span>
-                        <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f3c0c6' }}>1-in-{legOdds} Legendary</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.52rem', color: 'rgba(255,255,255,0.55)', marginTop: 3, paddingTop: 4, borderTop: `1px solid ${BLOOD}33` }}>
+                        style={{ flex: '1 1 0', minWidth: 0, padding: '0.75rem 0.4rem 0.65rem', borderRadius: 12, background: cannot ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}30, ${BLOOD}18)`, border: `1px solid ${BLOOD}80`, opacity: cannot ? 0.55 : 1, cursor: cannot ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, transition: 'transform 0.08s, opacity 0.18s' }}>
+                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.82rem', letterSpacing: '0.04em', color: cannot ? 'rgba(243,192,198,0.5)' : '#f7d0d5' }}>{busy ? '…' : t.name}</span>
+                        {/* The glanceable benefit: big up-arrow + multiplier = "way better odds". */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <span className="font-cinzel font-800" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.98rem', color: boost, lineHeight: 1 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={boost} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
+                            {epicMult}× Epic
+                          </span>
+                          <span className="font-cinzel font-800" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.98rem', color: boost, lineHeight: 1 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={boost} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
+                            {legMult}× Legendary
+                          </span>
+                        </div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.54rem', color: 'rgba(255,255,255,0.6)', marginTop: 2, paddingTop: 5, borderTop: `1px solid ${BLOOD}33`, width: '78%', justifyContent: 'center' }}>
                           {t.bloodCost}<BloodDrop size={8} /> + {state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span>
                         </span>
                       </button>
