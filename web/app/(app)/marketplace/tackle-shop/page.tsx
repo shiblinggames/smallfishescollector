@@ -11,15 +11,21 @@ export default async function TackleShopPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: profile }, { data: baitInventory }, { data: rodRows }, { count: uniqueSpecies }, { count: totalSpecies }] = await Promise.all([
-    supabase.from('profiles').select('hook_tier, rod_tier, reel_tier, line_tier, doubloons, packs_available, gems, fishing_xp, is_premium, premium_expires_at').eq('id', user.id).single(),
+  const [{ data: profile }, { data: baitInventory }, { data: rodRows }, { data: collRows }, { count: totalSpecies }] = await Promise.all([
+    supabase.from('profiles').select('hook_tier, rod_tier, reel_tier, line_tier, doubloons, packs_available, gems, fishing_xp, is_premium, premium_expires_at, ancient_catches').eq('id', user.id).single(),
     admin.from('bait_inventory').select('bait_type, quantity').eq('user_id', user.id),
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
-    admin.from('fish_collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    admin.from('fish_collection').select('fish_id').eq('user_id', user.id),
     admin.from('fish_species').select('*', { count: 'exact', head: true }),
   ])
 
   const ownedRods = (rodRows ?? []).map(r => r.rod_tier)
+  // Species caught = distinct regular catches (fish_collection) + Ancient trophies
+  // (which live in ancient_catches, NOT fish_collection). Counting only the
+  // former made the Completionist Rod unclaimable — its total is ALL species.
+  const regularsCaught = new Set((collRows ?? []).map(r => r.fish_id)).size
+  const ancientsCaught = ((profile?.ancient_catches as number[] | null) ?? []).length
+  const uniqueSpeciesCaught = regularsCaught + ancientsCaught
 
   return (
     <>
@@ -34,7 +40,7 @@ export default async function TackleShopPage() {
           baitInventory={baitInventory ?? []}
           fishingXP={profile?.fishing_xp ?? 0}
           isPremium={isPremiumActive(profile)}
-          uniqueSpeciesCaught={uniqueSpecies ?? 0}
+          uniqueSpeciesCaught={uniqueSpeciesCaught}
           totalSpecies={totalSpecies ?? 0}
         />
       </main>
