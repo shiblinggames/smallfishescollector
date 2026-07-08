@@ -696,6 +696,18 @@ html, body {
 }
 .rod-glow-forge { animation: rod-glow-forge 5.5s ease-in-out infinite; }
 
+/* Prismatic — the Completionist Rod. A smooth rainbow shimmer cycling the rod's
+   own four energy-strand colors (red / amber / green / blue) with a two-tone
+   glow that's always shifting, so the aura reads as multi-colored like the art. */
+@keyframes rod-glow-prismatic {
+  0%   { filter: drop-shadow(0 0 5px #f26d6d) drop-shadow(0 0 18px #f2c14eaa); }
+  25%  { filter: drop-shadow(0 0 5px #f2c14e) drop-shadow(0 0 18px #57d06aaa); }
+  50%  { filter: drop-shadow(0 0 5px #57d06a) drop-shadow(0 0 18px #5aa9f0aa); }
+  75%  { filter: drop-shadow(0 0 5px #5aa9f0) drop-shadow(0 0 18px #f26d6daa); }
+  100% { filter: drop-shadow(0 0 5px #f26d6d) drop-shadow(0 0 18px #f2c14eaa); }
+}
+.rod-glow-prismatic { animation: rod-glow-prismatic 4.2s linear infinite; }
+
 /* ── Hook glows (per-theme animated effects) ──
    Used by lib/hooks.ts via hookGlowClass(). chrome / gilded are very
    subtle so silver / gold hooks read as polished metal; arcane / cursed
@@ -815,6 +827,7 @@ html, body {
 .pause-glows .rod-glow-moon,
 .pause-glows .rod-glow-tech,
 .pause-glows .rod-glow-forge,
+.pause-glows .rod-glow-prismatic,
 .pause-glows .hook-glow-chrome,
 .pause-glows .hook-glow-gilded,
 .pause-glows .hook-glow-arcane,

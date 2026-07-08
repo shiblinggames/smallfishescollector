@@ -43,7 +43,7 @@ export interface RodDef {
   // Theme of the glow effect. Driven by per-keyframe CSS in globals.css
   // (rod-glow-fire / sparkle / electric for marquee rods; moon / tech as
   // subtler accents). Falls back to the generic .rod-glow pulse when omitted.
-  glowType?: 'fire' | 'sparkle' | 'electric' | 'moon' | 'tech' | 'galaxy' | 'saber' | 'forge'
+  glowType?: 'fire' | 'sparkle' | 'electric' | 'moon' | 'tech' | 'galaxy' | 'saber' | 'forge' | 'prismatic'
 }
 
 // Resolve the CSS class for a rod's glow aura. Single source of truth so
@@ -168,7 +168,7 @@ export const RODS: RodDef[] = [
     // procs. The unique effects come from the rods socketed into it (see
     // resolveCompletionistRod). Earlier this rod hard-coded every proc maxed;
     // now it's a build-your-own capstone.
-    slug: 'rod_completionist', glow: true, glowType: 'forge',
+    slug: 'rod_completionist', glow: true, glowType: 'prismatic',
     color: '#e8c84a', rarityBonus: 0, biteIntervalMs: 2000, catchZoneBonus: 16,
     doubleCatchChance: 0, retryOnMissChance: 0, snagImmune: true, perfectZoneBonus: 3,
   },
