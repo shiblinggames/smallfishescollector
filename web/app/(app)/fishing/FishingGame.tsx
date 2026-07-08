@@ -7487,7 +7487,11 @@ export default function FishingGame({
                 {(() => {
                   const zoneColor = HABITAT_COLOR[selectedZone]
                   const total = allFishSpecies.length
-                  const caught = caughtFishIds.size
+                  // Ancient trophies (sell_value 0) live in ancientCatches, NOT
+                  // caughtFishIds — add them so the headline "caught/total" matches
+                  // the drawer (which already credits them). The two sets are
+                  // disjoint (trophy ids vs everything else), so no double-count.
+                  const caught = caughtFishIds.size + ancientCatches.size
                   const hasNew = uncheckedNewFishIds.size > 0
                   const flashing = freshCatchHook != null
                   const flashAccent = freshCatchHook === 'pb' ? '#5eead4' : '#fde68a'
