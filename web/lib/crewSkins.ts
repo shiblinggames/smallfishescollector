@@ -60,7 +60,7 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'hammerhead_shark_bloodtide', slug: 'hammerhead_shark', name: 'Blood Tide', filename: 'Hammerhead_bloodtide.png', gemCost: 1000, blurb: 'The hunt turns the water red.',        color: '#ef4444' },
   { id: 'hammerhead_shark_kingpin',   slug: 'hammerhead_shark', name: 'Kingpin',    filename: 'Hammerhead_kingpin.png',  gemCost: 1000, blurb: 'Boss of the reef. Everyone pays up.',   color: '#f0c040' },
   // ── Blobfish (Bloo) — Rare ──
-  { id: 'blobfish_bighero',   slug: 'blobfish', name: 'Big Hero',   filename: 'Blobfish_bighero.png',   gemCost: 1000, blurb: 'Soft of body, iron of heart. The reef\'s unlikely champion.', color: '#c0384a' },
+  { id: 'blobfish_captain',   slug: 'blobfish', name: 'Captain',    filename: 'Blobfish_captain.png',   gemCost: 1000, blurb: 'Squishy, unbothered, and somehow in command of the whole reef.', color: '#e0a838' },
   { id: 'blobfish_partyblob', slug: 'blobfish', name: 'Party Blob', filename: 'Blobfish_partyblob.png', gemCost: 1000, blurb: 'First to the grog, last to leave the deck.',                color: '#ec4899' },
   // ── Orca (Orc) — Epic ──
   { id: 'orca_detective',   slug: 'orca', name: 'Detective',    filename: 'Orca_detective.png',   gemCost: 1250, blurb: 'Every current tells a story to a sharp eye.', color: '#a8b8d0' },
