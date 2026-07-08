@@ -3178,7 +3178,12 @@ export default function FishingGame({
       })
     })).then(() => { if (!cancelled) setSpritesReady(true) })
     return () => { cancelled = true }
-  }, [localCharacterColor, boatDef, hatDef, rod, reel.imageUrl, hook.imageUrl])
+    // Depend on the STABLE rod sprite fields (slug/imageUrl), NOT the `rod`
+    // object — getEffectiveRod rebuilds a fresh object every render for the
+    // Completionist Rod, so `rod` in the deps re-ran this effect on every
+    // render, thrashing spritesReady (which gates the bob + the hooked-fish
+    // shake) into a render loop. This effect only reads rod.slug/rod.imageUrl.
+  }, [localCharacterColor, boatDef, hatDef, rod.slug, rod.imageUrl, reel.imageUrl, hook.imageUrl])
 
   // Background soundtrack — managed by the module-level singleton in
   // lib/fishingMusic so the audio element survives React unmount and the
