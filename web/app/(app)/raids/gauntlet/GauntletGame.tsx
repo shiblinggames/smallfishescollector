@@ -1249,66 +1249,32 @@ export default function GauntletGame(props: GauntletGameProps) {
               style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntDrift 6s ease-in-out infinite' }} />
           </div>
 
-          {/* Deepest descent — the record to beat. Tap to recap that run's
-              boons / curses / tides (once a record with a snapshot exists). */}
-          {(() => {
-            const hasRecap = !!props.deepestRun && props.deepest > 0
-            return (
-              <button
-                type="button"
-                onClick={hasRecap ? () => setDeepestRunOpen(true) : undefined}
-                aria-label={hasRecap ? 'Recap your deepest run' : 'Deepest descent'}
-                className={hasRecap ? 'tap' : undefined}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 10, marginTop: 6,
-                  padding: '0.45rem 1.1rem', borderRadius: 999,
-                  background: 'rgba(240,192,64,0.08)', border: `1px solid ${GOLD}3a`,
-                  cursor: hasRecap ? 'pointer' : 'default',
-                }}>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.18em', color: '#9a948a' }}>Deepest Descent</span>
-                <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: GOLD, lineHeight: 1 }}>
-                  {props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}
-                </span>
-                {hasRecap && (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.85 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
-                )}
+          {/* ── TIER 1 · The one action ───────────────────────────
+              Compact currencies then Descend, so starting a run sits
+              right under the maw with nothing competing above it. */}
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?"
+              className="active:scale-95"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'rgba(45,212,191,0.12)', border: `1px solid ${TEAL}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
+              {/* Anchor = Fathoms (depth). */}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
+              <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: TEAL, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
+            </button>
+            {/* Blood Gems — shown once Hardcore is unlocked (discoverable at 0)
+                or whenever the player holds any. */}
+            {(bloodGemsNow > 0 || props.hardcoreUnlocked) && (
+              <button onClick={() => setInfoCurrency('blood')} title="What are Blood Gems?"
+                className="active:scale-95"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'linear-gradient(180deg, rgba(192,56,74,0.18), rgba(120,20,32,0.12))', border: '1px solid rgba(220,38,38,0.55)', boxShadow: '0 0 12px rgba(192,56,74,0.22)', cursor: 'pointer', transition: 'transform 0.08s' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden style={{ filter: 'drop-shadow(0 0 2.5px rgba(220,38,38,0.7))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
+                <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f2536a', lineHeight: 1, textShadow: '0 0 10px rgba(220,38,38,0.6)' }}>{fmt(bloodGemsNow)}</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f2536a" strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.6 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
               </button>
-            )
-          })()}
-
-          {/* The names to beat — the deepest cashed-out descender in EACH mode. */}
-          <div style={{ maxWidth: 340, margin: '13px auto 0' }}>
-            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c', marginBottom: 6 }}>Deepest Divers</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {([
-                { key: 'normal',   label: 'Normal',   color: TEAL,      rec: props.topDescender,
-                  icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" /> },
-                { key: 'hardcore', label: 'Hardcore', color: '#e0555a', rec: props.hardcoreTop,
-                  icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></> },
-              ] as const).map(({ key, label, color, rec, icon }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.42rem 0.7rem', borderRadius: 11, background: `${color}12`, border: `1px solid ${color}33` }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>{icon}</svg>
-                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color, width: 52, textAlign: 'left', flexShrink: 0 }}>{label}</span>
-                  {rec ? (
-                    <>
-                      <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#ece5d7', flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{rec.name}</span>
-                      <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color, flexShrink: 0 }}>Depth {rec.depth}</span>
-                    </>
-                  ) : (
-                    <span className="font-karla" style={{ fontSize: '0.72rem', color: '#8a857c', flex: 1, textAlign: 'left' }}>Unclaimed</span>
-                  )}
-                </div>
-              ))}
-            </div>
+            )}
           </div>
 
-          {/* Leaderboard — deepest cashed-out descent + biggest single blow. */}
-          <div style={{ marginTop: props.topDescender ? 6 : 9 }}>
-            <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="View the Ranks" />
-          </div>
-
-          {/* Descend — the start. Big and obvious. Opens the Normal / Hardcore
-              mode choice rather than starting straight away. */}
+          {/* Descend — the one action. Opens the Normal / Hardcore choice. */}
           <button onClick={() => setModeChoiceOpen(true)} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.08em] tap"
             style={{
               marginTop: 20, width: '100%', padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem',
@@ -1330,85 +1296,114 @@ export default function GauntletGame(props: GauntletGameProps) {
             </p>
           )}
 
-          {/* Currency pills — symbol + amount, tap to learn what each is for. */}
-          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <button onClick={() => setInfoCurrency('fathoms')} title="What are Fathoms?"
-              className="active:scale-95"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'rgba(45,212,191,0.12)', border: `1px solid ${TEAL}55`, cursor: 'pointer', transition: 'transform 0.08s' }}>
-              {/* Anchor = Fathoms (depth). */}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2" /><path d="M12 7v13" /><path d="M5 12H3a9 9 0 0 0 18 0h-2" /><path d="M8 10h8" /></svg>
-              <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: TEAL, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
-            </button>
-            {/* Blood Gems — shown once Hardcore is unlocked (so the currency is
-                discoverable at 0), or whenever the player holds any. */}
-            {(bloodGemsNow > 0 || props.hardcoreUnlocked) && (
-              <button onClick={() => setInfoCurrency('blood')} title="What are Blood Gems?"
-                className="active:scale-95"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'linear-gradient(180deg, rgba(192,56,74,0.18), rgba(120,20,32,0.12))', border: '1px solid rgba(220,38,38,0.55)', boxShadow: '0 0 12px rgba(192,56,74,0.22)', cursor: 'pointer', transition: 'transform 0.08s' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden style={{ filter: 'drop-shadow(0 0 2.5px rgba(220,38,38,0.7))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
-                <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: '#f2536a', lineHeight: 1, textShadow: '0 0 10px rgba(220,38,38,0.6)' }}>{fmt(bloodGemsNow)}</span>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f2536a" strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.6 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
-              </button>
-            )}
-          </div>
-
-          {/* Secondary doors: the rewards guide + the two Fathoms shops. */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <ActionTile
-              color={TEAL}
-              onClick={() => setHaulOpen(true)}
-              label="The Haul"
-              line="What you earn"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /><rect x="10.5" y="11.4" width="3" height="3.6" rx="0.6" fill="currentColor" stroke="none" /></svg>}
-            />
-            <ActionTile
-              color="#c4a0e8"
-              onClick={() => setShopSection('run')}
-              label="Run Upgrades"
-              line="For the descent"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l6 6 6-6" /><path d="M6 12l6 6 6-6" /></svg>}
-            />
-            <ActionTile
-              color={GOLD}
-              onClick={() => setShopSection('shore')}
-              label="Ship & Shore"
-              line="Beyond the Gauntlet"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></svg>}
-            />
-          </div>
-
-          {/* Synergies codex — what boon pairs unlock, so you can build toward them. */}
-          <button onClick={() => setSynergiesOpen(true)} className="tap"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 8, padding: '0.6rem', borderRadius: 12, background: '#f5b94a10', border: '1px solid #f5b94a3a', color: '#f5b94a', cursor: 'pointer' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-            <span className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.6rem' }}>Synergies · what the pairs unlock</span>
-          </button>
-
-          {/* Active run perks — only the gauntlet-scoped upgrades that change a
-              descent. Global Ship & Shore unlocks (cannonball rack, etc.) live
-              out in the world, so listing them here would just confuse. */}
+          {/* ── TIER 2 · Records ──────────────────────────────────
+              Your personal best (tap to recap), the deepest diver in
+              each mode, and the door to the full ranks — one card read
+              top to bottom, instead of three widgets competing. */}
           {(() => {
-            const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && upgrades.includes(u.id))
-            if (owned.length === 0) return null
+            const hasRecap = !!props.deepestRun && props.deepest > 0
             return (
-              <div style={{ marginTop: 18 }}>
-                <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#7a8e8a', marginBottom: 7 }}>Active Run Perks · {owned.length}</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-                  {owned.map(u => (
-                    <span key={u.id} title={u.description} className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${TEAL}dd`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 999, padding: '0.2rem 0.6rem' }}>
-                      ✓ {u.name}
-                    </span>
-                  ))}
+              <section style={{ marginTop: 22, borderRadius: 16, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.09)', overflow: 'hidden', textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.62rem 0.85rem 0.5rem' }}>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c' }}>Records</span>
+                  <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="Full ranks"
+                    triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
                 </div>
-              </div>
+
+                {/* Your best — tap to recap the run's boons / curses / tides */}
+                <button type="button" onClick={hasRecap ? () => setDeepestRunOpen(true) : undefined} disabled={!hasRecap}
+                  aria-label={hasRecap ? 'Recap your deepest run' : 'Your deepest descent'}
+                  className={hasRecap ? 'tap' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '0.6rem 0.85rem', background: `${GOLD}0c`, border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', cursor: hasRecap ? 'pointer' : 'default' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill={GOLD} stroke="none" aria-hidden style={{ flexShrink: 0 }}><path d="M12 2l2.1 5.6L20 9.2l-4.4 3.6L17 19l-5-3.4L7 19l1.4-6.2L4 9.2l5.9-1.6z" /></svg>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#b7a878', flex: 1 }}>Your Best</span>
+                  <span className="font-cinzel font-800" style={{ fontSize: '0.92rem', color: GOLD, lineHeight: 1, flexShrink: 0 }}>{props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}</span>
+                  {hasRecap && (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.8, flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
+                  )}
+                </button>
+
+                {/* Deepest cashed-out diver in each mode */}
+                {([
+                  { key: 'normal',   label: 'Normal',   color: TEAL,      rec: props.topDescender,
+                    icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" /> },
+                  { key: 'hardcore', label: 'Hardcore', color: '#e0555a', rec: props.hardcoreTop,
+                    icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></> },
+                ] as const).map(({ key, label, color, rec, icon }) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 0.85rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>{icon}</svg>
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color, width: 52, flexShrink: 0 }}>{label}</span>
+                    {rec ? (
+                      <>
+                        <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#ece5d7', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{rec.name}</span>
+                        <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color, flexShrink: 0 }}>Depth {rec.depth}</span>
+                      </>
+                    ) : (
+                      <span className="font-karla" style={{ fontSize: '0.7rem', color: '#8a857c', flex: 1 }}>Unclaimed</span>
+                    )}
+                  </div>
+                ))}
+              </section>
             )
           })()}
 
-          <button onClick={() => setIntroOpen(true)} className="font-karla font-600 tap"
-            style={{ marginTop: 14, background: 'none', border: 'none', color: '#8a8480', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-            How it works
-          </button>
+          {/* ── TIER 3 · The Locker — shops + guides, one weight down ──
+              Two shops as tiles, then muted guide links. Nothing here
+              competes with Descend. */}
+          <div style={{ marginTop: 18, textAlign: 'left' }}>
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c', marginBottom: 8, paddingLeft: 2 }}>The Locker</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <ActionTile
+                color="#c4a0e8"
+                onClick={() => setShopSection('run')}
+                label="Run Upgrades"
+                line="For the descent"
+                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l6 6 6-6" /><path d="M6 12l6 6 6-6" /></svg>}
+              />
+              <ActionTile
+                color={GOLD}
+                onClick={() => setShopSection('shore')}
+                label="Ship & Shore"
+                line="Permanent power"
+                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v15" /><path d="M5 11l7-4 7 4" /><path d="M4 14c1.6 2.5 4.5 4 8 4s6.4-1.5 8-4" /><path d="M9 5.5h6" /></svg>}
+              />
+            </div>
+
+            {/* Guides — deliberately quieter than the shops above */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              {([
+                { label: 'The Haul',      onClick: () => setHaulOpen(true),      icon: <><path d="M3 9.5 4 7a1.6 1.6 0 0 1 1.5-1h13A1.6 1.6 0 0 1 20 7l1 2.5" /><rect x="3" y="9.5" width="18" height="9.5" rx="1.6" /><path d="M3 13.2h18" /></> },
+                { label: 'Synergies',     onClick: () => setSynergiesOpen(true), icon: <><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></> },
+                { label: 'How it works',  onClick: () => setIntroOpen(true),     icon: <><circle cx="12" cy="12" r="9" /><path d="M9.6 9a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1 .8-1 1.6" /><path d="M12 17h.01" /></> },
+              ] as const).map(({ label, onClick, icon }) => (
+                <button key={label} onClick={onClick} className="tap"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.55rem 0.3rem', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#c9c2b6', cursor: 'pointer' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>{icon}</svg>
+                  <span className="font-karla font-700 uppercase tracking-[0.06em]" style={{ fontSize: '0.53rem', whiteSpace: 'nowrap' }}>{label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Active run perks — gauntlet-scoped upgrades in effect this dive.
+                Global Ship & Shore unlocks live out in the world, so they'd
+                only confuse here. */}
+            {(() => {
+              const owned = GAUNTLET_UPGRADES.filter(u => u.scope === 'gauntlet' && upgrades.includes(u.id))
+              if (owned.length === 0) return null
+              return (
+                <div style={{ marginTop: 14 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#7a8e8a', marginBottom: 7 }}>Active Run Perks · {owned.length}</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {owned.map(u => (
+                      <span key={u.id} title={u.description} className="font-karla font-700" style={{ fontSize: '0.56rem', color: `${TEAL}dd`, background: `${TEAL}12`, border: `1px solid ${TEAL}30`, borderRadius: 999, padding: '0.2rem 0.6rem' }}>
+                        ✓ {u.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
 
           <BackLink router={router} label="Not today" />
         </div>
