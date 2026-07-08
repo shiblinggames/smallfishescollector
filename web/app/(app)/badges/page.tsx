@@ -76,6 +76,8 @@ export default async function BadgesPage() {
   const gauntletFathomsEarned = Number(profile?.gauntlet_fathoms_earned ?? 0)
   const gauntletMaxHit = Number(profile?.gauntlet_max_hit ?? 0)
   const gauntletDeepestDied = Number(profile?.gauntlet_deepest_died ?? 0)
+  const gauntletHcDeepest = Number(profile?.gauntlet_hc_deepest ?? 0)
+  const gauntletHcDeepestDied = Number(profile?.gauntlet_hc_deepest_died ?? 0)
   const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
   const confluencesSeen = ((profile?.gauntlet_confluences_seen as string[] | null) ?? []).length
   const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
@@ -261,6 +263,16 @@ export default async function BadgesPage() {
         badgeGoal('greeds_price', "Greed's Price", 'Die deeper than your best cash-out', gauntletDeepestDied > gauntletDeepest ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('storm_reader', 'Storm Reader', 'Discover your first confluence', confluencesSeen, 1, '/raids/gauntlet'),
         badgeGoal('deep_cartographer', 'Deep Cartographer', 'Discover all 7 confluences', confluencesSeen, CONFLUENCE_COUNT, '/raids/gauntlet'),
+      ],
+    },
+    {
+      title: 'Hardcore Gauntlet',
+      accent: '#e0555a',
+      goals: [
+        badgeGoal('drowned_ledger', 'The Drowned Ledger', 'Cash out a Hardcore Gauntlet run', gauntletHcDeepest >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
+        badgeGoal('the_unsinkable', 'The Unsinkable', 'Reach depth 15 in the Hardcore Gauntlet', gauntletHcDeepest, 15, '/raids/gauntlet'),
+        badgeGoal('locker_bound', 'Locker-Bound', 'Reach depth 25 in the Hardcore Gauntlet', gauntletHcDeepest, 25, '/raids/gauntlet'),
+        badgeGoal('ferrymans_toll', "The Ferryman's Toll", 'Lose a squad to the Locker in Hardcore', gauntletHcDeepestDied >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
       ],
     },
     {
