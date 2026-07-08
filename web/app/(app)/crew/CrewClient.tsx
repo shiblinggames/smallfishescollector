@@ -15,7 +15,7 @@ import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
-import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
+import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, GEM_WEIGHTS, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
@@ -31,6 +31,12 @@ const artSrc = (filename: string) => `${SUPA}/storage/v1/object/public/card-arts
 
 // Blood Gem accent + glyph (Hardcore Gauntlet premium currency).
 const BLOOD = '#d1394b'
+
+// Per-reroll odds from a set of per-candidate C/R/E/L weights (3 candidates a
+// reroll). Used to show players the Epic % / Legendary 1-in-N a tier buys.
+const perRerollPct = (perCandPct: number) => 1 - Math.pow(1 - perCandPct / 100, 3)
+const rerollEpicPct = (w: readonly number[]) => Math.round(perRerollPct(w[2]) * 100)
+const rerollLegOdds = (w: readonly number[]) => Math.max(1, Math.round(1 / perRerollPct(w[3])))
 function BloodDrop({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ filter: `drop-shadow(0 0 2.5px ${BLOOD}99)`, flexShrink: 0 }}>
@@ -1693,6 +1699,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const totalNonLeg = nonLegSkins.length
           const skinPoolEmpty = ownedNonLeg >= totalNonLeg
           const canGamble = !skinPoolEmpty && !pending && !skinGamble && state.bloodGems >= BLOOD_SKIN_GAMBLE_COST
+          const baseEpic = rerollEpicPct(GEM_WEIGHTS)
+          const baseLeg = rerollLegOdds(GEM_WEIGHTS)
           return (
             <div>
               {/* Header — glowing sigil, title, help pill (mirrors the Forge). */}
@@ -1727,20 +1735,28 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     <p className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#c98a92', marginTop: 2 }}>Sway the recruit board</p>
                   </div>
                 </div>
-                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.42, marginBottom: 10 }}>
-                  Spend gems and Blood Gems together to tilt a reroll toward Epic and Legendary recruits. The richer the offering, the better the odds.
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#b0aaa0', lineHeight: 1.42, marginBottom: 9 }}>
+                  Spend gems and Blood Gems together to tilt a reroll toward Epic and Legendary recruits.
                 </p>
-                <div className="flex" style={{ gap: 7 }}>
+                {/* Base (no blood) rates for comparison. */}
+                <div className="flex items-center justify-between" style={{ padding: '0.4rem 0.6rem', borderRadius: 9, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 9 }}>
+                  <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.5rem', color: '#8a8480' }}>Base reroll</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.55)' }}>~{baseEpic}% Epic · 1-in-{baseLeg} Legendary</span>
+                </div>
+                <div className="flex" style={{ gap: 8 }}>
                   {BLOOD_REROLL_TIERS.map(t => {
                     const cannot = pending || reveal.revealing || state.gems < state.rerollCost || state.bloodGems < t.bloodCost
                     const busy = busyId === `reroll:${t.id}`
+                    const epicPct = rerollEpicPct(t.weights)
+                    const legOdds = rerollLegOdds(t.weights)
                     return (
                       <button key={t.id} onClick={() => setBloodConfirm({ kind: 'reroll', tierId: t.id })} disabled={cannot}
-                        title={`${t.name} — ${state.rerollCost} gems + ${t.bloodCost} Blood Gems`}
-                        className="font-karla font-700 uppercase active:scale-95"
-                        style={{ flex: '1 1 0', minWidth: 0, padding: '0.6rem 0.3rem', borderRadius: 11, background: cannot ? `${BLOOD}12` : `${BLOOD}28`, border: `1px solid ${BLOOD}80`, color: cannot ? 'rgba(243,192,198,0.5)' : '#f7d0d5', opacity: cannot ? 0.6 : 1, cursor: cannot ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, transition: 'transform 0.08s, opacity 0.18s' }}>
-                        <span style={{ fontSize: '0.62rem', letterSpacing: '0.04em' }}>{busy ? '…' : t.name}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.5rem', color: 'rgba(255,255,255,0.62)' }}>
+                        className="active:scale-95"
+                        style={{ flex: '1 1 0', minWidth: 0, padding: '0.7rem 0.4rem 0.6rem', borderRadius: 12, background: cannot ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}2e, ${BLOOD}1a)`, border: `1px solid ${BLOOD}80`, opacity: cannot ? 0.6 : 1, cursor: cannot ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'transform 0.08s, opacity 0.18s' }}>
+                        <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.78rem', letterSpacing: '0.04em', color: cannot ? 'rgba(243,192,198,0.5)' : '#f7d0d5' }}>{busy ? '…' : t.name}</span>
+                        <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f3c0c6' }}>{epicPct}% Epic</span>
+                        <span className="font-karla font-700" style={{ fontSize: '0.6rem', color: '#f3c0c6' }}>1-in-{legOdds} Legendary</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.52rem', color: 'rgba(255,255,255,0.55)', marginTop: 3, paddingTop: 4, borderTop: `1px solid ${BLOOD}33` }}>
                           {t.bloodCost}<BloodDrop size={8} /> + {state.rerollCost}<span style={{ color: '#a78bfa' }}>◆</span>
                         </span>
                       </button>
@@ -2741,9 +2757,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             const bloodCost = isGamble ? BLOOD_SKIN_GAMBLE_COST : tier!.bloodCost
             const gemCost = isGamble ? 0 : state.rerollCost
             const canAfford = state.bloodGems >= bloodCost && (isGamble || state.gems >= gemCost)
-            const perReroll = (p: number) => 1 - Math.pow(1 - p / 100, 3)
-            const epicPct = tier ? Math.round(perReroll(tier.weights[2]) * 100) : 0
-            const legOdds = tier ? Math.max(1, Math.round(1 / perReroll(tier.weights[3]))) : 0
+            const epicPct = tier ? rerollEpicPct(tier.weights) : 0
+            const legOdds = tier ? rerollLegOdds(tier.weights) : 0
             return (
               <motion.div key="blood-confirm" onClick={() => setBloodConfirm(null)}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
@@ -2772,6 +2787,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         <p className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#9a948a', marginTop: 1 }}>Legendary</p>
                       </div>
                     </div>
+                  )}
+                  {tier && (
+                    <p className="font-karla" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.42)', textAlign: 'center', marginTop: 6 }}>
+                      vs base ~{rerollEpicPct(GEM_WEIGHTS)}% Epic · 1-in-{rerollLegOdds(GEM_WEIGHTS)} Legendary
+                    </p>
                   )}
                   <div className="flex items-center justify-center" style={{ gap: 8, margin: '12px 0 12px' }}>
                     {gemCost > 0 && <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#c9b6f5' }}>{gemCost} ◆</span>}

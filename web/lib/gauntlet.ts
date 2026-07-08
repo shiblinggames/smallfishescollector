@@ -114,9 +114,11 @@ export const BLOOD_SKIN_GAMBLE_COST = 150
  *  candidate %s. */
 export interface BloodRerollTier { id: string; name: string; bloodCost: number; weights: [number, number, number, number] }
 export const BLOOD_REROLL_TIERS: BloodRerollTier[] = [
-  { id: 'bloodied', name: 'Bloodied', bloodCost: 10, weights: [59,   34, 6,  1   ] },
-  { id: 'cursed',   name: 'Cursed',   bloodCost: 25, weights: [55.5, 34, 9,  1.5 ] },
-  { id: 'sanguine', name: 'Sanguine', bloodCost: 45, weights: [52,   34, 12, 2   ] },
+  // Per-candidate C/R/E/L (sum 100). Tuned so the PER-REROLL (3 candidates)
+  // odds land on the round targets: Bloodied ≈ 33% Epic / 1-in-30 Legendary,
+  // Sanguine ≈ 50% Epic / 1-in-15 Legendary. (Base gem reroll ≈ 10% / 1-in-52.)
+  { id: 'bloodied', name: 'Bloodied', bloodCost: 15, weights: [52.38, 34, 12.5,  1.12] },
+  { id: 'sanguine', name: 'Sanguine', bloodCost: 40, weights: [43.10, 34, 20.63, 2.27] },
 ]
 export function bloodRerollTier(id: string | null | undefined): BloodRerollTier | undefined {
   return id ? BLOOD_REROLL_TIERS.find(t => t.id === id) : undefined
