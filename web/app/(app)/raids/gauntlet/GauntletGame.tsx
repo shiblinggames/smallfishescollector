@@ -2481,11 +2481,11 @@ const CHEST_ART: Record<number, { closed: string; open: string; color: string }>
 }
 
 // Hardcore cash-out chest — same Davy sprite, but a blood-dark coffer: a
-// red/black CSS tint over the art + a crimson accent driving every glow/ray,
-// and its own name (the tier still sets the pot multiplier + haul richness).
-const HARDCORE_CHEST_LABEL  = 'The Drowned Coffer'
-const HARDCORE_CHEST_ACCENT = '#e0392f'
-const HARDCORE_CHEST_FILTER = 'grayscale(0.35) sepia(1) saturate(7) hue-rotate(-33deg) brightness(0.8) contrast(1.18)'
+// dark, muted red CSS tint over the art + a matching accent driving every
+// glow/ray, and its own name (the tier still sets the pot mult + haul).
+const HARDCORE_CHEST_LABEL  = 'The Blood Coffer'
+const HARDCORE_CHEST_ACCENT = '#b83a3a'
+const HARDCORE_CHEST_FILTER = 'grayscale(0.4) sepia(1) saturate(2.4) hue-rotate(-30deg) brightness(0.62) contrast(1.1)'
 
 // rAF count-up for the reward numbers (easeOutCubic). Holds at 0 until `run`
 // flips true, so the chest can reveal first and THEN the numbers tick up.
