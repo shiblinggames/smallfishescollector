@@ -2867,6 +2867,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 ) : won ? (() => {
                   const c = won.color
                   const glow = skinArtGlow(c, groupForSlug(won.slug) ?? 3, true)
+                  const ownsCrew = state.roster.some(m => m.slug === won.slug)
                   return (
                     <>
                       {[0, 0.1, 0.22].map((d, i) => (
@@ -2887,7 +2888,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                           style={{ position: 'relative', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, maxWidth: 320, lineHeight: 1.4 }}>{won.blurb}</motion.p>
                       )}
                       <motion.p className="font-karla font-700 uppercase" initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ delay: 1 }}
-                        style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.4)', marginTop: 22 }}>Tap to continue · equip it in the Skins tab</motion.p>
+                        style={{ position: 'relative', fontSize: '0.54rem', letterSpacing: '0.16em', color: 'rgba(255,255,255,0.4)', marginTop: 22 }}>Tap to continue · {ownsCrew ? 'equip it in the Skins tab' : 'recruit its crew to wear it'}</motion.p>
                     </>
                   )
                 })() : null}
