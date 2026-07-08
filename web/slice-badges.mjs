@@ -135,6 +135,20 @@ const PLAN = [
   [18, 1, 0, 'not_a_shot_fired'],
   [18, 1, 1, 'tight_quarters'],
   [18, 1, 2, 'dead_reckoning'],
+  // ── batch 19 — Hardcore Gauntlet ──
+  [19, 0, 0, 'drowned_ledger'],
+  [19, 0, 1, 'the_unsinkable'],
+  [19, 0, 2, 'locker_bound'],
+  [19, 1, 0, 'the_deep_end'],
+  [19, 1, 1, 'ferrymans_toll'],
+  [19, 1, 2, 'blood_charged'],
+  // ── batch 20 — Blood Gems + Completionist Rod ──
+  [20, 0, 0, 'blood_rich'],
+  [20, 0, 1, 'bloodhoard'],
+  [20, 0, 2, 'crimson_fortune'],
+  [20, 1, 0, 'completionist_rod'],
+  [20, 1, 1, 'fully_rigged'],
+  [20, 1, 2, 'reforged'],
 ]
 
 let skipped = 0
