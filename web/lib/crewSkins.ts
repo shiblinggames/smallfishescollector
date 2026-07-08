@@ -87,7 +87,7 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'sailfish_overdrive', slug: 'sailfish', name: 'Overdrive', filename: 'Sailfish_futurespeed.png', gemCost: 1000, blurb: 'Past the horizon before the wake catches up.', color: '#22d3ee' },
   { id: 'sailfish_opulent',   slug: 'sailfish', name: 'Opulent',   filename: 'Sailfish_opulent.png',    gemCost: 1000, blurb: 'Sailing first-class, always.', color: '#f0c040' },
   // ── Swordfish (Sawyer) — Rare ──
-  { id: 'swordfish_hypersonic', slug: 'swordfish', name: 'Hypersonic', filename: 'Swordfish_superspeed.png', gemCost: 1000, blurb: 'A blade quicker than the sound it makes.', color: '#38bdf8' },
+  { id: 'swordfish_punkrock', slug: 'swordfish', name: 'Punk Rock', filename: 'Swordfish_superspeed.png', gemCost: 1000, blurb: 'Mohawk fin, blown speakers, zero chill.', color: '#ec4899' },
   { id: 'swordfish_cavalier',   slug: 'swordfish', name: 'Cavalier',   filename: 'Swordfish_cavalier.png',   gemCost: 1000, blurb: 'One thrust, one duel, one winner.', color: '#ef4444' },
   // ── Whale Shark (Welly) — Rare ──
   { id: 'whale_shark_afterlife', slug: 'whale_shark', name: 'Afterlife', filename: 'Whale_Shark_afterlife.png', gemCost: 1000, blurb: 'Drifting on from the far shore.', color: '#a78bfa' },
