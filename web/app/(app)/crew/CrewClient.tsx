@@ -1283,113 +1283,47 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             suffixes on the two text tabs. */}
         {(() => {
           const boardCount = state.board.filter(c => !c.recruited).length
-          const rosterActive = activeTab === 'roster'
-          const recruitsActive = activeTab === 'recruits'
-          const gravesActive = activeTab === 'graveyard'
+          const bloodShown = state.hardcoreUnlocked || state.bloodGems > 0
+          const iconProps = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
+          // Uniform icon + label tabs so every destination is self-explanatory
+          // (the old icon-only Blood/Wardrobe/Graveyard tabs weren't obvious).
+          const tabs: { id: typeof activeTab; label: string; accent: string; count?: number; icon: ReactNode }[] = [
+            { id: 'roster',   label: 'Roster',  accent: SECTION_ROSTER, count: state.roster.length || undefined,
+              icon: <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="3.2" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
+            { id: 'recruits', label: 'Recruit', accent: '#f0d696', count: boardCount || undefined,
+              icon: <svg {...iconProps}><path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="3.2" /><path d="M19 8v6M22 11h-6" /></svg> },
+            ...(bloodShown ? [{ id: 'blood' as const, label: 'Blood', accent: BLOOD,
+              icon: <svg {...iconProps} fill="currentColor" stroke="none"><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" /></svg> }] : []),
+            { id: 'wardrobe', label: 'Skins',  accent: '#5ec8e8',
+              icon: <svg {...iconProps}><path d="M12 3a2 2 0 0 0-2 2c0 1 1 1.6 2 2M3 20l9-7 9 7M3 20l9-4 9 4M3 20v-1l9-6 9 6v1" /></svg> },
+            { id: 'graveyard', label: 'Fallen', accent: '#c8ab7d',
+              icon: <svg {...iconProps}><path d="M6 21V10a6 6 0 0 1 12 0v11" /><path d="M4 21h16" /><path d="M12 7.5v5M9.5 10h5" /></svg> },
+          ]
           return (
-            <div role="tablist" className="flex items-center" style={{ gap: 6, marginBottom: '1.2rem' }}>
-              {/* Roster — standard quiet tab */}
-              <button
-                role="tab"
-                aria-selected={rosterActive}
-                onClick={() => setActiveTab('roster')}
-                className="font-cinzel font-700 uppercase"
-                style={{
-                  flex: '1 1 0', minWidth: 0,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  padding: '0.55rem 0.45rem', borderRadius: 9,
-                  fontSize: '0.7rem', letterSpacing: '0.06em',
-                  background: rosterActive ? `${SECTION_ROSTER}26` : 'rgba(0,0,0,0.25)',
-                  border: `1px solid ${rosterActive ? `${SECTION_ROSTER}88` : 'rgba(255,255,255,0.1)'}`,
-                  color: rosterActive ? SECTION_ROSTER : 'rgba(255,255,255,0.55)',
-                  cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
-                }}>
-                <span>Roster</span>
-                {state.roster.length > 0 && (
-                  <span className="font-karla font-700" style={{ fontSize: '0.62rem', opacity: 0.85 }}>· {state.roster.length}</span>
-                )}
-              </button>
-              {/* Recruit — neutral at rest (matches Roster), gold tint only
-                  when active. Earlier always-gold treatments (gradient fill,
-                  then permanent gold outline) both proved too loud. */}
-              <button
-                role="tab"
-                aria-selected={recruitsActive}
-                onClick={() => setActiveTab('recruits')}
-                className="font-cinzel font-700 uppercase"
-                style={{
-                  flex: '1 1 0', minWidth: 0,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  padding: '0.55rem 0.45rem', borderRadius: 9,
-                  fontSize: '0.7rem', letterSpacing: '0.06em',
-                  background: recruitsActive ? 'rgba(201,162,74,0.24)' : 'rgba(0,0,0,0.25)',
-                  border: `1px solid ${recruitsActive ? 'rgba(240,214,150,0.8)' : 'rgba(255,255,255,0.1)'}`,
-                  color: recruitsActive ? '#f0d696' : 'rgba(255,255,255,0.55)',
-                  cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap',
-                }}>
-                <span>Recruit</span>
-                {boardCount > 0 && (
-                  <span className="font-karla font-700" style={{ fontSize: '0.62rem', opacity: 0.85 }}>· {boardCount}</span>
-                )}
-              </button>
-              {/* Blood Market — crimson tab, shown once Hardcore is unlocked (so
-                  it's discoverable at 0 gems) or whenever the player holds any */}
-              {(state.hardcoreUnlocked || state.bloodGems > 0) && (
-                <button
-                  role="tab"
-                  aria-selected={activeTab === 'blood'}
-                  aria-label="Blood Market"
-                  title="The Blood Market"
-                  onClick={() => setActiveTab('blood')}
-                  style={{
-                    flexShrink: 0, height: 38, padding: '0 0.6rem',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                    borderRadius: 9,
-                    background: activeTab === 'blood' ? `${BLOOD}2a` : 'rgba(0,0,0,0.25)',
-                    border: `1px solid ${activeTab === 'blood' ? `${BLOOD}aa` : `${BLOOD}44`}`,
-                    color: activeTab === 'blood' ? '#f3c0c6' : '#c98a92',
-                    cursor: 'pointer', transition: 'all 0.18s',
-                  }}>
-                  <BloodDrop size={14} />
-                  <span className="font-karla font-700" style={{ fontSize: '0.62rem' }}>{state.bloodGems}</span>
-                </button>
-              )}
-              {/* Wardrobe — icon-only skin collection gallery */}
-              <button
-                role="tab"
-                aria-selected={activeTab === 'wardrobe'}
-                aria-label="Wardrobe"
-                title="Wardrobe"
-                onClick={() => setActiveTab('wardrobe')}
-                style={{
-                  flexShrink: 0, width: 38, height: 38,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  borderRadius: 9,
-                  background: activeTab === 'wardrobe' ? 'rgba(94,200,232,0.2)' : 'rgba(0,0,0,0.25)',
-                  border: `1px solid ${activeTab === 'wardrobe' ? 'rgba(94,200,232,0.7)' : 'rgba(255,255,255,0.1)'}`,
-                  color: activeTab === 'wardrobe' ? '#8fd7ea' : 'rgba(255,255,255,0.45)',
-                  cursor: 'pointer', transition: 'all 0.18s',
-                }}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3a2 2 0 0 0-2 2c0 1 1 1.6 2 2M3 20l9-7 9 7M3 20l9-4 9 4M3 20v-1l9-6 9 6v1" /></svg>
-              </button>
-              {/* Graveyard — icon-only memorial entry */}
-              <button
-                role="tab"
-                aria-selected={gravesActive}
-                aria-label="Graveyard"
-                title="Graveyard"
-                onClick={() => setActiveTab('graveyard')}
-                style={{
-                  flexShrink: 0, width: 38, height: 38,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  borderRadius: 9,
-                  background: gravesActive ? 'rgba(156,128,85,0.22)' : 'rgba(0,0,0,0.25)',
-                  border: `1px solid ${gravesActive ? 'rgba(156,128,85,0.7)' : 'rgba(255,255,255,0.1)'}`,
-                  color: gravesActive ? '#c8ab7d' : 'rgba(255,255,255,0.45)',
-                  cursor: 'pointer', transition: 'all 0.18s',
-                }}>
-                <GraveIcon />
-              </button>
+            <div role="tablist" className="flex items-stretch" style={{ gap: 5, marginBottom: '1.2rem' }}>
+              {tabs.map(t => {
+                const active = activeTab === t.id
+                return (
+                  <button key={t.id} role="tab" aria-selected={active} aria-label={t.label}
+                    onClick={() => setActiveTab(t.id)}
+                    className="font-cinzel font-700 uppercase"
+                    style={{
+                      flex: '1 1 0', minWidth: 0, position: 'relative',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                      padding: '0.5rem 0.15rem', borderRadius: 10,
+                      background: active ? `${t.accent}22` : 'rgba(0,0,0,0.25)',
+                      border: `1px solid ${active ? `${t.accent}99` : 'rgba(255,255,255,0.1)'}`,
+                      color: active ? t.accent : 'rgba(255,255,255,0.55)',
+                      cursor: 'pointer', transition: 'all 0.18s',
+                    }}>
+                    {t.icon}
+                    <span style={{ fontSize: '0.5rem', letterSpacing: '0.07em', lineHeight: 1 }}>{t.label}</span>
+                    {t.count != null && (
+                      <span className="font-karla font-800" style={{ position: 'absolute', top: 2, right: 3, minWidth: 13, textAlign: 'center', fontSize: '0.5rem', color: '#0b0b0d', background: active ? t.accent : 'rgba(255,255,255,0.7)', borderRadius: 999, padding: '0 3px', lineHeight: 1.35 }}>{t.count}</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )
         })()}
