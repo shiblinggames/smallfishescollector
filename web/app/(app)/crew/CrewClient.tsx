@@ -842,7 +842,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [equipFlash, setEquipFlash] = useState<{ key: number; color: string } | null>(null)
   // Skin id pending a purchase confirmation (tapping a locked skin opens it).
   const [skinBuyConfirm, setSkinBuyConfirm] = useState<string | null>(null)
-  // Skin id whose full-detail splash is open (from the Slop Chest gallery).
+  // Skin id whose full-detail splash is open (from the Trunk gallery).
   const [skinDetail, setSkinDetail] = useState<string | null>(null)
   // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
   // fires the unlock reveal so earning a new skin feels like a real moment.
@@ -1647,7 +1647,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           )
         })()}
 
-        {/* ── The Slop Chest (Skins tab) — every crew skin, owned + unowned, grouped by crew.
+        {/* ── The Trunk (Skins tab) — every crew skin, owned + unowned, grouped by crew.
              Matters now that the blood gamble hands out skins for crew you don't
              own yet: this is the only place to actually SEE them + track the
              collection. Owned + on your roster → tap to equip; owned but the crew
@@ -1663,7 +1663,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           return (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Slop Chest</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Trunk</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 4 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
               </div>
               {groups.map(({ slug, skins, rarity }) => {
@@ -1698,7 +1698,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={artSrc(s.filename)} alt={s.name} loading="lazy" decoding="async"
                                 className={isOwned && s.chase ? 'chase-skin-glow' : undefined}
-                                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4, filter: isOwned ? undefined : 'grayscale(1) brightness(0.3)' }} />
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4, filter: isOwned ? undefined : 'grayscale(1) brightness(0.62)' }} />
                               {isEquipped && (
                                 <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: color, display: 'grid', placeItems: 'center' }}>
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#0a0f14" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5" /></svg>
@@ -1833,7 +1833,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     : <><BloodDrop size={14} /> Gamble a Skin <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, letterSpacing: 0 }}>{BLOOD_SKIN_GAMBLE_COST}<BloodDrop size={12} /></span></>}
                 </button>
                 <button onClick={() => setActiveTab('wardrobe')} className="font-karla font-700 tap" style={{ display: 'block', margin: '9px auto 0', background: 'none', border: 'none', color: '#c98a92', fontSize: '0.66rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                  View the Slop Chest →
+                  View the Trunk →
                 </button>
               </div>
             </div>
@@ -2790,7 +2790,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         document.body,
       )}
 
-      {/* ── Slop Chest skin splash — full art + buy/equip, LoL-style. Opened by
+      {/* ── Trunk skin splash — full art + buy/equip, LoL-style. Opened by
           tapping any tile in the Skins gallery; handles every state. ── */}
       {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
@@ -2816,12 +2816,14 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: `radial-gradient(ellipse at 50% 34%, ${c}2e 0%, #060409 76%)` }}>
                     {skin.chase && owned && <ChaseSkinFx skinId={skin.id} color={c} />}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {/* Always full COLOR — even unowned — so you see exactly what you'd
+                        buy (LoL-style). A small corner lock badge marks it locked. */}
                     <img src={artSrc(skin.filename)} alt={skin.name} className={owned && skin.chase ? 'chase-skin-glow' : undefined}
                       style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', padding: 18,
-                        ...(owned && skin.chase ? { ['--chase-c']: c } : owned ? { filter: skinArtGlow(c, rarity, true) } : { filter: 'grayscale(0.9) brightness(0.5)' }) } as React.CSSProperties} />
+                        ...(owned && skin.chase ? { ['--chase-c']: c } : { filter: skinArtGlow(c, rarity, true) }) } as React.CSSProperties} />
                     {!owned && (
-                      <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', zIndex: 2 }}>
-                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                      <span aria-hidden title="Locked" style={{ position: 'absolute', top: 9, left: 10, zIndex: 3, width: 24, height: 24, borderRadius: 7, background: 'rgba(6,4,9,0.72)', border: '1px solid rgba(255,255,255,0.16)', display: 'grid', placeItems: 'center' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
                       </span>
                     )}
                   </div>
