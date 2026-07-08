@@ -65,24 +65,31 @@ export const CREW_SKINS: CrewSkin[] = [
   // ── Orca (Orc) — Epic ──
   { id: 'orca_detective',   slug: 'orca', name: 'Detective',    filename: 'Orca_detective.png',   gemCost: 1250, blurb: 'Every current tells a story to a sharp eye.', color: '#a8b8d0' },
   { id: 'orca_stormchaser', slug: 'orca', name: 'Storm Chaser', filename: 'Orca_stormchaser.png', gemCost: 1250, blurb: 'Where the storm breaks, she is already there.', color: '#818cf8' },
+  { id: 'orca_royalty',     slug: 'orca', name: 'Royalty',      filename: 'Orca_royalty.png',     gemCost: 1250, blurb: 'Born to rule the pod, crowned by the tide.', color: '#b18cf0' },
   // ── Tiger Shark (Ty) — Epic ──
   { id: 'tiger_shark_embermaw', slug: 'tiger_shark', name: 'Embermaw', filename: 'Tiger_Shark_embermaw.png', gemCost: 1250, blurb: 'Jaws lit like coals from the deep.', color: '#fb7331' },
   { id: 'tiger_shark_warlord',  slug: 'tiger_shark', name: 'Warlord',  filename: 'Tiger_Shark_warlord.png',  gemCost: 1250, blurb: 'Battle-scarred and unbeaten.',      color: '#cf9b3e' },
+  { id: 'tiger_shark_crimson',  slug: 'tiger_shark', name: 'Crimson',  filename: 'Tiger_Shark_bloodcrimson.png', gemCost: 1250, blurb: 'Striped in fresh blood, and hungry for more.', color: '#dc2626' },
   // ── Goblin Shark (Gob) — Epic ──
   { id: 'goblin_shark_bloodbaron', slug: 'goblin_shark', name: 'Blood Baron', filename: 'Goblin_Shark_bloodbaron.png', gemCost: 1250, blurb: 'Old blood, and plenty of it.',            color: '#dc2626' },
   { id: 'goblin_shark_ghastly',    slug: 'goblin_shark', name: 'Ghastly',     filename: 'Goblin_Shark_ghastly.png',    gemCost: 1250, blurb: 'A pale terror drifting up from the dark.', color: '#a7b8c4' },
+  { id: 'goblin_shark_eldritch',   slug: 'goblin_shark', name: 'Eldritch',    filename: 'Goblin_Shark_eldrich.png',    gemCost: 1250, blurb: 'Something older than the deep wears its face.', color: '#9d7bd8' },
   // ── Blue Whale (Big Blue) — Epic ──
   { id: 'blue_whale_bulwark',    slug: 'blue_whale', name: 'Bulwark',    filename: 'Blue_Whale_bulwark.png',    gemCost: 1250, blurb: 'The sea breaks on him and loses.',    color: '#6ba8d9' },
   { id: 'blue_whale_songkeeper', slug: 'blue_whale', name: 'Songkeeper', filename: 'Blue_Whale_songkeeper.png', gemCost: 1250, blurb: 'Keeper of the old songs of the deep.', color: '#a5b4fc' },
+  { id: 'blue_whale_opulent',    slug: 'blue_whale', name: 'Opulent',    filename: 'Blue_Whale_opulent.png',    gemCost: 1250, blurb: 'Draped in gold, vast beyond counting.', color: '#f0c040' },
   // ── Humpback Whale (Humps) — Epic ──
   { id: 'humpback_whale_admiral',       slug: 'humpback_whale', name: 'Admiral',        filename: 'Humpback_admiral.png',        gemCost: 1250, blurb: 'The fleet answers to his flag.', color: '#5b7fb0' },
   { id: 'humpback_whale_goldenhelmsman', slug: 'humpback_whale', name: 'Golden Helmsman', filename: 'Humpback_goldenhelmsman.png', gemCost: 1250, blurb: 'The richest hand on the wheel.',  color: '#f0c040' },
+  { id: 'humpback_whale_glacial',       slug: 'humpback_whale', name: 'Glacial',        filename: 'Humpback_glacial.png',        gemCost: 1250, blurb: 'Carved from the ice of the farthest north.', color: '#7dd3fc' },
   // ── Giant Squid (Skwid) — Epic ──
   { id: 'giant_squid_abyssal',  slug: 'giant_squid', name: 'Abyssal',  filename: 'Giant_Squid_abyssal.png',  gemCost: 1250, blurb: 'Born where no light reaches.',    color: '#3aa8a0' },
   { id: 'giant_squid_sorcerer', slug: 'giant_squid', name: 'Sorcerer', filename: 'Giant_Squid_sorcerer.png', gemCost: 1250, blurb: 'Ink and old magic in every arm.', color: '#a78bfa' },
+  { id: 'giant_squid_ghoul',    slug: 'giant_squid', name: 'Ghoul',    filename: 'Giant_Squid_ghoul.png',    gemCost: 1250, blurb: 'Risen grey and hungry from the black.', color: '#86efac' },
   // ── Great White Shark (Great White) — Epic ──
   { id: 'great_white_shark_ghostrelic', slug: 'great_white_shark', name: 'Ghost Relic', filename: 'Great_White_ghostrelic.png', gemCost: 1250, blurb: 'Bleached bone and old ghosts.', color: '#a9c0cc' },
   { id: 'great_white_shark_iceborn',    slug: 'great_white_shark', name: 'Iceborn',     filename: 'Great_White_iceborn.png',    gemCost: 1250, blurb: 'Forged in the coldest deep.',  color: '#7dd3fc' },
+  { id: 'great_white_shark_blackout',   slug: 'great_white_shark', name: 'Blackout',    filename: 'Great_White_blackout.png',   gemCost: 1250, blurb: 'A shadow with teeth. You never see it coming.', color: '#475569' },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
