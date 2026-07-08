@@ -844,6 +844,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [skinBuyConfirm, setSkinBuyConfirm] = useState<string | null>(null)
   // Skin id whose full-detail splash is open (from the Trunk gallery).
   const [skinDetail, setSkinDetail] = useState<string | null>(null)
+  // The Trunk filters — rarity (per-crew) + ownership (per-skin).
+  const [trunkRarity, setTrunkRarity] = useState<CrewRarity | 'all'>('all')
+  const [trunkOwned, setTrunkOwned] = useState<'all' | 'owned' | 'missing'>('all')
   // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
   // fires the unlock reveal so earning a new skin feels like a real moment.
   function runSkinAction(tag: string, action: () => Promise<CrewActionResult>) {
@@ -1657,14 +1660,62 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           const ownedSlugs = new Set(state.roster.map(m => (m.slug ?? '').toLowerCase()).filter(Boolean))
           const ownedCount = CREW_SKINS.filter(s => owned.has(s.id)).length
           const slugs = [...new Set(CREW_SKINS.map(s => s.slug))]
+          const matchOwned = (id: string) =>
+            trunkOwned === 'all' ? true : trunkOwned === 'owned' ? owned.has(id) : !owned.has(id)
           const groups = slugs
             .map(slug => ({ slug, skins: CREW_SKINS.filter(s => s.slug === slug), rarity: groupForSlug(slug) ?? 0 }))
             .sort((a, b) => a.rarity - b.rarity)
+            // Rarity filter is per-crew (a crew's skins share its rarity); ownership
+            // filter is per-skin, so drop any crew left with nothing to show.
+            .filter(g => trunkRarity === 'all' || g.rarity === trunkRarity)
+            .map(g => ({ ...g, skins: g.skins.filter(s => matchOwned(s.id)) }))
+            .filter(g => g.skins.length > 0)
           return (
             <div>
-              <div style={{ textAlign: 'center', marginBottom: 14 }}>
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Trunk</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 4 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
+              </div>
+              {/* Filters — rarity (top row) + ownership (bottom row). */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {([
+                    { key: 'all', label: 'All', color: '#8fd7ea' },
+                    { key: 2, label: RARITY_NAMES[2], color: RARITY_COLORS[2] },
+                    { key: 3, label: RARITY_NAMES[3], color: RARITY_COLORS[3] },
+                    { key: 4, label: RARITY_NAMES[4], color: RARITY_COLORS[4] },
+                  ] as const).map(o => {
+                    const active = trunkRarity === o.key
+                    return (
+                      <button key={String(o.key)} type="button" onClick={() => setTrunkRarity(o.key as CrewRarity | 'all')} className="tap"
+                        style={{ padding: '0.28rem 0.72rem', borderRadius: 999, cursor: 'pointer',
+                          background: active ? `${o.color}26` : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${active ? `${o.color}88` : 'rgba(255,255,255,0.1)'}`,
+                          color: active ? o.color : 'rgba(255,255,255,0.55)' }}>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.06em' }}>{o.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                  {([
+                    { key: 'all', label: 'All' },
+                    { key: 'owned', label: 'Owned' },
+                    { key: 'missing', label: 'Missing' },
+                  ] as const).map(o => {
+                    const active = trunkOwned === o.key
+                    const c = '#5ec8e8'
+                    return (
+                      <button key={o.key} type="button" onClick={() => setTrunkOwned(o.key)} className="tap"
+                        style={{ padding: '0.28rem 0.95rem', borderRadius: 999, cursor: 'pointer',
+                          background: active ? `${c}26` : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${active ? `${c}88` : 'rgba(255,255,255,0.1)'}`,
+                          color: active ? c : 'rgba(255,255,255,0.55)' }}>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.06em' }}>{o.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
               {groups.map(({ slug, skins, rarity }) => {
                 const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
@@ -1727,6 +1778,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   </div>
                 )
               })}
+              {groups.length === 0 && (
+                <p className="font-karla" style={{ textAlign: 'center', fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', padding: '2.2rem 0' }}>
+                  No skins match these filters.
+                </p>
+              )}
             </div>
           )
         })()}
