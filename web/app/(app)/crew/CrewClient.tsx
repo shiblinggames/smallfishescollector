@@ -1698,7 +1698,12 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={artSrc(s.filename)} alt={s.name} loading="lazy" decoding="async"
                                 className={isOwned && s.chase ? 'chase-skin-glow' : undefined}
-                                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4, filter: isOwned ? undefined : 'grayscale(1) brightness(0.62)' }} />
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4,
+                                  // Owned: chase tiles animate (need --chase-c set), others get the
+                                  // static rarity glow; unowned stay locked-grayscale.
+                                  ...(isOwned && s.chase
+                                    ? { ['--chase-c']: s.color }
+                                    : { filter: isOwned ? skinArtGlow(s.color, rarity) : 'grayscale(1) brightness(0.62)' }) } as React.CSSProperties} />
                               {isEquipped && (
                                 <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: color, display: 'grid', placeItems: 'center' }}>
                                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#0a0f14" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5" /></svg>
@@ -2814,13 +2819,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   style={{ position: 'relative', width: '100%', maxWidth: 340, borderRadius: 20, overflow: 'hidden', background: 'rgba(10,8,14,0.99)', border: `1px solid ${c}66`, boxShadow: `0 0 44px ${c}26, 0 22px 55px rgba(0,0,0,0.65)` }}>
                   <button onClick={close} aria-label="Close" style={{ position: 'absolute', top: 6, right: 12, zIndex: 4, color: 'rgba(255,255,255,0.65)', fontSize: '1.35rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
                   <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: `radial-gradient(ellipse at 50% 34%, ${c}2e 0%, #060409 76%)` }}>
-                    {skin.chase && owned && <ChaseSkinFx skinId={skin.id} color={c} />}
+                    {/* Chase FX + animated glow show for the preview even when UNOWNED,
+                        so you see exactly what you'd buy (LoL-style). */}
+                    {skin.chase && <ChaseSkinFx skinId={skin.id} color={c} />}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {/* Always full COLOR — even unowned — so you see exactly what you'd
-                        buy (LoL-style). A small corner lock badge marks it locked. */}
-                    <img src={artSrc(skin.filename)} alt={skin.name} className={owned && skin.chase ? 'chase-skin-glow' : undefined}
+                    <img src={artSrc(skin.filename)} alt={skin.name} className={skin.chase ? 'chase-skin-glow' : undefined}
                       style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', padding: 18,
-                        ...(owned && skin.chase ? { ['--chase-c']: c } : { filter: skinArtGlow(c, rarity, true) }) } as React.CSSProperties} />
+                        ...(skin.chase ? { ['--chase-c']: c } : { filter: skinArtGlow(c, rarity, true) }) } as React.CSSProperties} />
                     {!owned && (
                       <span aria-hidden title="Locked" style={{ position: 'absolute', top: 9, left: 10, zIndex: 3, width: 24, height: 24, borderRadius: 7, background: 'rgba(6,4,9,0.72)', border: '1px solid rgba(255,255,255,0.16)', display: 'grid', placeItems: 'center' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
