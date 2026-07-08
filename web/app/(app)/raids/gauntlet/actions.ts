@@ -228,15 +228,15 @@ export async function getGauntletLeaderboard(): Promise<{
 
 /** Whether the player can start a run now (cooldown elapsed) + their lifetime
  *  deepest + when the next run unlocks (ISO, null when available now). */
-export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; runHardcore: boolean }> {
+export async function getGauntletDailyState(): Promise<{ available: boolean; deepest: number; fathoms: number; nextAt: string | null; deepestRun: GauntletRunSnapshot | null; resumeState: GauntletRunState | null; hardcoreUnlocked: boolean; hardcoreLive: boolean; hcDeepest: number; hcRunsLeft: number; runHardcore: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, resumeState: null, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, runHardcore: false }
+  if (!user) return { available: false, deepest: 0, fathoms: 0, nextAt: null, deepestRun: null, resumeState: null, hardcoreUnlocked: false, hardcoreLive: HARDCORE_LIVE, hcDeepest: 0, hcRunsLeft: 0, runHardcore: false }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_hc_deepest, gauntlet_run_hardcore, raid_node_progress')
+    .select('gauntlet_last_run_at, gauntlet_deepest, gauntlet_fathoms, gauntlet_deepest_run, is_admin, gauntlet_run_open, gauntlet_run_state, gauntlet_resumes_used, gauntlet_hc_deepest, gauntlet_run_hardcore, gauntlet_hc_last_run_at, gauntlet_hc_runs_today, raid_node_progress')
     .eq('id', user.id)
     .single()
 
@@ -255,6 +255,12 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
 
   const deepest = (profile?.gauntlet_deepest as number | null) ?? 0
   const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
+  // Hardcore runs remaining in the current UTC day (resets when the date rolls;
+  // admins bypass the cap, so they always read full). Mirrors startGauntletRun.
+  const hcLastAt = profile?.gauntlet_hc_last_run_at ? new Date(profile.gauntlet_hc_last_run_at as string) : null
+  const hcSameUtcDay = !!hcLastAt && hcLastAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
+  const hcUsedToday = hcSameUtcDay ? Number(profile?.gauntlet_hc_runs_today ?? 0) : 0
+  const hcRunsLeft = isAdmin ? HARDCORE_RUNS_PER_DAY : Math.max(0, HARDCORE_RUNS_PER_DAY - hcUsedToday)
   return {
     available,
     deepest,
@@ -266,6 +272,8 @@ export async function getGauntletDailyState(): Promise<{ available: boolean; dee
     hardcoreUnlocked: hardcoreUnlocked({ isAdmin, clearedNodes, deepest }),
     hardcoreLive: HARDCORE_LIVE,
     hcDeepest: (profile?.gauntlet_hc_deepest as number | null) ?? 0,
+    // Hardcore runs left today (of HARDCORE_RUNS_PER_DAY) for the mode-choice card.
+    hcRunsLeft,
     // Is the currently OPEN (resumable) run a hardcore one? Lets a resumed run
     // keep its hardcore end-beats + abandon warning.
     runHardcore: profile?.gauntlet_run_hardcore === true,

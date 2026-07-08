@@ -26,7 +26,7 @@ import {
   confluenceEffects, activeConfluences, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
-  GAUNTLET_COOLDOWN_HOURS,
+  GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY,
   CHEST_TIERS, chestCannonDropChance,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState,
 } from '@/lib/gauntlet'
@@ -119,9 +119,11 @@ export interface GauntletGameProps {
   hardcoreUnlocked: boolean
   /** Is hardcore live for everyone yet? false → non-admins see a "Coming Soon" tag. */
   hardcoreLive: boolean
-  /** This player's best hardcore cash-out depth (the Drowned Ledger). */
+  /** This player's best hardcore cash-out depth. */
   hcDeepest: number
-  /** #1 on the hardcore-only Drowned Ledger, or null if none yet. */
+  /** Hardcore runs left in the current UTC day (of HARDCORE_RUNS_PER_DAY). */
+  hcRunsLeft: number
+  /** #1 on the hardcore-only board, or null if none yet. */
   hardcoreTop: { name: string; depth: number } | null
   /** Is the currently OPEN (resumable) run a hardcore one? Keeps a resumed run's
    *  end-beats + abandon warning correct. */
@@ -557,7 +559,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     </>}
                   />
                   <Card
-                    accent={DANGER} title="Hardcore" titleColor={canHc ? '#fca5a5' : 'rgba(252,165,165,0.8)'} icon={skull} enabled={canHc && !starting}
+                    accent={DANGER} title="Hardcore" titleColor={canHc ? '#fca5a5' : 'rgba(252,165,165,0.8)'} icon={skull} enabled={canHc && !starting && props.hcRunsLeft > 0}
                     desc="The squad you send in dies for good if you fall. Its own hiscore and cosmetics."
                     onClick={() => { setModeChoiceOpen(false); setHcConfirmOpen(true) }}
                     footer={comingSoon
@@ -566,6 +568,9 @@ export default function GauntletGame(props: GauntletGameProps) {
                           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${DANGER}cc` }}>Hardcore Best</p>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f3d6d6' }}>
                             {props.hcDeepest > 0 ? `Your best · ${props.hcDeepest}` : props.hardcoreTop ? `#1 · Depth ${props.hardcoreTop.depth}` : 'Unclaimed'}
+                          </p>
+                          <p className="font-karla font-700" style={{ fontSize: '0.6rem', color: props.hcRunsLeft > 0 ? '#c48a8a' : '#e0555a', marginTop: 3 }}>
+                            {props.hcRunsLeft > 0 ? `${props.hcRunsLeft} of ${HARDCORE_RUNS_PER_DAY} runs left today` : 'No runs left today'}
                           </p>
                         </>}
                   />
