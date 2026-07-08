@@ -6749,8 +6749,12 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
         transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
         style={{
           position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%',
-          background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}55 6deg, ${color}00 14deg)`,
-          filter: 'blur(2px)', pointerEvents: 'none',
+          // Soft spokes baked into the gradient stops (wide fades) instead of a
+          // live `filter: blur()` — the blur re-rasterized the conic gradient
+          // every frame while it scaled/rotated (the fade-in stutter). willChange
+          // promotes it to its own GPU layer so the transform runs paint-free.
+          background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}3a 9deg, ${color}00 20deg)`,
+          willChange: 'transform, opacity', pointerEvents: 'none',
         }}
       />
 
@@ -6762,7 +6766,7 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
           transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
           style={{
             position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%',
-            border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, pointerEvents: 'none',
+            border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, willChange: 'transform, opacity', pointerEvents: 'none',
           }}
         />
       ))}
