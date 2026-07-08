@@ -16,6 +16,27 @@
   --color-sg-gold-border: rgba(240,192,64,0.38);
 }
 
+/* ── Battery savers ──
+   1) Freeze every CSS animation while the app is backgrounded (phone locked /
+      switched away). BackgroundAnimationPauser toggles .doc-hidden on the body
+      via visibilitychange. No effect while the app is on screen. */
+body.doc-hidden *,
+body.doc-hidden *::before,
+body.doc-hidden *::after {
+  animation-play-state: paused !important;
+}
+/* 2) Respect the OS "Reduce Motion" setting: near-instant everything so the
+      ~60 decorative loops (glows, shimmers, backdrops) stop pegging the GPU for
+      users who opt in. Only affects those users; default visuals are unchanged. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @keyframes pageFadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
