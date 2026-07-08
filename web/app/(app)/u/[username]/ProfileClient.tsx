@@ -21,7 +21,7 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
-import { StatTile, RankHero, FishIcon, CompassIcon } from '@/components/ProfileStats'
+import { StatTile } from '@/components/ProfileStats'
 import { RarestCatchesTrophy, FeaturedCrew } from '@/components/ProfileShowcase'
 import type { CareerStats } from '@/lib/careerStats'
 
@@ -256,11 +256,9 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
       {profileTab === 'fishing' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Angler hero + headline career stats */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <RankHero color="#60a5fa" kicker="Angler" icon={FishIcon}
-              title={`Level ${fishingLevel}`}
-              sub={stats.uniqueSpecies > 0 ? `${stats.uniqueSpecies} species logged` : undefined} />
+          {/* Headline career stats */}
+          <div>
+            <SectionLabel color="#60a5fa">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
@@ -435,10 +433,9 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
       {profileTab === 'navigation' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Navigator hero + headline career stats */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <RankHero color="#c084fc" kicker="Navigator" icon={CompassIcon}
-              title={`Level ${expLevel}`} />
+          {/* Headline career stats */}
+          <div>
+            <SectionLabel color="#c084fc">Career</SectionLabel>
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
               <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
