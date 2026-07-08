@@ -1277,27 +1277,24 @@ export default function GauntletGame(props: GauntletGameProps) {
           {/* Descend — merged with your deepest-dive record into ONE hero card
               (the vertical medallion look, not a flat bar). The whole card
               starts a descent; the corner chip recaps your record run. */}
-          <div style={{ position: 'relative', marginTop: 18 }}>
+          <div style={{ position: 'relative', marginTop: 16 }}>
             <button onClick={() => setModeChoiceOpen(true)} disabled={starting} className="tap"
-              style={{ position: 'relative', display: 'block', width: '100%', padding: '1.15rem 1rem 1.1rem', borderRadius: 18, textAlign: 'center', cursor: starting ? 'wait' : 'pointer', overflow: 'hidden',
+              style={{ position: 'relative', display: 'block', width: '100%', padding: '0.85rem 1rem 0.9rem', borderRadius: 16, textAlign: 'center', cursor: starting ? 'wait' : 'pointer', overflow: 'hidden',
                 background: `radial-gradient(130% 82% at 50% 0%, ${GOLD}22, ${GOLD}0a 55%, transparent 82%), rgba(255,255,255,0.02)`,
                 border: `1px solid ${GOLD}55`, boxShadow: `0 0 26px ${GOLD}1c`,
                 animation: starting ? 'none' : 'gauntCta 2.8s ease-in-out infinite' }}>
-              {/* Medallion */}
-              <div style={{ width: 46, height: 46, margin: '0 auto 8px', borderRadius: '50%', background: `${GOLD}1e`, border: `1px solid ${GOLD}66`, boxShadow: `0 0 20px ${GOLD}2a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
-              </div>
-              {/* Your record — the number they liked seeing big */}
+              {/* Your record — no medallion arrow up top; the only ⌄⌄ is on the
+                  Descend button below, so the arrow means one thing: the action. */}
               {props.deepest > 0 ? (
                 <>
                   <p className="font-karla font-800 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.22em', color: '#b7a878' }}>Your Deepest Dive</p>
-                  <p className="font-cinzel font-800" style={{ fontSize: '2rem', color: GOLD, lineHeight: 1.02, marginTop: 2, textShadow: `0 0 22px ${GOLD}3a` }}>Depth {props.deepest}</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: GOLD, lineHeight: 1.02, marginTop: 1, textShadow: `0 0 22px ${GOLD}3a` }}>Depth {props.deepest}</p>
                 </>
               ) : (
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: '#b7a878' }}>No mark set yet</p>
+                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: '#b7a878', padding: '0.3rem 0' }}>No mark set yet</p>
               )}
               {/* The action — a contained CTA, subordinate to the record */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 13, padding: '0.5rem 1.5rem', borderRadius: 12, background: `linear-gradient(180deg, ${GOLD}32, ${GOLD}12)`, border: `1px solid ${GOLD}75` }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 9, padding: '0.5rem 1.5rem', borderRadius: 12, background: `linear-gradient(180deg, ${GOLD}32, ${GOLD}12)`, border: `1px solid ${GOLD}75` }}>
                 <span className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '1rem', color: GOLD }}>{starting ? 'Diving…' : 'Descend'}</span>
                 {!starting && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>}
               </div>
@@ -3008,10 +3005,16 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
     <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GOLD}3a`, boxShadow: `0 0 44px ${GOLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem', textAlign: 'center' }}>
-        {/* Hero — a trophy header, not a bare number */}
+        style={{ position: 'relative', width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GOLD}3a`, boxShadow: `0 0 44px ${GOLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.2rem', textAlign: 'center' }}>
+        {/* Close — X at the top-right */}
+        <button onClick={onClose} aria-label="Close" className="tap"
+          style={{ position: 'absolute', top: 10, right: 10, zIndex: 3, width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+        {/* Hero — a trophy header, not a bare number. Anchor (depth), not a
+            descend chevron — this is a record view, not an action. */}
         <div style={{ width: 50, height: 50, margin: '0 auto 8px', borderRadius: '50%', background: `${GOLD}1c`, border: `1px solid ${GOLD}5c`, boxShadow: `0 0 22px ${GOLD}2a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2.4" /><path d="M12 7.4V21" /><path d="M5 13H3a9 9 0 0 0 18 0h-2" /><path d="M8 11h8" /></svg>
         </div>
         <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: `${GOLD}cc` }}>Your Deepest Dive</p>
         <p className="font-cinzel font-800" style={{ fontSize: '2.3rem', color: GOLD, lineHeight: 1.02, marginTop: 3, textShadow: `0 0 26px ${GOLD}44` }}>
@@ -3033,23 +3036,21 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 
         {boons.length > 0 && (
           <Section title="Powers" color={TEAL}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {boons.map(({ fam, tier }) => {
                 const t = fam.tiers[Math.min(tier, fam.tiers.length) - 1]
                 const meta = BOON_RARITY_META[boonRarity(fam)]
                 const rc = meta.color
                 return (
-                  <div key={fam.id} style={{ display: 'flex', gap: 10, padding: '0.6rem 0.7rem', borderRadius: 12, background: `${rc}12`, border: `1px solid ${rc}38`, borderLeft: `3px solid ${rc}` }}>
-                    <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: `${rc}22`, border: `1px solid ${rc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill={rc} stroke="none" aria-hidden><path d="M12 2l2.3 6.9L21 11l-6.7 2.1L12 20l-2.3-6.9L3 11l6.7-2.1z" /></svg>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#f4fbf9', lineHeight: 1.15 }}>{fam.name}</span>
-                        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.1em', color: rc, background: `${rc}1e`, border: `1px solid ${rc}44`, borderRadius: 999, padding: '0.1rem 0.42rem' }}>{meta.label}{tier > 1 ? ` · ${boonTierLabel(tier)}` : ''}</span>
+                  <div key={fam.id} style={{ display: 'flex', flexDirection: 'column', padding: '0.6rem 0.62rem', borderRadius: 12, background: `${rc}12`, border: `1px solid ${rc}3a`, borderTop: `2.5px solid ${rc}`, textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 7 }}>
+                      <div style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, background: `${rc}22`, border: `1px solid ${rc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill={rc} stroke="none" aria-hidden><path d="M12 2l2.3 6.9L21 11l-6.7 2.1L12 20l-2.3-6.9L3 11l6.7-2.1z" /></svg>
                       </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#9fbdb5', marginTop: 3, lineHeight: 1.4 }}>{t?.desc}</p>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.42rem', letterSpacing: '0.06em', color: rc, background: `${rc}1e`, border: `1px solid ${rc}44`, borderRadius: 999, padding: '0.12rem 0.42rem', whiteSpace: 'nowrap' }}>{meta.label}{tier > 1 ? ` ${boonTierLabel(tier)}` : ''}</span>
                     </div>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#f4fbf9', lineHeight: 1.15 }}>{fam.name}</span>
+                    <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#9fbdb5', marginTop: 3, lineHeight: 1.35 }}>{t?.desc}</span>
                   </div>
                 )
               })}
@@ -3059,23 +3060,21 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 
         {curses.length > 0 && (
           <Section title="Curses" color="#f87171">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {curses.map(({ c, tier }) => {
                 const t = c.tiers[Math.min(tier, c.tiers.length) - 1]
                 const label = curseTierLabel(tier)
                 const rc = '#f87171'
                 return (
-                  <div key={c.id} style={{ display: 'flex', gap: 10, padding: '0.6rem 0.7rem', borderRadius: 12, background: `${rc}12`, border: `1px solid ${rc}38`, borderLeft: `3px solid ${rc}` }}>
-                    <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: `${rc}22`, border: `1px solid ${rc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.2" fill={rc} stroke="none" /><circle cx="15" cy="11" r="1.2" fill={rc} stroke="none" /></svg>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#fdecec', lineHeight: 1.15 }}>{c.name}</span>
-                        {label && <span className="font-karla font-800 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.1em', color: rc, background: `${rc}1e`, border: `1px solid ${rc}44`, borderRadius: 999, padding: '0.1rem 0.42rem' }}>{label}</span>}
+                  <div key={c.id} style={{ display: 'flex', flexDirection: 'column', padding: '0.6rem 0.62rem', borderRadius: 12, background: `${rc}12`, border: `1px solid ${rc}3a`, borderTop: `2.5px solid ${rc}`, textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 7 }}>
+                      <div style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, background: `${rc}22`, border: `1px solid ${rc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.2" fill={rc} stroke="none" /><circle cx="15" cy="11" r="1.2" fill={rc} stroke="none" /></svg>
                       </div>
-                      <p className="font-karla font-600" style={{ fontSize: '0.74rem', color: '#d99', marginTop: 3, lineHeight: 1.4 }}>{t?.desc}</p>
+                      {label && <span className="font-karla font-800 uppercase" style={{ fontSize: '0.42rem', letterSpacing: '0.06em', color: rc, background: `${rc}1e`, border: `1px solid ${rc}44`, borderRadius: 999, padding: '0.12rem 0.42rem', whiteSpace: 'nowrap' }}>{label}</span>}
                     </div>
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#fdecec', lineHeight: 1.15 }}>{c.name}</span>
+                    <span className="font-karla font-600" style={{ fontSize: '0.68rem', color: '#d99', marginTop: 3, lineHeight: 1.35 }}>{t?.desc}</span>
                   </div>
                 )
               })}
@@ -3085,11 +3084,14 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 
         {tides.length > 0 && (
           <Section title="Tides" color="#bae6fd">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {tides.map((t, i) => (
-                <div key={i} style={{ padding: '0.5rem 0.7rem', borderRadius: 11, background: 'rgba(125,211,252,0.08)', border: '1px solid rgba(125,211,252,0.22)', borderLeft: '3px solid rgba(125,211,252,0.55)', textAlign: 'left' }}>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#cbe9f8', lineHeight: 1.2 }}>{t.title}</p>
-                  <p className="font-karla font-600" style={{ fontSize: '0.7rem', color: '#8fb6c8', marginTop: 2 }}><span style={{ color: '#6f93a4' }}>Chose: </span>{t.choice}</p>
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', padding: '0.6rem 0.62rem', borderRadius: 12, background: 'rgba(125,211,252,0.08)', border: '1px solid rgba(125,211,252,0.26)', borderTop: '2.5px solid rgba(125,211,252,0.6)', textAlign: 'left' }}>
+                  <div style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, background: 'rgba(125,211,252,0.16)', border: '1px solid rgba(125,211,252,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 7 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bae6fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0" /><path d="M3 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0" /></svg>
+                  </div>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#cbe9f8', lineHeight: 1.18 }}>{t.title}</span>
+                  <span className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#8fb6c8', marginTop: 3, lineHeight: 1.35 }}><span style={{ color: '#6f93a4' }}>Chose: </span>{t.choice}</span>
                 </div>
               ))}
             </div>
@@ -3101,11 +3103,6 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
             No powers, curses, or tides were logged on that dive.
           </p>
         )}
-
-        <button onClick={onClose} className="font-karla font-700 uppercase tracking-[0.1em] tap"
-          style={{ marginTop: 18, width: '100%', padding: '0.8rem', borderRadius: 12, fontSize: '0.74rem', background: `${GOLD}18`, border: `1px solid ${GOLD}55`, color: '#f5d98a', cursor: 'pointer' }}>
-          Close
-        </button>
       </motion.div>
     </ModalScrim>
   )
