@@ -77,10 +77,10 @@ export function gauntletUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
 // FOR GOOD if you die or abandon, tracked on its own hiscore (the Drowned
 // Ledger). Same depth-scaled enemies as normal — the stake IS the difficulty.
 //
-// Launch is ADMIN-ONLY: flip HARDCORE_LIVE to open it to everyone (mirrors the
-// Chapter 3 rollout). Until then non-admins see a "Coming Soon" tease. The
-// server enforces this in startGauntletRun, so the action can't be forced.
-export const HARDCORE_LIVE = false
+// LIVE to everyone (2026-07-08). Gated per-player by hardcoreUnlocked (Gauntlet
+// unlocked + normal-Gauntlet depth >= HC_UNLOCK_DEPTH); the server enforces it
+// in startGauntletRun, so the action can't be forced. Set false to pull it back.
+export const HARDCORE_LIVE = true
 // Player-facing unlock once HARDCORE_LIVE: needs the Gauntlet unlocked AND a
 // normal-Gauntlet depth floor, so newcomers can't blind-permakill their crew.
 export const HC_UNLOCK_DEPTH = 5

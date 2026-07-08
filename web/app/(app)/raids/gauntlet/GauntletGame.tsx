@@ -26,7 +26,7 @@ import {
   confluenceEffects, activeConfluences, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
-  GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY,
+  GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH,
   CHEST_TIERS, chestCannonDropChance,
   type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState,
 } from '@/lib/gauntlet'
@@ -564,6 +564,11 @@ export default function GauntletGame(props: GauntletGameProps) {
                     onClick={() => { setModeChoiceOpen(false); setHcConfirmOpen(true) }}
                     footer={comingSoon
                       ? <p className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.12em', color: HC_ACCENT }}>Coming Soon</p>
+                      : !canHc
+                      // Live but not yet eligible — the only unmet gate here is the
+                      // normal-Gauntlet depth floor (they're already on the page).
+                      ? <><p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${DANGER}cc` }}>Locked</p>
+                          <p className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f3d6d6', lineHeight: 1.2 }}>Reach depth {HC_UNLOCK_DEPTH} in the Gauntlet</p></>
                       : <>
                           <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${DANGER}cc` }}>Hardcore Best</p>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f3d6d6' }}>
