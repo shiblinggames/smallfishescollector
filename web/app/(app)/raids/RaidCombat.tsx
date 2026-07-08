@@ -759,6 +759,17 @@ export default function RaidCombat({
     if (playerHp < prevHpRef.current) onDamageTaken?.()
     prevHpRef.current = playerHp
   }, [playerHp, onDamageTaken])
+
+  // Preload + decode every deployed crew's art on mount so a summon's fade-in
+  // never hitches on the image decoding mid-animation (the main fade-in stutter).
+  useEffect(() => {
+    for (const c of crewMembers) {
+      if (!c.imageUrl) continue
+      const img = new Image()
+      img.src = c.imageUrl
+      img.decode?.().catch(() => {})
+    }
+  }, [crewMembers])
   const [enemyHp, setEnemyHp]         = useState(() => Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult)))
   // The enemy's ACTUAL max HP this fight = base × any enemyHpScale (Barnacled
   // Hull curse, half-HP tides). Drives the HP bar denominator + stat sheet so
@@ -6725,7 +6736,10 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0.92, 0.92, 0.92] }}
         transition={{ duration: 2.1, times: HOLD, ease: 'easeInOut' }}
-        style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.94) 60%)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
+        // No backdrop-filter: animating opacity on a blurred backdrop re-blurs
+        // the whole screen every frame (a big fade-in stutter). The gradient is
+        // near-opaque already, so the blur added almost nothing visually.
+        style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.96) 60%)` }}
       />
 
       {/* Rotating light rays fanning out behind the crew (conic gradient). */}
@@ -6791,7 +6805,7 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
                 white wash on top read as the art vanishing then reappearing. */}
             {chase && skinId && <ChaseSkinFx skinId={skinId} color={color} variant="summon" />}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt={name} style={{ position: 'relative', zIndex: 1, height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block', filter: chase
+            <img src={image} alt={name} decoding="async" loading="eager" style={{ position: 'relative', zIndex: 1, height: 'min(50vh, 300px)', width: 'auto', maxWidth: '82vw', display: 'block', willChange: 'transform', filter: chase
               ? `drop-shadow(0 0 34px ${color}) drop-shadow(0 0 80px ${color}) drop-shadow(0 0 130px ${color}66) drop-shadow(0 12px 32px rgba(0,0,0,0.7))`
               : `drop-shadow(0 0 28px ${color}) drop-shadow(0 0 66px ${color}88) drop-shadow(0 12px 32px rgba(0,0,0,0.65))` }} />
           </div>
