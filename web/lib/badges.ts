@@ -189,7 +189,7 @@ export const BADGES: Badge[] = [
   { id: 'mark_of_mastery', name: 'Mark of Mastery',   description: 'Reach a Mark III ship class',                     imageUrl: '/badges/mark_of_mastery.png', difficulty: 'veteran' },
   { id: 'quick_draw',     name: 'Quick Draw',         description: 'Clear any raid in under 1:00',                    imageUrl: '/badges/quick_draw.png',     difficulty: 'veteran'  },
   { id: 'complete_captain', name: 'The Complete Captain', description: 'Reach Navigation 100 and Fishing 100',        imageUrl: '/badges/complete_captain.png', difficulty: 'grandmaster' },
-  { id: 'six_legends',    name: 'The Avengers',       description: 'Own all 5 base legendary crew',                   imageUrl: '/badges/six_legends.png',    difficulty: 'grandmaster' },
+  { id: 'six_legends',    name: 'The Avengers',       description: 'Own all 5 base legendary crew',                   imageUrl: '/badges/six_legends.png',    difficulty: 'master' },
 
   // ── 2026-07 expansion (batches 17–18) — crew skins + master feats ────────
   // Sheet 17 — crew skins.
