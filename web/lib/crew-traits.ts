@@ -199,6 +199,11 @@ export const CREW_TRAITS: Record<string, CrewTrait> = {
     rare: "Negotiated a Gilded Net debt down to nothing in a single conversation. Nobody's sure what she said.",
     legendary: "Three factions tried to recruit her in the same season. All three walked away thinking they'd won. None of them had.",
   },
+  Jellyfish: {
+    common: "Drifts where she likes. Everything she touches goes numb.",
+    rare: "Two crews swore they had her cornered. Both woke adrift, rudderless, and unsure why.",
+    legendary: "The Gilded Net stopped sending boarding parties. The ones who came back couldn't move their hands for a week. The ones who didn't, never do.",
+  },
 }
 
 export function getCrewTrait(fishName: string, rarity: string): string {

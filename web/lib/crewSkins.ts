@@ -124,6 +124,10 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'angelfish_archangel',   slug: 'angelfish', name: 'Archangel',    filename: 'Angelfish_archangel.png',   gemCost: 1250, blurb: 'Wings of light, judgment in every feather.', color: '#e6ecff' },
   { id: 'angelfish_fallenangel', slug: 'angelfish', name: 'Fallen Angel', filename: 'Angelfish_fallenangel.png', gemCost: 1250, blurb: 'Grace turned to grievance — halo swapped for horns.', color: '#b4384f' },
   { id: 'angelfish_gildedsaint', slug: 'angelfish', name: 'Gilded Saint', filename: 'Angelfish_gildedsaint.png', gemCost: 1250, blurb: 'Haloed in gold, worshipped by the whole reef.', color: '#f0c040' },
+  // ── Jellyfish (Jelly) — Epic ──
+  { id: 'jellyfish_ancientspirit', slug: 'jellyfish', name: 'Ancient Spirit', filename: 'Jellyfish_ancientspirit.png', gemCost: 1250, blurb: 'A soul adrift since the first tides.', color: '#5eead4' },
+  { id: 'jellyfish_arcanist',      slug: 'jellyfish', name: 'Arcanist',       filename: 'Jellyfish_arcanist.png',      gemCost: 1250, blurb: 'Old spells hum in every tendril.', color: '#a78bfa' },
+  { id: 'jellyfish_blizzard',      slug: 'jellyfish', name: 'Blizzard',       filename: 'Jellyfish_blizzard.png',      gemCost: 1250, blurb: 'A frozen drift out of the deep cold.', color: '#7dd3fc' },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))

@@ -63,6 +63,7 @@ export const CLASS_BY_SLUG: Record<string, CrewClass> = {
   pufferfish:    'snare',
   piranha:       'snare',
   giant_squid:   'snare',
+  jellyfish:     'snare',
   krill:         'snare',
   flounder:      'snare',
 

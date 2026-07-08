@@ -30,6 +30,7 @@ const CREW_NAMES: Record<string, string> = {
   clownfish: 'Chloe', doby_mick: 'Doby', eel: 'Ell', flounder: 'Floop',
   giant_squid: 'Skwid', goblin_shark: 'Gob', goldfish: 'Goldie',
   great_white_shark: 'Great White', hammerhead_shark: 'Hammer', humpback_whale: 'Humps',
+  jellyfish: 'Jelly',
   koi: 'Koy', krill: 'Kreel', lionfish: 'Linus', manta_ray: 'Manny', minnow: 'Min',
   nurse_shark: 'Nursa', oarfish: "O'her", orca: 'Orc', piranha: 'Perry',
   pufferfish: 'Puff', red_snapper: 'Snappy', salmon: 'Sam', sardine: 'Sard',

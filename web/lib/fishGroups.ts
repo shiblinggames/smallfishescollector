@@ -9,7 +9,7 @@
 export const FISH_GROUPS: Set<string>[] = [
   new Set(['bass','eel','flounder','goldfish','krill','minnow','piranha','pufferfish','red_snapper','salmon','sardine','tuna','clownfish','koi']),
   new Set(['anglerfish','beluga_whale','blobfish','blue_marlin','lionfish','nurse_shark','oarfish','sailfish','swordfish','hammerhead_shark','manta_ray','whale_shark']),
-  new Set(['goblin_shark','tiger_shark','blue_whale','giant_squid','great_white_shark','humpback_whale','orca','angelfish']),
+  new Set(['goblin_shark','tiger_shark','blue_whale','giant_squid','great_white_shark','humpback_whale','orca','angelfish','jellyfish']),
   new Set(['catfish','doby_mick','mako','dole','coelacanth']),
 ]
 
