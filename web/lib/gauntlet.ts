@@ -135,18 +135,16 @@ export function hardcoreUnlocked(opts: { isAdmin?: boolean | null; clearedNodes?
 }
 
 // Hardcore-only cosmetic unlocks — reaching these HARDCORE depths (on cash-out)
-// permanently grants a Drowned Fleet ship skin (see lib/shipSkins). Mirrors
-// GAUNTLET_DEPTH_UNLOCKS but grants a skin id. Placeholder art until real PNGs.
+// would permanently grant a Drowned Fleet ship skin. EMPTIED 2026-07-08: the
+// hull skins aren't ready (placeholder art), so nothing is granted for now. The
+// cash-out grant + reward-unlock plumbing already no-ops on an empty list.
+// Repopulate (and re-add the defs in lib/shipSkins) when real art lands.
 export interface HardcoreUnlock {
   depth: number
   skinId: string
   name: string
 }
-export const HARDCORE_UNLOCKS: HardcoreUnlock[] = [
-  { depth: 8,  skinId: 'drowned_hull',   name: 'Drowned Hull' },
-  { depth: 15, skinId: 'wraith_hull',    name: 'Wraith Hull' },
-  { depth: 25, skinId: 'leviathans_maw_hull', name: "Leviathan's Maw Hull" },
-]
+export const HARDCORE_UNLOCKS: HardcoreUnlock[] = []
 
 // ── Depth unlocks ─────────────────────────────────────────────────────────────
 // Reaching these depths permanently unlocks something OUTSIDE a single run.
