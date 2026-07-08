@@ -1237,13 +1237,13 @@ export default function GauntletGame(props: GauntletGameProps) {
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
           {/* Title */}
-          <h1 className="font-cinzel font-800" style={{ fontSize: '1.95rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 26px rgba(240,192,64,0.32)' }}>
+          <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
             Davy Jones Gauntlet
           </h1>
 
           {/* The maw — the hole you drop into */}
-          <div style={{ position: 'relative', width: 196, height: 196, margin: '14px auto 4px' }}>
-            <div style={{ position: 'absolute', inset: -26, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,192,64,0.26) 0%, rgba(94,234,212,0.12) 42%, transparent 70%)', animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
+          <div style={{ position: 'relative', width: 148, height: 148, margin: '12px auto 4px' }}>
+            <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,192,64,0.26) 0%, rgba(94,234,212,0.12) 42%, transparent 70%)', animation: 'gauntPulse 4.2s ease-in-out infinite' }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={MAW_IMG} alt="" loading="eager" decoding="async"
               style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 32px rgba(0,0,0,0.75))', animation: 'gauntDrift 6s ease-in-out infinite' }} />
@@ -1304,45 +1304,54 @@ export default function GauntletGame(props: GauntletGameProps) {
             const hasRecap = !!props.deepestRun && props.deepest > 0
             return (
               <section style={{ marginTop: 22, borderRadius: 16, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.09)', overflow: 'hidden', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.62rem 0.85rem 0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.62rem 0.85rem 0.4rem' }}>
                   <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c' }}>Records</span>
                   <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="Full ranks"
                     triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
                 </div>
 
-                {/* Your best — tap to recap the run's boons / curses / tides */}
+                {/* Your deepest dive — the HERO of the card: a big medallion
+                    depth, not a spreadsheet row. Tap to recap the run. */}
                 <button type="button" onClick={hasRecap ? () => setDeepestRunOpen(true) : undefined} disabled={!hasRecap}
                   aria-label={hasRecap ? 'Recap your deepest run' : 'Your deepest descent'}
                   className={hasRecap ? 'tap' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '0.6rem 0.85rem', background: `${GOLD}0c`, border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', cursor: hasRecap ? 'pointer' : 'default' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill={GOLD} stroke="none" aria-hidden style={{ flexShrink: 0 }}><path d="M12 2l2.1 5.6L20 9.2l-4.4 3.6L17 19l-5-3.4L7 19l1.4-6.2L4 9.2l5.9-1.6z" /></svg>
-                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#b7a878', flex: 1 }}>Your Best</span>
-                  <span className="font-cinzel font-800" style={{ fontSize: '0.92rem', color: GOLD, lineHeight: 1, flexShrink: 0 }}>{props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}</span>
-                  {hasRecap && (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ opacity: 0.8, flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
-                  )}
+                  style={{ position: 'relative', display: 'block', width: '100%', padding: '0.95rem 0.85rem 1rem', textAlign: 'center', border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', background: `radial-gradient(125% 90% at 50% 0%, ${GOLD}16, transparent 72%)`, cursor: hasRecap ? 'pointer' : 'default', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', width: 44, height: 44, margin: '0 auto 7px', borderRadius: '50%', background: `${GOLD}1c`, border: `1px solid ${GOLD}5c`, boxShadow: `0 0 18px ${GOLD}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>
+                  </div>
+                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.22em', color: '#b7a878' }}>Your Deepest Dive</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: props.deepest > 0 ? '2.1rem' : '1.35rem', color: GOLD, lineHeight: 1.05, marginTop: 2, textShadow: `0 0 22px ${GOLD}3a` }}>
+                    {props.deepest > 0 ? `Depth ${props.deepest}` : 'Uncharted'}
+                  </p>
+                  <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: hasRecap ? `${GOLD}bb` : '#7a766e', marginTop: 5 }}>
+                    {hasRecap ? 'Tap to recap the run ›' : 'Descend to set your mark'}
+                  </p>
                 </button>
 
-                {/* Deepest cashed-out diver in each mode */}
-                {([
-                  { key: 'normal',   label: 'Normal',   color: TEAL,      rec: props.topDescender,
-                    icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" /> },
-                  { key: 'hardcore', label: 'Hardcore', color: '#e0555a', rec: props.hardcoreTop,
-                    icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></> },
-                ] as const).map(({ key, label, color, rec, icon }) => (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0.55rem 0.85rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>{icon}</svg>
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color, width: 52, flexShrink: 0 }}>{label}</span>
-                    {rec ? (
-                      <>
-                        <span className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#ece5d7', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{rec.name}</span>
-                        <span className="font-cinzel font-800" style={{ fontSize: '0.82rem', color, flexShrink: 0 }}>Depth {rec.depth}</span>
-                      </>
-                    ) : (
-                      <span className="font-karla" style={{ fontSize: '0.7rem', color: '#8a857c', flex: 1 }}>Unclaimed</span>
-                    )}
+                {/* Deepest divers — the leaderboard top of EACH mode, as two
+                    distinct tinted entries with a medal, not identical rows. */}
+                <div style={{ padding: '0.2rem 0.7rem 0.75rem' }}>
+                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.47rem', letterSpacing: '0.2em', color: '#8a857c', margin: '4px 2px 8px' }}>Deepest Divers</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    {([
+                      { key: 'normal',   label: 'Normal',   color: TEAL,      rec: props.topDescender,
+                        icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" /> },
+                      { key: 'hardcore', label: 'Hardcore', color: '#e0555a', rec: props.hardcoreTop,
+                        icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></> },
+                    ] as const).map(({ key, label, color, rec, icon }) => (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 0.65rem', borderRadius: 12, background: `${color}12`, border: `1px solid ${color}2e` }}>
+                        <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: '50%', background: `${color}22`, border: `1px solid ${color}5a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{icon}</svg>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                          <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color }}>{label}</span>
+                          <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: rec ? '#ece5d7' : '#8a857c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.25 }}>{rec ? rec.name : 'Unclaimed'}</span>
+                        </div>
+                        <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: rec ? color : '#5f5b53', flexShrink: 0 }}>{rec ? `Depth ${rec.depth}` : '—'}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </section>
             )
           })()}
