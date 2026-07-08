@@ -96,6 +96,7 @@ export default async function ProfilePage() {
           hookTier={profile?.hook_tier ?? 0}
           equippedSpecialId={(profile?.equipped_special as string | null) ?? null}
           rarestFish={rarestFish}
+          raidItemIds={(profile?.raid_items as string[] | null) ?? []}
           ancientTrophies={ancientTrophies}
           characterColor={profile?.character_color ?? 'default'}
           unlockedColors={unlockedColors}

@@ -22,7 +22,7 @@ import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avat
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
 import { StatTile } from '@/components/ProfileStats'
-import { RarestCatchesTrophy, FeaturedCrew } from '@/components/ProfileShowcase'
+import { RarestCatchesTrophy, FeaturedCrew, RaidArsenal } from '@/components/ProfileShowcase'
 import type { CareerStats } from '@/lib/careerStats'
 
 export interface VoyageEntry {
@@ -109,7 +109,7 @@ function LevelChip({ color, label, value }: { color: string; label: string; valu
   )
 }
 
-export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
+export default function ProfileClient({ username, showcaseCrew, voyages, stats, gear, rarestFish, raidItemIds = [], equippedShipSkin, isPremium, isOwnProfile, isInCrew: initialIsInCrew, characterColor = 'default', equippedSpecialId, equippedBadges = [], equippedBoat = null, equippedHat = null, equippedPet = null, avatarBg = null, avatarBorder = null, profileBg = null, career }: Props) {
   const [inCrew, setInCrew] = useState(initialIsInCrew ?? false)
   const [crewPending, startCrewTransition] = useTransition()
   const [expandedVoyage, setExpandedVoyage] = useState<number | null>(null)
@@ -497,6 +497,14 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
             <div>
               <SectionLabel color="#c084fc">Featured Crew</SectionLabel>
               <FeaturedCrew crew={showcaseCrew} />
+            </div>
+          )}
+
+          {/* Arsenal — collected raid + forge items */}
+          {raidItemIds.length > 0 && (
+            <div>
+              <SectionLabel color="#f0c040">Arsenal</SectionLabel>
+              <RaidArsenal items={raidItemIds} />
             </div>
           )}
 

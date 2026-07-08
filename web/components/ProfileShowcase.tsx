@@ -10,6 +10,7 @@
 //    (no more cramped horizontal scroll strip).
 
 import { CrewPortrait, type ShowcaseCrew } from '@/components/CrewShowcase'
+import { getRaidItem, type RaidItemDef } from '@/lib/raidItems'
 
 // Bite-rarity → colour / label (kept in sync with the profile pages).
 const RARITY_COLOR: Record<number, string> = {
@@ -98,6 +99,48 @@ export function RarestCatchesTrophy({ fish }: { fish: RarestFish[] }) {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+// Raid-item rarity → accent + sort rank.
+const ITEM_RARITY_COLOR: Record<string, string> = {
+  common: '#94a3b8', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', legendary: '#f0c040',
+}
+const ITEM_RARITY_RANK: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5 }
+
+/** Arsenal — the raid + forge items a player has collected, as a rarity-sorted
+ *  grid of relic tiles (rarest first). Uses the raid_items ids already on the
+ *  profile; unknown ids are dropped. */
+export function RaidArsenal({ items }: { items: string[] }) {
+  const defs = [...new Set(items)]
+    .map(id => getRaidItem(id))
+    .filter((d): d is RaidItemDef => !!d)
+    .sort((a, b) => (ITEM_RARITY_RANK[b.rarity] ?? 0) - (ITEM_RARITY_RANK[a.rarity] ?? 0))
+  if (defs.length === 0) return null
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+      {defs.map(it => {
+        const c = ITEM_RARITY_COLOR[it.rarity] ?? '#94a3b8'
+        return (
+          <div key={it.id} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            padding: '0.75rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
+            background: `${c}0e`, border: `1px solid ${c}33`,
+          }}>
+            <div style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {it.image
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={it.image} alt={it.name} loading="lazy" decoding="async"
+                    style={{ maxWidth: 44, maxHeight: 44, objectFit: 'contain', filter: `drop-shadow(0 2px 7px ${c}66)` }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                : <span aria-hidden style={{ fontSize: '1.7rem', filter: `drop-shadow(0 2px 6px ${c}55)` }}>{it.emoji}</span>}
+            </div>
+            <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#e8e4dc', lineHeight: 1.15 }}>{it.name}</p>
+            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: c }}>{it.rarity}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }

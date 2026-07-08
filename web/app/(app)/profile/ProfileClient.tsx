@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { CrewPortrait } from '@/components/CrewShowcase'
-import { RarestCatchesTrophy, FeaturedCrew } from '@/components/ProfileShowcase'
+import { RarestCatchesTrophy, FeaturedCrew, RaidArsenal } from '@/components/ProfileShowcase'
 import type { CrewMember } from '@/app/(app)/crew/actions'
 import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcaseCrew, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
@@ -50,6 +50,7 @@ interface Props {
   hookTier: number
   equippedSpecialId: string | null
   rarestFish: { id: number; name: string; bite_rarity: number; habitat?: string }[]
+  raidItemIds: string[]
   ancientTrophies: { id: number; name: string }[]
   equippedBoat: string | null
   equippedHat: string | null
@@ -142,6 +143,7 @@ export default function ProfileClient({
   hookTier,
   equippedSpecialId,
   rarestFish,
+  raidItemIds,
   ancientTrophies,
   equippedBoat,
   equippedHat,
@@ -1024,6 +1026,14 @@ export default function ProfileClient({
             <SectionLabel color="#c084fc">{featuredCrew.length > 0 ? 'Featured Crew' : 'Active Crew'}</SectionLabel>
             <FeaturedCrew crew={showcaseCrew} onEdit={() => setModalOpen(true)} emptyHint="Assign crew to your ship, or feature your favorites here" />
           </div>
+
+          {/* Arsenal — collected raid + forge items */}
+          {raidItemIds.length > 0 && (
+            <div>
+              <SectionLabel color="#f0c040">Arsenal</SectionLabel>
+              <RaidArsenal items={raidItemIds} />
+            </div>
+          )}
 
         </div>
       )}
