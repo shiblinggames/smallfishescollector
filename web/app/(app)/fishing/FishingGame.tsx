@@ -4943,10 +4943,14 @@ export default function FishingGame({
     // partial-double rods (Twin-Strike) stay single-catch there. Trophies never
     // multiply. Server re-checks the rod so a manipulated client can't sneak it.
     const canDoubleHere = !inAncient || rod.doubleCatchChance >= 1
-    const doubleCatch = !ancientTrophy && canDoubleHere && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
+    // Roll the JACKPOT FIRST. On a forged Completionist Rod you can have BOTH a
+    // jackpot (YOLO) and an always-double (Millionaire's, doubleCatchChance 1);
+    // if double-catch rolled first it would always win and the jackpot could
+    // never fire. Jackpot takes priority; a double only rolls when it misses.
     const zoneJackpotChance = jackpotChanceForZone(rod, selectedZone)
-    const jackpotHit = !doubleCatch && !ancientTrophy && zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
+    const jackpotHit = !ancientTrophy && zoneJackpotChance > 0 && Math.random() < zoneJackpotChance
     const jackpotMultiplier = jackpotHit ? (rod.jackpotMultiplier ?? 1) : 1
+    const doubleCatch = !jackpotHit && !ancientTrophy && canDoubleHere && rod.doubleCatchChance > 0 && Math.random() < rod.doubleCatchChance
 
     // Finn challenge progression — replaces the old gem-challenge mechanic.
     // Perfect-streak: a non-perfect catch fails. Speed-catch: any catch

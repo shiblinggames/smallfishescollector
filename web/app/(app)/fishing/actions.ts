@@ -586,7 +586,10 @@ export async function reelIn(
   const effectiveJackpotMult = Math.min(jackpotMultiplier, 100)
   const holdCapacity = getFishHold(profile.fish_hold_tier ?? 0).capacity
   const currentHoldCount = (holdRows ?? []).reduce((s: number, r: { quantity: number }) => s + (r.quantity ?? 0), 0)
-  const desired = isShiny ? 1 : (effectiveDoubleCatch ? 2 : effectiveJackpotMult)
+  // Jackpot takes priority over a double-catch (they never stack). Matters for a
+  // forged Completionist Rod carrying BOTH YOLO + Millionaire's — else the
+  // always-double would swallow the ×100 jackpot.
+  const desired = isShiny ? 1 : (effectiveJackpotMult > 1 ? effectiveJackpotMult : (effectiveDoubleCatch ? 2 : 1))
   const catchQty = isShiny ? 1 : Math.min(desired, Math.max(0, holdCapacity - currentHoldCount))
 
   const { data: invRow } = await admin
