@@ -1190,11 +1190,15 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} />
-        <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
-          padding: '6px 0.85rem', textAlign: 'center',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
-        }}>
+        {/* Bottom padding clears the fixed mobile tab bar (~60px), so only mobile
+            needs it — on sm+ the bar is hidden, so drop to a small pad instead
+            of leaving ~88px of empty space under "Not today". */}
+        <div
+          className="pb-[76px] sm:pb-6"
+          style={{
+            position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
+            paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
+          }}>
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.7rem', color: '#f3ead2', lineHeight: 1.12, marginTop: 26, textShadow: '0 0 26px rgba(240,192,64,0.32)' }}>
             The Deep Still Has You
           </h1>
@@ -1231,11 +1235,15 @@ export default function GauntletGame(props: GauntletGameProps) {
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} />
-        <div style={{
-          position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
-          padding: '6px 0.85rem', textAlign: 'center',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
-        }}>
+        {/* Bottom padding clears the fixed mobile tab bar (~60px), so only mobile
+            needs it — on sm+ the bar is hidden, so drop to a small pad instead
+            of leaving ~88px of empty space under "Not today". */}
+        <div
+          className="pb-[76px] sm:pb-6"
+          style={{
+            position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
+            paddingTop: 6, paddingLeft: '0.85rem', paddingRight: '0.85rem', textAlign: 'center',
+          }}>
           {/* Title */}
           <h1 className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f3ead2', lineHeight: 1.08, marginTop: 8, textShadow: '0 0 22px rgba(240,192,64,0.3)' }}>
             Davy Jones Gauntlet
