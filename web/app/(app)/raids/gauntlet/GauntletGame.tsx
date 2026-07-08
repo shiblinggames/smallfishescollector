@@ -1837,7 +1837,7 @@ export default function GauntletGame(props: GauntletGameProps) {
               {fmt(previewDoubloons)} <span style={{ fontSize: '1.5rem' }}>⟡</span>
             </p>
             <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#b0a890', marginTop: 8 }}>
-              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {chest.label}{chest.potMult > 1 ? ` ×${chest.potMult} chest` : ''}
+              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {hardcoreRun ? HARDCORE_CHEST_LABEL : chest.label}{chest.potMult > 1 ? ` ×${chest.potMult} chest` : ''}
             </p>
             <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
               style={{ width: '100%', marginTop: 16, padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}0e)`, border: `1px solid ${GOLD}77`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}1e` }}>
@@ -2471,6 +2471,13 @@ const CHEST_ART: Record<number, { closed: string; open: string; color: string }>
   5: { ...DAVY_CHEST, color: '#a78bfa' },
 }
 
+// Hardcore cash-out chest — same Davy sprite, but a blood-dark coffer: a
+// red/black CSS tint over the art + a crimson accent driving every glow/ray,
+// and its own name (the tier still sets the pot multiplier + haul richness).
+const HARDCORE_CHEST_LABEL  = 'The Drowned Coffer'
+const HARDCORE_CHEST_ACCENT = '#e0392f'
+const HARDCORE_CHEST_FILTER = 'grayscale(0.35) sepia(1) saturate(7) hue-rotate(-33deg) brightness(0.8) contrast(1.18)'
+
 // rAF count-up for the reward numbers (easeOutCubic). Holds at 0 until `run`
 // flips true, so the chest can reveal first and THEN the numbers tick up.
 function CountUp({ to, dur = 850, run = true }: { to: number; dur?: number; run?: boolean }) {
@@ -2564,7 +2571,13 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
   // Counting starts a beat AFTER opening: chest cracks + reveals, then the
   // doubloons / XP increment (count-up + purse tick + bar fill).
   const [counting, setCounting] = useState(false)
-  const art = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
+  // Hardcore recolours the coffer red/black + renames it; the tier sprite is
+  // shared, so we just swap the accent colour (all glows/rays read it) and
+  // prepend a tint filter to the chest art.
+  const baseArt = CHEST_ART[r.chest.tier] ?? CHEST_ART[1]
+  const art = r.hardcore ? { ...baseArt, color: HARDCORE_CHEST_ACCENT } : baseArt
+  const chestFilter = r.hardcore ? `${HARDCORE_CHEST_FILTER} ` : ''
+  const chestLabel = r.hardcore ? HARDCORE_CHEST_LABEL : r.chest.label
   const newBest = r.depth >= r.deepest
 
   // Nav level + XP bar — the banked XP visibly flows into the bar as the chest
@@ -2660,10 +2673,10 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
                 transition={opening
                   ? { duration: ANTICIPATION_MS / 1000, ease: 'easeInOut' }
                   : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 26px ${art.color}44)` }} />
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${chestFilter}drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 26px ${art.color}44)` }} />
             </div>
             <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: art.color, lineHeight: 1.1, marginTop: 4, textShadow: `0 0 22px ${art.color}44` }}>
-              {r.chest.label}
+              {chestLabel}
             </p>
             <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a948a', marginTop: 5 }}>
               Hauled up from depth {r.depth}{r.chest.potMult > 1 ? ` · ×${r.chest.potMult} haul` : ''}
@@ -2685,7 +2698,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <motion.img src={art.open} alt="" loading="eager" decoding="async"
                 initial={{ scale: 0.55 }} animate={{ scale: [0.55, 1.16, 1] }} transition={{ duration: 0.5, ease: 'easeOut' }}
-                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 30px ${art.color}66)` }} />
+                style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain', filter: `${chestFilter}drop-shadow(0 8px 22px rgba(0,0,0,0.6)) drop-shadow(0 0 30px ${art.color}66)` }} />
             </div>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
               className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.32em', color: TEAL }}>
@@ -2693,7 +2706,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
             </motion.p>
             <motion.p initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.18, type: 'spring', stiffness: 240, damping: 18 }}
               className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: art.color, lineHeight: 1.1, marginTop: 4, textShadow: `0 0 22px ${art.color}44` }}>
-              {r.chest.label}
+              {chestLabel}
             </motion.p>
 
             <div style={{ marginTop: 16, textAlign: 'left', background: 'rgba(0,0,0,0.3)', border: `1px solid ${GOLD}26`, borderRadius: 14, padding: '0.5rem 0.85rem 0.7rem' }}>
