@@ -21,7 +21,7 @@ import CharacterAvatar from '@/components/CharacterAvatar'
 import { DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR } from '@/lib/avatarColors'
 import { getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
-import { StatTile } from '@/components/ProfileStats'
+import { StatTile, RankHero, FishIcon, CompassIcon } from '@/components/ProfileStats'
 import { RarestCatchesTrophy, FeaturedCrew } from '@/components/ProfileShowcase'
 import type { CareerStats } from '@/lib/careerStats'
 
@@ -175,52 +175,55 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
       )}
     <div className="flex flex-col max-w-4xl mx-auto px-5" style={{ gap: 0, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
 
-      {/* ── Header ── */}
-      <div className="flex flex-col items-center pt-3 pb-8">
-        {/* Portrait — same composite (character + hat + bg + border) used on
-            /profile and in the desktop Nav avatar, so the player's visual
-            identity stays consistent everywhere. */}
-        <CharacterAvatar
-          characterColor={characterColor}
-          equippedHat={equippedHat}
-          size={132}
-          bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
-          ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
-        />
+      {/* ── Header — identity banner ── */}
+      <div className="flex flex-col items-center" style={{ marginTop: 6, marginBottom: 20, padding: '1.7rem 1.2rem 1.5rem', borderRadius: 24, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(180deg, rgba(16,22,34,0.72), rgba(8,12,20,0.42))' }}>
+        {/* Dual-tone glow — fishing blue + nav violet, the two disciplines. */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 65% 55% at 28% -12%, rgba(96,165,250,0.18), transparent 62%), radial-gradient(ellipse 65% 55% at 72% -12%, rgba(192,132,252,0.15), transparent 62%)' }} />
+        <div className="flex flex-col items-center" style={{ position: 'relative', zIndex: 1, width: '100%' }}>
+          {/* Portrait — same composite (character + hat + bg + border) used on
+              /profile and in the desktop Nav avatar. */}
+          <CharacterAvatar
+            characterColor={characterColor}
+            equippedHat={equippedHat}
+            size={132}
+            bgColor={avatarBg ?? DEFAULT_AVATAR_BG_COLOR}
+            ringColor={avatarBorder ?? DEFAULT_AVATAR_BORDER_COLOR}
+          />
 
-        <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginTop: 14, marginBottom: 11 }}>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.6rem', color: '#f0ede8', lineHeight: 1 }}>{username}</p>
-          {isPremium && (
-            <span title="Captain" className="flex items-center gap-1 rounded-full" style={{ padding: '0.2rem 0.55rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)' }}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Captain</span>
-            </span>
+          <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginTop: 14, marginBottom: 11 }}>
+            <p className="font-cinzel font-700" style={{ fontSize: '1.7rem', color: '#f5f2ec', lineHeight: 1 }}>{username}</p>
+            {isPremium && (
+              <span title="Captain" className="flex items-center gap-1 rounded-full" style={{ padding: '0.2rem 0.55rem', background: 'rgba(240,192,64,0.12)', border: '1px solid rgba(240,192,64,0.35)' }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="#f0c040" stroke="none">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span className="font-karla font-700 uppercase tracking-[0.1em]" style={{ fontSize: '0.55rem', color: '#f0c040' }}>Captain</span>
+              </span>
+            )}
+          </div>
+
+          {/* Level chips — both core levels surfaced up top */}
+          <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginBottom: isOwnProfile ? 0 : 13 }}>
+            <LevelChip color="#60a5fa" label="Fishing Lv" value={fishingLevel} />
+            <LevelChip color="#c084fc" label="Nav Lv" value={expLevel} />
+          </div>
+
+          {!isOwnProfile && (
+            <button
+              onClick={toggleCrew}
+              disabled={crewPending}
+              className="flex items-center gap-1.5 rounded-full font-karla font-700 uppercase tracking-[0.1em] transition-all disabled:opacity-40"
+              style={{
+                padding: '0.4rem 0.95rem', fontSize: '0.62rem',
+                background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.06)',
+                border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.16)'}`,
+                color: inCrew ? '#4ade80' : '#c0bdb8',
+              }}
+            >
+              {crewPending ? '…' : inCrew ? '✓ Friends' : '+ Add Friend'}
+            </button>
           )}
         </div>
-
-        {/* Level chips — both core levels surfaced up top */}
-        <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginBottom: 13 }}>
-          <LevelChip color="#60a5fa" label="Fishing Lv" value={fishingLevel} />
-          <LevelChip color="#c084fc" label="Nav Lv" value={expLevel} />
-        </div>
-
-        {!isOwnProfile && (
-          <button
-            onClick={toggleCrew}
-            disabled={crewPending}
-            className="flex items-center gap-1.5 rounded-full font-karla font-700 uppercase tracking-[0.1em] transition-all disabled:opacity-40"
-            style={{
-              padding: '0.4rem 0.95rem', fontSize: '0.62rem',
-              background: inCrew ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.06)',
-              border: `1px solid ${inCrew ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.16)'}`,
-              color: inCrew ? '#4ade80' : '#c0bdb8',
-            }}
-          >
-            {crewPending ? '…' : inCrew ? '✓ Friends' : '+ Add Friend'}
-          </button>
-        )}
       </div>
 
       {/* ── Fishing / Navigation tabs — pill segmented control ── */}
@@ -253,9 +256,11 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
       {profileTab === 'fishing' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Headline career stats */}
-          <div>
-            <SectionLabel color="#60a5fa">Career</SectionLabel>
+          {/* Angler hero + headline career stats */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <RankHero color="#60a5fa" kicker="Angler" icon={FishIcon}
+              title={fishingLevel >= 100 ? 'Master Angler' : `Level ${fishingLevel}`}
+              sub={stats.uniqueSpecies > 0 ? `${stats.uniqueSpecies} species logged` : undefined} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
@@ -430,9 +435,10 @@ export default function ProfileClient({ username, showcaseCrew, voyages, stats, 
       {profileTab === 'navigation' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Headline career stats */}
-          <div>
-            <SectionLabel color="#c084fc">Career</SectionLabel>
+          {/* Navigator hero + headline career stats */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <RankHero color="#c084fc" kicker="Navigator" icon={CompassIcon}
+              title={expLevel >= 100 ? 'Master Navigator' : `Level ${expLevel}`} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
               <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />

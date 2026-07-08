@@ -11,7 +11,7 @@ import type { BorderStyle, ArtEffect } from '@/lib/types'
 import { updateUsername, updateShowcaseCrew, updateCharacterColor, updateAvatarColors, purchaseCharacterColor, purchaseAvatarSpecial, updateProfileBg } from '@/app/(app)/u/actions'
 import { PROFILE_BACKGROUNDS, getProfileBackground } from '@/lib/profileBackgrounds'
 import AncientBgEffect from '@/components/AncientBgEffect'
-import { StatTile } from '@/components/ProfileStats'
+import { StatTile, RankHero, FishIcon, CompassIcon } from '@/components/ProfileStats'
 import type { CareerStats } from '@/lib/careerStats'
 import { AVATAR_PALETTE, AVATAR_BORDER_EXTRAS, AVATAR_SPECIALS, DEFAULT_AVATAR_BG_COLOR, DEFAULT_AVATAR_BORDER_COLOR, NONE_VALUE } from '@/lib/avatarColors'
 import { equipBadge, unequipBadge } from '@/app/(app)/achievements/badgeActions'
@@ -387,8 +387,11 @@ export default function ProfileClient({
       )}
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1 }}>
 
-      {/* ── Identity header ── */}
-      <div className="flex flex-col items-center pt-3 pb-8">
+      {/* ── Identity header — banner ── */}
+      <div className="flex flex-col items-center" style={{ marginTop: 6, marginBottom: 20, padding: '1.7rem 1.2rem 1.5rem', borderRadius: 24, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(180deg, rgba(16,22,34,0.72), rgba(8,12,20,0.42))' }}>
+        {/* Dual-tone glow — fishing blue + nav violet. */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 65% 55% at 28% -12%, rgba(96,165,250,0.18), transparent 62%), radial-gradient(ellipse 65% 55% at 72% -12%, rgba(192,132,252,0.15), transparent 62%)' }} />
+        <div className="flex flex-col items-center" style={{ position: 'relative', zIndex: 1, width: '100%' }}>
         {/* Avatar — equipped character + hat composite. Tap to open the
             Profile Look picker. The pencil badge carries the affordance. */}
         <button
@@ -523,6 +526,7 @@ export default function ProfileClient({
             </div>
           </>
         )}
+        </div>
       </div>
 
       {/* ── Fishing / Navigation tabs (shared) — pill segmented control ── */}
@@ -555,9 +559,10 @@ export default function ProfileClient({
       {profileTab === 'fishing' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Headline career stats */}
-          <div>
-            <SectionLabel color="#60a5fa">Career</SectionLabel>
+          {/* Angler hero + headline career stats */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <RankHero color="#60a5fa" kicker="Angler" icon={FishIcon}
+              title={level >= 100 ? 'Master Angler' : `Level ${level}`} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Lines Cast" value={career.fishingCasts.toLocaleString()} color="#60a5fa" />
               <StatTile label="Perfects" value={career.perfects.toLocaleString()} color="#fde68a" />
@@ -956,9 +961,10 @@ export default function ProfileClient({
       {profileTab === 'navigation' && (
         <div className="flex flex-col mx-auto w-full" style={{ gap: 24, maxWidth: 540 }}>
 
-          {/* Headline career stats */}
-          <div>
-            <SectionLabel color="#c084fc">Career</SectionLabel>
+          {/* Navigator hero + headline career stats */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <RankHero color="#c084fc" kicker="Navigator" icon={CompassIcon}
+              title={expeditionLevel >= 100 ? 'Master Navigator' : `Level ${expeditionLevel}`} />
             <div style={{ display: 'flex', gap: 8 }}>
               <StatTile label="Raids Won" value={career.raidsCompleted.toLocaleString()} color="#f87171" />
               <StatTile label="Voyage Loot" value={`${career.voyageLoot.toLocaleString()} ⟡`} color="#f0c040" />
