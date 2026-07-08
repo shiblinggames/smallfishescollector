@@ -798,6 +798,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   // Blood Gem skin gamble: null = closed, 'rolling' = suspense build-up,
   // 'revealed' = the won skin slams in. skinId set once the server returns it.
   const [skinGamble, setSkinGamble] = useState<{ phase: 'rolling' | 'revealed'; skinId?: string } | null>(null)
+  // Confirm-before-spend for every Blood Market action (reroll tiers + gamble).
+  const [bloodConfirm, setBloodConfirm] = useState<{ kind: 'reroll'; tierId: string } | { kind: 'gamble' } | null>(null)
   const [pending, startTransition] = useTransition()
   const [busyId, setBusyId] = useState<number | string | null>(null)
   const [confirmDismiss, setConfirmDismiss] = useState<number | null>(null)
@@ -1726,7 +1728,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     const cannot = pending || reveal.revealing || state.gems < state.rerollCost || state.bloodGems < t.bloodCost
                     const busy = busyId === `reroll:${t.id}`
                     return (
-                      <button key={t.id} onClick={() => handleReroll(t.id)} disabled={cannot}
+                      <button key={t.id} onClick={() => setBloodConfirm({ kind: 'reroll', tierId: t.id })} disabled={cannot}
                         title={`${t.name} — ${state.rerollCost} gems + ${t.bloodCost} Blood Gems`}
                         className="font-karla font-700 uppercase active:scale-95"
                         style={{ flex: '1 1 0', minWidth: 0, padding: '0.6rem 0.3rem', borderRadius: 11, background: cannot ? `${BLOOD}12` : `${BLOOD}28`, border: `1px solid ${BLOOD}80`, color: cannot ? 'rgba(243,192,198,0.5)' : '#f7d0d5', opacity: cannot ? 0.6 : 1, cursor: cannot ? 'not-allowed' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, transition: 'transform 0.08s, opacity 0.18s' }}>
@@ -1760,7 +1762,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                 <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 11 }}>
                   <div style={{ height: '100%', width: `${totalNonLeg ? Math.round((ownedNonLeg / totalNonLeg) * 100) : 0}%`, borderRadius: 999, background: `linear-gradient(90deg, ${BLOOD}, #f2536a)`, transition: 'width 0.4s ease' }} />
                 </div>
-                <button onClick={handleGambleSkin} disabled={!canGamble}
+                <button onClick={() => setBloodConfirm({ kind: 'gamble' })} disabled={!canGamble}
                   className="font-karla font-700 uppercase active:scale-95 w-full"
                   style={{ padding: '0.7rem', borderRadius: 12, fontSize: '0.68rem', letterSpacing: '0.08em', background: !canGamble ? `${BLOOD}12` : `linear-gradient(180deg, ${BLOOD}4d, rgba(140,20,32,0.55))`, border: `1px solid ${BLOOD}99`, color: !canGamble ? 'rgba(243,192,198,0.5)' : '#fce3e6', cursor: !canGamble ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: canGamble ? `0 0 20px ${BLOOD}40` : 'none' }}>
                   {skinPoolEmpty
@@ -2712,6 +2714,72 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       onClick={() => { if (skinBusy || !canAfford) return; const id = skin.id; setSkinBuyConfirm(null); runSkinAction(`buy:${id}`, () => buyCrewSkin(id)) }}
                       className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1.4, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: canAfford ? `${c}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? c + '77' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#fff' : 'rgba(255,255,255,0.4)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
                       {skinBusy ? '…' : canAfford ? `Unlock · ${skin.gemCost.toLocaleString()} ◆` : `Need ${(skin.gemCost - state.gems).toLocaleString()} ◆`}
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>,
+        document.body,
+      )}
+
+      {/* ── Blood Market confirm-before-spend (reroll tiers + gamble) ── */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {bloodConfirm && (() => {
+            const isGamble = bloodConfirm.kind === 'gamble'
+            const tier = !isGamble ? BLOOD_REROLL_TIERS.find(t => t.id === bloodConfirm.tierId) : undefined
+            if (!isGamble && !tier) return null
+            const bloodCost = isGamble ? BLOOD_SKIN_GAMBLE_COST : tier!.bloodCost
+            const gemCost = isGamble ? 0 : state.rerollCost
+            const canAfford = state.bloodGems >= bloodCost && (isGamble || state.gems >= gemCost)
+            const perReroll = (p: number) => 1 - Math.pow(1 - p / 100, 3)
+            const epicPct = tier ? Math.round(perReroll(tier.weights[2]) * 100) : 0
+            const legOdds = tier ? Math.max(1, Math.round(1 / perReroll(tier.weights[3]))) : 0
+            return (
+              <motion.div key="blood-confirm" onClick={() => setBloodConfirm(null)}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 275, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.4rem', background: 'rgba(4,2,4,0.84)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+                <motion.div onClick={e => e.stopPropagation()}
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
+                  style={{ position: 'relative', width: '100%', maxWidth: 310, borderRadius: 18, padding: '1.15rem 1.05rem 1.1rem', background: 'linear-gradient(180deg, rgba(22,9,12,0.99), rgba(10,5,7,0.99))', border: `1px solid ${BLOOD}66`, boxShadow: `0 0 40px ${BLOOD}26, 0 20px 50px rgba(0,0,0,0.6)` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <BloodDrop size={18} />
+                    <p className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: `${BLOOD}dd` }}>{isGamble ? 'Wager' : 'Blood-Charged Reroll'}</p>
+                  </div>
+                  <p className="font-cinzel font-800" style={{ fontSize: '1.25rem', color: '#f4ead2', lineHeight: 1.08 }}>{isGamble ? 'Skin Gamble' : `${tier!.name} Reroll`}</p>
+                  <p className="font-karla" style={{ fontSize: '0.72rem', color: '#b0aaa0', lineHeight: 1.45, marginTop: 6 }}>
+                    {isGamble
+                      ? 'Roll for a random crew skin you don’t own yet. Every roll lands one you’re missing.'
+                      : 'Rerolls your recruit board with boosted odds. Your new board reveals on the Recruit tab.'}
+                  </p>
+                  {tier && (
+                    <div style={{ display: 'flex', gap: 7, marginTop: 10 }}>
+                      <div style={{ flex: 1, textAlign: 'center', padding: '0.45rem', borderRadius: 9, background: `${BLOOD}10`, border: `1px solid ${BLOOD}30` }}>
+                        <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#f3c0c6' }}>~{epicPct}%</p>
+                        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#9a948a', marginTop: 1 }}>Epic</p>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center', padding: '0.45rem', borderRadius: 9, background: `${BLOOD}10`, border: `1px solid ${BLOOD}30` }}>
+                        <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#f3c0c6' }}>1-in-{legOdds}</p>
+                        <p className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: '#9a948a', marginTop: 1 }}>Legendary</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-center" style={{ gap: 8, margin: '12px 0 12px' }}>
+                    {gemCost > 0 && <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#c9b6f5' }}>{gemCost} ◆</span>}
+                    <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#f3c0c6', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{bloodCost} <BloodDrop size={13} /></span>
+                    <span className="font-karla" style={{ fontSize: '0.58rem', color: canAfford ? 'rgba(255,255,255,0.4)' : '#f2b0b0' }}>· you have {state.bloodGems}</span>
+                  </div>
+                  <div className="flex" style={{ gap: 8 }}>
+                    <button type="button" onClick={() => setBloodConfirm(null)}
+                      className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.72)', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <button type="button" disabled={!canAfford}
+                      onClick={() => { if (!canAfford) return; const c = bloodConfirm; setBloodConfirm(null); if (c.kind === 'gamble') handleGambleSkin(); else handleReroll(c.tierId) }}
+                      className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1.4, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: canAfford ? `${BLOOD}33` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? `${BLOOD}88` : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#fff' : 'rgba(255,255,255,0.4)', cursor: canAfford ? 'pointer' : 'default' }}>
+                      {isGamble ? 'Gamble' : 'Reroll'}
                     </button>
                   </div>
                 </motion.div>
