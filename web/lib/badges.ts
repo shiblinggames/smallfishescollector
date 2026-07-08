@@ -63,7 +63,7 @@ export const BADGES: Badge[] = [
   // ── The collection ───────────────────────────────────────────────────────
   { id: 'half_the_sea',   name: 'Half the Sea',       description: 'Catch 50 fish species',                           imageUrl: '/badges/half_the_sea.png',   difficulty: 'rookie'   },
   { id: 'ancient_ones',   name: 'Ancient Ones',       description: 'Catch all 6 Ancient Deep trophies',               imageUrl: '/badges/ancient_ones.png',   difficulty: 'master'   },
-  { id: 'full_collection',name: 'Full Collection',    description: 'Catch every fish species in the game',             imageUrl: '/badges/full_collection.png', difficulty: 'grandmaster'  },
+  { id: 'full_collection',name: 'Full Collection',    description: 'Catch every fish species in the game',             imageUrl: '/badges/full_collection.png', difficulty: 'master'  },
 
   // ── The Completionist Rod ── the Fishing 100 + full-collection capstone.
   { id: 'completionist_rod', name: 'The Completionist', description: 'Claim the Completionist Rod',                     imageUrl: '/badges/completionist_rod.png', difficulty: 'grandmaster'   },
