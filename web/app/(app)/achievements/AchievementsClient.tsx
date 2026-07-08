@@ -38,7 +38,7 @@ interface Props {
 }
 
 const GOLD = '#f0c040'
-const TIER_ORDER: BadgeDifficulty[] = ['rookie', 'seasoned', 'veteran', 'master']
+const TIER_ORDER: BadgeDifficulty[] = ['rookie', 'seasoned', 'veteran', 'master', 'grandmaster']
 type Filter = 'all' | BadgeDifficulty
 
 const rectCenter = (el: Element) => {
@@ -271,7 +271,9 @@ export default function AchievementsClient({ groups }: Props) {
 
                   {/* Tier · points · reward */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 8, flexWrap: 'wrap' }}>
-                    {diff && <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}66`, borderRadius: 999, padding: '0.18rem 0.6rem' }}>{diff.label}</span>}
+                    {diff && (g.difficulty === 'grandmaster'
+                      ? <span className="font-karla font-700 uppercase tier-grandmaster-chip" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', borderRadius: 999, padding: '0.18rem 0.6rem' }}>{diff.label}</span>
+                      : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.62rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}66`, borderRadius: 999, padding: '0.18rem 0.6rem' }}>{diff.label}</span>)}
                     <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: 'rgba(240,237,232,0.75)' }}>{points} pt{points === 1 ? '' : 's'}</span>
                     <span style={{ color: 'rgba(240,237,232,0.3)' }}>·</span>
                     <span className="font-karla font-700" style={{ fontSize: '0.76rem', color: GOLD }}>{reward.toLocaleString()} ⟡</span>
@@ -447,7 +449,9 @@ function GoalRow({ g, groupAccent, claimed, busy, onClaim, onOpen }: {
         {isBadge && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7, flexWrap: 'wrap' }}>
             {diff && (
-              <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}55`, borderRadius: 999, padding: '0.15rem 0.5rem' }}>{diff.label}</span>
+              g.difficulty === 'grandmaster'
+              ? <span className="font-karla font-700 uppercase tier-grandmaster-chip" style={{ fontSize: '0.6rem', letterSpacing: '0.06em', borderRadius: 999, padding: '0.15rem 0.5rem' }}>{diff.label}</span>
+              : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.06em', color: accent, background: `${accent}1f`, border: `1px solid ${accent}55`, borderRadius: 999, padding: '0.15rem 0.5rem' }}>{diff.label}</span>
             )}
             <span className="font-karla font-700" style={{ fontSize: '0.74rem', color: 'rgba(240,237,232,0.72)' }}>{points} pt{points === 1 ? '' : 's'}</span>
             <span style={{ color: 'rgba(240,237,232,0.28)', fontSize: '0.7rem' }}>·</span>

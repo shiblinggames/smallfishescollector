@@ -730,6 +730,19 @@ body.hardcore-gauntlet::after {
   body.hardcore-gauntlet::after { animation: none; opacity: 0.85; }
 }
 
+/* ── Grandmaster badge tier chip ──
+   The only tier above Master (lib/badges DIFFICULTY_META). Its pill renders as
+   an animated prismatic rainbow so it reads as a step above the gold Masters. */
+.tier-grandmaster-chip {
+  background-image: linear-gradient(90deg, #f26d6d, #f2c14e, #57d06a, #5aa9f0, #c77dff, #f26d6d);
+  background-size: 220% auto;
+  color: #17110a;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  animation: tier-prism 5s linear infinite;
+}
+@keyframes tier-prism { to { background-position: 220% center; } }
+@media (prefers-reduced-motion: reduce) { .tier-grandmaster-chip { animation: none; } }
+
 /* ── Hook glows (per-theme animated effects) ──
    Used by lib/hooks.ts via hookGlowClass(). chrome / gilded are very
    subtle so silver / gold hooks read as polished metal; arcane / cursed

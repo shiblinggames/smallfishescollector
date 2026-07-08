@@ -1,5 +1,8 @@
 // Skill tiers (not rarity) — how hard a badge is to earn, low → high.
-export type BadgeDifficulty = 'rookie' | 'seasoned' | 'veteran' | 'master'
+// Grandmaster sits above Master: reserved for feats that require MAXING or
+// COMPLETING multiple endgame systems at once (e.g. Fishing 100 + full
+// collection), not just one long grind.
+export type BadgeDifficulty = 'rookie' | 'seasoned' | 'veteran' | 'master' | 'grandmaster'
 
 export interface Badge {
   id: string
@@ -11,28 +14,33 @@ export interface Badge {
 
 // Doubloons granted when a badge's reward is claimed (kept small + tunable —
 // the badge itself is the real prize, this is a little bonus). Tops out at
-// 10,000 for a Master-tier feat.
+// 10,000 for a Grandmaster feat; the lower tiers were rescaled under it.
 export const BADGE_REWARD: Record<BadgeDifficulty, number> = {
-  rookie:   250,
-  seasoned: 1_000,
-  veteran:  5_000,
-  master:   10_000,
+  rookie:      250,
+  seasoned:    1_000,
+  veteran:     2_500,
+  master:      5_000,
+  grandmaster: 10_000,
 }
 
-// Achievement points per tier (1–4) — a skill score summed over earned badges.
+// Achievement points per tier (1–5) — a skill score summed over earned badges.
 export const BADGE_POINTS: Record<BadgeDifficulty, number> = {
-  rookie:   1,
-  seasoned: 2,
-  veteran:  3,
-  master:   4,
+  rookie:      1,
+  seasoned:    2,
+  veteran:     3,
+  master:      4,
+  grandmaster: 5,
 }
 
 // Display meta for each tier (pill label + accent colour, a low→high progression).
+// Grandmaster's chip renders PRISMATIC in the UI (see .tier-grandmaster-chip);
+// the `color` here is the solid fallback used for its card border + progress bar.
 export const DIFFICULTY_META: Record<BadgeDifficulty, { label: string; color: string }> = {
-  rookie:   { label: 'Rookie',   color: '#7fae8f' },
-  seasoned: { label: 'Seasoned', color: '#5ea0e8' },
-  veteran:  { label: 'Veteran',  color: '#b06ff2' },
-  master:   { label: 'Master',   color: '#f0c040' },
+  rookie:      { label: 'Rookie',      color: '#7fae8f' },
+  seasoned:    { label: 'Seasoned',    color: '#5ea0e8' },
+  veteran:     { label: 'Veteran',     color: '#b06ff2' },
+  master:      { label: 'Master',      color: '#f0c040' },
+  grandmaster: { label: 'Grandmaster', color: '#c77dff' },
 }
 
 export const BADGES: Badge[] = [
@@ -45,7 +53,7 @@ export const BADGES: Badge[] = [
   { id: 'dead_eye',       name: 'Dead-Eye',           description: 'Land 1,000 perfect catches all-time',            imageUrl: '/badges/dead_eye.png',       difficulty: 'veteran'  },
   { id: 'master_angler',  name: 'Master Angler',      description: 'Reach Fishing Level 100',                         imageUrl: '/badges/master_angler.png',  difficulty: 'master'   },
   { id: 'zone_legend',    name: 'Zone Legend',        description: 'Reach Prestige in all 4 fishing zones',           imageUrl: '/badges/zone_legend.png',    difficulty: 'veteran'  },
-  { id: 'prestige_stars', name: 'Prestige Stars',     description: 'Earn all 20 prestige stars (5 per zone)',         imageUrl: '/badges/prestige_stars.png', difficulty: 'master'   },
+  { id: 'prestige_stars', name: 'Prestige Stars',     description: 'Earn all 20 prestige stars (5 per zone)',         imageUrl: '/badges/prestige_stars.png', difficulty: 'grandmaster'   },
 
   // ── Fishing feats ────────────────────────────────────────────────────────
   { id: 'two_for_the_pot', name: 'Two for the Pot',   description: 'Reel in a double catch',                          imageUrl: '/badges/two_for_the_pot.png', difficulty: 'rookie'   },
@@ -55,10 +63,10 @@ export const BADGES: Badge[] = [
   // ── The collection ───────────────────────────────────────────────────────
   { id: 'half_the_sea',   name: 'Half the Sea',       description: 'Catch 50 fish species',                           imageUrl: '/badges/half_the_sea.png',   difficulty: 'rookie'   },
   { id: 'ancient_ones',   name: 'Ancient Ones',       description: 'Catch all 6 Ancient Deep trophies',               imageUrl: '/badges/ancient_ones.png',   difficulty: 'master'   },
-  { id: 'full_collection',name: 'Full Collection',    description: 'Catch every fish species in the game',             imageUrl: '/badges/full_collection.png', difficulty: 'master'  },
+  { id: 'full_collection',name: 'Full Collection',    description: 'Catch every fish species in the game',             imageUrl: '/badges/full_collection.png', difficulty: 'grandmaster'  },
 
   // ── The Completionist Rod ── the Fishing 100 + full-collection capstone.
-  { id: 'completionist_rod', name: 'The Completionist', description: 'Claim the Completionist Rod',                     imageUrl: '/badges/completionist_rod.png', difficulty: 'master'   },
+  { id: 'completionist_rod', name: 'The Completionist', description: 'Claim the Completionist Rod',                     imageUrl: '/badges/completionist_rod.png', difficulty: 'grandmaster'   },
   { id: 'fully_rigged',      name: 'Fully Rigged',     description: 'Forge all 3 effects into the Completionist Rod',  imageUrl: '/badges/fully_rigged.png',      difficulty: 'veteran'  },
   { id: 'reforged',          name: 'Reforged',         description: 'Pay to re-forge the Completionist Rod into a fresh 3-effect loadout', imageUrl: '/badges/reforged.png',  difficulty: 'seasoned' },
 
@@ -177,11 +185,11 @@ export const BADGES: Badge[] = [
   { id: 'first_fusion',   name: 'First Fusion',       description: 'Forge your first item',                           imageUrl: '/badges/first_fusion.png',   difficulty: 'seasoned' },
   { id: 'ruse_undone',    name: 'Ruse Undone',        description: 'Defeat Admiral Ruse in challenge mode',           imageUrl: '/badges/ruse_undone.png',    difficulty: 'seasoned' },
   { id: 'account_settled', name: 'Account Settled',   description: 'Defeat the Quartermaster in challenge mode',      imageUrl: '/badges/account_settled.png', difficulty: 'seasoned' },
-  { id: 'grand_forgemaster', name: 'Grand Forgemaster', description: 'Learn every forge recipe',                      imageUrl: '/badges/grand_forgemaster.png', difficulty: 'master' },
+  { id: 'grand_forgemaster', name: 'Grand Forgemaster', description: 'Learn every forge recipe',                      imageUrl: '/badges/grand_forgemaster.png', difficulty: 'grandmaster' },
   { id: 'mark_of_mastery', name: 'Mark of Mastery',   description: 'Reach a Mark III ship class',                     imageUrl: '/badges/mark_of_mastery.png', difficulty: 'veteran' },
   { id: 'quick_draw',     name: 'Quick Draw',         description: 'Clear any raid in under 1:00',                    imageUrl: '/badges/quick_draw.png',     difficulty: 'veteran'  },
-  { id: 'complete_captain', name: 'The Complete Captain', description: 'Reach Navigation 100 and Fishing 100',        imageUrl: '/badges/complete_captain.png', difficulty: 'master' },
-  { id: 'six_legends',    name: 'The Avengers',       description: 'Own all 5 base legendary crew',                   imageUrl: '/badges/six_legends.png',    difficulty: 'master'   },
+  { id: 'complete_captain', name: 'The Complete Captain', description: 'Reach Navigation 100 and Fishing 100',        imageUrl: '/badges/complete_captain.png', difficulty: 'grandmaster' },
+  { id: 'six_legends',    name: 'The Avengers',       description: 'Own all 5 base legendary crew',                   imageUrl: '/badges/six_legends.png',    difficulty: 'grandmaster' },
 
   // ── 2026-07 expansion (batches 17–18) — crew skins + master feats ────────
   // Sheet 17 — crew skins.
@@ -193,7 +201,7 @@ export const BADGES: Badge[] = [
   { id: 'trophy_hunter',  name: 'Trophy Hunter',      description: 'Land 25 Trophy-size catches',                     imageUrl: '/badges/trophy_hunter.png',  difficulty: 'master'   },
   // Sheet 18 — challenge feats.
   { id: 'overkill',       name: 'Overkill',           description: 'Land a single raid hit for 500 or more',          imageUrl: '/badges/overkill.png',       difficulty: 'veteran'  },
-  { id: 'all_hands_legends', name: 'All Hands, All Legends', description: 'Raid in the Man-o-War with 5 Level 100 legendary crew', imageUrl: '/badges/all_hands_legends.png', difficulty: 'master' },
+  { id: 'all_hands_legends', name: 'All Hands, All Legends', description: 'Raid in the Man-o-War with 5 Level 100 legendary crew', imageUrl: '/badges/all_hands_legends.png', difficulty: 'grandmaster' },
   { id: 'iron_ruse',      name: 'Iron Ruse',          description: 'Beat the Admiral Ruse raid taking no damage',     imageUrl: '/badges/iron_ruse.png',      difficulty: 'master'   },
   { id: 'not_a_shot_fired', name: 'Not a Shot Fired', description: 'Sink a boss without a shot or a crew ability',    imageUrl: '/badges/not_a_shot_fired.png', difficulty: 'veteran'  },
   { id: 'tight_quarters', name: 'Tight Quarters',     description: 'Beat the Quartermaster raid using no crew abilities', imageUrl: '/badges/tight_quarters.png', difficulty: 'master' },
