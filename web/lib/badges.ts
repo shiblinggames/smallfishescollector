@@ -59,8 +59,8 @@ export const BADGES: Badge[] = [
 
   // ── The Completionist Rod ── the Fishing 100 + full-collection capstone.
   { id: 'completionist_rod', name: 'The Completionist', description: 'Claim the Completionist Rod',                     imageUrl: '/badges/completionist_rod.png', difficulty: 'master'   },
-  { id: 'rodsmith',          name: 'Rodsmith',         description: 'Forge an effect into the Completionist Rod',      imageUrl: '/badges/rodsmith.png',          difficulty: 'seasoned' },
   { id: 'fully_rigged',      name: 'Fully Rigged',     description: 'Forge all 3 effects into the Completionist Rod',  imageUrl: '/badges/fully_rigged.png',      difficulty: 'veteran'  },
+  { id: 'reforged',          name: 'Reforged',         description: 'Pay to re-forge the Completionist Rod into a fresh 3-effect loadout', imageUrl: '/badges/reforged.png',  difficulty: 'seasoned' },
 
   // ── Crew ─────────────────────────────────────────────────────────────────
   { id: 'growing_crew',     name: 'Growing Crew',      description: 'Recruit 25 crew',                                imageUrl: '/badges/growing_crew.png',     difficulty: 'rookie'   },
@@ -234,8 +234,8 @@ export const BADGE_DETAIL: Record<string, string> = {
   ancient_ones:     'Land all six Ancient Deep trophies — the rarest, oldest fish in the sea.',
   full_collection:  'Catch every single species in the game. The ultimate collector’s feat.',
   completionist_rod:'Claim the Completionist Rod — the capstone tool, earned only at Fishing Level 100 with every species landed. The proof you’ve mastered the sea.',
-  rodsmith:         'Forge one of your other rods’ effects into the Completionist Rod. Make the capstone your own.',
   fully_rigged:     'Fill all three of the Completionist Rod’s power sockets. A rod built exactly the way you fish.',
+  reforged:         'Pay the re-forge fee to swap the Completionist Rod into a fresh three-effect loadout. A rod remade to fit how your fishing has changed.',
   growing_crew:     'Recruit 25 crew over your career, living or lost.',
   theres_a_grave:   'Lose a crew member for the first time. The sea takes its due eventually — a sobering milestone.',
   legendary_recruit:'Add a legendary fish to your crew — Catfish, Doby Mick, or Mako. The rarest hands aboard.',

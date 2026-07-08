@@ -1755,7 +1755,7 @@ export async function setCompletionistEffects(
 
   const [{ data: ownedRows }, { data: prof }] = await Promise.all([
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
-    admin.from('profiles').select('has_seen_forge_flourish, completionist_effects, doubloons').eq('id', user.id).single(),
+    admin.from('profiles').select('has_seen_forge_flourish, completionist_effects, doubloons, unlocked_badges').eq('id', user.id).single(),
   ])
   const owned = new Set((ownedRows ?? []).map(r => r.rod_tier as number))
   if (!owned.has(COMPLETIONIST_TIER)) return { error: "You haven't earned the Completionist Rod yet." }
@@ -1788,6 +1788,14 @@ export async function setCompletionistEffects(
   const update: Record<string, unknown> = { completionist_effects: clean }
   if (firstForge) update.has_seen_forge_flourish = true
   if (mustPay) update.doubloons = newDoubloons
+
+  // "Reforged" badge — pay the re-forge fee to swap into a fresh FULL loadout.
+  // Hook-granted (a paid re-forge isn't recoverable from the final state, which
+  // just reads as 3 effects — same as a free first forge).
+  const badges = (prof?.unlocked_badges as string[] | null) ?? []
+  if (mustPay && clean.length >= COMPLETIONIST_MAX_EFFECTS && !badges.includes('reforged')) {
+    update.unlocked_badges = [...badges, 'reforged']
+  }
 
   await admin.from('profiles').update(update).eq('id', user.id)
   return { completionistEffects: clean, firstForge, charged: mustPay, newDoubloons }

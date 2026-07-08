@@ -79,7 +79,6 @@ export default async function BadgesPage() {
   const gauntletHcDeepest = Number(profile?.gauntlet_hc_deepest ?? 0)
   const gauntletHcDeepestDied = Number(profile?.gauntlet_hc_deepest_died ?? 0)
   const bloodGemsEarned = Number(profile?.blood_gems_earned ?? 0)
-  const hasForgedRod = profile?.has_seen_forge_flourish === true
   const rodEffectsCount = ((profile?.completionist_effects as number[] | null) ?? []).length
   const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
   const confluencesSeen = ((profile?.gauntlet_confluences_seen as string[] | null) ?? []).length
@@ -163,8 +162,8 @@ export default async function BadgesPage() {
         badgeGoal('zone_legend', 'Zone Legend', 'Reach Prestige in all 4 zones', prestigedZones, 4, '/fishing'),
         badgeGoal('prestige_stars', 'Prestige Stars', 'Earn all 20 prestige stars (5 per zone)', totalStars, 20, '/fishing'),
         badgeGoal('completionist_rod', 'The Completionist', 'Claim the Completionist Rod', has('completionist_rod') ? 1 : 0, 1, '/marketplace/tackle-shop', { binary: true }),
-        badgeGoal('rodsmith', 'Rodsmith', 'Forge an effect into the Completionist Rod', hasForgedRod ? 1 : 0, 1, '/fishing', { binary: true }),
         badgeGoal('fully_rigged', 'Fully Rigged', 'Forge all 3 effects into the Completionist Rod', rodEffectsCount, 3, '/fishing'),
+        badgeGoal('reforged', 'Reforged', 'Pay to re-forge the rod into a fresh 3-effect loadout', has('reforged') ? 1 : 0, 1, '/fishing', { binary: true }),
       ],
     },
     {
