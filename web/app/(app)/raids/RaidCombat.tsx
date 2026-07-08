@@ -4928,6 +4928,10 @@ export default function RaidCombat({
             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {nameplate}
             </p>
+            {/* Shield bar — only present while an absorb buffer is up. */}
+            <AnimatePresence>
+              {abyssalShieldHp > 0 && <ShieldBar key="shield" amount={abyssalShieldHp} max={playerHpMax} />}
+            </AnimatePresence>
             <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small />
           </div>
@@ -6209,6 +6213,34 @@ function HPBar({ current, max, accent, compact }: { current: number; max: number
         </div>
       )}
     </div>
+  )
+}
+
+// A slim shield bar shown ABOVE the HP bar whenever the player holds an absorb
+// buffer (Kat's Abyssal Tide / Tidecaller, the Stormward Gauntlet boon — both
+// feed abyssalShieldHp). Cyan so it reads as separate from the green HP; the
+// fill is the shield as a fraction of max HP (so it looks like bonus health).
+function ShieldBar({ amount, max }: { amount: number; max: number }) {
+  const SHIELD = '#7dd3fc'
+  const pct = max > 0 ? Math.min(100, (amount / max) * 100) : 0
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: 0.2 }}
+      style={{ marginBottom: 4 }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill={SHIELD} aria-hidden style={{ filter: `drop-shadow(0 0 2px ${SHIELD})` }}>
+          <path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5z" />
+        </svg>
+        <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: SHIELD, lineHeight: 1 }}>{amount}</span>
+      </div>
+      <div style={{ height: 5, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
+        <motion.div
+          animate={{ width: `${pct}%` }} transition={{ duration: 0.35, ease: 'easeOut' }}
+          style={{ height: '100%', background: `linear-gradient(90deg, ${SHIELD}, #5eead4)`, borderRadius: 4, boxShadow: `0 0 6px ${SHIELD}aa` }}
+        />
+      </div>
+    </motion.div>
   )
 }
 
