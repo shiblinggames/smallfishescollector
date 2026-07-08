@@ -363,7 +363,7 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
   if (!user) return { error: 'Not signed in' }
   const admin = createAdminClient()
 
-  const { data: prof } = await admin.from('profiles').select('blood_gems, owned_crew_skins').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('blood_gems, owned_crew_skins, unlocked_badges').eq('id', user.id).single()
   if (!prof) return { error: 'Profile not found' }
   const bloodGems = ((prof as any).blood_gems as number | null) ?? 0
   if (bloodGems < BLOOD_SKIN_GAMBLE_COST) return { error: 'Not enough Blood Gems' }
@@ -385,6 +385,13 @@ export async function gambleBloodSkin(): Promise<{ skinId: string; state: NonNul
     .select('blood_gems')
     .single()
   if (!updated) return { error: 'Not enough Blood Gems' }
+
+  // Crimson Fortune badge — hook-granted the first time the blood gamble pays
+  // out a skin (can't be derived from stored state; mirrors catfish_jackpot).
+  const badges = ((prof as any).unlocked_badges as string[] | null) ?? []
+  if (!badges.includes('crimson_fortune')) {
+    await admin.from('profiles').update({ unlocked_badges: [...badges, 'crimson_fortune'] }).eq('id', user.id)
+  }
 
   const state = await getCrewState()
   if (!state) return { error: 'Failed to load crew' }

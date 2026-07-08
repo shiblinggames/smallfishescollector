@@ -78,6 +78,7 @@ export default async function BadgesPage() {
   const gauntletDeepestDied = Number(profile?.gauntlet_deepest_died ?? 0)
   const gauntletHcDeepest = Number(profile?.gauntlet_hc_deepest ?? 0)
   const gauntletHcDeepestDied = Number(profile?.gauntlet_hc_deepest_died ?? 0)
+  const bloodGemsEarned = Number(profile?.blood_gems_earned ?? 0)
   const gauntletUpgrades = (profile?.gauntlet_upgrades as string[] | null) ?? []
   const confluencesSeen = ((profile?.gauntlet_confluences_seen as string[] | null) ?? []).length
   const shipClasses = (profile?.ship_classes as Record<string, string> | null) ?? {}
@@ -272,7 +273,11 @@ export default async function BadgesPage() {
         badgeGoal('drowned_ledger', 'The Drowned Ledger', 'Cash out a Hardcore Gauntlet run', gauntletHcDeepest >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('the_unsinkable', 'The Unsinkable', 'Reach depth 15 in the Hardcore Gauntlet', gauntletHcDeepest, 15, '/raids/gauntlet'),
         badgeGoal('locker_bound', 'Locker-Bound', 'Reach depth 25 in the Hardcore Gauntlet', gauntletHcDeepest, 25, '/raids/gauntlet'),
+        badgeGoal('the_deep_end', 'The Deep End', 'Reach depth 50 in the Hardcore Gauntlet', gauntletHcDeepest, 50, '/raids/gauntlet'),
         badgeGoal('ferrymans_toll', "The Ferryman's Toll", 'Lose a squad to the Locker in Hardcore', gauntletHcDeepestDied >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
+        badgeGoal('blood_rich', 'Blood-Rich', 'Earn 500 Blood Gems all-time', bloodGemsEarned, 500, '/raids/gauntlet'),
+        badgeGoal('bloodhoard', 'Bloodhoard', 'Earn 2,000 Blood Gems all-time', bloodGemsEarned, 2000, '/raids/gauntlet'),
+        badgeGoal('crimson_fortune', 'Crimson Fortune', 'Win a crew skin from the blood gamble', has('crimson_fortune') ? 1 : 0, 1, '/crew?tab=blood', { binary: true }),
       ],
     },
     {

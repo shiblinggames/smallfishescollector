@@ -429,7 +429,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems')
+    .select('gauntlet_run_open, gauntlet_deepest, gauntlet_last_run_at, gauntlet_best_depth, gauntlet_best_depth_ms, gauntlet_contest_depth, gauntlet_fathoms, gauntlet_fathoms_earned, gauntlet_runs_completed, gauntlet_upgrades, expedition_xp, doubloons, gems, ship_classes, nav_renown_alloc, raid_items, ship_skins, gauntlet_run_hardcore, gauntlet_hc_deepest, gauntlet_hc_best_depth, gauntlet_hc_best_depth_ms, blood_gems, blood_gems_earned')
     .eq('id', user.id)
     .single()
 
@@ -563,6 +563,9 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       gauntlet_resumes_used: 0,
       gauntlet_fathoms: newFathoms,
       blood_gems: newBloodGems,
+      // Lifetime Blood Gems earned (never decremented on spend) — backs the
+      // Blood-Rich / Bloodhoard badges. Adds 0 on a normal (non-hc) cash-out.
+      blood_gems_earned: ((profile.blood_gems_earned as number | null) ?? 0) + earnedBloodGems,
       // Lifetime counters for the achievement badges (a cash-out ends a run).
       gauntlet_runs_completed: ((profile.gauntlet_runs_completed as number | null) ?? 0) + 1,
       gauntlet_fathoms_earned: ((profile.gauntlet_fathoms_earned as number | null) ?? 0) + earnedFathoms,

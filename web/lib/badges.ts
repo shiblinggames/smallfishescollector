@@ -156,11 +156,16 @@ export const BADGES: Badge[] = [
   { id: 'greeds_price',   name: "Greed's Price",      description: 'Die deeper than your best cash-out',              imageUrl: '/badges/greeds_price.png',   difficulty: 'seasoned' },
   { id: 'storm_reader',   name: 'Storm Reader',       description: 'Discover your first confluence',                  imageUrl: '/badges/storm_reader.png',   difficulty: 'rookie'   },
   { id: 'deep_cartographer', name: 'Deep Cartographer', description: 'Discover all 7 confluences',                    imageUrl: '/badges/deep_cartographer.png', difficulty: 'master' },
-  // The Gauntlet — Hardcore (the Drowned Ledger). Crew you send in die for good.
-  { id: 'drowned_ledger', name: 'The Drowned Ledger', description: 'Cash out a Hardcore Gauntlet run',                imageUrl: '/badges/drowned_ledger.png', difficulty: 'seasoned' },
-  { id: 'the_unsinkable', name: 'The Unsinkable',     description: 'Reach depth 15 in the Hardcore Gauntlet',         imageUrl: '/badges/the_unsinkable.png', difficulty: 'veteran'  },
-  { id: 'locker_bound',   name: 'Locker-Bound',       description: 'Reach depth 25 in the Hardcore Gauntlet',         imageUrl: '/badges/locker_bound.png',   difficulty: 'master'   },
+  // The Gauntlet — Hardcore. Crew you send in die for good.
+  { id: 'drowned_ledger', name: 'The Drowned Ledger', description: 'Cash out a Hardcore Gauntlet run',                imageUrl: '/badges/drowned_ledger.png', difficulty: 'rookie'   },
+  { id: 'the_unsinkable', name: 'The Unsinkable',     description: 'Reach depth 15 in the Hardcore Gauntlet',         imageUrl: '/badges/the_unsinkable.png', difficulty: 'seasoned' },
+  { id: 'locker_bound',   name: 'Locker-Bound',       description: 'Reach depth 25 in the Hardcore Gauntlet',         imageUrl: '/badges/locker_bound.png',   difficulty: 'veteran'  },
+  { id: 'the_deep_end',   name: 'The Deep End',       description: 'Reach depth 50 in the Hardcore Gauntlet',         imageUrl: '/badges/the_deep_end.png',   difficulty: 'master'   },
   { id: 'ferrymans_toll', name: "The Ferryman's Toll", description: 'Lose a squad to the Locker in Hardcore',         imageUrl: '/badges/ferrymans_toll.png', difficulty: 'seasoned' },
+  // Blood Gems — the Hardcore premium currency.
+  { id: 'blood_rich',      name: 'Blood-Rich',       description: 'Earn 500 Blood Gems all-time',                    imageUrl: '/badges/blood_rich.png',      difficulty: 'seasoned' },
+  { id: 'bloodhoard',      name: 'Bloodhoard',       description: 'Earn 2,000 Blood Gems all-time',                  imageUrl: '/badges/bloodhoard.png',      difficulty: 'veteran'  },
+  { id: 'crimson_fortune', name: 'Crimson Fortune',  description: 'Win a crew skin from the blood gamble',           imageUrl: '/badges/crimson_fortune.png', difficulty: 'seasoned' },
   // Endgame & challenge.
   { id: 'weapon_of_legend', name: 'Weapon of Legend', description: 'Build your Man-o-War ultimate',                   imageUrl: '/badges/weapon_of_legend.png', difficulty: 'veteran' },
   { id: 'first_fusion',   name: 'First Fusion',       description: 'Forge your first item',                           imageUrl: '/badges/first_fusion.png',   difficulty: 'seasoned' },
