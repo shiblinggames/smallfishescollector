@@ -43,6 +43,7 @@ export type AffixId =
   | 'scorching'
   | 'glacial'
   | 'riposte'
+  | 'warded'
 
 export interface AffixDef {
   id: AffixId
@@ -94,6 +95,11 @@ export interface AffixDef {
   //    damage you WOULD have dealt back onto you. Scales with the player's
   //    hit, so it punishes heavy hitters specifically. ──────────────────
   riposteReflectPct?:  number  // 0.50
+
+  // ── Warded — starts each fight behind a barrier worth this fraction of its
+  //    max HP that soaks your direct hits (not burn/DoT) before its hull. The
+  //    Railgun's piercing Mega ignores it. ──────────────────────────────
+  shieldPctMaxHp?:     number  // 0.30
 }
 
 export const AFFIXES: Record<AffixId, AffixDef> = {
@@ -156,6 +162,11 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
     id: 'riposte', name: 'Riposte',
     description: 'When it dodges your shot, it turns 50% of that blow back on you.',
     riposteReflectPct: 0.50,
+  },
+  warded: {
+    id: 'warded', name: 'Warded',
+    description: 'Behind a barrier worth 30% of its hull that soaks your shots before its health. Break it first. (Burn bleeds through; the Railgun pierces it.)',
+    shieldPctMaxHp: 0.30,
   },
 }
 

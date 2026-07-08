@@ -496,6 +496,7 @@ export default function RaidCombat({
     let lowHpDamage     = 0
     let chargeCarryover = 0
     let fightShieldPct  = 0
+    let enemyShieldPct  = 0
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -512,6 +513,7 @@ export default function RaidCombat({
         case 'lowHpDamage':           lowHpDamage = Math.max(lowHpDamage, e.maxBonus); break
         case 'chargeCarryover':       chargeCarryover = Math.max(chargeCarryover, e.cap); break
         case 'fightShield':           fightShieldPct = Math.max(fightShieldPct, e.pctMax); break
+        case 'enemyShield':           enemyShieldPct = Math.max(enemyShieldPct, e.pctMax); break
         case 'incomingDmgMult':       inDmgMult *= e.mult; break
         case 'incomingCritReduction': inCritReduce += e.chance; break
         case 'dodgeBonus':            dodgeBonus += e.chance; break
@@ -575,7 +577,7 @@ export default function RaidCombat({
       critExecutePct, volleyRampPct,
       executeHealPct, burnTickHealPct, dodgeRefundCharges, retaliateBoostMult,
       critDmgMult, executeThreshold, lifestealPct,
-      retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct,
+      retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct, enemyShieldPct,
     }
   }, [tideEffects, isBoss])
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
@@ -775,6 +777,13 @@ export default function RaidCombat({
   // Hull curse, half-HP tides). Drives the HP bar denominator + stat sheet so
   // they don't read against the raw base while enemyHp is the scaled value.
   const enemyHpMax = Math.max(1, Math.round(enemy.hpBase * tide.enemyHpScaleMult))
+  // Enemy barrier (Warded elite affix / The Warding Gauntlet curse) — an absorb
+  // buffer worth a % of the enemy's max HP that soaks the player's DIRECT hits
+  // (shots/volleys/abilities, not burn/DoT) before the hull. The Railgun's
+  // piercing Mega ignores it. Reforms fresh each fight (per remount).
+  const enemyShieldMax = Math.round(enemyHpMax * Math.max(tide.enemyShieldPct, affix?.shieldPctMaxHp ?? 0))
+  const [enemyShieldHp, setEnemyShieldHp] = useState(enemyShieldMax)
+  const enemyShieldRef = useRef(enemyShieldMax)
   const [playerCharges, setPlayerCharges] = useState(() =>
     Math.max(0, Math.min(playerMaxCharges, tide.chargesStart + initialCharges))
   )
@@ -1369,6 +1378,10 @@ export default function RaidCombat({
     // enemyHpScale tide always targets a LATER enemy.
     const scaledHp = Math.max(1, Math.round(enemy.hpBase * enemyHpScaleMultRef.current))
     setEnemyHp(scaledHp); enemyHpRef.current = scaledHp; enemyHpMaxRef.current = scaledHp
+    // Enemy barrier reforms fresh each fight, sized off the ACTUAL scaled max HP.
+    const eShieldPct = Math.max(tide.enemyShieldPct, affix?.shieldPctMaxHp ?? 0)
+    const eShield = Math.round(scaledHp * eShieldPct)
+    enemyShieldRef.current = eShield; setEnemyShieldHp(eShield)
     enemyBurnRef.current = { turns: 0, dmg: 0 }; enemyFrozenRef.current = 0; enemyFreezePendingRef.current = 0; snareBlockedRef.current = false; carapaceLoggedRef.current = false
     playerBurnRef.current = { turns: 0, dmg: 0 }; playerFrozenRef.current = false; playerFreezePendingRef.current = false
     // "First Cut": enemies in the Tollmaster raid open LOADED (enemy.startCharges
@@ -1989,7 +2002,16 @@ export default function RaidCombat({
   // step-playback path inside resolveTurn so kills landed via an ability
   // run the same outro as kills landed via cannon fire.
   function applyAbilityDamage(rawDmg: number, logLine: string, hitKind: 'hit' | 'crit', skipSplat = false, splatColor?: string) {
-    const newHp = Math.max(0, enemyHpRef.current - rawDmg)
+    // Crew abilities are direct player damage — they route through the enemy's
+    // barrier (Warded / The Warding) before its hull, same as cannon fire.
+    let toHull = rawDmg
+    if (enemyShieldRef.current > 0 && rawDmg > 0) {
+      const absorbed = Math.min(enemyShieldRef.current, rawDmg)
+      enemyShieldRef.current -= absorbed
+      setEnemyShieldHp(enemyShieldRef.current)
+      toHull = rawDmg - absorbed
+    }
+    const newHp = Math.max(0, enemyHpRef.current - toHull)
     setEnemyHp(newHp)
     enemyHpRef.current = newHp
     if (!skipSplat) {
@@ -2046,7 +2068,14 @@ export default function RaidCombat({
   // its OWN damage number + shake, no log/kill. The FINAL shot in the chain runs
   // applyAbilityDamage instead (that one owns the summary line + kill outro).
   function applyChainHit(rawDmg: number, hitKind: 'hit' | 'crit', skipSplat = false) {
-    const newHp = Math.max(0, enemyHpRef.current - rawDmg)
+    let toHull = rawDmg
+    if (enemyShieldRef.current > 0 && rawDmg > 0) {
+      const absorbed = Math.min(enemyShieldRef.current, rawDmg)
+      enemyShieldRef.current -= absorbed
+      setEnemyShieldHp(enemyShieldRef.current)
+      toHull = rawDmg - absorbed
+    }
+    const newHp = Math.max(0, enemyHpRef.current - toHull)
     setEnemyHp(newHp)
     enemyHpRef.current = newHp
     if (!skipSplat) {
@@ -2291,6 +2320,7 @@ export default function RaidCombat({
     // build, then committed to state once (after) so the hull glints clear.
     let anchorConsumed = false
     let shieldChanged = false
+    let eShieldChanged = false
     // Speed-roll line shows immediately. Per-step lines are appended as each
     // step starts animating (see playStep) so the log feels alive instead of
     // dumping the whole turn at once.
@@ -2367,6 +2397,18 @@ export default function RaidCombat({
     let pCharges = playerCharges
     let eCharges = enemyCharges
     const steps: Step[] = []
+
+    // Enemy barrier (Warded affix / The Warding curse): route DIRECT player
+    // damage through the enemy's shield pool before its hull. Burn/DoT ticks
+    // bypass it (they hit eHp directly). The Railgun's piercing Mega passes
+    // `pierce` and ignores it. Returns the damage that reached the hull.
+    const soakEnemyShield = (amount: number, pierce = false): number => {
+      if (amount <= 0 || pierce || enemyShieldRef.current <= 0) return amount
+      const absorbed = Math.min(enemyShieldRef.current, amount)
+      enemyShieldRef.current -= absorbed
+      eShieldChanged = true
+      return amount - absorbed
+    }
 
     // Promote any freeze armed LAST round into the active skip for THIS round.
     // A freeze procced during this round only set the pending flag, so it can't
@@ -2456,6 +2498,7 @@ export default function RaidCombat({
       let enemyHealOut: number | undefined
       let lifestealHealedOut = 0
       let thermalBurstOut = 0    // Thermal Shock confluence: shatter burst this hit
+      let shieldAbsorbedOut = 0  // Enemy barrier soak on the player's shot this step
       let carapaceSoaked = false
       const stepLines: string[] = []
 
@@ -2826,7 +2869,7 @@ export default function RaidCombat({
               const parryReflectPct  = parryEffects.filter(e => e.type === 'parry_reflect_pct').reduce((a, e) => Math.max(a, e.value), 0)
               if (parryChance > 0 && parryReflectPct > 0 && dmg > 0 && Math.random() < parryChance) {
                 const reflectDmg = Math.max(1, Math.floor(dmg * parryReflectPct))
-                eHp = Math.max(0, eHp - reflectDmg)
+                eHp = Math.max(0, eHp - soakEnemyShield(reflectDmg))
                 reflectDmgOut = reflectDmg
                 stepLines.push(`Riposte! You turn the shot back, slicing ${reflectDmg} into ${enemy.name}.`)
               }
@@ -2841,7 +2884,11 @@ export default function RaidCombat({
         }
 
         if (isAttackerPlayer) {
-          eHp = Math.max(0, eHp - dmg)
+          const piercing = isMega && !!megaAug?.pierce
+          const preShield = enemyShieldRef.current
+          const toHull = soakEnemyShield(dmg, piercing)
+          shieldAbsorbedOut = preShield - enemyShieldRef.current
+          eHp = Math.max(0, eHp - toHull)
           if (dmg > 0) onPlayerHit?.(dmg)
           // Leviathan's Hunger (boon): heal a slice of the damage you deal. The
           // step carries the new pHp so the HP bar climbs + a +HP splat on your
@@ -2937,7 +2984,7 @@ export default function RaidCombat({
             && enemyBurnRef.current.turns > 0
           ) {
             const burst = Math.max(1, Math.round(dmg * tide.thermalShockMult))
-            eHp = Math.max(0, eHp - burst)
+            eHp = Math.max(0, eHp - soakEnemyShield(burst))
             enemyFrozenRef.current = 0
             enemyFreezePendingRef.current = 0
             thermalBurstOut = burst
@@ -3007,6 +3054,17 @@ export default function RaidCombat({
             splatText = `-${dmg}`
             splatColor = '#ef4444'
           }
+          // Enemy barrier — surface the soak so the player sees why the hull
+          // barely moved, and correct the splat (full soak reads "Blocked").
+          // Skipped on a Railgun pierce (shieldAbsorbedOut stays 0 there).
+          if (shieldAbsorbedOut > 0) {
+            const hullDmg = Math.max(0, dmg - shieldAbsorbedOut)
+            stepLines.push(enemyShieldRef.current > 0
+              ? `Its barrier soaks ${shieldAbsorbedOut} of the shot.`
+              : `Its barrier soaks ${shieldAbsorbedOut} and shatters.`)
+            splatText = hullDmg > 0 ? `-${hullDmg}` : 'Blocked'
+            if (hullDmg <= 0) splatColor = '#8fb7ff'
+          }
           // Leviathan's Hunger heal line — pushed here so it follows the shot
           // it fed on, not before it.
           if (lifestealHealedOut > 0) stepLines.push(`Leviathan's Hunger drinks the wound — +${lifestealHealedOut} HP.`)
@@ -3046,7 +3104,7 @@ export default function RaidCombat({
           if (tide.retaliatePct > 0 && dmg > 0 && eHp > 0) {
             // Iron Tempest confluence multiplies the reflected damage.
             const thorns = Math.max(1, Math.round(dmg * tide.retaliatePct * tide.retaliateBoostMult))
-            eHp = Math.max(0, eHp - thorns)
+            eHp = Math.max(0, eHp - soakEnemyShield(thorns))
             stepLines.push(tide.retaliateBoostMult > 1 ? `Iron Tempest! The blow is flung back for ${thorns}.` : `Spiteful Wake bites back for ${thorns}.`)
           }
           // Scorching / Glacial affixes: the elite's landed hit has a chance to
@@ -3697,6 +3755,7 @@ export default function RaidCombat({
     // Commit defensive-buff consumption so the hull glints reflect what's left.
     if (anchorConsumed) setAnchorReductionPct(null)
     if (shieldChanged) setAbyssalShieldHp(abyssalShieldRef.current)
+    if (eShieldChanged) setEnemyShieldHp(enemyShieldRef.current)
 
     playStepChainRef.current = []
     playStepChainRef.current.push(setTimeout(() => playStep(0), SPEED_LINE_HOLD_MS))
@@ -4340,6 +4399,12 @@ export default function RaidCombat({
                 ))}
               </span>
             )}
+            {/* Enemy barrier (Warded affix / The Warding curse) — a hostile
+                ward that soaks your shots before its hull. Violet so it reads
+                as the enemy's, not your cyan shield. */}
+            <AnimatePresence>
+              {enemyShieldHp > 0 && <ShieldBar key="eshield" amount={enemyShieldHp} max={enemyHpMax} color="#c084fc" gradTo="#a855f7" />}
+            </AnimatePresence>
             <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
@@ -6220,8 +6285,9 @@ function HPBar({ current, max, accent, compact }: { current: number; max: number
 // buffer (Kat's Abyssal Tide / Tidecaller, the Stormward Gauntlet boon — both
 // feed abyssalShieldHp). Cyan so it reads as separate from the green HP; the
 // fill is the shield as a fraction of max HP (so it looks like bonus health).
-function ShieldBar({ amount, max }: { amount: number; max: number }) {
-  const SHIELD = '#7dd3fc'
+function ShieldBar({ amount, max, color, gradTo }: { amount: number; max: number; color?: string; gradTo?: string }) {
+  const SHIELD = color ?? '#7dd3fc'
+  const GRAD_TO = gradTo ?? '#5eead4'
   const pct = max > 0 ? Math.min(100, (amount / max) * 100) : 0
   return (
     <motion.div
@@ -6237,7 +6303,7 @@ function ShieldBar({ amount, max }: { amount: number; max: number }) {
       <div style={{ height: 5, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
         <motion.div
           animate={{ width: `${pct}%` }} transition={{ duration: 0.35, ease: 'easeOut' }}
-          style={{ height: '100%', background: `linear-gradient(90deg, ${SHIELD}, #5eead4)`, borderRadius: 4, boxShadow: `0 0 6px ${SHIELD}aa` }}
+          style={{ height: '100%', background: `linear-gradient(90deg, ${SHIELD}, ${GRAD_TO})`, borderRadius: 4, boxShadow: `0 0 6px ${SHIELD}aa` }}
         />
       </div>
     </motion.div>

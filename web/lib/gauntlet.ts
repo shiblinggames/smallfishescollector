@@ -598,6 +598,15 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
+    id: 'the_warding',
+    name: 'The Warding',
+    flavor: 'A cold light sheathes every hull down here. You have to break the barrier before you can break the ship.',
+    tiers: [
+      { desc: 'Enemies carry a 20% barrier', detail: 'Every enemy starts each fight behind a barrier worth 20% of its hull. Your shots chew through the barrier before its health takes a scratch (burn bleeds through, and the Railgun pierces it). It reforms fresh each fight.', effects: [{ kind: 'enemyShield', pctMax: 0.20 }] },
+      { desc: 'Enemies carry a 32% barrier', detail: 'The warding thickens. Every enemy now hides behind a barrier worth 32% of its hull each fight.', effects: [{ kind: 'enemyShield', pctMax: 0.32 }] },
+    ],
+  },
+  {
     id: 'becalmed',
     name: 'Becalmed',
     flavor: 'The wind died at this depth. Your ship answers the wheel a beat too slow.',

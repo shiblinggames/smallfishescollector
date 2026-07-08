@@ -146,6 +146,10 @@ export type TideEffect =
   | { kind: 'enemyHpScale'; mult: number; scope: 'nextFight' | 'allRemaining' }
   /** Next enemy starts with N fewer cannonballs (clamped to 0). */
   | { kind: 'enemyStartChargesDelta'; n: number; scope: 'nextFight' | 'allRemaining' }
+  /** Every enemy starts each fight behind a barrier worth `pctMax` of its max HP
+   *  that soaks your direct hits before its hull (burn bleeds through; Railgun
+   *  pierces). A Gauntlet CURSE ("The Warding"). */
+  | { kind: 'enemyShield'; pctMax: number }
   // ── Legendary one-of-a-kind effects (Gauntlet boons) ────────────
   /** Instantly sink an enemy the moment its HP drops to <= pct of its max. */
   | { kind: 'executeThreshold'; pct: number }
@@ -205,6 +209,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
       return e.pct > 0 ? 'good' : 'neutral'
     case 'lowHpDamage':  return e.maxBonus > 0 ? 'good' : 'neutral'
     case 'fightShield':  return e.pctMax > 0 ? 'good' : 'neutral'
+    case 'enemyShield':  return e.pctMax > 0 ? 'bad' : 'neutral'
     case 'startOfFightHealPct': return e.pctMax > 0 ? 'good' : 'neutral'
     case 'chargeCarryover': return 'good'
     case 'incomingDmgMult':
@@ -770,6 +775,7 @@ export function describeEffect(e: TideEffect): string {
     case 'retaliateBoost':        return `Reflected damage ×${e.mult.toFixed(1)}`
     case 'chargeCarryover':       return e.cap >= 99 ? 'Carry all unfired cannonballs to the next fight' : `Carry up to ${e.cap} cannonball${e.cap === 1 ? '' : 's'} to the next fight`
     case 'fightShield':           return `Shield each fight worth ${Math.round(e.pctMax * 100)}% of max HP`
+    case 'enemyShield':           return `Every enemy is barriered for ${Math.round(e.pctMax * 100)}% of its hull each fight`
     case 'incomingDmgMult': {
       const scope = e.scope === 'nextFight' ? 'next fight' : 'all run'
       if (e.mult > 1) return `Take ${pct(e.mult - 1)} more damage, ${scope}`
