@@ -844,9 +844,10 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [skinBuyConfirm, setSkinBuyConfirm] = useState<string | null>(null)
   // Skin id whose full-detail splash is open (from the Trunk gallery).
   const [skinDetail, setSkinDetail] = useState<string | null>(null)
-  // The Trunk filters — rarity (per-crew) + ownership (per-skin).
+  // The Trunk filters — rarity (per-crew) + ownership (per-skin); two dropdowns.
   const [trunkRarity, setTrunkRarity] = useState<CrewRarity | 'all'>('all')
   const [trunkOwned, setTrunkOwned] = useState<'all' | 'owned' | 'missing'>('all')
+  const [trunkMenu, setTrunkMenu] = useState<'rarity' | 'owned' | null>(null)
   // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
   // fires the unlock reveal so earning a new skin feels like a real moment.
   function runSkinAction(tag: string, action: () => Promise<CrewActionResult>) {
@@ -1670,52 +1671,69 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             .filter(g => trunkRarity === 'all' || g.rarity === trunkRarity)
             .map(g => ({ ...g, skins: g.skins.filter(s => matchOwned(s.id)) }))
             .filter(g => g.skins.length > 0)
+          // One compact dropdown for a filter — a labelled trigger + a popover of
+          // options, so both filters fit on a single tidy row.
+          const renderDropdown = (
+            id: 'rarity' | 'owned',
+            current: string,
+            opts: { key: string; label: string; color?: string }[],
+            onPick: (key: string) => void,
+          ) => {
+            const open = trunkMenu === id
+            const sel = opts.find(o => o.key === current) ?? opts[0]
+            return (
+              <div style={{ position: 'relative', flex: 1, maxWidth: 172 }}>
+                <button type="button" onClick={() => setTrunkMenu(open ? null : id)} className="tap"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 7, width: '100%', padding: '0.42rem 0.72rem', borderRadius: 10,
+                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${open ? 'rgba(94,200,232,0.6)' : 'rgba(255,255,255,0.12)'}`, cursor: 'pointer' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    {sel.color && <span style={{ width: 8, height: 8, borderRadius: '50%', background: sel.color, flexShrink: 0 }} />}
+                    <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#dbeef4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sel.label}</span>
+                  </span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8fd7ea" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+                {open && (
+                  <>
+                    <div onClick={() => setTrunkMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+                    <div style={{ position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 20, borderRadius: 10, overflow: 'hidden', background: 'rgba(9,15,21,0.98)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 12px 28px rgba(0,0,0,0.6)' }}>
+                      {opts.map(o => {
+                        const active = o.key === current
+                        return (
+                          <button key={o.key} type="button" onClick={() => { onPick(o.key); setTrunkMenu(null) }} className="tap"
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.5rem 0.7rem', background: active ? 'rgba(94,200,232,0.15)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                            {o.color
+                              ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: o.color, flexShrink: 0 }} />
+                              : <span style={{ width: 8, flexShrink: 0 }} />}
+                            <span className="font-karla font-700" style={{ fontSize: '0.68rem', color: active ? '#eaf6fa' : 'rgba(255,255,255,0.62)' }}>{o.label}</span>
+                            {active && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5ec8e8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ marginLeft: 'auto' }}><path d="M20 6L9 17l-5-5" /></svg>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          }
           return (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
                 <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Trunk</p>
                 <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 4 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
               </div>
-              {/* Filters — rarity (top row) + ownership (bottom row). */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
-                <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {([
-                    { key: 'all', label: 'All', color: '#8fd7ea' },
-                    { key: 2, label: RARITY_NAMES[2], color: RARITY_COLORS[2] },
-                    { key: 3, label: RARITY_NAMES[3], color: RARITY_COLORS[3] },
-                    { key: 4, label: RARITY_NAMES[4], color: RARITY_COLORS[4] },
-                  ] as const).map(o => {
-                    const active = trunkRarity === o.key
-                    return (
-                      <button key={String(o.key)} type="button" onClick={() => setTrunkRarity(o.key as CrewRarity | 'all')} className="tap"
-                        style={{ padding: '0.28rem 0.72rem', borderRadius: 999, cursor: 'pointer',
-                          background: active ? `${o.color}26` : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${active ? `${o.color}88` : 'rgba(255,255,255,0.1)'}`,
-                          color: active ? o.color : 'rgba(255,255,255,0.55)' }}>
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.06em' }}>{o.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-                <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                  {([
-                    { key: 'all', label: 'All' },
-                    { key: 'owned', label: 'Owned' },
-                    { key: 'missing', label: 'Missing' },
-                  ] as const).map(o => {
-                    const active = trunkOwned === o.key
-                    const c = '#5ec8e8'
-                    return (
-                      <button key={o.key} type="button" onClick={() => setTrunkOwned(o.key)} className="tap"
-                        style={{ padding: '0.28rem 0.95rem', borderRadius: 999, cursor: 'pointer',
-                          background: active ? `${c}26` : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${active ? `${c}88` : 'rgba(255,255,255,0.1)'}`,
-                          color: active ? c : 'rgba(255,255,255,0.55)' }}>
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.06em' }}>{o.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+              {/* Filters — two compact dropdowns on ONE row. */}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+                {renderDropdown('rarity', String(trunkRarity), [
+                  { key: 'all', label: 'All rarities' },
+                  { key: '2', label: RARITY_NAMES[2], color: RARITY_COLORS[2] },
+                  { key: '3', label: RARITY_NAMES[3], color: RARITY_COLORS[3] },
+                  { key: '4', label: RARITY_NAMES[4], color: RARITY_COLORS[4] },
+                ], (k) => setTrunkRarity(k === 'all' ? 'all' : (Number(k) as CrewRarity)))}
+                {renderDropdown('owned', trunkOwned, [
+                  { key: 'all', label: 'All skins' },
+                  { key: 'owned', label: 'Owned' },
+                  { key: 'missing', label: 'Missing' },
+                ], (k) => setTrunkOwned(k as 'all' | 'owned' | 'missing'))}
               </div>
               {groups.map(({ slug, skins, rarity }) => {
                 const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
