@@ -40,6 +40,7 @@ export function useReveal() {
   const [flash, setFlash] = useState<Flash>(null)
   const [banner, setBanner] = useState<Banner>(null)
   const [climaxId, setClimaxId] = useState<number | null>(null)  // the finale (rarest) card
+  const [bloodied, setBloodied] = useState(false)                // a blood-charged reroll
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const done = useRef<Set<number>>(new Set())
 
@@ -61,10 +62,11 @@ export function useReveal() {
 
   const tapCard = useCallback((c: BoardCandidate) => { if (!done.current.has(c.id)) flip(c) }, [flip])
 
-  const startReveal = useCallback((board: BoardCandidate[]) => {
+  const startReveal = useCallback((board: BoardCandidate[], isBlood = false) => {
     timers.current.forEach(clearTimeout)
     timers.current = []
     done.current = new Set()
+    setBloodied(isBlood)
     const init: Record<number, Phase> = {}
     board.forEach(c => { init[c.id] = 'sealed' })
     setPhases(init)
@@ -96,12 +98,12 @@ export function useReveal() {
   // charging or revealed). Other cards dim while this is true.
   const climaxActive = climaxId != null && phases[climaxId] != null && phases[climaxId] !== 'sealed'
 
-  return { phases, flash, banner, startReveal, tapCard, revealing, climaxId, climaxActive }
+  return { phases, flash, banner, startReveal, tapCard, revealing, climaxId, climaxActive, bloodied }
 }
 
 // ── Per-card wrapper: sealed cover (front) + the real panel (back) ───────────
-export function BoardReveal({ card, phase, onTap, children }: {
-  card: BoardCandidate; phase: Phase; onTap: () => void; children: ReactNode
+export function BoardReveal({ card, phase, onTap, children, bloodied }: {
+  card: BoardCandidate; phase: Phase; onTap: () => void; children: ReactNode; bloodied?: boolean
 }) {
   const flipped = phase === 'flipped'
   const charging = phase === 'charging'
@@ -156,23 +158,25 @@ export function BoardReveal({ card, phase, onTap, children }: {
                 ? { x: [0, -2, 2, -1.5, 1.5, 0], rotate: card.rarity >= 4 ? [0, -1.6, 1.6, -1, 1, 0] : [0, -1, 1, -0.6, 0.6, 0] }
                 : { x: 0, rotate: 0 }}
               transition={charging ? { duration: card.rarity >= 4 ? 0.1 : 0.17, repeat: Infinity, ease: 'linear' } : { duration: 0.12 }}
+              // Blood-charged reroll = a bloodied dossier (crimson wrap + blood
+              // seal) so the whole board reads as blood-summoned, not gold.
               style={{
                 width: '100%', height: '100%', borderRadius: 7,
-                background: 'linear-gradient(157deg, #271d12 0%, #150e08 100%)',
-                border: '1px solid #46341f',
-                boxShadow: 'inset 0 0 0 1px rgba(176,141,79,0.18), 0 6px 16px rgba(0,0,0,0.55)',
+                background: bloodied ? 'linear-gradient(157deg, #3a0f14 0%, #180608 100%)' : 'linear-gradient(157deg, #271d12 0%, #150e08 100%)',
+                border: `1px solid ${bloodied ? '#7a2129' : '#46341f'}`,
+                boxShadow: bloodied ? 'inset 0 0 0 1px rgba(209,57,75,0.22), 0 6px 16px rgba(0,0,0,0.55)' : 'inset 0 0 0 1px rgba(176,141,79,0.18), 0 6px 16px rgba(0,0,0,0.55)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
               <div className={charging ? 'crew-seal-charging' : ''} style={{
                 width: 54, height: 54, borderRadius: '50%',
-                background: 'radial-gradient(circle at 38% 32%, #9a3b34 0%, #5e211c 70%)',
+                background: bloodied ? 'radial-gradient(circle at 38% 32%, #d1394b 0%, #6b0f1a 70%)' : 'radial-gradient(circle at 38% 32%, #9a3b34 0%, #5e211c 70%)',
                 border: '2px solid rgba(0,0,0,0.35)',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                ['--seal-glow']: SEAL_GLOW[card.rarity] ?? SEAL_GLOW[1],
+                ['--seal-glow']: bloodied ? 'rgba(209,57,75,0.85)' : (SEAL_GLOW[card.rarity] ?? SEAL_GLOW[1]),
               } as CSSProperties}>
-                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="rgba(255,225,190,0.85)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke={bloodied ? 'rgba(255,220,225,0.92)' : 'rgba(255,225,190,0.85)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="5" r="2.5" /><line x1="12" y1="22" x2="12" y2="7.5" /><path d="M5 12H2a10 10 0 0 0 20 0h-3" />
                 </svg>
               </div>

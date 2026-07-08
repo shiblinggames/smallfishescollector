@@ -15,7 +15,7 @@ import { crewSkinsForSlug, getCrewSkin, getCrewSkinByFilename, skinArtGlow, CREW
 import { ChaseSkinFx } from '@/components/ChaseSkinFx'
 import { hallTierDef, nextHallTier, CREW_HALL_MAX_TIER } from '@/lib/crewHall'
 import { crewAssignment } from '@/lib/crewAssignment'
-import { RARITY_NAMES, RARITY_COLORS, groupForSlug, type CrewRarity } from '@/lib/crewGen'
+import { RARITY_NAMES, RARITY_COLORS, groupForSlug, crewDisplayName, type CrewRarity } from '@/lib/crewGen'
 import { applyCrewEffects, netTraitStats, traitLabel, traitKind } from '@/lib/crewEffects'
 import { useReveal, BoardReveal, RevealFlash, RevealBanner } from './boardReveal'
 import { ROUTE_CONFIGS, type VoyageRoute } from '@/lib/voyageRoutes'
@@ -1087,7 +1087,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         // Keep the Nav-bar gem total in sync (it has its own displayGems state).
         window.dispatchEvent(new CustomEvent('gems-changed', { detail: res.state.gems }))
         window.dispatchEvent(new CustomEvent('blood-gems-changed', { detail: res.state.bloodGems }))
-        reveal.startReveal(res.state.board)
+        reveal.startReveal(res.state.board, !!bloodTierId)
       }
       setBusyId(null)
     })
@@ -1476,6 +1476,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
             )
           })()}
 
+          {reveal.revealing && reveal.bloodied && (
+            <div className="flex justify-center" style={{ marginBottom: 12 }}>
+              <span className="font-cinzel font-700 uppercase" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.28rem 0.75rem', borderRadius: 999, fontSize: '0.56rem', letterSpacing: '0.16em', color: '#f3c0c6', background: `${BLOOD}1e`, border: `1px solid ${BLOOD}66`, boxShadow: `0 0 16px ${BLOOD}33` }}>
+                <BloodDrop size={12} /> Blood-Charged Reroll
+              </span>
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.8rem' }}>
             {state.board.map((c: BoardCandidate) => {
               const panel = (
@@ -1507,7 +1514,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   boxShadow: spotlight ? '0 0 30px rgba(255,221,130,0.22)' : undefined,
                 }}>
                   {phase
-                    ? <BoardReveal card={c} phase={phase} onTap={() => reveal.tapCard(c)}>{panel}</BoardReveal>
+                    ? <BoardReveal card={c} phase={phase} onTap={() => reveal.tapCard(c)} bloodied={reveal.bloodied}>{panel}</BoardReveal>
                     : panel}
                 </div>
               )
@@ -2868,6 +2875,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   const c = won.color
                   const glow = skinArtGlow(c, groupForSlug(won.slug) ?? 3, true)
                   const ownsCrew = state.roster.some(m => m.slug === won.slug)
+                  const crewName = crewDisplayName(won.slug, won.slug.replace(/_/g, ' '))
                   return (
                     <>
                       {[0, 0.1, 0.22].map((d, i) => (
@@ -2883,6 +2891,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       </motion.div>
                       <motion.p className="font-pirata" initial={{ opacity: 0, scale: 1.2, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4, ease: [0.2, 1, 0.3, 1] }}
                         style={{ position: 'relative', fontSize: '2.2rem', color: '#f4ead2', marginTop: 16, lineHeight: 1.04, textShadow: `0 0 26px ${c}aa` }}>{won.name}</motion.p>
+                      {/* Which crew the skin is for. */}
+                      <motion.p className="font-cinzel font-700 uppercase" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                        style={{ position: 'relative', fontSize: '0.62rem', letterSpacing: '0.14em', color: c, marginTop: 4, textShadow: `0 0 12px ${c}66` }}>
+                        {crewName}<span style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}> skin</span>
+                      </motion.p>
                       {won.blurb && (
                         <motion.p className="font-karla" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.36 }}
                           style={{ position: 'relative', fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: 6, maxWidth: 320, lineHeight: 1.4 }}>{won.blurb}</motion.p>
