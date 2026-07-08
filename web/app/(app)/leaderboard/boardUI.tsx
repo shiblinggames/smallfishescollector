@@ -74,7 +74,7 @@ export const BOARD_META: Record<BoardKey, {
   raidProgress:  { label: 'Raid Progress',  accent: '#7fd0a0', unit: n => `${n.toLocaleString()}`,       subUnit: n => `${n === 1 ? 'node' : 'nodes'} cleared` },
   chartingPoints:{ label: 'Charting Points',accent: '#d8a24a', unit: n => `${n.toLocaleString()}`,       subUnit: n => `charting point${n === 1 ? '' : 's'}` },
   gauntletDepth: { label: 'Deepest Descent', accent: '#5eead4', unit: n => `Depth ${n}`,                  subUnit: () => 'cashed out' },
-  gauntletHardcore: { label: 'The Drowned Ledger', accent: '#8b7bf0', unit: n => `Depth ${n}`,             subUnit: () => 'hardcore' },
+  gauntletHardcore: { label: 'Hardcore Gauntlet', accent: '#e0555a', unit: n => `Depth ${n}`,             subUnit: () => 'hardcore' },
   gauntletBigHit:{ label: 'Biggest Hit',     accent: '#f87171', unit: n => `${n.toLocaleString()}`,       subUnit: () => 'in one blow' },
   achievementPoints: { label: 'Achievement Points', accent: '#e6b94a', unit: n => `${n.toLocaleString()}`, subUnit: n => `point${n === 1 ? '' : 's'}` },
 }

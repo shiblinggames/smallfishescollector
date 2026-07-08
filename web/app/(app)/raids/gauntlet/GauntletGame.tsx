@@ -562,7 +562,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                     footer={comingSoon
                       ? <p className="font-karla font-800 uppercase" style={{ fontSize: '0.52rem', letterSpacing: '0.12em', color: HC_ACCENT }}>Coming Soon</p>
                       : <>
-                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${DANGER}cc` }}>Drowned Ledger</p>
+                          <p className="font-karla font-700 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.1em', color: `${DANGER}cc` }}>Hardcore Best</p>
                           <p className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f3d6d6' }}>
                             {props.hcDeepest > 0 ? `Your best · ${props.hcDeepest}` : props.hardcoreTop ? `#1 · Depth ${props.hardcoreTop.depth}` : 'Unclaimed'}
                           </p>
@@ -1170,7 +1170,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     )
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
           padding: '6px 0.85rem', textAlign: 'center',
@@ -1211,7 +1211,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   if (phase === 'intro') {
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         <div style={{
           position: 'relative', zIndex: 1, maxWidth: 460, margin: '0 auto',
           padding: '6px 0.85rem', textAlign: 'center',
@@ -1455,7 +1455,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const CRIMSON = '#ef4444'
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         {/* Crimson death wash bleeding up from the deep, over the abyss. */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 75% at 50% 112%, ${CRIMSON}24 0%, ${CRIMSON}10 34%, transparent 66%)` }} />
         <div style={{
@@ -1569,7 +1569,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const canWager = fathomsNow >= 1
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 130% 90% at 50% 0%, ${VIO}1f 0%, ${VIO}0a 42%, transparent 70%)` }} />
         <div style={{
@@ -1762,7 +1762,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       : null
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         {/* Synergy Unlocked — a one-shot fanfare overlay the moment a confluence
             comes online (the boon you just claimed completed a pair). */}
         <AnimatePresence>
@@ -1996,7 +1996,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const curseTotalAfter = c.isUpgrade ? curseCount : curseCount + 1
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         {/* Crimson dread, bleeding up from the deep and breathing slowly. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: [0.55, 0.9, 0.55] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 135% 95% at 50% 112%, ${CRIM}26 0%, ${CRIM}0d 40%, transparent 68%)` }} />
@@ -2075,7 +2075,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const revealDone = pendingBoons.every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         {/* Teal "treasure surfacing" wash — the whole screen should read as a reward. */}
         <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
           style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 120% 66% at 50% 6%, ${TEAL}24 0%, ${TEAL}08 38%, transparent 64%)` }} />
@@ -2326,7 +2326,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     const taunt = davyTaunt(d)
     return (
       <>
-        <AbyssBackdrop />
+        <AbyssBackdrop hardcore={hardcoreRun} />
         <div style={{
           position: 'relative', zIndex: 1, minHeight: '60vh',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -2636,7 +2636,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
 
   return (
     <>
-      <AbyssBackdrop />
+      <AbyssBackdrop hardcore={r.hardcore} />
       <RenownUpOverlay info={renownUp} onDismiss={() => setRenownUp(null)} />
       <div style={{
         position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto',
@@ -2655,7 +2655,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
             </p>
             {r.hardcore && (
               <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.14em', color: '#a99cf0', marginTop: 6 }}>
-                Hardcore · the Drowned Ledger · survivor bonus paid
+                Hardcore Gauntlet · survivor bonus paid
               </p>
             )}
             <div style={{ position: 'relative', width: 200, height: 200, margin: '20px auto 6px' }}>
@@ -3753,38 +3753,50 @@ function BoonSparks() {
   )
 }
 
-function AbyssBackdrop() {
+function AbyssBackdrop({ hardcore }: { hardcore?: boolean }) {
+  // Hardcore recolours the whole abyss blood-dark: red god-rays, red motes, a
+  // heavier crimson-to-black vignette. Same motion, different palette, so every
+  // meta screen of a hardcore run reads red/black at a glance.
+  const bg = hardcore
+    ? 'radial-gradient(ellipse 130% 80% at 50% -12%, rgba(120,22,28,0.5) 0%, rgba(46,8,12,0.66) 36%, rgba(6,1,2,0.98) 76%), #060102'
+    : 'radial-gradient(ellipse 130% 80% at 50% -12%, rgba(34,64,98,0.55) 0%, rgba(10,20,34,0.62) 36%, rgba(2,5,10,0.97) 76%), #02040a'
+  const shaft = hardcore ? 'rgba(224,90,90,0.16)' : 'rgba(120,180,220,0.18)'
+  const shaft2 = hardcore ? 'rgba(224,90,90,0.12)' : 'rgba(120,180,220,0.13)'
+  const mote = hardcore ? 'rgba(240,120,120,0.5)' : 'rgba(150,200,230,0.55)'
+  const vignette = hardcore
+    ? 'radial-gradient(ellipse at 50% 42%, transparent 40%, rgba(60,2,6,0.5) 82%, rgba(10,0,1,0.82) 100%)'
+    : 'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,0.6) 100%)'
   return (
     <>
       <style>{ABYSS_KEYFRAMES}</style>
       <div aria-hidden style={{
         position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden',
-        background: 'radial-gradient(ellipse 130% 80% at 50% -12%, rgba(34,64,98,0.55) 0%, rgba(10,20,34,0.62) 36%, rgba(2,5,10,0.97) 76%), #02040a',
+        background: bg,
       }}>
         {/* God-rays from the surface */}
-        <div style={{ position: 'absolute', top: '-12%', left: '20%', width: 130, height: '95%', transform: 'rotate(9deg)', filter: 'blur(10px)', background: 'linear-gradient(to bottom, rgba(120,180,220,0.18), transparent 68%)', animation: 'gauntShaft 7s ease-in-out infinite' }} />
-        <div style={{ position: 'absolute', top: '-12%', left: '62%', width: 100, height: '95%', transform: 'rotate(-7deg)', filter: 'blur(10px)', background: 'linear-gradient(to bottom, rgba(120,180,220,0.13), transparent 64%)', animation: 'gauntShaft 9s ease-in-out infinite', animationDelay: '1.5s' }} />
+        <div style={{ position: 'absolute', top: '-12%', left: '20%', width: 130, height: '95%', transform: 'rotate(9deg)', filter: 'blur(10px)', background: `linear-gradient(to bottom, ${shaft}, transparent 68%)`, animation: 'gauntShaft 7s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', top: '-12%', left: '62%', width: 100, height: '95%', transform: 'rotate(-7deg)', filter: 'blur(10px)', background: `linear-gradient(to bottom, ${shaft2}, transparent 64%)`, animation: 'gauntShaft 9s ease-in-out infinite', animationDelay: '1.5s' }} />
         {/* Motes rising from the deep */}
         {MOTES.map((m, i) => (
           <div key={i} style={{
             position: 'absolute', bottom: -10, left: `${m.left}%`,
             width: m.size, height: m.size, borderRadius: '50%',
-            background: 'rgba(150,200,230,0.55)', boxShadow: '0 0 6px rgba(150,200,230,0.55)',
+            background: mote, boxShadow: `0 0 6px ${mote}`,
             animation: `gauntRise ${m.dur}s linear ${m.delay}s infinite`,
           }} />
         ))}
         {/* Vignette to keep the focus center */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,0,0,0.6) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: vignette }} />
       </div>
     </>
   )
 }
 
 // ── Small presentational helpers ──────────────────────────────────────────────
-function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+function Shell({ children, wide, hardcore }: { children: React.ReactNode; wide?: boolean; hardcore?: boolean }) {
   return (
     <>
-      <AbyssBackdrop />
+      <AbyssBackdrop hardcore={hardcore} />
       <div className="flex flex-col" style={{
         position: 'relative', zIndex: 1,
         maxWidth: wide ? 460 : 420, margin: '0 auto', padding: '12px 0.25rem',
