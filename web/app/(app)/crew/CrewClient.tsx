@@ -842,6 +842,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const [equipFlash, setEquipFlash] = useState<{ key: number; color: string } | null>(null)
   // Skin id pending a purchase confirmation (tapping a locked skin opens it).
   const [skinBuyConfirm, setSkinBuyConfirm] = useState<string | null>(null)
+  // Skin id whose full-detail splash is open (from the Slop Chest gallery).
+  const [skinDetail, setSkinDetail] = useState<string | null>(null)
   // Buy / equip a crew skin, then sync state + the Nav-bar gem total. A BUY also
   // fires the unlock reveal so earning a new skin feels like a real moment.
   function runSkinAction(tag: string, action: () => Promise<CrewActionResult>) {
@@ -1645,7 +1647,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           )
         })()}
 
-        {/* ── The Wardrobe — every crew skin, owned + unowned, grouped by crew.
+        {/* ── The Slop Chest (Skins tab) — every crew skin, owned + unowned, grouped by crew.
              Matters now that the blood gamble hands out skins for crew you don't
              own yet: this is the only place to actually SEE them + track the
              collection. Owned + on your roster → tap to equip; owned but the crew
@@ -1661,11 +1663,8 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           return (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Wardrobe</p>
-                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>
-                  Every crew skin you&apos;ve collected. You can win skins for crew you don&apos;t own yet in the Blood Market.
-                </p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 6 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Slop Chest</p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 4 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
               </div>
               {groups.map(({ slug, skins, rarity }) => {
                 const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
@@ -1687,14 +1686,13 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                         const canEquip = isOwned && ownsCrew && !isEquipped
                         return (
                           <button key={s.id} type="button"
-                            onClick={canEquip ? () => runSkinAction(`equip:${s.id}`, () => equipCrewSkin(slug, s.id)) : undefined}
-                            disabled={!canEquip || !!skinBusy}
+                            onClick={() => setSkinDetail(s.id)}
                             style={{
                               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                               padding: '0.5rem 0.35rem 0.4rem', borderRadius: 11,
                               background: isEquipped ? `${color}1e` : 'rgba(4,10,18,0.6)',
                               border: `1px solid ${isEquipped ? `${color}88` : isOwned ? `${color}33` : 'rgba(255,255,255,0.07)'}`,
-                              cursor: canEquip ? 'pointer' : 'default', textAlign: 'center',
+                              cursor: 'pointer', textAlign: 'center',
                             }}>
                             <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: 8, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.05), rgba(3,6,10,0.9))' }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1715,7 +1713,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                             <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: isOwned ? '#e8e2d6' : 'rgba(255,255,255,0.42)', lineHeight: 1.1 }}>{s.name}</p>
                             <span className="font-karla font-700 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.06em',
                               color: isEquipped ? color : canEquip ? '#4ade80' : isOwned ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.3)' }}>
-                              {isEquipped ? 'Equipped' : canEquip ? 'Tap to equip' : isOwned ? (ownsCrew ? 'Owned' : 'Recruit to wear') : `${s.gemCost.toLocaleString()} ◆`}
+                              {isEquipped ? 'Equipped' : canEquip ? 'Owned' : isOwned ? (ownsCrew ? 'Owned' : 'Recruit to wear') : `${s.gemCost.toLocaleString()} ◆`}
                             </span>
                           </button>
                         )
@@ -1835,7 +1833,7 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                     : <><BloodDrop size={14} /> Gamble a Skin <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, letterSpacing: 0 }}>{BLOOD_SKIN_GAMBLE_COST}<BloodDrop size={12} /></span></>}
                 </button>
                 <button onClick={() => setActiveTab('wardrobe')} className="font-karla font-700 tap" style={{ display: 'block', margin: '9px auto 0', background: 'none', border: 'none', color: '#c98a92', fontSize: '0.66rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                  View your Wardrobe →
+                  View the Slop Chest →
                 </button>
               </div>
             </div>
@@ -2783,6 +2781,92 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                       className="font-karla font-700 uppercase tracking-[0.08em]" style={{ flex: 1.4, padding: '0.6rem', borderRadius: 11, fontSize: '0.62rem', background: canAfford ? `${c}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? c + '77' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#fff' : 'rgba(255,255,255,0.4)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
                       {skinBusy ? '…' : canAfford ? `Unlock · ${skin.gemCost.toLocaleString()} ◆` : `Need ${(skin.gemCost - state.gems).toLocaleString()} ◆`}
                     </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>,
+        document.body,
+      )}
+
+      {/* ── Slop Chest skin splash — full art + buy/equip, LoL-style. Opened by
+          tapping any tile in the Skins gallery; handles every state. ── */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {skinDetail && (() => {
+            const skin = getCrewSkin(skinDetail)
+            if (!skin) return null
+            const c = skin.color
+            const rarity = (groupForSlug(skin.slug) ?? 4) as CrewRarity
+            const owned = state.ownedCrewSkins.includes(skin.id)
+            const ownsCrew = new Set(state.roster.map(m => (m.slug ?? '').toLowerCase())).has(skin.slug)
+            const equipped = (state.equippedCrewSkins[skin.slug] ?? null) === skin.id
+            const canAfford = state.gems >= skin.gemCost
+            const crewName = crewDisplayName(skin.slug, skin.slug.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()))
+            const close = () => { if (!skinBusy) setSkinDetail(null) }
+            return (
+              <motion.div key="skin-splash-bg" onClick={close}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 265, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.4rem', background: 'rgba(3,2,6,0.85)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+                <motion.div onClick={e => e.stopPropagation()}
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 6 }} transition={{ duration: 0.18 }}
+                  style={{ position: 'relative', width: '100%', maxWidth: 340, borderRadius: 20, overflow: 'hidden', background: 'rgba(10,8,14,0.99)', border: `1px solid ${c}66`, boxShadow: `0 0 44px ${c}26, 0 22px 55px rgba(0,0,0,0.65)` }}>
+                  <button onClick={close} aria-label="Close" style={{ position: 'absolute', top: 6, right: 12, zIndex: 4, color: 'rgba(255,255,255,0.65)', fontSize: '1.35rem', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem 0.4rem' }}>✕</button>
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: `radial-gradient(ellipse at 50% 34%, ${c}2e 0%, #060409 76%)` }}>
+                    {skin.chase && owned && <ChaseSkinFx skinId={skin.id} color={c} />}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={artSrc(skin.filename)} alt={skin.name} className={owned && skin.chase ? 'chase-skin-glow' : undefined}
+                      style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', objectFit: 'contain', padding: 18,
+                        ...(owned && skin.chase ? { ['--chase-c']: c } : owned ? { filter: skinArtGlow(c, rarity, true) } : { filter: 'grayscale(0.9) brightness(0.5)' }) } as React.CSSProperties} />
+                    {!owned && (
+                      <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', zIndex: 2 }}>
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ padding: '0.9rem 1.05rem 1.1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: c, background: `${c}1f`, border: `1px solid ${c}55`, borderRadius: 999, padding: '0.14rem 0.5rem' }}>{RARITY_NAMES[rarity] ?? ''}</span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.55)' }}>{crewName}</span>
+                    </div>
+                    <p className="font-pirata" style={{ fontSize: '1.7rem', color: '#f4ead2', lineHeight: 1.02 }}>{skin.name}</p>
+                    {skin.blurb && <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 5, lineHeight: 1.45 }}>{skin.blurb}</p>}
+                    <div style={{ marginTop: 13 }}>
+                      {equipped ? (
+                        <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:none:${skin.slug}`, () => equipCrewSkin(skin.slug, null))}
+                          className="font-karla font-700 uppercase tracking-[0.08em] w-full"
+                          style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.64rem', background: `${c}22`, border: `1px solid ${c}77`, color: '#fff', cursor: 'pointer', opacity: skinBusy ? 0.5 : 1 }}>
+                          {skinBusy ? '…' : '✓ Equipped · tap to remove'}
+                        </button>
+                      ) : owned && ownsCrew ? (
+                        <button type="button" disabled={!!skinBusy} onClick={() => runSkinAction(`equip:${skin.id}`, () => equipCrewSkin(skin.slug, skin.id))}
+                          className="font-karla font-700 uppercase tracking-[0.08em] w-full"
+                          style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.66rem', background: `${c}2a`, border: `1px solid ${c}88`, color: '#fff', cursor: 'pointer', opacity: skinBusy ? 0.5 : 1 }}>
+                          {skinBusy ? '…' : 'Equip'}
+                        </button>
+                      ) : owned && !ownsCrew ? (
+                        <div style={{ padding: '0.7rem', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', textAlign: 'center' }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e8dcc8' }}>Collected</p>
+                          <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Recruit {crewName} to wear it.</p>
+                        </div>
+                      ) : ownsCrew ? (
+                        <>
+                          <button type="button" disabled={!!skinBusy || !canAfford}
+                            onClick={() => { if (skinBusy || !canAfford) return; const id = skin.id; runSkinAction(`buy:${id}`, () => buyCrewSkin(id)) }}
+                            className="font-karla font-700 uppercase tracking-[0.08em] w-full"
+                            style={{ padding: '0.75rem', borderRadius: 12, fontSize: '0.66rem', background: canAfford ? `${c}2a` : 'rgba(255,255,255,0.04)', border: `1px solid ${canAfford ? c + '88' : 'rgba(255,255,255,0.12)'}`, color: canAfford ? '#fff' : 'rgba(255,255,255,0.42)', cursor: canAfford ? 'pointer' : 'default', opacity: skinBusy ? 0.5 : 1 }}>
+                            {skinBusy ? '…' : canAfford ? `Buy · ${skin.gemCost.toLocaleString()} ◆` : `Need ${(skin.gemCost - state.gems).toLocaleString()} more ◆`}
+                          </button>
+                          <p className="font-karla" style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 6 }}>You have {state.gems.toLocaleString()} ◆ · buying equips it</p>
+                        </>
+                      ) : (
+                        <div style={{ padding: '0.7rem', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', textAlign: 'center' }}>
+                          <p className="font-karla font-700" style={{ fontSize: '0.68rem', color: '#e8dcc8' }}>Recruit {crewName} to unlock</p>
+                          <p className="font-karla" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{skin.gemCost.toLocaleString()} ◆ once recruited, or win it in the Blood Market gamble.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               </motion.div>
