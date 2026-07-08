@@ -120,6 +120,10 @@ export const CREW_SKINS: CrewSkin[] = [
   { id: 'great_white_shark_ghostrelic', slug: 'great_white_shark', name: 'Ghost Relic', filename: 'Great_White_ghostrelic.png', gemCost: 1250, blurb: 'Bleached bone and old ghosts.', color: '#a9c0cc' },
   { id: 'great_white_shark_iceborn',    slug: 'great_white_shark', name: 'Iceborn',     filename: 'Great_White_iceborn.png',    gemCost: 1250, blurb: 'Forged in the coldest deep.',  color: '#7dd3fc' },
   { id: 'great_white_shark_blackout',   slug: 'great_white_shark', name: 'Blackout',    filename: 'Great_White_blackout.png',   gemCost: 1250, blurb: 'A shadow with teeth. You never see it coming.', color: '#475569' },
+  // ── Angelfish (Ang) — Epic (promoted from Common 2026-07-08) ──
+  { id: 'angelfish_archangel',   slug: 'angelfish', name: 'Archangel',    filename: 'Angelfish_archangel.png',   gemCost: 1250, blurb: 'Wings of light, judgment in every feather.', color: '#e6ecff' },
+  { id: 'angelfish_fallenangel', slug: 'angelfish', name: 'Fallen Angel', filename: 'Angelfish_fallenangel.png', gemCost: 1250, blurb: 'Grace turned to grievance — halo swapped for horns.', color: '#b4384f' },
+  { id: 'angelfish_gildedsaint', slug: 'angelfish', name: 'Gilded Saint', filename: 'Angelfish_gildedsaint.png', gemCost: 1250, blurb: 'Haloed in gold, worshipped by the whole reef.', color: '#f0c040' },
 ]
 
 const BY_ID = new Map(CREW_SKINS.map(s => [s.id, s]))
