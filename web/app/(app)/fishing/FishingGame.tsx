@@ -5674,12 +5674,10 @@ export default function FishingGame({
   const selectedBaitQty  = baitInventory.find(b => b.bait_type === selectedBait)?.quantity ?? 0
   const selectedBaitDef  = BAITS.find(b => b.type === selectedBait)
   const holdTotalCount   = inventory.reduce((s, i) => s + i.quantity, 0)
-  const ancientSpecies   = allFishSpecies.filter(f => f.habitat === 'ancient_deep')
-  const allAncientCaught = selectedZone === 'ancient_deep'
-    && ancientSpecies.length > 0
-    && ancientSpecies.every(f => (f.sell_value ?? 0) === 0
-        ? ancientCatches.has(f.id)
-        : caughtFishIds.has(f.id))
+  // NOTE: Ancient Deep used to hard-block once all 6 trophies were caught (back
+  // when the zone had ONLY the 6 one-and-done Ancients). It now also holds 12
+  // repeatable, sellable regulars (ids 149-160), so the zone must stay fishable
+  // forever — the server already stops the caught trophies from re-appearing.
   const isFullMoon = activeEvent?.type === 'fullmoon'
   const holdTotalValue   = inventory.reduce((s, i) => s + Math.floor(i.fish_species.sell_value * (isFullMoon ? 1.0 : 0.75)) * i.quantity, 0)
   const holdBaseValue    = inventory.reduce((s, i) => s + i.fish_species.sell_value * i.quantity, 0)
@@ -7109,31 +7107,7 @@ export default function FishingGame({
                   </button>
                 </motion.div>
               )}
-              {(phase === 'idle' || phase === 'result') && allAncientCaught && (
-                <motion.div key="all-ancient-caught"
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="text-center"
-                  style={{
-                    padding: '0.85rem 1rem',
-                    borderRadius: 14,
-                    background: 'linear-gradient(135deg, rgba(50,8,18,0.92) 0%, rgba(20,6,8,0.96) 70%, rgba(40,18,4,0.92) 100%)',
-                    border: '1px solid rgba(225,29,72,0.45)',
-                    boxShadow: '0 0 26px rgba(225,29,72,0.22)',
-                    maxWidth: 280,
-                  }}
-                >
-                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.26em', color: '#fde68a', marginBottom: 4 }}>
-                    The deep is silent
-                  </p>
-                  <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#fee2e2', lineHeight: 1.2, marginBottom: 6, textShadow: '0 0 12px rgba(225,29,72,0.45)' }}>
-                    All Ancient Ones revealed
-                  </p>
-                  <p className="font-karla font-300" style={{ fontSize: '0.62rem', color: 'rgba(254,226,226,0.7)', lineHeight: 1.5 }}>
-                    There is nothing more to catch here.
-                  </p>
-                </motion.div>
-              )}
-              {phase === 'idle' && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
+              {phase === 'idle' && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && hasBait && selectedBaitQty > 0 && (
                 <motion.button key="cast"
                   // pointerdown rather than onClick — fires on tap-start
                   // (~50–100 ms earlier than click on touch devices), so
@@ -7163,7 +7137,7 @@ export default function FishingGame({
                   Cast
                 </motion.button>
               )}
-              {phase === 'idle' && !allAncientCaught && holdTotalCount < holdCapacity && (!hasBait || selectedBaitQty <= 0) && (
+              {phase === 'idle' && holdTotalCount < holdCapacity && (!hasBait || selectedBaitQty <= 0) && (
                 <motion.div key="nobait"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-center">
@@ -7266,7 +7240,7 @@ export default function FishingGame({
                   </motion.button>
                 )
               })()}
-              {phase === 'result' && !crateResult && !allAncientCaught && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!!catchResult || !!missResult) && (() => {
+              {phase === 'result' && !crateResult && (selectedZone === 'ancient_deep' || holdTotalCount < holdCapacity) && (!!catchResult || !!missResult) && (() => {
                 const isShinyResult = !!catchResult?.isShiny
                 // Golden catches: three-stage action slot.
                 //   1. Reveal lock (~2.4s after the catch): show a pulsing
