@@ -2382,6 +2382,12 @@ export default function RaidCombat({
       // Thermal Shock confluence: the shatter burst dealt on top of this hit —
       // drives the ice+fire detonation FX + its own splat.
       thermalShock?: number
+      // Shield-pool snapshots AT this step (player absorb buffer + enemy
+      // barrier). Synced to the display alongside HP during playback so the
+      // bars deplete in lockstep with the animation, not the instant the turn
+      // resolves (which spoiled the incoming hit before it landed).
+      pShield?: number
+      eShield?: number
     }
 
     // Hull plating: equipped damage-reduction items cut INCOMING enemy
@@ -2409,6 +2415,14 @@ export default function RaidCombat({
       eShieldChanged = true
       return amount - absorbed
     }
+    // Snapshot both shield pools onto every step as it's pushed, so the display
+    // can deplete them in lockstep with the animation (see syncPHp/syncEHp)
+    // instead of the whole turn's soak landing the instant it resolves.
+    const pushStep = (s: Step) => { steps.push({ ...s, pShield: abyssalShieldRef.current, eShield: enemyShieldRef.current }) }
+    // HP appliers that ALSO settle the matching shield bar to this step's
+    // snapshot. Used everywhere a step's HP is committed during playback.
+    const syncPHp = (step: Step) => { setPlayerHp(step.pHp); if (step.pShield != null) setAbyssalShieldHp(step.pShield) }
+    const syncEHp = (step: Step) => { setEnemyHp(step.eHp); if (step.eShield != null) setEnemyShieldHp(step.eShield) }
 
     // Promote any freeze armed LAST round into the active skip for THIS round.
     // A freeze procced during this round only set the pending flag, so it can't
@@ -2442,7 +2456,7 @@ export default function RaidCombat({
         feedHeal = Math.min(playerHpMax - pHp, Math.round(total * tide.burnTickHealPct))
         if (feedHeal > 0) pHp += feedHeal
       }
-      steps.push({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
+      pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
     }
 
     // Scorching burn (elite affix) ticks the PLAYER's hull at the top of the turn
@@ -2452,7 +2466,7 @@ export default function RaidCombat({
       const tick = playerBurnRef.current.dmg
       pHp = Math.max(0, pHp - tick)
       playerBurnRef.current = { turns: playerBurnRef.current.turns - 1, dmg: playerBurnRef.current.dmg }
-      steps.push({ who: 'enemy', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`Your ship is ablaze, burning for ${tick}.`], burnTurnsLeft: playerBurnRef.current.turns })
+      pushStep({ who: 'enemy', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`Your ship is ablaze, burning for ${tick}.`], burnTurnsLeft: playerBurnRef.current.turns })
     }
 
     for (const who of order) {
@@ -2463,14 +2477,14 @@ export default function RaidCombat({
       if (who === 'enemy' && enemyFrozenRef.current > 0) {
         enemyFrozenRef.current -= 1
         const ends = enemyFrozenRef.current === 0
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [ends ? `The ${enemy.name} is frozen solid — its turn is skipped.` : `The ${enemy.name} is locked in deep ice — another turn frozen.`], freezeEnds: ends })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [ends ? `The ${enemy.name} is frozen solid — its turn is skipped.` : `The ${enemy.name} is locked in deep ice — another turn frozen.`], freezeEnds: ends })
         continue
       }
       // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
       // mirror of the Frozen Cannonball. Your chosen action is forfeit.
       if (who === 'player' && playerFrozenRef.current) {
         playerFrozenRef.current = false
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid — your turn is skipped.'], freezeEnds: true })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: ['Your ship is frozen solid — your turn is skipped.'], freezeEnds: true })
         continue
       }
       const action = who === 'player' ? pAction : eAction
@@ -2485,7 +2499,7 @@ export default function RaidCombat({
         pCharges = Math.max(0, pCharges - cost)
         const chip = Math.max(enemy.minDmg, Math.round(playerHpMax * 0.06))
         pHp = Math.max(1, pHp - chip)
-        steps.push({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${chip}`, splatColor: '#ef4444', logLines: [`False Colours! You locked onto a phantom. The shot is a dud: the loaded shot is wasted and you take ${chip} chip damage for the mistake.`] })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${chip}`, splatColor: '#ef4444', logLines: [`False Colours! You locked onto a phantom. The shot is a dud: the loaded shot is wasted and you take ${chip} chip damage for the mistake.`] })
         continue
       }
       let splatTarget: Actor | null = null
@@ -2875,7 +2889,7 @@ export default function RaidCombat({
               }
             }
 
-            steps.push({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut, riposteDmg: riposteDmgOut })
+            pushStep({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut, riposteDmg: riposteDmgOut })
             continue
           } else {
             partialDodge = true
@@ -3165,7 +3179,7 @@ export default function RaidCombat({
         }
       }
 
-      steps.push({
+      pushStep({
         who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor,
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
@@ -3198,7 +3212,7 @@ export default function RaidCombat({
         enemyFeintStreakRef.current = 0
         const revivedHp = Math.max(1, Math.floor(enemyHpMaxRef.current * nextCfg.revivePct))
         eHp = revivedHp
-        steps.push({
+        pushStep({
           who: 'enemy',
           // Reload as the "stays in place" cosmetic action — no projectile,
           // no splat. playStep's catch-all branch syncs HP for these steps,
@@ -3256,7 +3270,7 @@ export default function RaidCombat({
           const stolen2 = Math.min(enemyHpMaxRef.current - eHp, Math.max(1, Math.round(dmg2 * affix.lifestealPct)))
           eHp += stolen2
         }
-        steps.push({
+        pushStep({
           who: 'enemy', action: 'fire',
           pHp, eHp, pCharges, eCharges,
           splatTarget: 'player',
@@ -3431,7 +3445,7 @@ export default function RaidCombat({
           // Lands a beat after the dodge reads, with its own number + impact.
           if (step.reflectDmg) {
             setTimeout(() => {
-              setEnemyHp(step.eHp)
+              syncEHp(step)
               setEHitsplat({ key: Date.now() + i + 8, text: `-${step.reflectDmg}`, color: '#38bdf8' })
               setEnemyShakeKind('hit'); setEnemyShakeKey(k => k + 1)
               setEnemyImpact({ key: Date.now() + i + 9, kind: 'normal' })
@@ -3444,7 +3458,7 @@ export default function RaidCombat({
           // player hull, a beat after the dodge reads.
           if (step.riposteDmg) {
             setTimeout(() => {
-              setPlayerHp(step.pHp)
+              syncPHp(step)
               setPHitsplat({ key: Date.now() + i + 8, text: `-${step.riposteDmg}`, color: '#ef4444' })
               setPlayerShakeKey(k => k + 1)
               setPlayerImpact({ key: Date.now() + i + 9, kind: 'normal' })
@@ -3535,13 +3549,13 @@ export default function RaidCombat({
         }
 
         setTimeout(() => {
-          setEnemyHp(step.eHp)
+          syncEHp(step)
           // ALSO push the player HP — Reflective and Volatile affix damage
           // lives in step.pHp on a player-attacks step. Without this sync,
           // the log says "reflects N back" / "wreck scorches for N" but
           // the actual HP bar never moves until the next enemy-fires step
           // catches up.
-          setPlayerHp(step.pHp)
+          syncPHp(step)
           if (step.splatTarget === 'enemy') {
             // Barrage: split the total into 4 falling splats (first biggest), so
             // the broadside reads as four hammer-blows. Others: one splat.
@@ -3647,10 +3661,10 @@ export default function RaidCombat({
           setTimeout(() => setEnemyMuzzle(null), 700)
         }
         setTimeout(() => {
-          setPlayerHp(step.pHp)
+          syncPHp(step)
           // ALSO sync enemy HP — Vampiric lifesteal lands in step.eHp on
           // an enemy-attacks step, so the heal needs a separate push.
-          setEnemyHp(step.eHp)
+          syncEHp(step)
           if (step.splatTarget === 'player') {
             setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: step.big, volley: eIsVolley })
             if (!isDodged) {
@@ -3686,7 +3700,7 @@ export default function RaidCombat({
         // then bump the HP bar and float a green +HP splat. No shake (no
         // hit), no projectile, just the patch landing.
         setTimeout(() => {
-          setPlayerHp(step.pHp)
+          syncPHp(step)
           if (step.splatTarget === 'player') {
             setPHitsplat({ key: Date.now() + i + 1, text: step.splatText, color: step.splatColor, big: false })
             setTimeout(() => setPHitsplat(null), SPLAT_HOLD_MS)
@@ -3703,8 +3717,8 @@ export default function RaidCombat({
         // log line being streamed in, so the heal feels concurrent with
         // its narration.
         setTimeout(() => {
-          setPlayerHp(step.pHp)
-          setEnemyHp(step.eHp)
+          syncPHp(step)
+          syncEHp(step)
           // Burn tick / freeze steps ride the reload branch but carry an enemy
           // splat (a "-N" flame or a "Frozen" tag). Float it so the status reads.
           if (step.splatTarget === 'enemy' && step.splatText) {
@@ -3754,8 +3768,11 @@ export default function RaidCombat({
 
     // Commit defensive-buff consumption so the hull glints reflect what's left.
     if (anchorConsumed) setAnchorReductionPct(null)
-    if (shieldChanged) setAbyssalShieldHp(abyssalShieldRef.current)
-    if (eShieldChanged) setEnemyShieldHp(enemyShieldRef.current)
+    // NOTE: shield-pool displays are NO LONGER committed here. They settle
+    // per-step during playback (syncPHp/syncEHp) so a bar depletes WITH the hit
+    // that drained it, not the instant the turn resolves (which spoiled the
+    // incoming damage). The refs stay authoritative for next-turn soak math.
+    void shieldChanged; void eShieldChanged
 
     playStepChainRef.current = []
     playStepChainRef.current.push(setTimeout(() => playStep(0), SPEED_LINE_HOLD_MS))
@@ -4399,13 +4416,10 @@ export default function RaidCombat({
                 ))}
               </span>
             )}
-            {/* Enemy barrier (Warded affix / The Warding curse) — a hostile
-                ward that soaks your shots before its hull. Violet so it reads
-                as the enemy's, not your cyan shield. */}
-            <AnimatePresence>
-              {enemyShieldHp > 0 && <ShieldBar key="eshield" amount={enemyShieldHp} max={enemyHpMax} color="#c084fc" gradTo="#a855f7" />}
-            </AnimatePresence>
-            <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact />
+            {/* Enemy barrier (Warded affix / The Warding curse) folds into the
+                HP bar as a violet segment so it reads as the enemy's, not your
+                cyan shield. */}
+            <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact shield={enemyShieldHp} shieldColor="#c084fc" shieldGradTo="#a855f7" />
             <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
           </div>
         </motion.button>
@@ -4993,11 +5007,9 @@ export default function RaidCombat({
             <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color: '#ffffff', lineHeight: 1, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {nameplate}
             </p>
-            {/* Shield bar — only present while an absorb buffer is up. */}
-            <AnimatePresence>
-              {abyssalShieldHp > 0 && <ShieldBar key="shield" amount={abyssalShieldHp} max={playerHpMax} />}
-            </AnimatePresence>
-            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact />
+            {/* Absorb shield (Abyssal Tide / Stormward) folds into the HP bar
+                as a cyan segment — one row, no stacked bar. */}
+            <HPBar current={playerHp} max={playerHpMax} accent={PLAYER_COLOR} compact shield={abyssalShieldHp} />
             <ChargesRow charges={playerCharges} max={playerMaxCharges} small />
           </div>
         </motion.button>
@@ -6258,8 +6270,16 @@ function CarapaceDeflect() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function HPBar({ current, max, accent, compact }: { current: number; max: number; accent: string; compact?: boolean }) {
-  const pct = max > 0 ? Math.max(0, (current / max) * 100) : 0
+// HP bar with an OPTIONAL absorb-shield folded into the SAME row: the shield
+// (player's Abyssal Tide / Stormward buffer, or an enemy Warded/Warding
+// barrier) renders as a distinct-coloured segment filling the gap just past
+// the HP fill (reads as temporary bonus HP), plus a small inline chip on the
+// number line. No separate stacked bar — keeps the nameplate to one row.
+function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4' }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string }) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
+  // Cap the shield segment to the empty space so the bar never overflows; the
+  // true amount always shows on the chip even when the hull is full.
+  const shieldPct = max > 0 && shield > 0 ? Math.min(100 - pct, (shield / max) * 100) : 0
   const h = compact ? 8 : 10
   return (
     <div>
@@ -6269,44 +6289,26 @@ function HPBar({ current, max, accent, compact }: { current: number; max: number
           <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: accent }}>{current}/{max}</p>
         </div>
       )}
-      <div style={{ height: h, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
+      <div style={{ position: 'relative', height: h, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
+        {shieldPct > 0 && (
+          <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct}%`, width: `${shieldPct}%`, background: `linear-gradient(90deg, ${shieldColor}, ${shieldGradTo})`, boxShadow: `0 0 6px ${shieldColor}aa`, transition: 'width 0.35s ease, left 0.4s ease' }} />
+        )}
       </div>
       {compact && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 3 }}>
+        <div style={{ display: 'flex', justifyContent: shield > 0 ? 'space-between' : 'flex-end', alignItems: 'center', marginTop: 3 }}>
+          {shield > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill={shieldColor} aria-hidden style={{ filter: `drop-shadow(0 0 2px ${shieldColor})` }}>
+                <path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5z" />
+              </svg>
+              <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: shieldColor, lineHeight: 1 }}>{shield}</span>
+            </span>
+          )}
           <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: accent }}>{current}/{max}</p>
         </div>
       )}
     </div>
-  )
-}
-
-// A slim shield bar shown ABOVE the HP bar whenever the player holds an absorb
-// buffer (Kat's Abyssal Tide / Tidecaller, the Stormward Gauntlet boon — both
-// feed abyssalShieldHp). Cyan so it reads as separate from the green HP; the
-// fill is the shield as a fraction of max HP (so it looks like bonus health).
-function ShieldBar({ amount, max, color, gradTo }: { amount: number; max: number; color?: string; gradTo?: string }) {
-  const SHIELD = color ?? '#7dd3fc'
-  const GRAD_TO = gradTo ?? '#5eead4'
-  const pct = max > 0 ? Math.min(100, (amount / max) * 100) : 0
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: 0.2 }}
-      style={{ marginBottom: 4 }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-        <svg width="9" height="9" viewBox="0 0 24 24" fill={SHIELD} aria-hidden style={{ filter: `drop-shadow(0 0 2px ${SHIELD})` }}>
-          <path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5z" />
-        </svg>
-        <span className="font-karla font-700" style={{ fontSize: '0.64rem', color: SHIELD, lineHeight: 1 }}>{amount}</span>
-      </div>
-      <div style={{ height: 5, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
-        <motion.div
-          animate={{ width: `${pct}%` }} transition={{ duration: 0.35, ease: 'easeOut' }}
-          style={{ height: '100%', background: `linear-gradient(90deg, ${SHIELD}, ${GRAD_TO})`, borderRadius: 4, boxShadow: `0 0 6px ${SHIELD}aa` }}
-        />
-      </div>
-    </motion.div>
   )
 }
 
