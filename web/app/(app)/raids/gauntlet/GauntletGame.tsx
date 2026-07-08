@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import RaidCombat from '../RaidCombat'
 import { getShipSkin } from '@/lib/shipSkins'
@@ -596,6 +597,14 @@ export default function GauntletGame(props: GauntletGameProps) {
               ))}
             </div>
             <p className="font-karla font-700 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.14em', color: '#c48a8a', marginTop: 10 }}>{squadAtRisk.length} crew at risk</p>
+            {/* Why brave it — the upside, so the choice isn't all downside. Blood
+                Gems are the ONLY thing Hardcore pays that normal runs don't. */}
+            <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', textAlign: 'left', marginTop: 15, padding: '0.72rem 0.8rem', borderRadius: 12, background: 'rgba(120,10,20,0.18)', border: `1px solid ${DANGER}44`, boxShadow: `inset 0 0 14px rgba(120,10,18,0.28)` }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0, marginTop: 1, filter: 'drop-shadow(0 0 4px rgba(220,38,38,0.6))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#e0555a" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.5" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
+              <p className="font-karla" style={{ fontSize: '0.76rem', color: '#f0cfcf', lineHeight: 1.46 }}>
+                <span className="font-800" style={{ color: '#fca5a5' }}>Why brave it:</span> bring your crew home alive and the cash-out chest pays <span className="font-700" style={{ color: '#fca5a5' }}>Blood Gems</span> — earned nowhere else. Spend them in the Crew Hall&apos;s <span className="font-700" style={{ color: '#fca5a5' }}>Blood Market</span> to weight recruits toward Epic &amp; Legendary crew and gamble for skins.
+              </p>
+            </div>
             <button onClick={() => begin(true)} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
               style={{ width: '100%', marginTop: 16, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#fff0f0', background: `linear-gradient(180deg, ${DANGER}3a, ${DANGER}18)`, border: `1px solid ${DANGER}88`, cursor: starting ? 'wait' : 'pointer', boxShadow: `0 0 22px ${DANGER}22` }}>
               {starting ? 'Descending…' : 'Descend into the Locker'}
@@ -3167,6 +3176,14 @@ function CurrencyInfoModal({ kind, onClose }: { kind: 'fathoms' | 'blood'; onClo
             </div>
           ))}
         </div>
+        {/* Both uses live in the Crew Hall's Blood Market — a one-tap jump there. */}
+        {blood && (
+          <Link href="/crew?tab=blood" onClick={onClose} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '0.85rem', borderRadius: 12, fontSize: '0.9rem', color: '#ffe6e9', textDecoration: 'none', background: `linear-gradient(180deg, ${accent}3a, ${accent}16)`, border: `1px solid ${accent}88`, boxShadow: `0 0 20px ${accent}22` }}>
+            Open the Blood Market
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </Link>
+        )}
       </motion.div>
     </ModalScrim>
   )
