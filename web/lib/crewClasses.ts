@@ -356,17 +356,18 @@ export const ABYSSAL_TIDE: ClassDef<AbyssalTideMilestone> = {
 
 export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   id: 'leviathan', name: 'Leviathan', shortLabel: 'Salvo',
-  blurb: 'Fires one massive extra cannon shot — a single, ship-shaking knock. Made for big prey: slightly weaker against regular hulls, but it hits far harder against bosses and elites (and crits at the cap).',
+  blurb: 'Fires one massive extra cannon shot — a single, ship-shaking crit that ALWAYS lands the full crit amount. Made for big prey: slightly weaker against regular hulls, but far harder against bosses and elites.',
   color: '#a3b1c6', emoji: '➤',
-  // The apex hunter of BIG prey: ONE reliable heavy shell, a bonus vs
-  // bosses/elites and a small penalty vs regular hulls. The anti-big-target
-  // counterpoint to Blitz's many-small-shots frenzy.
+  // The apex hunter of BIG prey: ONE reliable heavy shell that always lands a
+  // full crit (deterministic crit ceiling in RaidCombat, never a compressed
+  // roll), a bonus vs bosses/elites and a small penalty vs regular hulls. The
+  // anti-big-target counterpoint to Blitz's many-small-shots frenzy.
   milestones: [
-    { unlockLevel: 10,  dmgMult: 0.85, mobPenaltyPct: 0.15, bossBonusPct: 0.15, desc: 'Fire 1 heavy shot at 85% damage. −15% vs regular hulls, +15% vs bosses and elites.' },
-    { unlockLevel: 25,  dmgMult: 1.10, mobPenaltyPct: 0.15, bossBonusPct: 0.20, desc: 'Fire 1 heavy shot at 110% damage. −15% vs regular hulls, +20% vs bosses and elites.' },
-    { unlockLevel: 40,  dmgMult: 1.40, mobPenaltyPct: 0.15, bossBonusPct: 0.25, desc: 'Fire 1 heavy shot at 140% damage. −15% vs regular hulls, +25% vs bosses and elites.' },
-    { unlockLevel: 75,  dmgMult: 1.90, mobPenaltyPct: 0.15, bossBonusPct: 0.30, desc: 'Fire 1 heavy shot at 190% damage. −15% vs regular hulls, +30% vs bosses and elites.' },
-    { unlockLevel: 100, dmgMult: 2.50, mobPenaltyPct: 0.15, bossBonusPct: 0.40, autoCrit: true, desc: 'Fire 1 heavy shot at 250% damage; guaranteed crit. −15% vs regular hulls, +40% vs bosses and elites.' },
+    { unlockLevel: 10,  dmgMult: 0.85, mobPenaltyPct: 0.15, bossBonusPct: 0.15, autoCrit: true, desc: 'Fire 1 heavy crit shot at 85% damage. −15% vs regular hulls, +15% vs bosses and elites.' },
+    { unlockLevel: 25,  dmgMult: 1.10, mobPenaltyPct: 0.15, bossBonusPct: 0.20, autoCrit: true, desc: 'Fire 1 heavy crit shot at 110% damage. −15% vs regular hulls, +20% vs bosses and elites.' },
+    { unlockLevel: 40,  dmgMult: 1.40, mobPenaltyPct: 0.15, bossBonusPct: 0.25, autoCrit: true, desc: 'Fire 1 heavy crit shot at 140% damage. −15% vs regular hulls, +25% vs bosses and elites.' },
+    { unlockLevel: 75,  dmgMult: 1.90, mobPenaltyPct: 0.15, bossBonusPct: 0.30, autoCrit: true, desc: 'Fire 1 heavy crit shot at 190% damage. −15% vs regular hulls, +30% vs bosses and elites.' },
+    { unlockLevel: 100, dmgMult: 2.50, mobPenaltyPct: 0.15, bossBonusPct: 0.40, autoCrit: true, desc: 'Fire 1 heavy crit shot at 250% damage. −15% vs regular hulls, +40% vs bosses and elites.' },
   ],
 }
 

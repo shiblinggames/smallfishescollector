@@ -1832,10 +1832,15 @@ export default function RaidCombat({
       }
       case 'leviathan': {
         const lv = m as import('@/lib/crewClasses').LeviathanMilestone
-        // ONE big shell. Rolls through the standard damage profile (Sharpshot /
-        // damagePct mods compound), × the milestone's dmgMult; Lv 100 crits.
-        const shotResult: ShotResult = lv.autoCrit ? 'critical' : 'hit'
-        let dmg = Math.floor(rollShotDamage(shotResult, shipMinDamage, totalPower) * lv.dmgMult)
+        // ONE big shell — a GUARANTEED crit that ALWAYS lands the full crit
+        // amount. We take the deterministic crit ceiling from the shared damage
+        // profile instead of ROLLING the crit range: that range's floor is
+        // minDmg×2 (tiny vs powerMax on a Power-stacked build), so a rolled
+        // "guaranteed crit" often compressed toward a normal hit and let Blitz's
+        // barrage out-damage it. A fixed crit amount keeps Leviathan the
+        // reliable heavy hitter it's meant to be. × the milestone's dmgMult.
+        const { critMax } = raidDamageProfile(totalPower, shipMinDamage)
+        let dmg = Math.floor(critMax * lv.dmgMult)
         // Made for BIG prey: a bonus vs bosses/elites, a small penalty vs a
         // regular hull. The anti-big-target identity (Blitz is the swarm).
         const bigGame = isBoss || isElite
@@ -1852,7 +1857,7 @@ export default function RaidCombat({
           setEnemyImpact({ key: lk + 1, kind: 'crit' })
           cameraShake('crit')
           vibrate(chaseColor ? [0, 70, 45, 110] : [0, 55, 40, 90])
-          applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, lv.autoCrit ? 'crit' : 'hit', false, chaseColor ?? undefined)
+          applyAbilityDamage(dmg, `${crew.name} lands a leviathan salvo for ${dmg}${bigGame ? ' — big-game strike!' : '!'}`, 'crit', false, chaseColor ?? undefined)
           playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 700))
           // Hunter's Bane lands heavier — a second delayed thud + shake so the
           // blow feels weighty, not just recolored.
