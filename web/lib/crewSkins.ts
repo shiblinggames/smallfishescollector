@@ -62,6 +62,36 @@ export const CREW_SKINS: CrewSkin[] = [
   // ── Blobfish (Bloo) — Rare ──
   { id: 'blobfish_captain',   slug: 'blobfish', name: 'Captain',    filename: 'Blobfish_captain.png',   gemCost: 1000, blurb: 'Squishy, unbothered, and somehow in command of the whole reef.', color: '#e0a838' },
   { id: 'blobfish_partyblob', slug: 'blobfish', name: 'Party Blob', filename: 'Blobfish_partyblob.png', gemCost: 1000, blurb: 'First to the grog, last to leave the deck.',                color: '#ec4899' },
+  // ── Anglerfish (Anglerr) — Rare ──
+  { id: 'anglerfish_sailor', slug: 'anglerfish', name: 'Sailor', filename: 'Anglerfish_sailor.png', gemCost: 1000, blurb: 'Salt in the veins, one eye on the horizon.', color: '#6ba8d9' },
+  { id: 'anglerfish_dealer', slug: 'anglerfish', name: 'Dealer', filename: 'Anglerfish_dealer.png', gemCost: 1000, blurb: 'The house always bites back.', color: '#f0c040' },
+  // ── Beluga Whale (Bellie) — Rare ──
+  { id: 'beluga_whale_bard',         slug: 'beluga_whale', name: 'Bard',         filename: 'Beluga_Whale_bard.png',         gemCost: 1000, blurb: 'A tune for every tide, a tale for every scar.', color: '#c084fc' },
+  { id: 'beluga_whale_tavernkeeper', slug: 'beluga_whale', name: 'Tavernkeeper', filename: 'Beluga_Whale_tavernkeeper.png', gemCost: 1000, blurb: 'The grog never runs dry on this watch.', color: '#c9852f' },
+  // ── Blue Marlin (Marl) — Rare ──
+  { id: 'blue_marlin_aristocrat', slug: 'blue_marlin', name: 'Aristocrat', filename: 'Blue_Marlin_aristocrat.png', gemCost: 1000, blurb: 'Old money runs deep in these waters.', color: '#8fa9c9' },
+  { id: 'blue_marlin_royalty',    slug: 'blue_marlin', name: 'Royalty',    filename: 'Blue_Marlin_royalty.png',    gemCost: 1000, blurb: 'Crowned by the current, bowed to by the reef.', color: '#f0c040' },
+  // ── Lionfish (Linus) — Rare ──
+  { id: 'lionfish_potionmaster',    slug: 'lionfish', name: 'Potion Master',    filename: 'Lionfish_potionmaster.png',    gemCost: 1000, blurb: 'A different brew on every spine.', color: '#7fd88f' },
+  { id: 'lionfish_crimsoncavalier', slug: 'lionfish', name: 'Crimson Cavalier', filename: 'Lionfish_crimsoncavalier.png', gemCost: 1000, blurb: 'En garde — venom on every point.', color: '#dc2626' },
+  // ── Manta Ray (Manny) — Rare ──
+  { id: 'manta_ray_mannyjones', slug: 'manta_ray', name: 'Manny Jones', filename: 'Manta_Ray_mannyjones.png', gemCost: 1000, blurb: "Keeper of the reef's own locker.", color: '#5eead4' },
+  { id: 'manta_ray_spectral',   slug: 'manta_ray', name: 'Spectral',    filename: 'Manta_Ray_spectral.png',   gemCost: 1000, blurb: 'A shadow gliding just past the light.', color: '#a5b4fc' },
+  // ── Nurse Shark (Nursa) — Rare ──
+  { id: 'nurse_shark_royalnurse',   slug: 'nurse_shark', name: 'Royal Nurse',   filename: 'Nurse_Shark_royalnurse.png',   gemCost: 1000, blurb: 'Mends the crew, rules the ward.', color: '#e8c96a' },
+  { id: 'nurse_shark_plaguedoctor', slug: 'nurse_shark', name: 'Plague Doctor', filename: 'Nurse_Shark_plaguedoctor.png', gemCost: 1000, blurb: 'The beak keeps the miasma at bay.', color: '#6b7280' },
+  // ── Oarfish (O'her) — Rare ──
+  { id: 'oarfish_frozen',    slug: 'oarfish', name: 'Frozen',    filename: 'Oarfish_frozen.png',    gemCost: 1000, blurb: 'Locked in the ice of the deep cold.', color: '#7dd3fc' },
+  { id: 'oarfish_collector', slug: 'oarfish', name: 'Collector', filename: 'Oarfish_collector.png', gemCost: 1000, blurb: 'Every lost trinket finds its way home.', color: '#f0c040' },
+  // ── Sailfish (Selly) — Rare ──
+  { id: 'sailfish_overdrive', slug: 'sailfish', name: 'Overdrive', filename: 'Sailfish_futurespeed.png', gemCost: 1000, blurb: 'Past the horizon before the wake catches up.', color: '#22d3ee' },
+  { id: 'sailfish_opulent',   slug: 'sailfish', name: 'Opulent',   filename: 'Sailfish_opulent.png',    gemCost: 1000, blurb: 'Sailing first-class, always.', color: '#f0c040' },
+  // ── Swordfish (Sawyer) — Rare ──
+  { id: 'swordfish_hypersonic', slug: 'swordfish', name: 'Hypersonic', filename: 'Swordfish_superspeed.png', gemCost: 1000, blurb: 'A blade quicker than the sound it makes.', color: '#38bdf8' },
+  { id: 'swordfish_cavalier',   slug: 'swordfish', name: 'Cavalier',   filename: 'Swordfish_cavalier.png',   gemCost: 1000, blurb: 'One thrust, one duel, one winner.', color: '#ef4444' },
+  // ── Whale Shark (Welly) — Rare ──
+  { id: 'whale_shark_afterlife', slug: 'whale_shark', name: 'Afterlife', filename: 'Whale_Shark_afterlife.png', gemCost: 1000, blurb: 'Drifting on from the far shore.', color: '#a78bfa' },
+  { id: 'whale_shark_enforcer',  slug: 'whale_shark', name: 'Enforcer',  filename: 'Whale_Shark_enforcer.png',  gemCost: 1000, blurb: 'Gentle giant? Not today.', color: '#9ca3af' },
   // ── Orca (Orc) — Epic ──
   { id: 'orca_detective',   slug: 'orca', name: 'Detective',    filename: 'Orca_detective.png',   gemCost: 1250, blurb: 'Every current tells a story to a sharp eye.', color: '#a8b8d0' },
   { id: 'orca_stormchaser', slug: 'orca', name: 'Storm Chaser', filename: 'Orca_stormchaser.png', gemCost: 1250, blurb: 'Where the storm breaks, she is already there.', color: '#818cf8' },
