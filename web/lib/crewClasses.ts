@@ -364,11 +364,11 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   // big shell is wasted on small fry). The anti-big-target counterpoint to
   // Blitz's many-small-shots frenzy.
   milestones: [
-    { unlockLevel: 10,  dmgMult: 0.85, mobPenaltyPct: 0.35, bossBonusPct: 0.15, autoCrit: true, desc: 'Fire 1 heavy crit shot at 85% damage. −35% vs regular hulls, +15% vs bosses and elites.' },
-    { unlockLevel: 25,  dmgMult: 1.10, mobPenaltyPct: 0.35, bossBonusPct: 0.20, autoCrit: true, desc: 'Fire 1 heavy crit shot at 110% damage. −35% vs regular hulls, +20% vs bosses and elites.' },
-    { unlockLevel: 40,  dmgMult: 1.40, mobPenaltyPct: 0.35, bossBonusPct: 0.25, autoCrit: true, desc: 'Fire 1 heavy crit shot at 140% damage. −35% vs regular hulls, +25% vs bosses and elites.' },
-    { unlockLevel: 75,  dmgMult: 1.90, mobPenaltyPct: 0.35, bossBonusPct: 0.30, autoCrit: true, desc: 'Fire 1 heavy crit shot at 190% damage. −35% vs regular hulls, +30% vs bosses and elites.' },
-    { unlockLevel: 100, dmgMult: 2.50, mobPenaltyPct: 0.35, bossBonusPct: 0.40, autoCrit: true, desc: 'Fire 1 heavy crit shot at 250% damage. −35% vs regular hulls, +40% vs bosses and elites.' },
+    { unlockLevel: 10,  dmgMult: 0.85, mobPenaltyPct: 0.45, bossBonusPct: 0.25, autoCrit: true, desc: 'Fire 1 heavy crit shot at 85% damage. −45% vs regular hulls, +25% vs bosses and elites.' },
+    { unlockLevel: 25,  dmgMult: 1.10, mobPenaltyPct: 0.45, bossBonusPct: 0.35, autoCrit: true, desc: 'Fire 1 heavy crit shot at 110% damage. −45% vs regular hulls, +35% vs bosses and elites.' },
+    { unlockLevel: 40,  dmgMult: 1.40, mobPenaltyPct: 0.45, bossBonusPct: 0.45, autoCrit: true, desc: 'Fire 1 heavy crit shot at 140% damage. −45% vs regular hulls, +45% vs bosses and elites.' },
+    { unlockLevel: 75,  dmgMult: 1.90, mobPenaltyPct: 0.45, bossBonusPct: 0.55, autoCrit: true, desc: 'Fire 1 heavy crit shot at 190% damage. −45% vs regular hulls, +55% vs bosses and elites.' },
+    { unlockLevel: 100, dmgMult: 2.50, mobPenaltyPct: 0.45, bossBonusPct: 0.65, autoCrit: true, desc: 'Fire 1 heavy crit shot at 250% damage. −45% vs regular hulls, +65% vs bosses and elites.' },
   ],
 }
 
