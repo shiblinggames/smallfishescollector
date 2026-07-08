@@ -364,11 +364,16 @@ export const LEVIATHAN: ClassDef<LeviathanMilestone> = {
   // big shell is wasted on small fry). The anti-big-target counterpoint to
   // Blitz's many-small-shots frenzy.
   milestones: [
-    { unlockLevel: 10,  dmgMult: 0.85, mobPenaltyPct: 0.45, bossBonusPct: 0.25, autoCrit: true, desc: 'Fire 1 heavy crit shot at 85% damage. −45% vs regular hulls, +25% vs bosses and elites.' },
-    { unlockLevel: 25,  dmgMult: 1.10, mobPenaltyPct: 0.45, bossBonusPct: 0.35, autoCrit: true, desc: 'Fire 1 heavy crit shot at 110% damage. −45% vs regular hulls, +35% vs bosses and elites.' },
-    { unlockLevel: 40,  dmgMult: 1.40, mobPenaltyPct: 0.45, bossBonusPct: 0.45, autoCrit: true, desc: 'Fire 1 heavy crit shot at 140% damage. −45% vs regular hulls, +45% vs bosses and elites.' },
-    { unlockLevel: 75,  dmgMult: 1.90, mobPenaltyPct: 0.45, bossBonusPct: 0.55, autoCrit: true, desc: 'Fire 1 heavy crit shot at 190% damage. −45% vs regular hulls, +55% vs bosses and elites.' },
-    { unlockLevel: 100, dmgMult: 2.50, mobPenaltyPct: 0.45, bossBonusPct: 0.65, autoCrit: true, desc: 'Fire 1 heavy crit shot at 250% damage. −45% vs regular hulls, +65% vs bosses and elites.' },
+    // dmgMult multiplies a GUARANTEED FULL CRIT (crit ceiling ~1.5× a power
+    // shot), so these look lower than a normal shot's % but land as heavy crits.
+    // Curve trimmed from the old 0.85–2.50 (which double-counted the crit and
+    // ballooned the boss salvo to ~6× P) to land the Lv100 boss shell at
+    // ~3.3× P — Doby's historical boss power, now reliable, not compressed.
+    { unlockLevel: 10,  dmgMult: 0.45, mobPenaltyPct: 0.45, bossBonusPct: 0.25, autoCrit: true, desc: 'Fire 1 heavy crit shot. −45% vs regular hulls, +25% vs bosses and elites.' },
+    { unlockLevel: 25,  dmgMult: 0.60, mobPenaltyPct: 0.45, bossBonusPct: 0.35, autoCrit: true, desc: 'Fire 1 heavy crit shot. −45% vs regular hulls, +35% vs bosses and elites.' },
+    { unlockLevel: 40,  dmgMult: 0.80, mobPenaltyPct: 0.45, bossBonusPct: 0.45, autoCrit: true, desc: 'Fire 1 heavy crit shot. −45% vs regular hulls, +45% vs bosses and elites.' },
+    { unlockLevel: 75,  dmgMult: 1.05, mobPenaltyPct: 0.45, bossBonusPct: 0.55, autoCrit: true, desc: 'Fire 1 bigger heavy crit shot. −45% vs regular hulls, +55% vs bosses and elites.' },
+    { unlockLevel: 100, dmgMult: 1.35, mobPenaltyPct: 0.45, bossBonusPct: 0.65, autoCrit: true, desc: 'Fire 1 massive heavy crit shot. −45% vs regular hulls, +65% vs bosses and elites.' },
   ],
 }
 
