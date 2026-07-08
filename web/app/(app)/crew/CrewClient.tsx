@@ -999,9 +999,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
   const searchParams = useSearchParams()
   const initialTab    = (() => {
     const t = searchParams?.get('tab')
-    return t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'blood' ? t : 'roster'
-  })() as 'roster' | 'recruits' | 'graveyard' | 'blood'
-  const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard' | 'blood'>(initialTab)
+    return t === 'recruits' || t === 'graveyard' || t === 'roster' || t === 'blood' || t === 'wardrobe' ? t : 'roster'
+  })() as 'roster' | 'recruits' | 'graveyard' | 'blood' | 'wardrobe'
+  const [activeTab, setActiveTab] = useState<'roster' | 'recruits' | 'graveyard' | 'blood' | 'wardrobe'>(initialTab)
   // "How the Blood Market works" help modal.
   const [showBloodHelp, setShowBloodHelp] = useState(false)
   const [graveyard, setGraveyard] = useState<FallenCrew[] | null>(null)
@@ -1354,6 +1354,24 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <span className="font-karla font-700" style={{ fontSize: '0.62rem' }}>{state.bloodGems}</span>
                 </button>
               )}
+              {/* Wardrobe — icon-only skin collection gallery */}
+              <button
+                role="tab"
+                aria-selected={activeTab === 'wardrobe'}
+                aria-label="Wardrobe"
+                title="Wardrobe"
+                onClick={() => setActiveTab('wardrobe')}
+                style={{
+                  flexShrink: 0, width: 38, height: 38,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 9,
+                  background: activeTab === 'wardrobe' ? 'rgba(94,200,232,0.2)' : 'rgba(0,0,0,0.25)',
+                  border: `1px solid ${activeTab === 'wardrobe' ? 'rgba(94,200,232,0.7)' : 'rgba(255,255,255,0.1)'}`,
+                  color: activeTab === 'wardrobe' ? '#8fd7ea' : 'rgba(255,255,255,0.45)',
+                  cursor: 'pointer', transition: 'all 0.18s',
+                }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3a2 2 0 0 0-2 2c0 1 1 1.6 2 2M3 20l9-7 9 7M3 20l9-4 9 4M3 20v-1l9-6 9 6v1" /></svg>
+              </button>
               {/* Graveyard — icon-only memorial entry */}
               <button
                 role="tab"
@@ -1693,6 +1711,89 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
           )
         })()}
 
+        {/* ── The Wardrobe — every crew skin, owned + unowned, grouped by crew.
+             Matters now that the blood gamble hands out skins for crew you don't
+             own yet: this is the only place to actually SEE them + track the
+             collection. Owned + on your roster → tap to equip; owned but the crew
+             isn't recruited → "recruit to wear"; unowned → silhouette + cost. ── */}
+        {activeTab === 'wardrobe' && (() => {
+          const owned = new Set(state.ownedCrewSkins)
+          const ownedSlugs = new Set(state.roster.map(m => (m.slug ?? '').toLowerCase()).filter(Boolean))
+          const ownedCount = CREW_SKINS.filter(s => owned.has(s.id)).length
+          const slugs = [...new Set(CREW_SKINS.map(s => s.slug))]
+          const groups = slugs
+            .map(slug => ({ slug, skins: CREW_SKINS.filter(s => s.slug === slug), rarity: groupForSlug(slug) ?? 0 }))
+            .sort((a, b) => a.rarity - b.rarity)
+          return (
+            <div>
+              <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                <p className="font-cinzel font-800" style={{ fontSize: '1.15rem', color: '#e8f2f5' }}>The Wardrobe</p>
+                <p className="font-karla" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 3, lineHeight: 1.4, maxWidth: 320, marginInline: 'auto' }}>
+                  Every crew skin you&apos;ve collected. You can win skins for crew you don&apos;t own yet in the Blood Market.
+                </p>
+                <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#8fd7ea', marginTop: 6 }}>{ownedCount} / {CREW_SKINS.length} collected</p>
+              </div>
+              {groups.map(({ slug, skins, rarity }) => {
+                const color = RARITY_COLORS[(rarity as CrewRarity)] ?? '#8a857c'
+                const ownsCrew = ownedSlugs.has(slug)
+                const groupOwned = skins.filter(s => owned.has(s.id)).length
+                return (
+                  <div key={slug} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 7 }}>
+                      <p className="font-cinzel font-700" style={{ fontSize: '0.9rem', color }}>
+                        {crewDisplayName(slug, slug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}
+                        {!ownsCrew && <span className="font-karla font-600" style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.4)', marginLeft: 6, letterSpacing: '0.04em' }}>· NOT RECRUITED</span>}
+                      </p>
+                      <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: groupOwned === skins.length ? color : 'rgba(255,255,255,0.5)' }}>{groupOwned}/{skins.length}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      {skins.map(s => {
+                        const isOwned = owned.has(s.id)
+                        const isEquipped = (state.equippedCrewSkins[slug] ?? null) === s.id
+                        const canEquip = isOwned && ownsCrew && !isEquipped
+                        return (
+                          <button key={s.id} type="button"
+                            onClick={canEquip ? () => runSkinAction(`equip:${s.id}`, () => equipCrewSkin(slug, s.id)) : undefined}
+                            disabled={!canEquip || !!skinBusy}
+                            style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                              padding: '0.5rem 0.35rem 0.4rem', borderRadius: 11,
+                              background: isEquipped ? `${color}1e` : 'rgba(4,10,18,0.6)',
+                              border: `1px solid ${isEquipped ? `${color}88` : isOwned ? `${color}33` : 'rgba(255,255,255,0.07)'}`,
+                              cursor: canEquip ? 'pointer' : 'default', textAlign: 'center',
+                            }}>
+                            <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: 8, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.05), rgba(3,6,10,0.9))' }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={artSrc(s.filename)} alt={s.name} loading="lazy" decoding="async"
+                                className={isOwned && s.chase ? 'chase-skin-glow' : undefined}
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4, filter: isOwned ? undefined : 'grayscale(1) brightness(0.3)' }} />
+                              {isEquipped && (
+                                <span style={{ position: 'absolute', top: 3, right: 3, width: 15, height: 15, borderRadius: '50%', background: color, display: 'grid', placeItems: 'center' }}>
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#0a0f14" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5" /></svg>
+                                </span>
+                              )}
+                              {!isOwned && (
+                                <span aria-hidden style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-cinzel font-700" style={{ fontSize: '0.62rem', color: isOwned ? '#e8e2d6' : 'rgba(255,255,255,0.42)', lineHeight: 1.1 }}>{s.name}</p>
+                            <span className="font-karla font-700 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.06em',
+                              color: isEquipped ? color : canEquip ? '#4ade80' : isOwned ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.3)' }}>
+                              {isEquipped ? 'Equipped' : canEquip ? 'Tap to equip' : isOwned ? (ownsCrew ? 'Owned' : 'Recruit to wear') : `${s.gemCost.toLocaleString()} ◆`}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
+
         {/* ── The Blood Market — a dedicated crimson destination for spending
              Blood Gems (Hardcore Gauntlet spoils), styled as its own vendor room
              the way the Forge is. Two offerings: the blood-charged reroll + the
@@ -1798,6 +1899,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   {skinPoolEmpty
                     ? 'Every skin collected'
                     : <><BloodDrop size={14} /> Gamble a Skin <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, letterSpacing: 0 }}>{BLOOD_SKIN_GAMBLE_COST}<BloodDrop size={12} /></span></>}
+                </button>
+                <button onClick={() => setActiveTab('wardrobe')} className="font-karla font-700 tap" style={{ display: 'block', margin: '9px auto 0', background: 'none', border: 'none', color: '#c98a92', fontSize: '0.66rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                  View your Wardrobe →
                 </button>
               </div>
             </div>
