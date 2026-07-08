@@ -1321,8 +1321,9 @@ export default function GauntletGame(props: GauntletGameProps) {
               <span className="font-cinzel font-800" style={{ fontSize: '0.95rem', color: TEAL, lineHeight: 1 }}>{fmt(fathomsNow)}</span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.2" strokeLinecap="round" aria-hidden style={{ opacity: 0.55 }}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>
             </button>
-            {/* Blood Gems — only shown once the player holds any (Hardcore spoil). */}
-            {bloodGemsNow > 0 && (
+            {/* Blood Gems — shown once Hardcore is unlocked (so the currency is
+                discoverable at 0), or whenever the player holds any. */}
+            {(bloodGemsNow > 0 || props.hardcoreUnlocked) && (
               <button onClick={() => setInfoCurrency('blood')} title="What are Blood Gems?"
                 className="active:scale-95"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.3rem 0.7rem 0.3rem 0.55rem', borderRadius: 999, background: 'linear-gradient(180deg, rgba(192,56,74,0.18), rgba(120,20,32,0.12))', border: '1px solid rgba(220,38,38,0.55)', boxShadow: '0 0 12px rgba(192,56,74,0.22)', cursor: 'pointer', transition: 'transform 0.08s' }}>

@@ -13,7 +13,7 @@ import {
 import { clampHallTier, nextHallTier, hallStartXP, type CrewHallTierNum } from '@/lib/crewHall'
 import { crewLevelFromXP } from '@/lib/crewLevel'
 import { getCrewSkin, resolveCrewFilename, CREW_SKINS, type EquippedCrewSkins } from '@/lib/crewSkins'
-import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST } from '@/lib/gauntlet'
+import { bloodRerollTier, BLOOD_SKIN_GAMBLE_COST, hardcoreUnlocked } from '@/lib/gauntlet'
 
 const REROLL_COST = 100
 
@@ -103,6 +103,9 @@ export type CrewState = {
   /** Blood Gem balance — Hardcore Gauntlet premium currency; fuels blood-charged
    *  rerolls + the skin gamble. Shown only in the Crew Hall + Gauntlet. */
   bloodGems: number
+  /** Can this player access the Hardcore Gauntlet? Surfaces the Blood Market
+   *  tab once unlocked (so the currency is discoverable at 0 gems). */
+  hardcoreUnlocked: boolean
   /** Crew skin ids the player owns (gem-bought legendary skins). */
   ownedCrewSkins: string[]
   /** Equipped skin per legendary slug ({ dole: 'dole_frostbite' }). */
@@ -224,7 +227,7 @@ export async function getCrewState(): Promise<CrewState | null> {
 
   const { data: prof } = await admin
     .from('profiles')
-    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins')
+    .select('gems, is_premium, premium_expires_at, expedition_xp, last_free_recruit_date, ship_tier, crew_hall_tier, doubloons, blood_gems, owned_crew_skins, equipped_crew_skins, is_admin, gauntlet_deepest, raid_node_progress')
     .eq('id', user.id)
     .single()
   if (!prof) return null
@@ -285,6 +288,11 @@ export async function getCrewState(): Promise<CrewState | null> {
     hallTier: clampHallTier((prof as any).crew_hall_tier),
     doubloons: (prof as any).doubloons ?? 0,
     bloodGems: ((prof as any).blood_gems as number | null) ?? 0,
+    hardcoreUnlocked: hardcoreUnlocked({
+      isAdmin: (prof as any).is_admin,
+      clearedNodes: ((prof as any).raid_node_progress?.cleared as string[] | undefined) ?? [],
+      deepest: (prof as any).gauntlet_deepest ?? 0,
+    }),
     ownedCrewSkins, equippedCrewSkins,
   }
 }

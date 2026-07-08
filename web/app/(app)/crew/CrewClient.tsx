@@ -1332,8 +1332,9 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
                   <span className="font-karla font-700" style={{ fontSize: '0.62rem', opacity: 0.85 }}>· {boardCount}</span>
                 )}
               </button>
-              {/* Blood Market — crimson tab, only once the player holds Blood Gems */}
-              {state.bloodGems > 0 && (
+              {/* Blood Market — crimson tab, shown once Hardcore is unlocked (so
+                  it's discoverable at 0 gems) or whenever the player holds any */}
+              {(state.hardcoreUnlocked || state.bloodGems > 0) && (
                 <button
                   role="tab"
                   aria-selected={activeTab === 'blood'}
