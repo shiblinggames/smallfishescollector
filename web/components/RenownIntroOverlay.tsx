@@ -6,7 +6,7 @@
 // already maxed (gated by profiles.seen_*_renown_intro). Bigger and slower than
 // the per-level RenownUpOverlay: this is the "you did it" moment.
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { vibrate } from '@/lib/haptics'
 import { playRenownUpSfx } from '@/lib/fishingMusic'
@@ -29,13 +29,21 @@ const COPY: Record<RenownSkill, { track: string; earn: string }> = {
   },
 }
 
+// Hold the moment: taps are ignored until the burst + Renown reveal have played,
+// so a reflexive tap can't skip the "you did it" beat instantly.
+const DISMISS_LOCK_MS = 1900
+
 export default function RenownIntroOverlay({ open, skill, onDismiss }: Props) {
   const copy = COPY[skill]
+  const [canDismiss, setCanDismiss] = useState(false)
 
   useEffect(() => {
     if (!open) return
+    setCanDismiss(false)
     vibrate([0, 30, 60, 40, 90, 55])
     playRenownUpSfx()
+    const t = setTimeout(() => setCanDismiss(true), DISMISS_LOCK_MS)
+    return () => clearTimeout(t)
   }, [open])
 
   return (
@@ -47,13 +55,13 @@ export default function RenownIntroOverlay({ open, skill, onDismiss }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.35 } }}
           transition={{ duration: 0.3 }}
-          onClick={onDismiss}
+          onClick={() => { if (canDismiss) onDismiss() }}
           style={{
             position: 'fixed', inset: 0, zIndex: 95,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'radial-gradient(ellipse 85% 70% at 50% 45%, rgba(70,52,12,0.96) 0%, rgba(0,0,0,0.99) 100%)',
             backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)',
-            cursor: 'pointer', padding: '1.5rem',
+            cursor: canDismiss ? 'pointer' : 'default', padding: '1.5rem',
           }}
         >
           {/* Ring bursts — larger + one extra ring vs the per-level overlay. */}
@@ -119,12 +127,18 @@ export default function RenownIntroOverlay({ open, skill, onDismiss }: Props) {
               </p>
             </motion.div>
 
-            <motion.p
-              className="font-karla font-400"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
-              style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.34)', marginTop: '1.5rem', letterSpacing: '0.08em' }}>
-              tap to continue
-            </motion.p>
+            {/* Only invites a tap once dismissal is actually unlocked, so the
+                prompt never appears before the moment has landed. */}
+            <AnimatePresence>
+              {canDismiss && (
+                <motion.p
+                  className="font-karla font-400"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}
+                  style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.34)', marginTop: '1.5rem', letterSpacing: '0.08em' }}>
+                  tap to continue
+                </motion.p>
+              )}
+            </AnimatePresence>
           </motion.div>
         </motion.div>
       )}
