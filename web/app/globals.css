@@ -708,6 +708,28 @@ html, body {
 }
 .rod-glow-prismatic { animation: rod-glow-prismatic 4.2s linear infinite; }
 
+/* ── Hardcore Gauntlet dread ──
+   A blood vignette hung over the whole viewport while a hardcore run is live
+   (toggled by GauntletGame via the .hardcore-gauntlet body class). Edge-only
+   so the fight stays readable; a slow breathing pulse keeps the dread alive.
+   pointer-events:none so it never eats taps. */
+body.hardcore-gauntlet::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 45;
+  background: radial-gradient(ellipse 118% 100% at 50% 50%, transparent 50%, rgba(120,8,16,0.30) 86%, rgba(88,4,10,0.52) 100%);
+  animation: hardcore-vignette 4.5s ease-in-out infinite;
+}
+@keyframes hardcore-vignette {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.hardcore-gauntlet::after { animation: none; opacity: 0.85; }
+}
+
 /* ── Hook glows (per-theme animated effects) ──
    Used by lib/hooks.ts via hookGlowClass(). chrome / gilded are very
    subtle so silver / gold hooks read as polished metal; arcane / cursed

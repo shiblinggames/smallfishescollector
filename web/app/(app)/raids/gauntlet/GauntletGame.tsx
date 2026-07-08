@@ -392,6 +392,17 @@ export default function GauntletGame(props: GauntletGameProps) {
     }
   }, [runLive, router])
 
+  // Hardcore dread — hang an ominous blood vignette over the WHOLE viewport
+  // for the duration of a hardcore run (and its death screen) so it's never in
+  // doubt which mode you're in. A body class drives a fixed ::after in
+  // globals.css (edge-only + a slow breathing pulse), so it survives every
+  // phase's early-return render and the PageTransition/fixed pitfalls.
+  useEffect(() => {
+    const on = hardcoreRun && (runLive || phase === 'dead')
+    document.body.classList.toggle('hardcore-gauntlet', on)
+    return () => document.body.classList.remove('hardcore-gauntlet')
+  }, [hardcoreRun, runLive, phase])
+
   // Body-scroll lock in installed PWA only, and ONLY during combat (keeps the
   // action buttons reachable — same reasoning as RaidGame). The meta screens
   // (intro/cooldown/between/reward/dead) are taller and must stay scrollable.
@@ -1943,15 +1954,28 @@ export default function GauntletGame(props: GauntletGameProps) {
             </motion.div>
           )}
 
+          {/* Hardcore — the crew are on the line, not just the pot. A stark red
+              reminder at every dive-or-bank fork so the stakes are never a
+              surprise on the death screen. */}
+          {hardcoreRun && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, padding: '0.7rem 0.85rem', borderRadius: 12, textAlign: 'left',
+              background: 'linear-gradient(180deg, rgba(140,10,20,0.3), rgba(88,4,10,0.16))', border: '1px solid rgba(220,38,38,0.5)', boxShadow: '0 0 18px rgba(200,20,32,0.22), inset 0 0 12px rgba(120,10,18,0.3)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, filter: 'drop-shadow(0 0 5px rgba(220,38,38,0.5))' }}><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.4" fill="#fca5a5" stroke="none" /><circle cx="15" cy="11" r="1.4" fill="#fca5a5" stroke="none" /><path d="M11 15.5h2" /></svg>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f0c9c9', lineHeight: 1.42 }}>
+                <span className="font-800 uppercase tracking-[0.08em]" style={{ color: '#fca5a5' }}>Hardcore.</span> Sink on this dive and <span className="font-800" style={{ color: '#fca5a5' }}>your whole crew drowns for good</span> — no revives, no recruiting them back. Bank now to bring them home.
+              </p>
+            </div>
+          )}
+
           {/* Push deeper — the gamble against the banked haul above. */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: 22 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: hardcoreRun ? 14 : 22 }}>
             <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.05em] tap"
               style={{ width: '100%', padding: '1.05rem', borderRadius: 15, fontSize: '1.05rem', background: `${TEAL}1e`, border: `1px solid ${TEAL}77`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               Risk It · Dive to Depth {nextDepth}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
             </button>
             <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9a857a', marginTop: 3, lineHeight: 1.4 }}>
-              Sink on the next dive and all <span style={{ color: '#d8a14a' }}>{fmt(previewDoubloons)} ⟡</span> goes down with you.
+              Sink on the next dive and all <span style={{ color: '#d8a14a' }}>{fmt(previewDoubloons)} ⟡</span> goes down with you{hardcoreRun ? <span style={{ color: '#f0a0a0' }}> — and your crew with it</span> : ''}.
             </p>
           </div>
         </div>
@@ -2360,7 +2384,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             background: `radial-gradient(ellipse 116% 96% at 50% 44%, transparent 56%, rgba(3,9,18,${gloom}) 100%)` }} />
         )}
         <div className="gauntlet-depthbar" style={{ width: '100%', flexShrink: 0, marginBottom: 2 }}>
-          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} />
+          <DepthBar depth={fight.depth} pot={pot} isBoss={fight.isBoss} isElite={fight.isElite} affixName={fight.affix?.name} curses={Object.keys(curseTiers).length} isHardcore={hardcoreRun} />
         </div>
         <div style={{ width: '100%' }}>
           <RaidCombat
@@ -3793,17 +3817,24 @@ function BackLink({ router, label, primary, onClick }: { router: ReturnType<type
   )
 }
 
-function DepthBar({ depth, pot, isBoss, isElite, affixName, curses }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number }) {
+function DepthBar({ depth, pot, isBoss, isElite, affixName, curses, isHardcore }: { depth: number; pot: number; isBoss: boolean; isElite: boolean; affixName?: string; curses: number; isHardcore?: boolean }) {
   const tag = isBoss ? 'BOSS' : isElite ? `ELITE${affixName ? ` · ${affixName}` : ''}` : null
   const tagColor = isBoss ? '#f87171' : '#c084fc'
   return (
     <div className="flex items-center justify-between"
-      style={{ background: 'rgba(4,10,18,0.94)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: `1px solid ${GOLD}28`, borderRadius: 14, padding: '0.4rem 0.8rem' }}>
+      style={{ background: 'rgba(4,10,18,0.94)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: isHardcore ? '1px solid rgba(220,38,38,0.55)' : `1px solid ${GOLD}28`, borderRadius: 14, padding: '0.4rem 0.8rem', boxShadow: isHardcore ? '0 0 16px rgba(200,20,32,0.32), inset 0 0 10px rgba(120,10,18,0.3)' : undefined }}>
       <div className="flex items-baseline gap-1.5">
         <span className="font-karla font-600" style={{ fontSize: '0.46rem', color: GOLD + 'bb', letterSpacing: '0.1em' }}>DEPTH</span>
         <span className="font-cinzel font-800" style={{ fontSize: '1rem', color: GOLD, lineHeight: 1 }}>{depth}</span>
         {tag && <span className="font-cinzel font-700" style={{ fontSize: '0.56rem', color: tagColor, letterSpacing: '0.06em', marginLeft: 4 }}>{tag}</span>}
       </div>
+      {isHardcore && (
+        <span className="font-cinzel font-800 uppercase" title="Hardcore — your crew die for good if you sink"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.54rem', letterSpacing: '0.12em', color: '#fca5a5', padding: '0.16rem 0.44rem', borderRadius: 999, background: 'rgba(140,10,20,0.4)', border: '1px solid rgba(220,38,38,0.6)', boxShadow: '0 0 10px rgba(220,38,38,0.4)', whiteSpace: 'nowrap' }}>
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></svg>
+          Hardcore
+        </span>
+      )}
       <div className="flex items-center gap-2.5">
         {curses > 0 && (
           <span className="flex items-baseline gap-1" title={`${curses} curse${curses === 1 ? '' : 's'} active`}>
