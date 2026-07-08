@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getHook, HOOKS, hookGlowClass } from '@/lib/hooks'
-import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS } from '@/lib/rods'
+import { getEffectiveRod, RODS, rodGlowClass, isCaptainRod, rodHasUniqueEffect, rodEffectLabel, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST } from '@/lib/rods'
 import { openMembership } from '@/components/MembershipModal'
 import { getReel, REELS } from '@/lib/reels'
 import { fishingGearLevelReq } from '@/lib/gearGating'
@@ -678,7 +679,7 @@ function AppearanceSlot({
 export default function GearScreen({
   baitInventory, selectedBait, onSelectBait,
   equippedRodTier, ownedRods, onEquipRod, onBuyRod, onSellRod,
-  completionistEffects, onCompletionistEffectsChange,
+  completionistEffects, hasForgedBefore, onCompletionistEffectsChange,
   reelTier, hookTier, lineTier, onBuyReel, onBuyHook,
   rodHasAffordable, reelHasAffordable, hookHasAffordable,
   characterColor, charSrc, equippedBadges, unlockedCharacterColors, unlockedBadges, onUpdateColor, onEquipBadge,
@@ -707,8 +708,11 @@ export default function GearScreen({
   /** Completionist forge: rod tiers whose unique effects are folded into
    *  the Completionist (up to COMPLETIONIST_MAX_EFFECTS). */
   completionistEffects: number[]
-  /** Persist a new forge loadout (validated server-side). */
-  onCompletionistEffectsChange: (tiers: number[]) => void | Promise<void>
+  /** Has the player already done their FREE first forge (re-forges cost). */
+  hasForgedBefore: boolean
+  /** Persist a new forge loadout (validated + charged server-side). Returns the
+   *  outcome so the panel can roll back / show an error. */
+  onCompletionistEffectsChange: (tiers: number[]) => Promise<{ ok: true } | { error: string }>
   reelTier: number
   hookTier: number
   lineTier: number
@@ -819,19 +823,28 @@ export default function GearScreen({
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
 
-  // Forge juice — a spark burst keyed to the last fused/removed effect, plus
-  // SFX + haptic. Forging the 100%-reward rod is a rare, ceremonial act, so a
-  // dramatic localized moment is warranted (unlike frequent-action effects).
+  // Forge juice — a spark burst keyed to the last staged/removed effect, plus
+  // SFX + haptic. Forging is now STAGE-then-COMMIT: tapping a rod only arranges
+  // the bench (stagedEffects); a Re-Forge button commits (free first time, then
+  // a doubloon fee) and plays the cinematic merge.
   const [forgeBurst, setForgeBurst] = useState<{ id: number; color: string; dir: 'in' | 'out' } | null>(null)
-  // Bumped on every forge so the rod emblem replays its recoil pulse.
   const [forgePulse, setForgePulse] = useState(0)
-  // Last-forged colour tints the emblem's tip glow.
   const [forgeAccent, setForgeAccent] = useState('#f3d98a')
-  function triggerForge(tier: number, color: string) {
-    const selected = completionistEffects.includes(tier)
+  // The bench: what the player is arranging, before committing. Resyncs to the
+  // saved loadout whenever it changes (initial / after a commit / rollback).
+  const [stagedEffects, setStagedEffects] = useState<number[]>(completionistEffects)
+  useEffect(() => { setStagedEffects(completionistEffects) }, [completionistEffects])
+  // Commit-time cinematic (donor rods streaking into the Completionist) + guards.
+  const [forgeCinematic, setForgeCinematic] = useState<{ donors: { color: string; slug: string | null }[] } | null>(null)
+  const [forgeBusy, setForgeBusy] = useState(false)
+  const [forgeErr, setForgeErr] = useState<string | null>(null)
+
+  function toggleStaged(tier: number, color: string) {
+    if (forgeBusy) return
+    const selected = stagedEffects.includes(tier)
     const next = selected
-      ? completionistEffects.filter(t => t !== tier)
-      : [...completionistEffects, tier]
+      ? stagedEffects.filter(t => t !== tier)
+      : [...stagedEffects, tier]
     const dir: 'in' | 'out' = selected ? 'out' : 'in'
     setForgeBurst({ id: Date.now(), color, dir })
     setForgePulse(p => p + 1)
@@ -840,7 +853,42 @@ export default function GearScreen({
       playForgeSfx(dir === 'out')
       vibrate(dir === 'in' ? [12, 28, 22] : 14)
     } catch {}
-    onCompletionistEffectsChange(next)
+    setStagedEffects(next)
+    setForgeErr(null)
+  }
+
+  // Has the bench changed from what's saved? Drives the Re-Forge / Discard row.
+  const savedForgeSet = new Set(completionistEffects)
+  const forgeDirty = stagedEffects.length !== completionistEffects.length || stagedEffects.some(t => !savedForgeSet.has(t))
+  // Fee: free the first time (or when clearing); flat REFORGE_COST after.
+  const reforgeCost = (hasForgedBefore && stagedEffects.length > 0 && forgeDirty) ? REFORGE_COST : 0
+  const canAffordReforge = doubloons >= reforgeCost
+
+  function commitForge() {
+    if (!forgeDirty || forgeBusy) return
+    if (reforgeCost > 0 && !canAffordReforge) { setForgeErr(`Need ${REFORGE_COST.toLocaleString()} ⟡ to re-forge`); return }
+    setForgeErr(null)
+    setForgeBusy(true)
+    const staged = stagedEffects
+    const donors = staged.map(t => {
+      const r = RODS.find(rr => rr.tier === t)
+      return { color: r?.color ?? '#e8c84a', slug: r?.slug ?? null }
+    })
+    setForgeCinematic({ donors })
+    try { playForgeSfx(false); vibrate([0, 30, 50, 40, 90, 55]) } catch {}
+    // Commit once the merge animation has landed.
+    setTimeout(async () => {
+      const res = await onCompletionistEffectsChange(staged)
+      setForgeCinematic(null)
+      setForgeBusy(false)
+      if ('error' in res) { setForgeErr(res.error); setStagedEffects(completionistEffects) }
+    }, 1400)
+  }
+
+  function discardForge() {
+    if (forgeBusy) return
+    setStagedEffects(completionistEffects)
+    setForgeErr(null)
   }
 
   const rod  = getEffectiveRod(equippedRodTier, completionistEffects)
@@ -1154,7 +1202,7 @@ export default function GearScreen({
                         in/out of the loadout (capped at COMPLETIONIST_MAX_EFFECTS)
                         and persists via onCompletionistEffectsChange. */}
                     {ownsCompletionist && (() => {
-                      const filled = completionistEffects.length
+                      const filled = stagedEffects.length
                       const auraT = filled / COMPLETIONIST_MAX_EFFECTS // 0..1 power level
                       return (
                       <div style={{
@@ -1221,7 +1269,7 @@ export default function GearScreen({
                             />
                           )}
                           {Array.from({ length: COMPLETIONIST_MAX_EFFECTS }).map((_, i) => {
-                            const tier = completionistEffects[i]
+                            const tier = stagedEffects[i]
                             const donor = tier != null ? RODS.find(r => r.tier === tier) : undefined
                             return (
                               <div key={i} style={{
@@ -1253,7 +1301,7 @@ export default function GearScreen({
                         </div>
 
                         <p className="font-karla" style={{ position: 'relative', fontSize: '0.68rem', color: '#9aa6b2', lineHeight: 1.45 }}>
-                          Fold up to three of your rods&rsquo; effects into the Completionist. Re-forge whenever you like, your rods are never consumed.
+                          Fold up to three of your rods&rsquo; effects into the Completionist. Your rods are never consumed. The first forge is free; re-forging later costs {REFORGE_COST.toLocaleString()} ⟡.
                         </p>
                         {forgeableRods.length === 0 ? (
                           <p className="font-karla" style={{ position: 'relative', fontSize: '0.66rem', color: '#6a7888', fontStyle: 'italic' }}>
@@ -1262,14 +1310,14 @@ export default function GearScreen({
                         ) : (
                           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 5 }}>
                             {forgeableRods.map(fr => {
-                              const selected = completionistEffects.includes(fr.tier)
-                              const full = !selected && completionistEffects.length >= COMPLETIONIST_MAX_EFFECTS
+                              const selected = stagedEffects.includes(fr.tier)
+                              const full = !selected && stagedEffects.length >= COMPLETIONIST_MAX_EFFECTS
                               return (
                                 <motion.button
                                   key={fr.tier}
-                                  disabled={full}
+                                  disabled={full || forgeBusy}
                                   whileTap={full ? undefined : { scale: 0.97 }}
-                                  onClick={() => triggerForge(fr.tier, fr.color)}
+                                  onClick={() => toggleStaged(fr.tier, fr.color)}
                                   animate={{
                                     background: selected ? `${fr.color}24` : 'rgba(255,255,255,0.03)',
                                     borderColor: selected ? `${fr.color}cc` : 'rgba(255,255,255,0.08)',
@@ -1294,11 +1342,41 @@ export default function GearScreen({
                                     fontSize: '0.7rem', flexShrink: 0,
                                     color: selected ? fr.color : full ? '#4a5562' : '#7a8aa0',
                                   }}>
-                                    {selected ? '✓ Forged' : full ? 'Full' : '+ Forge'}
+                                    {selected ? '− Remove' : full ? 'Full' : '+ Add'}
                                   </span>
                                 </motion.button>
                               )
                             })}
+                          </div>
+                        )}
+
+                        {/* ── Commit row ── stage-then-forge: only shows when the
+                            bench differs from the saved loadout. Free first time,
+                            REFORGE_COST after. */}
+                        {forgeDirty && (
+                          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+                            {forgeErr && <p className="font-karla font-600" style={{ fontSize: '0.62rem', color: '#f2a0a0', textAlign: 'center' }}>{forgeErr}</p>}
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button
+                                onClick={discardForge}
+                                disabled={forgeBusy}
+                                className="font-karla font-700 uppercase tracking-[0.08em]"
+                                style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontSize: '0.62rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.72)', cursor: forgeBusy ? 'default' : 'pointer', opacity: forgeBusy ? 0.5 : 1 }}>
+                                Discard
+                              </button>
+                              <button
+                                onClick={commitForge}
+                                disabled={forgeBusy || (reforgeCost > 0 && !canAffordReforge)}
+                                className="font-cinzel font-700 uppercase tracking-[0.06em]"
+                                style={{ flex: 1.6, padding: '0.6rem', borderRadius: 10, fontSize: '0.66rem', background: (reforgeCost > 0 && !canAffordReforge) ? 'rgba(232,200,74,0.08)' : 'linear-gradient(180deg, rgba(240,200,90,0.34), rgba(200,160,50,0.28))', border: '1px solid rgba(240,200,90,0.7)', color: (reforgeCost > 0 && !canAffordReforge) ? 'rgba(243,217,138,0.5)' : '#fdf3d4', cursor: (forgeBusy || (reforgeCost > 0 && !canAffordReforge)) ? 'default' : 'pointer', boxShadow: (reforgeCost > 0 && !canAffordReforge) ? 'none' : '0 0 16px rgba(240,200,90,0.28)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                {forgeBusy ? 'Forging…' : reforgeCost > 0 ? `Re-Forge · ${REFORGE_COST.toLocaleString()} ⟡` : 'Forge'}
+                              </button>
+                            </div>
+                            {reforgeCost > 0 && (
+                              <p className="font-karla" style={{ fontSize: '0.54rem', color: canAffordReforge ? '#8a8480' : '#f2a0a0', textAlign: 'center' }}>
+                                You have {doubloons.toLocaleString()} ⟡
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2810,6 +2888,50 @@ export default function GearScreen({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Completionist forge cinematic ── the staged donor rods streak in and
+           merge into the Completionist on a prismatic flash. Plays on commit. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {forgeCinematic && (
+            <motion.div key="forge-cine"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'radial-gradient(ellipse 80% 65% at 50% 46%, rgba(34,24,6,0.95) 0%, rgba(4,4,9,0.98) 100%)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+              {/* Rotating prismatic ray-fan. */}
+              <motion.div aria-hidden initial={{ opacity: 0, scale: 0.5, rotate: 0 }} animate={{ opacity: [0, 0.5, 0.6], scale: [0.5, 1, 1.2], rotate: 130 }} transition={{ duration: 1.4, ease: 'easeOut' }}
+                style={{ position: 'absolute', width: 560, height: 560, borderRadius: '50%', background: 'conic-gradient(from 0deg, #f26d6d33, #f2c14e33, #57d06a33, #5aa9f033, #f26d6d33)', maskImage: 'radial-gradient(circle, transparent 26%, #000 42%, transparent 74%)', WebkitMaskImage: 'radial-gradient(circle, transparent 26%, #000 42%, transparent 74%)' }} />
+              {/* The Completionist rod, center — swells on impact. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <motion.img src="/rod_completionist_thumb.png" alt="" width={210} height={210}
+                initial={{ scale: 0.72, opacity: 0.55 }}
+                animate={{ scale: [0.72, 0.72, 1.18, 1], opacity: [0.55, 0.7, 1, 1] }}
+                transition={{ duration: 1.4, times: [0, 0.55, 0.74, 1], ease: 'easeOut' }}
+                style={{ position: 'relative', zIndex: 2, width: 210, height: 210, objectFit: 'contain', filter: 'drop-shadow(0 0 14px #f26d6daa) drop-shadow(0 0 26px #5aa9f088) drop-shadow(0 0 44px #f2c14e88)' }} />
+              {/* Donor rods streaking in from around and shrinking into the rod. */}
+              {forgeCinematic.donors.map((d, i) => {
+                const ang = (i / Math.max(1, forgeCinematic.donors.length)) * Math.PI * 2 - Math.PI / 2
+                const sx = Math.cos(ang) * 250, sy = Math.sin(ang) * 250
+                return (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <motion.img key={i} src={d.slug ? `/${d.slug}_thumb.png` : '/rod_completionist_thumb.png'} alt="" width={76} height={76}
+                    initial={{ x: sx, y: sy, scale: 0.9, opacity: 0, rotate: 0 }}
+                    animate={{ x: [sx, sx, 0], y: [sy, sy, 0], scale: [0.9, 0.95, 0.15], opacity: [0, 1, 1, 0], rotate: 200 }}
+                    transition={{ duration: 1.05, delay: 0.12 + i * 0.07, times: [0, 0.35, 1], ease: 'easeIn' }}
+                    style={{ position: 'absolute', zIndex: 1, width: 76, height: 76, objectFit: 'contain', filter: `drop-shadow(0 0 12px ${d.color}) drop-shadow(0 0 22px ${d.color}88)` }} />
+                )
+              })}
+              {/* White impact flash on convergence. */}
+              <motion.div aria-hidden initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 0, 0.95, 0], scale: [0.3, 0.3, 2.2, 2.9] }} transition={{ duration: 1.4, times: [0, 0.66, 0.76, 1], ease: 'easeOut' }}
+                style={{ position: 'absolute', zIndex: 3, width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, #fffdf2ee 0%, #f2c14e66 38%, transparent 68%)', pointerEvents: 'none' }} />
+              <motion.p className="font-cinzel font-800 uppercase" initial={{ opacity: 0, y: 8 }} animate={{ opacity: [0, 0, 1], y: [8, 8, 0] }} transition={{ duration: 1.4, times: [0, 0.76, 0.9] }}
+                style={{ position: 'absolute', bottom: '20%', zIndex: 4, fontSize: '0.9rem', letterSpacing: '0.3em', textIndent: '0.3em', background: 'linear-gradient(100deg, #f26d6d, #f2c14e, #57d06a, #5aa9f0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', filter: 'drop-shadow(0 1px 8px rgba(0,0,0,0.6))' }}>
+                Forging
+              </motion.p>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   )
 }

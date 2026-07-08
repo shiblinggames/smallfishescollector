@@ -47,7 +47,7 @@ type FishSpeciesBasic = { id: number; name: string; scientific_name: string; fun
 export default function FishingPageClient({
   hookTier, rodTier, reelTier, lineTier,
   initialDoubloons, initialFishingXP, initialBait, initialLastUsedBait, initialInventory, uniqueSpeciesCaught, zoneStats,
-  fishHoldTier, ownedRods, initialCompletionistEffects, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
+  fishHoldTier, ownedRods, initialCompletionistEffects, initialHasForgedBefore, allFishSpecies, caughtFishIds, mountedFishIds, initialPersonalBests, initialHighestPerfectStreak, initialPerfectStreak,
   hasSeenFishingTour, hasSeenFishingCatchTour, hasSeenFirstCatchCelebration, initialShowWaitTimer, activeSession, username, zoneRewardsClaimed,
   initialDailyChallenge, hasTideTurner, initialTideTurnerSkipsLeft, initialEquippedSpecial, hasPhantomHook, hasAutoCaster, hasAutoCatcher, gauntletDeepest, gauntletUpgrades, hasPerfectedSigil, prestigeLevels, ancientCatches, characterColor, unlockedCharacterColors, equippedBadges, unlockedBadges, marketMultipliers, isPremium, equippedBoat, unlockedBoats, equippedHat, unlockedHats, equippedPet, unlockedPets,
   initialFinnEncounters, initialFinnWins, initialFinnSeenBeats, initialFinnRevealed, initialFinnLastOutcome,
@@ -67,6 +67,7 @@ export default function FishingPageClient({
   fishHoldTier: number
   ownedRods: number[]
   initialCompletionistEffects: number[]
+  initialHasForgedBefore: boolean
   allFishSpecies: FishSpeciesBasic[]
   caughtFishIds: number[]
   mountedFishIds: number[]
@@ -232,6 +233,7 @@ export default function FishingPageClient({
       unlockedBadges={unlockedBadges}
       ownedRods={ownedRods}
       initialCompletionistEffects={initialCompletionistEffects}
+      initialHasForgedBefore={initialHasForgedBefore}
       allFishSpecies={allFishSpecies}
       initialCaughtFishIds={caughtFishIds}
       initialMountedFishIds={mountedFishIds}

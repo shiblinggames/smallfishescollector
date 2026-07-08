@@ -217,6 +217,8 @@ export function getRod(tier: number): RodDef {
 // in profiles.completionist_effects; resolveCompletionistRod merges them.
 export const COMPLETIONIST_TIER = 14
 export const COMPLETIONIST_MAX_EFFECTS = 3
+// Flat doubloon fee to RE-forge (change effects) after the free first forge.
+export const REFORGE_COST = 50_000
 
 /** A rod carries a "unique effect" worth absorbing if it has any proc beyond
  *  plain speed / catch-zone. The forge only accepts these (Bamboo, Graphite,

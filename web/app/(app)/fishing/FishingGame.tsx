@@ -2993,6 +2993,7 @@ export default function FishingGame({
   fishHoldTier: initialFishHoldTier,
   ownedRods: initialOwnedRods,
   initialCompletionistEffects,
+  initialHasForgedBefore,
   allFishSpecies, initialCaughtFishIds, initialMountedFishIds,
   initialPersonalBests,
   initialHighestPerfectStreak, initialPerfectStreak,
@@ -3020,6 +3021,7 @@ export default function FishingGame({
   fishHoldTier: number
   ownedRods: number[]
   initialCompletionistEffects: number[]
+  initialHasForgedBefore: boolean
   allFishSpecies: FishSpeciesBasic[]
   initialCaughtFishIds: number[]
   /** Species the player has mounted as golden in the Logbook. Used to
@@ -3107,6 +3109,9 @@ export default function FishingGame({
   // Resolved into the rod's effective stats below via getEffectiveRod. The
   // forge UI in GearScreen updates this optimistically + persists server-side.
   const [completionistEffects, setCompletionistEffects] = useState<number[]>(initialCompletionistEffects)
+  // Has the player already done their FREE first forge? Drives the re-forge fee
+  // (free first, 50k after). Set true once a forge with effects commits.
+  const [hasForgedBefore, setHasForgedBefore] = useState(initialHasForgedBefore)
   // One-time "Rod Forged" flourish — fires the first time the player ever fuses
   // an effect (server returns firstForge off the has_seen_forge_flourish flag).
   const [forgeFlourish, setForgeFlourish] = useState(false)
@@ -8665,13 +8670,21 @@ export default function FishingGame({
               ownedRods={ownedRods}
               onEquipRod={handleEquipRod}
               completionistEffects={completionistEffects}
+              hasForgedBefore={hasForgedBefore}
               onCompletionistEffectsChange={async (tiers) => {
                 const prev = completionistEffects
                 setCompletionistEffects(tiers) // optimistic
                 const res = await saveCompletionistEffects(tiers)
-                if ('error' in res) { setCompletionistEffects(prev); return }
+                if ('error' in res) { setCompletionistEffects(prev); return { error: res.error } }
                 setCompletionistEffects(res.completionistEffects)
                 if (res.firstForge) setForgeFlourish(true)
+                // After any committed forge the free first forge is spent.
+                if (res.completionistEffects.length > 0) setHasForgedBefore(true)
+                if (res.charged) {
+                  setDoubloons(res.newDoubloons)
+                  window.dispatchEvent(new CustomEvent('doubloons-changed', { detail: res.newDoubloons }))
+                }
+                return { ok: true as const }
               }}
               rodHasAffordable={rodHasAffordable}
               reelHasAffordable={reelHasAffordable}

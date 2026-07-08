@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBait } from '@/lib/bait'
-import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, rodHasUniqueEffect } from '@/lib/rods'
+import { getRod, getEffectiveRod, COMPLETIONIST_TIER, COMPLETIONIST_MAX_EFFECTS, REFORGE_COST, rodHasUniqueEffect } from '@/lib/rods'
 import { getFishHold } from '@/lib/fishHold'
 import { unlockBadge } from '@/app/(app)/achievements/badgeActions'
 import { recordChallengeScore } from '@/app/(app)/social/challengeActions'
@@ -1747,7 +1747,7 @@ export async function mountGoldenTrophy(
 // single source the gameplay paths trust.
 export async function setCompletionistEffects(
   tiers: number[],
-): Promise<{ completionistEffects: number[]; firstForge: boolean } | { error: string }> {
+): Promise<{ completionistEffects: number[]; firstForge: boolean; charged: boolean; newDoubloons: number } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
@@ -1755,7 +1755,7 @@ export async function setCompletionistEffects(
 
   const [{ data: ownedRows }, { data: prof }] = await Promise.all([
     admin.from('rod_inventory').select('rod_tier').eq('user_id', user.id),
-    admin.from('profiles').select('has_seen_forge_flourish').eq('id', user.id).single(),
+    admin.from('profiles').select('has_seen_forge_flourish, completionist_effects, doubloons').eq('id', user.id).single(),
   ])
   const owned = new Set((ownedRows ?? []).map(r => r.rod_tier as number))
   if (!owned.has(COMPLETIONIST_TIER)) return { error: "You haven't earned the Completionist Rod yet." }
@@ -1771,13 +1771,25 @@ export async function setCompletionistEffects(
     clean.push(t)
   }
 
+  const doubloons = prof?.doubloons ?? 0
+  const current = (prof?.completionist_effects as number[] | null) ?? []
+  const currentSet = new Set(current)
+  const changed = clean.length !== current.length || clean.some(t => !currentSet.has(t))
   // First-forge flourish fires the first time an actual effect lands (not on an
   // empty loadout / clear). One-time via the has_seen_forge_flourish flag.
   const firstForge = clean.length > 0 && !prof?.has_seen_forge_flourish
+  // Charge for a re-forge: a real change to a non-empty loadout AFTER the free
+  // first forge. Using the flag (not "is current empty") stops a clear-then-
+  // rebuild from dodging the fee.
+  const mustPay = changed && clean.length > 0 && !!prof?.has_seen_forge_flourish
+  if (mustPay && doubloons < REFORGE_COST) return { error: `Re-forging costs ${REFORGE_COST.toLocaleString()} doubloons.` }
+
+  const newDoubloons = mustPay ? doubloons - REFORGE_COST : doubloons
   const update: Record<string, unknown> = { completionist_effects: clean }
   if (firstForge) update.has_seen_forge_flourish = true
+  if (mustPay) update.doubloons = newDoubloons
 
   await admin.from('profiles').update(update).eq('id', user.id)
-  return { completionistEffects: clean, firstForge }
+  return { completionistEffects: clean, firstForge, charged: mustPay, newDoubloons }
 }
 

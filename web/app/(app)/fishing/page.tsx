@@ -186,6 +186,7 @@ export default async function FishingPage() {
           zoneStats={zoneStats}
           ownedRods={ownedRods}
           initialCompletionistEffects={(profile?.completionist_effects as number[] | null) ?? []}
+          initialHasForgedBefore={profile?.has_seen_forge_flourish === true}
           allFishSpecies={(allSpecies ?? []) as { id: number; name: string; scientific_name: string; fun_fact: string; habitat: string; bite_rarity: number; sell_value: number }[]}
           caughtFishIds={caughtFishIds}
           mountedFishIds={mountedFishIds}
