@@ -168,6 +168,7 @@ export const BADGES: Badge[] = [
   { id: 'the_deep_end',   name: 'The Deep End',       description: 'Reach depth 50 in the Hardcore Gauntlet',         imageUrl: '/badges/the_deep_end.png',   difficulty: 'master'   },
   { id: 'ferrymans_toll', name: "The Ferryman's Toll", description: 'Lose a squad to the Locker in Hardcore',         imageUrl: '/badges/ferrymans_toll.png', difficulty: 'seasoned' },
   // Blood Gems — the Hardcore premium currency.
+  { id: 'blood_charged',   name: 'Blood-Charged',    description: 'Boost a recruit reroll with Blood Gems',          imageUrl: '/badges/blood_charged.png',   difficulty: 'rookie'   },
   { id: 'blood_rich',      name: 'Blood-Rich',       description: 'Earn 500 Blood Gems all-time',                    imageUrl: '/badges/blood_rich.png',      difficulty: 'seasoned' },
   { id: 'bloodhoard',      name: 'Bloodhoard',       description: 'Earn 2,000 Blood Gems all-time',                  imageUrl: '/badges/bloodhoard.png',      difficulty: 'veteran'  },
   { id: 'crimson_fortune', name: 'Crimson Fortune',  description: 'Win a crew skin from the blood gamble',           imageUrl: '/badges/crimson_fortune.png', difficulty: 'seasoned' },

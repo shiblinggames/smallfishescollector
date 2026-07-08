@@ -324,7 +324,7 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   const tier = bloodRerollTier(bloodTierId)
   if (bloodTierId && !tier) return { error: 'Unknown reroll tier' }
 
-  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems').eq('id', user.id).single()
+  const { data: prof } = await admin.from('profiles').select('gems, crew_hall_tier, blood_gems, unlocked_badges').eq('id', user.id).single()
   const gems = (prof as any)?.gems ?? 0
   const bloodGems = ((prof as any)?.blood_gems as number | null) ?? 0
   if (gems < REROLL_COST) return { error: 'Not enough gems' }
@@ -341,6 +341,15 @@ export async function rerollBoard(bloodTierId?: string | null): Promise<CrewActi
   if (tier) q = q.gte('blood_gems', tier.bloodCost)
   const { data: updated } = await q.select('gems').single()
   if (!updated) return { error: tier ? 'Not enough gems or Blood Gems' : 'Not enough gems' }
+
+  // Blood-Charged badge — hook-granted the first time a reroll is boosted with
+  // Blood Gems (a blood-charged reroll; not derivable from stored state).
+  if (tier) {
+    const badges = ((prof as any)?.unlocked_badges as string[] | null) ?? []
+    if (!badges.includes('blood_charged')) {
+      await admin.from('profiles').update({ unlocked_badges: [...badges, 'blood_charged'] }).eq('id', user.id)
+    }
+  }
 
   const { byGroup, meta } = await loadCards(admin)
   await admin.from('daily_recruits').delete().eq('user_id', user.id)

@@ -279,6 +279,7 @@ export default async function BadgesPage() {
         badgeGoal('locker_bound', 'Locker-Bound', 'Reach depth 25 in the Hardcore Gauntlet', gauntletHcDeepest, 25, '/raids/gauntlet'),
         badgeGoal('the_deep_end', 'The Deep End', 'Reach depth 50 in the Hardcore Gauntlet', gauntletHcDeepest, 50, '/raids/gauntlet'),
         badgeGoal('ferrymans_toll', "The Ferryman's Toll", 'Lose a squad to the Locker in Hardcore', gauntletHcDeepestDied >= 1 ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
+        badgeGoal('blood_charged', 'Blood-Charged', 'Boost a recruit reroll with Blood Gems', has('blood_charged') ? 1 : 0, 1, '/crew?tab=blood', { binary: true }),
         badgeGoal('blood_rich', 'Blood-Rich', 'Earn 500 Blood Gems all-time', bloodGemsEarned, 500, '/raids/gauntlet'),
         badgeGoal('bloodhoard', 'Bloodhoard', 'Earn 2,000 Blood Gems all-time', bloodGemsEarned, 2000, '/raids/gauntlet'),
         badgeGoal('crimson_fortune', 'Crimson Fortune', 'Win a crew skin from the blood gamble', has('crimson_fortune') ? 1 : 0, 1, '/crew?tab=blood', { binary: true }),
