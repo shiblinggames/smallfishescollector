@@ -1841,7 +1841,7 @@ export default function RaidCombat({
         // reliable heavy hitter it's meant to be. × the milestone's dmgMult.
         const { critMax } = raidDamageProfile(totalPower, shipMinDamage)
         let dmg = Math.floor(critMax * lv.dmgMult)
-        // Made for BIG prey: a bonus vs bosses/elites, a small penalty vs a
+        // Made for BIG prey: a bonus vs bosses/elites, a HEAVY penalty vs a
         // regular hull. The anti-big-target identity (Blitz is the swarm).
         const bigGame = isBoss || isElite
         if (bigGame && (lv.bossBonusPct ?? 0) > 0)        dmg = Math.floor(dmg * (1 + lv.bossBonusPct!))
