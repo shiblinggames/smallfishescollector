@@ -1276,12 +1276,31 @@ export default function GauntletGame(props: GauntletGameProps) {
             )
           })()}
 
-          {/* The name to beat — #1 deepest cashed-out descender of all. */}
-          {props.topDescender && (
-            <p className="font-karla" style={{ fontSize: '0.7rem', color: '#9a948a', marginTop: 9 }}>
-              Deepest of all captains: <span className="font-700" style={{ color: TEAL }}>{props.topDescender.name}</span>, Depth {props.topDescender.depth}
-            </p>
-          )}
+          {/* The names to beat — the deepest cashed-out descender in EACH mode. */}
+          <div style={{ maxWidth: 340, margin: '13px auto 0' }}>
+            <p className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c', marginBottom: 6 }}>Deepest Divers</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {([
+                { key: 'normal',   label: 'Normal',   color: TEAL,      rec: props.topDescender,
+                  icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" /> },
+                { key: 'hardcore', label: 'Hardcore', color: '#e0555a', rec: props.hardcoreTop,
+                  icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></> },
+              ] as const).map(({ key, label, color, rec, icon }) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.42rem 0.7rem', borderRadius: 11, background: `${color}12`, border: `1px solid ${color}33` }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>{icon}</svg>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color, width: 52, textAlign: 'left', flexShrink: 0 }}>{label}</span>
+                  {rec ? (
+                    <>
+                      <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: '#ece5d7', flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{rec.name}</span>
+                      <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color, flexShrink: 0 }}>Depth {rec.depth}</span>
+                    </>
+                  ) : (
+                    <span className="font-karla" style={{ fontSize: '0.72rem', color: '#8a857c', flex: 1, textAlign: 'left' }}>Unclaimed</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Leaderboard — deepest cashed-out descent + biggest single blow. */}
           <div style={{ marginTop: props.topDescender ? 6 : 9 }}>
