@@ -15,7 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateShipClasses } from '@/lib/shipClasses'
 import { navRenownEffects, type RenownAlloc } from '@/lib/renown'
 import { grantXPToAssignedCrew, type CrewXPGrant } from '@/lib/crewXPGrant'
-import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_COOLDOWN_MS, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
+import { maxPotForDepth, chestForDepth, chestCannonDropChance, MAX_GAUNTLET_DEPTH, GAUNTLET_COOLDOWN_MS, GAUNTLET_DEPTH_UNLOCKS, fathomsForDepth, gauntletXpForDepth, gauntletCrewXp, CONFLUENCES, hardcoreUnlocked, HARDCORE_LIVE, HARDCORE_UNLOCKS, HARDCORE_RUNS_PER_DAY, HC_FATHOMS_MULT, HC_SURVIVOR_XP_MULT, bloodGemsForDepth, type GauntletRunSnapshot, type GauntletRunState } from '@/lib/gauntlet'
 import { getGauntletUpgrade, isUpgradeComingSoon, gauntletHaulMult, gauntletXpMult, gauntletFathomsMult } from '@/lib/gauntletUpgrades'
 import { DAVY_FORGE } from '@/lib/raidItems'
 import { GAUNTLET_DEEPEST_CONTEST_ENDS_AT } from '@/lib/contests'
@@ -325,7 +325,7 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at')
+    .select('gauntlet_last_run_at, gauntlet_deepest, is_admin, raid_node_progress, gauntlet_hc_last_run_at, gauntlet_hc_runs_today')
     .eq('id', user.id)
     .single()
 
@@ -340,6 +340,7 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
 
   // ── Hardcore: gate + snapshot the squad at risk ──────────────────────────
   let hcFields: Record<string, unknown> = { gauntlet_run_hardcore: false, gauntlet_hc_squad: null }
+  let hcRunsToday = 0
   if (hardcore) {
     const clearedNodes = (profile?.raid_node_progress as { cleared?: string[] } | null)?.cleared ?? []
     // Server-enforced gate — admin-only until HARDCORE_LIVE (so the action can't
@@ -347,12 +348,18 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
     if (!hardcoreUnlocked({ isAdmin, clearedNodes, deepest })) {
       return { started: false, reason: 'locked', deepest }
     }
-    // Hardcore is once per day (admins bypass so they can test).
-    const hcLastAt = profile?.gauntlet_hc_last_run_at ? new Date(profile.gauntlet_hc_last_run_at as string).getTime() : 0
-    const hcNextMs = hcLastAt + HARDCORE_COOLDOWN_MS
-    if (!isAdmin && Date.now() < hcNextMs) {
-      return { started: false, reason: 'cooldown', deepest, nextAt: new Date(hcNextMs).toISOString() }
+    // Hardcore is capped at HARDCORE_RUNS_PER_DAY per UTC day (admins bypass so
+    // they can test). The count resets when the UTC date of the last run differs
+    // from today's; when capped, the run reopens at the next UTC midnight.
+    const now = new Date()
+    const hcLastAt = profile?.gauntlet_hc_last_run_at ? new Date(profile.gauntlet_hc_last_run_at as string) : null
+    const sameUtcDay = !!hcLastAt && hcLastAt.toISOString().slice(0, 10) === now.toISOString().slice(0, 10)
+    const runsToday = sameUtcDay ? Number(profile?.gauntlet_hc_runs_today ?? 0) : 0
+    if (!isAdmin && runsToday >= HARDCORE_RUNS_PER_DAY) {
+      const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+      return { started: false, reason: 'cooldown', deepest, nextAt: nextMidnight.toISOString() }
     }
+    hcRunsToday = runsToday + 1
     // The squad = the living raid party. Snapshot their ids; these are the crew
     // that drown on death/abandon (resolveGauntletDeath reads gauntlet_hc_squad).
     const { data: squadRows } = await admin
@@ -363,7 +370,7 @@ export async function startGauntletRun(hardcore = false): Promise<{ started: boo
       .is('died_at', null)
     const squad = (squadRows ?? []).map(r => r.id as number)
     if (squad.length === 0) return { started: false, reason: 'no_squad', deepest }
-    hcFields = { gauntlet_run_hardcore: true, gauntlet_hc_squad: squad, gauntlet_hc_last_run_at: new Date().toISOString() }
+    hcFields = { gauntlet_run_hardcore: true, gauntlet_hc_squad: squad, gauntlet_hc_last_run_at: new Date().toISOString(), gauntlet_hc_runs_today: hcRunsToday }
   }
 
   await admin

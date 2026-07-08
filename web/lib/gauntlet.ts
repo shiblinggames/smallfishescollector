@@ -84,9 +84,10 @@ export const HARDCORE_LIVE = false
 // Player-facing unlock once HARDCORE_LIVE: needs the Gauntlet unlocked AND a
 // normal-Gauntlet depth floor, so newcomers can't blind-permakill their crew.
 export const HC_UNLOCK_DEPTH = 5
-// Hardcore is limited to ONE run per day (the normal Gauntlet has no cooldown).
-// Keyed off gauntlet_hc_last_run_at; admins bypass for testing.
-export const HARDCORE_COOLDOWN_MS = 24 * 60 * 60 * 1000
+// Hardcore is capped at N runs per UTC day (the normal Gauntlet has no
+// cooldown). Counted via gauntlet_hc_runs_today, reset when the UTC date rolls
+// over (tracked against gauntlet_hc_last_run_at); admins bypass for testing.
+export const HARDCORE_RUNS_PER_DAY = 3
 // Hardcore pays EXACTLY like normal Gauntlet now (no 2× premium) — the only
 // added benefit is Blood Gems (below). Kept as 1× constants so callsites read
 // clearly and can be re-tuned in one place.
@@ -107,7 +108,7 @@ export function bloodGemsForDepth(depth: number, rand: number): number {
   return Math.max(0, Math.round(Math.max(0, depth) * per))
 }
 /** Skin gamble: this many Blood Gems → one random UNOWNED non-legendary skin. */
-export const BLOOD_SKIN_GAMBLE_COST = 150
+export const BLOOD_SKIN_GAMBLE_COST = 250
 /** Blood-charged reroll tiers. Attaching a tier to a gem reroll swaps the
  *  per-candidate C/R/E/L weights for the tier's (in place of GEM_WEIGHTS),
  *  boosting Epic + a light Legendary nudge. Weights sum to 100 = exact per-
