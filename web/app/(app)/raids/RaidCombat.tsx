@@ -2238,8 +2238,12 @@ export default function RaidCombat({
       if (pool.length > 0) {
         const swapped = pool[Math.floor(Math.random() * pool.length)]
         confusionRef.current = { from: action, to: swapped }
-        setConfusedFx({ key: Date.now(), from: action, to: swapped })
-        setTimeout(() => setConfusedFx(c => (c && c.from === action ? null : c)), 1400)
+        // Clear by a STABLE key, not `from` — `action` is reassigned to `swapped`
+        // below, so a `c.from === action` guard would never match and the flash
+        // would stick on screen forever.
+        const fxKey = Date.now()
+        setConfusedFx({ key: fxKey, from: action, to: swapped })
+        setTimeout(() => setConfusedFx(c => (c && c.key === fxKey ? null : c)), 1400)
         vibrate([0, 25, 35, 25])
         action = swapped
       }
