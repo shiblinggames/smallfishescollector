@@ -160,17 +160,23 @@ export function FeaturedCrew({ crew, onEdit, emptyHint }: { crew: ShowcaseCrew[]
       </div>
     )
   }
+  const [flag, ...rest] = crew
   return (
     <div>
-      {/* Uniform gallery — all posters equal size, wraps + centers so an odd
-          count doesn't leave a lopsided lone card. */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-        {crew.map(c => (
-          <div key={c.id} style={{ width: 152, maxWidth: 'calc(50% - 6px)' }}>
-            <CrewPortrait crew={c} fill hideStats />
-          </div>
-        ))}
+      {/* Flagship — one bigger poster on its own... */}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ width: 220, maxWidth: '72%' }}>
+          <CrewPortrait crew={flag} fill hideStats />
+        </div>
       </div>
+      {/* ...then the rest in a tidy 2-up grid beneath (a full showcase reads as
+          1 on top + a 2x2). Constrained so the grid cards stay smaller than
+          the flagship. */}
+      {rest.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, maxWidth: 320, margin: '14px auto 0' }}>
+          {rest.map(c => <CrewPortrait key={c.id} crew={c} fill hideStats />)}
+        </div>
+      )}
       {onEdit && (
         <button onClick={onEdit} className="font-karla font-700 tap" style={{
           marginTop: 14, fontSize: '0.68rem', padding: '0.4rem 0.85rem', borderRadius: 8,
