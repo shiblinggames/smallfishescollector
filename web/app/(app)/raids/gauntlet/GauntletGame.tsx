@@ -100,6 +100,8 @@ export interface GauntletGameProps {
   deepest: number
   /** Snapshot of the deepest run (boons/curses/tides) for the home recap. */
   deepestRun: GauntletRunSnapshot | null
+  /** Snapshot of the deepest HARDCORE run, for the Hardcore card's recap. */
+  hcDeepestRun: GauntletRunSnapshot | null
   /** Fathoms balance — the Gauntlet's meta-currency, spent in the Locker. */
   fathoms: number
   /** Blood Gems balance — the premium Hardcore currency. */
@@ -335,7 +337,9 @@ export default function GauntletGame(props: GauntletGameProps) {
   const [seenConfluences, setSeenConfluences] = useState<string[]>(props.confluencesSeen)
   useEffect(() => { setSeenConfluences(props.confluencesSeen) }, [props.confluencesSeen])
   // Deepest-run recap modal (boons/curses/tides of the record dive).
-  const [deepestRunOpen, setDeepestRunOpen] = useState(false)
+  // The deepest-run recap, per mode (Normal or Hardcore). Holds the snapshot to
+  // show + whether it's a hardcore run (drives the modal's theming).
+  const [recapRun, setRecapRun] = useState<{ run: GauntletRunSnapshot; hardcore: boolean } | null>(null)
   // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
   // live run forfeits the whole pot — so confirm first.
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -1346,7 +1350,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 const cards = [
                   {
                     key: 'normal' as const, color: TEAL, label: 'Normal', rec: props.topDescender,
-                    mine: props.deepest, canRecap: !!props.deepestRun && props.deepest > 0,
+                    mine: props.deepest, recap: (props.deepestRun && props.deepest > 0) ? props.deepestRun : null,
                     icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" />,
                     enabled: !starting,
                     onClick: () => begin(false),
@@ -1355,7 +1359,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   },
                   {
                     key: 'hardcore' as const, color: '#e0555a', label: 'Hardcore', rec: props.hardcoreTop,
-                    mine: props.hcDeepest, canRecap: false,
+                    mine: props.hcDeepest, recap: (props.hcDeepestRun && props.hcDeepest > 0) ? props.hcDeepestRun : null,
                     icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></>,
                     enabled: canHc && !starting && props.hcRunsLeft > 0,
                     onClick: () => setHcConfirmOpen(true),
@@ -1394,14 +1398,14 @@ export default function GauntletGame(props: GauntletGameProps) {
                     {/* Deepest footer — your own record above the global #1. Taps to
                         the recap on Normal (Hardcore has no stored run to recap). */}
                     <button
-                      onClick={c.canRecap ? () => setDeepestRunOpen(true) : undefined}
-                      className={c.canRecap ? 'tap' : undefined}
-                      aria-label={c.canRecap ? 'Recap your deepest run' : undefined}
-                      style={{ width: '100%', marginTop: 'auto', padding: '0.5rem 0.5rem 0.55rem', background: c.canRecap ? `${c.color}0d` : 'none', border: 'none', borderTop: `1px solid ${c.color}22`, cursor: c.canRecap ? 'pointer' : 'default', textAlign: 'center', minWidth: 0 }}>
+                      onClick={c.recap ? () => setRecapRun({ run: c.recap!, hardcore: c.key === 'hardcore' }) : undefined}
+                      className={c.recap ? 'tap' : undefined}
+                      aria-label={c.recap ? 'Recap your deepest run' : undefined}
+                      style={{ width: '100%', marginTop: 'auto', padding: '0.5rem 0.5rem 0.55rem', background: c.recap ? `${c.color}0d` : 'none', border: 'none', borderTop: `1px solid ${c.color}22`, cursor: c.recap ? 'pointer' : 'default', textAlign: 'center', minWidth: 0 }}>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <span className="font-karla font-800 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.12em', color: `${c.color}cc` }}>You </span>
                         {c.mine > 0
-                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f2ede3' }}>Depth {c.mine}{c.canRecap ? ' ↻' : ''}</span>
+                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f2ede3' }}>Depth {c.mine}{c.recap ? ' ↻' : ''}</span>
                           : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#8a857c' }}>Uncharted</span>}
                       </div>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>
@@ -1499,7 +1503,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {lootMode && <LootModal mode={lootMode} onClose={() => setLootMode(null)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} onClose={() => setInfoCurrency(null)} />}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
-        {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
+        {recapRun && <DeepestRunModal run={recapRun.run} hardcore={recapRun.hardcore} onClose={() => setRecapRun(null)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
         {descentModals}
       </>
@@ -3201,7 +3205,8 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
 // Tapping the "Deepest Descent" chip opens this: the boons, curses, and tides
 // the player carried on their record dive, resolved from the stored id→tier
 // snapshot against the live boon/curse tables.
-function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: () => void }) {
+function DeepestRunModal({ run, hardcore = false, onClose }: { run: GauntletRunSnapshot; hardcore?: boolean; onClose: () => void }) {
+  const accent = hardcore ? '#e0555a' : GOLD
   const boons = Object.entries(run.boons ?? {})
     .map(([id, tier]) => ({ fam: GAUNTLET_BOONS.find(b => b.id === id), tier }))
     .filter((x): x is { fam: NonNullable<typeof x.fam>; tier: number } => !!x.fam && x.tier >= 1)
@@ -3221,7 +3226,7 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
     <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ position: 'relative', width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GOLD}3a`, boxShadow: `0 0 44px ${GOLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.2rem', textAlign: 'center' }}>
+        style={{ position: 'relative', width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${accent}3a`, boxShadow: `0 0 44px ${accent}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.2rem', textAlign: 'center' }}>
         {/* Close — X at the top-right */}
         <button onClick={onClose} aria-label="Close" className="tap"
           style={{ position: 'absolute', top: 10, right: 10, zIndex: 3, width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.16)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -3229,11 +3234,11 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
         </button>
         {/* Hero — a trophy header, not a bare number. Anchor (depth), not a
             descend chevron — this is a record view, not an action. */}
-        <div style={{ width: 50, height: 50, margin: '0 auto 8px', borderRadius: '50%', background: `${GOLD}1c`, border: `1px solid ${GOLD}5c`, boxShadow: `0 0 22px ${GOLD}2a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2.4" /><path d="M12 7.4V21" /><path d="M5 13H3a9 9 0 0 0 18 0h-2" /><path d="M8 11h8" /></svg>
+        <div style={{ width: 50, height: 50, margin: '0 auto 8px', borderRadius: '50%', background: `${accent}1c`, border: `1px solid ${accent}5c`, boxShadow: `0 0 22px ${accent}2a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="5" r="2.4" /><path d="M12 7.4V21" /><path d="M5 13H3a9 9 0 0 0 18 0h-2" /><path d="M8 11h8" /></svg>
         </div>
-        <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: `${GOLD}cc` }}>Your Deepest Dive</p>
-        <p className="font-cinzel font-800" style={{ fontSize: '2.3rem', color: GOLD, lineHeight: 1.02, marginTop: 3, textShadow: `0 0 26px ${GOLD}44` }}>
+        <p className="font-karla font-800 uppercase tracking-[0.24em]" style={{ fontSize: '0.54rem', color: `${accent}cc` }}>Your Deepest {hardcore ? 'Hardcore ' : ''}Dive</p>
+        <p className="font-cinzel font-800" style={{ fontSize: '2.3rem', color: accent, lineHeight: 1.02, marginTop: 3, textShadow: `0 0 26px ${accent}44` }}>
           Depth {run.depth}
         </p>
         {/* Stat strip — the run at a glance */}

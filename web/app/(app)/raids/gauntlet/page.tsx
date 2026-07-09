@@ -58,6 +58,7 @@ export default async function GauntletPage() {
           confluencesSeen={(profile?.gauntlet_confluences_seen as string[] | null) ?? []}
           deepest={daily.deepest}
           deepestRun={daily.deepestRun}
+          hcDeepestRun={daily.hcDeepestRun}
           fathoms={daily.fathoms}
           available={daily.available}
           nextAt={daily.nextAt}
