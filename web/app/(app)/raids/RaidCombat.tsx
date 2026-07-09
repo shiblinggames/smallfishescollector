@@ -1033,7 +1033,11 @@ export default function RaidCombat({
   // True for the phase-transition turn the check armed on, so that turn's own
   // turn-advance doesn't burn a countdown tick (the window starts NEXT turn).
   const checkArmedThisTurnRef = useRef(false)
-  const checkFlagsRef    = useRef<{ heal: boolean; burst: boolean }>({ heal: false, burst: false })
+  // Every ability answer PRODUCED during the check window is flagged here, so it
+  // counts even if the defense is consumed before the check resolves (a shield
+  // eaten by the boss's own attacks still answered the check). brace/shield/snare
+  // ALSO fall back to their live refs (a defense that was already up counts too).
+  const checkFlagsRef    = useRef<Record<'heal' | 'burst' | 'brace' | 'shield' | 'snare', boolean>>({ heal: false, burst: false, brace: false, shield: false, snare: false })
   const [pendingCheck, setPendingCheck] = useState<{ name: string; telegraph: string; turnsLeft: number } | null>(null)
   // Centre-screen result callout the instant a check resolves — green "Countered!"
   // or red "<name> hits!" so success/failure is unmistakable.
@@ -1044,16 +1048,17 @@ export default function RaidCombat({
     pendingCheckRef.current = check
     checkTurnsLeftRef.current = check.chargeTurns
     checkArmedThisTurnRef.current = true
-    checkFlagsRef.current = { heal: false, burst: false }
+    checkFlagsRef.current = { heal: false, burst: false, brace: false, shield: false, snare: false }
     // Telegraph into the action log so the fight NARRATES what's coming (vague on
     // purpose — the player figures out the answer by trial and error).
     setResolveLog(prev => [...prev, `⚠ ${check.telegraph}`])
     setPendingCheck({ name: check.name, telegraph: check.telegraph, turnsLeft: check.chargeTurns })
   }
-  // Record a transient ability answer if a check is live (persistent answers —
-  // brace/shield/snare — are read live at resolve). Only real ability plays call
-  // this; plain Dodge / normal crits deliberately don't.
-  function noteCheckResponse(r: 'heal' | 'burst') {
+  // Flag an ability answer if a check is live. brace/shield/snare are flagged
+  // HERE (produced during the window) as well as read live at resolve, so a
+  // defense that's consumed before the check fires still counts. Only real
+  // ability plays call this; plain Dodge / normal crits deliberately don't.
+  function noteCheckResponse(r: 'heal' | 'burst' | 'brace' | 'shield' | 'snare') {
     if (pendingCheckRef.current) checkFlagsRef.current[r] = true
   }
   // A CREW HEAL ability (Mender / Tidecaller) douses an active hull burn — the
@@ -1072,9 +1077,9 @@ export default function RaidCombat({
   function isCheckSatisfied(chk: BossMechanicCheck): boolean {
     const f = checkFlagsRef.current
     const has = (r: MechanicResponse) =>
-      r === 'brace'  ? (anchorReductionRef.current ?? 0) > 0
-      : r === 'shield' ? (abyssalShieldRef.current ?? 0) > 0
-      : r === 'snare'  ? (snareDodgeTurnsRef.current ?? 0) !== 0
+      r === 'brace'  ? (f.brace  || (anchorReductionRef.current ?? 0) > 0)
+      : r === 'shield' ? (f.shield || (abyssalShieldRef.current ?? 0) > 0)
+      : r === 'snare'  ? (f.snare  || (snareDodgeTurnsRef.current ?? 0) !== 0)
       : r === 'heal'   ? f.heal
       : r === 'burst'  ? f.burst
       : false
@@ -1817,6 +1822,7 @@ export default function RaidCombat({
         const sn = m as import('@/lib/crewClasses').SnareMilestone
         setSnareDodgeTurns(sn.disableDodgeTurns)
         snareDodgeTurnsRef.current = sn.disableDodgeTurns
+        noteCheckResponse('snare')
         snareJamChanceRef.current = sn.jamChance
         const pct = Math.round(sn.jamChance * 100)
         const snDur = `${sn.disableDodgeTurns} turn${sn.disableDodgeTurns === 1 ? '' : 's'}`
@@ -1827,6 +1833,7 @@ export default function RaidCombat({
         const an = m as import('@/lib/crewClasses').AnchorMilestone
         setAnchorReductionPct(an.pctReduction)
         anchorReductionRef.current = an.pctReduction
+        noteCheckResponse('brace')
         anchorAbsorbsCritsRef.current = !!an.absorbsCrits
         setResolveLog(prev => [...prev, `${crew.name} drops the sea anchor — the next hit you take is cut ${Math.round(an.pctReduction * 100)}%${an.absorbsCrits ? ', crits and all' : ''}.`])
         break
@@ -1859,7 +1866,7 @@ export default function RaidCombat({
         setAbyssalShieldHp(prev => prev + shield)
         abyssalShieldRef.current += shield
         if (at.cleanseDebuff) setCleanseDebuffPending(true)
-        noteCheckResponse('heal'); dousePlayerBurnFromHeal()   // shield is read live at resolve; the heal is the transient note
+        noteCheckResponse('heal'); noteCheckResponse('shield'); dousePlayerBurnFromHeal()   // a shield+heal ability answers both
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
         setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
