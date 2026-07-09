@@ -2049,6 +2049,15 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           )}
 
+          {/* Browse the full synergy codex — plan the build between fights. */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+            <button onClick={() => setSynergiesOpen(true)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.42rem 0.9rem', borderRadius: 999, fontSize: '0.55rem', color: '#b7ae9f', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+              Synergy Codex
+            </button>
+          </div>
+
           {/* Sounding Line — the next depth, read before the gamble. */}
           {sounding && (
             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
@@ -2089,6 +2098,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
         {detailModal}
         {exitModal}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
       </>
     )
   }
@@ -2473,9 +2483,26 @@ export default function GauntletGame(props: GauntletGameProps) {
               Reroll · {rerollsLeft} left
             </button>
           )}
+          {/* Codex access — review what a synergy does / what you're building
+              toward right when you're deciding. Lights violet when one is on
+              offer. */}
+          {revealDone && (
+            <div style={{ marginTop: rerollsLeft > 0 ? 9 : 16 }}>
+              <button onClick={() => setSynergiesOpen(true)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0.5rem 1rem', borderRadius: 999, fontSize: '0.6rem',
+                  color: pendingConfluence ? '#e6d5ff' : '#c9c2b6',
+                  background: pendingConfluence ? 'rgba(185,139,255,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${pendingConfluence ? 'rgba(185,139,255,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                  boxShadow: pendingConfluence ? '0 0 16px rgba(185,139,255,0.28)' : 'none', cursor: 'pointer' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                {pendingConfluence ? 'Review Synergies' : 'Synergy Codex'}
+              </button>
+            </div>
+          )}
         </div>
         {detailModal}
         {exitModal}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
       </>
     )
   }
