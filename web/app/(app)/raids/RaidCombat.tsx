@@ -480,6 +480,8 @@ export default function RaidCombat({
     let aimBlackout   = 0
     let aimDecoys     = 0   // False Colours curse: N decoy bands on random fires
     let confuseChance = 0   // Drowned Whispers curse: chance to scramble your action
+    let hideEnemyHpChance = 0       // Shrouded Hull curse: chance the enemy HP is hidden
+    let hideEnemyChargesChance = 0  // Shuttered Ports curse: chance enemy charges hidden
     // Elemental boons — Permafrost (ice) + Wildfire (fire). The proc chances fold
     // into the item burn/freeze math (capped in combat); the rest are multipliers
     // / flags read where burn + freeze resolve.
@@ -577,6 +579,8 @@ export default function RaidCombat({
         case 'aimBlackout':           aimBlackout = Math.min(0.95, Math.max(aimBlackout, e.intensity)); break
         case 'aimDecoys':             aimDecoys = Math.max(aimDecoys, e.n); break
         case 'confuse':               confuseChance = Math.max(confuseChance, e.chance); break
+        case 'hideEnemyHp':           hideEnemyHpChance = Math.max(hideEnemyHpChance, e.chance); break
+        case 'hideEnemyCharges':      hideEnemyChargesChance = Math.max(hideEnemyChargesChance, e.chance); break
         case 'iceAffinity':
           freezeChanceBoon = Math.max(freezeChanceBoon, e.freezeChance)
           frozenDmgMult    = Math.max(frozenDmgMult, e.frozenDmgMult)
@@ -625,7 +629,7 @@ export default function RaidCombat({
       chargesStart, hpStartDelta, everyFightHeal, everyFightHealPct,
       reloadProc, guaranteedDodgeBank,
       enemyHpScaleMult, enemyChargesDelta,
-      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, noncritDmgMult,
+      aimFog, aimSpeedMult, zoneSpeedMult, aimBlackout, aimDecoys, confuseChance, hideEnemyHpChance, hideEnemyChargesChance, noncritDmgMult,
       freezeChanceBoon, frozenDmgMult, deepFreeze, brittle,
       burnChanceBoon, burnTurnsBonus, burnTickMult, reignite, backdraft, thermalShockMult,
       critExecutePct, volleyRampPct,
@@ -636,6 +640,11 @@ export default function RaidCombat({
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
+  // Shrouded Hull / Shuttered Ports curses — rolled ONCE per fight (RaidCombat
+  // remounts per Gauntlet enemy). Purely visual: the enemy AI still reads its
+  // real HP + charges; only the player's readout is fogged over.
+  const [enemyHpHidden] = useState(() => Math.random() < tide.hideEnemyHpChance)
+  const [enemyChargesHidden] = useState(() => Math.random() < tide.hideEnemyChargesChance)
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
   // charges) so the enemy-RESET effect below — which has intentionally tight
   // deps so it doesn't refire mid-fight — reads the CURRENT values. Without
@@ -4672,8 +4681,8 @@ export default function RaidCombat({
             {/* Enemy barrier (Warded affix / The Warding curse) folds into the
                 HP bar as a violet segment so it reads as the enemy's, not your
                 cyan shield. */}
-            <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact shield={enemyShieldHp} shieldColor="#c084fc" shieldGradTo="#a855f7" />
-            <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small />
+            <HPBar current={enemyHp} max={enemyHpMax} accent={ENEMY_COLOR} compact shield={enemyShieldHp} shieldColor="#c084fc" shieldGradTo="#a855f7" hidden={enemyHpHidden} />
+            <ChargesRow charges={enemyCharges} max={MAX_CHARGES} small hidden={enemyChargesHidden} />
           </div>
         </motion.button>
 
@@ -6589,8 +6598,8 @@ function CarapaceDeflect() {
 // barrier) renders as a distinct-coloured segment filling the gap just past
 // the HP fill (reads as temporary bonus HP), plus a small inline chip on the
 // number line. No separate stacked bar — keeps the nameplate to one row.
-function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4' }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string }) {
-  const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
+function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3fc', shieldGradTo = '#5eead4', hidden = false }: { current: number; max: number; accent: string; compact?: boolean; shield?: number; shieldColor?: string; shieldGradTo?: string; hidden?: boolean }) {
+  const pct = hidden ? 0 : (max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0)
   // Cap the shield segment to the empty space so the bar never overflows; the
   // true amount always shows on the chip even when the hull is full.
   const shieldPct = max > 0 && shield > 0 ? Math.min(100 - pct, (shield / max) * 100) : 0
@@ -6600,13 +6609,20 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
       {!compact && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
           <p className="font-karla" style={{ fontSize: '0.72rem', color: '#7a8aa0' }}>HP</p>
-          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: accent }}>{current}/{max}</p>
+          <p className="font-karla font-700" style={{ fontSize: '0.82rem', color: hidden ? '#8a95aa' : accent }}>{hidden ? '???' : `${current}/${max}`}</p>
         </div>
       )}
       <div style={{ position: 'relative', height: h, background: 'rgba(0,0,0,0.6)', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
-        {shieldPct > 0 && (
-          <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct}%`, width: `${shieldPct}%`, background: `linear-gradient(90deg, ${shieldColor}, ${shieldGradTo})`, boxShadow: `0 0 6px ${shieldColor}aa`, transition: 'width 0.35s ease, left 0.4s ease' }} />
+        {hidden ? (
+          // Shrouded Hull — a fogged bar, no fill, so the hull's state is unreadable.
+          <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg, rgba(110,120,140,0.32) 0 5px, rgba(56,66,86,0.32) 5px 10px)' }} />
+        ) : (
+          <>
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: accent, borderRadius: 4, transition: 'width 0.4s ease' }} />
+            {shieldPct > 0 && (
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct}%`, width: `${shieldPct}%`, background: `linear-gradient(90deg, ${shieldColor}, ${shieldGradTo})`, boxShadow: `0 0 6px ${shieldColor}aa`, transition: 'width 0.35s ease, left 0.4s ease' }} />
+            )}
+          </>
         )}
       </div>
       {compact && (
@@ -6619,14 +6635,14 @@ function HPBar({ current, max, accent, compact, shield = 0, shieldColor = '#7dd3
               <span className="font-karla font-700" style={{ fontSize: '0.72rem', color: shieldColor, lineHeight: 1 }}>{shield}</span>
             </span>
           )}
-          <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: accent }}>{current}/{max}</p>
+          <p className="font-karla font-700" style={{ fontSize: '0.8rem', color: hidden ? '#8a95aa' : accent }}>{hidden ? '???' : `${current}/${max}`}</p>
         </div>
       )}
     </div>
   )
 }
 
-function ChargesRow({ charges, max, small }: { charges: number; max: number; small?: boolean }) {
+function ChargesRow({ charges, max, small, hidden = false }: { charges: number; max: number; small?: boolean; hidden?: boolean }) {
   const dotSize = small ? 12 : 16
   // Track the prior count so a freshly-loaded cannonball "clicks in" — the new
   // pip pops from nothing with a brief overshoot. prevRef lags one render
@@ -6635,6 +6651,19 @@ function ChargesRow({ charges, max, small }: { charges: number; max: number; sma
   const prevRef = useRef(charges)
   const prev = prevRef.current
   useEffect(() => { prevRef.current = charges }, [charges])
+  // Shuttered Ports — pips read as identical "?" markers so the loaded count
+  // can't be told apart.
+  if (hidden) {
+    return (
+      <div style={{ display: 'flex', gap: small ? 4 : 5, marginTop: small ? 5 : 7 }}>
+        {Array.from({ length: max }).map((_, i) => (
+          <div key={i} style={{ width: dotSize, height: dotSize, borderRadius: '50%', background: '#1c2540', border: '1px dashed #4a5570', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="font-karla font-800" style={{ fontSize: dotSize * 0.6, color: '#6a7590', lineHeight: 1 }}>?</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
     <div style={{ display: 'flex', gap: small ? 4 : 5, marginTop: small ? 5 : 7 }}>
       {Array.from({ length: max }).map((_, i) => {

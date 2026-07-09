@@ -692,6 +692,24 @@ export const GAUNTLET_CURSES: GauntletCurse[] = [
     ],
   },
   {
+    id: 'shrouded_hull',
+    name: 'Shrouded Hull',
+    flavor: 'The enemy hull swims in and out of the murk. You never quite know how close it is to going under.',
+    tiers: [
+      { desc: '40% chance the enemy’s health is hidden', detail: 'Each fight, a 40% chance the enemy’s HP bar is fogged over. You fight blind on how close it is to sinking, judging by the numbers you land instead.', effects: [{ kind: 'hideEnemyHp', chance: 0.40 }] },
+      { desc: '70% chance the enemy’s health is hidden', detail: 'The murk thickens: a 70% chance each fight that the enemy’s HP is hidden entirely.', effects: [{ kind: 'hideEnemyHp', chance: 0.70 }] },
+    ],
+  },
+  {
+    id: 'shuttered_ports',
+    name: 'Shuttered Ports',
+    flavor: 'Their gun ports stay shut till the muzzles run out. No counting the shots they hold.',
+    tiers: [
+      { desc: '40% chance the enemy’s loaded shots are hidden', detail: 'Each fight, a 40% chance you can’t see the enemy’s cannonball count. No telling when the next broadside comes.', effects: [{ kind: 'hideEnemyCharges', chance: 0.40 }] },
+      { desc: '70% chance the enemy’s loaded shots are hidden', detail: 'A 70% chance each fight the enemy’s loaded shots are hidden from you entirely.', effects: [{ kind: 'hideEnemyCharges', chance: 0.70 }] },
+    ],
+  },
+  {
     id: 'racing_tide',
     name: 'Racing Tide',
     flavor: 'A fast current rips down the deck. The wheel will not hold still.',

@@ -67,6 +67,12 @@ export type TideEffect =
   /** 0-1 chance, each turn, that the action you pick comes out SCRAMBLED — your
    *  crew does a different (valid) action instead. The "Drowned Whispers" curse. */
   | { kind: 'confuse'; chance: number }
+  /** 0-1 chance, rolled per fight, that the enemy's HP bar is HIDDEN — you fight
+   *  blind on how close it is to sinking. The "Shrouded Hull" curse. */
+  | { kind: 'hideEnemyHp'; chance: number }
+  /** 0-1 chance, rolled per fight, that the enemy's loaded-cannonball count is
+   *  HIDDEN — no reading when the next broadside comes. "Shuttered Ports" curse. */
+  | { kind: 'hideEnemyCharges'; chance: number }
   // ── Elemental builds (Gauntlet boons) — composite effects so one boon tier
   //    carries a whole identity. Fold into the item burn/freeze proc math (the
   //    chances STACK with the matching cannonball, capped in RaidCombat).
@@ -261,6 +267,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'aimFog':       return e.density > 0 ? 'bad' : 'neutral'
     case 'aimDecoys':    return e.n > 0 ? 'bad' : 'neutral'
     case 'confuse':      return e.chance > 0 ? 'bad' : 'neutral'
+    case 'hideEnemyHp': case 'hideEnemyCharges': return e.chance > 0 ? 'bad' : 'neutral'
     case 'iceAffinity':  return 'good'
     case 'fireAffinity': return 'good'
     case 'aimSpeedMult': return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
@@ -864,6 +871,8 @@ export function describeEffect(e: TideEffect): string {
     case 'aimBlackout':           return 'Your aim bar goes dark in fits'
     case 'aimDecoys':             return `${e.n} false target${e.n === 1 ? '' : 's'} drift your aim bar`
     case 'confuse':               return `${Math.round(e.chance * 100)}% of your orders come out scrambled`
+    case 'hideEnemyHp':           return `${Math.round(e.chance * 100)}% chance the enemy's HP is hidden`
+    case 'hideEnemyCharges':      return `${Math.round(e.chance * 100)}% chance the enemy's loaded shots are hidden`
     case 'iceAffinity':           return `${Math.round(e.freezeChance * 100)}% freeze + ${Math.round((e.frozenDmgMult - 1) * 100)}% vs frozen`
     case 'fireAffinity':          return `${Math.round(e.burnChance * 100)}% burn, longer + hotter`
     case 'aimFog':                return 'Fog drifts over your aim bar'
