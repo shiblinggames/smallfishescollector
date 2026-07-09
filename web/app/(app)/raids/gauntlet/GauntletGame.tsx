@@ -1995,8 +1995,8 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           )}
 
-          {/* Confluences — synergies you've unlocked by pairing boons. A just-
-              completed one lands as a highlighted "unlocked" beat. */}
+          {/* Confluences — synergies you've DRAFTED this run. A just-taken one
+              lands as a highlighted "unlocked" beat. */}
           {activeConf.length > 0 && (
             <div style={{ marginTop: 16, textAlign: 'left' }}>
               <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f5b94a', marginBottom: 7 }}>
@@ -2011,7 +2011,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
                   return (
                     <motion.button key={c.id} type="button" className="tap" whileTap={{ scale: 0.985 }}
-                      onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `Active while you hold ${reqNames.join(' and ')} together. It deepens as you tier both boons up.`, flavor: c.flavor, count: 0 })}
+                      onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `Drafted this run — it stays for the whole dive. Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
                       initial={fresh ? { opacity: 0, scale: 0.92, y: 6 } : false}
                       animate={fresh ? { opacity: 1, scale: 1, y: 0 } : {}}
                       transition={{ type: 'spring', stiffness: 240, damping: 18 }}
@@ -3268,8 +3268,23 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
           </button>
         </div>
         <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
-          Certain pairs of boons hide a bonus power. Unlock one in a dive and it&apos;s recorded here for good.
+          Certain pairs of boons unlock a bonus power. Discover one in a dive and it&apos;s recorded here for good.
         </p>
+        {/* How synergies actually work — the three rules a player has to know,
+            spelled out since the draft/level mechanic isn't obvious in-run. */}
+        <div style={{ marginTop: 12, borderRadius: 12, padding: '0.7rem 0.85rem', background: `${GLD}0d`, border: `1px solid ${GLD}30` }}>
+          <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: `${GLD}cc`, marginBottom: 6 }}>How they work</p>
+          {[
+            'Hold both boons and the synergy is offered as a card in a draft — take it instead of a boon that round.',
+            'Once drafted it stays for the rest of the dive.',
+            'Its level is the LOWER of its two boons’ tiers — deepen the boon that’s behind to level it up.',
+          ].map((line, i) => (
+            <div key={i} style={{ display: 'flex', gap: 7, marginTop: i === 0 ? 0 : 5 }}>
+              <span aria-hidden style={{ color: GLD, fontSize: '0.7rem', lineHeight: 1.5, flexShrink: 0 }}>◆</span>
+              <p className="font-karla" style={{ fontSize: '0.72rem', color: '#c8bfa8', lineHeight: 1.45 }}>{line}</p>
+            </div>
+          ))}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
           {CONFLUENCES.map(c => {
             const lvl = confluenceLevel(c, owned)
@@ -3285,7 +3300,7 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                   <div style={{ minWidth: 0 }}>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#7d8794', letterSpacing: '0.16em' }}>? ? ?</p>
-                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered synergy. Find the pair to reveal it.</p>
+                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered synergy. Draft it in a dive to reveal it.</p>
                   </div>
                 </div>
               )
@@ -3522,6 +3537,7 @@ function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; first
   const steps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
     { color: TEAL, title: 'Descend the Locker', text: 'Fight ship after ship. Each depth hits harder.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg> },
     { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Go deep enough and the Locker forces curses on you too.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.1 5.6L20 9.2l-4.4 3.6L17 19l-5-3.4L7 19l1.4-6.2L4 9.2l5.9-1.6z" /></svg> },
+    { color: '#b98bff', title: 'Synergies', text: 'Hold the right pair of boons and a synergy surfaces as a card in a draft — take it instead of a boon. It lasts the whole dive and levels up as you deepen its two boons.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg> },
     { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg> },
     { color: '#f87171', title: 'Cash out or sink', text: 'Bank the pot whenever you like. Go under first and it all sinks with you.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg> },
     { color: TEAL, title: 'Fathoms to spend', text: 'Each dive also pays Fathoms, win or lose — spend them in the Run Upgrades and Ship & Shore shops.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M7 10.6c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /><path d="M7 14c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /></svg> },
