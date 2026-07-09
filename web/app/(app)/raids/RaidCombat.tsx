@@ -7584,7 +7584,15 @@ function AimBarInline({ indicatorRef, zoneRef, flashRef, aimFogDensity, aimBlack
 // vertical space CircleBtn's "Dodge"/"Fire" labels would have.
 function InlineLockButton({ onLock }: { onLock: () => void }) {
   return (
-    <div style={{ position: 'relative' }}>
+    // zIndex + own compositing layer: the button sits directly under the heavy
+    // framer-motion battle stage (+ the RAF-animated aim bar). On iOS WebKit
+    // that composited neighbour offsets hit-testing near the boundary, so taps
+    // on the TOP of the button miss and land "slightly below" instead. Lifting
+    // the button onto its own layer (willChange:transform) + above the bleed
+    // (zIndex) aligns the tap target with the visual. It's a leaf, not an
+    // ancestor of the fixed Nav/TabBar, so it doesn't trip the iOS PWA
+    // fixed-positioning regression.
+    <div style={{ position: 'relative', zIndex: 20 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
           <motion.button
@@ -7602,6 +7610,8 @@ function InlineLockButton({ onLock }: { onLock: () => void }) {
               border: 'none', fontSize: '0.95rem', cursor: 'pointer',
               boxShadow: '0 4px 14px rgba(74,222,128,0.35), inset 0 -3px 0 rgba(0,0,0,0.15)',
               touchAction: 'manipulation',
+              // Own compositing layer so iOS hit-tests the button where it's drawn.
+              willChange: 'transform', position: 'relative', zIndex: 20,
             }}
           >
             Lock Shot
