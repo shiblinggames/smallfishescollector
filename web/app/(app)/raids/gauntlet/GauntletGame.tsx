@@ -635,8 +635,11 @@ export default function GauntletGame(props: GauntletGameProps) {
                 <span className="font-800" style={{ color: '#fca5a5' }}>Why brave it:</span> bring your crew home alive and the cash-out chest pays <span className="font-700" style={{ color: '#fca5a5' }}>Blood Gems</span> — earned nowhere else. Spend them in the Crew Hall&apos;s <span className="font-700" style={{ color: '#fca5a5' }}>Blood Market</span> to weight recruits toward Epic &amp; Legendary crew and gamble for skins.
               </p>
             </div>
+            <p className="font-karla font-700 uppercase" style={{ fontSize: '0.54rem', letterSpacing: '0.12em', color: '#c48a8a', marginTop: 14 }}>
+              {props.hcRunsLeft} of {HARDCORE_RUNS_PER_DAY} hardcore runs left today
+            </p>
             <button onClick={() => begin(true)} disabled={starting} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-              style={{ width: '100%', marginTop: 16, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#fff0f0', background: `linear-gradient(180deg, ${DANGER}3a, ${DANGER}18)`, border: `1px solid ${DANGER}88`, cursor: starting ? 'wait' : 'pointer', boxShadow: `0 0 22px ${DANGER}22` }}>
+              style={{ width: '100%', marginTop: 10, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#fff0f0', background: `linear-gradient(180deg, ${DANGER}3a, ${DANGER}18)`, border: `1px solid ${DANGER}88`, cursor: starting ? 'wait' : 'pointer', boxShadow: `0 0 22px ${DANGER}22` }}>
               {starting ? 'Descending…' : 'Descend into the Locker'}
             </button>
             <button onClick={() => setHcConfirmOpen(false)} className="font-karla font-600 tap" style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a8e8e', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
@@ -1351,68 +1354,65 @@ export default function GauntletGame(props: GauntletGameProps) {
                   {
                     key: 'normal' as const, color: TEAL, label: 'Normal', rec: props.topDescender,
                     mine: props.deepest, recap: (props.deepestRun && props.deepest > 0) ? props.deepestRun : null,
-                    icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" />,
                     enabled: !starting,
                     onClick: () => begin(false),
-                    cta: starting ? 'Descending…' : 'Descend',
-                    note: null as string | null,
+                    disabledNote: starting ? 'Descending…' : null as string | null,
                   },
                   {
                     key: 'hardcore' as const, color: '#e0555a', label: 'Hardcore', rec: props.hardcoreTop,
                     mine: props.hcDeepest, recap: (props.hcDeepestRun && props.hcDeepest > 0) ? props.hcDeepestRun : null,
-                    icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></>,
                     enabled: canHc && !starting && props.hcRunsLeft > 0,
                     onClick: () => setHcConfirmOpen(true),
-                    cta: comingSoon ? 'Coming soon' : !canHc ? `Reach depth ${HC_UNLOCK_DEPTH}` : props.hcRunsLeft <= 0 ? 'No runs left' : 'Send them down',
-                    note: canHc && props.hcRunsLeft > 0 ? `${props.hcRunsLeft} of ${HARDCORE_RUNS_PER_DAY} runs left` : null,
+                    disabledNote: comingSoon ? 'Coming soon' : !canHc ? `Reach depth ${HC_UNLOCK_DEPTH}` : props.hcRunsLeft <= 0 ? 'No runs left today' : starting ? 'Descending…' : null,
                   },
                 ]
-                // Card = a wrapper carrying the visual, with the descend button and
-                // the deepest footer as SIBLINGS (no button-in-button). The footer
-                // shows YOUR deepest above the global #1; on Normal it taps to the
-                // detailed recap.
+                // Card = a wrapper with a descend button (the pulsing down-arrow IS
+                // the tap-to-dive indicator; no CTA text) and a deepest footer as
+                // siblings. Footer shows YOUR best above the global #1; Normal taps
+                // to the detailed recap.
                 return cards.map(c => (
                   <div key={c.key} style={{
                     position: 'relative', display: 'flex', flexDirection: 'column', minWidth: 0, borderRadius: 15, overflow: 'hidden',
-                    background: `linear-gradient(180deg, ${c.color}26 0%, ${c.color}0b 60%, rgba(8,13,22,0.35) 100%)`,
-                    border: `1px solid ${c.color}${c.enabled ? '70' : '2e'}`,
-                    boxShadow: c.enabled ? `0 0 22px ${c.color}20` : 'none',
-                    opacity: c.enabled ? 1 : 0.62,
-                    animation: c.enabled ? 'gauntCta 2.8s ease-in-out infinite' : 'none',
+                    background: `linear-gradient(180deg, ${c.color}1e 0%, ${c.color}09 58%, rgba(8,13,22,0.35) 100%)`,
+                    border: `1px solid ${c.color}${c.enabled ? '4a' : '22'}`,
+                    opacity: c.enabled ? 1 : 0.6,
                   }}>
                     <motion.button
                       onClick={c.enabled ? c.onClick : undefined}
                       disabled={!c.enabled}
                       whileTap={c.enabled ? { scale: 0.97 } : undefined}
                       className="tap"
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0.9rem 0.55rem 0.7rem', background: 'none', border: 'none', textAlign: 'center', minWidth: 0, cursor: c.enabled ? 'pointer' : 'default', color: 'inherit' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: `radial-gradient(circle at 40% 30%, ${c.color}4d, ${c.color}12)`, border: `1px solid ${c.color}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color, marginBottom: 3 }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{c.icon}</svg>
-                      </div>
-                      <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.95rem', letterSpacing: '0.03em', color: c.color, lineHeight: 1 }}>{c.label}</span>
-                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.08em', color: c.enabled ? '#f2ede3' : `${c.color}bb`, marginTop: 2 }}>
-                        {c.cta}{c.enabled ? ' ▾' : ''}
-                      </span>
-                      {c.note && <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#9a948a' }}>{c.note}</span>}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '1rem 0.55rem 0.85rem', background: 'none', border: 'none', textAlign: 'center', minWidth: 0, cursor: c.enabled ? 'pointer' : 'default', color: 'inherit' }}>
+                      {/* Descend indicator — a bobbing down-arrow that reads as the tap target */}
+                      <motion.div aria-hidden
+                        animate={c.enabled ? { y: [0, 3, 0] } : {}}
+                        transition={c.enabled ? { duration: 1.7, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                        style={{ width: 48, height: 48, borderRadius: '50%', background: `radial-gradient(circle at 42% 32%, ${c.color}55, ${c.color}10)`, border: `1.5px solid ${c.color}${c.enabled ? 'b0' : '55'}`, boxShadow: c.enabled ? `0 0 20px ${c.color}4a` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6M6 12l6 6 6-6" /></svg>
+                      </motion.div>
+                      <span className="font-cinzel font-800 uppercase" style={{ fontSize: '1rem', letterSpacing: '0.04em', color: c.color, lineHeight: 1 }}>{c.label}</span>
+                      {!c.enabled && c.disabledNote && (
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em', color: `${c.color}cc` }}>{c.disabledNote}</span>
+                      )}
                     </motion.button>
-                    {/* Deepest footer — your own record above the global #1. Taps to
-                        the recap on Normal (Hardcore has no stored run to recap). */}
+                    {/* Deepest footer — your best above the global #1, aligned for
+                        readability. Normal taps to the recap. */}
                     <button
                       onClick={c.recap ? () => setRecapRun({ run: c.recap!, hardcore: c.key === 'hardcore' }) : undefined}
                       className={c.recap ? 'tap' : undefined}
                       aria-label={c.recap ? 'Recap your deepest run' : undefined}
-                      style={{ width: '100%', marginTop: 'auto', padding: '0.5rem 0.5rem 0.55rem', background: c.recap ? `${c.color}0d` : 'none', border: 'none', borderTop: `1px solid ${c.color}22`, cursor: c.recap ? 'pointer' : 'default', textAlign: 'center', minWidth: 0 }}>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.12em', color: `${c.color}cc` }}>You </span>
+                      style={{ width: '100%', marginTop: 'auto', padding: '0.52rem 0.6rem 0.55rem', background: c.recap ? `${c.color}0d` : 'none', border: 'none', borderTop: `1px solid ${c.color}22`, cursor: c.recap ? 'pointer' : 'default', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
+                        <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.48rem', letterSpacing: '0.12em', color: `${c.color}cc` }}>You</span>
                         {c.mine > 0
-                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f2ede3' }}>Depth {c.mine}{c.recap ? ' ↻' : ''}</span>
-                          : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#8a857c' }}>Uncharted</span>}
+                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.78rem', color: '#f2ede3', whiteSpace: 'nowrap' }}>Depth {c.mine}{c.recap ? ' ↻' : ''}</span>
+                          : <span className="font-karla" style={{ fontSize: '0.62rem', color: '#8a857c' }}>Uncharted</span>}
                       </div>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>
-                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.42rem', letterSpacing: '0.1em', color: '#6a665e' }}>#1 </span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, marginTop: 4, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.48rem', letterSpacing: '0.12em', color: '#6a665e' }}>#1</span>
                         {c.rec
-                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#a8a296' }}>{c.rec.name} · {c.rec.depth}</span>
-                          : <span className="font-karla" style={{ fontSize: '0.56rem', color: '#6a665e' }}>Unclaimed</span>}
+                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#a8a296', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.rec.name} · {c.rec.depth}</span>
+                          : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#6a665e' }}>Unclaimed</span>}
                       </div>
                     </button>
                   </div>
