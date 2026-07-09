@@ -275,11 +275,11 @@ export const RAID_ITEMS: RaidItemDef[] = [
     // lifesteal stacks additively with the Leviathan's Hunger boon.
     id: 'davys_blood_cannon',
     name: "Davy's Blood Cannon",
-    description: 'The gun drinks every wound it opens — you heal 12% of the damage you deal. The deep gives nothing back but what you take by force.',
+    description: 'The gun drinks every wound it opens — you heal 8% of the damage you deal. The deep gives nothing back but what you take by force.',
     image: '/davysbloodcannon.png',
     emoji: '🩸',
     rarity: 'rare',
-    effects: [{ type: 'lifesteal_pct', value: 0.12 }],
+    effects: [{ type: 'lifesteal_pct', value: 0.08 }],
     source: 'Hardcore · The Davy Jones Gauntlet',
   },
   // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
