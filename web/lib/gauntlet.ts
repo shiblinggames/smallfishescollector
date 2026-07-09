@@ -975,18 +975,26 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   ] },
 ]
 
-// Depths at which the player drafts a boon — offset from CURSE_DEPTHS so the
-// descent alternates gift and toll. PAST the fixed schedule the cadence
-// CONTINUES every BOON_INTERVAL depths (isBoonDepth); drawBoons returns [] once
-// every family is maxed, and the caller falls through to the breather.
-export const BOON_DEPTHS = [2, 5, 8, 11, 14, 17, 20, 23]
-const BOON_INTERVAL = 3
+// Boon drafts fall on a ~every-2.5-depths cadence (alternating +2 / +3), up
+// from the old flat every-3. This offsets the opportunity cost of DRAFTING
+// confluences (which used to auto-grant for free) — more picks means a
+// committed build can afford a synergy AND keep deepening its boons. Curses
+// stay every 3 (isCurseDepth), so this is a deliberate net power lift.
+//
+// Expressed as a period-5 pattern anchored at depth 2 (offsets 0 and 2 in each
+// block of 5): depths 2, 4, 7, 9, 12, 14, 17, 19, 22, 24, 27, 29, … — forever,
+// so deep runs keep drafting until the pool is maxed (drawBoons returns [] then
+// and the caller falls through to the breather). Where a boon depth lands on a
+// curse depth, BOTH happen: the run resolves the curse, then hands off to the
+// boon draft (descend sets both; applyCurse routes to 'boon' when one is set).
+export const BOON_DEPTHS = [2, 4, 7, 9, 12, 14, 17, 19, 22, 24]  // illustrative early list; isBoonDepth is the source of truth
 
-/** Is `depth` a boon draft? Fixed early schedule, then every BOON_INTERVAL
- *  depths forever after, so deep runs keep drafting (until the pool is maxed). */
+/** Is `depth` a boon draft? A ~2.5-depth cadence via a period-5 pattern, so
+ *  deep runs keep drafting (until the boon pool is maxed). */
 export function isBoonDepth(depth: number): boolean {
-  const last = BOON_DEPTHS[BOON_DEPTHS.length - 1]
-  return BOON_DEPTHS.includes(depth) || (depth > last && (depth - last) % BOON_INTERVAL === 0)
+  if (depth < 2) return false
+  const m = (depth - 2) % 5
+  return m === 0 || m === 2
 }
 
 /** A single draft choice: a specific TIER of a boon family. The offered tier is
@@ -1127,9 +1135,9 @@ export const CONFLUENCES: Confluence[] = [
     requires: [{ boonId: 'wildfire' }, { boonId: 'leviathans_hunger' }],
     flavor: 'The flames you set drink from the enemy and pour it into your hull.',
     levels: [
-      { desc: 'Burn ticks heal you 50% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.50 }] },
-      { desc: 'Burn ticks heal you 75% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.75 }] },
-      { desc: 'Burn ticks heal you for the full tick', effects: [{ kind: 'burnTickHeal', pctTick: 1.00 }] },
+      { desc: 'Burn ticks heal you 65% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.65 }] },
+      { desc: 'Burn ticks heal you 95% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 0.95 }] },
+      { desc: 'Burn ticks heal you 130% of the tick', effects: [{ kind: 'burnTickHeal', pctTick: 1.30 }] },
     ],
   },
   {
@@ -1138,9 +1146,9 @@ export const CONFLUENCES: Confluence[] = [
     requires: [{ boonId: 'following_sea' }, { boonId: 'ghostward' }],
     flavor: 'You are never where the shot lands, and the wind hands you back your powder.',
     levels: [
-      { desc: 'A successful dodge refunds a cannonball', effects: [{ kind: 'dodgeRefund', charges: 1 }] },
       { desc: 'A dodge refunds a cannonball; +8% dodge', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.08, scope: 'allRemaining' }] },
       { desc: 'A dodge refunds a cannonball; +16% dodge', effects: [{ kind: 'dodgeRefund', charges: 1 }, { kind: 'dodgeBonus', chance: 0.16, scope: 'allRemaining' }] },
+      { desc: 'A dodge refunds 2 cannonballs; +24% dodge', effects: [{ kind: 'dodgeRefund', charges: 2 }, { kind: 'dodgeBonus', chance: 0.24, scope: 'allRemaining' }] },
     ],
   },
   {
@@ -1149,9 +1157,9 @@ export const CONFLUENCES: Confluence[] = [
     requires: [{ boonId: 'spiteful_wake' }, { boonId: 'ironhide' }],
     flavor: 'Plate over plate, and every blow that breaks on it is flung back twofold.',
     levels: [
-      { desc: 'Your reflected damage hits 1.5× harder', effects: [{ kind: 'retaliateBoost', mult: 1.5 }] },
-      { desc: 'Your reflected damage hits 1.9× harder', effects: [{ kind: 'retaliateBoost', mult: 1.9 }] },
-      { desc: 'Your reflected damage hits 2.4× harder', effects: [{ kind: 'retaliateBoost', mult: 2.4 }] },
+      { desc: 'Your reflected damage hits 1.8× harder', effects: [{ kind: 'retaliateBoost', mult: 1.8 }] },
+      { desc: 'Your reflected damage hits 2.5× harder', effects: [{ kind: 'retaliateBoost', mult: 2.5 }] },
+      { desc: 'Your reflected damage hits 3.2× harder', effects: [{ kind: 'retaliateBoost', mult: 3.2 }] },
     ],
   },
   {
