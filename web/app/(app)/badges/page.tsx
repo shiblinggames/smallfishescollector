@@ -267,7 +267,7 @@ export default async function BadgesPage() {
         badgeGoal('one_shot', 'One Shot', 'Land a single Gauntlet hit for 2,000+', gauntletMaxHit, 2000, '/raids/gauntlet', { record: true }),
         badgeGoal('greeds_price', "Greed's Price", 'Die deeper than your best cash-out', gauntletDeepestDied > gauntletDeepest ? 1 : 0, 1, '/raids/gauntlet', { binary: true }),
         badgeGoal('storm_reader', 'Storm Reader', 'Discover your first confluence', confluencesSeen, 1, '/raids/gauntlet'),
-        badgeGoal('deep_cartographer', 'Deep Cartographer', 'Discover all 7 confluences', confluencesSeen, CONFLUENCE_COUNT, '/raids/gauntlet'),
+        badgeGoal('deep_cartographer', 'Deep Cartographer', 'Discover every confluence', confluencesSeen, CONFLUENCE_COUNT, '/raids/gauntlet'),
       ],
     },
     {

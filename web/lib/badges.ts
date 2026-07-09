@@ -168,7 +168,7 @@ export const BADGES: Badge[] = [
   { id: 'one_shot',       name: 'One Shot',           description: 'Land a single Gauntlet hit for 2,000 or more',    imageUrl: '/badges/one_shot.png',       difficulty: 'veteran'  },
   { id: 'greeds_price',   name: "Greed's Price",      description: 'Die deeper than your best cash-out',              imageUrl: '/badges/greeds_price.png',   difficulty: 'seasoned' },
   { id: 'storm_reader',   name: 'Storm Reader',       description: 'Discover your first confluence',                  imageUrl: '/badges/storm_reader.png',   difficulty: 'rookie'   },
-  { id: 'deep_cartographer', name: 'Deep Cartographer', description: 'Discover all 7 confluences',                    imageUrl: '/badges/deep_cartographer.png', difficulty: 'master' },
+  { id: 'deep_cartographer', name: 'Deep Cartographer', description: 'Discover every confluence',                     imageUrl: '/badges/deep_cartographer.png', difficulty: 'master' },
   // The Gauntlet — Hardcore. Crew you send in die for good.
   { id: 'drowned_ledger', name: 'The Drowned Ledger', description: 'Cash out a Hardcore Gauntlet run',                imageUrl: '/badges/drowned_ledger.png', difficulty: 'rookie'   },
   { id: 'the_unsinkable', name: 'The Unsinkable',     description: 'Reach depth 15 in the Hardcore Gauntlet',         imageUrl: '/badges/the_unsinkable.png', difficulty: 'seasoned' },
@@ -317,7 +317,7 @@ export const BADGE_DETAIL: Record<string, string> = {
   one_shot:         'Land a single Gauntlet hit for 2,000 damage or more. A deep run and a stacked build turn one blow into a kill.',
   greeds_price:     'Die on a Gauntlet run deeper than your best cash-out. You had a new record in hand and pushed one fight too far.',
   storm_reader:     'Discover your first confluence — two boons that combine into something greater. The Gauntlet rewards a sharp eye.',
-  deep_cartographer:'Discover all seven confluences. You have charted every way the deep’s gifts combine.',
+  deep_cartographer:'Discover every confluence. You have charted every way the deep’s gifts combine.',
   drowned_ledger:   'Sail a squad down into the Hardcore Gauntlet and cash out — crew on the line the whole way, and you brought them home.',
   the_unsinkable:   'Reach depth 15 in the Hardcore Gauntlet, where a single fall would take your whole squad. Nerve most captains never test.',
   locker_bound:     'Reach depth 25 in the Hardcore Gauntlet. This deep, with your crew as the stake, few ever go and fewer return.',
