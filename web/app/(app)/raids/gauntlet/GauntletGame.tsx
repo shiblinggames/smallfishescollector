@@ -3651,7 +3651,7 @@ function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: ()
               <Label color={`${accent}cc`}>Hardcore-only spoils</Label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.55rem 0.65rem', borderRadius: 10, background: `${accent}14`, border: `1px solid ${accent}55` }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill={accent} stroke="none" style={{ flexShrink: 0, filter: `drop-shadow(0 0 6px ${accent}88)` }}><path d="M12 2l2.4 6.3L21 9.2l-5 4.4L17.6 21 12 17.3 6.4 21 8 13.6 3 9.2l6.6-.9z" /></svg>
+                  <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0, filter: 'drop-shadow(0 0 6px rgba(220,38,38,0.7))' }}><path d="M12 2s7 8.6 7 13a7 7 0 1 1-14 0c0-4.4 7-13 7-13z" fill="#d1394b" /><path d="M9.2 12.4a3.4 3.4 0 0 0-.2 4.2" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.3" fill="none" strokeLinecap="round" /></svg>
                   <div style={{ minWidth: 0 }}>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.8rem', color: '#f3d3d3', lineHeight: 1.1 }}>Blood Gems</p>
                     <p className="font-karla" style={{ fontSize: '0.62rem', color: '#c3a3a3', lineHeight: 1.3, marginTop: 1 }}>The premium currency — banked in your cash-out chest. Survive to keep them; the deeper you go, the more you carry up.</p>
@@ -3663,23 +3663,28 @@ function LootModal({ mode, onClose }: { mode: 'normal' | 'hardcore'; onClose: ()
             </>
           )}
 
-          {/* ── Shared drops — for Hardcore, framed as "also from Normal" ── */}
-          <Label>{hardcore ? 'Also earns every Normal drop' : 'The chase — rare from any chest'}</Label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {cannons.map(it => (
-              <DropRow key={it.id} img={it.image} name={it.name} desc={it.description} color="#9370d0" />
-            ))}
-            {goldHull && <DropRow img={goldHull.imageByTier?.[6]} name={goldHull.name} desc={goldHull.description} color={goldHull.color} big />}
-          </div>
-          <p className="font-karla" style={{ fontSize: '0.63rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
-            The cannons are a rare chase from any chest; the Golden Hull drops only from the deepest one (Davy Jones&apos; Locker).
-          </p>
-
-          {/* Normal: make the one-way rule explicit here too. */}
-          {!hardcore && (
-            <p className="font-karla" style={{ fontSize: '0.63rem', color: '#8a8480', marginTop: 8, lineHeight: 1.45 }}>
-              The <span style={{ color: '#e0888c', fontWeight: 700 }}>Hardcore-only spoils</span> — Blood Gems, Davy&apos;s Blood Cannon, Bad Blood Hull — never drop on a Normal dive. A Hardcore dive earns all of the above <em>and</em> those.
+          {/* Shared drops — full chase list on Normal; on Hardcore just one line
+              (no need to re-list them all). */}
+          {hardcore ? (
+            <p className="font-karla" style={{ fontSize: '0.72rem', color: '#cbb8e8', lineHeight: 1.5, marginTop: 13, padding: '0.6rem 0.75rem', borderRadius: 10, background: 'rgba(147,112,208,0.10)', border: '1px solid rgba(147,112,208,0.3)' }}>
+              You also earn <span style={{ color: '#e4d6f7', fontWeight: 700 }}>every Normal Gauntlet drop</span> — the Davy cannons, the Golden Hull, and everything else a Normal dive can turn up.
             </p>
+          ) : (
+            <>
+              <Label>The chase — rare from any chest</Label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {cannons.map(it => (
+                  <DropRow key={it.id} img={it.image} name={it.name} desc={it.description} color="#9370d0" />
+                ))}
+                {goldHull && <DropRow img={goldHull.imageByTier?.[6]} name={goldHull.name} desc={goldHull.description} color={goldHull.color} big />}
+              </div>
+              <p className="font-karla" style={{ fontSize: '0.63rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
+                The cannons are a rare chase from any chest; the Golden Hull drops only from the deepest one (Davy Jones&apos; Locker).
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.63rem', color: '#8a8480', marginTop: 8, lineHeight: 1.45 }}>
+                The <span style={{ color: '#e0888c', fontWeight: 700 }}>Hardcore-only spoils</span> — Blood Gems, Davy&apos;s Blood Cannon, Bad Blood Hull — never drop on a Normal dive. A Hardcore dive earns all of the above <em>and</em> those.
+              </p>
+            </>
           )}
         </div>
       </motion.div>
