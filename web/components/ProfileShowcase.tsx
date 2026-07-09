@@ -109,9 +109,11 @@ const ITEM_RARITY_COLOR: Record<string, string> = {
 }
 const ITEM_RARITY_RANK: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5 }
 // Forge-crafted items — flagged by their `source` ("Forged from …") — display
-// as PRISMATIC (a step above legendary): animated rainbow glow + rainbow label.
-const PRISMATIC_ACCENT = '#c9a6ff'
-const PRISMATIC_GRADIENT = 'linear-gradient(90deg, #f26d6d, #f2c14e, #57d06a, #5aa9f0, #c9a6ff)'
+// distinctly (a step above legendary): animated rainbow glow on the art + a
+// "Forged" label in the Aurora-border spectrum. Neutral tile (NOT a purple fill).
+const FORGED_BG = 'rgba(255,255,255,0.045)'
+const FORGED_BORDER = 'rgba(120,180,255,0.42)'
+const FORGED_GRADIENT = 'linear-gradient(90deg, #34d399, #22d3ee, #3b82f6, #8b5cf6, #ec4899)'
 const isForged = (d: RaidItemDef) => /^Forged from/i.test(d.source ?? '')
 
 /** Arsenal — the raid + forge items a player has collected, as a rarity-sorted
@@ -128,12 +130,12 @@ export function RaidArsenal({ items }: { items: string[] }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
       {defs.map(it => {
         const forged = isForged(it)
-        const c = forged ? PRISMATIC_ACCENT : (ITEM_RARITY_COLOR[it.rarity] ?? '#94a3b8')
+        const c = ITEM_RARITY_COLOR[it.rarity] ?? '#94a3b8'
         return (
           <div key={it.id} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             padding: '0.75rem 0.5rem 0.6rem', borderRadius: 13, textAlign: 'center',
-            background: `${c}0e`, border: `1px solid ${c}${forged ? '5a' : '33'}`,
+            background: forged ? FORGED_BG : `${c}0e`, border: `1px solid ${forged ? FORGED_BORDER : `${c}33`}`,
           }}>
             <div style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {it.image
@@ -146,7 +148,7 @@ export function RaidArsenal({ items }: { items: string[] }) {
             </div>
             <p className="font-karla font-600" style={{ fontSize: '0.66rem', color: '#e8e4dc', lineHeight: 1.15 }}>{it.name}</p>
             {forged
-              ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.12em', backgroundImage: PRISMATIC_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Forged</span>
+              ? <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.12em', backgroundImage: FORGED_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Forged</span>
               : <span className="font-karla font-700 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.1em', color: c }}>{it.rarity}</span>}
           </div>
         )
