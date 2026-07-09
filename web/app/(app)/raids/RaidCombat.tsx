@@ -4822,41 +4822,27 @@ export default function RaidCombat({
                   />
                 )
               })()}
-              {/* Cannonade (boon) — a rising heat rim + streak badge that
-                  brightens with each consecutive crit (ember orange, gold at
-                  max). Same ambient edge-halo lane as Wounded Fury; frozen
-                  static during aiming so the mixBlend re-composite never
-                  stutters the aim needle. */}
+              {/* Cannonade (boon) — a streak badge on the hull that brightens
+                  with each consecutive crit (ember orange, gold at max). No hull
+                  halo: a radial glow read as a "shield", which this isn't — the
+                  labelled badge carries it cleanly on its own. */}
               {cannonadeStacks > 0 && (() => {
                 const maxStk = tide.critStreakMaxStacks || 5
                 const maxed = cannonadeStacks >= maxStk
-                const t = Math.min(1, cannonadeStacks / maxStk)
-                const peak = 0.3 + t * 0.5
                 const col = maxed ? '251,191,36' : '251,146,60'
                 return (
-                  <>
-                    <motion.div aria-hidden
-                      animate={subPhase === 'aiming' ? { opacity: peak } : { opacity: [peak * 0.6, peak, peak * 0.6] }}
-                      transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                      style={{
-                        position: 'absolute', inset: '-7%', borderRadius: '50%',
-                        pointerEvents: 'none', zIndex: 1, mixBlendMode: 'screen',
-                        background: `radial-gradient(ellipse at center, transparent 44%, rgba(${col},0.85) 63%, transparent 82%)`,
-                      }}
-                    />
-                    <motion.div key={`cn-${cannonadeStacks}`} aria-hidden
-                      initial={{ scale: 1.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 520, damping: 20 }}
-                      className="font-karla font-800 uppercase tracking-wide"
-                      style={{
-                        position: 'absolute', top: '-8%', right: '-3%', zIndex: 5, pointerEvents: 'none',
-                        padding: '2px 7px', borderRadius: 999, fontSize: '0.6rem', lineHeight: 1,
-                        color: '#1a1204', background: `rgba(${col},0.97)`, border: '1px solid rgba(255,255,255,0.55)',
-                        boxShadow: `0 0 12px rgba(${col},0.85)`, whiteSpace: 'nowrap',
-                      }}>
-                      {maxed ? 'Cannonade Max' : `Cannonade ×${cannonadeStacks}`}
-                    </motion.div>
-                  </>
+                  <motion.div key={`cn-${cannonadeStacks}`} aria-hidden
+                    initial={{ scale: 1.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+                    className="font-karla font-800 uppercase tracking-wide"
+                    style={{
+                      position: 'absolute', top: '-8%', right: '-3%', zIndex: 5, pointerEvents: 'none',
+                      padding: '2px 7px', borderRadius: 999, fontSize: '0.6rem', lineHeight: 1,
+                      color: '#1a1204', background: `rgba(${col},0.97)`, border: '1px solid rgba(255,255,255,0.55)',
+                      boxShadow: `0 0 12px rgba(${col},0.85)`, whiteSpace: 'nowrap',
+                    }}>
+                    {maxed ? 'Cannonade Max' : `Cannonade ×${cannonadeStacks}`}
+                  </motion.div>
                 )
               })()}
               {/* Impact spray when the enemy's shot lands on the player hull */}

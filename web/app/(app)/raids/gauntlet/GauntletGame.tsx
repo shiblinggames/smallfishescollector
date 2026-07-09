@@ -1872,17 +1872,22 @@ export default function GauntletGame(props: GauntletGameProps) {
               <motion.div key={confluenceBanner.key} aria-hidden
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 style={{ position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 1.2rem' }}>
+                {/* Dark scrim — dims the busy abyss so the gold reveal is legible
+                    (fades with the parent's opacity). */}
+                <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 44%, rgba(4,8,15,0.72) 0%, rgba(3,6,12,0.93) 100%)' }} />
                 {/* radial gold burst */}
                 <motion.div initial={{ scale: 0.3, opacity: 0.7 }} animate={{ scale: 2.8, opacity: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}
                   style={{ position: 'absolute', width: 280, height: 280, borderRadius: '50%', background: `radial-gradient(circle, ${GLD}88 0%, ${GLD}22 40%, transparent 70%)` }} />
                 <motion.div initial={{ scale: 0.4, opacity: 0.8 }} animate={{ scale: 2.1, opacity: 0 }} transition={{ duration: 0.8, delay: 0.1, ease: 'easeOut' }}
                   style={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', border: `2px solid ${GLD}`, boxShadow: `0 0 28px ${GLD}` }} />
+                {/* Reveal card — a dark backing plate keeps the text readable on
+                    top of the burst + backdrop. */}
                 <motion.div initial={{ scale: 0.6, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 16 }}
-                  style={{ position: 'relative' }}>
+                  style={{ position: 'relative', padding: '1.3rem 1.5rem 1.4rem', borderRadius: 18, background: 'rgba(8,13,22,0.66)', border: `1px solid ${GLD}55`, boxShadow: `0 0 44px ${GLD}22, 0 12px 40px rgba(0,0,0,0.6)`, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${GLD}aa)` }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
                   <p className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.32em', color: GLD, marginTop: 10, textShadow: `0 0 16px ${GLD}88` }}>{confluenceBanner.discovered ? 'New Synergy Discovered' : confluenceBanner.isNew ? 'Synergy Unlocked' : `Synergy Deepened · ${['', 'I', 'II', 'III'][confluenceBanner.level] ?? ''}`}</p>
-                  <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1.05, color: '#fdecc6', marginTop: 6, textShadow: `0 0 30px ${GLD}66` }}>{confluenceBanner.c.name}</p>
-                  <p className="font-karla" style={{ fontSize: '0.86rem', color: '#cdb88e', marginTop: 8, lineHeight: 1.4, maxWidth: 320 }}>{confluenceDescAt(confluenceBanner.c, confluenceBanner.level)}</p>
+                  <p className="font-cinzel font-800" style={{ fontSize: '2.1rem', lineHeight: 1.05, color: '#fff3d6', marginTop: 6, textShadow: `0 2px 10px rgba(0,0,0,0.7), 0 0 30px ${GLD}66` }}>{confluenceBanner.c.name}</p>
+                  <p className="font-karla" style={{ fontSize: '0.86rem', color: '#e7d5aa', marginTop: 8, lineHeight: 1.4, maxWidth: 300, marginInline: 'auto', textShadow: '0 1px 6px rgba(0,0,0,0.75)' }}>{confluenceDescAt(confluenceBanner.c, confluenceBanner.level)}</p>
                 </motion.div>
               </motion.div>
             )
