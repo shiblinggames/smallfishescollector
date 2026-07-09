@@ -4634,7 +4634,7 @@ export default function RaidCombat({
                 {playerAura && <PlayerStatusAura key={`pa-${playerAura.key}`} kind={playerAura.kind} color={playerAura.color} />}
               </AnimatePresence>
               {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
-              {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} />}
+              {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} paused={subPhase === 'aiming'} />}
               {/* Wounded Fury (boon) — a crimson rage rim around the hull that
                   grows as HP drops, mirroring the boon's "harder the lower you
                   get" damage. Its own ambient lane (an edge halo, not rising
@@ -4646,8 +4646,10 @@ export default function RaidCombat({
                 const peak = Math.min(0.8, 0.22 + ragePct * 0.72)
                 return (
                   <motion.div aria-hidden
-                    animate={{ opacity: [peak * 0.6, peak, peak * 0.6] }}
-                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                    // Frozen static during aiming so the mixBlend re-composite
+                    // doesn't stutter the aim needle.
+                    animate={subPhase === 'aiming' ? { opacity: peak } : { opacity: [peak * 0.6, peak, peak * 0.6] }}
+                    transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
                     style={{
                       position: 'absolute', inset: '-7%', borderRadius: '50%',
                       pointerEvents: 'none', zIndex: 1, mixBlendMode: 'screen',
@@ -4677,8 +4679,9 @@ export default function RaidCombat({
                 <motion.div
                   aria-hidden
                   initial={{ opacity: 0.32 }}
-                  animate={{ opacity: [0.32, 0.62, 0.32] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                  // Frozen static during aiming (mixBlend re-composite starves the aim RAF).
+                  animate={subPhase === 'aiming' ? { opacity: 0.5 } : { opacity: [0.32, 0.62, 0.32] }}
+                  transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                   style={{
                     position: 'absolute', inset: '-7%', borderRadius: '50%',
                     pointerEvents: 'none', zIndex: 2, mixBlendMode: 'screen',
@@ -6614,15 +6617,19 @@ function ShipDamageFX({ hpPct, flip = false }: { hpPct: number; flip?: boolean }
 // Persistent enemy status — a low ambient tell that lingers between the
 // activation flare and the tick/skip. Burning: a base ember glow + slow rising
 // embers. Frozen: a cyan frost tint over the hull.
-function ShipStatusAura({ burning, frozen }: { burning: boolean; frozen: boolean }) {
+function ShipStatusAura({ burning, frozen, paused }: { burning: boolean; frozen: boolean; paused?: boolean }) {
+  // `paused` freezes the mixBlend opacity pulses to a static value during the
+  // aim minigame — a blended layer re-composites every opacity frame, which on
+  // the main thread starves the aim RAF (the needle stutters). Frozen = one
+  // composite, not per-frame. The aura still shows, it just stops breathing.
   return (
     <>
       {burning && (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
           <motion.div
             aria-hidden
-            animate={{ opacity: [0.22, 0.46, 0.22] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            animate={paused ? { opacity: 0.4 } : { opacity: [0.22, 0.46, 0.22] }}
+            transition={paused ? { duration: 0.2 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
             style={{ position: 'absolute', inset: '-10% -4% -2%', borderRadius: '46%', mixBlendMode: 'screen', background: 'radial-gradient(ellipse at 50% 82%, rgba(251,146,60,0.6) 0%, rgba(251,146,60,0.2) 46%, transparent 72%)' }}
           />
           {[0, 1, 2].map(n => (
@@ -6633,8 +6640,8 @@ function ShipStatusAura({ burning, frozen }: { burning: boolean; frozen: boolean
       {frozen && (
         <motion.div
           aria-hidden
-          animate={{ opacity: [0.4, 0.62, 0.4] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          animate={paused ? { opacity: 0.55 } : { opacity: [0.4, 0.62, 0.4] }}
+          transition={paused ? { duration: 0.2 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
           style={{ position: 'absolute', inset: '-6%', borderRadius: '46%', mixBlendMode: 'screen', zIndex: 3, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, rgba(125,211,252,0.5) 0%, rgba(186,230,253,0.22) 45%, transparent 72%)' }}
         />
       )}
