@@ -1346,6 +1346,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                 const cards = [
                   {
                     key: 'normal' as const, color: TEAL, label: 'Normal', rec: props.topDescender,
+                    mine: props.deepest, canRecap: !!props.deepestRun && props.deepest > 0,
                     icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" />,
                     enabled: !starting,
                     onClick: () => begin(false),
@@ -1354,6 +1355,7 @@ export default function GauntletGame(props: GauntletGameProps) {
                   },
                   {
                     key: 'hardcore' as const, color: '#e0555a', label: 'Hardcore', rec: props.hardcoreTop,
+                    mine: props.hcDeepest, canRecap: false,
                     icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></>,
                     enabled: canHc && !starting && props.hcRunsLeft > 0,
                     onClick: () => setHcConfirmOpen(true),
@@ -1361,36 +1363,55 @@ export default function GauntletGame(props: GauntletGameProps) {
                     note: canHc && props.hcRunsLeft > 0 ? `${props.hcRunsLeft} of ${HARDCORE_RUNS_PER_DAY} runs left` : null,
                   },
                 ]
+                // Card = a wrapper carrying the visual, with the descend button and
+                // the deepest footer as SIBLINGS (no button-in-button). The footer
+                // shows YOUR deepest above the global #1; on Normal it taps to the
+                // detailed recap.
                 return cards.map(c => (
-                  <motion.button key={c.key}
-                    onClick={c.enabled ? c.onClick : undefined}
-                    disabled={!c.enabled}
-                    whileTap={c.enabled ? { scale: 0.97 } : undefined}
-                    className="tap"
-                    style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                      padding: '0.9rem 0.55rem 0.7rem', borderRadius: 15, textAlign: 'center', minWidth: 0, overflow: 'hidden',
-                      background: `linear-gradient(180deg, ${c.color}26 0%, ${c.color}0b 60%, rgba(8,13,22,0.35) 100%)`,
-                      border: `1px solid ${c.color}${c.enabled ? '70' : '2e'}`,
-                      boxShadow: c.enabled ? `0 0 22px ${c.color}20` : 'none',
-                      cursor: c.enabled ? 'pointer' : 'default', opacity: c.enabled ? 1 : 0.62,
-                      animation: c.enabled ? 'gauntCta 2.8s ease-in-out infinite' : 'none',
-                    }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: `radial-gradient(circle at 40% 30%, ${c.color}4d, ${c.color}12)`, border: `1px solid ${c.color}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color, marginBottom: 3 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{c.icon}</svg>
-                    </div>
-                    <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.95rem', letterSpacing: '0.03em', color: c.color, lineHeight: 1 }}>{c.label}</span>
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.08em', color: c.enabled ? '#f2ede3' : `${c.color}bb`, marginTop: 2 }}>
-                      {c.cta}{c.enabled ? ' ▾' : ''}
-                    </span>
-                    {c.note && <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#9a948a' }}>{c.note}</span>}
-                    <div style={{ marginTop: 'auto', paddingTop: 8, width: '100%', borderTop: `1px solid ${c.color}22`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.42rem', letterSpacing: '0.1em', color: '#7a766e' }}>Deepest </span>
-                      {c.rec
-                        ? <span className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#cfc9bd' }}>{c.rec.name} · {c.rec.depth}</span>
-                        : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#7a766e' }}>Unclaimed</span>}
-                    </div>
-                  </motion.button>
+                  <div key={c.key} style={{
+                    position: 'relative', display: 'flex', flexDirection: 'column', minWidth: 0, borderRadius: 15, overflow: 'hidden',
+                    background: `linear-gradient(180deg, ${c.color}26 0%, ${c.color}0b 60%, rgba(8,13,22,0.35) 100%)`,
+                    border: `1px solid ${c.color}${c.enabled ? '70' : '2e'}`,
+                    boxShadow: c.enabled ? `0 0 22px ${c.color}20` : 'none',
+                    opacity: c.enabled ? 1 : 0.62,
+                    animation: c.enabled ? 'gauntCta 2.8s ease-in-out infinite' : 'none',
+                  }}>
+                    <motion.button
+                      onClick={c.enabled ? c.onClick : undefined}
+                      disabled={!c.enabled}
+                      whileTap={c.enabled ? { scale: 0.97 } : undefined}
+                      className="tap"
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0.9rem 0.55rem 0.7rem', background: 'none', border: 'none', textAlign: 'center', minWidth: 0, cursor: c.enabled ? 'pointer' : 'default', color: 'inherit' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: `radial-gradient(circle at 40% 30%, ${c.color}4d, ${c.color}12)`, border: `1px solid ${c.color}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color, marginBottom: 3 }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{c.icon}</svg>
+                      </div>
+                      <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.95rem', letterSpacing: '0.03em', color: c.color, lineHeight: 1 }}>{c.label}</span>
+                      <span className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.08em', color: c.enabled ? '#f2ede3' : `${c.color}bb`, marginTop: 2 }}>
+                        {c.cta}{c.enabled ? ' ▾' : ''}
+                      </span>
+                      {c.note && <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#9a948a' }}>{c.note}</span>}
+                    </motion.button>
+                    {/* Deepest footer — your own record above the global #1. Taps to
+                        the recap on Normal (Hardcore has no stored run to recap). */}
+                    <button
+                      onClick={c.canRecap ? () => setDeepestRunOpen(true) : undefined}
+                      className={c.canRecap ? 'tap' : undefined}
+                      aria-label={c.canRecap ? 'Recap your deepest run' : undefined}
+                      style={{ width: '100%', marginTop: 'auto', padding: '0.5rem 0.5rem 0.55rem', background: c.canRecap ? `${c.color}0d` : 'none', border: 'none', borderTop: `1px solid ${c.color}22`, cursor: c.canRecap ? 'pointer' : 'default', textAlign: 'center', minWidth: 0 }}>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span className="font-karla font-800 uppercase" style={{ fontSize: '0.44rem', letterSpacing: '0.12em', color: `${c.color}cc` }}>You </span>
+                        {c.mine > 0
+                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.72rem', color: '#f2ede3' }}>Depth {c.mine}{c.canRecap ? ' ↻' : ''}</span>
+                          : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#8a857c' }}>Uncharted</span>}
+                      </div>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>
+                        <span className="font-karla font-700 uppercase" style={{ fontSize: '0.42rem', letterSpacing: '0.1em', color: '#6a665e' }}>#1 </span>
+                        {c.rec
+                          ? <span className="font-cinzel font-700" style={{ fontSize: '0.6rem', color: '#a8a296' }}>{c.rec.name} · {c.rec.depth}</span>
+                          : <span className="font-karla" style={{ fontSize: '0.56rem', color: '#6a665e' }}>Unclaimed</span>}
+                      </div>
+                    </button>
+                  </div>
                 ))
               })()}
             </div>
@@ -1408,16 +1429,6 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </button>
               ))}
             </div>
-            {/* Recap your own record — kept accessible after dropping the hero. */}
-            {props.deepestRun && props.deepest > 0 && (
-              <div style={{ textAlign: 'center', marginTop: 10 }}>
-                <button onClick={() => setDeepestRunOpen(true)} aria-label="Recap your deepest run" className="tap"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.8rem', borderRadius: 999, background: `${GOLD}0f`, border: `1px solid ${GOLD}3a`, color: `${GOLD}dd`, cursor: 'pointer' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
-                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.08em' }}>Recap your deepest · Depth {props.deepest}</span>
-                </button>
-              </div>
-            )}
             {GAUNTLET_COOLDOWN_HOURS > 0 && (
               <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a766e', marginTop: 8, textAlign: 'center' }}>
                 Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
