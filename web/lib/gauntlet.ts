@@ -248,11 +248,15 @@ const BOSS_HP_MULT  = 2.8
 const BOSS_DMG_MULT = 1.5
 
 // ── Roll guardrails ──────────────────────────────────────────────────────────
+// Boss cadence. Every boss FULLY refreshes crew abilities (a breather), so
+// bosses appearing too often actually made deep runs EASIER, not harder —
+// thinned out here so refreshes are earned, not constant. Deep steady-state is
+// now ~a boss every 4 rounds (was ~2.8) with a longer pity floor.
 const FIRST_BOSS_EARLIEST = 4    // no boss before this depth
 const BOSS_CHANCE_BASE    = 0.08 // at FIRST_BOSS_EARLIEST
-const BOSS_CHANCE_GROWTH  = 0.05 // per depth past earliest
-const BOSS_CHANCE_CAP     = 0.55
-const BOSS_PITY           = 6    // force a boss after this many bossless rounds (past earliest)
+const BOSS_CHANCE_GROWTH  = 0.035 // per depth past earliest
+const BOSS_CHANCE_CAP     = 0.35
+const BOSS_PITY           = 9    // force a boss after this many bossless rounds (past earliest)
 
 const ELITE_CHANCE_BASE   = 0.06
 const ELITE_CHANCE_GROWTH = 0.05 // per depth
