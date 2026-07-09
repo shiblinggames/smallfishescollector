@@ -2624,7 +2624,8 @@ export default function RaidCombat({
           const before = pHp
           pHp = Math.min(playerHpMax, pHp + roll)
           const healed = pHp - before
-          noteCheckResponse('heal')
+          // A repair kit does NOT answer boss mechanic checks — only crew
+          // abilities pass checks (and only a crew heal douses a burn).
           stepLines.push(`You crack open the ${repairKit.name}.`)
           stepLines.push(`The hull patches up for ${healed} HP.`)
           splatTarget = 'player'
