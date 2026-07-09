@@ -1071,6 +1071,12 @@ export default function RaidCombat({
   // Centre-screen result callout the instant a check resolves — green "Countered!"
   // or red "<name> hits!" so success/failure is unmistakable.
   const [checkResultFlash, setCheckResultFlash] = useState<{ ok: boolean; label: string; key: number } | null>(null)
+  // Centre-screen callout for a boon PROC (Counter-Battery). Same lane as the
+  // check flash but themed to the boon's colour.
+  const [boonFlash, setBoonFlash] = useState<{ label: string; sub?: string; color: string; key: number } | null>(null)
+  // Cannonade (boon): the live crit streak, mirrored to state (off the step,
+  // in playStep) so the heat rim + badge on the player hull track it.
+  const [cannonadeStacks, setCannonadeStacks] = useState(0)
   // Arm the check that opens a phase (called from both revival paths).
   function armMechanicCheck(check: BossMechanicCheck | undefined) {
     if (!check) return
@@ -1488,6 +1494,18 @@ export default function RaidCombat({
     const introLines = [intro]
     // Host-supplied opener (Gauntlet: 'Crew abilities refreshed.' on a refresh round).
     if (openingNote) introLines.push(openingNote)
+    // Momentum boons are passive damage mults with no per-shot trigger, so
+    // capture their LIVE contribution once here at fight start — accurate,
+    // no per-shot log spam.
+    for (const e of tideEffects) {
+      if (e.kind === 'killStackDamage') {
+        const bonus = Math.min(e.maxBonus, e.perKill * Math.max(0, runKills))
+        if (bonus > 0) introLines.push(`Rising Tide: +${Math.round(bonus * 100)}% damage — ${runKills} hull${runKills === 1 ? '' : 's'} in your wake.`)
+      } else if (e.kind === 'depthScaleDamage') {
+        const bonus = Math.min(e.maxBonus, e.perDepth * Math.max(0, runDepth))
+        if (bonus > 0) introLines.push(`Abyssal Bounty: +${Math.round(bonus * 100)}% damage at depth ${runDepth}.`)
+      }
+    }
     if ((enemy.damageReduction ?? 0) > 0) {
       introLines.push(`Its ${(enemy.abilityName ?? 'armour').toLowerCase()} soaks fire and graze. Volleys break through.`)
     }
@@ -2470,6 +2488,12 @@ export default function RaidCombat({
       // Thermal Shock confluence: the shatter burst dealt on top of this hit —
       // drives the ice+fire detonation FX + its own splat.
       thermalShock?: number
+      // Counter-Battery (boon): this step is the negated enemy shot — fires the
+      // centre "COUNTER-BATTERY" flash + a clash spark on the enemy.
+      countered?: boolean
+      // Cannonade (boon): the crit streak AFTER this landed player shot (0 = the
+      // chain just broke). Drives the persistent heat rim + streak badge.
+      cannonade?: number
       // Shield-pool snapshots AT this step (player absorb buffer + enemy
       // barrier). Synced to the display alongside HP during playback so the
       // bars deplete in lockstep with the animation, not the instant the turn
@@ -2576,7 +2600,7 @@ export default function RaidCombat({
       if (who === 'enemy' && counterEnemyShot) {
         counterEnemyShot = false
         eCharges = Math.max(0, eCharges - (eAction === 'volley' ? MAX_CHARGES : 1))
-        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Countered', splatColor: '#7dd3fc', logLines: [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`] })
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Countered', splatColor: '#7dd3fc', logLines: [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`], countered: true })
         continue
       }
       // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
@@ -2780,19 +2804,14 @@ export default function RaidCombat({
           // Hull Render confluence: each Volley this fight ramps. Reads the count
           // BEFORE this volley (so the first is +0), then it's bumped below.
           const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + Math.min(tide.volleyRampPct * volleyCountRef.current, HULL_RENDER_RAMP_CAP) : 1
-          // Cannonade (boon): each consecutive crit this fight stacks damage;
-          // any non-crit shot breaks the streak. First crit already grants a
-          // stack. Update the streak on THIS shot, then apply it to THIS shot.
-          let critStreakMult = 1
-          if (tide.critStreakPerStack > 0) {
-            if (isCritShot) {
-              critStreakRef.current = Math.min(tide.critStreakMaxStacks, critStreakRef.current + 1)
-              critStreakMult = 1 + tide.critStreakPerStack * critStreakRef.current
-              if (critStreakRef.current >= 2) stepLines.push(`Cannonade! ${critStreakRef.current} crits running — +${Math.round(tide.critStreakPerStack * critStreakRef.current * 100)}% damage.`)
-            } else {
-              critStreakRef.current = 0
-            }
-          }
+          // Cannonade (boon): consecutive crits ramp damage. The bonus for THIS
+          // shot is the streak it WILL reach if it lands (first crit = 1 stack).
+          // Read-only here — the streak is only COMMITTED once the shot lands
+          // (past the dodge check, just before the step is pushed), so a dodged
+          // crit doesn't advance the chain.
+          const critStreakMult = (tide.critStreakPerStack > 0 && isCritShot)
+            ? 1 + tide.critStreakPerStack * Math.min(tide.critStreakMaxStacks, critStreakRef.current + 1)
+            : 1
           const actionBaseMult = isMega ? (megaAug?.megaMult ?? 2.6) : isVolley ? 2 : 1
           // Vengeance rage — after Laz's ward cheats a killing blow, every shot
           // for the rest of the fight hits harder (capped +35% at the def level).
@@ -3292,6 +3311,23 @@ export default function RaidCombat({
         }
       }
 
+      // Cannonade streak COMMIT — only now that the shot has landed (a dodged
+      // shot never reaches here; it continues at the dodge branch). Bake the
+      // resulting streak into the step so the badge + log fire in lockstep with
+      // the animation, and add the build / break log line.
+      let cannonadeStep: number | undefined
+      if (who === 'player' && (action === 'fire' || action === 'volley' || action === 'mega') && tide.critStreakPerStack > 0) {
+        const prior = critStreakRef.current
+        if (lockedAimResult === 'critical') {
+          critStreakRef.current = Math.min(tide.critStreakMaxStacks, prior + 1)
+          if (critStreakRef.current >= 2) stepLines.push(`Cannonade! ${critStreakRef.current} crits running — +${Math.round(tide.critStreakPerStack * critStreakRef.current * 100)}% damage.`)
+        } else {
+          if (prior >= 2) stepLines.push(`Cannonade fades — the chain of crits breaks.`)
+          critStreakRef.current = 0
+        }
+        cannonadeStep = critStreakRef.current
+      }
+
       pushStep({
         who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor,
         big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
@@ -3301,6 +3337,7 @@ export default function RaidCombat({
         lifestealHeal: lifestealHealedOut || undefined,
         carapaceSoak: carapaceSoaked,
         thermalShock: thermalBurstOut || undefined,
+        cannonade: cannonadeStep,
       })
 
       // Phase 2 revival — when the player's killing blow drops the boss
@@ -3538,6 +3575,21 @@ export default function RaidCombat({
           setResolveLog(prev => [...prev, line])
         }, j * 220)
       })
+
+      // Counter-Battery proc — a centre "COUNTER-BATTERY" flash + a cyan clash
+      // spark bursting on the enemy hull as its shot is knocked down.
+      if (step.countered) {
+        const bk = Date.now() + i + 31
+        setBoonFlash({ label: 'COUNTER-BATTERY', sub: 'Their broadside — smashed from the air', color: '#7dd3fc', key: bk })
+        playStepChainRef.current.push(setTimeout(() => setBoonFlash(bf => (bf && bf.key === bk ? null : bf)), 1500))
+        setEnemyImpact({ key: bk + 1, kind: 'normal' })
+        setEnemyShakeKind('hit'); setEnemyShakeKey(k => k + 1)
+        playStepChainRef.current.push(setTimeout(() => setEnemyImpact(null), 520))
+        vibrate([0, 35, 25, 55])
+      }
+      // Cannonade — sync the heat rim + streak badge on the player hull to the
+      // committed streak (0 = the chain just broke, badge clears).
+      if (step.cannonade !== undefined) setCannonadeStacks(step.cannonade)
 
       // Charges always update at the start of the step (reloads visible right
       // away; spending charges visible the moment the cannon fires).
@@ -4723,6 +4775,43 @@ export default function RaidCombat({
                   />
                 )
               })()}
+              {/* Cannonade (boon) — a rising heat rim + streak badge that
+                  brightens with each consecutive crit (ember orange, gold at
+                  max). Same ambient edge-halo lane as Wounded Fury; frozen
+                  static during aiming so the mixBlend re-composite never
+                  stutters the aim needle. */}
+              {cannonadeStacks > 0 && (() => {
+                const maxStk = tide.critStreakMaxStacks || 5
+                const maxed = cannonadeStacks >= maxStk
+                const t = Math.min(1, cannonadeStacks / maxStk)
+                const peak = 0.3 + t * 0.5
+                const col = maxed ? '251,191,36' : '251,146,60'
+                return (
+                  <>
+                    <motion.div aria-hidden
+                      animate={subPhase === 'aiming' ? { opacity: peak } : { opacity: [peak * 0.6, peak, peak * 0.6] }}
+                      transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                      style={{
+                        position: 'absolute', inset: '-7%', borderRadius: '50%',
+                        pointerEvents: 'none', zIndex: 1, mixBlendMode: 'screen',
+                        background: `radial-gradient(ellipse at center, transparent 44%, rgba(${col},0.85) 63%, transparent 82%)`,
+                      }}
+                    />
+                    <motion.div key={`cn-${cannonadeStacks}`} aria-hidden
+                      initial={{ scale: 1.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+                      className="font-karla font-800 uppercase tracking-wide"
+                      style={{
+                        position: 'absolute', top: '-8%', right: '-3%', zIndex: 5, pointerEvents: 'none',
+                        padding: '2px 7px', borderRadius: 999, fontSize: '0.6rem', lineHeight: 1,
+                        color: '#1a1204', background: `rgba(${col},0.97)`, border: '1px solid rgba(255,255,255,0.55)',
+                        boxShadow: `0 0 12px rgba(${col},0.85)`, whiteSpace: 'nowrap',
+                      }}>
+                      {maxed ? 'Cannonade Max' : `Cannonade ×${cannonadeStacks}`}
+                    </motion.div>
+                  </>
+                )
+              })()}
               {/* Impact spray when the enemy's shot lands on the player hull */}
               {playerImpact && (
                 <ImpactBurst key={`pi-${playerImpact.key}`} kind={playerImpact.kind} />
@@ -4846,6 +4935,22 @@ export default function RaidCombat({
                 ? '0 0 18px rgba(74,222,128,0.9), 0 0 44px rgba(74,222,128,0.5)'
                 : '0 0 18px #fff, 0 0 44px rgba(239,68,68,1), 0 0 90px rgba(239,68,68,0.6)',
             }}>{checkResultFlash.label}</p>
+          </motion.div>
+        )}
+
+        {/* Boon proc callout — Counter-Battery's "smashed from the air" beat.
+            Sits a touch above centre so it never collides with the mechanic
+            check flash, themed to the boon's colour. */}
+        {boonFlash && (
+          <motion.div key={`boonflash-${boonFlash.key}`} initial={{ opacity: 0, scale: 0.55, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, zIndex: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, transform: 'translateY(-14%)', pointerEvents: 'none' }}>
+            <p className="font-cinzel font-800 uppercase tracking-[0.2em]" style={{
+              fontSize: '1.5rem', textAlign: 'center', lineHeight: 1.05, color: boonFlash.color,
+              textShadow: `0 0 18px ${boonFlash.color}, 0 0 46px ${boonFlash.color}88`,
+            }}>{boonFlash.label}</p>
+            {boonFlash.sub && (
+              <p className="font-karla font-600" style={{ fontSize: '0.82rem', color: '#cbd5e1', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{boonFlash.sub}</p>
+            )}
           </motion.div>
         )}
 
