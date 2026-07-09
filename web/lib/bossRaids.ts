@@ -75,6 +75,7 @@ export interface BossMechanicCheck {
   consequence:
     | { kind: 'damagePctMaxHp';    value: number }   // hit for value × player max HP (can wipe)
     | { kind: 'enemyHealPctMaxHp'; value: number }   // boss heals value × its own max HP
+    | { kind: 'burnDot'; pctPerTurn: number; turns: number }  // sets you ablaze: pctPerTurn × maxHP per turn for `turns`; any crew heal clears it (can wipe if ignored)
 }
 
 export interface BroadsideEnemy {
@@ -1067,11 +1068,11 @@ export const THE_QUARTERMASTER: BossRaidConfig = {
           check: {
             id: 'fire_sale', name: 'Fire Sale', chargeTurns: 2,
             telegraph: 'The Quartermaster touches a torch to the stock and the whole Cache goes up in flame.',
-            hint: 'The whole stock goes up at once. This is one to weather, not to trade blows through. Be ready to soak or outlast the burn.',
+            hint: 'The whole stock goes up at once and sets your hull ablaze. Get a heal or a shield up before it catches — and if it does catch, a crew heal is the only thing that puts the fire out.',
             responses: ['heal', 'shield'],
-            counteredLine: 'You ride out the blaze.',
-            failLine: 'The fire sale takes its cut of your hull.',
-            consequence: { kind: 'damagePctMaxHp', value: 0.55 },
+            counteredLine: 'You smother the blaze before it can spread.',
+            failLine: 'The fire sale catches, and your hull goes up in flame.',
+            consequence: { kind: 'burnDot', pctPerTurn: 0.18, turns: 3 },
           } },
       ],
       zoneSpeedMult: 2.0,

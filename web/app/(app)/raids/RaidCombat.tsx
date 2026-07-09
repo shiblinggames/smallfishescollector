@@ -1055,6 +1055,13 @@ export default function RaidCombat({
   // this; plain Dodge / normal crits deliberately don't.
   function noteCheckResponse(r: 'heal' | 'burst') {
     if (pendingCheckRef.current) checkFlagsRef.current[r] = true
+    // A crew heal also douses an active hull burn (the Quartermaster's Fire
+    // Sale, or a Scorching-affix burn) — heals put fires out.
+    if (r === 'heal' && playerBurnRef.current.turns > 0) {
+      playerBurnRef.current = { turns: 0, dmg: 0 }
+      setPlayerBurning(false)
+      setResolveLog(prev => [...prev, 'The heal washes over the deck and douses the flames.'])
+    }
   }
   // Is the armed check already satisfied by the player's answers so far?
   // Persistent answers (brace/shield/snare) are read live off their refs;
@@ -1099,6 +1106,18 @@ export default function RaidCombat({
       const nHp = Math.min(enemyHpMaxRef.current, enemyHpRef.current + heal)
       enemyHpRef.current = nHp; setEnemyHp(nHp)
       setResolveLog(prev => [...prev, `${enemy.name} collects — heals ${heal}.`])
+      return
+    }
+    if (chk.consequence.kind === 'burnDot') {
+      // Ablaze — a DoT instead of an instant hit. Reuses the Scorching-burn
+      // system: it ticks at the top of each turn during resolution (visible
+      // splat, handles death via the normal check, no instant defeat), and a
+      // crew heal clears it (noteCheckResponse).
+      const turns = chk.consequence.turns
+      const perTurn = Math.max(1, Math.round(playerHpMax * chk.consequence.pctPerTurn))
+      playerBurnRef.current = { turns, dmg: perTurn }
+      setPlayerBurning(true)
+      setResolveLog(prev => [...prev, `Your hull catches — it burns for ${turns} turns unless a crew heal puts the fire out.`])
       return
     }
     // damagePctMaxHp — a big hit that can wipe (the whole point of a one-shot).
@@ -5710,6 +5729,8 @@ function EnemyStatsPopup({
   const describeConsequence = (c: BossMechanicCheck['consequence']): string =>
     c.kind === 'damagePctMaxHp'
       ? `hits you for ${Math.round(c.value * 100)}% of your max hull`
+      : c.kind === 'burnDot'
+      ? `sets you ablaze — ${Math.round(c.pctPerTurn * 100)}% of your hull per turn for ${c.turns} turns unless a heal puts it out`
       : `the boss heals ${Math.round(c.value * 100)}% of its HP`
 
   if (typeof document === 'undefined') return null
