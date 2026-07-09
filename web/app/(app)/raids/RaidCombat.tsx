@@ -91,7 +91,7 @@ const FEINT_CHANCE = 0.3
 // of the PLAYER's max HP (so a big boss doesn't near-full-heal you); Hull
 // Render's per-fight volley ramp bonus caps here (so a long fight can't runaway).
 const REAPER_HEAL_CAP_PCT = 0.15
-const HULL_RENDER_RAMP_CAP = 1.0   // max +100% from the ramp, on top of the base volley boost
+const DAMAGE_RAMP_CAP = 1.0   // +100% ceiling on any per-turn/per-volley damage ramp (Heavy/Grand/Siege cannon + Hull Render), so a long fight can't spiral
 // Total lifesteal ceiling across ALL sources (Leviathan's Hunger boon + Feeding
 // Frenzy confluence + Davy's Blood Cannon item). Uncapped, the full sustain
 // stack reached ~57% of damage-dealt healed — enough to out-heal the deep and
@@ -1232,7 +1232,7 @@ export default function RaidCombat({
     () => getActiveEffects(equippedRaidItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0),
     [equippedRaidItems],
   )
-  const rampBonusPct = Math.round(rampPerTurn * Math.max(0, turn - 1) * 100)
+  const rampBonusPct = Math.round(Math.min(DAMAGE_RAMP_CAP, rampPerTurn * Math.max(0, turn - 1)) * 100)
   const critFreezeRef      = useRef(false)
   useEffect(() => { critFreezeRef.current = critFreeze }, [critFreeze])
   // Ability per-turn reset effect — every new player turn clears the
@@ -2847,7 +2847,7 @@ export default function RaidCombat({
           // (turn 1 = base; resets per enemy via turnRef reset in the encounter
           // effect). Sums if multiple ramp items are somehow equipped.
           const rampPerTurn = getActiveEffects(liveItems).filter(e => e.type === 'ramp_damage_per_turn').reduce((a, e) => a + e.value, 0)
-          const rampMult = 1 + rampPerTurn * Math.max(0, turnRef.current - 1)
+          const rampMult = 1 + Math.min(DAMAGE_RAMP_CAP, rampPerTurn * Math.max(0, turnRef.current - 1))
           // Cold Fury (boon): crit hits hit harder. Only on a crit shot.
           const critTideMult = isCritShot ? tide.critDmgMult : 1
           // Wounded Fury (boon): bonus damage scaling with MISSING HP — 0 at full
@@ -2865,7 +2865,7 @@ export default function RaidCombat({
             : 1
           // Hull Render confluence: each Volley this fight ramps. Reads the count
           // BEFORE this volley (so the first is +0), then it's bumped below.
-          const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + Math.min(tide.volleyRampPct * volleyCountRef.current, HULL_RENDER_RAMP_CAP) : 1
+          const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + Math.min(tide.volleyRampPct * volleyCountRef.current, DAMAGE_RAMP_CAP) : 1
           // Cannonade (boon): consecutive crits ramp damage. The bonus for THIS
           // shot is the streak it WILL reach if it lands (first crit = 1 stack).
           // Read-only here — the streak is only COMMITTED once the shot lands
