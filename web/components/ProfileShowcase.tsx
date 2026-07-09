@@ -160,32 +160,17 @@ export function FeaturedCrew({ crew, onEdit, emptyHint }: { crew: ShowcaseCrew[]
       </div>
     )
   }
-  const [flag, ...rest] = crew
-  const cols = Math.min(Math.max(rest.length, 1), 3)
   return (
     <div>
-      {/* Flagship */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: rest.length > 0 ? 16 : 0 }}>
-        <div style={{ position: 'relative', width: 210, maxWidth: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-            <span className="font-karla font-800 uppercase" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontSize: '0.5rem', letterSpacing: '0.2em', color: '#f0c040',
-              padding: '0.2rem 0.6rem', borderRadius: 999, background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.36)',
-            }}>
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="#f0c040" stroke="none" aria-hidden><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-              Flagship
-            </span>
+      {/* Uniform gallery — all posters equal size, wraps + centers so an odd
+          count doesn't leave a lopsided lone card. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+        {crew.map(c => (
+          <div key={c.id} style={{ width: 152, maxWidth: 'calc(50% - 6px)' }}>
+            <CrewPortrait crew={c} fill hideStats />
           </div>
-          <CrewPortrait crew={flag} fill hideStats />
-        </div>
+        ))}
       </div>
-      {/* Gallery */}
-      {rest.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10 }}>
-          {rest.map(c => <CrewPortrait key={c.id} crew={c} fill hideStats />)}
-        </div>
-      )}
       {onEdit && (
         <button onClick={onEdit} className="font-karla font-700 tap" style={{
           marginTop: 14, fontSize: '0.68rem', padding: '0.4rem 0.85rem', borderRadius: 8,
