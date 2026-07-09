@@ -3252,27 +3252,65 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
   const SYN = '#b98bff'
   const seenSet = new Set(seen)
   const takenSet = new Set(taken)
-  const found = CONFLUENCES.filter(c => seenSet.has(c.id) || confluenceLevel(c, owned) >= 1).length
+  const ROMAN = ['', 'I', 'II', 'III']
+  // Build each entry with its status, then float the lit ones to the top so the
+  // codex reads as progress: Active → Available → discovered-but-dormant → the
+  // silhouettes you're still chasing.
+  const entries = CONFLUENCES.map(c => {
+    const lvl = confluenceLevel(c, owned)
+    const qualifies = lvl >= 1
+    const on = takenSet.has(c.id) && qualifies
+    const available = !on && qualifies
+    const known = seenSet.has(c.id) || qualifies
+    const status: 'active' | 'available' | 'dormant' | 'hidden' = !known ? 'hidden' : on ? 'active' : available ? 'available' : 'dormant'
+    return { c, lvl, on, available, status }
+  })
+  const rank = { active: 0, available: 1, dormant: 2, hidden: 3 }
+  entries.sort((a, b) => rank[a.status] - rank[b.status])
+  const found = entries.filter(e => e.status !== 'hidden').length
+  const activeCount = entries.filter(e => e.status === 'active').length
+  const pctFound = found / CONFLUENCES.length
+
+  // The level ladder — three diamonds, filled to `level`, so every card wears
+  // its progress and there's always a visible rung left to chase.
+  const Pips = ({ level, color, max = 3 }: { level: number; color: string; max?: number }) => (
+    <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center', flexShrink: 0 }} aria-hidden>
+      {Array.from({ length: max }, (_, i) => i + 1).map(n => (
+        <span key={n} style={{ width: 7, height: 7, transform: 'rotate(45deg)', borderRadius: 1, background: n <= level ? color : 'transparent', border: `1px solid ${n <= level ? color : 'rgba(255,255,255,0.22)'}`, boxShadow: n <= level ? `0 0 6px ${color}bb` : 'none' }} />
+      ))}
+    </span>
+  )
+
   return (
     <ModalScrim zIndex={1300} onClose={onClose}>
       <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 440, borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem' }}>
+        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', borderRadius: 18, background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${GLD}3a`, boxShadow: `0 0 44px ${GLD}1f, 0 18px 50px rgba(0,0,0,0.6)`, padding: '1.3rem 1.15rem 1.1rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>Discovered · {found} / {CONFLUENCES.length}</p>
-            <p className="font-cinzel font-800" style={{ fontSize: '1.35rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>Synergies</p>
+          <div style={{ minWidth: 0 }}>
+            <p className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.52rem', color: `${GLD}cc` }}>The Codex</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '1.4rem', color: '#eafffb', lineHeight: 1.1, marginTop: 3 }}>Synergies</p>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
-        <p className="font-karla" style={{ fontSize: '0.74rem', color: '#9a948a', marginTop: 6, lineHeight: 1.45 }}>
-          Certain pairs of boons unlock a bonus power. Discover one in a dive and it&apos;s recorded here for good.
-        </p>
-        {/* How synergies actually work — the three rules a player has to know,
-            spelled out since the draft/level mechanic isn't obvious in-run. */}
-        <div style={{ marginTop: 12, borderRadius: 12, padding: '0.7rem 0.85rem', background: `${GLD}0d`, border: `1px solid ${GLD}30` }}>
+        {/* Completion meter — the collect-them-all hook. */}
+        <div style={{ marginTop: 11 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+            <span className="font-karla font-700 uppercase tracking-[0.18em]" style={{ fontSize: '0.5rem', color: '#9a948a' }}>Discovered</span>
+            <span className="font-cinzel font-800" style={{ fontSize: '0.76rem', color: GLD }}>{found}<span style={{ color: 'rgba(255,255,255,0.32)' }}> / {CONFLUENCES.length}</span></span>
+          </div>
+          <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round(pctFound * 100)}%` }} transition={{ duration: 0.8, ease: 'easeOut' }}
+              style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${GLD}, #ffe6a8)`, boxShadow: `0 0 10px ${GLD}88` }} />
+          </div>
+          {activeCount > 0 && (
+            <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: `${GLD}cc`, marginTop: 6 }}>{activeCount} active this dive</p>
+          )}
+        </div>
+        {/* How synergies actually work — the three rules a player has to know. */}
+        <div style={{ marginTop: 13, borderRadius: 12, padding: '0.7rem 0.85rem', background: `${GLD}0d`, border: `1px solid ${GLD}30` }}>
           <p className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.5rem', color: `${GLD}cc`, marginBottom: 6 }}>How they work</p>
           {[
             'Hold both boons and the synergy is offered as a card in a draft — take it instead of a boon that round.',
@@ -3286,49 +3324,68 @@ function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<st
           ))}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-          {CONFLUENCES.map(c => {
-            const lvl = confluenceLevel(c, owned)
-            const qualifies = lvl >= 1
-            const on = takenSet.has(c.id) && qualifies      // drafted AND still held = live
-            const available = !on && qualifies              // qualify, not yet drafted
-            const accent = on ? GLD : available ? SYN : GLD
-            const known = seenSet.has(c.id) || qualifies
-            if (!known) {
-              // Undiscovered — a silhouette. No name, no boons, no effect.
+          {entries.map(({ c, lvl, on, available, status }) => {
+            if (status === 'hidden') {
+              // Undiscovered — a silhouette teasing an empty level ladder.
               return (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, padding: '0.85rem 0.9rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 11, borderRadius: 14, padding: '0.85rem 0.9rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.12)' }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <p className="font-cinzel font-700" style={{ fontSize: '0.95rem', color: '#7d8794', letterSpacing: '0.16em' }}>? ? ?</p>
-                    <p className="font-karla" style={{ fontSize: '0.68rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered synergy. Draft it in a dive to reveal it.</p>
+                    <p className="font-karla" style={{ fontSize: '0.66rem', color: '#5f6875', lineHeight: 1.4, marginTop: 2 }}>An undiscovered synergy. Draft it in a dive to reveal it.</p>
                   </div>
+                  <Pips level={0} color="#6b7280" />
                 </div>
               )
             }
             const reqs = c.requires.map(r => {
               const fam = GAUNTLET_BOONS.find(b => b.id === r.boonId)
-              return { name: fam?.name ?? r.boonId, color: fam ? BOON_RARITY_META[boonRarity(fam)].color : '#888' }
+              return { name: fam?.name ?? r.boonId, color: fam ? BOON_RARITY_META[boonRarity(fam)].color : '#888', tier: owned[r.boonId] ?? 0 }
             })
+            const accent = on ? GLD : available ? SYN : '#8894a6'
+            const maxLvl = c.levels.length
+            // Level-up guidance — surface exactly what to do next.
+            let hint: string | null = null
+            if (on && lvl >= maxLvl) hint = 'Fully deepened — maxed out.'
+            else if (on) {
+              const lagging = reqs.filter(r => r.tier === lvl).map(r => r.name)
+              hint = `Deepen ${lagging.join(' & ')} to reach ${ROMAN[lvl + 1]}`
+            } else if (available) hint = `Ready to draft${lvl > 1 ? ` at ${ROMAN[lvl]}` : ''} — take it instead of a boon`
+            else hint = `Hold ${reqs.map(r => r.name).join(' & ')} together to draft it`
             return (
-              <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.85rem', background: on ? `${GLD}16` : available ? `${SYN}12` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${GLD}66` : available ? `${SYN}55` : 'rgba(255,255,255,0.1)'}` }}>
-                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
+              <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.8rem', background: on ? `${GLD}18` : available ? `${SYN}14` : 'rgba(255,255,255,0.03)', border: `1px solid ${on ? `${GLD}66` : available ? `${SYN}55` : 'rgba(255,255,255,0.09)'}`, boxShadow: on ? `0 0 24px ${GLD}22, inset 0 0 26px ${GLD}0e` : available ? `0 0 15px ${SYN}1c` : 'none' }}>
+                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent, boxShadow: on || available ? `0 0 12px ${accent}` : 'none' }} />
+                {/* Sheen only on ACTIVE cards — the reward for lighting it up. */}
+                {on && (
+                  <motion.span aria-hidden initial={{ x: '-130%' }} animate={{ x: '190%' }} transition={{ duration: 3.4, repeat: Infinity, repeatDelay: 2.4, ease: 'easeInOut' }}
+                    style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '42%', background: `linear-gradient(100deg, transparent, ${GLD}30, transparent)`, pointerEvents: 'none' }} />
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                  <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name}{on ? ` ${['', 'I', 'II', 'III'][lvl] ?? ''}` : ''}</p>
+                  <p className="font-cinzel font-800" style={{ flex: 1, minWidth: 0, fontSize: '1rem', color: on ? '#fbe7c4' : '#dfe7ee', lineHeight: 1.12 }}>{c.name}</p>
+                  <Pips level={(on || available) ? lvl : 0} color={accent} max={maxLvl} />
                   {on
                     ? <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Active</span>
-                    : available && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1030', background: SYN, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Available</span>}
+                    : available && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1030', background: SYN, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Ready</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                   {reqs.map((r, i) => (
                     <span key={r.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {i > 0 && <span style={{ color: '#7a8e8a', fontSize: '0.85rem' }}>+</span>}
-                      <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: r.color, background: `${r.color}1e`, border: `1px solid ${r.color}55`, borderRadius: 999, padding: '0.18rem 0.55rem' }}>{r.name}</span>
+                      <span className="font-karla font-700" style={{ fontSize: '0.66rem', color: r.color, background: `${r.color}1e`, border: `1px solid ${r.color}55`, borderRadius: 999, padding: '0.18rem 0.55rem' }}>
+                        {r.name}{r.tier > 0 ? <span style={{ opacity: 0.7 }}> {ROMAN[Math.min(r.tier, 3)]}</span> : ''}
+                      </span>
                     </span>
                   ))}
                 </div>
                 <p className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: '#aef5c4', marginTop: 9, lineHeight: 1.25, textShadow: '0 0 12px rgba(74,222,128,0.3)' }}>{confluenceDescAt(c, Math.max(1, lvl))}</p>
-                <p className="font-karla" style={{ fontSize: '0.74rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.5)', lineHeight: 1.45, marginTop: 5 }}>{c.flavor}</p>
+                {hint && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M7 13l5 5 5-5" /><path d="M7 6l5 5 5-5" /></svg>
+                    <p className="font-karla font-700" style={{ fontSize: '0.64rem', color: `${accent}`, lineHeight: 1.3 }}>{hint}</p>
+                  </div>
+                )}
+                <p className="font-karla" style={{ fontSize: '0.72rem', fontStyle: 'italic', color: 'rgba(245,242,236,0.45)', lineHeight: 1.4, marginTop: 6 }}>{c.flavor}</p>
               </div>
             )
           })}
