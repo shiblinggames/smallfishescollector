@@ -1288,72 +1288,87 @@ export default function GauntletGame(props: GauntletGameProps) {
             )}
           </div>
 
-          {/* Descend — merged with your deepest-dive record into ONE hero card
-              (the vertical medallion look, not a flat bar). The whole card
-              starts a descent; the corner chip recaps your record run. */}
-          <div style={{ position: 'relative', marginTop: 16 }}>
-            <button onClick={() => setModeChoiceOpen(true)} disabled={starting} className="tap"
-              style={{ position: 'relative', display: 'block', width: '100%', padding: '0.85rem 1rem 0.9rem', borderRadius: 16, textAlign: 'center', cursor: starting ? 'wait' : 'pointer', overflow: 'hidden',
-                background: `radial-gradient(130% 82% at 50% 0%, ${GOLD}22, ${GOLD}0a 55%, transparent 82%), rgba(255,255,255,0.02)`,
-                border: `1px solid ${GOLD}55`, boxShadow: `0 0 26px ${GOLD}1c`,
-                animation: starting ? 'none' : 'gauntCta 2.8s ease-in-out infinite' }}>
-              {/* Your record — no medallion arrow up top; the only ⌄⌄ is on the
-                  Descend button below, so the arrow means one thing: the action. */}
-              {props.deepest > 0 ? (
-                <>
-                  <p className="font-karla font-800 uppercase" style={{ fontSize: '0.48rem', letterSpacing: '0.22em', color: '#b7a878' }}>Your Deepest Dive</p>
-                  <p className="font-cinzel font-800" style={{ fontSize: '1.85rem', color: GOLD, lineHeight: 1.02, marginTop: 1, textShadow: `0 0 22px ${GOLD}3a` }}>Depth {props.deepest}</p>
-                </>
-              ) : (
-                <p className="font-karla font-700 uppercase" style={{ fontSize: '0.58rem', letterSpacing: '0.16em', color: '#b7a878', padding: '0.3rem 0' }}>No mark set yet</p>
-              )}
-              {/* The action — a contained CTA, subordinate to the record */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 9, padding: '0.5rem 1.5rem', borderRadius: 12, background: `linear-gradient(180deg, ${GOLD}32, ${GOLD}12)`, border: `1px solid ${GOLD}75` }}>
-                <span className="font-cinzel font-800 uppercase tracking-[0.1em]" style={{ fontSize: '1rem', color: GOLD }}>{starting ? 'Diving…' : 'Descend'}</span>
-                {!starting && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg>}
-              </div>
-            </button>
-            {/* Recap chip — a separate action; only when a record exists */}
-            {props.deepestRun && props.deepest > 0 && (
-              <button onClick={(e) => { e.stopPropagation(); setDeepestRunOpen(true) }} aria-label="Recap your deepest run" className="tap"
-                style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.32rem 0.62rem', borderRadius: 999, background: 'rgba(4,10,18,0.62)', border: `1px solid ${GOLD}44`, color: `${GOLD}dd`, cursor: 'pointer' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
-                <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.08em' }}>Recap</span>
-              </button>
-            )}
-          </div>
-          {GAUNTLET_COOLDOWN_HOURS > 0 && (
-            <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a766e', marginTop: 8 }}>
-              Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
-            </p>
-          )}
-
-          {/* Deepest divers — a compact leaderboard card: the deepest cashed-out
-              diver in each mode as two distinct tinted entries, plus the door
-              to the full ranks. */}
-          <div style={{ marginTop: 12, borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.5rem 0.65rem 0.65rem', textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.15rem 0.1rem 0.5rem' }}>
-              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.47rem', letterSpacing: '0.2em', color: '#8a857c' }}>Deepest Divers</span>
+          {/* Descend — the two mode cards ARE the descent buttons. Normal starts
+              a run immediately; Hardcore opens the "send them down" confirm (its
+              own gating shown inline). No separate mode-choice modal on the way
+              in. Each card also shows that mode's deepest diver — the mark to
+              beat. */}
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: '0 0.15rem' }}>
+              <span className="font-karla font-800 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: '#8a857c' }}>Choose Your Descent</span>
               <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="Full ranks"
                 triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {([
-                { key: 'normal',   label: 'Normal',   color: TEAL,      rec: props.topDescender,
-                  icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" /> },
-                { key: 'hardcore', label: 'Hardcore', color: '#e0555a', rec: props.hardcoreTop,
-                  icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></> },
-              ] as const).map(({ key, label, color, rec, icon }) => (
-                <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '0.65rem 0.5rem 0.6rem', borderRadius: 12, background: `${color}12`, border: `1px solid ${color}2e`, textAlign: 'center', minWidth: 0 }}>
-                  <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: '50%', background: `${color}22`, border: `1px solid ${color}5a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{icon}</svg>
-                  </div>
-                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color }}>{label}</span>
-                  <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: rec ? '#ece5d7' : '#8a857c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2, maxWidth: '100%' }}>{rec ? rec.name : 'Unclaimed'}</span>
-                  <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: rec ? color : '#5f5b53' }}>{rec ? `Depth ${rec.depth}` : '—'}</span>
-                </div>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {(() => {
+                const canHc = props.hardcoreUnlocked
+                const comingSoon = !canHc && !props.hardcoreLive
+                const cards = [
+                  {
+                    key: 'normal' as const, color: TEAL, label: 'Normal', rec: props.topDescender,
+                    icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" />,
+                    enabled: !starting,
+                    onClick: () => begin(false),
+                    cta: starting ? 'Descending…' : 'Descend',
+                    note: null as string | null,
+                  },
+                  {
+                    key: 'hardcore' as const, color: '#e0555a', label: 'Hardcore', rec: props.hardcoreTop,
+                    icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></>,
+                    enabled: canHc && !starting && props.hcRunsLeft > 0,
+                    onClick: () => setHcConfirmOpen(true),
+                    cta: comingSoon ? 'Coming soon' : !canHc ? `Reach depth ${HC_UNLOCK_DEPTH}` : props.hcRunsLeft <= 0 ? 'No runs left' : 'Send them down',
+                    note: canHc && props.hcRunsLeft > 0 ? `${props.hcRunsLeft} of ${HARDCORE_RUNS_PER_DAY} runs left` : null,
+                  },
+                ]
+                return cards.map(c => (
+                  <motion.button key={c.key}
+                    onClick={c.enabled ? c.onClick : undefined}
+                    disabled={!c.enabled}
+                    whileTap={c.enabled ? { scale: 0.97 } : undefined}
+                    className="tap"
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                      padding: '0.9rem 0.55rem 0.7rem', borderRadius: 15, textAlign: 'center', minWidth: 0, overflow: 'hidden',
+                      background: `linear-gradient(180deg, ${c.color}26 0%, ${c.color}0b 60%, rgba(8,13,22,0.35) 100%)`,
+                      border: `1px solid ${c.color}${c.enabled ? '70' : '2e'}`,
+                      boxShadow: c.enabled ? `0 0 22px ${c.color}20` : 'none',
+                      cursor: c.enabled ? 'pointer' : 'default', opacity: c.enabled ? 1 : 0.62,
+                      animation: c.enabled ? 'gauntCta 2.8s ease-in-out infinite' : 'none',
+                    }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: `radial-gradient(circle at 40% 30%, ${c.color}4d, ${c.color}12)`, border: `1px solid ${c.color}70`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.color, marginBottom: 3 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{c.icon}</svg>
+                    </div>
+                    <span className="font-cinzel font-800 uppercase" style={{ fontSize: '0.95rem', letterSpacing: '0.03em', color: c.color, lineHeight: 1 }}>{c.label}</span>
+                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.6rem', letterSpacing: '0.08em', color: c.enabled ? '#f2ede3' : `${c.color}bb`, marginTop: 2 }}>
+                      {c.cta}{c.enabled ? ' ▾' : ''}
+                    </span>
+                    {c.note && <span className="font-karla font-600" style={{ fontSize: '0.5rem', color: '#9a948a' }}>{c.note}</span>}
+                    <div style={{ marginTop: 'auto', paddingTop: 8, width: '100%', borderTop: `1px solid ${c.color}22`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span className="font-karla font-700 uppercase" style={{ fontSize: '0.42rem', letterSpacing: '0.1em', color: '#7a766e' }}>Deepest </span>
+                      {c.rec
+                        ? <span className="font-cinzel font-700" style={{ fontSize: '0.66rem', color: '#cfc9bd' }}>{c.rec.name} · {c.rec.depth}</span>
+                        : <span className="font-karla" style={{ fontSize: '0.6rem', color: '#7a766e' }}>Unclaimed</span>}
+                    </div>
+                  </motion.button>
+                ))
+              })()}
             </div>
+            {/* Recap your own record — kept accessible after dropping the hero. */}
+            {props.deepestRun && props.deepest > 0 && (
+              <div style={{ textAlign: 'center', marginTop: 10 }}>
+                <button onClick={() => setDeepestRunOpen(true)} aria-label="Recap your deepest run" className="tap"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.8rem', borderRadius: 999, background: `${GOLD}0f`, border: `1px solid ${GOLD}3a`, color: `${GOLD}dd`, cursor: 'pointer' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.08em' }}>Recap your deepest · Depth {props.deepest}</span>
+                </button>
+              </div>
+            )}
+            {GAUNTLET_COOLDOWN_HOURS > 0 && (
+              <p className="font-karla" style={{ fontSize: '0.66rem', color: '#7a766e', marginTop: 8, textAlign: 'center' }}>
+                Each descent starts the {GAUNTLET_COOLDOWN_HOURS}-hour cooldown.
+              </p>
+            )}
           </div>
 
           {/* ── TIER 3 · The Locker — shops + guides, one weight down ──
