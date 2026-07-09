@@ -16,6 +16,7 @@ export type RaidEffectType =
   | 'dodge_pierce_chance'   // value = 0-1 chance, when the ENEMY would dodge your shot, to land it anyway ("see through the feint"). Only fires vs a would-be dodge, so naturally infrequent.
   | 'crit_upgrade_chance'   // value = 0-1 chance for a normal HIT to upgrade to a CRITICAL. Stacks with the Keen Cutlass crew effect + any tide crit bonus.
   | 'reload_charge_chance'  // value = 0-1 chance, on each RELOAD, to load a SECOND cannonball (catch the wind). Folds on top of any tide reload proc.
+  | 'lifesteal_pct'         // value = 0-1 fraction of the damage you deal that heals your hull (Davy's Blood Cannon). Stacks additively with the Leviathan's Hunger boon's lifesteal.
 
 export interface RaidEffect {
   type: RaidEffectType
@@ -268,6 +269,18 @@ export const RAID_ITEMS: RaidItemDef[] = [
       { type: 'nonboss_damage_mult',  value: 1.17 },
     ],
     source: "Forged from Davy's Heavy + Hand Cannon",
+  },
+  {
+    // First LIFESTEAL item in the game. Hardcore-Gauntlet-only chest chase; the
+    // lifesteal stacks additively with the Leviathan's Hunger boon.
+    id: 'davys_blood_cannon',
+    name: "Davy's Blood Cannon",
+    description: 'The gun drinks every wound it opens — you heal 12% of the damage you deal. The deep gives nothing back but what you take by force.',
+    image: '/davysbloodcannon.png',
+    emoji: '🩸',
+    rarity: 'rare',
+    effects: [{ type: 'lifesteal_pct', value: 0.12 }],
+    source: 'Hardcore · The Davy Jones Gauntlet',
   },
   // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
   // Offense fusions run at ~85% of each parent effect (they trade raw numbers for

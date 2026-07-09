@@ -3076,12 +3076,15 @@ export default function RaidCombat({
           shieldAbsorbedOut = preShield - enemyShieldRef.current
           eHp = Math.max(0, eHp - toHull)
           if (dmg > 0) onPlayerHit?.(dmg)
-          // Leviathan's Hunger (boon): heal a slice of the damage you deal. The
-          // step carries the new pHp so the HP bar climbs + a +HP splat on your
-          // hull; the log line is pushed AFTER the "you fire" line below so it
-          // reads in order (the hit lands, then the wound is drunk).
-          if (dmg > 0 && tide.lifestealPct > 0 && pHp > 0) {
-            const healed = Math.max(1, Math.round(dmg * tide.lifestealPct))
+          // Lifesteal — heal a slice of the damage you deal. Two additive
+          // sources: the Leviathan's Hunger boon (tide.lifestealPct) and Davy's
+          // Blood Cannon raid item (lifesteal_pct effect). The step carries the
+          // new pHp so the HP bar climbs + a +HP splat on your hull; the log line
+          // is pushed AFTER the "you fire" line below so it reads in order.
+          const itemLifesteal = getActiveEffects(liveItems).filter(e => e.type === 'lifesteal_pct').reduce((a, e) => a + e.value, 0)
+          const totalLifesteal = tide.lifestealPct + itemLifesteal
+          if (dmg > 0 && totalLifesteal > 0 && pHp > 0) {
+            const healed = Math.max(1, Math.round(dmg * totalLifesteal))
             const before = pHp
             pHp = Math.min(playerHpMax, pHp + healed)
             lifestealHealedOut = pHp - before

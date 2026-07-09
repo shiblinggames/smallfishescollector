@@ -2942,13 +2942,14 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
               )
             })}
 
-            {/* Golden Gauntlet Hull — the rare Man-o-War-only cosmetic from the
-                deepest chest. Its own gilded card so the prestige drop lands. */}
-            {r.droppedSkinId && (() => {
-              const skin = getShipSkin(r.droppedSkinId)
+            {/* Man-o-War hull drops — the Golden Gauntlet Hull (deepest chest) and
+                the Hardcore-only Bad Blood Hull. Each gets its own coloured card
+                so the prestige drop lands. */}
+            {[r.droppedSkinId, r.droppedHcSkinId].filter((x): x is string => !!x).map((skinId, i) => {
+              const skin = getShipSkin(skinId)
               if (!skin) return null
               return (
-                <motion.div initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.85, type: 'spring', stiffness: 260, damping: 18 }}
+                <motion.div key={skinId} initial={{ opacity: 0, scale: 0.85, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.85 + i * 0.15, type: 'spring', stiffness: 260, damping: 18 }}
                   style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 10, padding: '0.7rem 0.8rem', borderRadius: 12, background: `${skin.color}18`, border: `1px solid ${skin.color}88`, boxShadow: `0 0 26px ${skin.color}33` }}>
                   {skin.imageByTier?.[6]
                     // eslint-disable-next-line @next/next/no-img-element
@@ -2961,7 +2962,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
                   </div>
                 </motion.div>
               )
-            })()}
+            })}
 
             {/* Depth-milestone unlocks earned by SURVIVING to this depth. Shown
                 here, in the moment, instead of a piece of mail after the fact. */}

@@ -100,6 +100,20 @@ export const SHIP_SKINS: ShipSkinDef[] = [
       6: '/goldengauntlethull.png',
     },
   },
+  {
+    // Man-o-War-only prestige skin dropped ONLY from HARDCORE Gauntlet chests —
+    // crimson-drowned plating to pair with the run that risks the whole crew.
+    id: 'bad_blood_hull',
+    name: 'Bad Blood Hull',
+    description: 'Iron gone red with everything the deep has taken. Only the Man-o-War carries this much bad blood — and only the drowned earn it.',
+    filter: 'none',
+    color: '#c0303a',
+    source: 'Hardcore drop · Davy Jones’ Locker chest',
+    requiresShipTier: MANOWAR_SHIP_TIER,
+    imageByTier: {
+      6: '/badbloodhull.png',
+    },
+  },
 
   // ── Drowned Fleet — Hardcore Gauntlet ── REMOVED 2026-07-08: the hull skins
   // aren't ready (placeholder tints, no bespoke art), so they're pulled from the

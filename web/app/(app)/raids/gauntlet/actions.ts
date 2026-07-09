@@ -27,6 +27,15 @@ const GOLD_HULL_SKIN_ID = 'golden_gauntlet_hull'
 const GOLD_HULL_CHEST_TIER = 5
 const GOLD_HULL_DROP_CHANCE = 0.04
 
+// Hardcore-only drops. Bad Blood Hull (Man-o-War skin) + Davy's Blood Cannon
+// (the first lifesteal raid item) both come ONLY from Hardcore Gauntlet chests.
+const BLOOD_HULL_SKIN_ID = 'bad_blood_hull'
+const BLOOD_HULL_CHEST_TIER = 4        // from the deeper hardcore chests up
+const BLOOD_HULL_DROP_CHANCE = 0.05
+const BLOOD_CANNON_ITEM_ID = 'davys_blood_cannon'
+const BLOOD_CANNON_CHEST_TIER = 3
+const BLOOD_CANNON_DROP_CHANCE = 0.06  // per-chest; a rare chase from the deep-hardcore chests
+
 /** Record a single gauntlet hit; persists the all-time biggest via greatest()
  *  (bump_gauntlet_hit). Fired per new run-best from GauntletGame (win OR loss),
  *  so the Biggest Hit board reflects the largest blow ever landed in a descent. */
@@ -415,6 +424,8 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       droppedItems: string[]
       /** Golden Gauntlet Hull skin id if it dropped this cash-out, else null. */
       droppedSkinId: string | null
+      /** Bad Blood Hull (Hardcore-only Man-o-War skin) id if it dropped, else null. */
+      droppedHcSkinId: string | null
       /** Depth-milestone unlocks crossed by this CASH-OUT (surfaced on the
        *  reward screen — the Gauntlet no longer mails these). */
       unlockedThisRun: { name: string; blurb: string; where: string }[]
@@ -469,6 +480,11 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
       if (!ownedItems.includes(cannon) && Math.random() < dropChance) droppedItems.push(cannon)
     }
   }
+  // Davy's Blood Cannon — HARDCORE-only chase (the first lifesteal item), from
+  // the deeper hardcore chests. Never re-drops once owned.
+  if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && Math.random() < BLOOD_CANNON_DROP_CHANCE) {
+    droppedItems.push(BLOOD_CANNON_ITEM_ID)
+  }
   const newRaidItems = droppedItems.length > 0 ? [...new Set([...ownedItems, ...droppedItems])] : ownedItems
 
   // Golden Gauntlet Hull — a RARE cosmetic drop from the Davy Jones' Locker chest
@@ -479,13 +495,19 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   if (chest.tier >= GOLD_HULL_CHEST_TIER && !ownedSkins.includes(GOLD_HULL_SKIN_ID) && Math.random() < GOLD_HULL_DROP_CHANCE) {
     droppedSkinId = GOLD_HULL_SKIN_ID
   }
+  // Bad Blood Hull — the HARDCORE-only Man-o-War skin, from the deeper hardcore
+  // chests. Owned to ship_skins even before the player has the Man-o-War to wear it.
+  let droppedHcSkinId: string | null = null
+  if (hc && chest.tier >= BLOOD_HULL_CHEST_TIER && !ownedSkins.includes(BLOOD_HULL_SKIN_ID) && Math.random() < BLOOD_HULL_DROP_CHANCE) {
+    droppedHcSkinId = BLOOD_HULL_SKIN_ID
+  }
   // Hardcore Drowned Fleet skins — granted the first time you cash out past a
   // hardcore-depth milestone (mirrors GAUNTLET_DEPTH_UNLOCKS but for cosmetics).
   const prevHcDeepest = (profile.gauntlet_hc_deepest as number | null) ?? 0
   const hcDeepest = hc ? Math.max(prevHcDeepest, cd) : prevHcDeepest
   const hcUnlocks = hc ? HARDCORE_UNLOCKS.filter(u => prevHcDeepest < u.depth && u.depth <= hcDeepest) : []
   const hcSkinIds = hcUnlocks.map(u => u.skinId).filter(id => !ownedSkins.includes(id))
-  const grantSkins = [...(droppedSkinId ? [droppedSkinId] : []), ...hcSkinIds]
+  const grantSkins = [...(droppedSkinId ? [droppedSkinId] : []), ...(droppedHcSkinId ? [droppedHcSkinId] : []), ...hcSkinIds]
   const skinFields = grantSkins.length > 0 ? { ship_skins: [...new Set([...ownedSkins, ...grantSkins])] } : {}
 
   // Blood Gems — the Hardcore premium currency, dropped in the cash-out chest
@@ -610,6 +632,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
     newBloodGems,
     droppedItems,
     droppedSkinId,
+    droppedHcSkinId,
     unlockedThisRun,
     hardcore: hc,
   }
