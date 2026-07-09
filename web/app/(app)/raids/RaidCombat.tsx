@@ -7153,14 +7153,10 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
   // SUMMON_TOTAL_MS). The crew is CONJURED — a rune ring + light rays sweep in
   // behind a smaller portrait, a white impact flash lands on arrival, and the
   // ABILITY NAME slams up huge underneath so it reads as an RPG summon.
-  const HOLD: number[] = [0, 0.09, 0.78, 0.9]   // fade-in / hold / synchronized fade-out (all content gone by ~90% = 1.9s)
+  const HOLD: number[] = [0, 0.09, 0.78, 0.9]   // transform-settle timing (opacity is driven by the wrapper below)
   return (
     <motion.div
       aria-hidden
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.12 }}
       style={{
         position: 'fixed', inset: 0, zIndex: 70,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -7168,52 +7164,41 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
         overflow: 'hidden',
       }}
     >
-      {/* ONE wrapper drives the exit: every piece of the summon holds at full
-          opacity, then this fades them ALL out together on a single curve — so
-          nothing lingers or leaves on its own easing. The effect fires only
-          after this has finished (SUMMON_LEAD_MS). */}
+      {/* SINGLE opacity driver: the whole summon fades IN and OUT on one curve
+          here. Every held piece below keeps a STATIC opacity and animates only
+          TRANSFORMS (scale / rotate / slide) — so nothing fades in or out on its
+          own timing, which is what read as janky. Only the transient arrival
+          FLASHES (impact / chase) animate their own opacity, by design. */}
       <motion.div
-        initial={{ opacity: 1 }}
-        animate={{ opacity: [1, 1, 0] }}
-        transition={{ duration: 2.1, times: [0, 0.8, 0.92], ease: 'easeInOut' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 1, 0] }}
+        transition={{ duration: 2.1, times: [0, 0.045, 0.8, 0.92], ease: 'easeInOut' }}
         style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
       >
       {/* Near-opaque dark + color-wash backdrop so the summon takes over. */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.92, 0.92, 0.92] }}
-        transition={{ duration: 2.1, times: HOLD, ease: 'easeInOut' }}
-        // No backdrop-filter: animating opacity on a blurred backdrop re-blurs
-        // the whole screen every frame (a big fade-in stutter). The gradient is
-        // near-opaque already, so the blur added almost nothing visually.
-        style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.96) 60%)` }}
-      />
+      <div style={{ position: 'absolute', inset: 0, opacity: 0.92, background: `radial-gradient(ellipse 75% 65% at 50% 46%, ${color}30 0%, rgba(1,3,8,0.96) 60%)` }} />
 
       {/* Rotating light rays fanning out behind the crew (conic gradient). */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
-        animate={{ opacity: [0, 0.5, 0.32, 0.32], scale: [0.4, 1.1, 1.15, 1.2], rotate: [-30, 20, 40, 55] }}
+        initial={{ scale: 0.4, rotate: -30 }}
+        animate={{ scale: [0.4, 1.1, 1.15, 1.2], rotate: [-30, 20, 40, 55] }}
         transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
         style={{
-          position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%',
-          // Soft spokes baked into the gradient stops (wide fades) instead of a
-          // live `filter: blur()` — the blur re-rasterized the conic gradient
-          // every frame while it scaled/rotated (the fade-in stutter). willChange
-          // promotes it to its own GPU layer so the transform runs paint-free.
+          position: 'absolute', top: '43%', width: 460, height: 460, borderRadius: '50%', opacity: 0.36,
           background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}3a 9deg, ${color}00 20deg)`,
-          willChange: 'transform, opacity', pointerEvents: 'none',
+          willChange: 'transform', pointerEvents: 'none',
         }}
       />
 
       {/* Summoning rune ring — two counter-rotating rings that snap in. */}
       {[{ d: 300, dir: 1, dash: '14 12', w: 2 }, { d: 240, dir: -1, dash: '4 16', w: 3 }].map((r, i) => (
         <motion.div key={`ring-${i}`}
-          initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
-          animate={{ opacity: [0, 0.85, 0.55, 0.55], scale: [0.3, 1, 1, 1.08], rotate: r.dir * 90 }}
+          initial={{ scale: 0.3, rotate: 0 }}
+          animate={{ scale: [0.3, 1, 1, 1.08], rotate: r.dir * 90 }}
           transition={{ duration: 2.1, times: HOLD, ease: 'easeOut' }}
           style={{
-            position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%',
-            border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, willChange: 'transform, opacity', pointerEvents: 'none',
+            position: 'absolute', top: '43%', width: r.d, height: r.d, marginTop: -r.d / 2, borderRadius: '50%', opacity: 0.6,
+            border: `${r.w}px dashed ${color}`, boxShadow: `0 0 24px ${color}55`, willChange: 'transform', pointerEvents: 'none',
           }}
         />
       ))}
@@ -7244,8 +7229,8 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
           signature FX (lightning, tentacles, spectrum, reticle) plays right
           over the character. */}
       <motion.div
-        initial={{ opacity: 0, scale: 1.34, y: 10 }}
-        animate={{ opacity: [0, 1, 1, 1], scale: [1.34, 1, 1, 1], y: [10, 0, 0, 0] }}
+        initial={{ scale: 1.34, y: 10 }}
+        animate={{ scale: [1.34, 1, 1, 1], y: [10, 0, 0, 0] }}
         transition={{ duration: 2.1, times: [0, 0.09, 0.78, 0.9], ease: [0.18, 0.9, 0.3, 1] }}
         style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'center' }}
       >
@@ -7267,17 +7252,17 @@ const AbilitySummonFx = memo(function AbilitySummonFx({ label, name, color, imag
 
       {/* Small crew name, then the BIG ability name slamming up underneath. */}
       <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: [0, 1, 1, 1], y: [14, 0, 0, 0] }}
-        transition={{ duration: 2.1, times: [0, 0.2, 0.78, 0.9], ease: 'easeOut' }}
+        initial={{ y: 14 }}
+        animate={{ y: [14, 0, 0, 0] }}
+        transition={{ duration: 2.1, times: [0, 0.14, 0.78, 0.9], ease: 'easeOut' }}
         style={{ textAlign: 'center', marginTop: 16, position: 'relative', zIndex: 2, padding: '0 1rem' }}
       >
         <p className="font-karla font-700 uppercase tracking-[0.32em]" style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{name}</p>
         <motion.p
           className="font-cinzel font-800 uppercase"
-          initial={{ scale: 1.35, opacity: 0, letterSpacing: '0.3em' }}
-          animate={{ scale: 1, opacity: 1, letterSpacing: '0.06em' }}
-          transition={{ delay: 0.18, duration: 0.34, ease: [0.2, 1, 0.3, 1] }}
+          initial={{ scale: 1.35, letterSpacing: '0.3em' }}
+          animate={{ scale: 1, letterSpacing: '0.06em' }}
+          transition={{ delay: 0.14, duration: 0.34, ease: [0.2, 1, 0.3, 1] }}
           style={{ fontSize: '2.15rem', lineHeight: 1.05, color: '#fff', marginTop: 4, textShadow: `0 0 22px ${color}, 0 0 54px ${color}aa, 0 3px 8px rgba(0,0,0,0.85)` }}
         >
           {label}
