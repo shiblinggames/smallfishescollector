@@ -1166,11 +1166,11 @@ export const CONFLUENCES: Confluence[] = [
     id: 'broadside_duel',
     name: 'Broadside Duel',
     requires: [{ boonId: 'cannonade' }, { boonId: 'counter_battery' }],
-    flavor: 'Trade broadsides and win the exchange every time — their shot in the water, yours dead on the mark.',
+    flavor: 'Trade broadsides and win the exchange every time — their shot in the water, and the guns already coming back to bear.',
     levels: [
-      { desc: 'A countered shot lands your return fire as a crit', effects: [{ kind: 'counterCrit', refund: 0, bonusStack: 0 }] },
-      { desc: 'A countered shot crits and loads you +1 cannonball', effects: [{ kind: 'counterCrit', refund: 1, bonusStack: 0 }] },
-      { desc: 'A countered shot crits, loads +1, and adds a Cannonade stack', effects: [{ kind: 'counterCrit', refund: 1, bonusStack: 1 }] },
+      { desc: 'Counters fire +8% more often and add a Cannonade stack', effects: [{ kind: 'counterBonus', refund: 0, bonusStack: 1, chanceBonus: 0.08 }] },
+      { desc: 'Counters fire +15% more, add a stack, and refund a cannonball', effects: [{ kind: 'counterBonus', refund: 1, bonusStack: 1, chanceBonus: 0.15 }] },
+      { desc: 'Counters fire +22% more, add 2 stacks, and refund a cannonball', effects: [{ kind: 'counterBonus', refund: 1, bonusStack: 2, chanceBonus: 0.22 }] },
     ],
   },
   {

@@ -183,10 +183,11 @@ export type TideEffect =
    *  yours still hits (reuses the frozen-skip on the enemy's step). */
   | { kind: 'counterFireChance'; chance: number }
   // ── Confluences on the new momentum boons ───────────────────────
-  /** "Broadside Duel" (Cannonade + Counter-Battery): a countered shot lands
-   *  your return fire as a guaranteed crit (feeds the streak); `refund` extra
-   *  cannonballs + `bonusStack` extra Cannonade stacks at higher levels. */
-  | { kind: 'counterCrit'; refund: number; bonusStack: number }
+  /** "Broadside Duel" (Cannonade + Counter-Battery): winning the exchange feeds
+   *  your rhythm — a counter fires `chanceBonus` more often (additive on top of
+   *  Counter-Battery), adds `bonusStack` extra Cannonade stacks when you crit it,
+   *  and refunds `refund` cannonballs. */
+  | { kind: 'counterBonus'; refund: number; bonusStack: number; chanceBonus: number }
   /** "Return to Sender" (Counter-Battery + Spiteful Wake): a countered shot is
    *  flung back for `pct` of the enemy's would-be damage. */
   | { kind: 'counterReflect'; pct: number }
@@ -266,7 +267,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'zoneSpeedMult':return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
     case 'killStackDamage': case 'depthScaleDamage':
     case 'critStreakDamage': case 'counterFireChance':
-    case 'counterCrit': case 'counterReflect': case 'lifestealKillScale':
+    case 'counterBonus': case 'counterReflect': case 'lifestealKillScale':
     case 'depthScaleMitigation':
       return 'good'
     default:
@@ -872,7 +873,7 @@ export function describeEffect(e: TideEffect): string {
     case 'depthScaleDamage':      return `${pct(e.perDepth)} damage per depth (max ${pct(e.maxBonus)})`
     case 'critStreakDamage':      return `${pct(e.perStack)} damage per crit in a row (max ${e.maxStacks})`
     case 'counterFireChance':     return `${Math.round(e.chance * 100)}% to cancel their shot when you both fire`
-    case 'counterCrit':           return `A countered shot lands as a crit${e.refund > 0 ? ` (+${e.refund} cannonball)` : ''}${e.bonusStack > 0 ? ' + extra Cannonade stack' : ''}`
+    case 'counterBonus':          return `Counters fire +${Math.round(e.chanceBonus * 100)}% more, add ${e.bonusStack} Cannonade stack${e.bonusStack === 1 ? '' : 's'}${e.refund > 0 ? `, refund ${e.refund}` : ''}`
     case 'counterReflect':        return `A countered shot flings back ${Math.round(e.pct * 100)}% of their damage`
     case 'lifestealKillScale':    return `+${pct(e.perKill)} lifesteal per hull sunk (max ${pct(e.max)})`
     case 'depthScaleMitigation':  return `Take ${pct(e.perDepth)} less damage per depth (max ${pct(e.max)})`
