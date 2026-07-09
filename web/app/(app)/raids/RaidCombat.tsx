@@ -599,6 +599,7 @@ export default function RaidCombat({
           break
         case 'counterReflect':        counterReflectPct = Math.max(counterReflectPct, e.pct); break
         case 'lifestealKillScale':    lifestealPct += Math.min(e.max, e.perKill * Math.max(0, runKills)); break
+        case 'depthScaleMitigation':  inDmgMult *= (1 - Math.min(e.max, e.perDepth * Math.max(0, runDepth))); break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
     }

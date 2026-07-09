@@ -1187,6 +1187,72 @@ export const CONFLUENCES: Confluence[] = [
       { desc: 'Lifesteal grows +2.5% per hull sunk (max +30%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.025, max: 0.30 }] },
     ],
   },
+  {
+    id: 'bullseye',
+    name: 'Bullseye',
+    requires: [{ boonId: 'dead_eye' }, { boonId: 'wide_sights' }],
+    flavor: 'Wide sights and a killer’s eye. The gold band stops being luck and starts being a habit.',
+    levels: [
+      { desc: 'Clean hits crit +10% more; the gold band is 10% wider', effects: [{ kind: 'critChanceBonus', chance: 0.10 }, { kind: 'critZoneScale', mult: 1.10 }] },
+      { desc: 'Clean hits crit +16% more; the gold band is 16% wider', effects: [{ kind: 'critChanceBonus', chance: 0.16 }, { kind: 'critZoneScale', mult: 1.16 }] },
+      { desc: 'Clean hits crit +24% more; the gold band is 24% wider', effects: [{ kind: 'critChanceBonus', chance: 0.24 }, { kind: 'critZoneScale', mult: 1.24 }] },
+    ],
+  },
+  {
+    id: 'deep_wake',
+    name: 'Deep Wake',
+    requires: [{ boonId: 'rising_tide' }, { boonId: 'abyssal_bounty' }],
+    flavor: 'The hulls in your wake and the weight of the deep pull in the same direction — down, and harder.',
+    levels: [
+      { desc: 'Bonus +2% damage per hull sunk AND +1% per depth', effects: [{ kind: 'killStackDamage', perKill: 0.02, maxBonus: 0.20 }, { kind: 'depthScaleDamage', perDepth: 0.01, maxBonus: 0.20 }] },
+      { desc: 'Bonus +3% per hull sunk AND +1.5% per depth', effects: [{ kind: 'killStackDamage', perKill: 0.03, maxBonus: 0.30 }, { kind: 'depthScaleDamage', perDepth: 0.015, maxBonus: 0.30 }] },
+      { desc: 'Bonus +4% per hull sunk AND +2% per depth', effects: [{ kind: 'killStackDamage', perKill: 0.04, maxBonus: 0.40 }, { kind: 'depthScaleDamage', perDepth: 0.02, maxBonus: 0.40 }] },
+    ],
+  },
+  {
+    id: 'dreadnought',
+    name: 'Dreadnought',
+    requires: [{ boonId: 'giant_killer' }, { boonId: 'grapeshot' }],
+    flavor: 'The bigger the hull, the more of it to scatter your iron across. Bring the whole broadside.',
+    levels: [
+      { desc: 'Giants take +12% from all fire and +18% more from volleys', effects: [{ kind: 'bossDamageMult', mult: 1.12 }, { kind: 'bossVolleyDmgMult', mult: 1.18 }] },
+      { desc: 'Giants take +20% from all fire and +30% more from volleys', effects: [{ kind: 'bossDamageMult', mult: 1.20 }, { kind: 'bossVolleyDmgMult', mult: 1.30 }] },
+      { desc: 'Giants take +30% from all fire and +45% more from volleys', effects: [{ kind: 'bossDamageMult', mult: 1.30 }, { kind: 'bossVolleyDmgMult', mult: 1.45 }] },
+    ],
+  },
+  {
+    id: 'last_bastion',
+    name: 'Last Bastion',
+    requires: [{ boonId: 'stormward' }, { boonId: 'bilge_pump' }],
+    flavor: 'A heavier ward, and hands quick on the seams. Nothing gets through that you can’t out-mend.',
+    levels: [
+      { desc: 'A 20% max-HP ward reforms each fight; patch +4% more between guns', effects: [{ kind: 'fightShield', pctMax: 0.20 }, { kind: 'startOfFightHealPct', pctMax: 0.04 }] },
+      { desc: 'A 28% max-HP ward reforms each fight; patch +7% more between guns', effects: [{ kind: 'fightShield', pctMax: 0.28 }, { kind: 'startOfFightHealPct', pctMax: 0.07 }] },
+      { desc: 'A 36% max-HP ward reforms each fight; patch +10% more between guns', effects: [{ kind: 'fightShield', pctMax: 0.36 }, { kind: 'startOfFightHealPct', pctMax: 0.10 }] },
+    ],
+  },
+  {
+    id: 'powder_keg',
+    name: 'Powder Keg',
+    requires: [{ boonId: 'press_the_powder' }, { boonId: 'powder_hoard' }],
+    flavor: 'A crew that never stops loading and never wastes a shell. The magazine is always full and always spilling over.',
+    levels: [
+      { desc: 'Reloads chamber extra 15% of the time; open every fight +1 loaded', effects: [{ kind: 'reloadProc', chance: 0.15, bonusCharges: 1 }, { kind: 'startCharges', n: 1, scope: 'allRemaining' }] },
+      { desc: 'Reloads chamber extra 25% of the time; open every fight +2 loaded', effects: [{ kind: 'reloadProc', chance: 0.25, bonusCharges: 1 }, { kind: 'startCharges', n: 2, scope: 'allRemaining' }] },
+      { desc: 'Reloads chamber +2 extra 35% of the time; open every fight +2 loaded', effects: [{ kind: 'reloadProc', chance: 0.35, bonusCharges: 2 }, { kind: 'startCharges', n: 2, scope: 'allRemaining' }] },
+    ],
+  },
+  {
+    id: 'pressure_hull',
+    name: 'Pressure Hull',
+    requires: [{ boonId: 'abyssal_bounty' }, { boonId: 'ironhide' }],
+    flavor: 'The same deep that loads your guns crushes down on theirs. The lower you go, the less they land.',
+    levels: [
+      { desc: 'Incoming damage cut, scaling with depth (up to -12%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.006, max: 0.12 }] },
+      { desc: 'Incoming damage cut, scaling with depth (up to -20%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.009, max: 0.20 }] },
+      { desc: 'Incoming damage cut, scaling with depth (up to -28%)', effects: [{ kind: 'depthScaleMitigation', perDepth: 0.012, max: 0.28 }] },
+    ],
+  },
 ]
 
 /** A confluence's current LEVEL (1..3), or 0 if you don't hold both halves. The
@@ -1232,17 +1298,25 @@ export interface ConfluenceOffer {
   halves: [string, string]
 }
 
-/** Base chance a qualifying confluence is offered on a draft where one exists. */
-export const CONFLUENCE_OFFER_CHANCE = 0.55
+/** Base chance a qualifying confluence is offered on a draft where one exists.
+ *  Bumped from the original 0.55 so a growing eligible pool stays accessible. */
+export const CONFLUENCE_OFFER_CHANCE = 0.7
 
 /** Roll whether to slot a confluence into this draft. Returns one eligible
- *  (qualified-but-untaken) confluence, or null. `force` bypasses the chance
- *  roll (a light pity so a long-eligible synergy isn't missed forever). */
-export function drawConfluenceOffer(owned: Record<string, number>, taken: string[] = [], force = false): ConfluenceOffer | null {
+ *  (qualified-but-untaken) confluence, or null.
+ *
+ *  Pity/telegraph: `offered` is the set of confluence ids already SURFACED this
+ *  run. A synergy you newly qualify for and have NEVER been offered is GUARANTEED
+ *  to appear next draft (and is preferred when picking), so a build you commit to
+ *  reliably shows up. Once it's been offered once (taken or not), it reverts to
+ *  the base chance — this keeps a large pool from swamping every draft. */
+export function drawConfluenceOffer(owned: Record<string, number>, taken: string[] = [], offered: Set<string> = new Set()): ConfluenceOffer | null {
   const pool = eligibleConfluences(owned, taken)
   if (pool.length === 0) return null
-  if (!force && Math.random() >= CONFLUENCE_OFFER_CHANCE) return null
-  const c = pool[Math.floor(Math.random() * pool.length)]
+  const fresh = pool.filter(c => !offered.has(c.id))   // never-surfaced yet = pity priority
+  if (fresh.length === 0 && Math.random() >= CONFLUENCE_OFFER_CHANCE) return null
+  const chooseFrom = fresh.length > 0 ? fresh : pool
+  const c = chooseFrom[Math.floor(Math.random() * chooseFrom.length)]
   const level = confluenceLevel(c, owned)
   const halfName = (id: string) => GAUNTLET_BOONS.find(b => b.id === id)?.name ?? id
   return {

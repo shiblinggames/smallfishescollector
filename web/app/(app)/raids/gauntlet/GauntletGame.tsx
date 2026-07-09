@@ -278,6 +278,10 @@ export default function GauntletGame(props: GauntletGameProps) {
   // A qualifying confluence offered as a card in this draft (replaces one boon
   // slot — the Hades-duo opportunity cost). Null when none is offered.
   const [pendingConfluence, setPendingConfluence] = useState<ConfluenceOffer | null>(null)
+  // Confluence ids already SURFACED as a draft card this run — drives the pity
+  // in drawConfluenceOffer (a newly-qualified synergy is guaranteed once). Per
+  // run only; not checkpointed (worst case on resume you re-see one, harmless).
+  const offeredConfluenceIdsRef = useRef<Set<string>>(new Set())
   // Boon-draft reveal — the three powers surface like a Crew Hall recruit pull:
   // each card sits under a sealed cover that rattles, then 3D-flips open, run
   // worst -> best so the rarest is the climax. Per-card phase keyed by index.
@@ -474,7 +478,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // run" bug.
       silencedCrewIdsRef.current = []
       setPendingCurse(null)
-      setBoonTiers({}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null)
+      setBoonTiers({}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null); offeredConfluenceIdsRef.current = new Set()
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
       peekFightRef.current = null; setPeekFight(null)
@@ -804,7 +808,8 @@ export default function GauntletGame(props: GauntletGameProps) {
         // haven't taken, it can surface as a gold card in place of a boon slot —
         // taking it forgoes those boons. Mutually exclusive with the Reprieve so
         // the screen never stacks two "instead of a boon" cards.
-        const conf = drawConfluenceOffer(boonTiers, confluencesTaken)
+        const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current)
+        if (conf) offeredConfluenceIdsRef.current.add(conf.id)
         setPendingConfluence(conf)
         setPendingReprieve(!conf && nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE
           ? drawReprieve({ curseCount: Object.keys(curseTiersRef.current).length })
@@ -864,7 +869,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPendingBoons(draft)
     setRerollsLeft(0)
     setPendingReprieve(null)
-    setPendingConfluence(drawConfluenceOffer(boonTiers, confluencesTaken))
+    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setBoonFromShrine(true)
     setPhase('boon')
   }
@@ -946,7 +951,7 @@ export default function GauntletGame(props: GauntletGameProps) {
   function rerollBoons() {
     if (rerollsLeft <= 0) return
     setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(upgrades)))
-    setPendingConfluence(drawConfluenceOffer(boonTiers, confluencesTaken))
+    { const conf = drawConfluenceOffer(boonTiers, confluencesTaken, offeredConfluenceIdsRef.current); if (conf) offeredConfluenceIdsRef.current.add(conf.id); setPendingConfluence(conf) }
     setRerollsLeft(r => r - 1)
   }
 

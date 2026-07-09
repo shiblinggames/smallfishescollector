@@ -193,6 +193,10 @@ export type TideEffect =
   /** "Feeding Frenzy" (Rising Tide + Leviathan's Hunger): lifesteal grows with
    *  every hull sunk this run — +perKill × kills, capped at `max`. */
   | { kind: 'lifestealKillScale'; perKill: number; max: number }
+  /** "Pressure Hull" (Abyssal Bounty + Ironhide): incoming damage is reduced,
+   *  scaling with the current depth — the defensive mirror of Abyssal Bounty.
+   *  −perDepth × depth, capped at `max`. */
+  | { kind: 'depthScaleMitigation'; perDepth: number; max: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -263,6 +267,7 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'killStackDamage': case 'depthScaleDamage':
     case 'critStreakDamage': case 'counterFireChance':
     case 'counterCrit': case 'counterReflect': case 'lifestealKillScale':
+    case 'depthScaleMitigation':
       return 'good'
     default:
       return 'neutral'
@@ -870,6 +875,7 @@ export function describeEffect(e: TideEffect): string {
     case 'counterCrit':           return `A countered shot lands as a crit${e.refund > 0 ? ` (+${e.refund} cannonball)` : ''}${e.bonusStack > 0 ? ' + extra Cannonade stack' : ''}`
     case 'counterReflect':        return `A countered shot flings back ${Math.round(e.pct * 100)}% of their damage`
     case 'lifestealKillScale':    return `+${pct(e.perKill)} lifesteal per hull sunk (max ${pct(e.max)})`
+    case 'depthScaleMitigation':  return `Take ${pct(e.perDepth)} less damage per depth (max ${pct(e.max)})`
   }
 }
 
