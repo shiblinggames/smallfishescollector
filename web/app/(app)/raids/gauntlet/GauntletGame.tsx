@@ -1852,6 +1852,14 @@ export default function GauntletGame(props: GauntletGameProps) {
           ? { label: peekFight.affix ? `An Elite below · ${peekFight.affix.name}` : 'An Elite lies below', sub: peekFight.enemy.name, color: '#c084fc' }
           : { label: 'Open water below · a lone hull', sub: peekFight.enemy.name, color: TEAL }
       : null
+    // Aligned label + wrapping chips — one tidy row per loadout category so the
+    // whole loadout reads as a single block instead of three headed sections.
+    const LoadoutRow = ({ label, color, children }: { label: string; color: string; children: React.ReactNode }) => (
+      <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+        <span className="font-karla font-800 uppercase tracking-[0.1em]" style={{ flexShrink: 0, width: 54, paddingTop: 4, fontSize: '0.5rem', color }}>{label}</span>
+        <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 5 }}>{children}</div>
+      </div>
+    )
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} />
@@ -1904,194 +1912,155 @@ export default function GauntletGame(props: GauntletGameProps) {
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px + 24px)',
         }}>
           <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-            className="font-karla font-800 uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.34em', color: TEAL, marginTop: 12, textShadow: `0 0 14px ${TEAL}44` }}>
+            className="font-karla font-800 uppercase" style={{ fontSize: '0.68rem', letterSpacing: '0.34em', color: TEAL, marginTop: 12, textShadow: `0 0 14px ${TEAL}44` }}>
             Catch Your Breath
           </motion.p>
-          <p className="font-cinzel font-700" style={{ fontSize: '1.2rem', color: '#ece5d7', marginTop: 8, lineHeight: 1.1 }}>
+          <p className="font-cinzel font-700" style={{ fontSize: '1.15rem', color: '#ece5d7', marginTop: 7, lineHeight: 1.1 }}>
             Depth {combatDepth} · {band.name}
           </p>
-          {/* A line of voice so the breather has a pulse, keyed to how the run's going. */}
-          <p className="font-karla" style={{ fontSize: '0.88rem', fontStyle: 'italic', color: 'rgba(150,205,194,0.82)', lineHeight: 1.45, marginTop: 9, maxWidth: 350, marginInline: 'auto' }}>
+          <p className="font-karla" style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'rgba(150,205,194,0.75)', lineHeight: 1.4, marginTop: 7, maxWidth: 340, marginInline: 'auto' }}>
             &ldquo;{breathLine}&rdquo;
           </p>
 
-          {/* The haul on the line — the push-your-luck centerpiece. */}
-          <div style={{
-            marginTop: 18, padding: '1.35rem 1rem 1.2rem', borderRadius: 20,
+          {/* Stakes — the haul you'd walk away with (the fork below decides). */}
+          <div style={{ marginTop: 15, padding: '1.15rem 1rem 1.05rem', borderRadius: 18,
             background: `radial-gradient(ellipse at 50% 0%, ${GOLD}24 0%, rgba(8,13,22,0.6) 76%)`,
-            border: `1px solid ${GOLD}4a`,
-            boxShadow: `inset 0 0 32px ${GOLD}12, 0 14px 44px rgba(0,0,0,0.5)`,
-          }}>
-            <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.6rem', color: `${GOLD}cc` }}>
-              Your Haul If You Bank Now
+            border: `1px solid ${GOLD}4a`, boxShadow: `inset 0 0 32px ${GOLD}12, 0 14px 40px rgba(0,0,0,0.5)` }}>
+            <p className="font-karla font-800 uppercase tracking-[0.2em]" style={{ fontSize: '0.58rem', color: `${GOLD}cc` }}>Your Haul If You Bank Now</p>
+            <p className="font-cinzel font-800" style={{ fontSize: '2.5rem', color: GOLD, lineHeight: 1.0, marginTop: 5, textShadow: `0 0 30px ${GOLD}55` }}>
+              {fmt(previewDoubloons)} <span style={{ fontSize: '1.4rem' }}>⟡</span>
             </p>
-            <p className="font-cinzel font-800" style={{ fontSize: '2.6rem', color: GOLD, lineHeight: 1.0, marginTop: 6, textShadow: `0 0 30px ${GOLD}55` }}>
-              {fmt(previewDoubloons)} <span style={{ fontSize: '1.5rem' }}>⟡</span>
+            <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#b0a890', marginTop: 7 }}>
+              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {hardcoreRun ? HARDCORE_CHEST_LABEL : chest.label}{chest.potMult > 1 ? ` ×${chest.potMult}` : ''}
             </p>
-            <p className="font-karla font-600" style={{ fontSize: '0.8rem', color: '#b0a890', marginTop: 8 }}>
-              +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''} · {hardcoreRun ? HARDCORE_CHEST_LABEL : chest.label}{chest.potMult > 1 ? ` ×${chest.potMult} chest` : ''}
-            </p>
-            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
-              style={{ width: '100%', marginTop: 16, padding: '1.05rem', borderRadius: 14, fontSize: '1.05rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}2a, ${GOLD}0e)`, border: `1px solid ${GOLD}77`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}1e` }}>
-              {resolving ? '…' : 'Claim Now and Leave'}
-            </button>
           </div>
 
-          {/* Hull bar */}
-          <div style={{ marginTop: 16, textAlign: 'left' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.6rem', color: '#9a988e' }}>Hull</span>
-              <span className="font-cinzel font-700" style={{ fontSize: '0.98rem', color: hpColor }}>{playerHP} / {hpMax}</span>
+          {/* Hull — the other half of the gamble, right under the reward. */}
+          <div style={{ marginTop: 13, textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+              <span className="font-karla font-800 uppercase tracking-[0.16em]" style={{ fontSize: '0.58rem', color: '#9a988e' }}>Hull</span>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: hpColor }}>{playerHP} / {hpMax}</span>
             </div>
-            <div style={{ height: 12, borderRadius: 6, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ height: 11, borderRadius: 6, background: 'rgba(0,0,0,0.5)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
               <motion.div initial={{ width: `${hpPct}%` }} animate={{ width: `${hpPct}%` }} transition={{ duration: 0.4 }}
                 style={{ height: '100%', background: `linear-gradient(90deg, ${hpColor}aa, ${hpColor})`, boxShadow: `0 0 10px ${hpColor}88` }} />
             </div>
           </div>
 
-          {/* Powers + Curses tallies — each chip taps to a plain-English detail. */}
-          {(ownedBoons.length > 0 || ownedCurses.length > 0) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: 16, textAlign: 'left' }}>
+          {/* Loadout — powers, synergies, curses as one tidy panel of chip rows.
+              Tap any chip for its plain-English detail; the footer carries the
+              "within reach" nudge + the codex. */}
+          {(ownedBoons.length > 0 || activeConf.length > 0 || ownedCurses.length > 0) && (
+            <div style={{ marginTop: 13, padding: '0.85rem 0.9rem 0.75rem', borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 9 }}>
               {ownedBoons.length > 0 && (
-                <div>
-                  <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: TEAL, marginBottom: 6 }}>
-                    Powers · {ownedBoons.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {ownedBoons.map(({ fam, tier }) => {
-                      const t = fam.tiers[tier - 1]
-                      const rc = BOON_RARITY_META[boonRarity(fam)].color
-                      return (
-                        <button key={fam.id} className="font-karla font-700 tap"
-                          onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length })}
-                          style={{ cursor: 'pointer', fontSize: '0.68rem', padding: '0.28rem 0.66rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
-                          {fam.name} {boonTierLabel(tier)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
+                <LoadoutRow label="Powers" color={TEAL}>
+                  {ownedBoons.map(({ fam, tier }) => {
+                    const t = fam.tiers[tier - 1]
+                    const rc = BOON_RARITY_META[boonRarity(fam)].color
+                    return (
+                      <button key={fam.id} className="font-karla font-700 tap"
+                        onClick={() => setDetailEffect({ kind: 'boon', name: `${fam.name} ${boonTierLabel(tier)}`, desc: t.desc, detail: t.detail, flavor: fam.flavor, count: tier, maxTier: fam.tiers.length })}
+                        style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: `${rc}20`, border: `1px solid ${rc}66`, color: rc }}>
+                        {fam.name} {boonTierLabel(tier)}
+                      </button>
+                    )
+                  })}
+                </LoadoutRow>
+              )}
+              {activeConf.length > 0 && (
+                <LoadoutRow label="Synergies" color={GOLD}>
+                  {activeConf.map(c => {
+                    const lvl = confluenceLevel(c, boonTiers)
+                    const lvlLabel = ['', 'I', 'II', 'III'][lvl] ?? ''
+                    const fresh = confluenceUnlocked?.id === c.id
+                    const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
+                    return (
+                      <button key={c.id} className="font-karla font-700 tap"
+                        onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `Drafted this run — it stays for the whole dive. Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
+                        style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: fresh ? `${GOLD}30` : `${GOLD}18`, border: `1px solid ${GOLD}${fresh ? 'aa' : '66'}`, color: '#fbe7c4', boxShadow: fresh ? `0 0 12px ${GOLD}66` : 'none' }}>
+                        {c.name} {lvlLabel}{fresh ? ' · NEW' : ''}
+                      </button>
+                    )
+                  })}
+                </LoadoutRow>
               )}
               {ownedCurses.length > 0 && (
-                <div>
-                  <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f87171', marginBottom: 6 }}>
-                    Curses · {ownedCurses.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {ownedCurses.map(({ c, tier }) => {
-                      const t = c.tiers[tier - 1]
-                      const label = curseTierLabel(tier)
-                      return (
-                        <button key={c.id} className="font-karla font-700 tap"
-                          onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length })}
-                          style={{ cursor: 'pointer', fontSize: '0.68rem', padding: '0.28rem 0.66rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
-                          {c.name}{label ? ` ${label}` : ''}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
+                <LoadoutRow label="Curses" color="#f87171">
+                  {ownedCurses.map(({ c, tier }) => {
+                    const t = c.tiers[tier - 1]
+                    const label = curseTierLabel(tier)
+                    return (
+                      <button key={c.id} className="font-karla font-700 tap"
+                        onClick={() => setDetailEffect({ kind: 'curse', name: label ? `${c.name} ${label}` : c.name, desc: t.desc, detail: t.detail, flavor: c.flavor, count: tier, maxTier: c.tiers.length })}
+                        style={{ cursor: 'pointer', fontSize: '0.64rem', padding: '0.24rem 0.6rem', borderRadius: 999, background: 'rgba(248,113,113,0.14)', border: '1px solid rgba(248,113,113,0.42)', color: '#fca5a5' }}>
+                        {c.name}{label ? ` ${label}` : ''}
+                      </button>
+                    )
+                  })}
+                </LoadoutRow>
               )}
-            </div>
-          )}
-
-          {/* Confluences — synergies you've DRAFTED this run. A just-taken one
-              lands as a highlighted "unlocked" beat. */}
-          {activeConf.length > 0 && (
-            <div style={{ marginTop: 16, textAlign: 'left' }}>
-              <p className="font-karla font-800 uppercase tracking-[0.12em]" style={{ fontSize: '0.6rem', color: '#f5b94a', marginBottom: 7 }}>
-                Synergies · {activeConf.length} <span style={{ color: 'rgba(255,255,255,0.34)', letterSpacing: 0, fontWeight: 600 }}>· tap to read</span>
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {activeConf.map(c => {
-                  const fresh = confluenceUnlocked?.id === c.id
-                  const GLD = '#f5b94a'
-                  const lvl = confluenceLevel(c, boonTiers)
-                  const lvlLabel = ['', 'I', 'II', 'III'][lvl] ?? ''
-                  const reqNames = c.requires.map(r => GAUNTLET_BOONS.find(b => b.id === r.boonId)?.name ?? r.boonId)
-                  return (
-                    <motion.button key={c.id} type="button" className="tap" whileTap={{ scale: 0.985 }}
-                      onClick={() => setDetailEffect({ kind: 'confluence', name: lvlLabel ? `${c.name} ${lvlLabel}` : c.name, desc: confluenceDescAt(c, lvl), detail: `Drafted this run — it stays for the whole dive. Its level is the lower of your ${reqNames.join(' and ')} tiers, so deepen whichever is behind to level it up.`, flavor: c.flavor, count: 0 })}
-                      initial={fresh ? { opacity: 0, scale: 0.92, y: 6 } : false}
-                      animate={fresh ? { opacity: 1, scale: 1, y: 0 } : {}}
-                      transition={{ type: 'spring', stiffness: 240, damping: 18 }}
-                      style={{ width: '100%', textAlign: 'left', cursor: 'pointer', position: 'relative', overflow: 'hidden', borderRadius: 12, padding: '0.6rem 0.8rem 0.6rem 0.95rem', background: fresh ? `${GLD}1c` : `${GLD}0e`, border: `1px solid ${GLD}${fresh ? '88' : '4a'}`, boxShadow: fresh ? `0 0 22px ${GLD}33` : 'none' }}>
-                      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: GLD }} />
-                      {fresh && (
-                        <motion.span aria-hidden initial={{ x: '-130%' }} animate={{ x: '180%' }} transition={{ duration: 1.4, repeat: 2, ease: 'easeInOut' }}
-                          style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${GLD}3a, transparent)`, pointerEvents: 'none' }} />
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                        <p className="font-cinzel font-700" style={{ fontSize: '0.92rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name} <span style={{ color: GLD, fontSize: '0.78rem' }}>{lvlLabel}</span></p>
-                        {fresh && <span className="font-karla font-800 uppercase tracking-[0.12em]" style={{ flexShrink: 0, marginLeft: 'auto', fontSize: '0.46rem', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.42rem' }}>Unlocked</span>}
-                      </div>
-                      <p className="font-karla" style={{ fontSize: '0.7rem', color: '#cdb88e', lineHeight: 1.4, marginTop: 4 }}>{confluenceDescAt(c, lvl)}</p>
-                    </motion.button>
-                  )
-                })}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 3, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="font-karla font-600" style={{ fontSize: '0.58rem', lineHeight: 1.3, color: eligibleConf.length > 0 ? '#c6b0ff' : '#7a756c' }}>
+                  {eligibleConf.length > 0
+                    ? `${eligibleConf.length} synerg${eligibleConf.length === 1 ? 'y' : 'ies'} within reach — forge in a draft`
+                    : 'Tap any to read'}
+                </span>
+                <button onClick={() => setSynergiesOpen(true)} className="font-karla font-800 uppercase tracking-[0.1em] tap"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.54rem', color: '#c9bfa8', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                  Codex
+                </button>
               </div>
             </div>
           )}
 
-          {/* Available synergies — you hold both halves but haven't drafted it.
-              A quiet violet nudge to watch for the "forge a synergy" draft card. */}
-          {eligibleConf.length > 0 && (
-            <div style={{ marginTop: activeConf.length > 0 ? 8 : 16, textAlign: 'left' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 12, padding: '0.55rem 0.8rem', background: 'rgba(185,139,255,0.09)', border: '1px solid rgba(185,139,255,0.32)' }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b98bff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-                <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d9c6ff', lineHeight: 1.35 }}>
-                  {eligibleConf.length === 1
-                    ? <><span className="font-800" style={{ color: '#eaddff' }}>{eligibleConf[0].name}</span> is within reach — forge it in a draft.</>
-                    : <><span className="font-800" style={{ color: '#eaddff' }}>{eligibleConf.length} synergies</span> within reach — forge one in a draft.</>}
+          {/* The fork — bank or push, presented together as one clear decision. */}
+          <div style={{ marginTop: 18 }}>
+            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+              style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}30, ${GOLD}10)`, border: `1px solid ${GOLD}88`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
+              {resolving ? '…' : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
+            </button>
+
+            {/* The hinge — makes the two buttons read as one either/or. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '11px 4px 10px' }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+              <span className="font-karla font-700 uppercase tracking-[0.24em]" style={{ fontSize: '0.5rem', color: '#8a8578' }}>or press your luck</span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+            </div>
+
+            {/* What lies below (Sounding Line) — the intel that informs the dive,
+                now sitting right on top of the dive button. */}
+            {sounding && (
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, padding: '0.55rem 0.85rem', borderRadius: 11, background: `${sounding.color}12`, border: `1px solid ${sounding.color}44` }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={sounding.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20" /><path d="M5 9l7-7 7 7" /><path d="M8 16h8" /></svg>
+                <div style={{ textAlign: 'left', minWidth: 0 }}>
+                  <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.44rem', color: `${sounding.color}cc` }}>Sounding Line · what lies below</p>
+                  <p className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: sounding.color, lineHeight: 1.15 }}>
+                    {sounding.label}{sounding.sub ? <span style={{ color: 'rgba(255,255,255,0.58)' }}> · {sounding.sub}</span> : ''}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Hardcore — compact stakes reminder, in the dive lane where it matters. */}
+            {hardcoreRun && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9, padding: '0.55rem 0.8rem', borderRadius: 11, textAlign: 'left',
+                background: 'linear-gradient(180deg, rgba(140,10,20,0.28), rgba(88,4,10,0.14))', border: '1px solid rgba(220,38,38,0.45)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, filter: 'drop-shadow(0 0 5px rgba(220,38,38,0.5))' }}><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.4" fill="#fca5a5" stroke="none" /><circle cx="15" cy="11" r="1.4" fill="#fca5a5" stroke="none" /><path d="M11 15.5h2" /></svg>
+                <p className="font-karla" style={{ fontSize: '0.7rem', color: '#f0c9c9', lineHeight: 1.35 }}>
+                  <span className="font-800 uppercase tracking-[0.06em]" style={{ color: '#fca5a5' }}>Hardcore.</span> Sink and your whole crew drowns for good.
                 </p>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Browse the full synergy codex — plan the build between fights. */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
-            <button onClick={() => setSynergiesOpen(true)} className="font-karla font-700 uppercase tracking-[0.1em] tap"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.42rem 0.9rem', borderRadius: 999, fontSize: '0.55rem', color: '#b7ae9f', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
-              Synergy Codex
-            </button>
-          </div>
-
-          {/* Sounding Line — the next depth, read before the gamble. */}
-          {sounding && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 18, padding: '0.6rem 0.9rem', borderRadius: 12, background: `${sounding.color}12`, border: `1px solid ${sounding.color}44` }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={sounding.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2v20" /><path d="M5 9l7-7 7 7" /><path d="M8 16h8" /></svg>
-              <div style={{ textAlign: 'left', minWidth: 0 }}>
-                <p className="font-karla font-700 uppercase tracking-[0.16em]" style={{ fontSize: '0.46rem', color: `${sounding.color}cc` }}>The Sounding Line</p>
-                <p className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: sounding.color, lineHeight: 1.15 }}>{sounding.label}</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Hardcore — the crew are on the line, not just the pot. A stark red
-              reminder at every dive-or-bank fork so the stakes are never a
-              surprise on the death screen. */}
-          {hardcoreRun && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, padding: '0.7rem 0.85rem', borderRadius: 12, textAlign: 'left',
-              background: 'linear-gradient(180deg, rgba(140,10,20,0.3), rgba(88,4,10,0.16))', border: '1px solid rgba(220,38,38,0.5)', boxShadow: '0 0 18px rgba(200,20,32,0.22), inset 0 0 12px rgba(120,10,18,0.3)' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, filter: 'drop-shadow(0 0 5px rgba(220,38,38,0.5))' }}><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.4" fill="#fca5a5" stroke="none" /><circle cx="15" cy="11" r="1.4" fill="#fca5a5" stroke="none" /><path d="M11 15.5h2" /></svg>
-              <p className="font-karla" style={{ fontSize: '0.78rem', color: '#f0c9c9', lineHeight: 1.42 }}>
-                <span className="font-800 uppercase tracking-[0.08em]" style={{ color: '#fca5a5' }}>Hardcore.</span> Sink on this dive and <span className="font-800" style={{ color: '#fca5a5' }}>your whole crew drowns for good</span> — no revives, no recruiting them back. Bank now to bring them home.
-              </p>
-            </div>
-          )}
-
-          {/* Push deeper — the gamble against the banked haul above. */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginTop: hardcoreRun ? 14 : 22 }}>
             <button onClick={pushOn} disabled={resolving} className="font-cinzel font-700 uppercase tracking-[0.05em] tap"
-              style={{ width: '100%', padding: '1.05rem', borderRadius: 15, fontSize: '1.05rem', background: `${TEAL}1e`, border: `1px solid ${TEAL}77`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              Risk It · Dive to Depth {nextDepth}
+              style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem', background: `${TEAL}20`, border: `1px solid ${TEAL}88`, color: TEAL, cursor: resolving ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              Dive to Depth {nextDepth}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
             </button>
-            <p className="font-karla font-600" style={{ fontSize: '0.76rem', color: '#9a857a', marginTop: 3, lineHeight: 1.4 }}>
-              Sink on the next dive and all <span style={{ color: '#d8a14a' }}>{fmt(previewDoubloons)} ⟡</span> goes down with you{hardcoreRun ? <span style={{ color: '#f0a0a0' }}> — and your crew with it</span> : ''}.
+            <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#9a857a', marginTop: 8, lineHeight: 1.4, textAlign: 'center' }}>
+              Sink on the dive and all <span style={{ color: '#d8a14a' }}>{fmt(previewDoubloons)} ⟡</span> goes down with you{hardcoreRun ? <span style={{ color: '#f0a0a0' }}> — crew and all</span> : ''}.
             </p>
           </div>
         </div>
