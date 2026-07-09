@@ -915,6 +915,28 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: 'Up to +35% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +35%.', effect: { kind: 'lowHpDamage', maxBonus: 0.35 } },
     { desc: 'Up to +52% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +52%.', effect: { kind: 'lowHpDamage', maxBonus: 0.52 } },
   ] },
+  // ── Momentum — damage that FEEDS on the run: kills stacked, depth dared,
+  //    and clean crits chained. Each rewards a different way of pushing.
+  { id: 'rising_tide', name: 'Rising Tide', flavor: 'Every hull you send down feeds the swell behind you.', rarity: 'rare', tiers: [
+    { desc: '+3% damage per enemy sunk (max +30%)', detail: 'Every enemy you sink this run permanently raises your damage by 3%, up to +30%. Counts every hull you have already sunk, and bosses count too. It never resets — the deeper you fight, the harder you hit.', effect: { kind: 'killStackDamage', perKill: 0.03, maxBonus: 0.30 } },
+    { desc: '+4% damage per enemy sunk (max +44%)', detail: 'Every enemy you sink this run permanently raises your damage by 4%, up to +44%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.04, maxBonus: 0.44 } },
+    { desc: '+5% damage per enemy sunk (max +60%)', detail: 'Every enemy you sink this run permanently raises your damage by 5%, up to +60%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.05, maxBonus: 0.60 } },
+  ] },
+  { id: 'abyssal_bounty', name: 'Abyssal Bounty', flavor: 'The pressure of the deep loads every gun.', rarity: 'rare', tiers: [
+    { desc: '+1.2% damage per depth (max +24%)', detail: 'Your damage rises with how deep you are — 1.2% for every depth you have reached, up to +24%. It scales live as you descend, and is full value the moment you take it.', effect: { kind: 'depthScaleDamage', perDepth: 0.012, maxBonus: 0.24 } },
+    { desc: '+1.8% damage per depth (max +36%)', detail: 'Your damage rises with how deep you are — 1.8% for every depth reached, up to +36%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.018, maxBonus: 0.36 } },
+    { desc: '+2.4% damage per depth (max +48%)', detail: 'Your damage rises with how deep you are — 2.4% for every depth reached, up to +48%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.024, maxBonus: 0.48 } },
+  ] },
+  { id: 'cannonade', name: 'Cannonade', flavor: 'Land them clean and the guns never cool.', rarity: 'rare', tiers: [
+    { desc: '+6% per crit in a row (max 5)', detail: 'Each critical hit in a row stacks +6% damage, up to 5 stacks (+30%). Any shot that is NOT a crit resets the streak to zero. The streak resets at the start of every fight.', effect: { kind: 'critStreakDamage', perStack: 0.06, maxStacks: 5 } },
+    { desc: '+8% per crit in a row (max 5)', detail: 'Each critical hit in a row stacks +8% damage, up to 5 stacks (+40%). Any non-crit shot resets the streak. Resets each fight.', effect: { kind: 'critStreakDamage', perStack: 0.08, maxStacks: 5 } },
+    { desc: '+10% per crit in a row (max 6)', detail: 'Each critical hit in a row stacks +10% damage, up to 6 stacks (+60%). Any non-crit shot resets the streak. Resets each fight.', effect: { kind: 'critStreakDamage', perStack: 0.10, maxStacks: 6 } },
+  ] },
+  { id: 'counter_battery', name: 'Counter-Battery', flavor: 'Answer their broadside with yours — and let the sea swallow theirs.', rarity: 'rare', tiers: [
+    { desc: '20% to cancel their shot when you both fire', detail: 'When you Fire, Volley or Mega on the same turn the enemy fires or volleys AND your shot lands, you have a 20% chance to smash their shot out of the air — their attack is fully negated while yours still hits. A whiffed aim does not count.', effect: { kind: 'counterFireChance', chance: 0.20 } },
+    { desc: '32% to cancel their shot when you both fire', detail: 'When you Fire, Volley or Mega on the same turn the enemy fires or volleys and your shot lands, you have a 32% chance to negate their attack while yours still hits.', effect: { kind: 'counterFireChance', chance: 0.32 } },
+    { desc: '45% to cancel their shot when you both fire', detail: 'When you Fire, Volley or Mega on the same turn the enemy fires or volleys and your shot lands, you have a 45% chance to negate their attack while yours still hits.', effect: { kind: 'counterFireChance', chance: 0.45 } },
+  ] },
   // ── Elemental builds — lean a run into ICE (control + shatter) or FIRE
   //    (stacking DoT). Each grants its proc chance ON ITS OWN, so you can take
   //    it without the matching cannonball; with the cannonball the chances stack

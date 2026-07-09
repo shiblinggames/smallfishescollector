@@ -166,6 +166,22 @@ export type TideEffect =
   /** Start every fight with a damage-absorbing shield worth `pctMax` of max HP;
    *  it soaks incoming hits before the hull does and reforms each fight. */
   | { kind: 'fightShield'; pctMax: number }
+  // ── Momentum / conditional damage (Gauntlet boons) ──────────────
+  /** "Rising Tide": +perKill outgoing damage for EVERY enemy sunk this run
+   *  (retroactive; bosses count), capped at maxBonus. Run-scoped snowball —
+   *  the host feeds the live kill tally; RaidCombat reads it off `tide`. */
+  | { kind: 'killStackDamage'; perKill: number; maxBonus: number }
+  /** "Abyssal Bounty": +perDepth outgoing damage scaled by the current run
+   *  depth, capped at maxBonus. A live function of depth (no wind-up). */
+  | { kind: 'depthScaleDamage'; perDepth: number; maxBonus: number }
+  /** "Cannonade": each consecutive CRIT this fight adds +perStack outgoing
+   *  damage (up to maxStacks); any non-crit shot resets the streak to 0.
+   *  Per-fight, tracked by a streak ref in RaidCombat. */
+  | { kind: 'critStreakDamage'; perStack: number; maxStacks: number }
+  /** "Counter-Battery": when you fire/volley/mega on the same turn the enemy
+   *  fires/volleys AND your shot lands, `chance` to negate their attack while
+   *  yours still hits (reuses the frozen-skip on the enemy's step). */
+  | { kind: 'counterFireChance'; chance: number }
   // ── Meta (post-raid only) ───────────────────────────────────────
   /** Doubloons granted / deducted at raid end. */
   | { kind: 'doubloonsAtRaidEnd'; n: number }
@@ -233,6 +249,9 @@ export function effectTone(e: TideEffect): 'good' | 'bad' | 'neutral' {
     case 'fireAffinity': return 'good'
     case 'aimSpeedMult': return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
     case 'zoneSpeedMult':return e.mult > 1 ? 'bad' : e.mult < 1 ? 'good' : 'neutral'
+    case 'killStackDamage': case 'depthScaleDamage':
+    case 'critStreakDamage': case 'counterFireChance':
+      return 'good'
     default:
       return 'neutral'
   }
@@ -832,6 +851,10 @@ export function describeEffect(e: TideEffect): string {
     case 'aimFog':                return 'Fog drifts over your aim bar'
     case 'aimSpeedMult':          return e.mult > 1 ? `Aim needle ${pct(e.mult - 1)} faster` : `Aim needle ${pct(1 - e.mult)} slower`
     case 'zoneSpeedMult':         return e.mult > 1 ? `Target band lurches ${pct(e.mult - 1)} faster` : `Target band ${pct(1 - e.mult)} steadier`
+    case 'killStackDamage':       return `${pct(e.perKill)} damage per enemy sunk (max ${pct(e.maxBonus)})`
+    case 'depthScaleDamage':      return `${pct(e.perDepth)} damage per depth (max ${pct(e.maxBonus)})`
+    case 'critStreakDamage':      return `${pct(e.perStack)} damage per crit in a row (max ${e.maxStacks})`
+    case 'counterFireChance':     return `${Math.round(e.chance * 100)}% to cancel their shot when you both fire`
   }
 }
 

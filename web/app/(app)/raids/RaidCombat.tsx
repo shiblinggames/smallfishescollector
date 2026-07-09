@@ -319,6 +319,13 @@ export interface RaidCombatProps {
   /** Cannonballs to start this fight already loaded (Powder Hoard carryover).
    *  Folded on top of any Primer / start-charge tide, capped to the magazine. */
   initialCharges?: number
+  /** Gauntlet momentum boons: the live run tally the damage boons read.
+   *  `runKills` = enemies sunk so far this run (Rising Tide, retroactive);
+   *  `runDepth` = current descent depth (Abyssal Bounty). Constant for the
+   *  fight (RaidCombat remounts per depth), so no mid-fight resync needed.
+   *  Omitted outside the Gauntlet → the boons simply never appear. */
+  runKills?: number
+  runDepth?: number
   /** Fires with each damage value the player lands, so the parent can track
    *  the biggest hit of the run (career stat). */
   onPlayerHit?: (dmg: number) => void
@@ -412,6 +419,7 @@ export default function RaidCombat({
   onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
   onDamageTaken, onShotResolved, onNoShotKill,
   initialCharges = 0,
+  runKills = 0, runDepth = 0,
   anchorSaveAvailable = false, onAnchorSave,
   raidMods, riskyFlee = false, fleeSignal, fleeNav,
   tideEffects = [],
@@ -497,6 +505,13 @@ export default function RaidCombat({
     let chargeCarryover = 0
     let fightShieldPct  = 0
     let enemyShieldPct  = 0
+    // Momentum boons: Cannonade (crit-streak ramp — the live streak is a ref,
+    // this just carries the per-stack/cap tuning), Counter-Battery (chance to
+    // negate an enemy shot you fire into). Rising Tide / Abyssal Bounty resolve
+    // straight into dmgMult below using the live run tally.
+    let critStreakPerStack = 0
+    let critStreakMaxStacks = 0
+    let counterFireChance   = 0
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -561,6 +576,15 @@ export default function RaidCombat({
         case 'dodgeRefund':           dodgeRefundCharges = Math.max(dodgeRefundCharges, e.charges); break
         case 'retaliateBoost':        retaliateBoostMult = Math.max(retaliateBoostMult, e.mult); break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
+        // Rising Tide / Abyssal Bounty: resolve the live run tally into a flat
+        // outgoing mult right here (both constant for the fight). Capped.
+        case 'killStackDamage':       dmgMult *= 1 + Math.min(e.maxBonus, e.perKill * Math.max(0, runKills)); break
+        case 'depthScaleDamage':      dmgMult *= 1 + Math.min(e.maxBonus, e.perDepth * Math.max(0, runDepth)); break
+        // Cannonade / Counter-Battery: take the highest tier held.
+        case 'critStreakDamage':
+          if (e.perStack > critStreakPerStack) { critStreakPerStack = e.perStack; critStreakMaxStacks = e.maxStacks }
+          break
+        case 'counterFireChance':     counterFireChance = Math.max(counterFireChance, e.chance); break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
     }
@@ -578,8 +602,9 @@ export default function RaidCombat({
       executeHealPct, burnTickHealPct, dodgeRefundCharges, retaliateBoostMult,
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct, enemyShieldPct,
+      critStreakPerStack, critStreakMaxStacks, counterFireChance,
     }
-  }, [tideEffects, isBoss])
+  }, [tideEffects, isBoss, runKills, runDepth])
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
   // charges) so the enemy-RESET effect below — which has intentionally tight
   // deps so it doesn't refire mid-fight — reads the CURRENT values. Without
@@ -709,6 +734,10 @@ export default function RaidCombat({
   // Hull Render confluence: how many Volleys the player has fired THIS fight, so
   // each one ramps harder than the last. Reset on every fight start.
   const volleyCountRef = useRef(0)
+  // Cannonade boon: consecutive player CRITS this fight. Each crit bumps it,
+  // any non-crit shot resets it to 0. Fresh per fight (RaidCombat remounts per
+  // enemy), so no manual reset needed.
+  const critStreakRef = useRef(0)
   // Cleanse Mender flag — Lv 100 Mender heals AND strips one enemy debuff
   // from the player. There's no in-fight debuff system yet, so this is a
   // hook for future expansion; for now it's tracked but does nothing.
@@ -2387,6 +2416,18 @@ export default function RaidCombat({
 
     const order: Actor[] = first === 'player' ? ['player', 'enemy'] : ['enemy', 'player']
 
+    // Counter-Battery (boon): you and the enemy both loose a shot this beat and
+    // your aim landed (not a whiff, not a decoy dud) — roll to smash their shot
+    // out of the air. Rolled once here; consumed when the enemy's attack step
+    // comes up in the order loop, which skips it (even if the enemy is faster,
+    // so a high-tier proc can eat a lethal blow). Order-independent by design.
+    const playerFiresThisTurn = pAction === 'fire' || pAction === 'volley' || pAction === 'mega'
+    const enemyFiresThisTurn  = eAction === 'fire' || eAction === 'volley'
+    const playerShotLands = lockedAimResult != null && lockedAimResult !== 'miss' && !decoyFumbleRef.current
+    let counterEnemyShot = tide.counterFireChance > 0
+      && playerFiresThisTurn && enemyFiresThisTurn && playerShotLands
+      && Math.random() < tide.counterFireChance
+
     // Pre-compute the full sequence of state snapshots so we can animate them in order
     type Step = {
       who: Actor
@@ -2525,6 +2566,17 @@ export default function RaidCombat({
         enemyFrozenRef.current -= 1
         const ends = enemyFrozenRef.current === 0
         pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Frozen', splatColor: FREEZE_COLOR, logLines: [ends ? `The ${enemy.name} is frozen solid — its turn is skipped.` : `The ${enemy.name} is locked in deep ice — another turn frozen.`], freezeEnds: ends })
+        continue
+      }
+      // Counter-Battery: you fired into the enemy's shot this beat and smashed
+      // it from the air. It still spends the cannonball(s) — the shot simply
+      // never lands. Skip its attack step (like a frozen turn); your own fire
+      // resolves in its own step. Rendered as a neutral 'reload' so no enemy
+      // cannon animation loosens toward you.
+      if (who === 'enemy' && counterEnemyShot) {
+        counterEnemyShot = false
+        eCharges = Math.max(0, eCharges - (eAction === 'volley' ? MAX_CHARGES : 1))
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Countered', splatColor: '#7dd3fc', logLines: [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`] })
         continue
       }
       // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
@@ -2728,12 +2780,25 @@ export default function RaidCombat({
           // Hull Render confluence: each Volley this fight ramps. Reads the count
           // BEFORE this volley (so the first is +0), then it's bumped below.
           const volleyRampMult = isVolley && tide.volleyRampPct > 0 ? 1 + Math.min(tide.volleyRampPct * volleyCountRef.current, HULL_RENDER_RAMP_CAP) : 1
+          // Cannonade (boon): each consecutive crit this fight stacks damage;
+          // any non-crit shot breaks the streak. First crit already grants a
+          // stack. Update the streak on THIS shot, then apply it to THIS shot.
+          let critStreakMult = 1
+          if (tide.critStreakPerStack > 0) {
+            if (isCritShot) {
+              critStreakRef.current = Math.min(tide.critStreakMaxStacks, critStreakRef.current + 1)
+              critStreakMult = 1 + tide.critStreakPerStack * critStreakRef.current
+              if (critStreakRef.current >= 2) stepLines.push(`Cannonade! ${critStreakRef.current} crits running — +${Math.round(tide.critStreakPerStack * critStreakRef.current * 100)}% damage.`)
+            } else {
+              critStreakRef.current = 0
+            }
+          }
           const actionBaseMult = isMega ? (megaAug?.megaMult ?? 2.6) : isVolley ? 2 : 1
           // Vengeance rage — after Laz's ward cheats a killing blow, every shot
           // for the rest of the fight hits harder (capped +35% at the def level).
           const vengeanceMult = vengeanceDmgBuffRef.current > 0 ? 1 + vengeanceDmgBuffRef.current : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
-                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * vengeanceMult
+                       * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult
           dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every

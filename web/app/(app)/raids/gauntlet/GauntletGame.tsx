@@ -2476,6 +2476,8 @@ export default function GauntletGame(props: GauntletGameProps) {
             shipClasses={props.shipClasses}
             equippedRepairKit={props.equippedRepairKit}
             onEnemyDefeated={handleEnemyDefeated}
+            runKills={rollStateRef.current.cleared}
+            runDepth={fight.depth}
             initialCharges={carriedChargesRef.current}
             onPlayerDefeated={handlePlayerDefeated}
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
