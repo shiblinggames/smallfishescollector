@@ -2766,7 +2766,15 @@ export default function RaidCombat({
             stepLines.push(`You load a cannonball. (${pCharges}/${playerMaxCharges})`)
           }
         }
-        else                  { eCharges = Math.min(MAX_CHARGES, eCharges + 1); stepLines.push(`Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`) }
+        else                  {
+          eCharges = Math.min(MAX_CHARGES, eCharges + 1)
+          // Shuttered Ports curse: the reload count is hidden, so don't leak it
+          // in the log either (or the player could just tally reloads to rebuild
+          // the magazine). Obscure the action entirely.
+          stepLines.push(enemyChargesHidden
+            ? `The ${enemy.name} works something behind its shuttered gunports — you can't make it out.`
+            : `Enemy loads a cannonball. (${eCharges}/${MAX_CHARGES})`)
+        }
       } else if (action === 'repair') {
         // Player-only consumable: heal the hull, lose the offensive
         // half of this turn. Roll uses the kit's [min, max+Fortune*scale].
