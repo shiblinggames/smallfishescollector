@@ -338,6 +338,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Mid-fight bail-out guard. The ← button is easy to mis-tap, and leaving a
   // live run forfeits the whole pot — so confirm first.
   const [confirmLeave, setConfirmLeave] = useState(false)
+  // Confirm before banking the haul + ending the run on the breather.
+  const [confirmClaim, setConfirmClaim] = useState(false)
   // First-timer explainer. Auto-opens once (server flag), reopenable via the
   // "How it works" link.
   const [introOpen, setIntroOpen] = useState(!props.hasSeenIntro)
@@ -2034,7 +2036,7 @@ export default function GauntletGame(props: GauntletGameProps) {
 
           {/* The fork — bank or push, presented together as one clear decision. */}
           <div style={{ marginTop: 18 }}>
-            <button onClick={cashOut} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+            <button onClick={() => setConfirmClaim(true)} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
               style={{ width: '100%', padding: '1.02rem', borderRadius: 14, fontSize: '1rem', color: '#f5d98a', background: `linear-gradient(180deg, ${GOLD}30, ${GOLD}10)`, border: `1px solid ${GOLD}88`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}22` }}>
               {resolving ? '…' : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
             </button>
@@ -2086,6 +2088,32 @@ export default function GauntletGame(props: GauntletGameProps) {
         {detailModal}
         {exitModal}
         {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
+        {/* Claim & Leave confirm — a light guard so you never bank + end the run
+            on a misfire. Shows exactly what walks away with you. */}
+        {confirmClaim && (
+          <div onClick={() => setConfirmClaim(false)} style={{ position: 'fixed', inset: 0, zIndex: 1310, background: 'rgba(6,8,14,0.86)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflowY: 'auto' }}>
+            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, borderRadius: 20, padding: '1.35rem 1.15rem 1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(24,20,10,0.99), rgba(12,10,6,0.99))', border: `1px solid ${GOLD}66`, boxShadow: `0 0 44px ${GOLD}22, 0 18px 50px rgba(0,0,0,0.6)` }}>
+              <p className="font-karla font-800 uppercase" style={{ fontSize: '0.56rem', letterSpacing: '0.24em', color: `${GOLD}cc` }}>Bank the Haul</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '1.5rem', color: '#f6ead0', lineHeight: 1.08, marginTop: 8 }}>Claim &amp; leave?</p>
+              <p className="font-cinzel font-800" style={{ fontSize: '2rem', color: GOLD, lineHeight: 1, marginTop: 12, textShadow: `0 0 26px ${GOLD}55` }}>
+                {fmt(previewDoubloons)} <span style={{ fontSize: '1.2rem' }}>⟡</span>
+              </p>
+              <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#b0a890', marginTop: 6 }}>
+                +{fmt(previewXp)} Nav XP{chest.gems > 0 ? ` · +${chest.gems} ◆` : ''}{hardcoreRun ? ' · Blood Gems' : ''}
+              </p>
+              <p className="font-karla" style={{ fontSize: '0.78rem', color: 'rgba(230,222,205,0.8)', lineHeight: 1.5, marginTop: 12, maxWidth: 300, marginInline: 'auto' }}>
+                Your descent ends here and this is yours to keep. Push deeper and it grows — but sink and it all goes down with you.
+              </p>
+              <button onClick={() => { setConfirmClaim(false); cashOut() }} disabled={resolving} className="font-cinzel font-800 uppercase tracking-[0.05em] tap"
+                style={{ width: '100%', marginTop: 16, padding: '1rem', borderRadius: 13, fontSize: '1rem', color: '#1a1206', background: `linear-gradient(180deg, ${GOLD}, ${GOLD}cc)`, border: `1px solid ${GOLD}`, cursor: resolving ? 'wait' : 'pointer', boxShadow: `0 0 22px ${GOLD}33` }}>
+                {resolving ? '…' : <>Claim {fmt(previewDoubloons)} ⟡ &amp; Leave</>}
+              </button>
+              <button onClick={() => setConfirmClaim(false)} className="font-karla font-600 tap" style={{ marginTop: 11, background: 'none', border: 'none', color: '#9a948a', fontSize: '0.76rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                Keep diving
+              </button>
+            </div>
+          </div>
+        )}
       </>
     )
   }
