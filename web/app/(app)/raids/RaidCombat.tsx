@@ -92,6 +92,12 @@ const FEINT_CHANCE = 0.3
 // Render's per-fight volley ramp bonus caps here (so a long fight can't runaway).
 const REAPER_HEAL_CAP_PCT = 0.15
 const HULL_RENDER_RAMP_CAP = 1.0   // max +100% from the ramp, on top of the base volley boost
+// Total lifesteal ceiling across ALL sources (Leviathan's Hunger boon + Feeding
+// Frenzy confluence + Davy's Blood Cannon item). Uncapped, the full sustain
+// stack reached ~57% of damage-dealt healed — enough to out-heal the deep and
+// gut the Gauntlet's attrition tension. 35% keeps the dedicated build very
+// strong without letting it become unkillable.
+const LIFESTEAL_CAP = 0.35
 const PLAYER_COLOR = '#4ade80'
 const ENEMY_COLOR  = '#ef4444'
 
@@ -3082,7 +3088,7 @@ export default function RaidCombat({
           // new pHp so the HP bar climbs + a +HP splat on your hull; the log line
           // is pushed AFTER the "you fire" line below so it reads in order.
           const itemLifesteal = getActiveEffects(liveItems).filter(e => e.type === 'lifesteal_pct').reduce((a, e) => a + e.value, 0)
-          const totalLifesteal = tide.lifestealPct + itemLifesteal
+          const totalLifesteal = Math.min(LIFESTEAL_CAP, tide.lifestealPct + itemLifesteal)
           if (dmg > 0 && totalLifesteal > 0 && pHp > 0) {
             const healed = Math.max(1, Math.round(dmg * totalLifesteal))
             const before = pHp
