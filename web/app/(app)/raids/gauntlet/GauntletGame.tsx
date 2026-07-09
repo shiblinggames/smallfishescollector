@@ -1337,22 +1337,20 @@ export default function GauntletGame(props: GauntletGameProps) {
               <LeaderboardModal boards={['gauntletDepth', 'gauntletHardcore', 'gauntletBigHit']} title="The Gauntlet" label="Full ranks"
                 triggerStyle={{ background: 'none', border: 'none', color: '#9a948a', padding: 0, fontSize: '0.55rem', letterSpacing: '0.04em' }} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {([
                 { key: 'normal',   label: 'Normal',   color: TEAL,      rec: props.topDescender,
                   icon: <path d="M6 5l6 6 6-6M6 12l6 6 6-6" /> },
                 { key: 'hardcore', label: 'Hardcore', color: '#e0555a', rec: props.hardcoreTop,
                   icon: <><path d="M12 3a7 7 0 0 0-7 7v3.4c0 .9.6 1.7 1.5 2l.5.2V19a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3.4l.5-.2c.9-.3 1.5-1.1 1.5-2V10a7 7 0 0 0-7-7Z" /><circle cx="9" cy="11" r="1.3" fill="currentColor" stroke="none" /><circle cx="15" cy="11" r="1.3" fill="currentColor" stroke="none" /></> },
               ] as const).map(({ key, label, color, rec, icon }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 0.65rem', borderRadius: 12, background: `${color}12`, border: `1px solid ${color}2e` }}>
+                <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '0.65rem 0.5rem 0.6rem', borderRadius: 12, background: `${color}12`, border: `1px solid ${color}2e`, textAlign: 'center', minWidth: 0 }}>
                   <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: '50%', background: `${color}22`, border: `1px solid ${color}5a`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{icon}</svg>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                    <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color }}>{label}</span>
-                    <span className="font-cinzel font-700" style={{ fontSize: '0.85rem', color: rec ? '#ece5d7' : '#8a857c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.25 }}>{rec ? rec.name : 'Unclaimed'}</span>
-                  </div>
-                  <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: rec ? color : '#5f5b53', flexShrink: 0 }}>{rec ? `Depth ${rec.depth}` : '—'}</span>
+                  <span className="font-karla font-800 uppercase" style={{ fontSize: '0.46rem', letterSpacing: '0.14em', color }}>{label}</span>
+                  <span className="font-cinzel font-700" style={{ fontSize: '0.82rem', color: rec ? '#ece5d7' : '#8a857c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2, maxWidth: '100%' }}>{rec ? rec.name : 'Unclaimed'}</span>
+                  <span className="font-cinzel font-800" style={{ fontSize: '0.9rem', color: rec ? color : '#5f5b53' }}>{rec ? `Depth ${rec.depth}` : '—'}</span>
                 </div>
               ))}
             </div>
