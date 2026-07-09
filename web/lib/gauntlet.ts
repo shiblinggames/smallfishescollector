@@ -27,7 +27,7 @@ import {
   CORSAIRS_RECKONING_CHALLENGE, CAPTAIN_KRUST_CHALLENGE,
   THE_CARTOGRAPHER_CHALLENGE, THE_TOLLMASTER_CHALLENGE,
 } from './raidChallenge'
-import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, type AffixDef } from './raidAffixes'
+import { AFFIXES, ELITE_HP_MULT, ELITE_DMG_MULT, rollAffix, rollSecondAffix, mergeAffixes, type AffixDef } from './raidAffixes'
 import { type TideEffect } from './tides'
 
 // ── Economy ────────────────────────────────────────────────────────────────
@@ -261,6 +261,8 @@ const BOSS_PITY           = 9    // force a boss after this many bossless rounds
 const ELITE_CHANCE_BASE   = 0.06
 const ELITE_CHANCE_GROWTH = 0.05 // per depth
 const ELITE_CHANCE_CAP    = 0.6
+const DUAL_AFFIX_MIN_DEPTH = 30  // from here, elites can roll a SECOND affix
+const DUAL_AFFIX_CHANCE    = 0.3 // chance an elite past that depth carries two
 
 
 // ── Enemy pools ──────────────────────────────────────────────────────────────
@@ -477,7 +479,13 @@ export function generateFight(state: GauntletRollState, skipOffset = 0): Gauntle
   const eliteChance = Math.min(ELITE_CHANCE_CAP, ELITE_CHANCE_BASE + depth * ELITE_CHANCE_GROWTH)
   if (Math.random() < eliteChance) {
     isElite = true
-    affix = AFFIXES[rollAffix()]
+    const firstId = rollAffix()
+    affix = AFFIXES[firstId]
+    // The abyss gets crueller: from DUAL_AFFIX_MIN_DEPTH, an elite can carry a
+    // SECOND affix (merged into one — combined effects + name).
+    if (depth >= DUAL_AFFIX_MIN_DEPTH && Math.random() < DUAL_AFFIX_CHANCE) {
+      affix = mergeAffixes(affix, AFFIXES[rollSecondAffix(firstId)])
+    }
     enemy = {
       ...enemy,
       hpBase: Math.round(enemy.hpBase * ELITE_HP_MULT),

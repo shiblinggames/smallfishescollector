@@ -185,6 +185,27 @@ export function rollAffix(): AffixId {
   return ALL_AFFIX_IDS[Math.floor(Math.random() * ALL_AFFIX_IDS.length)]
 }
 
+/** Roll an affix DISTINCT from `first` (for double-affix elites). */
+export function rollSecondAffix(first: AffixId): AffixId {
+  let id = rollAffix()
+  for (let guard = 0; id === first && guard < 8; guard++) id = rollAffix()
+  return id
+}
+
+/** Combine two distinct affixes into one. Each affix sets its OWN effect fields,
+ *  so a shallow union carries both effects; only id/name/description overlap, and
+ *  those are set explicitly (name/description concatenated). RaidCombat reads
+ *  affix effects by field, so it needs no changes to handle a merged affix. */
+export function mergeAffixes(a: AffixDef, b: AffixDef): AffixDef {
+  return {
+    ...a,
+    ...b,
+    id: a.id,
+    name: `${a.name} + ${b.name}`,
+    description: `${a.description} ${b.description}`,
+  }
+}
+
 /** Decide which non-boss slots in a challenge gauntlet become elites.
  *  Phase 2 rule: exactly 2 random non-boss slots per run get elite
  *  treatment, each with one rolled affix. Cap at the slot count to
