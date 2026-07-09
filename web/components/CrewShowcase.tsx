@@ -38,7 +38,7 @@ export type ShowcaseCrew = {
  *  showing the crew off, not reading a stat card. Rarity (or equipped-skin)
  *  colour becomes a soft aura; name + rank sit on a scrim over the art; a
  *  slim stat line is the only chrome. */
-export function CrewPortrait({ crew, w = 148, dimmed, fill }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean; fill?: boolean }) {
+export function CrewPortrait({ crew, w = 148, dimmed, fill, hideStats }: { crew: ShowcaseCrew; w?: number; dimmed?: boolean; fill?: boolean; hideStats?: boolean }) {
   const color = RARITY_COLORS[(crew.rarity as CrewRarity)] ?? '#8a857c'
   const skin = getCrewSkinByFilename(crew.filename)
   const skinColor = skin?.color
@@ -78,14 +78,16 @@ export function CrewPortrait({ crew, w = 148, dimmed, fill }: { crew: ShowcaseCr
         </div>
       </div>
       {/* Slim stat line — the three numbers to brag with, no box. */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 8 }}>
-        {STAT.map(s => (
-          <span key={s.k} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 3 }}>
-            <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: s.c, lineHeight: 1 }}>{eff[s.k]}</span>
-            <span style={{ fontSize: '0.44rem', color: 'rgba(255,255,255,0.34)', letterSpacing: '0.06em' }}>{s.l}</span>
-          </span>
-        ))}
-      </div>
+      {!hideStats && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 8 }}>
+          {STAT.map(s => (
+            <span key={s.k} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 3 }}>
+              <span className="font-cinzel font-700" style={{ fontSize: '0.86rem', color: s.c, lineHeight: 1 }}>{eff[s.k]}</span>
+              <span style={{ fontSize: '0.44rem', color: 'rgba(255,255,255,0.34)', letterSpacing: '0.06em' }}>{s.l}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -177,13 +177,13 @@ export function FeaturedCrew({ crew, onEdit, emptyHint }: { crew: ShowcaseCrew[]
               Flagship
             </span>
           </div>
-          <CrewPortrait crew={flag} fill />
+          <CrewPortrait crew={flag} fill hideStats />
         </div>
       </div>
       {/* Gallery */}
       {rest.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10 }}>
-          {rest.map(c => <CrewPortrait key={c.id} crew={c} fill />)}
+          {rest.map(c => <CrewPortrait key={c.id} crew={c} fill hideStats />)}
         </div>
       )}
       {onEdit && (
