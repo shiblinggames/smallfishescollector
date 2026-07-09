@@ -282,6 +282,39 @@ export const RAID_ITEMS: RaidItemDef[] = [
     effects: [{ type: 'lifesteal_pct', value: 0.08 }],
     source: 'Hardcore · The Davy Jones Gauntlet',
   },
+  // ── Blood Cannon fusions — keep the 8% lifesteal, bolt on a damage lane.
+  //    Damage side taxed ~15% for the saved slot (lifesteal stays full). ART:
+  //    placeholder (reuses the Blood Cannon sprite) until bespoke art lands.
+  {
+    id: 'bloodletter',
+    name: 'Bloodletter',
+    description: 'The blood gun wed to the long ramp: you heal 8% of the damage you deal AND your damage climbs +4% every turn of a fight. Bleed them slow.',
+    image: '/davysbloodcannon.png',
+    emoji: '🩸',
+    rarity: 'legendary',
+    effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'ramp_damage_per_turn', value: 0.04 }],
+    source: "Forged from Davy's Blood + Heavy Cannon",
+  },
+  {
+    id: 'reavers_cannon',
+    name: "Reaver's Cannon",
+    description: 'Heal 8% of the damage you deal and hit non-boss enemies for +17%. Reave through a crew and drink the whole time.',
+    image: '/davysbloodcannon.png',
+    emoji: '🩸',
+    rarity: 'legendary',
+    effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'nonboss_damage_mult', value: 1.17 }],
+    source: "Forged from Davy's Blood + Hand Cannon",
+  },
+  {
+    id: 'bloodmaw_cannon',
+    name: 'Bloodmaw Cannon',
+    description: 'Heal 8% of the damage you deal and hit bosses for +17%. Chew the biggest hulls down and heal off every bite.',
+    image: '/davysbloodcannon.png',
+    emoji: '🩸',
+    rarity: 'legendary',
+    effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'boss_damage_mult', value: 1.17 }],
+    source: "Forged from Davy's Blood + Corsair's Prime Cannon",
+  },
   // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
   // Offense fusions run at ~85% of each parent effect (they trade raw numbers for
   // the slot a single mount saves); defence/tempo fusions keep full strength.
@@ -553,6 +586,10 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   { components: ['corsair_prime_cannon', 'captains_carapace'],  result: 'dreadnought_cannon',     fathomCost: 150 },
   { components: ['captains_carapace', 'tollmasters_primer'],    result: 'bastion_primer',         fathomCost: 150 },
   { components: ['captains_astrolabe', 'tollmasters_primer'],   result: 'riposte_chronometer',    fathomCost: 150 },
+  // Blood Cannon fusions (Hardcore Blood Cannon + a normal-run damage cannon).
+  { components: ['davys_blood_cannon', 'davys_heavy_cannon'],   result: 'bloodletter',            fathomCost: 150 },
+  { components: ['davys_blood_cannon', 'davys_hand_cannon'],    result: 'reavers_cannon',         fathomCost: 150 },
+  { components: ['davys_blood_cannon', 'corsair_prime_cannon'], result: 'bloodmaw_cannon',        fathomCost: 150 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {
