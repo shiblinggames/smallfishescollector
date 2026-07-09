@@ -305,16 +305,6 @@ export const RAID_ITEMS: RaidItemDef[] = [
     effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'nonboss_damage_mult', value: 1.17 }],
     source: "Forged from Davy's Blood + Hand Cannon",
   },
-  {
-    id: 'bloodmaw_cannon',
-    name: 'Bloodmaw Cannon',
-    description: 'Heal 8% of the damage you deal and hit bosses for +17%. Chew the biggest hulls down and heal off every bite.',
-    image: '/davysbloodcannon.png',
-    emoji: '🩸',
-    rarity: 'legendary',
-    effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'boss_damage_mult', value: 1.17 }],
-    source: "Forged from Davy's Blood + Corsair's Prime Cannon",
-  },
   // ── Forge fusions (learned in The Forge, sacrificing both components) ────────
   // Offense fusions run at ~85% of each parent effect (they trade raw numbers for
   // the slot a single mount saves); defence/tempo fusions keep full strength.
@@ -589,7 +579,6 @@ export const FORGE_RECIPES: ForgeRecipe[] = [
   // Blood Cannon fusions (Hardcore Blood Cannon + a normal-run damage cannon).
   { components: ['davys_blood_cannon', 'davys_heavy_cannon'],   result: 'bloodletter',            fathomCost: 150 },
   { components: ['davys_blood_cannon', 'davys_hand_cannon'],    result: 'reavers_cannon',         fathomCost: 150 },
-  { components: ['davys_blood_cannon', 'corsair_prime_cannon'], result: 'bloodmaw_cannon',        fathomCost: 150 },
 ]
 
 export function getForgeRecipe(resultId: string): ForgeRecipe | undefined {

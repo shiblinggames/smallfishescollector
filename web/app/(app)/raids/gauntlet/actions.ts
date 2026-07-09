@@ -484,7 +484,7 @@ export async function cashOutGauntlet(rewardDepth: number, combatDepth: number, 
   // Davy's Blood Cannon — HARDCORE-only chase (the first lifesteal item), from
   // the deeper hardcore chests. Stops dropping once you own it OR have forged it
   // into one of its fusions (mirrors the Grand Cannon).
-  const bloodForged = ['bloodletter', 'reavers_cannon', 'bloodmaw_cannon'].some(id => ownedItems.includes(id))
+  const bloodForged = ['bloodletter', 'reavers_cannon'].some(id => ownedItems.includes(id))
   if (hc && chest.tier >= BLOOD_CANNON_CHEST_TIER && !ownedItems.includes(BLOOD_CANNON_ITEM_ID) && !bloodForged && Math.random() < BLOOD_CANNON_DROP_CHANCE) {
     droppedItems.push(BLOOD_CANNON_ITEM_ID)
   }
