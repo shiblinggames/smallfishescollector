@@ -5350,38 +5350,55 @@ export default function RaidCombat({
           60%  { opacity: 0.75; }
           100% { opacity: 0; }
         }
-        @keyframes rc-phase2-pulse {
-          0%, 100% { box-shadow: 0 0 18px rgba(239,68,68,0.45); }
-          50%      { box-shadow: 0 0 28px rgba(239,68,68,0.85); }
+        /* These glows pulse via OPACITY only (GPU-composited). Animating
+           box-shadow/text-shadow instead forces a full main-thread repaint
+           every frame — and since the phase-2 glow + badge run 'infinite' the
+           whole time any boss is in a later phase, that paint load starved the
+           aim-bar RAF (the "lag in all boss phase 2+" stutter). The shadow is
+           held static; a pseudo-element (or the element itself) just fades. */
+        @keyframes rc-glow-fade {
+          0%, 100% { opacity: 0.55; }
+          50%      { opacity: 1; }
         }
-        .rc-phase2-pulse {
-          animation: rc-phase2-pulse 1.8s ease-in-out infinite;
-        }
-        @keyframes rc-phase2-badge-pulse {
-          0%, 100% { text-shadow: 0 0 6px rgba(239,68,68,0.7);  opacity: 1; }
-          50%      { text-shadow: 0 0 12px rgba(239,68,68,1);   opacity: 0.88; }
+        .rc-phase2-pulse::after {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          pointer-events: none; z-index: -1;
+          box-shadow: 0 0 26px rgba(239,68,68,0.85);
+          animation: rc-glow-fade 1.8s ease-in-out infinite;
+          will-change: opacity;
         }
         .rc-phase2-badge {
-          animation: rc-phase2-badge-pulse 1.8s ease-in-out infinite;
+          text-shadow: 0 0 10px rgba(239,68,68,0.9);
+          animation: rc-glow-fade 1.8s ease-in-out infinite;
+          will-change: opacity;
         }
-        @keyframes rc-check-pulse {
-          0%, 100% { box-shadow: 0 0 18px rgba(239,68,68,0.35); }
-          50%      { box-shadow: 0 0 30px rgba(239,68,68,0.7); }
-        }
-        .rc-check-banner { animation: rc-check-pulse 1.1s ease-in-out infinite; }
-        @keyframes rc-lowhp-pulse {
-          0%, 100% { box-shadow: inset 0 0 36px 6px rgba(239,68,68,0.28); }
-          50%      { box-shadow: inset 0 0 64px 14px rgba(239,68,68,0.52); }
+        .rc-check-banner { position: relative; }
+        .rc-check-banner::after {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          pointer-events: none; z-index: -1;
+          box-shadow: 0 0 28px rgba(239,68,68,0.7);
+          animation: rc-glow-fade 1.1s ease-in-out infinite;
+          will-change: opacity;
         }
         .rc-lowhp-vignette {
-          animation: rc-lowhp-pulse 1.25s ease-in-out infinite;
+          box-shadow: inset 0 0 60px 12px rgba(239,68,68,0.5);
+          animation: rc-glow-fade 1.25s ease-in-out infinite;
+          will-change: opacity;
         }
         @keyframes rc-sharp-pulse {
-          0%, 100% { box-shadow: 0 0 4px rgba(251,191,36,0.5);  filter: brightness(1); }
-          50%      { box-shadow: 0 0 13px rgba(251,191,36,0.95); filter: brightness(1.55); }
+          0%, 100% { opacity: 0.5; }
+          50%      { opacity: 1; }
         }
-        .rc-sharp-band {
+        /* Pulses the sharpshot crit band via a pseudo-element's opacity — this
+           sits INSIDE the aim bar, so the old box-shadow+filter animation was
+           repainting the very surface the needle RAF needs. */
+        .rc-sharp-band { position: absolute; }
+        .rc-sharp-band::after {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          pointer-events: none;
+          box-shadow: 0 0 13px rgba(251,191,36,0.95);
           animation: rc-sharp-pulse 1s ease-in-out infinite;
+          will-change: opacity;
         }
         @keyframes rc-ember-rise {
           0%   { transform: translateY(0) scale(1);     opacity: 0; }
