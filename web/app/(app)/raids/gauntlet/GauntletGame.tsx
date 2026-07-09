@@ -23,7 +23,7 @@ import {
   generateFight, advanceRollState, chestForDepth, gauntletXpForDepth,
   isCurseDepth, drawCurse, curseEffects, curseHpDrain, curseSilenceCount, curseTierLabel, GAUNTLET_CURSES,
   isBoonDepth, drawBoons, boonEffects, boonTierLabel, GAUNTLET_BOONS, BOON_RARITY_META, boonRarity,
-  confluenceEffects, activeConfluences, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence,
+  confluenceEffects, activeConfluences, eligibleConfluences, drawConfluenceOffer, confluenceLevel, confluenceDescAt, CONFLUENCES, type Confluence, type ConfluenceOffer,
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH,
@@ -271,7 +271,13 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Boons — drafted as TIERS (family id → highest tier owned, 1..3). Drafting a
   // higher tier replaces the lower; no infinite single-boon stacking.
   const [boonTiers, setBoonTiers] = useState<Record<string, number>>({})
+  // Confluences the player has DRAFTED (opportunity-cost model — a confluence
+  // only applies once taken as a draft card, then scales with its boon tiers).
+  const [confluencesTaken, setConfluencesTaken] = useState<string[]>([])
   const [pendingBoons, setPendingBoons] = useState<BoonOffer[] | null>(null)
+  // A qualifying confluence offered as a card in this draft (replaces one boon
+  // slot — the Hades-duo opportunity cost). Null when none is offered.
+  const [pendingConfluence, setPendingConfluence] = useState<ConfluenceOffer | null>(null)
   // Boon-draft reveal — the three powers surface like a Crew Hall recruit pull:
   // each card sits under a sealed cover that rattles, then 3D-flips open, run
   // worst -> best so the rarest is the climax. Per-card phase keyed by index.
@@ -468,7 +474,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       // run" bug.
       silencedCrewIdsRef.current = []
       setPendingCurse(null)
-      setBoonTiers({}); setPendingBoons(null); setPendingReprieve(null)
+      setBoonTiers({}); setConfluencesTaken([]); setPendingBoons(null); setPendingConfluence(null); setPendingReprieve(null)
       setConfluenceUnlocked(null); setConfluenceBanner(null); setCurseShed(null)
       nextShrineRef.current = SHRINE_FIRST_DEPTH; setShrineCoin(null); setShrineFlipping(false); setBoonFromShrine(false)
       peekFightRef.current = null; setPeekFight(null)
@@ -671,11 +677,14 @@ export default function GauntletGame(props: GauntletGameProps) {
   useEffect(() => {
     if (phase !== 'boon' || !pendingBoons) { setBoonPhases({}); setBoonBanner(null); return }
     const rank = (r: string) => (r === 'legendary' ? 3 : r === 'rare' ? 2 : 1)
+    // Only reveal the SHOWN cards — a confluence offer takes one boon slot, so
+    // the hidden 3rd boon must not flip (or fire a banner the player can't see).
+    const shown = pendingBoons.slice(0, pendingConfluence ? 2 : 3)
     const init: Record<number, 'sealed' | 'charging' | 'flipped'> = {}
-    pendingBoons.forEach((_, i) => { init[i] = 'sealed' })
+    shown.forEach((_, i) => { init[i] = 'sealed' })
     setBoonPhases(init)
     setBoonBanner(null)
-    const order = pendingBoons
+    const order = shown
       .map((b, i) => ({ i, r: rank(b.rarity), name: b.name }))
       .sort((a, c) => a.r - c.r)   // rarest last
     const timers: ReturnType<typeof setTimeout>[] = []
@@ -710,7 +719,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       }
     })
     return () => timers.forEach(clearTimeout)
-  }, [phase, pendingBoons])
+  }, [phase, pendingBoons, pendingConfluence])
 
   // Auto-dismiss the legendary banner a beat after it lands.
   useEffect(() => {
@@ -791,10 +800,13 @@ export default function GauntletGame(props: GauntletGameProps) {
         setPendingBoons(boons)
         setBoonFromShrine(false)
         setRerollsLeft(gauntletBoonRerolls(upgrades))
-        // Reprieve: in later rounds, sometimes a one-time relief card surfaces
-        // alongside the boons (replacing the old random heal-tide's job, but as
-        // a deliberate choice). Taking it forgoes the boon draft.
-        setPendingReprieve(nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE
+        // Confluence draft (Hades-duo model): if you QUALIFY for a synergy you
+        // haven't taken, it can surface as a gold card in place of a boon slot —
+        // taking it forgoes those boons. Mutually exclusive with the Reprieve so
+        // the screen never stacks two "instead of a boon" cards.
+        const conf = drawConfluenceOffer(boonTiers, confluencesTaken)
+        setPendingConfluence(conf)
+        setPendingReprieve(!conf && nextDepth >= REPRIEVE_MIN_DEPTH && Math.random() < REPRIEVE_CHANCE
           ? drawReprieve({ curseCount: Object.keys(curseTiersRef.current).length })
           : null)
       }
@@ -852,6 +864,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setPendingBoons(draft)
     setRerollsLeft(0)
     setPendingReprieve(null)
+    setPendingConfluence(drawConfluenceOffer(boonTiers, confluencesTaken))
     setBoonFromShrine(true)
     setPhase('boon')
   }
@@ -894,35 +907,46 @@ export default function GauntletGame(props: GauntletGameProps) {
   // RaidCombat each fight, so they persist for free without piling into the tide
   // channel (where an upgrade would otherwise double-apply the old tier).
   function applyBoon(offer: BoonOffer) {
-    // Detect a confluence the new boon just brought online OR deepened a level
-    // (the lower of the pair's tiers rose), so the breather can celebrate it.
+    // Opportunity-cost model: completing a boon PAIR no longer auto-grants the
+    // confluence — it just makes it eligible to be OFFERED as a draft card
+    // (handled at the next draw). So taking a boon only bumps its own tier.
     const nextTiers = { ...boonTiers, [offer.id]: offer.tier }
-    const bumped = CONFLUENCES.find(c => confluenceLevel(c, nextTiers) > confluenceLevel(c, boonTiers)) ?? null
     setBoonTiers(nextTiers)
     setPendingBoons(null)
-    setPendingReprieve(null) // chose the boon over the relief
-    setConfluenceUnlocked(bumped)
-    if (bumped) {
-      // A synergy coming online (or climbing a tier) is a real moment. A FIRST-
-      // EVER unlock (not in the discovery set) is bigger still — reveal it in the
-      // codex forever and persist it server-side.
-      const isNew = confluenceLevel(bumped, boonTiers) === 0
-      const discovered = isNew && !seenConfluences.includes(bumped.id)
+    setPendingConfluence(null)   // forwent the synergy card this draft
+    setPendingReprieve(null)     // chose the boon over the relief
+    setPhase('between')
+  }
+
+  // Draft a confluence instead of a boon this round (the Hades-duo opportunity
+  // cost). It applies from now on, scaling with its two boon tiers, and lands as
+  // a full "synergy unlocked" beat — codex reveal + banner.
+  function applyConfluence(offer: ConfluenceOffer) {
+    const c = CONFLUENCES.find(x => x.id === offer.id)
+    setConfluencesTaken(prev => (prev.includes(offer.id) ? prev : [...prev, offer.id]))
+    setPendingBoons(null)
+    setPendingConfluence(null)
+    setPendingReprieve(null)
+    if (c) {
+      setConfluenceUnlocked(c)
+      const discovered = !seenConfluences.includes(c.id)
       if (discovered) {
-        setSeenConfluences(prev => (prev.includes(bumped.id) ? prev : [...prev, bumped.id]))
-        markConfluencesSeen([bumped.id]).catch(() => {})
+        setSeenConfluences(prev => (prev.includes(c.id) ? prev : [...prev, c.id]))
+        markConfluencesSeen([c.id]).catch(() => {})
       }
-      setConfluenceBanner({ c: bumped, level: confluenceLevel(bumped, nextTiers), isNew, discovered, key: Date.now() })
+      setConfluenceBanner({ c, level: offer.level, isNew: true, discovered, key: Date.now() })
       vibrate([0, 45, 40, 80, 40, 130])
-      import('@/lib/fishingMusic').then(m => m.playChestSfx(isNew)).catch(() => {})
+      import('@/lib/fishingMusic').then(m => m.playChestSfx(true)).catch(() => {})
     }
     setPhase('between')
   }
 
-  // Second Cast: throw the offered boons back and draw three fresh ones.
+  // Second Cast: throw the offered boons back and draw three fresh ones (the
+  // synergy card re-rolls with them).
   function rerollBoons() {
     if (rerollsLeft <= 0) return
     setPendingBoons(drawBoons(3, boonTiers, gauntletBoonLuck(upgrades)))
+    setPendingConfluence(drawConfluenceOffer(boonTiers, confluencesTaken))
     setRerollsLeft(r => r - 1)
   }
 
@@ -999,6 +1023,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       pot: potRef.current,
       bossesDefeated,
       boonTiers,
+      confluencesTaken,
       curseTiers,
       usedAbilityIds: Array.from(usedAbilityIds),
       usedRaidItemIds: Array.from(usedRaidItemIds),
@@ -1019,6 +1044,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     potRef.current = s.pot; setPot(s.pot)
     setBossesDefeated(s.bossesDefeated)
     setBoonTiers(s.boonTiers)
+    setConfluencesTaken(s.confluencesTaken ?? [])
     setCurseTiers(s.curseTiers); curseTiersRef.current = s.curseTiers
     setUsedAbilityIds(new Set(s.usedAbilityIds))
     setUsedRaidItemIds(new Set(s.usedRaidItemIds ?? []))
@@ -1032,7 +1058,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     peekFightRef.current = null; setPeekFight(null)
     crewRefreshedRef.current = false; setFightOpensRefreshed(false)
     setConfluenceUnlocked(null); setConfluenceBanner(null)
-    setPendingBoons(null); setPendingCurse(null); setPendingReprieve(null)
+    setPendingBoons(null); setPendingConfluence(null); setPendingCurse(null); setPendingReprieve(null)
     setPhase('between')
   }
 
@@ -1434,7 +1460,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         {introOpen && <GauntletIntroModal onClose={dismissIntro} firstTime={!props.hasSeenIntro} />}
         {haulOpen && <HaulModal onClose={() => setHaulOpen(false)} />}
         {infoCurrency && <CurrencyInfoModal kind={infoCurrency} onClose={() => setInfoCurrency(null)} />}
-        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} onClose={() => setSynergiesOpen(false)} />}
+        {synergiesOpen && <SynergiesModal owned={boonTiers} seen={seenConfluences} taken={confluencesTaken} onClose={() => setSynergiesOpen(false)} />}
         {deepestRunOpen && props.deepestRun && <DeepestRunModal run={props.deepestRun} onClose={() => setDeepestRunOpen(false)} />}
         {shopSection && <LockerUpgradesModal section={shopSection} onClose={() => setShopSection(null)} onClaimed={(owned) => { setUpgrades(owned); setBonusSlots(bonusChargeSlots(owned)) }} />}
         {descentModals}
@@ -1498,7 +1524,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </Shell>
       )
     }
-    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers }} onBack={backToIntro} />
+    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken }} onBack={backToIntro} />
   }
 
   // ── Dead ────────────────────────────────────────────────────────────────
@@ -1604,7 +1630,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}>
-            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} />
+            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} />
           </motion.div>
 
           <div style={{ marginTop: 22 }}>
@@ -1801,7 +1827,10 @@ export default function GauntletGame(props: GauntletGameProps) {
     const ownedCurses = GAUNTLET_CURSES
       .map(c => ({ c, tier: curseTiers[c.id] ?? 0 }))
       .filter(x => x.tier >= 1)
-    const activeConf = activeConfluences(boonTiers)
+    const activeConf = activeConfluences(boonTiers, confluencesTaken)
+    // Synergies you QUALIFY for but haven't drafted — nudge the player to watch
+    // for the gold "forge a synergy" card in an upcoming draft.
+    const eligibleConf = eligibleConfluences(boonTiers, confluencesTaken)
     // A line of voice for the breather, keyed to the run's state — bleeding hull,
     // a fat haul, a record depth, or just the quiet before the next gun.
     const breathLine =
@@ -2000,6 +2029,21 @@ export default function GauntletGame(props: GauntletGameProps) {
             </div>
           )}
 
+          {/* Available synergies — you hold both halves but haven't drafted it.
+              A quiet violet nudge to watch for the "forge a synergy" draft card. */}
+          {eligibleConf.length > 0 && (
+            <div style={{ marginTop: activeConf.length > 0 ? 8 : 16, textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 12, padding: '0.55rem 0.8rem', background: 'rgba(185,139,255,0.09)', border: '1px solid rgba(185,139,255,0.32)' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b98bff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                <p className="font-karla font-600" style={{ fontSize: '0.72rem', color: '#d9c6ff', lineHeight: 1.35 }}>
+                  {eligibleConf.length === 1
+                    ? <><span className="font-800" style={{ color: '#eaddff' }}>{eligibleConf[0].name}</span> is within reach — forge it in a draft.</>
+                    : <><span className="font-800" style={{ color: '#eaddff' }}>{eligibleConf.length} synergies</span> within reach — forge one in a draft.</>}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Sounding Line — the next depth, read before the gamble. */}
           {sounding && (
             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
@@ -2128,9 +2172,12 @@ export default function GauntletGame(props: GauntletGameProps) {
   // ── Boon draft — claim one of three powers ──────────────────────────────────
   if (phase === 'boon' && pendingBoons) {
     const RELIEF = '#e7b667' // warm amber — distinct from the boon rarity palette
-    // Hold the reprieve + reroll options back until every card has flipped open,
-    // so they don't pop in over a reveal still in progress.
-    const revealDone = pendingBoons.every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
+    const SYN = '#b98bff'    // violet — the "synergy" lane, distinct from rarity + reprieve
+    // When a confluence is offered it takes one boon slot, so only 2 boon cards
+    // render. Gate the reveal-dependent extras (confluence card, reprieve, reroll)
+    // on just the SHOWN boons — else the hidden 3rd card never flips.
+    const shownBoons = pendingConfluence ? 2 : 3
+    const revealDone = pendingBoons.slice(0, shownBoons).every((_, i) => (boonPhases[i] ?? 'sealed') === 'flipped')
     return (
       <>
         <AbyssBackdrop hardcore={hardcoreRun} />
@@ -2178,7 +2225,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {pendingBoons.map((b, idx) => {
+            {pendingBoons.slice(0, pendingConfluence ? 2 : 3).map((b, idx) => {
               const rm = BOON_RARITY_META[b.rarity]
               const legendary = b.rarity === 'legendary'
               const rare = b.rarity === 'rare'
@@ -2319,6 +2366,57 @@ export default function GauntletGame(props: GauntletGameProps) {
                 </div>
               )
             })}
+
+            {/* Confluence — a synergy you QUALIFY for, offered in place of a boon
+                slot (the Hades-duo opportunity cost). Distinct violet lane so the
+                "forge the synergy instead" trade reads at a glance. */}
+            {pendingConfluence && revealDone && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 2px' }}>
+                  <div style={{ flex: 1, height: 1, background: `${SYN}33` }} />
+                  <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.2em', color: SYN }}>or forge a synergy</span>
+                  <div style={{ flex: 1, height: 1, background: `${SYN}33` }} />
+                </div>
+                <motion.button
+                  initial={{ opacity: 0, y: 22, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.12 + shownBoons * 0.13, type: 'spring', stiffness: 300, damping: 19 }}
+                  whileTap={{ scale: 0.945 }}
+                  whileHover={{ scale: 1.015 }}
+                  onClick={() => applyConfluence(pendingConfluence)}
+                  className="tap reveal-glow-legendary"
+                  style={{
+                    position: 'relative', textAlign: 'left', overflow: 'hidden',
+                    padding: '0.9rem 1rem 0.9rem 1.2rem', borderRadius: 16,
+                    background: `linear-gradient(180deg, ${SYN}2c 0%, rgba(8,14,22,0.62) 74%)`,
+                    border: `1.5px solid ${SYN}aa`, color: '#f3ecff', cursor: 'pointer',
+                    boxShadow: `0 0 30px ${SYN}44, inset 0 0 30px ${SYN}12`,
+                  }}
+                >
+                  <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(180deg, ${SYN}, ${SYN}33)`, boxShadow: `0 0 16px ${SYN}` }} />
+                  <motion.span aria-hidden
+                    initial={{ x: '-130%' }} animate={{ x: '180%' }}
+                    transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
+                    style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: `linear-gradient(100deg, transparent, ${SYN}3a, transparent)`, pointerEvents: 'none' }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p className="font-cinzel font-700" style={{ flex: 1, minWidth: 0, fontSize: '1.06rem', color: '#f6f1ff', lineHeight: 1.16 }}>
+                      {pendingConfluence.name} <span style={{ color: SYN }}>{boonTierLabel(pendingConfluence.level)}</span>
+                    </p>
+                    <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.52rem', letterSpacing: '0.13em', color: '#1a1030', background: SYN, border: `1px solid ${SYN}`, borderRadius: 999, padding: '0.2rem 0.55rem', boxShadow: `0 0 12px ${SYN}88` }}>Synergy</span>
+                  </div>
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.12em', color: `${SYN}cc`, marginTop: 4 }}>
+                    {pendingConfluence.halves[0]} + {pendingConfluence.halves[1]}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 7 }}>
+                    <span aria-hidden style={{ fontSize: '0.92rem', color: SYN, lineHeight: 1 }}>✦</span>
+                    <span className="font-cinzel font-800" style={{ fontSize: '1.06rem', color: '#e6d5ff', lineHeight: 1.12, textShadow: `0 0 14px ${SYN}55` }}>{pendingConfluence.desc}</span>
+                  </div>
+                  <p className="font-karla" style={{ fontSize: '0.8rem', color: 'rgba(243,236,255,0.6)', lineHeight: 1.4, fontStyle: 'italic', marginTop: 6 }}>{pendingConfluence.flavor}</p>
+                  <p className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.1em', color: '#9a7fce', marginTop: 7 }}>You forgo the draft</p>
+                </motion.button>
+              </>
+            )}
 
             {/* Reprieve — an optional one-time relief, taken INSTEAD of a boon.
                 Surfaces in later rounds; the warm amber + "you forgo the draft"
@@ -2483,7 +2581,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
             onLeave={() => setConfirmLeave(true)}
             raidMods={runRaidMods}
-            tideEffects={[...boonEffects(boonTiers), ...confluenceEffects(boonTiers), ...curseEffects(curseTiers)]}
+            tideEffects={[...boonEffects(boonTiers), ...confluenceEffects(boonTiers, confluencesTaken), ...curseEffects(curseTiers)]}
             crewMembers={props.crewMembers}
             usedAbilityIds={usedAbilityIds}
             megaAugment={props.manowarAugment}
@@ -2623,7 +2721,7 @@ const REVEAL_DELAY = 900
 // The wind-up beat before the lid bursts — chest rattles + creaks, glow builds.
 const ANTICIPATION_MS = 750
 
-function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number> }; onBack: () => void }) {
+function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[] }; onBack: () => void }) {
   // Three beats: closed -> opening (a wind-up rattle + creak) -> open (burst +
   // reveal). The anticipation phase makes the crack land as a payoff.
   const [opening, setOpening] = useState(false)
@@ -2875,7 +2973,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
 
             {counting && (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.4 }}>
-                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} />
+                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} confluencesTaken={recap.confluencesTaken} />
               </motion.div>
             )}
 
@@ -2956,9 +3054,9 @@ function AbandonRunModal({ pot, hardcore = false, onStay, onAbandon }: { pot: nu
 // A scannable "what happened this dive" panel — the run's headline stats + the
 // build you carried (boon + curse chips). Shared by the death + cash-out screens
 // so every dive ends on a satisfying summary, win or lose.
-function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers }: {
+function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluencesTaken = [] }: {
   depth: number; shipsSunk: number; maxHit: number
-  boonTiers: Record<string, number>; curseTiers: Record<string, number>
+  boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]
 }) {
   const boons = Object.entries(boonTiers)
     .map(([id, tier]) => ({ fam: GAUNTLET_BOONS.find(b => b.id === id), tier }))
@@ -2966,7 +3064,7 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers }: {
   const curses = Object.entries(curseTiers)
     .map(([id, tier]) => ({ c: GAUNTLET_CURSES.find(c => c.id === id), tier }))
     .filter((x): x is { c: NonNullable<typeof x.c>; tier: number } => !!x.c && x.tier >= 1)
-  const confs = activeConfluences(boonTiers)
+  const confs = activeConfluences(boonTiers, confluencesTaken)
   const Stat = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
     <div style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '0.62rem 0.35rem', borderRadius: 12, background: 'rgba(125,211,252,0.05)', border: '1px solid rgba(125,211,252,0.16)', textAlign: 'center', overflow: 'hidden' }}>
       <p className="font-cinzel font-800" style={{ fontSize: 'clamp(0.95rem, 4.4vw, 1.22rem)', color, lineHeight: 1, textShadow: `0 0 16px ${color}33`, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</p>
@@ -3144,9 +3242,11 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
 // shows as a silhouetted "undiscovered" row (no name, boons, or effect), and
 // reveals permanently the first time you unlock it in a dive. The chase is the
 // point — you find them by experimenting, then they stay in your codex.
-function SynergiesModal({ owned, seen, onClose }: { owned: Record<string, number>; seen: string[]; onClose: () => void }) {
+function SynergiesModal({ owned, seen, taken = [], onClose }: { owned: Record<string, number>; seen: string[]; taken?: string[]; onClose: () => void }) {
   const GLD = '#f5b94a'
+  const SYN = '#b98bff'
   const seenSet = new Set(seen)
+  const takenSet = new Set(taken)
   const found = CONFLUENCES.filter(c => seenSet.has(c.id) || confluenceLevel(c, owned) >= 1).length
   return (
     <ModalScrim zIndex={1300} onClose={onClose}>
@@ -3168,8 +3268,11 @@ function SynergiesModal({ owned, seen, onClose }: { owned: Record<string, number
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
           {CONFLUENCES.map(c => {
             const lvl = confluenceLevel(c, owned)
-            const on = lvl >= 1
-            const known = seenSet.has(c.id) || on
+            const qualifies = lvl >= 1
+            const on = takenSet.has(c.id) && qualifies      // drafted AND still held = live
+            const available = !on && qualifies              // qualify, not yet drafted
+            const accent = on ? GLD : available ? SYN : GLD
+            const known = seenSet.has(c.id) || qualifies
             if (!known) {
               // Undiscovered — a silhouette. No name, no boons, no effect.
               return (
@@ -3187,12 +3290,14 @@ function SynergiesModal({ owned, seen, onClose }: { owned: Record<string, number
               return { name: fam?.name ?? r.boonId, color: fam ? BOON_RARITY_META[boonRarity(fam)].color : '#888' }
             })
             return (
-              <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.85rem', background: on ? `${GLD}16` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${GLD}66` : 'rgba(255,255,255,0.1)'}` }}>
-                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: GLD }} />
+              <div key={c.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, padding: '0.8rem 0.9rem 0.85rem', background: on ? `${GLD}16` : available ? `${SYN}12` : 'rgba(255,255,255,0.035)', border: `1px solid ${on ? `${GLD}66` : available ? `${SYN}55` : 'rgba(255,255,255,0.1)'}` }}>
+                <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GLD} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2 4 7v10l8 5 8-5V7z" /><path d="M12 22V12" /><path d="m4 7 8 5 8-5" /></svg>
                   <p className="font-cinzel font-800" style={{ flex: 1, fontSize: '1rem', color: '#fbe7c4', lineHeight: 1.12 }}>{c.name}{on ? ` ${['', 'I', 'II', 'III'][lvl] ?? ''}` : ''}</p>
-                  {on && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Active</span>}
+                  {on
+                    ? <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1206', background: GLD, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Active</span>
+                    : available && <span className="font-karla font-800 uppercase" style={{ flexShrink: 0, fontSize: '0.46rem', letterSpacing: '0.12em', color: '#1a1030', background: SYN, borderRadius: 999, padding: '0.16rem 0.44rem' }}>Available</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                   {reqs.map((r, i) => (

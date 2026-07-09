@@ -512,6 +512,13 @@ export default function RaidCombat({
     let critStreakPerStack = 0
     let critStreakMaxStacks = 0
     let counterFireChance   = 0
+    // Confluences on the momentum boons: Broadside Duel (counter → crit + extras),
+    // Return to Sender (counter reflects their shell), Feeding Frenzy (lifesteal
+    // scales with kills — folded into lifestealPct below).
+    let counterCritActive = false
+    let counterCritRefund = 0
+    let counterCritBonusStack = 0
+    let counterReflectPct = 0
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -585,6 +592,13 @@ export default function RaidCombat({
           if (e.perStack > critStreakPerStack) { critStreakPerStack = e.perStack; critStreakMaxStacks = e.maxStacks }
           break
         case 'counterFireChance':     counterFireChance = Math.max(counterFireChance, e.chance); break
+        case 'counterCrit':
+          counterCritActive = true
+          counterCritRefund = Math.max(counterCritRefund, e.refund)
+          counterCritBonusStack = Math.max(counterCritBonusStack, e.bonusStack)
+          break
+        case 'counterReflect':        counterReflectPct = Math.max(counterReflectPct, e.pct); break
+        case 'lifestealKillScale':    lifestealPct += Math.min(e.max, e.perKill * Math.max(0, runKills)); break
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
     }
@@ -603,6 +617,7 @@ export default function RaidCombat({
       critDmgMult, executeThreshold, lifestealPct,
       retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct, enemyShieldPct,
       critStreakPerStack, critStreakMaxStacks, counterFireChance,
+      counterCritActive, counterCritRefund, counterCritBonusStack, counterReflectPct,
     }
   }, [tideEffects, isBoss, runKills, runDepth])
   // Mirror the per-enemy tide one-shots (next-fight HP scale + enemy start
@@ -2445,6 +2460,11 @@ export default function RaidCombat({
     let counterEnemyShot = tide.counterFireChance > 0
       && playerFiresThisTurn && enemyFiresThisTurn && playerShotLands
       && Math.random() < tide.counterFireChance
+    // Broadside Duel confluence: a countered shot lands your return fire as a
+    // guaranteed crit (+ extra Cannonade stacks). Snapshot as a stable const —
+    // the skip below consumes `counterEnemyShot`, but the player-shot calc reads
+    // this whether the player fires before or after the enemy in the order.
+    const duelCrit = counterEnemyShot && tide.counterCritActive
 
     // Pre-compute the full sequence of state snapshots so we can animate them in order
     type Step = {
@@ -2600,7 +2620,23 @@ export default function RaidCombat({
       if (who === 'enemy' && counterEnemyShot) {
         counterEnemyShot = false
         eCharges = Math.max(0, eCharges - (eAction === 'volley' ? MAX_CHARGES : 1))
-        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: 'Countered', splatColor: '#7dd3fc', logLines: [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`], countered: true })
+        const cLines = [`Counter-Battery! You fire into the ${enemy.name}'s broadside — its shot is smashed clean out of the air.`]
+        // Broadside Duel: you loaded while they didn't.
+        if (tide.counterCritRefund > 0) {
+          const before = pCharges
+          pCharges = Math.min(playerMaxCharges, pCharges + tide.counterCritRefund)
+          if (pCharges > before) cLines.push(`Broadside Duel — you loaded while they didn't (+${pCharges - before} cannonball${pCharges - before === 1 ? '' : 's'}).`)
+        }
+        // Return to Sender: fling their would-be shell right back at them.
+        let reflectOut = 0
+        if (tide.counterReflectPct > 0) {
+          const eBase = (Math.floor(Math.random() * (enemy.maxDmg - enemy.minDmg + 1)) + enemy.minDmg) * (eAction === 'volley' ? 2 : 1)
+          const pm = enemyPhaseRef.current >= 2 && phaseList[enemyPhaseRef.current - 2] ? phaseList[enemyPhaseRef.current - 2].damageMult : 1
+          reflectOut = Math.max(1, Math.floor(eBase * pm * tide.counterReflectPct))
+          eHp = Math.max(0, eHp - reflectOut)
+          cLines.push(`Return to Sender — their own shell, flung back for ${reflectOut}.`)
+        }
+        pushStep({ who, action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: reflectOut > 0 ? `-${reflectOut}` : 'Countered', splatColor: '#7dd3fc', logLines: cLines, countered: true })
         continue
       }
       // Glacial (elite affix): the PLAYER is frozen and loses this turn — the
@@ -2760,7 +2796,8 @@ export default function RaidCombat({
           // Only ONE branch applies per shot — crit shots multiply by the
           // crit mult; hit + graze multiply by the non-crit mult. Skipped
           // entirely on a miss (rollShotDamage already returns 0).
-          const isCritShot = lockedAimResult === 'critical'
+          // Broadside Duel forces this shot to crit (you fired into their shell).
+          const isCritShot = lockedAimResult === 'critical' || duelCrit
           const aimItemMult = isCritShot
             ? getActiveEffects(liveItems).filter(e => e.type === 'crit_damage_mult').reduce((a, e) => a * e.value, 1)
             : getActiveEffects(liveItems).filter(e => e.type === 'noncrit_damage_mult').reduce((a, e) => a * e.value, 1)
@@ -2818,7 +2855,8 @@ export default function RaidCombat({
           const vengeanceMult = vengeanceDmgBuffRef.current > 0 ? 1 + vengeanceDmgBuffRef.current : 1
           const mult = actionBaseMult * bossMult * nonbossMult * rampMult * aimItemMult * classDamageMult
                        * tide.dmgMult * tideActionMult * tideBossMult * critTideMult * lowHpMult * noncritTideMult * frozenMult * volleyRampMult * critStreakMult * vengeanceMult
-          dmg = Math.floor(rollShotDamage(lockedAimResult ?? 'miss', shipMinDamage, totalPower, mods.damagePct) * mult)
+          const effAim: ShotResult = duelCrit ? 'critical' : (lockedAimResult ?? 'miss')
+          dmg = Math.floor(rollShotDamage(effAim, shipMinDamage, totalPower, mods.damagePct) * mult)
           if (isVolley) volleyCountRef.current += 1   // this volley is now "fired" — the next ramps further
           // Enemy themed defense: crustacean carapace soaks a flat % off every
           // hit the player lands (Krust's crew). Applied to the rolled damage so
@@ -3318,8 +3356,10 @@ export default function RaidCombat({
       let cannonadeStep: number | undefined
       if (who === 'player' && (action === 'fire' || action === 'volley' || action === 'mega') && tide.critStreakPerStack > 0) {
         const prior = critStreakRef.current
-        if (lockedAimResult === 'critical') {
-          critStreakRef.current = Math.min(tide.critStreakMaxStacks, prior + 1)
+        if (lockedAimResult === 'critical' || duelCrit) {
+          // Broadside Duel L3 adds an extra stack on a countered (duel) crit.
+          const inc = 1 + (duelCrit ? tide.counterCritBonusStack : 0)
+          critStreakRef.current = Math.min(tide.critStreakMaxStacks, prior + inc)
           if (critStreakRef.current >= 2) stepLines.push(`Cannonade! ${critStreakRef.current} crits running — +${Math.round(tide.critStreakPerStack * critStreakRef.current * 100)}% damage.`)
         } else {
           if (prior >= 2) stepLines.push(`Cannonade fades — the chain of crits breaks.`)
@@ -3330,7 +3370,7 @@ export default function RaidCombat({
 
       pushStep({
         who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor,
-        big: (who === 'player' && lockedAimResult === 'critical') || (who === 'enemy' && enemyCrit),
+        big: (who === 'player' && (lockedAimResult === 'critical' || duelCrit)) || (who === 'enemy' && enemyCrit),
         logLines: stepLines,
         procStatus,
         enemyHeal: enemyHealOut,

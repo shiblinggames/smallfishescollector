@@ -353,6 +353,10 @@ export interface GauntletRunState {
   bossesDefeated: number
   /** boon family id -> tier */
   boonTiers: Record<string, number>
+  /** confluence ids the player has DRAFTED (opportunity-cost model — a
+   *  confluence only applies once taken, then scales with its boon tiers).
+   *  Optional so runs saved before the draft model resume cleanly. */
+  confluencesTaken?: string[]
   /** curse id -> tier */
   curseTiers: Record<string, number>
   /** crew ids whose ability is spent (Set serialised to array) */
@@ -1150,6 +1154,39 @@ export const CONFLUENCES: Confluence[] = [
       { desc: 'Your reflected damage hits 2.4× harder', effects: [{ kind: 'retaliateBoost', mult: 2.4 }] },
     ],
   },
+  {
+    id: 'broadside_duel',
+    name: 'Broadside Duel',
+    requires: [{ boonId: 'cannonade' }, { boonId: 'counter_battery' }],
+    flavor: 'Trade broadsides and win the exchange every time — their shot in the water, yours dead on the mark.',
+    levels: [
+      { desc: 'A countered shot lands your return fire as a crit', effects: [{ kind: 'counterCrit', refund: 0, bonusStack: 0 }] },
+      { desc: 'A countered shot crits and loads you +1 cannonball', effects: [{ kind: 'counterCrit', refund: 1, bonusStack: 0 }] },
+      { desc: 'A countered shot crits, loads +1, and adds a Cannonade stack', effects: [{ kind: 'counterCrit', refund: 1, bonusStack: 1 }] },
+    ],
+  },
+  {
+    id: 'return_to_sender',
+    name: 'Return to Sender',
+    requires: [{ boonId: 'counter_battery' }, { boonId: 'spiteful_wake' }],
+    flavor: "Their own shell, caught mid-air and flung right back down their throat.",
+    levels: [
+      { desc: 'A countered shot flings back 60% of their damage', effects: [{ kind: 'counterReflect', pct: 0.60 }] },
+      { desc: 'A countered shot flings back 85% of their damage', effects: [{ kind: 'counterReflect', pct: 0.85 }] },
+      { desc: 'A countered shot flings back 120% of their damage', effects: [{ kind: 'counterReflect', pct: 1.20 }] },
+    ],
+  },
+  {
+    id: 'feeding_frenzy',
+    name: 'Feeding Frenzy',
+    requires: [{ boonId: 'rising_tide' }, { boonId: 'leviathans_hunger' }],
+    flavor: 'The swell of the slain makes the deep drink deeper — every hull in your wake feeds the next wound.',
+    levels: [
+      { desc: 'Lifesteal grows +1.5% per hull sunk (max +18%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.015, max: 0.18 }] },
+      { desc: 'Lifesteal grows +2% per hull sunk (max +24%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.02, max: 0.24 }] },
+      { desc: 'Lifesteal grows +2.5% per hull sunk (max +30%)', effects: [{ kind: 'lifestealKillScale', perKill: 0.025, max: 0.30 }] },
+    ],
+  },
 ]
 
 /** A confluence's current LEVEL (1..3), or 0 if you don't hold both halves. The
@@ -1160,9 +1197,19 @@ export function confluenceLevel(c: Confluence, owned: Record<string, number>): n
   return Math.min(Math.min(...tiers), c.levels.length)
 }
 
-/** Confluences the player currently has online (both halves held). */
-export function activeConfluences(owned: Record<string, number>): Confluence[] {
-  return CONFLUENCES.filter(c => confluenceLevel(c, owned) >= 1)
+/** Confluences currently ONLINE — the player has DRAFTED them (taken) AND still
+ *  holds both halves. Opportunity-cost model: holding both halves is not enough;
+ *  the confluence must have been taken as a draft card. */
+export function activeConfluences(owned: Record<string, number>, taken: string[] = []): Confluence[] {
+  const t = new Set(taken)
+  return CONFLUENCES.filter(c => t.has(c.id) && confluenceLevel(c, owned) >= 1)
+}
+
+/** Confluences you QUALIFY for (hold both halves at tier 1+) but have NOT yet
+ *  drafted — the pool eligible to be offered as a draft card. */
+export function eligibleConfluences(owned: Record<string, number>, taken: string[] = []): Confluence[] {
+  const t = new Set(taken)
+  return CONFLUENCES.filter(c => !t.has(c.id) && confluenceLevel(c, owned) >= 1)
 }
 
 /** The player-facing summary for a confluence at a given level (defaults to its
@@ -1172,10 +1219,46 @@ export function confluenceDescAt(c: Confluence, level: number): string {
   return c.levels[i].desc
 }
 
-/** Flattened TideEffects from every active confluence at its CURRENT level —
- *  appended to the boon effects fed into combat. */
-export function confluenceEffects(owned: Record<string, number>): TideEffect[] {
+/** A confluence offered as a draft card, in place of a boon (Hades-duo model). */
+export interface ConfluenceOffer {
+  kind: 'confluence'
+  id: string
+  name: string
+  flavor: string
+  /** The level it comes online at right now (min of the two boon tiers). */
+  level: number
+  desc: string
+  /** The two boon family display names, for the card subtitle. */
+  halves: [string, string]
+}
+
+/** Base chance a qualifying confluence is offered on a draft where one exists. */
+export const CONFLUENCE_OFFER_CHANCE = 0.55
+
+/** Roll whether to slot a confluence into this draft. Returns one eligible
+ *  (qualified-but-untaken) confluence, or null. `force` bypasses the chance
+ *  roll (a light pity so a long-eligible synergy isn't missed forever). */
+export function drawConfluenceOffer(owned: Record<string, number>, taken: string[] = [], force = false): ConfluenceOffer | null {
+  const pool = eligibleConfluences(owned, taken)
+  if (pool.length === 0) return null
+  if (!force && Math.random() >= CONFLUENCE_OFFER_CHANCE) return null
+  const c = pool[Math.floor(Math.random() * pool.length)]
+  const level = confluenceLevel(c, owned)
+  const halfName = (id: string) => GAUNTLET_BOONS.find(b => b.id === id)?.name ?? id
+  return {
+    kind: 'confluence',
+    id: c.id, name: c.name, flavor: c.flavor,
+    level, desc: confluenceDescAt(c, level),
+    halves: [halfName(c.requires[0].boonId), halfName(c.requires[1].boonId)],
+  }
+}
+
+/** Flattened TideEffects from every TAKEN, still-qualified confluence at its
+ *  CURRENT level — appended to the boon effects fed into combat. */
+export function confluenceEffects(owned: Record<string, number>, taken: string[] = []): TideEffect[] {
+  const t = new Set(taken)
   return CONFLUENCES.flatMap(c => {
+    if (!t.has(c.id)) return []
     const lvl = confluenceLevel(c, owned)
     return lvl >= 1 ? c.levels[lvl - 1].effects : []
   })
