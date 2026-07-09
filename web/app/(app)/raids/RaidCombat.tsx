@@ -1055,9 +1055,12 @@ export default function RaidCombat({
   // this; plain Dodge / normal crits deliberately don't.
   function noteCheckResponse(r: 'heal' | 'burst') {
     if (pendingCheckRef.current) checkFlagsRef.current[r] = true
-    // A crew heal also douses an active hull burn (the Quartermaster's Fire
-    // Sale, or a Scorching-affix burn) — heals put fires out.
-    if (r === 'heal' && playerBurnRef.current.turns > 0) {
+  }
+  // A CREW HEAL ability (Mender / Tidecaller) douses an active hull burn — the
+  // Quartermaster's Fire Sale, or a Scorching-affix burn. Called only from the
+  // crew-heal sites, NOT from a repair kit (an item is not a crew heal).
+  function dousePlayerBurnFromHeal() {
+    if (playerBurnRef.current.turns > 0) {
       playerBurnRef.current = { turns: 0, dmg: 0 }
       setPlayerBurning(false)
       setResolveLog(prev => [...prev, 'The heal washes over the deck and douses the flames.'])
@@ -1798,7 +1801,7 @@ export default function RaidCombat({
         setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
         playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
         if (mm.cleanseDebuff) setCleanseDebuffPending(true)
-        noteCheckResponse('heal')
+        noteCheckResponse('heal'); dousePlayerBurnFromHeal()
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: '#4ade80', big: true })
         setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} patches the hull. +${heal} HP${mm.cleanseDebuff ? ', debuffs cleared' : ''}.`])
@@ -1856,7 +1859,7 @@ export default function RaidCombat({
         setAbyssalShieldHp(prev => prev + shield)
         abyssalShieldRef.current += shield
         if (at.cleanseDebuff) setCleanseDebuffPending(true)
-        noteCheckResponse('heal')   // shield is read live at resolve; the heal is the transient note
+        noteCheckResponse('heal'); dousePlayerBurnFromHeal()   // shield is read live at resolve; the heal is the transient note
         setPHitsplat({ key: ak + 1, text: `+${heal}`, color: chaseColor ?? '#5eead4', big: true })
         setTimeout(() => setPHitsplat(null), 900)
         setResolveLog(prev => [...prev, `${crew.name} calls the abyss: +${heal} HP, ${shield} HP shield.`])
