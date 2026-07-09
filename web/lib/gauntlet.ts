@@ -323,6 +323,44 @@ function drownedName(name: string): string {
   return `Drowned ${name}`
 }
 
+/** Fun run telemetry — accumulated across every fight of a dive and surfaced on
+ *  the run summary + deepest-dive recap. Additive except `highestHit` (max). */
+export interface GauntletRunStats {
+  shots: number        // Fire / Volley / Mega actions loosed
+  volleys: number      // of those, how many were Volleys
+  crits: number        // shots that landed as a critical
+  dmgDealt: number     // total damage put on enemy hulls
+  highestHit: number   // biggest single blow
+  dmgTaken: number     // total damage to your hull
+  dmgHealed: number    // total HP restored (lifesteal + repairs + crew heals)
+  dmgAbsorbed: number  // damage soaked by shields before it reached the hull
+  dodgesWon: number    // enemy shots slipped
+  dodgesLost: number   // dodges that failed (took the hit anyway)
+}
+export function emptyRunStats(): GauntletRunStats {
+  return { shots: 0, volleys: 0, crits: 0, dmgDealt: 0, highestHit: 0, dmgTaken: 0, dmgHealed: 0, dmgAbsorbed: 0, dodgesWon: 0, dodgesLost: 0 }
+}
+/** Fold a delta into a running stats total in place (highestHit takes the max). */
+export function addRunStats(s: GauntletRunStats, d: Partial<GauntletRunStats>): void {
+  for (const k of Object.keys(d) as (keyof GauntletRunStats)[]) {
+    const v = d[k]
+    if (v == null) continue
+    if (k === 'highestHit') s.highestHit = Math.max(s.highestHit, v)
+    else s[k] += v
+  }
+}
+/** Coerce an unknown/partial stats blob (old snapshots) into a full stats object. */
+export function coerceRunStats(raw: unknown): GauntletRunStats {
+  const s = emptyRunStats()
+  if (raw && typeof raw === 'object') {
+    for (const k of Object.keys(s) as (keyof GauntletRunStats)[]) {
+      const v = (raw as Record<string, unknown>)[k]
+      if (typeof v === 'number' && isFinite(v)) s[k] = v
+    }
+  }
+  return s
+}
+
 /** Snapshot of one gauntlet run, kept for the player's DEEPEST dive so the home
  *  screen can recap the boons / curses they ran. Stored in
  *  profiles.gauntlet_deepest_run, written server-side on a new record. */
@@ -335,6 +373,8 @@ export interface GauntletRunSnapshot {
   /** tides picked (LEGACY — the Gauntlet no longer runs Tides; kept optional so
    *  old stored snapshots still recap, and the server sanitiser still accepts it) */
   tides?: { title: string; choice: string }[]
+  /** Fun run telemetry (optional — old snapshots predate it). */
+  stats?: GauntletRunStats
   /** ISO timestamp, set server-side */
   at?: string
 }
@@ -357,6 +397,8 @@ export interface GauntletRunState {
    *  confluence only applies once taken, then scales with its boon tiers).
    *  Optional so runs saved before the draft model resume cleanly. */
   confluencesTaken?: string[]
+  /** Fun run telemetry accumulated so far (optional — old saves predate it). */
+  stats?: GauntletRunStats
   /** curse id -> tier */
   curseTiers: Record<string, number>
   /** crew ids whose ability is spent (Set serialised to array) */

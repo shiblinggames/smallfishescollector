@@ -27,7 +27,8 @@ import {
   REPRIEVE_MIN_DEPTH, REPRIEVE_CHANCE, drawReprieve, type Reprieve,
   DROWNED_FILTER, bandForDepth, davyTaunt,
   GAUNTLET_COOLDOWN_HOURS, HARDCORE_RUNS_PER_DAY, HC_UNLOCK_DEPTH,
-  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState,
+  emptyRunStats, addRunStats, coerceRunStats,
+  type GauntletFight, type GauntletRollState, type CurseOffer, type BoonOffer, type GauntletRunSnapshot, type GauntletRunState, type GauntletRunStats,
 } from '@/lib/gauntlet'
 import { startGauntletRun, cashOutGauntlet, resolveGauntletDeath, getGauntletUpgradeState, claimGauntletUpgrade, markGauntletIntroSeen, recordGauntletHit, wagerGauntletFathoms, markConfluencesSeen, checkpointGauntletRun, resumeGauntletRun, buyBaitWithFathoms } from './actions'
 import { FATHOM_BAITS } from '@/lib/bait'
@@ -357,6 +358,8 @@ export default function GauntletGame(props: GauntletGameProps) {
   // Biggest single blow landed this descent — fed to the Biggest Hit board the
   // moment it's beaten (persists even on death). Reset each run in begin().
   const runMaxHitRef = useRef(0)
+  // Fun run telemetry — folded from RaidCombat's onStat deltas across the dive.
+  const runStatsRef = useRef<GauntletRunStats>(emptyRunStats())
   // Lethal-save charges (Quartermaster's Anchor etc.) — a per-RUN pool that
   // survives the per-fight RaidCombat remounts, decremented when one fires.
   // Reset each run in begin().
@@ -468,6 +471,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       potRef.current = 0
       carriedChargesRef.current = 0
       runMaxHitRef.current = 0
+      runStatsRef.current = emptyRunStats()
       setPlayerHP(hpMax)
       setPot(0)
       setBossesDefeated(0)
@@ -1014,6 +1018,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       depth: rollStateRef.current.cleared + skipOffset,
       boons: boonTiers,
       curses: curseTiers,
+      stats: { ...runStatsRef.current },
     }
   }
 
@@ -1031,6 +1036,7 @@ export default function GauntletGame(props: GauntletGameProps) {
       bossesDefeated,
       boonTiers,
       confluencesTaken,
+      stats: runStatsRef.current,
       curseTiers,
       usedAbilityIds: Array.from(usedAbilityIds),
       usedRaidItemIds: Array.from(usedRaidItemIds),
@@ -1052,6 +1058,7 @@ export default function GauntletGame(props: GauntletGameProps) {
     setBossesDefeated(s.bossesDefeated)
     setBoonTiers(s.boonTiers)
     setConfluencesTaken(s.confluencesTaken ?? [])
+    runStatsRef.current = coerceRunStats(s.stats)
     setCurseTiers(s.curseTiers); curseTiersRef.current = s.curseTiers
     setUsedAbilityIds(new Set(s.usedAbilityIds))
     setUsedRaidItemIds(new Set(s.usedRaidItemIds ?? []))
@@ -1544,7 +1551,7 @@ export default function GauntletGame(props: GauntletGameProps) {
         </Shell>
       )
     }
-    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken }} onBack={backToIntro} />
+    return <GauntletReward r={r} recap={{ shipsSunk: rollStateRef.current.cleared, maxHit: runMaxHitRef.current, boonTiers, curseTiers, confluencesTaken, stats: runStatsRef.current }} onBack={backToIntro} />
   }
 
   // ── Dead ────────────────────────────────────────────────────────────────
@@ -1650,7 +1657,7 @@ export default function GauntletGame(props: GauntletGameProps) {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.4 }}>
-            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} />
+            <RunRecap depth={reached} shipsSunk={cleared} maxHit={runMaxHitRef.current} boonTiers={boonTiers} curseTiers={curseTiers} confluencesTaken={confluencesTaken} stats={runStatsRef.current} />
           </motion.div>
 
           <div style={{ marginTop: 22 }}>
@@ -2626,6 +2633,7 @@ export default function GauntletGame(props: GauntletGameProps) {
             initialCharges={carriedChargesRef.current}
             onPlayerDefeated={handlePlayerDefeated}
             onPlayerHit={(d) => { if (d > runMaxHitRef.current) { runMaxHitRef.current = d; recordGauntletHit(d).catch(() => {}) } }}
+            onStat={(d) => addRunStats(runStatsRef.current, d)}
             onLeave={() => setConfirmLeave(true)}
             raidMods={runRaidMods}
             tideEffects={[...boonEffects(boonTiers), ...confluenceEffects(boonTiers, confluencesTaken), ...curseEffects(curseTiers)]}
@@ -2768,7 +2776,7 @@ const REVEAL_DELAY = 900
 // The wind-up beat before the lid bursts — chest rattles + creaks, glow builds.
 const ANTICIPATION_MS = 750
 
-function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[] }; onBack: () => void }) {
+function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk: number; maxHit: number; boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; stats?: GauntletRunStats }; onBack: () => void }) {
   // Three beats: closed -> opening (a wind-up rattle + creak) -> open (burst +
   // reveal). The anticipation phase makes the crack land as a payoff.
   const [opening, setOpening] = useState(false)
@@ -3021,7 +3029,7 @@ function GauntletReward({ r, recap, onBack }: { r: RewardOk; recap: { shipsSunk:
 
             {counting && (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.4 }}>
-                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} confluencesTaken={recap.confluencesTaken} />
+                <RunRecap depth={r.depth} shipsSunk={recap.shipsSunk} maxHit={recap.maxHit} boonTiers={recap.boonTiers} curseTiers={recap.curseTiers} confluencesTaken={recap.confluencesTaken} stats={recap.stats} />
               </motion.div>
             )}
 
@@ -3102,9 +3110,9 @@ function AbandonRunModal({ pot, hardcore = false, onStay, onAbandon }: { pot: nu
 // A scannable "what happened this dive" panel — the run's headline stats + the
 // build you carried (boon + curse chips). Shared by the death + cash-out screens
 // so every dive ends on a satisfying summary, win or lose.
-function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluencesTaken = [] }: {
+function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluencesTaken = [], stats }: {
   depth: number; shipsSunk: number; maxHit: number
-  boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]
+  boonTiers: Record<string, number>; curseTiers: Record<string, number>; confluencesTaken?: string[]; stats?: GauntletRunStats
 }) {
   const boons = Object.entries(boonTiers)
     .map(([id, tier]) => ({ fam: GAUNTLET_BOONS.find(b => b.id === id), tier }))
@@ -3139,6 +3147,28 @@ function RunRecap({ depth, shipsSunk, maxHit, boonTiers, curseTiers, confluences
         <Stat label="Ships Sunk" value={shipsSunk} color="#f4fbf9" />
         <Stat label="Biggest Hit" value={fmt(maxHit)} color={GOLD} />
       </div>
+      {/* Combat telemetry — the fun run stats. Only when we actually logged a
+          shot (old snapshots + zero-shot runs skip it cleanly). */}
+      {stats && stats.shots > 0 && (
+        <>
+          <p className="font-karla font-800 uppercase tracking-[0.22em]" style={{ fontSize: '0.52rem', color: '#7e96a8', margin: '15px 0 9px', textAlign: 'center' }}>The Guns</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Stat label="Total Damage" value={fmt(stats.dmgDealt)} color="#fca5a5" />
+            <Stat label="Crit Rate" value={`${Math.round((stats.crits / stats.shots) * 100)}%`} color={GOLD} />
+            <Stat label="Shots Fired" value={fmt(stats.shots)} color="#f4fbf9" />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <Stat label="Dmg Taken" value={fmt(stats.dmgTaken)} color="#f87171" />
+            <Stat label="Dmg Healed" value={fmt(stats.dmgHealed)} color="#4ade80" />
+            <Stat label="Dmg Absorbed" value={fmt(stats.dmgAbsorbed)} color="#7dd3fc" />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <Stat label="Volleys" value={fmt(stats.volleys)} color={TEAL} />
+            <Stat label="Dodges Slipped" value={fmt(stats.dodgesWon)} color="#38bdf8" />
+            <Stat label="Dodges Failed" value={fmt(stats.dodgesLost)} color="#9a948a" />
+          </div>
+        </>
+      )}
       {boons.length > 0 && (
         <Chips title={`Powers · ${boons.length}`} color={TEAL}
           items={boons.map(({ fam, tier }) => ({ key: fam.id, label: `${fam.name} ${boonTierLabel(tier)}`.trim(), rc: BOON_RARITY_META[boonRarity(fam)].color }))} />
@@ -3208,6 +3238,34 @@ function DeepestRunModal({ run, onClose }: { run: GauntletRunSnapshot; onClose: 
             </span>
           ))}
         </div>
+
+        {/* The Guns — the combat telemetry, from the stored snapshot. */}
+        {(() => {
+          const st = coerceRunStats(run.stats)
+          if (st.shots <= 0) return null
+          const cells = [
+            { label: 'Biggest Hit', value: fmt(st.highestHit), color: GOLD },
+            { label: 'Total Damage', value: fmt(st.dmgDealt), color: '#fca5a5' },
+            { label: 'Crit Rate', value: `${Math.round((st.crits / st.shots) * 100)}%`, color: GOLD },
+            { label: 'Shots Fired', value: fmt(st.shots), color: '#f4fbf9' },
+            { label: 'Dmg Taken', value: fmt(st.dmgTaken), color: '#f87171' },
+            { label: 'Dmg Healed', value: fmt(st.dmgHealed), color: '#4ade80' },
+            { label: 'Dmg Absorbed', value: fmt(st.dmgAbsorbed), color: '#7dd3fc' },
+            { label: 'Dodges', value: `${fmt(st.dodgesWon)}/${fmt(st.dodgesWon + st.dodgesLost)}`, color: '#38bdf8' },
+          ]
+          return (
+            <Section title="The Guns" color={GOLD}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+                {cells.map(c => (
+                  <div key={c.label} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6, padding: '0.5rem 0.65rem', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span className="font-karla font-700 uppercase" style={{ fontSize: '0.5rem', letterSpacing: '0.05em', color: '#84939f' }}>{c.label}</span>
+                    <span className="font-cinzel font-800" style={{ fontSize: '0.85rem', color: c.color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{c.value}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )
+        })()}
 
         {boons.length > 0 && (
           <Section title="Powers" color={TEAL}>

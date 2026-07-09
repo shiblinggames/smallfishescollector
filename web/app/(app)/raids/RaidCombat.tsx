@@ -253,6 +253,13 @@ function getShotResult(pos: number, zoneCenter: number, critW: number = CRIT_W):
 
 // ─── Public props ──────────────────────────────────────────────────────────────
 
+/** Incremental combat telemetry — the host (Gauntlet) folds these deltas into a
+ *  run-total for the summary + deepest-dive recap. Fields mirror GauntletRunStats. */
+export interface CombatStatDelta {
+  shots?: number; volleys?: number; crits?: number; dmgDealt?: number; highestHit?: number
+  dmgTaken?: number; dmgHealed?: number; dmgAbsorbed?: number; dodgesWon?: number; dodgesLost?: number
+}
+
 export interface RaidCombatProps {
   enemy: BroadsideEnemy
   /** Challenge-mode elite affix for this encounter. When set, the enemy
@@ -335,6 +342,8 @@ export interface RaidCombatProps {
   /** Fires with each damage value the player lands, so the parent can track
    *  the biggest hit of the run (career stat). */
   onPlayerHit?: (dmg: number) => void
+  /** Incremental combat telemetry for the run summary (Gauntlet). Optional. */
+  onStat?: (d: CombatStatDelta) => void
   /** Achievement telemetry, aggregated across the raid by RaidGame:
    *  onDamageTaken — the ship lost HP (any source); onShotResolved — a player
    *  shot was locked in (isCrit = it landed critical); onNoShotKill — the enemy
@@ -422,7 +431,7 @@ export default function RaidCombat({
   shipClasses = {},
   equippedRepairKit,
   killReward,
-  onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit,
+  onEnemyDefeated, onPlayerDefeated, onLeave, onPlayerHit, onStat,
   onDamageTaken, onShotResolved, onNoShotKill,
   initialCharges = 0,
   runKills = 0, runDepth = 0,
@@ -1872,6 +1881,7 @@ export default function RaidCombat({
       case 'mender': {
         const mm = m as import('@/lib/crewClasses').MenderMilestone
         const heal = Math.round(playerHpMax * mm.pctMaxHp)
+        onStat?.({ dmgHealed: Math.max(0, Math.min(heal, playerHpMax - playerHpRef.current)) })
         setPlayerHp(prev => Math.min(playerHpMax, prev + heal))
         playerHpRef.current = Math.min(playerHpMax, playerHpRef.current + heal)
         if (mm.cleanseDebuff) setCleanseDebuffPending(true)
@@ -2596,7 +2606,7 @@ export default function RaidCombat({
       let feedHeal = 0
       if (tide.burnTickHealPct > 0 && pHp > 0) {
         feedHeal = Math.min(playerHpMax - pHp, Math.round(total * tide.burnTickHealPct))
-        if (feedHeal > 0) pHp += feedHeal
+        if (feedHeal > 0) { pHp += feedHeal; onStat?.({ dmgHealed: feedHeal }) }
       }
       pushStep({ who: 'player', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'enemy', splatText: `-${total}`, splatColor: BURN_COLOR, logLines: [`${flare > 0 ? `The ${enemy.name} burns for ${tick}, then the flames backdraft for ${flare} more.` : `The ${enemy.name} is ablaze, burning for ${tick}.`}${feedHeal > 0 ? ` The fire feeds you ${feedHeal}.` : ''}`], burnTurnsLeft: enemyBurnRef.current.turns, lifestealHeal: feedHeal || undefined })
     }
@@ -2606,6 +2616,7 @@ export default function RaidCombat({
     // fight via the final death check (anchor save still applies).
     if (playerBurnRef.current.turns > 0 && pHp > 0) {
       const tick = playerBurnRef.current.dmg
+      onStat?.({ dmgTaken: tick })
       pHp = Math.max(0, pHp - tick)
       playerBurnRef.current = { turns: playerBurnRef.current.turns - 1, dmg: playerBurnRef.current.dmg }
       pushStep({ who: 'enemy', action: 'reload', pHp, eHp, pCharges, eCharges, splatTarget: 'player', splatText: `-${tick}`, splatColor: BURN_COLOR, logLines: [`Your ship is ablaze, burning for ${tick}.`], burnTurnsLeft: playerBurnRef.current.turns })
@@ -2753,6 +2764,7 @@ export default function RaidCombat({
           const before = pHp
           pHp = Math.min(playerHpMax, pHp + roll)
           const healed = pHp - before
+          if (healed > 0) onStat?.({ dmgHealed: healed })
           // A repair kit does NOT answer boss mechanic checks — only crew
           // abilities pass checks (and only a crew heal douses a burn).
           stepLines.push(`You crack open the ${repairKit.name}.`)
@@ -3013,6 +3025,10 @@ export default function RaidCombat({
             stepLines.push(isAttackerPlayer ? `Enemy weaves aside — dodged!` : `You weave aside — dodged!`)
             splatText = 'Dodged'
             splatColor = '#38bdf8'
+            // Telemetry: enemy dodged YOUR shot (still a shot fired) vs YOU
+            // slipped the enemy's shot (a won dodge).
+            if (isAttackerPlayer) onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0 })
+            else onStat?.({ dodgesWon: 1 })
             // Untouchable confluence: slipping an enemy shot hands you back a
             // cannonball (only when it's the PLAYER who dodged).
             if (!isAttackerPlayer && tide.dodgeRefundCharges > 0) {
@@ -3070,6 +3086,8 @@ export default function RaidCombat({
             pushStep({ who, action, pHp, eHp, pCharges, eCharges, splatTarget, splatText, splatColor, logLines: stepLines, reflectDmg: reflectDmgOut, riposteDmg: riposteDmgOut })
             continue
           } else {
+            // A player dodge that failed — you took the hit anyway.
+            if (!isAttackerPlayer) onStat?.({ dodgesLost: 1 })
             partialDodge = true
             dmg = Math.max(1, Math.floor(dmg * 0.3))
           }
@@ -3082,6 +3100,9 @@ export default function RaidCombat({
           shieldAbsorbedOut = preShield - enemyShieldRef.current
           eHp = Math.max(0, eHp - toHull)
           if (dmg > 0) onPlayerHit?.(dmg)
+          // Telemetry: a landed player shot (fire/volley/mega). dmg is the blow
+          // the hitsplat shows; highestHit takes the max host-side.
+          onStat?.({ shots: 1, volleys: action === 'volley' ? 1 : 0, crits: lockedAimResult === 'critical' ? 1 : 0, dmgDealt: dmg, highestHit: dmg })
           // Lifesteal — heal a slice of the damage you deal. Two additive
           // sources: the Leviathan's Hunger boon (tide.lifestealPct) and Davy's
           // Blood Cannon raid item (lifesteal_pct effect). The step carries the
@@ -3094,6 +3115,7 @@ export default function RaidCombat({
             const before = pHp
             pHp = Math.min(playerHpMax, pHp + healed)
             lifestealHealedOut = pHp - before
+            if (lifestealHealedOut > 0) onStat?.({ dmgHealed: lifestealHealedOut })
           }
           // Executioner (boon): the moment a hit drops the enemy to <= X% HP,
           // it's sunk outright (only when it actually landed + isn't already dead).
@@ -3288,10 +3310,12 @@ export default function RaidCombat({
             abyssalShieldRef.current -= soaked
             dmg -= soaked
             shieldChanged = true
+            onStat?.({ dmgAbsorbed: soaked })
             stepLines.push(abyssalShieldRef.current > 0
               ? `Your shield soaks ${soaked}.`
               : `Your shield soaks ${soaked} and shatters.`)
           }
+          if (dmg > 0) onStat?.({ dmgTaken: dmg })
           pHp = Math.max(0, pHp - dmg)
           // Spiteful Wake (boon): the attacker takes a slice of what it dealt
           // straight back. Reads the post-shield, post-mitigation damage (what
