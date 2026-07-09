@@ -283,13 +283,12 @@ export const RAID_ITEMS: RaidItemDef[] = [
     source: 'Hardcore · The Davy Jones Gauntlet',
   },
   // ── Blood Cannon fusions — keep the 8% lifesteal, bolt on a damage lane.
-  //    Damage side taxed ~15% for the saved slot (lifesteal stays full). ART:
-  //    placeholder (reuses the Blood Cannon sprite) until bespoke art lands.
+  //    Damage side taxed ~15% for the saved slot (lifesteal stays full).
   {
     id: 'bloodletter',
     name: 'Bloodletter',
     description: 'The blood gun wed to the long ramp: you heal 8% of the damage you deal AND your damage climbs +4% every turn of a fight. Bleed them slow.',
-    image: '/davysbloodcannon.png',
+    image: '/forge_bloodletter.png',
     emoji: '🩸',
     rarity: 'legendary',
     effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'ramp_damage_per_turn', value: 0.04 }],
@@ -299,7 +298,7 @@ export const RAID_ITEMS: RaidItemDef[] = [
     id: 'reavers_cannon',
     name: "Reaver's Cannon",
     description: 'Heal 8% of the damage you deal and hit non-boss enemies for +17%. Reave through a crew and drink the whole time.',
-    image: '/davysbloodcannon.png',
+    image: '/forge_reaverscannon.png',
     emoji: '🩸',
     rarity: 'legendary',
     effects: [{ type: 'lifesteal_pct', value: 0.08 }, { type: 'nonboss_damage_mult', value: 1.17 }],
