@@ -123,15 +123,8 @@ export default function SetupModal({ currentColor, unlockedColors, showWelcomeAf
               {usernameError && (
                 <p className="font-karla font-400" style={{ fontSize: '0.68rem', color: '#f87171', marginBottom: '1rem' }}>{usernameError}</p>
               )}
-              <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginBottom: '0.4rem' }}>
-                3–20 characters · letters, numbers, underscores
-              </p>
-              {/* Permanence caveat kept small + low-key. Leading with it
-                  (the old copy) discouraged players from picking one
-                  in case they "got it wrong" — better to put visibility
-                  benefits up top and let this sit as a footnote. */}
               <p className="font-karla font-400" style={{ fontSize: '0.62rem', color: '#4a4845', marginBottom: '1.25rem' }}>
-                Permanent — set once, kept forever.
+                3–20 characters · letters, numbers, underscores
               </p>
               {/* Continue is now the full-width primary CTA. Skip drops
                   to a small text link below so it reads as "I'll come

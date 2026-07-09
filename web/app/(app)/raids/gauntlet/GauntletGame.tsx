@@ -628,10 +628,12 @@ export default function GauntletGame(props: GauntletGameProps) {
 
       {hcBlockedMsg && (
         <div onClick={() => setHcBlockedMsg(null)} style={{ position: 'fixed', inset: 0, zIndex: 1320, background: 'rgba(2,6,12,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 340, borderRadius: 16, padding: '1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${HC_ACCENT}55` }}>
+          <motion.div onClick={e => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+          style={{ width: '100%', maxWidth: 340, borderRadius: 16, padding: '1.15rem', textAlign: 'center', background: 'linear-gradient(180deg, rgba(14,22,34,0.99), rgba(7,13,22,0.99))', border: `1px solid ${HC_ACCENT}55` }}>
             <p className="font-karla" style={{ fontSize: '0.86rem', color: '#e0dccc', lineHeight: 1.5 }}>{hcBlockedMsg}</p>
             <button onClick={() => setHcBlockedMsg(null)} className="font-karla font-700 tap" style={{ marginTop: 14, padding: '0.6rem 1.4rem', borderRadius: 10, background: `${HC_ACCENT}1e`, border: `1px solid ${HC_ACCENT}66`, color: '#cfc4ff', fontSize: '0.8rem', cursor: 'pointer' }}>Got it</button>
-          </div>
+          </motion.div>
         </div>
       )}
     </>
@@ -3316,9 +3318,6 @@ function HaulModal({ onClose }: { onClose: () => void }) {
                   </div>
                 ))}
               </div>
-              <p className="font-karla" style={{ fontSize: '0.6rem', color: '#7a766e', marginTop: 5, lineHeight: 1.4 }}>
-                The pot itself grows with every ship; the chest multiplies it the moment you cash out.
-              </p>
 
               {/* The named chase */}
               <p className="font-karla font-700 uppercase tracking-[0.14em]" style={{ fontSize: '0.5rem', color: '#8a8480', marginTop: 12, marginBottom: 6 }}>The Chase — rare from any chest</p>
@@ -3335,7 +3334,7 @@ function HaulModal({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
               <p className="font-karla" style={{ fontSize: '0.64rem', color: '#8a8480', marginTop: 7, lineHeight: 1.4 }}>
-                Each can drop from any chest you crack, from about {shallowOdds}% up shallow to {deepOdds}% in Davy Jones&apos; Locker. Land both and forge them into the Grand Cannon.
+                Rare from any chest — about {shallowOdds}% shallow, up to {deepOdds}% in Davy Jones&apos; Locker.
               </p>
 
               {/* The prestige cosmetic — a rare Man-o-War-only hull that drops
@@ -3396,18 +3395,20 @@ function ActionTile({ color, icon, label, line, primary, disabled, onClick }: {
 // reopenable via "How it works".
 function GauntletIntroModal({ onClose, firstTime }: { onClose: () => void; firstTime: boolean }) {
   const steps: { color: string; title: string; text: string; icon: React.ReactNode }[] = [
-    { color: TEAL, title: 'Descend the Locker', text: 'Fight ship after ship. Every depth hits harder than the last.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg> },
-    { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon that lasts the whole dive. Deeper down, the Locker forces curses on you too. Now and then you can take a one-time reprieve, a heal or crew refresh, instead of a boon.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.1 5.6L20 9.2l-4.4 3.6L17 19l-5-3.4L7 19l1.4-6.2L4 9.2l5.9-1.6z" /></svg> },
+    { color: TEAL, title: 'Descend the Locker', text: 'Fight ship after ship. Each depth hits harder.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5l6 6 6-6" /><path d="M6 13l6 6 6-6" /></svg> },
+    { color: '#8b9cff', title: 'Powers and curses', text: 'Between fights you draft a boon for the whole dive. Go deep enough and the Locker forces curses on you too.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.1 5.6L20 9.2l-4.4 3.6L17 19l-5-3.4L7 19l1.4-6.2L4 9.2l5.9-1.6z" /></svg> },
     { color: GOLD, title: 'One pot grows', text: 'Every ship you sink swells a single pot of doubloons and Nav XP.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="2.6" /><path d="M5 6.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /><path d="M5 11.5v5c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-5" /></svg> },
-    { color: '#f87171', title: 'Cash out or sink', text: 'Bank the pot any time you like. Go under first and it all sinks with you.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg> },
-    { color: TEAL, title: 'Earn Fathoms', text: 'Every dive pays Fathoms, one per ship you sink. You keep them win or lose.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M7 10.6c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /><path d="M7 14c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /></svg> },
-    { color: GOLD, title: 'Spend them in two shops', text: 'Run Upgrades sharpen your dives. Ship & Shore buys permanent power for raids, voyages, and fishing.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6" rx="6.5" ry="2.4" /><path d="M5.5 6v4c0 1.3 2.9 2.4 6.5 2.4S18.5 11.3 18.5 10V6" /><path d="M5.5 10v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /><path d="M5.5 14v4c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-4" /></svg> },
+    { color: '#f87171', title: 'Cash out or sink', text: 'Bank the pot whenever you like. Go under first and it all sinks with you.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 4 3 7 7 8 4-1 7-4 7-8a8 8 0 0 0-8-8z" /><circle cx="9" cy="10" r="1.4" fill="#120a12" /><circle cx="15" cy="10" r="1.4" fill="#120a12" /></svg> },
+    { color: TEAL, title: 'Fathoms to spend', text: 'Each dive also pays Fathoms, win or lose — spend them in the Run Upgrades and Ship & Shore shops.', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M7 10.6c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /><path d="M7 14c1.2-1 2.3-1 3.5 0s2.3 1 3.5 0 2.1-0.9 2.8-0.4" /></svg> },
   ]
   return (
     <ModalScrim zIndex={1400} onClose={onClose} bg="rgba(2,6,12,0.88)" blur="blur(5px)">
       <motion.div initial={{ opacity: 0, y: 18, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 250, damping: 23 }}
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 420, borderRadius: 20, background: 'linear-gradient(180deg, rgba(12,18,30,0.99), rgba(6,9,16,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 50px ${TEAL}22, 0 18px 50px rgba(0,0,0,0.65)`, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center' }}>
+        style={{ position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20, background: 'linear-gradient(180deg, rgba(12,18,30,0.99), rgba(6,9,16,0.99))', border: `1px solid ${TEAL}3a`, boxShadow: `0 0 50px ${TEAL}22, 0 18px 50px rgba(0,0,0,0.65)`, padding: '1.3rem 1.15rem 1.15rem', textAlign: 'center' }}>
+        <button onClick={onClose} aria-label="Close" className="tap" style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, width: 30, height: 30, borderRadius: '50%', padding: 0, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#cfcabf', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
         <div style={{ position: 'relative', width: 92, height: 92, margin: '0 auto 6px' }}>
           <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD}22 0%, ${TEAL}12 45%, transparent 72%)`, animation: 'gauntPulse 3.6s ease-in-out infinite' }} />
           {/* eslint-disable-next-line @next/next/no-img-element */}

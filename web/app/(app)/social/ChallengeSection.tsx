@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import {
   createChallenge, acceptChallenge, declineChallenge, startSession,
@@ -77,8 +78,9 @@ function CreateChallengeModal({ targetUsername, myDoubloons, onClose, onCreated 
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
     >
-      <div
+      <motion.div
         onClick={e => e.stopPropagation()}
+        initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         style={{ background: '#0f0d0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 0 0', padding: '1.5rem', width: '100%', maxWidth: 480, paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -179,7 +181,7 @@ function CreateChallengeModal({ targetUsername, myDoubloons, onClose, onCreated 
         >
           {loading ? 'Sending…' : 'Send Challenge'}
         </button>
-      </div>
+      </motion.div>
     </div>
   )
 }

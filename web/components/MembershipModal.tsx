@@ -16,6 +16,7 @@
 // returns via /tavern?membership=success which we detect below.
 
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
@@ -138,8 +139,10 @@ export default function MembershipModal() {
   const showEmbedded = step === 'pay' && !!stripePromise && !!clientSecret
 
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(2,4,8,0.82)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div onClick={e => e.stopPropagation()} style={{
+    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <motion.div onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        style={{
         width: '100%', maxWidth: 440, maxHeight: '92vh', overflowY: 'auto',
         background: 'linear-gradient(180deg, #14110b 0%, #0a0807 100%)',
         border: `1px solid ${GOLD}40`, borderTop: `2px solid ${GOLD}`,
@@ -237,7 +240,7 @@ export default function MembershipModal() {
             </p>
           </>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }
