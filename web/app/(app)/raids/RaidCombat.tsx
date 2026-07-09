@@ -7531,15 +7531,29 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
   // events. Height is LOCKED at 130px so the action buttons below never get
   // shoved off-screen during the post-kill XP/doubloons cascade.
   //
-  // Older lines fall off the TOP, not the bottom: the lines area uses a
-  // flex column with `justify-content: flex-end` + `overflow: hidden`, so
-  // entries pile against the bottom and any overflow (a long wrapping
-  // line, or all four entries) gets clipped from the TOP. That preserves
-  // the newest, most actionable info — the original slice(-4) cap kept 4
-  // entries, but a wrapping line could blow the height budget and the
-  // bottom (= newest, with the damage numbers) was getting cut off.
+  // The lines area is SCROLLABLE: a busy turn (a counter + a crew ability + a
+  // burn tick + the kill) can stream more lines than the 130px window holds,
+  // so instead of clipping the earlier ones we keep them all and let the
+  // player scroll back through what happened this turn. Lines still pile
+  // against the BOTTOM when few (marginTop:auto on the inner wrap — the robust
+  // cross-browser stand-in for justify-content:flex-end that doesn't break
+  // scroll-to-top), and the view auto-sticks to the newest line as they stream
+  // in, unless the player has scrolled up to read.
   const isEmpty = lines.length === 0
-  const visible = isEmpty ? ['What will you do?'] : lines.slice(-4)
+  const visible = isEmpty ? ['What will you do?'] : lines
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const stickRef = useRef(true)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight
+  }, [lines])
+  const onScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    // "Stuck to bottom" if within a line's slack of the end — new streaming
+    // lines keep following; scroll up past that and we stop yanking you down.
+    stickRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 10
+  }
   return (
     <div style={{
       background: '#04080e',
@@ -7557,34 +7571,48 @@ function LogBox({ lines, turn }: { lines: string[]; turn: number }) {
           Turn {turn}
         </p>
       </div>
-      <div style={{
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-end',
-      }}>
-        {visible.map((line, i) => (
-          <motion.p
-            // Key on index + content only — DON'T include `turn`. When a turn
-            // ends, `turn` increments but the log still shows the last turn's
-            // lines until the next resolveTurn() clears it. Including `turn` in
-            // the key re-mounted every existing line on turn-over, causing the
-            // whole log to flicker fade-in at the start of every player input.
-            // Line content is unique enough within a turn (and across turns the
-            // log is replaced wholesale by setResolveLog([speedLine]) anyway).
-            key={`${i}-${line}`}
-            initial={isEmpty ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="font-karla"
-            style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.5, flexShrink: 0 }}
-          >
-            {line}
-          </motion.p>
-        ))}
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="rc-log-scroll"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <div style={{ marginTop: 'auto' }}>
+          {visible.map((line, i) => (
+            <motion.p
+              // Key on index + content only — DON'T include `turn`. When a turn
+              // ends, `turn` increments but the log still shows the last turn's
+              // lines until the next resolveTurn() clears it. Including `turn` in
+              // the key re-mounted every existing line on turn-over, causing the
+              // whole log to flicker fade-in at the start of every player input.
+              // Line content is unique enough within a turn (and across turns the
+              // log is replaced wholesale by setResolveLog([speedLine]) anyway).
+              key={`${i}-${line}`}
+              initial={isEmpty ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="font-karla"
+              style={{ fontSize: '0.86rem', color: '#c8d4e0', lineHeight: 1.5 }}
+            >
+              {line}
+            </motion.p>
+          ))}
+        </div>
       </div>
+      <style>{`
+        .rc-log-scroll { scrollbar-width: thin; scrollbar-color: #2a3f57 transparent; }
+        .rc-log-scroll::-webkit-scrollbar { width: 5px; }
+        .rc-log-scroll::-webkit-scrollbar-thumb { background: #2a3f57; border-radius: 3px; }
+        .rc-log-scroll::-webkit-scrollbar-track { background: transparent; }
+      `}</style>
     </div>
   )
 }
