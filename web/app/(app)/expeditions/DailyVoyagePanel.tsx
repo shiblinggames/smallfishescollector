@@ -13,7 +13,7 @@ import { hasSafeVoyages, gauntletVoyageSpeedMult } from '@/lib/gauntletUpgrades'
 import { getBait } from '@/lib/bait'
 import { getSpecialItem } from '@/lib/specialItems'
 import { sendDailyVoyage, revealVoyageResults, getTrawlingCrewIds, type DailyVoyage } from './voyageActions'
-import { getLevelFromXP } from '@/lib/expeditionLevel'
+import { getLevelFromXP, ROUTE_BASE_XP, VOYAGE_XP_MULT } from '@/lib/expeditionLevel'
 import { BASE_VOYAGE_MS, computeVoyageDurationMs } from '@/lib/voyage'
 import VoyageHistory, { type VoyageHistoryEntry } from './VoyageHistory'
 import NavLevelUpOverlay, { NavLevelUpInfo } from '@/components/NavLevelUpOverlay'
@@ -141,12 +141,13 @@ function computeRouteEstimate(
       ? Math.round(effectiveCrewLossChance(route, stats.fortune) * 1000) / 10
       : 0
 
-  // XP estimate — same event counts, best/worst case outcomes
-  const XP_BASE: Record<VoyageRoute, number> = { coastal: 30, open: 55, deep: 90, triangle: 140, shroud: 220 }
-  const xpBase      = XP_BASE[route]
+  // XP estimate — same event counts, best/worst case outcomes. Base + crew +
+  // event values MUST track lib/expeditionLevel.voyageXP (single source), incl.
+  // the ×VOYAGE_XP_MULT payout lift, or this preview drifts from the real grant.
+  const xpBase      = ROUTE_BASE_XP[route] ?? 150
   const xpCrewBonus = crewCount * 12
-  const xpMin = xpBase + xpCrewBonus + enc * 5  + dng * 3  + dis * 4
-  const xpMax = xpBase + xpCrewBonus + enc * 18 + dng * 14 + dis * 12
+  const xpMin = Math.round((xpBase + xpCrewBonus + enc * 5  + dng * 3  + dis * 4)  * VOYAGE_XP_MULT)
+  const xpMax = Math.round((xpBase + xpCrewBonus + enc * 18 + dng * 14 + dis * 12) * VOYAGE_XP_MULT)
 
   return { lootMin, lootMax, crewRiskPct, drops: ROUTE_DROPS[route], xpMin, xpMax }
 }

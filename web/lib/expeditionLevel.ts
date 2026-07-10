@@ -73,7 +73,7 @@ export function navLevelBonuses(navLevel: number): NavLevelBonuses {
 // 2026-06-17: the curve ramps steeply from Triangle on, so the endgame routes
 // are the real XP grind, matching their doubloon jump (Deep ~800 → Triangle
 // ~1,500 → Shroud ~2,100). Anything unlisted still falls to the 150 default.
-const ROUTE_BASE_XP: Record<string, number> = {
+export const ROUTE_BASE_XP: Record<string, number> = {
   coastal:  30,
   open:     55,
   deep:     90,
