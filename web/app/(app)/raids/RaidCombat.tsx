@@ -536,6 +536,15 @@ export default function RaidCombat({
     let counterBonusStack = 0
     let counterBonusChance = 0
     let counterReflectPct = 0
+    // Spiteful Wake: chip the enemy for this fraction of a shot you DODGE.
+    let retaliateDodgePct = 0
+    // Momentum (Rising Tide / Abyssal Bounty + the Deep Wake confluence) is
+    // SUMMED per axis and applied ONCE — Deep Wake's per-kill/per-depth ADD into
+    // its component's rate under a shared (summed) cap, instead of stacking a
+    // separate multiplier. That's what stops the momentum axis compounding into
+    // a runaway ×4+ multiplier while keeping its kill/depth-damage identity.
+    let killDmgPerKill = 0,  killDmgCap = 0
+    let depthDmgPerDepth = 0, depthDmgCap = 0
     for (const e of tideEffects) {
       switch (e.kind) {
         case 'damageMult':            dmgMult *= e.mult; break
@@ -548,7 +557,7 @@ export default function RaidCombat({
         case 'critDmgMult':           critDmgMult *= e.mult; break
         case 'executeThreshold':      executeThreshold = Math.max(executeThreshold, e.pct); break
         case 'lifestealPct':          lifestealPct += e.pct; break
-        case 'retaliatePct':          retaliatePct += e.pct; break
+        case 'retaliatePct':          retaliatePct += e.pct; retaliateDodgePct += (e.dodgePct ?? 0); break
         case 'lowHpDamage':           lowHpDamage = Math.max(lowHpDamage, e.maxBonus); break
         case 'chargeCarryover':       chargeCarryover = Math.max(chargeCarryover, e.cap); break
         case 'fightShield':           fightShieldPct = Math.max(fightShieldPct, e.pctMax); break
@@ -602,10 +611,11 @@ export default function RaidCombat({
         case 'dodgeRefund':           dodgeRefundCharges = Math.max(dodgeRefundCharges, e.charges); break
         case 'retaliateBoost':        retaliateBoostMult = Math.max(retaliateBoostMult, e.mult); break
         case 'noncritDmgMult':        noncritDmgMult *= e.mult; break
-        // Rising Tide / Abyssal Bounty: resolve the live run tally into a flat
-        // outgoing mult right here (both constant for the fight). Capped.
-        case 'killStackDamage':       dmgMult *= 1 + Math.min(e.maxBonus, e.perKill * Math.max(0, runKills)); break
-        case 'depthScaleDamage':      dmgMult *= 1 + Math.min(e.maxBonus, e.perDepth * Math.max(0, runDepth)); break
+        // Rising Tide / Abyssal Bounty (+ Deep Wake): accumulate the per-axis
+        // rate + cap; resolved into ONE multiplier per axis after the loop so
+        // Deep Wake reinforces its component instead of compounding.
+        case 'killStackDamage':       killDmgPerKill  += e.perKill;  killDmgCap  += e.maxBonus; break
+        case 'depthScaleDamage':      depthDmgPerDepth += e.perDepth; depthDmgCap += e.maxBonus; break
         // Cannonade / Counter-Battery: take the highest tier held.
         case 'critStreakDamage':
           if (e.perStack > critStreakPerStack) { critStreakPerStack = e.perStack; critStreakMaxStacks = e.maxStacks }
@@ -622,6 +632,11 @@ export default function RaidCombat({
         case 'instantHeal': case 'fullHeal': case 'doubloonsAtRaidEnd': break // handled elsewhere
       }
     }
+    // Momentum axes resolved ONCE each (summed rate, capped at summed cap), so
+    // Rising Tide + Deep Wake (and Abyssal Bounty + Deep Wake) add rather than
+    // multiply. The kill axis and the depth axis still multiply each other.
+    if (killDmgPerKill  > 0) dmgMult *= 1 + Math.min(killDmgCap,  killDmgPerKill  * Math.max(0, runKills))
+    if (depthDmgPerDepth > 0) dmgMult *= 1 + Math.min(depthDmgCap, depthDmgPerDepth * Math.max(0, runDepth))
     return {
       dmgMult, fireDmgMult, volleyDmgMult, bossDmgMult, bossVolMult,
       critBonus, critZoneMult, inDmgMult, inCritReduce,
@@ -635,7 +650,7 @@ export default function RaidCombat({
       critExecutePct, volleyRampPct,
       executeHealPct, burnTickHealPct, dodgeRefundCharges, retaliateBoostMult,
       critDmgMult, executeThreshold, lifestealPct,
-      retaliatePct, lowHpDamage, chargeCarryover, fightShieldPct, enemyShieldPct,
+      retaliatePct, retaliateDodgePct, lowHpDamage, chargeCarryover, fightShieldPct, enemyShieldPct,
       critStreakPerStack, critStreakMaxStacks, counterFireChance,
       counterBonusRefund, counterBonusStack, counterBonusChance, counterReflectPct,
     }
@@ -1537,14 +1552,19 @@ export default function RaidCombat({
     // Momentum boons are passive damage mults with no per-shot trigger, so
     // capture their LIVE contribution once here at fight start — accurate,
     // no per-shot log spam.
-    for (const e of tideEffects) {
-      if (e.kind === 'killStackDamage') {
-        const bonus = Math.min(e.maxBonus, e.perKill * Math.max(0, runKills))
-        if (bonus > 0) introLines.push(`Rising Tide: +${Math.round(bonus * 100)}% damage — ${runKills} hull${runKills === 1 ? '' : 's'} in your wake.`)
-      } else if (e.kind === 'depthScaleDamage') {
-        const bonus = Math.min(e.maxBonus, e.perDepth * Math.max(0, runDepth))
-        if (bonus > 0) introLines.push(`Abyssal Bounty: +${Math.round(bonus * 100)}% damage at depth ${runDepth}.`)
+    // Sum each axis (Rising Tide/Abyssal Bounty + the Deep Wake confluence) so
+    // ONE line reflects the true combined bonus — matching the single applied
+    // multiplier per axis rather than printing a duplicate line per effect.
+    {
+      let kPerKill = 0, kCap = 0, dPerDepth = 0, dCap = 0
+      for (const e of tideEffects) {
+        if (e.kind === 'killStackDamage') { kPerKill += e.perKill; kCap += e.maxBonus }
+        else if (e.kind === 'depthScaleDamage') { dPerDepth += e.perDepth; dCap += e.maxBonus }
       }
+      const kBonus = Math.min(kCap, kPerKill * Math.max(0, runKills))
+      if (kBonus > 0) introLines.push(`Rising Tide: +${Math.round(kBonus * 100)}% damage — ${runKills} hull${runKills === 1 ? '' : 's'} in your wake.`)
+      const dBonus = Math.min(dCap, dPerDepth * Math.max(0, runDepth))
+      if (dBonus > 0) introLines.push(`Abyssal Bounty: +${Math.round(dBonus * 100)}% damage at depth ${runDepth}.`)
     }
     if ((enemy.damageReduction ?? 0) > 0) {
       introLines.push(`Its ${(enemy.abilityName ?? 'armour').toLowerCase()} soaks fire and graze. Volleys break through.`)
@@ -3055,6 +3075,15 @@ export default function RaidCombat({
             if (!isAttackerPlayer && tide.dodgeRefundCharges > 0) {
               const refund = Math.min(playerMaxCharges - pCharges, tide.dodgeRefundCharges)
               if (refund > 0) { pCharges += refund; stepLines.push(`Untouchable! The wind hands you back ${refund} cannonball${refund === 1 ? '' : 's'}.`) }
+            }
+            // Spiteful Wake — the "good play pays too" half: slipping an enemy
+            // shot still lashes the wake back for a slice of the damage it WOULD
+            // have dealt, so the boon rewards dodging, not just eating hits.
+            if (!isAttackerPlayer && tide.retaliateDodgePct > 0 && dmg > 0 && eHp > 0) {
+              const spite = Math.max(1, Math.round(dmg * tide.retaliateDodgePct))
+              eHp = Math.max(0, eHp - soakEnemyShield(spite))
+              reflectDmgOut = (reflectDmgOut ?? 0) + spite
+              stepLines.push(`Spiteful Wake — you slip the shot and the wake lashes back for ${spite}.`)
             }
 
             // ── Parry layer on top of the dodge result ───────────────────

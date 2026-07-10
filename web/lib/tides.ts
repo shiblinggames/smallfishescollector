@@ -161,8 +161,10 @@ export type TideEffect =
   | { kind: 'executeThreshold'; pct: number }
   /** Heal the player for pct of the damage they deal. */
   | { kind: 'lifestealPct'; pct: number }
-  /** Reflect pct of the damage an enemy lands on you back into it (thorns). */
-  | { kind: 'retaliatePct'; pct: number }
+  /** Reflect pct of the damage an enemy lands on you back into it (thorns).
+   *  `dodgePct` (optional) also chips the enemy for that fraction of a shot you
+   *  DODGE — so the boon rewards slipping hits, not only eating them. */
+  | { kind: 'retaliatePct'; pct: number; dodgePct?: number }
   /** Bonus damage that scales with MISSING HP. `maxBonus` is the damage bonus
    *  at 0 HP (e.g. 0.45 = up to +45%); it tapers linearly to 0 at full HP. */
   | { kind: 'lowHpDamage'; maxBonus: number }
@@ -808,7 +810,9 @@ export function describeEffect(e: TideEffect): string {
     case 'critDmgMult':           return `${pct(e.mult - 1)} critical damage`
     case 'executeThreshold':      return `Sink enemies below ${Math.round(e.pct * 100)}% HP`
     case 'lifestealPct':          return `Heal ${pct(e.pct)} of damage dealt`
-    case 'retaliatePct':          return `Reflect ${Math.round(e.pct * 100)}% of damage taken`
+    case 'retaliatePct':          return e.dodgePct
+                                    ? `Reflect ${Math.round(e.pct * 100)}% of damage taken; chip ${Math.round(e.dodgePct * 100)}% of a shot you dodge`
+                                    : `Reflect ${Math.round(e.pct * 100)}% of damage taken`
     case 'lowHpDamage':           return `Up to ${pct(e.maxBonus)} damage as your HP drops`
     case 'thermalShock':          return `Frozen + burning hulls shatter for +${pct(e.burstMult)}`
     case 'critExecute':           return `Crits sink hulls below ${Math.round(e.pct * 100)}% HP`

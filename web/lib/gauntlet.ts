@@ -921,9 +921,9 @@ export function boonRarity(fam: GauntletBoon): BoonRarity { return fam.rarity ??
 
 export const GAUNTLET_BOONS: GauntletBoon[] = [
   { id: 'broadside_mastery', name: 'Broadside Mastery', flavor: 'Your gunners find their rhythm. Everything you fire bites harder.', rarity: 'rare', tiers: [
-    { desc: '+12% all damage', detail: 'Every shot deals 12% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.12 } },
-    { desc: '+26% all damage', detail: 'Every shot deals 26% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.26 } },
-    { desc: '+42% all damage', detail: 'Every shot deals 42% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.42 } },
+    { desc: '+10% all damage', detail: 'Every shot deals 10% more damage — both the single-shot Fire action and the Volley. It covers every shot you take, where the focused boons only buff one action for a bigger number.', effect: { kind: 'damageMult', mult: 1.10 } },
+    { desc: '+22% all damage', detail: 'Every shot deals 22% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.22 } },
+    { desc: '+36% all damage', detail: 'Every shot deals 36% more damage — both the single-shot Fire action and the Volley.', effect: { kind: 'damageMult', mult: 1.36 } },
   ] },
   { id: 'powder_and_shot', name: 'Powder & Shot', flavor: 'Dry powder, packed tight. Your single shots punch through.', tiers: [
     { desc: '+14% Fire damage', detail: 'The single-shot Fire action deals 14% more damage. Your Volley (the 3-charge double shot) is unaffected.', effect: { kind: 'fireDmgMult', mult: 1.14 } },
@@ -981,10 +981,10 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
     { desc: '+33% boss damage', detail: 'Deal 33% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.33 } },
     { desc: '+48% boss damage', detail: 'Deal 48% more damage to boss-depth ships. Regular enemies are unaffected.', effect: { kind: 'bossDamageMult', mult: 1.48 } },
   ] },
-  { id: 'spiteful_wake', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back. The sea keeps its debts.', rarity: 'rare', tiers: [
-    { desc: 'Reflect 8% of damage taken', detail: 'When an enemy lands a hit on you, it takes 8% of that damage straight back into its own hull.', effect: { kind: 'retaliatePct', pct: 0.08 } },
-    { desc: 'Reflect 16% of damage taken', detail: 'When an enemy lands a hit on you, it takes 16% of that damage straight back into its own hull.', effect: { kind: 'retaliatePct', pct: 0.16 } },
-    { desc: 'Reflect 25% of damage taken', detail: 'When an enemy lands a hit on you, it takes 25% of that damage straight back into its own hull.', effect: { kind: 'retaliatePct', pct: 0.25 } },
+  { id: 'spiteful_wake', name: 'Spiteful Wake', flavor: 'Strike the hull and the hull strikes back — and slip its shot and the sea flings your spite anyway.', rarity: 'rare', tiers: [
+    { desc: 'Reflect 12% taken · chip 10% dodged', detail: 'When an enemy lands a hit on you, it takes 12% of that damage back into its own hull. And when you DODGE an enemy shot, the wake still lashes it for 10% of the damage it would have dealt — so good play pays too, not just eating hits.', effect: { kind: 'retaliatePct', pct: 0.12, dodgePct: 0.10 } },
+    { desc: 'Reflect 22% taken · chip 14% dodged', detail: 'Reflect 22% of any hit an enemy lands on you, and chip 14% of a shot you dodge into its hull.', effect: { kind: 'retaliatePct', pct: 0.22, dodgePct: 0.14 } },
+    { desc: 'Reflect 32% taken · chip 18% dodged', detail: 'Reflect 32% of any hit an enemy lands on you, and chip 18% of a shot you dodge into its hull.', effect: { kind: 'retaliatePct', pct: 0.32, dodgePct: 0.18 } },
   ] },
   { id: 'wounded_fury', name: 'Wounded Fury', flavor: 'The closer to sinking, the harder your guns bite.', rarity: 'rare', tiers: [
     { desc: 'Up to +17% damage as HP drops', detail: 'Your shots hit harder the lower your HP, scaling with missing health. At full HP nothing; right at the brink, +17%.', effect: { kind: 'lowHpDamage', maxBonus: 0.17 } },
@@ -994,14 +994,14 @@ export const GAUNTLET_BOONS: GauntletBoon[] = [
   // ── Momentum — damage that FEEDS on the run: kills stacked, depth dared,
   //    and clean crits chained. Each rewards a different way of pushing.
   { id: 'rising_tide', name: 'Rising Tide', flavor: 'Every hull you send down feeds the swell behind you.', rarity: 'rare', tiers: [
-    { desc: '+3% damage per enemy sunk (max +30%)', detail: 'Every enemy you sink this run permanently raises your damage by 3%, up to +30%. Counts every hull you have already sunk, and bosses count too. It never resets — the deeper you fight, the harder you hit.', effect: { kind: 'killStackDamage', perKill: 0.03, maxBonus: 0.30 } },
-    { desc: '+4% damage per enemy sunk (max +44%)', detail: 'Every enemy you sink this run permanently raises your damage by 4%, up to +44%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.04, maxBonus: 0.44 } },
-    { desc: '+5% damage per enemy sunk (max +60%)', detail: 'Every enemy you sink this run permanently raises your damage by 5%, up to +60%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.05, maxBonus: 0.60 } },
+    { desc: '+3% damage per enemy sunk (max +24%)', detail: 'Every enemy you sink this run permanently raises your damage by 3%, up to +24%. Counts every hull you have already sunk, and bosses count too. It never resets — the deeper you fight, the harder you hit.', effect: { kind: 'killStackDamage', perKill: 0.03, maxBonus: 0.24 } },
+    { desc: '+4% damage per enemy sunk (max +36%)', detail: 'Every enemy you sink this run permanently raises your damage by 4%, up to +36%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.04, maxBonus: 0.36 } },
+    { desc: '+5% damage per enemy sunk (max +45%)', detail: 'Every enemy you sink this run permanently raises your damage by 5%, up to +45%. Counts hulls already sunk and bosses. Never resets.', effect: { kind: 'killStackDamage', perKill: 0.05, maxBonus: 0.45 } },
   ] },
   { id: 'abyssal_bounty', name: 'Abyssal Bounty', flavor: 'The pressure of the deep loads every gun.', rarity: 'rare', tiers: [
-    { desc: '+1.2% damage per depth (max +24%)', detail: 'Your damage rises with how deep you are — 1.2% for every depth you have reached, up to +24%. It scales live as you descend, and is full value the moment you take it.', effect: { kind: 'depthScaleDamage', perDepth: 0.012, maxBonus: 0.24 } },
-    { desc: '+1.8% damage per depth (max +36%)', detail: 'Your damage rises with how deep you are — 1.8% for every depth reached, up to +36%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.018, maxBonus: 0.36 } },
-    { desc: '+2.4% damage per depth (max +48%)', detail: 'Your damage rises with how deep you are — 2.4% for every depth reached, up to +48%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.024, maxBonus: 0.48 } },
+    { desc: '+1.2% damage per depth (max +18%)', detail: 'Your damage rises with how deep you are — 1.2% for every depth you have reached, up to +18%. It scales live as you descend, and is full value the moment you take it.', effect: { kind: 'depthScaleDamage', perDepth: 0.012, maxBonus: 0.18 } },
+    { desc: '+1.8% damage per depth (max +28%)', detail: 'Your damage rises with how deep you are — 1.8% for every depth reached, up to +28%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.018, maxBonus: 0.28 } },
+    { desc: '+2.4% damage per depth (max +38%)', detail: 'Your damage rises with how deep you are — 2.4% for every depth reached, up to +38%. Scales live as you descend.', effect: { kind: 'depthScaleDamage', perDepth: 0.024, maxBonus: 0.38 } },
   ] },
   { id: 'cannonade', name: 'Cannonade', flavor: 'Land them clean and the guns never cool.', rarity: 'rare', tiers: [
     { desc: '+6% per crit in a row (max 5)', detail: 'Each critical hit in a row stacks +6% damage, up to 5 stacks (+30%). Any shot that is NOT a crit resets the streak to zero. The streak resets at the start of every fight.', effect: { kind: 'critStreakDamage', perStack: 0.06, maxStacks: 5 } },
@@ -1283,10 +1283,15 @@ export const CONFLUENCES: Confluence[] = [
     name: 'Deep Wake',
     requires: [{ boonId: 'rising_tide' }, { boonId: 'abyssal_bounty' }],
     flavor: 'The hulls in your wake and the weight of the deep pull in the same direction — down, and harder.',
+    // Reinforces the two momentum boons rather than stacking a separate
+    // multiplier: its per-kill/per-depth ADD into Rising Tide's and Abyssal
+    // Bounty's own scaling (RaidCombat sums same-axis killStack / depthScale and
+    // applies each axis once), lifting a shared cap. So your momentum climbs
+    // steeper and further — but it can't compound into a runaway multiplier.
     levels: [
-      { desc: 'Bonus +2% damage per hull sunk AND +1% per depth', effects: [{ kind: 'killStackDamage', perKill: 0.02, maxBonus: 0.20 }, { kind: 'depthScaleDamage', perDepth: 0.01, maxBonus: 0.20 }] },
-      { desc: 'Bonus +3% per hull sunk AND +1.5% per depth', effects: [{ kind: 'killStackDamage', perKill: 0.03, maxBonus: 0.30 }, { kind: 'depthScaleDamage', perDepth: 0.015, maxBonus: 0.30 }] },
-      { desc: 'Bonus +4% per hull sunk AND +2% per depth', effects: [{ kind: 'killStackDamage', perKill: 0.04, maxBonus: 0.40 }, { kind: 'depthScaleDamage', perDepth: 0.02, maxBonus: 0.40 }] },
+      { desc: 'Momentum climbs faster: +1% per hull and +0.5% per depth, higher cap', effects: [{ kind: 'killStackDamage', perKill: 0.01, maxBonus: 0.05 }, { kind: 'depthScaleDamage', perDepth: 0.005, maxBonus: 0.05 }] },
+      { desc: 'Momentum climbs faster: +1.5% per hull and +0.6% per depth, higher cap', effects: [{ kind: 'killStackDamage', perKill: 0.015, maxBonus: 0.08 }, { kind: 'depthScaleDamage', perDepth: 0.006, maxBonus: 0.08 }] },
+      { desc: 'Momentum climbs faster: +2% per hull and +0.8% per depth, higher cap', effects: [{ kind: 'killStackDamage', perKill: 0.02, maxBonus: 0.10 }, { kind: 'depthScaleDamage', perDepth: 0.008, maxBonus: 0.10 }] },
     ],
   },
   {
