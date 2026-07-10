@@ -4901,29 +4901,12 @@ export default function RaidCombat({
               </AnimatePresence>
               {/* Persistent burn glow / frost tint from elite Scorching / Glacial */}
               {(playerBurning || playerFrozen) && <ShipStatusAura burning={playerBurning} frozen={playerFrozen} paused={subPhase === 'aiming'} />}
-              {/* Wounded Fury (boon) — a crimson rage rim around the hull that
-                  grows as HP drops, mirroring the boon's "harder the lower you
-                  get" damage. Its own ambient lane (an edge halo, not rising
-                  embers like burn) so it composites cleanly with status auras.
-                  Transparent center = the ship reads through it untouched. */}
-              {tide.lowHpDamage > 0 && (() => {
-                const ragePct = Math.max(0, 1 - playerHp / playerHpMax)
-                if (ragePct < 0.12) return null // only once a real chunk is gone
-                const peak = Math.min(0.8, 0.22 + ragePct * 0.72)
-                return (
-                  <motion.div aria-hidden
-                    // Frozen static during aiming so the mixBlend re-composite
-                    // doesn't stutter the aim needle.
-                    animate={subPhase === 'aiming' ? { opacity: peak } : { opacity: [peak * 0.6, peak, peak * 0.6] }}
-                    transition={subPhase === 'aiming' ? { duration: 0.2 } : { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                    style={{
-                      position: 'absolute', inset: '-7%', borderRadius: '50%',
-                      pointerEvents: 'none', zIndex: 1, mixBlendMode: 'screen',
-                      background: 'radial-gradient(ellipse at center, transparent 46%, rgba(220,38,38,0.85) 64%, transparent 82%)',
-                    }}
-                  />
-                )
-              })()}
+              {/* Wounded Fury (boon) — deliberately NO hull halo. The old crimson
+                  rage rim (radial ring growing as HP dropped) read as a SHIELD
+                  bubble — the same visual language as the absorb-shield glow —
+                  which is the opposite of what the boon does. Same reasoning as
+                  Cannonade's removed rim below; the ramp already shows in the
+                  damage numbers + the Ledger. */}
               {/* Cannonade (boon) — a streak badge on the hull that brightens
                   with each consecutive crit (ember orange, gold at max). No hull
                   halo: a radial glow read as a "shield", which this isn't — the
