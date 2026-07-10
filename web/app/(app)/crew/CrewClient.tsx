@@ -365,7 +365,7 @@ function StatIcon({ k, color }: { k: 'power' | 'dodge' | 'fortune'; color: strin
 // `enabled` false renders the card bare (no swipe at all).
 const SWIPE_SPRING = { type: 'spring' as const, stiffness: 700, damping: 46, restDelta: 0.4 }
 function SwipeAction({ enabled, side, label, icon, gradient, textColor, onAction, children }: {
-  enabled: boolean; side: 'left' | 'right'; label: string; icon: ReactNode
+  enabled: boolean; side: 'left' | 'right'; label: string; icon?: ReactNode
   gradient: string; textColor: string; onAction: () => void; children: ReactNode
 }) {
   const x = useMotionValue(0)
@@ -392,7 +392,7 @@ function SwipeAction({ enabled, side, label, icon, gradient, textColor, onAction
           className="font-karla font-700 uppercase"
           style={{
             width: REVEAL, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-            border: 'none', background: 'transparent', color: textColor, fontSize: '0.6rem', letterSpacing: '0.09em', cursor: 'pointer',
+            border: 'none', background: 'transparent', color: textColor, fontSize: icon ? '0.6rem' : '0.82rem', letterSpacing: '0.08em', cursor: 'pointer',
           }}>
           {icon}<span>{label}</span>
         </button>
@@ -1252,13 +1252,17 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
         }
         if (c.recruited) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(220,248,231,0.72)' }}><CheckIcon /> Aboard</span>
         if (rosterFull) return <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(220,90,90,0.1)', border: '1px solid rgba(220,90,90,0.32)', color: '#f2b0b0' }}>Roster Full</span>
-        // The on-card Recruit BUTTON is replaced by swipe-right-to-recruit (the
-        // SwipeAction wrapper on the board card). Leave a quiet cue so the
-        // gesture stays discoverable; recruiting from the detail modal still works.
+        // The on-card Recruit BUTTON is replaced by swipe-left-to-recruit (the
+        // SwipeAction wrapper on the board card). A pulsing yellow arrow points
+        // the swipe direction so the gesture stays discoverable; recruiting from
+        // the detail modal still works.
         return (
-          <span className="font-karla font-700" style={{ ...STATIC_PILL, background: 'rgba(76,196,131,0.1)', border: '1px solid rgba(76,196,131,0.34)', color: 'rgba(150,235,185,0.9)' }}>
-            <AnchorIcon /> Swipe to recruit
-          </span>
+          <motion.span aria-hidden title="Swipe left to recruit"
+            animate={{ x: [0, -5, 0], opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.25, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ display: 'inline-flex', alignItems: 'center', color: '#ffcc33', filter: 'drop-shadow(0 0 5px rgba(255,204,51,0.5))' }}>
+            <svg width="30" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M13 5l-7 7 7 7" /><path d="M19 12H6" /></svg>
+          </motion.span>
         )
       }
       if (c.recruited) return <div className="font-karla font-700" style={{ ...BTN_STATIC, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)' }}>Recruited ✓</div>
@@ -1561,11 +1565,11 @@ export default function CrewClient({ initial }: { initial: CrewState }) {
               // finale (rarest) card so the best pull lands as an event.
               const dim = reveal.climaxActive && c.id !== reveal.climaxId
               const spotlight = reveal.climaxActive && c.id === reveal.climaxId
-              // Swipe-right to recruit — only once the card has settled (not
-              // mid-reveal) and it's actually recruitable.
+              // Swipe-left to recruit (same direction as dismiss) — only once the
+              // card has settled (not mid-reveal) and it's actually recruitable.
               const recruitable = !c.recruited && !rosterFull && !phase && !reveal.climaxActive
               const swipeCard = (
-                <SwipeAction enabled={recruitable} side="right" label="Recruit" icon={<AnchorIcon />}
+                <SwipeAction enabled={recruitable} side="left" label="Recruit"
                   gradient="linear-gradient(180deg, #4cc483 0%, #2e9a5c 100%)" textColor="#04160d"
                   onAction={() => recruitBoard(c.id)}>
                   {panel}
